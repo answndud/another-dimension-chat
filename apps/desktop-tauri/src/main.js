@@ -1149,8 +1149,8 @@ function localizedChatStatus(message) {
     "peer address updated": "statusLoaded",
     "new message received": "statusLoaded",
     "private delivery running": "statusSending",
-    "private delivery sent": "statusSent",
-    "private delivery completed": "statusSent",
+    "private delivery sent": "userMessageWrittenToPeerRoute",
+    "private delivery completed": "userDeliveryFinished",
     "private delivery failed": "statusFailed",
     "private delivery blocked": "statusFailed",
     "private delivery needs review": "statusRetry",
@@ -1205,8 +1205,11 @@ function localizedChatStatus(message) {
   if (lower.includes("failed") || lower.includes("blocked")) {
     return t("statusFailed");
   }
-  if (lower.includes("completed") || lower.includes("sent")) {
-    return t("statusSent");
+  if (lower.includes("completed")) {
+    return t("userDeliveryFinished");
+  }
+  if (lower.includes("sent")) {
+    return t("userMessageWrittenToPeerRoute");
   }
   if (lower.includes("incomplete") || lower.includes("rebuild") || lower.includes("setup")) {
     return t("statusSetup");
@@ -7298,10 +7301,12 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
   const payload = publicBetaDiagnosticsReport(report, { includeCopyBoundary: true });
   fields.publicBetaDiagnostics.value = payload;
   const parsed = parseFieldTestReport(report);
+  const publicDiagnostics = parseFieldTestReport(payload);
   const desktopCompletion = desktopFirstCompletionStatus(report);
   const failureClass = fieldTestReportValue(publicDiagnosticsFailureClass(parsed, desktopCompletion), "none");
+  const recoveryNextAction = fieldTestReportValue(publicDiagnostics.recovery_next_action, "none");
   if (fields.publicBetaDiagnosticsSummary) {
-    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication app_launch_network=false`;
+    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication app_launch_network=false`;
   }
   return payload;
 }
@@ -8095,8 +8100,7 @@ function runtimeResumeRollbackRecoveryView(result, options = {}) {
   const rollbackSuspicion = result?.rollback_suspicion_detected === true;
   const resumeBlocked = result?.rollback_resume_blocked === true;
   const keyPolicy = result?.key_policy_status ?? "unknown";
-  const rollbackPrevention = result?.rollback_prevention_claimed === true;
-  const secureDelete = result?.secure_deletion_from_media_claimed === true;
+  const rollbackDetection = result?.rollback_detection_ready === true;
   return {
     state: "Resume blocked",
     warning: runtimeResumeRollbackBlockedMessage(result),
@@ -8104,15 +8108,15 @@ function runtimeResumeRollbackRecoveryView(result, options = {}) {
     lifecycle:
       `resume_blocked=${resumeBlocked} local_recovery=check-data-lifecycle ` +
       `rollback_suspicion=${rollbackSuspicion} rollback_marker=${result?.rollback_marker_present === true} ` +
-      `rollback_detection=${result?.rollback_detection_ready === true} rollback_prevention=${rollbackPrevention} ` +
-      `backup_recovery=false cloud_backup_sync=false secure_delete_claim=${secureDelete}`,
+      `rollback_detection=${rollbackDetection} rollback_prevention=false ` +
+      `backup_recovery=false cloud_backup_sync=false secure_delete_claim=false`,
     boundary:
       `local_only=true recovery=check-data-lifecycle source=${source} key_policy=${keyPolicy} ` +
       `rollback_suspicion=${rollbackSuspicion} resume_blocked=${resumeBlocked} ` +
       `passphrase_first=${result?.passphrase_first_unlock_required === true} ` +
       `os_keychain_fallback=false os_keystore_only_rejected=${result?.os_keystore_only_unlock_rejected === true} ` +
-      `backup_recovery=false cloud_backup_sync=false rollback_prevention=${rollbackPrevention} ` +
-      `secure_delete_claim=${secureDelete} security_ready=false passphrase_retained=${result?.passphrase_retained === true} ` +
+      `backup_recovery=false cloud_backup_sync=false rollback_detection=${rollbackDetection} ` +
+      `rollback_prevention=false secure_delete_claim=false security_ready=false passphrase_retained=${result?.passphrase_retained === true} ` +
       `key_material=${result?.key_material_exposed === true} network_io=${result?.network_io_attempted === true} ` +
       `transport_io=${result?.transport_io_opened === true} runtime=${result?.runtime_messaging_enabled === true}`,
   };
@@ -17605,7 +17609,7 @@ function renderProductionProductUnlockStatus(result) {
   );
   setText(
     fields.productionProfileBoundary,
-    `passphrase_first=${result?.passphrase_first === true} os_keystore_only_rejected=${result?.os_keystore_only_rejected === true} production_key_management_ready=${result?.production_key_management_ready === true} rollback_marker=${result?.rollback_marker_present === true} rollback_detection=${result?.rollback_detection_ready === true} rollback_blocked=${result?.rollback_resume_blocked === true} rollback_prevention=${result?.rollback_prevention_claimed === true} secure_delete_claim=${result?.secure_deletion_from_media_claimed === true} store_path_returned=${result?.store_path_returned === true} passphrase_retained=${result?.passphrase_retained === true} key_material=${result?.key_material_exposed === true} raw_error=${result?.raw_storage_error_exposed === true} runtime=${result?.runtime_messaging_enabled === true}`,
+    `passphrase_first=${result?.passphrase_first === true} os_keystore_only_rejected=${result?.os_keystore_only_rejected === true} production_key_management_ready=${result?.production_key_management_ready === true} rollback_marker=${result?.rollback_marker_present === true} rollback_detection=${result?.rollback_detection_ready === true} rollback_blocked=${result?.rollback_resume_blocked === true} rollback_prevention=false secure_delete_claim=false store_path_returned=${result?.store_path_returned === true} passphrase_retained=${result?.passphrase_retained === true} key_material=${result?.key_material_exposed === true} raw_error=${result?.raw_storage_error_exposed === true} runtime=${result?.runtime_messaging_enabled === true}`,
   );
   if (fields.lockProductionProfile) {
     fields.lockProductionProfile.disabled = !unlocked || productionBusyAction !== null;
@@ -17622,8 +17626,8 @@ function productionProductUnlockRecoveryView(result, options = {}) {
   const boundary =
     `local_only=true passphrase_first=${result?.passphrase_first === true} ` +
     `os_keychain_fallback=false os_keystore_only_rejected=${result?.os_keystore_only_rejected === true} ` +
-    `backup_recovery=false cloud_backup_sync=false rollback_prevention=${result?.rollback_prevention_claimed === true} ` +
-    `secure_delete_claim=${result?.secure_deletion_from_media_claimed === true} security_ready=false ` +
+    `backup_recovery=false cloud_backup_sync=false rollback_detection=${result?.rollback_detection_ready === true} ` +
+    `rollback_prevention=false secure_delete_claim=false security_ready=false ` +
     `passphrase_retained=${result?.passphrase_retained === true} key_material=${result?.key_material_exposed === true} raw_error=${result?.raw_storage_error_exposed === true}`;
 
   if (unlocked) {
@@ -17728,8 +17732,7 @@ function dataLifecycleBoundary(result) {
 
 function dataLifecycleActionView(result = {}, action = "status") {
   const destructiveAction = action === "profile-delete" || action === "full-local-wipe";
-  const rollbackPrevention = result?.rollback_prevention_claimed === true;
-  const secureDelete = result?.secure_deletion_from_media_claimed === true;
+  const rollbackDetection = result?.rollback_detection_ready === true;
   const rollbackSuspicion = result?.rollback_suspicion_detected === true;
   const summaryParts = [
     dataLifecycleSummary(result),
@@ -17739,8 +17742,9 @@ function dataLifecycleActionView(result = {}, action = "status") {
     `local_only=true`,
     `backup_recovery=false`,
     `cloud_backup_sync=false`,
-    `rollback_prevention=${rollbackPrevention}`,
-    `secure_delete_claim=${secureDelete}`,
+    `rollback_detection=${rollbackDetection}`,
+    `rollback_prevention=false`,
+    `secure_delete_claim=false`,
     `security_ready=false`,
   ];
   if (action === "profile-delete") {
@@ -17767,8 +17771,8 @@ function dataLifecycleActionView(result = {}, action = "status") {
     summary: summaryParts.join(" "),
     boundary:
       `${dataLifecycleBoundary(result)} action=${action} destructive_action=${destructiveAction} ` +
-      `redacted_result=true backup_recovery=false cloud_backup_sync=false rollback_prevention=${rollbackPrevention} ` +
-      `secure_delete_claim=${secureDelete} security_ready=false`,
+      `redacted_result=true backup_recovery=false cloud_backup_sync=false rollback_detection=${rollbackDetection} ` +
+      `rollback_prevention=false secure_delete_claim=false security_ready=false`,
     next,
   };
 }
