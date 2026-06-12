@@ -69,7 +69,7 @@ Current implementation evidence includes:
 - explicit no-public-user-safety-signoff and no-fabricated-review/peer-evidence
   boundary
 - local-copy public support diagnostics limited to app status, build identity,
-  broad failure class, recovery next action, and app-launch network boundary
+  broad failure class, recovery next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary
 - public issue and security intake policy that requires redacted diagnostics or
   minimal private-contact requests instead of raw sensitive material
 - private vulnerability reporting or a minimal public contact request for

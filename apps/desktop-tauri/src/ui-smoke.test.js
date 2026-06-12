@@ -1518,6 +1518,9 @@ test("single-machine local rehearsal is scoped apart from external field evidenc
   assert.match(indexHtml, /data-i18n="localRehearsalHint"/);
   assert.match(i18nJs, /Single-machine dual-profile rehearsal only/);
   assert.match(i18nJs, /외부 onion delivery evidence가 아닙니다/);
+  assert.match(i18nJs, /this public beta does not collect, require, or claim external delivery evidence/);
+  assert.doesNotMatch(i18nJs, /external delivery evidence must come from real peer reports/);
+  assert.doesNotMatch(i18nJs, /실제 peer report에서만/);
 
   assert.match(mainJs, /localRehearsalChecklist: document\.querySelector\("#local-rehearsal-checklist"\)/);
   assert.match(mainJs, /localRehearsalNextAction: document\.querySelector\("#local-rehearsal-next-action"\)/);

@@ -145,7 +145,7 @@ const dictionaries = {
     localRehearsalNextRetryDelivery: "Next: retry the saved outbound message from this room.",
     localRehearsalNextInspectDiagnostics: "Next: inspect the local diagnostic blocker before retrying.",
     localRehearsalNextExternalEvidenceIgnored:
-      "Next: treat this as local rehearsal only; external delivery evidence must come from real peer reports.",
+      "Next: treat this as local rehearsal only; this public beta does not collect, require, or claim external delivery evidence.",
     localRehearsalNextRepeatOrReset: "Next: repeat the rehearsal from a saved room, or reset local data and run it again.",
     localRehearsalNextContinue: "Next: continue the local rehearsal from the visible room action.",
     refreshFieldTestReport: "Refresh report",
@@ -154,7 +154,7 @@ const dictionaries = {
     fieldTestReportCopyFallback: "Could not copy automatically. The report is selected; copy it manually.",
     publicBetaDiagnostics: "Public support diagnostics",
     publicBetaDiagnosticsHint:
-      "Support-safe status, build, broad failure class, and next action only. No crash upload, telemetry, raw log export, workflow state, codes, endpoints, messages, profiles, paths, passphrases, or key material.",
+      "Support-safe status, build, broad failure class, next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary only. No crash upload, telemetry, raw log export, workflow state, codes, endpoints, messages, profiles, paths, passphrases, or key material.",
     refreshPublicBetaDiagnostics: "Refresh diagnostics",
     copyPublicBetaDiagnostics: "Copy diagnostics",
     publicBetaDiagnosticsCopied: "Public support diagnostics copied.",
@@ -1231,7 +1231,7 @@ const dictionaries = {
     localRehearsalNextRetryDelivery: "다음: 이 방에서 저장된 outbound 메시지를 다시 시도하세요.",
     localRehearsalNextInspectDiagnostics: "다음: 재시도 전에 로컬 diagnostic blocker를 확인하세요.",
     localRehearsalNextExternalEvidenceIgnored:
-      "다음: 이것은 로컬 리허설로만 취급하세요. 외부 전송 evidence는 실제 peer report에서만 와야 합니다.",
+      "다음: 이것은 로컬 리허설로만 취급하세요. 이 public beta는 외부 전송 evidence를 수집하거나 요구하거나 주장하지 않습니다.",
     localRehearsalNextRepeatOrReset: "다음: 저장된 방에서 리허설을 반복하거나 로컬 데이터를 초기화하고 다시 실행하세요.",
     localRehearsalNextContinue: "다음: 화면에 보이는 방 action에서 로컬 리허설을 계속하세요.",
     refreshFieldTestReport: "리포트 새로고침",
@@ -1240,7 +1240,7 @@ const dictionaries = {
     fieldTestReportCopyFallback: "자동 복사에 실패했습니다. 리포트를 선택해 두었으니 직접 복사하세요.",
     publicBetaDiagnostics: "공개 지원용 진단 정보",
     publicBetaDiagnosticsHint:
-      "지원에 필요한 상태, 빌드, 넓은 실패 분류, 다음 액션만 포함합니다. crash upload, telemetry, raw log export, 작업 흐름 상태, 코드, endpoint, 메시지, 프로필명, 경로, passphrase, key material은 제외합니다.",
+      "지원에 필요한 상태, 빌드, 넓은 실패 분류, 다음 액션, desktop local-private-flow acceptance status/blockers/non-claims, app-launch network boundary만 포함합니다. crash upload, telemetry, raw log export, 작업 흐름 상태, 코드, endpoint, 메시지, 프로필명, 경로, passphrase, key material은 제외합니다.",
     refreshPublicBetaDiagnostics: "진단 정보 새로고침",
     copyPublicBetaDiagnostics: "진단 정보 복사",
     publicBetaDiagnosticsCopied: "공개 지원용 진단 정보를 복사했습니다.",

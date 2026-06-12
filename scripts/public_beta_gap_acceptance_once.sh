@@ -19,6 +19,15 @@ require_text() {
   fi
 }
 
+reject_text() {
+  local file="$1"
+  local text="$2"
+  if grep -Fq "$text" "$file"; then
+    echo "FAIL forbidden public beta text in $file: $text" >&2
+    exit 1
+  fi
+}
+
 PUBLIC_CLAIM_FILES=(
   "$ROOT_DIR/README.md"
   "$ROOT_DIR/SECURITY.md"
@@ -51,8 +60,16 @@ require_text "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "External onion delive
 require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "External onion delivery is outside the v0.1 public product claim"
 require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "No peer report is"
 require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "Release body"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "status-build-failure-class-recovery-action-desktop-acceptance-only"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "desktop local-private-flow acceptance status/blockers/non-claims"
+require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only"
+require_text "$ROOT_DIR/apps/desktop-tauri/src/i18n.js" "desktop local-private-flow acceptance status/blockers/non-claims"
+require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "desktop local-private-flow acceptance status/blockers/non-claims"
+reject_text "$ROOT_DIR/apps/desktop-tauri/README.md" "manual network permission state"
+reject_text "$ROOT_DIR/apps/desktop-tauri/src/i18n.js" "external delivery evidence must come from real peer reports"
+reject_text "$ROOT_DIR/apps/desktop-tauri/src/i18n.js" "실제 peer report에서만"
 
 echo "status=public-beta-external-delivery-nonclaim-accepted"
 echo "external_delivery_claim=false"
-echo "final_security_ready_acceptance=out_of_v0_1_scope"
+echo "security_ready_claim=false"
 echo "next=prepare or upload unsigned public beta artifacts without claiming external onion delivery"

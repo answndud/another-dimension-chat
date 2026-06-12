@@ -220,7 +220,7 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "private_reporting_boundary": "private-vulnerability-reporting-or-minimal-public-contact-request",
   "minimal_public_contact_request_allowed": true,
   "fabricated_review_or_peer_evidence_allowed": false,
-  "public_diagnostics_boundary": "status-build-failure-class-recovery-action-only",
+  "public_diagnostics_boundary": "status-build-failure-class-recovery-action-desktop-acceptance-only",
   "public_intake_boundary": "redacted-public-diagnostics-or-minimal-contact-request-only",
   "repository_governance_boundary": "main-maintainer-unsigned-beta-non-claim-redaction-guardrails",
   "privacy_model_target": "no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server",
@@ -348,7 +348,7 @@ This folder is for a GitHub Release upload.
 - Private reporting boundary: private-vulnerability-reporting-or-minimal-public-contact-request
 - Minimal public contact request allowed: true
 - Fabricated review or peer evidence allowed: false
-- Public diagnostics boundary: status-build-failure-class-recovery-action-only
+- Public diagnostics boundary: status-build-failure-class-recovery-action-desktop-acceptance-only
 - Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only
 - Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails
 - Privacy model target: no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server
@@ -408,13 +408,14 @@ Briar/Cwtch-equivalent, audited E2EE-ready, repeatedly verified on external
 onion delivery, offline-mesh capable, independently reviewed, or security-ready.
 
 Public support diagnostics are local-copy only and limited to app status, build
-identity, broad failure class, recovery next action, and app-launch network
-boundary. No workflow-state export, crash upload, telemetry, raw log export,
-crash dump export, automated log collection, support bundle export, raw
-diagnostic file export, bridge line, onion endpoint, invite code, pairing
-payload, envelope payload, safety phrase, profile name, message text, local
-path, passphrase, private key, key material, screenshot of private room data, or
-private planning note is permitted in public diagnostics or release artifacts.
+identity, broad failure class, recovery next action, desktop local-private-flow
+acceptance status/blockers/non-claims, and app-launch network boundary. No
+workflow-state export, crash upload, telemetry, raw log export, crash dump
+export, automated log collection, support bundle export, raw diagnostic file
+export, bridge line, onion endpoint, invite code, pairing payload, envelope
+payload, safety phrase, profile name, message text, local path, passphrase,
+private key, key material, screenshot of private room data, or private planning
+note is permitted in public diagnostics or release artifacts.
 
 Public GitHub issues and release comments must use the same redaction boundary.
 Security reports with exploit details or sensitive material must use private
@@ -465,7 +466,7 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_safe_review_commands_r
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"private_reporting_boundary\": \"private-vulnerability-reporting-or-minimal-public-contact-request\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"minimal_public_contact_request_allowed\": true"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"fabricated_review_or_peer_evidence_allowed\": false"
-require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_diagnostics_boundary\": \"status-build-failure-class-recovery-action-only\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_diagnostics_boundary\": \"status-build-failure-class-recovery-action-desktop-acceptance-only\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"public_intake_boundary\": \"redacted-public-diagnostics-or-minimal-contact-request-only\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"repository_governance_boundary\": \"main-maintainer-unsigned-beta-non-claim-redaction-guardrails\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"privacy_model_target\": \"no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server\""
@@ -511,7 +512,8 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Public-safe review commands required: t
 require_text "$RELEASE_DIR/MANIFEST.md" "Private reporting boundary: private-vulnerability-reporting-or-minimal-public-contact-request"
 require_text "$RELEASE_DIR/MANIFEST.md" "Minimal public contact request allowed: true"
 require_text "$RELEASE_DIR/MANIFEST.md" "Fabricated review or peer evidence allowed: false"
-require_text "$RELEASE_DIR/MANIFEST.md" "Public diagnostics boundary: status-build-failure-class-recovery-action-only"
+require_text "$RELEASE_DIR/MANIFEST.md" "Public diagnostics boundary: status-build-failure-class-recovery-action-desktop-acceptance-only"
+require_text "$RELEASE_DIR/MANIFEST.md" "desktop local-private-flow acceptance status/blockers/non-claims"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public intake boundary: redacted-public-diagnostics-or-minimal-contact-request-only"
 require_text "$RELEASE_DIR/MANIFEST.md" "Repository governance boundary: main-maintainer-unsigned-beta-non-claim-redaction-guardrails"
 require_text "$RELEASE_DIR/MANIFEST.md" "Dependency lockfile evidence count: $dependency_lockfile_evidence_count"
