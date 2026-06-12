@@ -2067,6 +2067,12 @@ test("private delivery stays explicit before network work starts", () => {
   assert.doesNotMatch(functionBody(mainJs, "enablePrivateDeliveryPermission"), /production_onion_service_launch_attempt/);
   const intentBody = functionBody(mainJs, "twoProfileComposerPrimaryIntent");
   assert.ok(intentBody.indexOf("if (input.message)") < intentBody.indexOf("if (!manualNetworkPermission)"));
+  const messageBody = functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip");
+  assert.match(messageBody, /Manual envelope save running/);
+  assert.match(messageBody, /default path is local manual envelope exchange and starts no network send/);
+  assert.match(messageBody, /default_transport_path=local-manual-encrypted-envelope-exchange network_io=false automatic_delivery=false/);
+  assert.match(messageBody, /default_transport_network_io=false high_risk_onion_path=explicit-user-triggered-fail-closed external_delivery_claim=false/);
+  assert.doesNotMatch(messageBody, /production_onion_outbound_envelope_send_attempt|production_two_profile_real_onion_roundtrip/);
   assert.match(functionBody(mainJs, "ensurePrivateDeliveryRuntimeReady"), /production_onion_persistent_client_start/);
 });
 
@@ -2173,6 +2179,9 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /payload_next_action_match=\$\{payloadNextActionMatchesSummary\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /raw_state_excluded=\$\{rawStateExcluded\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /local_manual_e2ee_runtime_boundary=\$\{localManualE2eeBoundary\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /default_transport_path=\$\{defaultTransportPath\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /default_transport_network_io=\$\{defaultTransportNetworkIo\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_onion_path=explicit-user-triggered-fail-closed/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /production_e2ee_ready=\$\{productionE2eeReady\}/);
   assert.doesNotMatch(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public diagnostics ready failure_class=/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_completion=\$\{desktopCompletion\.status\}/);
