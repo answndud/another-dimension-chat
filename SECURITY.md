@@ -205,7 +205,7 @@ scripts/public_release_readiness_preflight.sh
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-Run the source-only preflight before staging artifacts; it includes the desktop public beta source freeze candidate gate, does not require a DMG, does not rebuild a DMG, does not upload, and does not generate release files. The packaging decision is `proceed-to-packaging-only-with-frozen-ignored-dmg`; if the source preflight fails, return to desktop hardening instead of staging artifacts.
+Run the source-only preflight before staging artifacts; it includes the desktop public beta source freeze candidate gate, does not require a DMG, does not rebuild a DMG, does not upload, and does not generate release files. The packaging decision is `proceed-to-packaging-only-with-frozen-ignored-dmg`, but packaging/upload remains held unless the current task explicitly requests release packaging/upload; if the source preflight fails, return to desktop hardening instead of staging artifacts.
 
 The generated public release folder is `apps/desktop-tauri/public-release/unsigned-public-beta/`. It is ignored and should contain only the DMG, matching `.sha256`, public provenance JSON, `INSTALL_UNSIGNED_MACOS.md`, `RELEASE_NOTES.md`, `GITHUB_RELEASE_BODY.md`, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, `DEPENDENCY_INVENTORY.md`, `PUBLIC_THREAT_MODEL.md`, `PRIVACY_MODEL_COMPARISON.md`, `INDEPENDENT_REVIEW_PACKET.md`, `PUBLIC_INTAKE_POLICY.md`, `REPOSITORY_GOVERNANCE.md`, `COMPONENT_BOUNDARIES.md`, `DEPENDENCY_LOCKFILES.sha256`, `OPERATOR_FINAL_HANDOFF.md`, and `MANIFEST.md`.
 

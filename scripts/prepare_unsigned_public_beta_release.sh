@@ -129,7 +129,8 @@ check_artifact_boundary() {
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "COMPONENT_BOUNDARIES.md"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "release output must stay under ignored apps/desktop-tauri/public-release/"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" 'manifest=$RELEASE_DIR/MANIFEST.md'
-  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next=upload all and only generated files listed in MANIFEST.md from release_dir"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_request_gate=explicit-user-request-required-before-packaging-upload"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next=hold unless explicit release upload was requested; upload all and only generated files listed in MANIFEST.md from release_dir"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_release_body=use GITHUB_RELEASE_BODY.md exactly"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"same_release_asset_set_authority_required\": true"
@@ -565,6 +566,8 @@ for sensitive communication.
 - Upload decision: proceed only after the source preflight prints
   \`source_acceptance=desktop-release-source-accepted-for-operator-staging\`
   and the generated upload set prints \`status=unsigned-public-beta-release-ready\`.
+- Explicit operator request gate: do not package, upload, or announce unless the
+  user explicitly requested release packaging/upload in the current task.
 - Hold decision: do not upload, do not announce, and return to desktop hardening
   if either required status is missing, if the generated files differ from
   \`MANIFEST.md\`, or if the post-upload checksum/body/asset checks fail.
@@ -900,13 +903,14 @@ echo "manifest=$RELEASE_DIR/MANIFEST.md"
 echo "operator_final_handoff=$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md"
 echo "dmg_sha256=$EXPECTED_DMG_SHA"
 echo "source_provenance_sha256=$source_provenance_sha"
-echo "next=upload all and only generated files listed in MANIFEST.md from release_dir; use GITHUB_RELEASE_BODY.md as the release body"
+echo "operator_request_gate=explicit-user-request-required-before-packaging-upload"
+echo "next=hold unless explicit release upload was requested; upload all and only generated files listed in MANIFEST.md from release_dir; use GITHUB_RELEASE_BODY.md as the release body"
 echo "operator_upload_allowlist=MANIFEST.md"
 echo "operator_release_body=use GITHUB_RELEASE_BODY.md exactly"
 echo "operator_verify=downloaded users must verify ${RELEASE_DMG}.sha256 before opening"
 echo "operator_update_authority=same-release-assets-only-no-auto-update-manifest-signing-notarization-store-branch-source-archive"
 echo "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
 echo "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
-echo "operator_handoff_wrapup=upload-only-after-source-and-staging-statuses-otherwise-hold-and-return-to-desktop-hardening"
+echo "operator_handoff_wrapup=upload-only-after-explicit-user-request-source-and-staging-statuses-otherwise-hold-and-return-to-desktop-hardening"
 echo "next_development_axis=desktop-post-release-hardening-or-non-release-product-work"
 echo "status=unsigned-public-beta-release-ready"

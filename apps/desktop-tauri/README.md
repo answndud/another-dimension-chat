@@ -155,7 +155,7 @@ scripts/public_release_readiness_preflight.sh
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-Run the source-only preflight from the repository root before staging artifacts; it does not require a DMG and does not generate release files. Treat `decision=proceed-to-packaging-only-with-frozen-ignored-dmg` as the packaging go signal, and return to desktop hardening if the source preflight fails. Then run the release staging command after the frozen local DMG and provenance JSON exist in `apps/desktop-tauri/beta-artifacts/`. It writes the ignored upload set to `apps/desktop-tauri/public-release/unsigned-public-beta/`; upload only the files listed in the generated `MANIFEST.md`.
+Run the source-only preflight from the repository root before staging artifacts; it does not require a DMG and does not generate release files. Treat `decision=proceed-to-packaging-only-with-frozen-ignored-dmg` as the packaging go signal only when the current task explicitly requests release packaging/upload, and return to desktop hardening if the source preflight fails or no explicit request exists. Then run the release staging command after the frozen local DMG and provenance JSON exist in `apps/desktop-tauri/beta-artifacts/`. It writes the ignored upload set to `apps/desktop-tauri/public-release/unsigned-public-beta/`; upload only the files listed in the generated `MANIFEST.md`.
 
 Desktop public beta source freeze candidate: this is a source-only candidate,
 with no DMG rebuild, no upload, and no generated release artifact commit. Final
