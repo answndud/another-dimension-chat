@@ -19489,6 +19489,13 @@ async function exportProductionReceivedMessage() {
   const { profile, passphrase, messageNumber } = input;
   const twoProfileRefreshInput = productionTwoProfileInput();
   let postBusyFocus = null;
+  const selectedBlocker = selectedManualMessageActionBlocker("show plaintext", input);
+  if (selectedBlocker) {
+    setProductionMessageState("Received export blocked");
+    setText(fields.productionMessageWarning, selectedBlocker);
+    applyProductionActionState();
+    return;
+  }
   if (!profile || !passphrase || !Number.isInteger(messageNumber) || messageNumber < 1) {
     setProductionMessageState("Received export needs input");
     setText(fields.productionMessageWarning, "Enter profile, passphrase, and message number.");
