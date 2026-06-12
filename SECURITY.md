@@ -54,6 +54,11 @@ message text, local paths, raw logs, crash dumps, screenshots of private room
 data, passphrases, private keys, key material, private planning notes, files
 from `docs/`, or local app data.
 
+Public support diagnostics may include desktop local-private-flow acceptance
+status, blockers, recovery next action, and explicit non-claims. This is not
+external onion delivery evidence, not a production-ready claim, not audited
+status, and not permission for sensitive communication.
+
 ## Non-Claims
 
 This project does not currently claim:

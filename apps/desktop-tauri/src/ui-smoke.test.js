@@ -80,6 +80,14 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(indexHtml, /data-i18n="publicBetaNoUpdateBody"/);
   assert.match(i18nJs, /same GitHub Release/);
   assert.match(i18nJs, /Privacy & Security manual allow/);
+  assert.match(i18nJs, /unsigned experimental public beta/);
+  assert.match(i18nJs, /not audited/);
+  assert.match(i18nJs, /not production-ready/);
+  assert.match(i18nJs, /sensitive communication prohibited/);
+  assert.match(i18nJs, /external onion delivery claim/);
+  assert.match(i18nJs, /Ready for local beta messages/);
+  assert.match(i18nJs, /Verified local beta room\. Manual message actions are available\./);
+  assert.match(i18nJs, /Explicit local\/manual messaging path available/);
   assert.match(i18nJs, /nothing starts on app launch/);
   assert.match(i18nJs, /앱 실행 시 자동 시작되지 않습니다/);
   assert.match(stylesCss, /\.public-beta-gate/);
@@ -1810,6 +1818,10 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(mainJs, /function desktopFirstCompletionStatus\(report\)/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_completion=\$\{desktopCompletion\.status\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_blockers=\$\{desktopCompletion\.blockerSummary\}/);
+  assert.match(
+    functionBody(mainJs, "refreshPublicBetaDiagnostics"),
+    /release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited/,
+  );
   assert.match(
     functionBody(mainJs, "refreshPublicBetaDiagnostics"),
     /non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication/,
