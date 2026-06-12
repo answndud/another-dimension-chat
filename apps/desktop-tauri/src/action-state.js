@@ -1164,7 +1164,7 @@ export function productionActionAvailability(state) {
       !busy && hasMessageRetentionPolicy && selectedMessageInputMatches && hasOutboundMessageInput,
     importMessageEnvelope:
       !busy && hasMessageRetentionPolicy && selectedMessageInputMatches && hasInboundEnvelopeInput,
-    exportReceivedMessage: !busy && hasReceivedExportInput,
+    exportReceivedMessage: !busy && selectedMessageInputMatches && hasReceivedExportInput,
     runTwoProfileRoundtrip:
       !busy && hasMessageRetentionPolicy && hasTwoProfileSetupInput && !hasTwoProfileSessionsReady,
     runTwoProfileMessageRoundtrip:
@@ -2265,6 +2265,8 @@ export function productionManualMessageCheckView(state) {
     check = "Manual check: selected message and manual number/body differ; reselect the row before export or import.";
   } else if (state?.hasTwoProfileReplyDraftInput) {
     check = "Manual check: reply draft is ready; send the stored-session reply.";
+  } else if (state?.hasImportedMessage && !state?.hasReceivedMessage) {
+    check = "Manual check: imported envelope is decrypted; click Show plaintext before writing the reply.";
   } else if (state?.hasTwoProfileReplySelected) {
     check = "Manual check: reply target is selected; write the reply or show plaintext for local review.";
   } else if (state?.hasInboundEnvelopeInput && !state?.hasRemoteMessageEnvelopeSlot) {
