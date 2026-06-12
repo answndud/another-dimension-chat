@@ -3009,12 +3009,13 @@ function renderRoomSetupProgress(input = productionTwoProfileInput(), sessionsRe
 
 function renderTwoProfileSafetyConfirm(input = productionTwoProfileInput(), sessionsReady = twoProfileSessionsReadyForInput(input)) {
   const safety = twoProfileSafetyForInput(input);
-  const confirmed = sessionsReady && twoProfileSafetyConfirmedForInput(input);
+  const safetyLoaded = Boolean(safety?.safetyPhrase || safety?.safetyNumber);
+  const confirmed = sessionsReady && safetyLoaded && twoProfileSafetyConfirmedForInput(input);
   document.body.classList.toggle("has-confirmed-safety", confirmed);
-  document.body.classList.toggle("needs-safety-confirmation", sessionsReady && !confirmed);
+  document.body.classList.toggle("needs-safety-confirmation", sessionsReady && safetyLoaded && !confirmed);
   const phrase = safety?.safetyPhrase || safety?.safetyNumber || "";
   setText(fields.twoProfileSafetyPhrase, phrase || t("verificationPhraseUnavailable"));
-  setDisabled(fields.confirmTwoProfileSafety, !sessionsReady || confirmed);
+  setDisabled(fields.confirmTwoProfileSafety, !sessionsReady || !safetyLoaded || confirmed);
 }
 
 function renderAppStateSummary(status) {
@@ -3678,6 +3679,44 @@ function clearSavedInviteRoomRuntimeState(room) {
   clearSavedInviteRoomRetryableOutbound(room);
   clearSavedInviteRoomManualRebuildMetadata(room);
   return true;
+}
+
+function clearSavedInviteRoomConversationMetadata(room) {
+  const code = String(room?.code ?? "").trim();
+  const role = room?.role === "inviter" ? "inviter" : room?.role === "joiner" ? "joiner" : "";
+  if (!code || !role) {
+    return false;
+  }
+  rememberInviteRoom(
+    code,
+    role,
+    {
+      lastMessagePreview: "",
+      lastMessageAt: 0,
+      messageCount: 0,
+      retryableOutboundCount: 0,
+      retryableOutboundMessageNumber: 0,
+      retryableOutboundMessage: "",
+      retryableOutboundAction: "",
+      updatedAt: Number(room.updatedAt ?? 0),
+    },
+    { render: false },
+  );
+  clearMessageEnvelopeSlotsForRoomFingerprint(privateRouteRoomKey(savedInviteRoomInput(room)));
+  return true;
+}
+
+function clearSavedInviteRoomConversationMetadataForProfile(profile) {
+  let cleared = 0;
+  for (const room of savedInviteRooms()) {
+    if (savedInviteRoomReferencesProfile(room, profile) && clearSavedInviteRoomConversationMetadata(room)) {
+      cleared += 1;
+    }
+  }
+  if (cleared > 0) {
+    renderSavedInviteRooms();
+  }
+  return cleared;
 }
 
 function clearSavedInviteRoomRuntimeStateForProfile(profile) {
@@ -7498,12 +7537,15 @@ async function finishInviteRoomReadyFromStatus(input, status, warningText) {
   renderRoomStatusSummary(roomInput, status.both_ready_for_message_envelope);
   updateMinimalChatMode(input, status.both_ready_for_message_envelope);
   renderSavedInviteRooms();
-  await loadProductionTwoProfileTranscript({
+  const transcriptLoaded = await loadProductionTwoProfileTranscript({
     quiet: true,
     refreshSessionStatus: false,
     sessionStatus: status,
     input,
   });
+  if (!transcriptLoaded || !twoProfileTranscriptInputStillCurrent(input)) {
+    return false;
+  }
   const recoveryNoticeShown = showSavedInviteRoomRecoveryAfterOpen(roomInput);
   const rebuildNoticeShown = renderManualInviteRoomRebuildFlow("room-ready");
   if (rebuildNoticeShown) {
@@ -8260,7 +8302,7 @@ function twoProfileSafetyConfirmedForInput(input = productionTwoProfileInput()) 
 
 function confirmTwoProfileSafetyForInput(input = productionTwoProfileInput()) {
   const key = twoProfileSafetyStorageKey(input);
-  if (!key) {
+  if (!key || !twoProfileSafetyForInput(input)) {
     return false;
   }
   return localStoreSet(key, "confirmed");
@@ -10463,6 +10505,22 @@ function clearProductionPayloadSlotsForRoomFingerprint(roomFingerprint) {
         slots.delete(key);
         cleared += 1;
       }
+    }
+  }
+  return cleared;
+}
+
+function clearMessageEnvelopeSlotsForRoomFingerprint(roomFingerprint) {
+  const fingerprint = String(roomFingerprint ?? "").trim();
+  if (!fingerprint) {
+    return 0;
+  }
+  let cleared = 0;
+  for (const [key, slot] of productionPayloadSlots.messageEnvelope.entries()) {
+    if (String(slot?.roomFingerprint ?? "").trim() === fingerprint) {
+      clearMessageEnvelopeFieldsForPayload(messageEnvelopeSlotPayload(slot));
+      productionPayloadSlots.messageEnvelope.delete(key);
+      cleared += 1;
     }
   }
   return cleared;
@@ -16467,6 +16525,23 @@ async function startProductionTwoProfileOnionReceive(options = {}) {
     applyProductionActionState();
     return;
   }
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    rememberReceiveIntentForRoom(input, false);
+    rememberLocalPrivateRouteLifecycle(input, {
+      state: "stopped",
+      endpoint: currentActiveLocalPrivateRouteCode(input) ||
+        routeMapValueForRoom(localPrivateRouteCodesByRoom, input, localPrivateRouteCodesStorageKey),
+      generation: productionTwoProfileOnionReceiveMode.generation,
+    });
+    try {
+      await invoke("production_onion_receive_loop_stop");
+    } catch {
+      // Best-effort stop for a backend loop that completed after the user switched rooms.
+    }
+    renderSavedInviteRooms();
+    applyProductionActionState();
+    return;
+  }
   if (backendLoop.duplicate_loop_blocked || !backendLoop.enabled) {
     setProductionTwoProfileState("Message listening already running");
     setText(fields.productionTwoProfileWarning, t("receiveAlreadyListening"));
@@ -19474,6 +19549,7 @@ async function deleteProductionConversation() {
     if (!productionProfileInputStillCurrent(input)) {
       return;
     }
+    const savedRoomsCleared = clearSavedInviteRoomConversationMetadataForProfile(profile);
     resetProductionMessageTranscript();
     resetProductionMessageImportState();
     if (fields.productionMessageEnvelope) {
@@ -19487,7 +19563,7 @@ async function deleteProductionConversation() {
     );
     setText(
       fields.productionMessageInbound,
-      `received_deleted=${result.received_messages_deleted} total_records=${result.conversation_records_deleted} session_preserved=${result.session_records_preserved}`,
+      `received_deleted=${result.received_messages_deleted} total_records=${result.conversation_records_deleted} session_preserved=${result.session_records_preserved} saved_rooms_cleared=${savedRoomsCleared}`,
     );
     setText(fields.productionMessageBoundary, productionLocalLifecycleBoundaryView(result));
     await checkProductionSessionState(input);
