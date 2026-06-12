@@ -16,11 +16,26 @@ The scaffold provides:
 
 - Minimal Xcode project marker and SwiftUI app source layout.
 - A Swift `SharedCoreMobileApi` protocol mirroring the Phase HO API groups.
-- A placeholder `IOSSharedCoreBoundary` that returns redacted, blocked status
-  until a real shared Rust binding phase exists.
-- A passphrase-first SwiftUI shell with invite, manual envelope, and diagnostics
-  controls routed through the shared-core boundary protocol.
+- An `IOSSharedCoreBoundary` that delegates read-only status calls and blocked
+  command calls to source-boundary adapters until a real shared Rust binding
+  phase exists.
+- A source-only read-only status adapter for
+  `status_and_redacted_diagnostics_read_only_adapter`.
+- A blocked command adapter for unlock, invite, pairing, safety transcript,
+  manual envelope, message transcript, and local data lifecycle surfaces.
+- A passphrase-first SwiftUI shell with invite, manual envelope, diagnostics
+  copy, lifecycle confirmation, and no-network launch boundary controls routed
+  through the shared-core boundary protocol.
 - Empty iCloud entitlement arrays to keep iCloud backup not claimed.
+
+Operator handoff check:
+
+- run `scripts/verify_mobile_source_handoff.sh` from the repository root
+- this is source-boundary verification only
+- current controls include diagnostics copy, lifecycle confirmation, and
+  no-network launch boundary
+- it does not build IPA artifacts, generate FFI bindings, start runtime
+  messaging, request local network usage, configure APNs, or claim iOS readiness
 
 The scaffold must not define independent protocol, storage, transport, pairing,
 contact discovery, background fetch delivery, APNs delivery, Apple account
