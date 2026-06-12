@@ -48,7 +48,7 @@ Do not use it for real communication.
 
 The current implementation has a local Tauri desktop beta candidate for two-profile invite rooms, local encrypted profile/session/message stores, explicit user-mediated private-delivery setup, restart/resume recovery, and fail-closed onion/Tor attempt paths. It still exists to test protocol, storage, transport, and UI recovery boundaries before any production security claim.
 
-The current internal field-test handoff record, if the ignored local artifact directory is present, is:
+The current internal field-test handoff record, if the ignored local artifact directory is present, is separate from the public release packaging input:
 
 - Transfer bundle: `apps/desktop-tauri/beta-artifacts/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-field-test-handoff.zip`
 - Transfer bundle SHA-256: `f231dcc3a95b63d5d32b6b36cb503443a46547fa1dcbb44d58f772be831d0907`
@@ -57,7 +57,7 @@ The current internal field-test handoff record, if the ignored local artifact di
 
 This handoff is not a public release, not signed or notarized, not audited, and not suitable for sensitive communication. The ignored `beta-artifacts/` directory is local-only and must not be committed.
 
-The current unsigned public beta release path repackages the local DMG into a GitHub Release upload set. It is still an unsigned experimental public beta, not notarized, not audited, not production-ready, and sensitive communication prohibited. External onion delivery is outside the v0.1 public product claim; same-machine dual-profile rehearsal is development evidence only. No peer report is expected or required for this v0.1 claim, and no external delivery claim is made. The public review packet is included as reviewer input, and the independent-review gap remains explicit.
+The current unsigned public beta release path repackages only the pinned public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`: build channel `beta-onion`, commit `e8954df9`, and SHA-256 `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`. It is still an unsigned experimental public beta, not notarized, not audited, not production-ready, and sensitive communication prohibited. External onion delivery is outside the v0.1 public product claim; same-machine dual-profile rehearsal is development evidence only. No peer report is expected or required for this v0.1 claim, and no external delivery claim is made. The public review packet is included as reviewer input, and the independent-review gap remains explicit.
 
 Published unsigned public beta:
 
@@ -105,7 +105,7 @@ scripts/public_release_readiness_preflight.sh
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-The first command is the source-only release readiness preflight. It does not require a DMG and does not generate release artifacts. The release command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, records the same-GitHub-Release-assets authority, rejects branch/source archive release authority for DMG verification, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, dependency lockfile hash evidence, public threat model, privacy model comparison, independent review packet, public intake policy, repository governance guardrails, component boundary map, explicit review-gap evidence, private-reporting boundary, and fabricated-review/peer-evidence-forbidden evidence are missing. The dependency evidence is exactly three lockfiles: `Cargo.lock`, `apps/desktop-tauri/src-tauri/Cargo.lock`, and `apps/desktop-tauri/package-lock.json`; it is not a live dependency scan, vulnerability triage signoff, SBOM, audit, or reproducible-build proof. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
+The first command is the source-only release readiness preflight. It does not require a DMG and does not generate release artifacts. Its packaging decision is `proceed-to-packaging-only-with-frozen-ignored-dmg`; if the source preflight fails, the fallback is `return-to-desktop-hardening-if-source-preflight-fails`. The release command writes to `apps/desktop-tauri/public-release/unsigned-public-beta/`, which is ignored and must not be committed. It regenerates public provenance for the public DMG file name, records the source provenance SHA-256, records the same-GitHub-Release-assets authority, rejects branch/source archive release authority for DMG verification, and fails if the expected checksum, GitHub Release body non-claims, update-integrity note, supply-chain baseline, dependency inventory, dependency lockfile hash evidence, public threat model, privacy model comparison, independent review packet, public intake policy, repository governance guardrails, component boundary map, explicit review-gap evidence, private-reporting boundary, and fabricated-review/peer-evidence-forbidden evidence are missing. The dependency evidence is exactly three lockfiles: `Cargo.lock`, `apps/desktop-tauri/src-tauri/Cargo.lock`, and `apps/desktop-tauri/package-lock.json`; it is not a live dependency scan, vulnerability triage signoff, SBOM, audit, or reproducible-build proof. Public users must verify the `.sha256` file before using the normal macOS Privacy & Security manual allow path. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
 Future public Windows, Android, and iOS artifacts must follow the same manual
 GitHub Release integrity model: matching checksum, public provenance, manifest,
@@ -319,11 +319,13 @@ This runs:
 - Tauri prototype status separates the still-disabled CLI production unlock from the desktop product unlock command, which opens storage only after explicit user passphrase input. Manual local runtime messaging is limited to explicit envelope export/import flows and still does not claim network send/receive, external onion delivery, audited E2EE readiness, or secure production messaging.
 - Tauri scaffold static checks.
 
-For a heavier pre-release, audit, or risky cross-cutting change pass, run:
+For a heavier local engineering pass before risky cross-cutting changes, run:
 
 ```bash
 scripts/verify_full.sh
 ```
+
+This is not a packaging readiness, audit readiness, or release go signal. Public release staging still requires `scripts/public_release_readiness_preflight.sh` and the pinned frozen DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`.
 
 This additionally runs:
 
@@ -362,7 +364,7 @@ scripts/public_release_readiness_preflight.sh
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-Run the source-only preflight before staging artifacts; it does not require a DMG and does not generate release files. Upload only the generated public release files from `apps/desktop-tauri/public-release/unsigned-public-beta/`. Use `GITHUB_RELEASE_BODY.md` as the GitHub Release body. The public release body, notes, install guide, manifest, provenance, privacy model comparison, and component boundary map must keep the unsigned experimental beta warning, sensitive communication prohibition, not audited status, not production-ready status, external two-machine onion delivery non-claim, Briar/Cwtch-equivalent non-claim, backup/migration non-claims, and public support diagnostics redaction boundary. Users must treat every update as a fresh manual download and verify the matching `.sha256` file.
+Run the source-only preflight before staging artifacts; it does not require a DMG and does not generate release files. Treat `decision=proceed-to-packaging-only-with-frozen-ignored-dmg` as the only packaging go signal, and return to desktop hardening if that preflight fails. Upload only the generated public release files from `apps/desktop-tauri/public-release/unsigned-public-beta/`. Use `GITHUB_RELEASE_BODY.md` as the GitHub Release body. The public release body, notes, install guide, manifest, provenance, privacy model comparison, and component boundary map must keep the unsigned experimental beta warning, sensitive communication prohibition, not audited status, not production-ready status, external two-machine onion delivery non-claim, Briar/Cwtch-equivalent non-claim, backup/migration non-claims, and public support diagnostics redaction boundary. Users must treat every update as a fresh manual download and verify the matching `.sha256` file.
 
 For the current local field-test handoff, send only the per-peer delivery folder contents from:
 
