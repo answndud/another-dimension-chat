@@ -162,7 +162,7 @@ with no DMG rebuild, no upload, and no generated release artifact commit. Final
 source acceptance is limited to non-claims, redacted diagnostics, release
 boundary, and desktop flow blocker checks. The next development axis must be
 one of: release packaging/upload only after explicit user request, Windows
-readiness, or real-user test preparation.
+readiness, real-user test preparation, or default-transport-boundary.
 
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
@@ -177,6 +177,16 @@ mismatch. Abort criteria are exposed secrets, requests for raw logs, requests
 for an external success claim, or requests to use the beta for sensitive
 communication. There is no external two-machine success claim, no production
 readiness claim, and sensitive communication prohibited remains in force.
+
+Desktop Default Practical Transport Boundary: the desktop default practical path
+is local manual encrypted envelope exchange. It is the only default source
+boundary for v0.1 and has `network_io=false`, `automatic_delivery=false`,
+`central_message_server=false`, `push_notification_dependency=false`, and
+`central_contact_discovery=false`. The high-risk onion/Tor path is separate,
+explicit-user-triggered, fail-closed, onion-only, and has
+`direct_fallback=false`. This boundary is a product decision and first
+implementation slice, not a reliable external delivery claim, production-ready
+claim, audited security claim, or sensitive-communication allowance.
 
 This public path is still an unsigned experimental public beta. It is not notarized, not audited, not production-ready, and sensitive communication prohibited. External onion delivery is outside the v0.1 public product claim; same-machine dual-profile rehearsal is development evidence only. No peer report is expected or required for this v0.1 claim, and no external delivery claim is made. Users must verify the checksum attached to the same GitHub Release as the DMG before using the normal macOS Privacy & Security manual allow path. Branch source files, source archives, or copied docs are not release proof. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
