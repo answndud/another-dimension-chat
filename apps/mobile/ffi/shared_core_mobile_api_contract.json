@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "status": "source-boundary-contract",
+  "binding_generation_implemented": false,
+  "callable_ffi_implemented": false,
+  "generated_bindings_claimed": false,
+  "android_adapter_required": true,
+  "ios_adapter_required": true,
+  "wrapper_neutral": true,
+  "mobile_readiness_claimed": false,
+  "security_ready_claimed": false,
+  "api_groups": [
+    "shared_core_status_surface",
+    "profile_unlock_lock_status",
+    "invite_code_create_join",
+    "pairing_payload_export_import",
+    "safety_transcript_confirm",
+    "manual_envelope_export_import",
+    "message_transcript_view",
+    "local_data_lifecycle",
+    "redacted_support_diagnostics"
+  ],
+  "status_dto_fields": [
+    "schema_version",
+    "platform",
+    "profile_lock_state",
+    "runtime_command_surface",
+    "mobile_command_surface",
+    "local_data_lifecycle_state",
+    "backup_exclusion_state",
+    "install_update_integrity_state",
+    "diagnostics_redaction_state",
+    "public_non_claims"
+  ],
+  "command_result_fields": [
+    "status",
+    "failure_class",
+    "recovery_next_action"
+  ],
+  "error_taxonomy": [
+    "locked_profile",
+    "malformed_payload",
+    "replay_rejected",
+    "policy_blocked",
+    "transport_unavailable",
+    "unsupported_mobile_surface",
+    "lifecycle_confirmation_required",
+    "ffi_unavailable"
+  ],
+  "serialization_contract": [
+    "deterministic_utf8_json_object",
+    "explicit_schema_version",
+    "sorted_keys",
+    "string_enums",
+    "bounded_status_label_arrays",
+    "reject_unknown_fields"
+  ],
+  "lifecycle_commands": [
+    "conversation_delete",
+    "session_delete",
+    "profile_delete",
+    "full_local_wipe"
+  ],
+  "diagnostics_fields": [
+    "status",
+    "build",
+    "failure_class",
+    "recovery_next_action",
+    "app_launch_network_boundary",
+    "public_non_claims"
+  ],
+  "forbidden_semantics": [
+    "wrapper_specific_protocol",
+    "wrapper_specific_storage",
+    "wrapper_specific_transport",
+    "phone_number_account",
+    "email_account",
+    "global_account",
+    "searchable_username",
+    "central_contact_discovery",
+    "central_message_server",
+    "push_notification_delivery",
+    "cloud_backup",
+    "auto_update_trust",
+    "store_trust",
+    "external_onion_delivery_success_claim",
+    "security_ready_claim",
+    "mobile_readiness_claim"
+  ],
+  "first_binding_unit": "status_and_redacted_diagnostics_read_only_adapter",
+  "first_binding_unit_allows": [
+    "shared_core_status_surface",
+    "redacted_support_diagnostics"
+  ],
+  "first_binding_unit_blocks": [
+    "profile_unlock_lock_status",
+    "invite_code_create_join",
+    "pairing_payload_export_import",
+    "safety_transcript_confirm",
+    "manual_envelope_export_import",
+    "message_transcript_view",
+    "local_data_lifecycle",
+    "network_io",
+    "runtime_messaging",
+    "destructive_lifecycle"
+  ]
+}

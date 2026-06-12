@@ -44,6 +44,24 @@ Wrappers must not add independent protocol, storage, transport, pairing,
 lifecycle, diagnostics, account, discovery, delivery, backup, or security-ready
 semantics.
 
+## Native Binding Implementation Gate
+
+The first binding implementation unit is
+`status_and_redacted_diagnostics_read_only_adapter`. It may expose only
+`shared_core_status_surface` and `redacted_support_diagnostics` through a native
+adapter. It must keep profile unlock, invite, pairing, safety transcript,
+manual envelope, transcript view, lifecycle commands, network I/O, runtime
+messaging, and destructive lifecycle operations blocked until later phases.
+
+The source contract is `shared_core_mobile_api_contract.json`. Android and iOS
+placeholder adapters must match its API group names, DTO fields, command result
+fields, error taxonomy, serialization contract, diagnostics fields, forbidden
+semantics, and first binding unit gate before any generated binding is added.
+
+This gate keeps binding generation implemented false, callable FFI implemented
+false, generated bindings claimed false, mobile readiness claimed false, and
+security-ready claimed false.
+
 Allowed API groups mirror the shared core wrapper boundary:
 
 - `shared_core_status_surface`

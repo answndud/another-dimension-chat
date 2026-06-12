@@ -34,6 +34,7 @@ require_file "apps/mobile/README.md"
 require_file "apps/mobile/android/README.md"
 require_file "apps/mobile/ios/README.md"
 require_file "apps/mobile/ffi/README.md"
+require_file "apps/mobile/ffi/shared_core_mobile_api_contract.json"
 require_file "crates/core/src/lib.rs"
 
 require_text "apps/mobile/README.md" "Mobile Wrapper Boundary"
@@ -538,6 +539,11 @@ require_text "apps/mobile/ffi/README.md" "not generated bindings"
 require_text "apps/mobile/ffi/README.md" "not Kotlin or Swift"
 require_text "apps/mobile/ffi/README.md" "runtime source"
 require_text "apps/mobile/ffi/README.md" "Allowed API groups mirror the shared core wrapper boundary"
+require_text "apps/mobile/ffi/README.md" "Native Binding Implementation Gate"
+require_text "apps/mobile/ffi/README.md" "shared_core_mobile_api_contract.json"
+require_text "apps/mobile/ffi/shared_core_mobile_api_contract.json" '"status": "source-boundary-contract"'
+require_text "apps/mobile/ffi/shared_core_mobile_api_contract.json" '"callable_ffi_implemented": false'
+require_text "apps/mobile/ffi/shared_core_mobile_api_contract.json" '"first_binding_unit": "status_and_redacted_diagnostics_read_only_adapter"'
 require_text "apps/mobile/ffi/README.md" "shared_core_status_surface"
 require_text "apps/mobile/ffi/README.md" "redacted_support_diagnostics"
 require_text "apps/mobile/ffi/README.md" "must not export raw storage open calls"

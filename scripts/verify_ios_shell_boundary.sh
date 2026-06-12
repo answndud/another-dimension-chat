@@ -47,6 +47,7 @@ require_file "apps/mobile/ios/AnotherDimension/Info.plist"
 require_file "apps/mobile/ios/AnotherDimension/AnotherDimension.entitlements"
 require_file "apps/mobile/ios/README.md"
 require_file "apps/mobile/ffi/README.md"
+require_file "apps/mobile/ffi/shared_core_mobile_api_contract.json"
 require_file "crates/core/src/lib.rs"
 
 require_text "apps/mobile/ios/README.md" "iOS Shell Scaffold Boundary"
@@ -95,6 +96,7 @@ require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "sharedCore.ma
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "sharedCore.redactedSupportDiagnostics"
 
 require_text "apps/mobile/ffi/README.md" "production_mobile_shared_core_api_freeze_boundary_summary"
+require_text "apps/mobile/ffi/shared_core_mobile_api_contract.json" '"first_binding_unit": "status_and_redacted_diagnostics_read_only_adapter"'
 require_text "crates/core/src/lib.rs" "production_mobile_shared_core_api_freeze_boundary_summary"
 
 reject_text "apps/mobile/ios/AnotherDimension/Info.plist" "NSContactsUsageDescription"
