@@ -122,5 +122,35 @@
     "manual_envelope_export_import",
     "message_transcript_view",
     "local_data_lifecycle"
-  ]
+  ],
+  "native_binding_readiness_gate": {
+    "status": "blocked-until-prerequisites-met",
+    "readiness_gate_documented": true,
+    "callable_ffi_may_start": false,
+    "generated_binding_may_start": false,
+    "native_runtime_messaging_may_start": false,
+    "network_delivery_may_start": false,
+    "release_packaging_may_start": false,
+    "required_before_callable_ffi": [
+      "explicit_owner_authorization_for_native_binding",
+      "memory_ownership_release_contract_finalized",
+      "canonical_serialization_test_vectors_finalized",
+      "ffi_error_mapping_table_finalized",
+      "redacted_diagnostics_payload_reviewed",
+      "android_ios_adapter_parity_verified",
+      "source_handoff_verifier_passing"
+    ],
+    "blocked_until_later_phase": [
+      "unlock_callable_ffi",
+      "invite_callable_ffi",
+      "pairing_callable_ffi",
+      "envelope_callable_ffi",
+      "transcript_callable_ffi",
+      "lifecycle_callable_ffi",
+      "native_network_runtime",
+      "background_delivery",
+      "push_notification_delivery",
+      "release_packaging"
+    ]
+  }
 }

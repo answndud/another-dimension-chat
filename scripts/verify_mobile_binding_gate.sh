@@ -51,6 +51,9 @@ require_text "$CONTRACT" '"callable_ffi_implemented": false'
 require_text "$CONTRACT" '"generated_bindings_claimed": false'
 require_text "$CONTRACT" '"read_only_adapter_implemented": true'
 require_text "$CONTRACT" '"blocked_command_adapter_implemented": true'
+require_text "$CONTRACT" '"native_binding_readiness_gate"'
+require_text "$CONTRACT" '"callable_ffi_may_start": false'
+require_text "$CONTRACT" '"generated_binding_may_start": false'
 require_text "$CONTRACT" '"wrapper_neutral": true'
 require_text "$CONTRACT" '"mobile_readiness_claimed": false'
 require_text "$CONTRACT" '"security_ready_claimed": false'
@@ -136,6 +139,7 @@ require_text "$IOS_BLOCKED_COMMAND_ADAPTER" "SourceBoundaryBlockedMobileCommandA
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Native Binding Implementation Gate"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Read-Only Native Status Adapter Boundary"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Blocked Command Adapter Boundary"
+require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Native Binding Readiness Gate"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "status_and_redacted_diagnostics_read_only_adapter"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "shared_core_mobile_api_contract.json"
 require_text "$ROOT_DIR/crates/core/src/lib.rs" "production_mobile_shared_core_api_freeze_boundary_summary"
