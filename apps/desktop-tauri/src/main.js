@@ -4722,6 +4722,10 @@ function focusManualRebuildRecoveryAction(action, input = productionTwoProfileIn
     fields.productionTwoProfileState?.focus?.({ preventScroll: true });
     return;
   }
+  if (action === "verify-safety") {
+    focusSafetyConfirmation();
+    return;
+  }
   fields.runProductionTwoProfileMessageRoundtrip?.focus?.({ preventScroll: true });
 }
 
@@ -4753,6 +4757,20 @@ function showManualRebuildRecoveryAfterSavedRoomOpen(current, input = production
   return shown;
 }
 
+function showSavedInviteRoomPeerCodePrompt(input = productionTwoProfileInput()) {
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return false;
+  }
+  setProductionTwoProfileState("Peer delivery code needed");
+  setText(fields.productionTwoProfileWarning, t("privateRouteWaitingPeerCode"));
+  setText(fields.productionProfileNextAction, t("roomReadinessNextPastePeerCode"));
+  setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "warning", input);
+  setProductionFollowupActions(true, t("roomReadinessNextPastePeerCode"));
+  focusPrivateRouteNextAction(input);
+  refreshFieldTestReport();
+  return true;
+}
+
 function showSavedInviteRoomRecoveryAfterOpen(input = productionTwoProfileInput()) {
   const current = currentSavedInviteRoomView(input);
   if (showManualRebuildRecoveryAfterSavedRoomOpen(current, input)) {
@@ -4772,6 +4790,9 @@ function showSavedInviteRoomRecoveryAfterOpen(input = productionTwoProfileInput(
   }
   if (current.action === "wait-receive-stop") {
     return showSavedInviteRoomReceiveStopPending();
+  }
+  if (current.action === "paste-peer-code") {
+    return showSavedInviteRoomPeerCodePrompt(input);
   }
   const routeReadiness = externalPeerSendReadiness(input, {
     allowMissingMessage: true,
