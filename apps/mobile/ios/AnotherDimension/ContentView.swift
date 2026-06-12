@@ -14,7 +14,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Another Dimension")
                 .font(.title)
-            Text(sharedCore.sharedCoreStatusSurface().publicNonClaims.joined(separator: "\n"))
+            Text(ContentView.renderPublicNonClaims(sharedCore.sharedCoreStatusSurface()))
                 .font(.footnote)
             SecureField("Passphrase", text: $passphrase)
                 .textFieldStyle(.roundedBorder)
@@ -47,19 +47,27 @@ struct ContentView: View {
     private func renderResult(_ result: SharedCoreCommandResult) -> String {
         [
             "status=\(result.status)",
-            "failure=\(result.failureClass)",
-            "next=\(result.recoveryNextAction)",
+            "failure_class=\(result.failureClass)",
+            "recovery_next_action=\(result.recoveryNextAction)",
         ].joined(separator: "\n")
     }
 
     private static func renderStatus(_ status: SharedCoreStatusDto) -> String {
         [
+            "schema_version=\(status.schemaVersion)",
             "platform=\(status.platform)",
-            "profile=\(status.profileLockState)",
-            "lifecycle=\(status.localDataLifecycleState)",
-            "diagnostics=\(status.diagnosticsRedactionState)",
-            "backup=\(status.backupExclusionState)",
-            "install=\(status.installUpdateIntegrityState)",
+            "profile_lock_state=\(status.profileLockState)",
+            "runtime_command_surface=\(status.runtimeCommandSurface.joined(separator: ","))",
+            "mobile_command_surface=\(status.mobileCommandSurface.joined(separator: ","))",
+            "local_data_lifecycle_state=\(status.localDataLifecycleState)",
+            "backup_exclusion_state=\(status.backupExclusionState)",
+            "install_update_integrity_state=\(status.installUpdateIntegrityState)",
+            "diagnostics_redaction_state=\(status.diagnosticsRedactionState)",
+            renderPublicNonClaims(status),
         ].joined(separator: "\n")
+    }
+
+    private static func renderPublicNonClaims(_ status: SharedCoreStatusDto) -> String {
+        "public_non_claims=\(status.publicNonClaims.joined(separator: "|"))"
     }
 }

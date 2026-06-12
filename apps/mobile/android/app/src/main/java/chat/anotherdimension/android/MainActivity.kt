@@ -30,7 +30,7 @@ class MainActivity : Activity() {
             textSize = 22f
         }
         val warning = TextView(this).apply {
-            text = status.publicNonClaims.joinToString(separator = "\n")
+            text = renderPublicNonClaims(status)
         }
         val passphrase = EditText(this).apply {
             hint = "Passphrase"
@@ -86,18 +86,25 @@ class MainActivity : Activity() {
 
     private fun renderStatus(status: SharedCoreStatusDto): String =
         listOf(
+            "schema_version=${status.schemaVersion}",
             "platform=${status.platform}",
-            "profile=${status.profileLockState}",
-            "lifecycle=${status.localDataLifecycleState}",
-            "diagnostics=${status.diagnosticsRedactionState}",
-            "backup=${status.backupExclusionState}",
-            "install=${status.installUpdateIntegrityState}",
+            "profile_lock_state=${status.profileLockState}",
+            "runtime_command_surface=${status.runtimeCommandSurface.joinToString(separator = ",")}",
+            "mobile_command_surface=${status.mobileCommandSurface.joinToString(separator = ",")}",
+            "local_data_lifecycle_state=${status.localDataLifecycleState}",
+            "backup_exclusion_state=${status.backupExclusionState}",
+            "install_update_integrity_state=${status.installUpdateIntegrityState}",
+            "diagnostics_redaction_state=${status.diagnosticsRedactionState}",
+            renderPublicNonClaims(status),
         ).joinToString(separator = "\n")
 
     private fun renderResult(result: SharedCoreCommandResult): String =
         listOf(
             "status=${result.status}",
-            "failure=${result.failureClass}",
-            "next=${result.recoveryNextAction}",
+            "failure_class=${result.failureClass}",
+            "recovery_next_action=${result.recoveryNextAction}",
         ).joinToString(separator = "\n")
+
+    private fun renderPublicNonClaims(status: SharedCoreStatusDto): String =
+        "public_non_claims=${status.publicNonClaims.joinToString(separator = "|")}"
 }
