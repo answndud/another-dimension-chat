@@ -55,6 +55,7 @@ import {
   productionTwoProfileResultView,
   productionTwoProfileResumeTarget,
   productionTwoProfileSendAttemptUserView,
+  productionTwoProfileShouldClearPendingOutboundNotice,
   productionTwoProfileShouldShowOutboundRecovery,
   productionTwoProfileSessionSummaryView,
   productionTwoProfileSessionStatusView,
@@ -12751,6 +12752,9 @@ function applyProductionActionState() {
   clearMismatchedChatDeliveryNotice(twoProfile);
   clearMismatchedPrivateRouteFollowup(twoProfile);
   const currentRoomDeliveryNotice = chatDeliveryNoticeMatchesInput(twoProfile);
+  const pendingOutboundNoticeRetryable = latestChatDeliveryNoticePendingOutbound
+    ? restoreLatestChatDeliveryPendingOutbound(twoProfile)
+    : null;
   if (
     productionTwoProfileShouldShowOutboundRecovery({
       busy,
@@ -12759,6 +12763,15 @@ function applyProductionActionState() {
     })
   ) {
     setChatDeliveryNoticeForPendingOutbound(retryableOutboundConversation, twoProfile);
+  } else if (
+    productionTwoProfileShouldClearPendingOutboundNotice({
+      busy,
+      hasPendingOutboundNotice: Boolean(latestChatDeliveryNoticePendingOutbound),
+      noticeMatchesCurrentRoom: currentRoomDeliveryNotice,
+      noticePendingOutboundRetryable: Boolean(pendingOutboundNoticeRetryable),
+    })
+  ) {
+    setChatDeliveryNoticeByKey("", "neutral", twoProfile);
   } else if (!busy && twoProfileSessionsReady && !twoProfileSafetyConfirmed) {
     setChatDeliveryNoticeByKey("sendLockedUntilVerified", "warning", twoProfile);
   } else if (
