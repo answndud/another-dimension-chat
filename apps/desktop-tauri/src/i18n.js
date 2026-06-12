@@ -662,6 +662,8 @@ const dictionaries = {
     verification: "Verification",
     noSecureReleaseClaim: "No secure-release claim",
     releaseIntegrityValue: "Manual GitHub Release download; same-release checksum required; no auto-update",
+    desktopPlatformBoundaryValue:
+      "macOS public beta only; Windows is a local build candidate until app-data path, path separator, installer, and signing boundary review is complete.",
     supplyChainBoundaryValue:
       "DMG SHA-256, provenance, manifest, dependency inventory, and lockfile hashes required",
     noRuntimeMessagingPath: "No runtime messaging path",
@@ -1752,6 +1754,8 @@ const dictionaries = {
     verification: "검증",
     noSecureReleaseClaim: "정식 보안 출시 주장은 아직 하지 않습니다",
     releaseIntegrityValue: "수동 GitHub Release 다운로드, 같은 release의 checksum 필요, auto-update 없음",
+    desktopPlatformBoundaryValue:
+      "macOS 공개 베타만 제공됩니다. Windows는 app data 경로, 경로 구분자, installer, signing boundary 검토가 끝날 때까지 로컬 빌드 후보입니다.",
     supplyChainBoundaryValue: "DMG SHA-256, provenance, manifest, dependency inventory, lockfile hash 필요",
     noRuntimeMessagingPath: "자동 실행되는 메시지 경로가 없습니다",
     coreBoundaryOnly: "핵심 로직의 노출 여부만 확인합니다",
