@@ -19,6 +19,8 @@ Public reports may include only:
 - unsigned macOS install step reached
 - failure class
 - redacted next action
+- desktop local-private-flow acceptance status
+- desktop local-private-flow blocker summary
 - whether app-launch network remained false
 
 ## Desktop Real-User Test Preparation Boundary
@@ -27,8 +29,9 @@ Tester-facing reports must use redacted public support diagnostics, failure
 class, and recovery next action only.
 
 Allowed public fields are app version, build channel, build commit, platform,
-checksum result, public diagnostics, failure class, recovery next action, and
-whether app-launch network stayed false.
+checksum result, public diagnostics, failure class, recovery next action,
+desktop local-private-flow acceptance status, desktop local-private-flow
+blocker summary, and whether app-launch network stayed false.
 
 Forbidden fields include raw logs, onion endpoints, invite codes,
 pairing/envelope/endpoint payloads, safety phrases, profile names, message text,
