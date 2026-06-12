@@ -114,6 +114,8 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_readiness=local-build-candidate-only"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_local_usable_criteria_defined=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_prerequisites_separate=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_local_runtime_smoke_status=source-boundary-only"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_ready=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_installer_ready=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_runtime_smoke_required=true"

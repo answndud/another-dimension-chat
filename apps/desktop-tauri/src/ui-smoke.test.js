@@ -1728,6 +1728,11 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(functionBody(privateDeliveryStateJs, "publicDiagnosticsDesktopNextAction"), /publicDiagnosticsLocalRecoveryAction\(parsed\)/);
   assert.match(functionBody(privateDeliveryStateJs, "publicDiagnosticsFailureClass"), /local-recovery-needed/);
   assert.match(publicDiagnosticsBody, /windows_public_artifact_ready=false/);
+  assert.match(publicDiagnosticsBody, /windows_local_runtime_smoke_status=source-boundary-only/);
+  assert.match(publicDiagnosticsBody, /windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows/);
+  assert.match(publicDiagnosticsBody, /windows_local_deletion_behavior_review_required=true/);
+  assert.match(publicDiagnosticsBody, /windows_redacted_diagnostics_behavior_review_required=true/);
+  assert.match(publicDiagnosticsBody, /windows_explicit_user_action_review_required=true/);
   assert.match(publicDiagnosticsBody, /windows_release_blocker=local-build-smoke-and-release-boundary-review/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /windows_public_artifact=false/);
   assert.match(functionBody(mainJs, "renderPrototypeStatus"), /desktop_platform_readiness_boundary/);
