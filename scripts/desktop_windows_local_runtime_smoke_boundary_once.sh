@@ -80,6 +80,7 @@ require_text "$ROOT_DIR/apps/desktop-tauri/scripts/verify-windows-local-runtime-
 require_text "$ROOT_DIR/apps/desktop-tauri/scripts/verify-windows-local-runtime-boundary.mjs" "windows_explicit_user_action_review_required=true"
 
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_windows_local_runtime_smoke_boundary_once.sh"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_real_user_test_prep_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_runtime_smoke_source_command=npm --prefix apps/desktop-tauri run test:windows-boundary"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_local_deletion_behavior_review_required=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_redacted_diagnostics_behavior_review_required=true"

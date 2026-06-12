@@ -78,8 +78,8 @@ require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "deskt
 require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "diagnostics_security_ready_proof_claim=false"
 
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_public_beta_source_freeze_once.sh"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,public-beta-gap,public-claim-acceptance"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,public-beta-gap,public-claim-acceptance"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze=desktop-public-beta-source-candidate"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze_scope=desktop-source-only-no-dmg-rebuild-no-upload"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze_next_axes=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep"
