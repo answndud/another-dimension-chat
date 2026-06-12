@@ -4099,7 +4099,7 @@ function savedRoomActionLabelKey(action, fallbackLabelKey = "openRoom") {
   if (normalized === "enable-private-delivery" || normalized === "real-onion-enable-private-delivery") {
     return "savedRoomActionEnableDelivery";
   }
-  if (normalized === "prepare-private-route" || normalized === "real-onion-network-settings") {
+  if (normalized === "prepare-private-route") {
     return "savedRoomActionShareDeliveryCode";
   }
   if (normalized === "refresh-endpoint") {
@@ -4225,7 +4225,7 @@ function savedInviteRoomListAction(room, options = {}) {
       return { action, labelKey: savedRoomActionLabelKey(action), origin: "retryable-outbound" };
     }
     if (action === "start-receiving") {
-      return { action, labelKey: savedRoomActionLabelKey(action), origin: "retryable-outbound" };
+      return { action, labelKey: "savedRoomActionStartReceivingForRetry", origin: "retryable-outbound" };
     }
     if (action === "wait-receive-stop") {
       return { action, labelKey: savedRoomActionLabelKey(action), origin: "retryable-outbound" };
@@ -4643,8 +4643,13 @@ function focusManualRebuildRecoveryAction(action, input = productionTwoProfileIn
     focusPrivateRouteNextAction(input);
     return;
   }
-  if (action === "start-receiving" || action === "wait-receive-stop") {
+  if (action === "start-receiving") {
     fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
+    return;
+  }
+  if (action === "wait-receive-stop") {
+    fields.savedRoomList?.focus?.({ preventScroll: true });
+    fields.productionTwoProfileState?.focus?.({ preventScroll: true });
     return;
   }
   fields.runProductionTwoProfileMessageRoundtrip?.focus?.({ preventScroll: true });
@@ -5436,11 +5441,75 @@ function savedInviteRoomReadinessSummaryKey(view) {
   return "roomReadinessOpen";
 }
 
+function savedInviteRoomReadinessNextDetailKey(view) {
+  if (view.hasRetryableSend) {
+    const action = savedInviteRoomRetryableAction(view.nextAction?.action);
+    if (action === "enable-private-delivery") {
+      return "roomReadinessNextEnableDelivery";
+    }
+    if (action === "prepare-private-route") {
+      return "roomReadinessNextShareDeliveryCode";
+    }
+    if (action === "refresh-and-retry") {
+      return "roomReadinessNextRefreshCodeAndRetry";
+    }
+    if (action === "start-receiving") {
+      return "roomReadinessNextStartReceive";
+    }
+    if (action === "wait-receive-stop") {
+      return "roomReadinessNextWaitReceiveStop";
+    }
+    if (action === "retry-network") {
+      return "roomReadinessNextRetryNetwork";
+    }
+    if (action === "verify-safety") {
+      return "roomReadinessNextVerifySafety";
+    }
+    return "roomReadinessNextRetrySavedMessage";
+  }
+  const action = String(view.nextAction?.action ?? "").trim();
+  if (view.receiveState === "stopping" || action === "wait-receive-stop") {
+    return "roomReadinessNextWaitReceiveStop";
+  }
+  if (view.receiveState === "paused" || action === "start-receiving") {
+    return "roomReadinessNextStartReceive";
+  }
+  if (view.waitingPeerCode || action === "paste-peer-code") {
+    return "roomReadinessNextPastePeerCode";
+  }
+  if (action === "enable-private-delivery" || action === "real-onion-enable-private-delivery") {
+    return "roomReadinessNextEnableDelivery";
+  }
+  if (action === "verify-safety") {
+    return "roomReadinessNextVerifySafety";
+  }
+  if (action === "prepare-private-route" || action === "real-onion-network-settings") {
+    return "roomReadinessNextShareDeliveryCode";
+  }
+  if (action === "refresh-endpoint") {
+    return "roomReadinessNextRefreshDeliveryCode";
+  }
+  if (action === "retry-network" || action === "real-onion-retry") {
+    return "roomReadinessNextRetryNetwork";
+  }
+  if (action === "real-onion-inspect-diagnostics") {
+    return "roomReadinessNextInspectDiagnostics";
+  }
+  if (view.current) {
+    return "roomReadinessNextUseCurrentRoom";
+  }
+  if (view.resumeRecommended) {
+    return "roomReadinessNextResumeRoom";
+  }
+  return "roomReadinessNextOpenRoom";
+}
+
 function savedInviteRoomReadinessReview(view) {
   const blockerKey = savedInviteRoomReadinessBlockerKey(view);
   return {
     boundaryKey: "roomReadinessBoundary",
     blockerKey,
+    nextDetailKey: savedInviteRoomReadinessNextDetailKey(view),
     nextLabelKey: view.nextAction?.labelKey ?? "openRoom",
     statusKey: savedInviteRoomReadinessSummaryKey(view),
     titleKey: "roomReadinessReview",
@@ -5609,7 +5678,7 @@ function renderSavedInviteRooms() {
     readinessStatus.textContent = t(view.readinessReview.statusKey);
     const readinessMeta = document.createElement("span");
     readinessMeta.className = "saved-room-readiness-meta";
-    readinessMeta.textContent = `next=${t(view.readinessReview.nextLabelKey)} / blocker=${view.readinessReview.blockerKey} / ${t(view.readinessReview.boundaryKey)}`;
+    readinessMeta.textContent = `next=${t(view.readinessReview.nextLabelKey)} / detail=${t(view.readinessReview.nextDetailKey)} / blocker=${view.readinessReview.blockerKey} / ${t(view.readinessReview.boundaryKey)}`;
     readiness.append(readinessTitle, readinessStatus, readinessMeta);
     const primaryAction = document.createElement("button");
     primaryAction.type = "button";
