@@ -64,6 +64,7 @@ for adapter in "$ANDROID_ADAPTER" "$IOS_ADAPTER"; do
   require_text "$adapter" "SourceBoundaryBlockedMobileCommandAdapter"
   require_text "$adapter" "locked_profile"
   require_text "$adapter" "policy_blocked"
+  require_text "$adapter" "lifecycle_confirmation_required"
   require_text "$adapter" "ffi_unavailable"
   require_text "$adapter" "explicit user action required"
   require_text "$adapter" "unsigned experimental public beta"

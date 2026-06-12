@@ -107,6 +107,7 @@ require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/androi
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "not production-ready"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt" "SourceBoundaryBlockedMobileCommandAdapter"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt" "policy_blocked"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt" "lifecycle_confirmation_required"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt" "ffi_unavailable"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt" "not production-ready"
 
@@ -120,6 +121,8 @@ require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/androi
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "public_non_claims="
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "copyRedactedDiagnosticsPayload"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "diagnostics_payload=redacted_status_support_only"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "sharedCore.localDataLifecycle"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "lifecycle_confirmation_boundary=display_only_no_local_data_mutation"
 
 require_text "apps/mobile/ffi/README.md" "production_mobile_shared_core_api_freeze_boundary_summary"
 require_text "apps/mobile/ffi/shared_core_mobile_api_contract.json" '"first_binding_unit": "status_and_redacted_diagnostics_read_only_adapter"'

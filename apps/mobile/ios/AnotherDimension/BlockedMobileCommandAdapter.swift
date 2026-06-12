@@ -67,7 +67,13 @@ final class SourceBoundaryBlockedMobileCommandAdapter: BlockedMobileCommandAdapt
     }
 
     func localDataLifecycle(action: ExplicitUserActionToken) -> SharedCoreCommandResult {
-        explicitActionBoundary(action: action, surface: "local_data_lifecycle")
+        if action.reason.isEmpty {
+            return blocked(failureClass: "policy_blocked", recoveryNextAction: "explicit user action required")
+        }
+        return blocked(
+            failureClass: "lifecycle_confirmation_required",
+            recoveryNextAction: "confirm lifecycle intent before any shared Rust core binding for local_data_lifecycle"
+        )
     }
 
     private func explicitActionBoundary(action: ExplicitUserActionToken, surface: String) -> SharedCoreCommandResult {

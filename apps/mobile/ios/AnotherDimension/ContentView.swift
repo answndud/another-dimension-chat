@@ -42,6 +42,11 @@ struct ContentView: View {
             Button("Copy Diagnostics") {
                 statusText = copyRedactedDiagnosticsPayload(sharedCore.redactedSupportDiagnostics())
             }
+            Button("Lifecycle") {
+                statusText = ContentView.renderLifecycleConfirmationBoundary(
+                    sharedCore.localDataLifecycle(action: ExplicitUserActionToken(reason: "tap_lifecycle_review"))
+                )
+            }
             Text(statusText)
                 .font(.system(.body, design: .monospaced))
         }
@@ -92,6 +97,25 @@ struct ContentView: View {
             "diagnostics_copy_boundary=user_initiated_local_clipboard_only",
             "diagnostics_payload=redacted_status_support_only",
             renderStatus(status),
+        ].joined(separator: "\n")
+    }
+
+    private static func renderLifecycleConfirmationBoundary(_ result: SharedCoreCommandResult) -> String {
+        [
+            renderResultStatic(result),
+            "lifecycle_confirmation_boundary=display_only_no_local_data_mutation",
+            "lifecycle_commands=conversation_delete,session_delete,profile_delete,full_local_wipe",
+            "destructive_lifecycle_execution=false",
+            "filesystem_path_exposed=false",
+            "storage_delete_called=false",
+        ].joined(separator: "\n")
+    }
+
+    private static func renderResultStatic(_ result: SharedCoreCommandResult) -> String {
+        [
+            "status=\(result.status)",
+            "failure_class=\(result.failureClass)",
+            "recovery_next_action=\(result.recoveryNextAction)",
         ].joined(separator: "\n")
     }
 }

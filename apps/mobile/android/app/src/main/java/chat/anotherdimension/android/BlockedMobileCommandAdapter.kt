@@ -57,7 +57,14 @@ class SourceBoundaryBlockedMobileCommandAdapter : BlockedMobileCommandAdapter {
         blocked("ffi_unavailable", "load transcript through shared Rust core for message_transcript_view")
 
     override fun localDataLifecycle(action: ExplicitUserActionToken): SharedCoreCommandResult =
-        explicitActionBoundary(action, "local_data_lifecycle")
+        if (action.reason.isBlank()) {
+            blocked("policy_blocked", "explicit user action required")
+        } else {
+            blocked(
+                "lifecycle_confirmation_required",
+                "confirm lifecycle intent before any shared Rust core binding for local_data_lifecycle",
+            )
+        }
 
     private fun explicitActionBoundary(
         action: ExplicitUserActionToken,
