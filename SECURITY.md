@@ -151,12 +151,19 @@ claim is made.
 
 The current public upload set is prepared from the pinned ignored public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`: build channel `beta-onion`, commit `e8954df9`, and SHA-256 `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`.
 
+Desktop public beta source freeze candidate means source-only candidate status:
+no DMG rebuild, no upload, and no generated release artifact commit. Final
+source acceptance is limited to non-claims, redacted diagnostics, release
+boundary, and desktop flow blocker checks. The next development axis must be
+one of release packaging/upload only after explicit user request, Windows
+readiness, or real-user test preparation.
+
 ```bash
 scripts/public_release_readiness_preflight.sh
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-Run the source-only preflight before staging artifacts; it does not require a DMG and does not generate release files. The packaging decision is `proceed-to-packaging-only-with-frozen-ignored-dmg`; if the source preflight fails, return to desktop hardening instead of staging artifacts.
+Run the source-only preflight before staging artifacts; it includes the desktop public beta source freeze candidate gate, does not require a DMG, does not rebuild a DMG, does not upload, and does not generate release files. The packaging decision is `proceed-to-packaging-only-with-frozen-ignored-dmg`; if the source preflight fails, return to desktop hardening instead of staging artifacts.
 
 The generated public release folder is `apps/desktop-tauri/public-release/unsigned-public-beta/`. It is ignored and should contain only the DMG, matching `.sha256`, public provenance JSON, `INSTALL_UNSIGNED_MACOS.md`, `RELEASE_NOTES.md`, `GITHUB_RELEASE_BODY.md`, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, `DEPENDENCY_INVENTORY.md`, `PUBLIC_THREAT_MODEL.md`, `PRIVACY_MODEL_COMPARISON.md`, `INDEPENDENT_REVIEW_PACKET.md`, `PUBLIC_INTAKE_POLICY.md`, `REPOSITORY_GOVERNANCE.md`, `COMPONENT_BOUNDARIES.md`, `DEPENDENCY_LOCKFILES.sha256`, `OPERATOR_FINAL_HANDOFF.md`, and `MANIFEST.md`.
 

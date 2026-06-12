@@ -90,6 +90,7 @@ require_file "$ROOT_DIR/scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "prepare_unsigned_public_beta_release.sh\" --check-artifact-boundary"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "prepare_unsigned_public_beta_release.sh\" --check-policy"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_beta_acceptance_matrix_once.sh"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_public_beta_source_freeze_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_beta_gap_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_claim_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_status=current"
@@ -105,7 +106,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Final Op
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Upload decision: proceed only after the source preflight prints"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Hold decision: do not upload, do not announce, and return to desktop hardening"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Operation boundary: this handoff does not perform a GitHub Release upload"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "next_development_axis=desktop-post-release-hardening-or-non-release-product-work"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "next_development_axis=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "stale existing release output"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "preflight=public-release-readiness"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "status=public-release-readiness-source-preflight-ready"
@@ -116,10 +117,15 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "scope=so
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "dmg_required=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "network_or_onion_work=false"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,public-beta-gap,public-claim-acceptance"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,public-beta-gap,public-claim-acceptance"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "generated_artifacts_created=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_artifact_generation=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze=desktop-public-beta-source-candidate"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze_scope=desktop-source-only-no-dmg-rebuild-no-upload"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze_next_axes=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_upload_performed=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "dmg_rebuild_performed=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_delivery_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "security_ready_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_security_ready_acceptance=false"
@@ -136,7 +142,11 @@ require_text "$ROOT_DIR/README.md" 'pinned public-release source DMG accepted by
 require_text "$ROOT_DIR/README.md" 'commit `e8954df9`, and SHA-256 `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`'
 require_text "$ROOT_DIR/README.md" "This is not a packaging readiness, audit readiness, or release go signal."
 require_file "$ROOT_DIR/scripts/desktop_beta_acceptance_matrix_once.sh"
+require_file "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh"
 require_text "$ROOT_DIR/scripts/desktop_beta_acceptance_matrix_once.sh" 'ACCEPTED_ITEMS="invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim"'
+require_text "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh" "status=desktop-public-beta-source-freeze-candidate-ready"
+require_text "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh" "source_freeze_scope=desktop-source-only-no-dmg-rebuild-no-upload"
+require_text "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh" "next_development_axis=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep"
 require_text "$ROOT_DIR/README.md" "Desktop-only v0.1 acceptance matrix"
 require_text "$ROOT_DIR/SECURITY.md" "Desktop-only v0.1 acceptance matrix"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "Desktop-only v0.1 acceptance matrix"
@@ -279,7 +289,7 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing hardening fallback" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,public-beta-gap,public-claim-acceptance" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,public-beta-gap,public-claim-acceptance" || {
     echo "FAIL release readiness preflight missing check list" >&2
     exit 1
   }
@@ -297,6 +307,26 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "release_artifact_generation=false" || {
     echo "FAIL release readiness preflight missing release-artifact-generation boundary" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "source_freeze=desktop-public-beta-source-candidate" || {
+    echo "FAIL release readiness preflight missing desktop source freeze marker" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "source_freeze_scope=desktop-source-only-no-dmg-rebuild-no-upload" || {
+    echo "FAIL release readiness preflight missing desktop source freeze scope" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "source_freeze_next_axes=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep" || {
+    echo "FAIL release readiness preflight missing desktop source freeze next axes" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "release_upload_performed=false" || {
+    echo "FAIL release readiness preflight missing release upload non-action" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "dmg_rebuild_performed=false" || {
+    echo "FAIL release readiness preflight missing DMG rebuild non-action" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "dmg_required=false" || {
@@ -347,11 +377,11 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing operator handoff wrap-up" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "next_development_axis=desktop-post-release-hardening-or-non-release-product-work" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "next_development_axis=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep" || {
     echo "FAIL release readiness preflight missing next development axis" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "next=if a frozen ignored DMG exists, run scripts/prepare_unsigned_public_beta_release.sh and upload only files listed in MANIFEST.md" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "next=choose release packaging/upload only after explicit user request, Windows readiness, or real-user test preparation" || {
     echo "FAIL release readiness preflight missing operator next step" >&2
     exit 1
   }
