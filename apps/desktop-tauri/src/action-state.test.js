@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   chatNoticeForSendReceiveText,
+  productionActionAvailability,
   productionLocalLifecycleBoundaryView,
   productionBridgeCensorshipBoundaryView,
   productionInviteCodeProfiles,
   productionInviteIdentityBoundaryView,
   productionInviteRoomConversationMetadata,
+  productionManualMessageCheckView,
   productionOnionReceiveLoopRefreshPlan,
   productionOnionReceiveRuntimeView,
   productionTwoProfileCurrentAction,
@@ -928,5 +930,39 @@ test("room list metadata collapses retried copies before counting retryable send
       retryableOutboundMessage: "",
       retryableOutboundAction: "",
     },
+  );
+});
+
+test("manual received review stays tied to the selected pending row", () => {
+  assert.equal(
+    productionActionAvailability({
+      busy: false,
+      hasReceivedExportInput: true,
+      selectedMessageInputMatches: false,
+    }).exportReceivedMessage,
+    false,
+  );
+  assert.equal(
+    productionActionAvailability({
+      busy: false,
+      hasReceivedExportInput: true,
+      selectedMessageInputMatches: true,
+    }).exportReceivedMessage,
+    true,
+  );
+});
+
+test("manual check keeps imported message review before reply writing", () => {
+  assert.equal(
+    productionManualMessageCheckView({
+      activeProfile: "bob",
+      counterpartProfile: "alice",
+      messageNumber: 1,
+      selectedMessageInputMatches: true,
+      hasImportedMessage: true,
+      hasReceivedMessage: false,
+      hasTwoProfileReplySelected: true,
+    }),
+    "Manual check: imported envelope is decrypted; click Show plaintext before writing the reply.",
   );
 });

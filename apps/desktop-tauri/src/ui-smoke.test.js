@@ -652,12 +652,15 @@ test("manual message actions ignore stale inputs before updating current UI", ()
   assert.match(importBody, /refreshTwoProfileConversationAfterManualImport\([\s\S]*twoProfileRefreshInput/);
 
   const receivedBody = functionBody(mainJs, "exportProductionReceivedMessage");
+  assert.match(receivedBody, /selectedManualMessageActionBlocker\("show plaintext", input\)/);
   assert.match(receivedBody, /const twoProfileRefreshInput = productionTwoProfileInput\(\)/);
   assert.match(receivedBody, /if \(!productionMessageInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(receivedBody, /syncTwoProfileConversationAfterReceivedExport\([\s\S]*twoProfileRefreshInput/);
 
   assert.match(functionBody(mainJs, "syncTwoProfileConversationAfterManualExport"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
   assert.match(functionBody(mainJs, "syncTwoProfileConversationAfterReceivedExport"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
+  assert.match(functionBody(actionStateJs, "productionActionAvailability"), /exportReceivedMessage: !busy && selectedMessageInputMatches && hasReceivedExportInput/);
+  assert.match(functionBody(actionStateJs, "productionManualMessageCheckView"), /click Show plaintext before writing the reply/);
 });
 
 test("manual message envelope slots require the active pending message", () => {
