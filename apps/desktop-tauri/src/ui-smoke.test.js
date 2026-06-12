@@ -1104,9 +1104,19 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(roomConversationClearBody, /clearMessageEnvelopeSlotsForRoomFingerprint\(privateRouteRoomKey\(savedInviteRoomInput\(room\)\)\)/);
   assert.match(functionBody(mainJs, "clearSavedInviteRoomConversationMetadataForProfile"), /savedInviteRoomReferencesProfile\(room, profile\)/);
   assert.match(functionBody(mainJs, "clearMessageEnvelopeSlotsForRoomFingerprint"), /productionPayloadSlots\.messageEnvelope\.entries\(\)/);
+  const activeConversationClearBody = functionBody(mainJs, "clearActiveConversationStateAfterLocalDelete");
+  assert.match(activeConversationClearBody, /twoProfileInputReferencesProfile\(input, targetProfile\)/);
+  assert.match(activeConversationClearBody, /clearChatDeliveryNoticeForInput\(input\)/);
+  assert.match(activeConversationClearBody, /clearManualMessagePayloadsForRoomContextChange\(\)/);
+  assert.match(activeConversationClearBody, /clearMessageEnvelopeSlotsForRoomFingerprint\(privateRouteRoomKey\(input\)\)/);
+  assert.match(activeConversationClearBody, /resetProductionTwoProfileTranscript\(\)/);
+  assert.match(activeConversationClearBody, /renderRoomStatusSummary\(input, twoProfileSessionsReadyForInput\(input\)\)/);
   const conversationDeleteBody = functionBody(mainJs, "deleteProductionConversation");
+  assert.match(conversationDeleteBody, /roomInputBeforeDelete = productionTwoProfileInput\(\)/);
   assert.match(conversationDeleteBody, /clearSavedInviteRoomConversationMetadataForProfile\(profile\)/);
+  assert.match(conversationDeleteBody, /clearActiveConversationStateAfterLocalDelete\(profile, roomInputBeforeDelete\)/);
   assert.match(conversationDeleteBody, /saved_rooms_cleared=\$\{savedRoomsCleared\}/);
+  assert.match(conversationDeleteBody, /active_room_cleared=\$\{activeRoomCleared\}/);
 
   assert.match(functionBody(mainJs, "clearProductionPayloadSlotsForRoomFingerprint"), /Object\.values\(productionPayloadSlots\)/);
   assert.match(functionBody(mainJs, "clearProductionPayloadSlotsForRoomFingerprint"), /slot\?\.roomFingerprint/);
