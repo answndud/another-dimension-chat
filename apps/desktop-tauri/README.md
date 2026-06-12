@@ -159,6 +159,14 @@ Run the source-only preflight from the repository root before staging artifacts;
 
 This public path is still an unsigned experimental public beta. It is not notarized, not audited, not production-ready, and sensitive communication prohibited. External onion delivery is outside the v0.1 public product claim; same-machine dual-profile rehearsal is development evidence only. No peer report is expected or required for this v0.1 claim, and no external delivery claim is made. Users must verify the checksum attached to the same GitHub Release as the DMG before using the normal macOS Privacy & Security manual allow path. Branch source files, source archives, or copied docs are not release proof. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
+Desktop-only v0.1 acceptance matrix: `desktop local/manual beta readiness`
+covers `invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim`.
+It excludes
+`android-ios-runtime#external-peer-evidence#audit#production-ready#security-ready#sensitive-communication`.
+This matrix is not external onion delivery evidence, an audit result, a
+production-ready claim, a security-ready claim, or permission for sensitive
+communication.
+
 Run the local desktop shell during development:
 
 ```bash

@@ -90,6 +90,13 @@ This project does not currently claim:
   current product lifecycle matrix only distinguishes local conversation delete,
   session resume-record delete, profile delete, and full local app-data wipe
   scopes.
+- Desktop-only v0.1 acceptance matrix: `desktop local/manual beta readiness`
+  covers `invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim`
+  only. It excludes
+  `android-ios-runtime#external-peer-evidence#audit#production-ready#security-ready#sensitive-communication`,
+  and it is not external onion delivery evidence, an audit result, a
+  production-ready claim, a security-ready claim, or permission for sensitive
+  communication.
 - Durable production key storage.
 - Audited or security-ready durable production session lifecycle.
 - Replay rollback prevention against encrypted database snapshot restore.

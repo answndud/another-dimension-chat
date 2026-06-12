@@ -89,6 +89,7 @@ require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "desktop local-privat
 require_file "$ROOT_DIR/scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "prepare_unsigned_public_beta_release.sh\" --check-artifact-boundary"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "prepare_unsigned_public_beta_release.sh\" --check-policy"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_beta_acceptance_matrix_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_beta_gap_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_claim_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_status=current"
@@ -115,13 +116,16 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "scope=so
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "dmg_required=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "network_or_onion_work=false"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,public-beta-gap,public-claim-acceptance"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,public-beta-gap,public-claim-acceptance"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "generated_artifacts_created=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_delivery_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "security_ready_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_security_ready_acceptance=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_beta_acceptance_matrix=invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_beta_acceptance_scope=desktop-local-manual-beta-readiness"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_beta_acceptance_excluded=android-ios-runtime#external-peer-evidence#audit#production-ready#security-ready#sensitive-communication"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_final_handoff=OPERATOR_FINAL_HANDOFF.md"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_after_upload_verify=same-release-sha256-before-opening"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_update_authority=same-release-assets-only-no-auto-update-manifest-signing-notarization-store-branch-source-archive"
@@ -131,6 +135,11 @@ require_text "$ROOT_DIR/README.md" "scripts/public_release_readiness_preflight.s
 require_text "$ROOT_DIR/README.md" 'pinned public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`'
 require_text "$ROOT_DIR/README.md" 'commit `e8954df9`, and SHA-256 `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`'
 require_text "$ROOT_DIR/README.md" "This is not a packaging readiness, audit readiness, or release go signal."
+require_file "$ROOT_DIR/scripts/desktop_beta_acceptance_matrix_once.sh"
+require_text "$ROOT_DIR/scripts/desktop_beta_acceptance_matrix_once.sh" 'ACCEPTED_ITEMS="invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim"'
+require_text "$ROOT_DIR/README.md" "Desktop-only v0.1 acceptance matrix"
+require_text "$ROOT_DIR/SECURITY.md" "Desktop-only v0.1 acceptance matrix"
+require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "Desktop-only v0.1 acceptance matrix"
 require_text "$ROOT_DIR/SECURITY.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/SECURITY.md" "source-only preflight before staging artifacts"
 require_text "$ROOT_DIR/SECURITY.md" 'pinned ignored public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`'
@@ -270,7 +279,7 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing hardening fallback" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,public-beta-gap,public-claim-acceptance" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,public-beta-gap,public-claim-acceptance" || {
     echo "FAIL release readiness preflight missing check list" >&2
     exit 1
   }
@@ -308,6 +317,10 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "final_security_ready_acceptance=false" || {
     echo "FAIL release readiness preflight missing final acceptance non-claim" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "desktop_beta_acceptance_matrix=invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim" || {
+    echo "FAIL release readiness preflight missing desktop beta acceptance matrix" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "operator_final_handoff=OPERATOR_FINAL_HANDOFF.md" || {
