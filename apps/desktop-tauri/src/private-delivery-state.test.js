@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  desktopFirstCompletionStatus,
   fieldTestReportComposerAction,
   fieldTestReportComparisonStatus,
   fieldTestReportCopyActionLines,
@@ -354,6 +355,13 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /build_commit=806ecad1/);
   assert.match(diagnostics, /failure_class=safety-unverified/);
   assert.match(diagnostics, /recovery_next_action=verify/);
+  assert.match(diagnostics, /desktop_completion_scope=desktop-local-private-flow/);
+  assert.match(diagnostics, /desktop_completion_status=incomplete/);
+  assert.match(diagnostics, /desktop_completion_blockers=safety#private-route#receive/);
+  assert.match(diagnostics, /external_onion_delivery_verified=false/);
+  assert.match(diagnostics, /production_messaging_ready=false/);
+  assert.match(diagnostics, /security_ready_claimed=false/);
+  assert.match(diagnostics, /sensitive_communication_allowed=false/);
   assert.match(diagnostics, /app_launch_network=false/);
   assert.match(diagnostics, /crash_upload=false/);
   assert.match(diagnostics, /telemetry=false/);
@@ -375,6 +383,55 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.doesNotMatch(diagnostics, /^next_action=/m);
   assert.doesNotMatch(diagnostics, /obfs4|198\.51\.100\.4|examplehiddenservice|ADINVITE|alpha bravo|hello secret|alice-private|payload-secret/);
   assert.doesNotMatch(diagnostics, /\/Users\/alex|correct horse|deadbeef/);
+});
+
+test("desktop-first completion reports local private flow readiness without security claims", () => {
+  const readyReport = [
+    "room_present=true",
+    "session_ready=true",
+    "safety_confirmed=true",
+    "route_ready=true",
+    "route_readiness_ready=true",
+    "route_readiness_next_action=none",
+    "receive_enabled=true",
+    "receive_state=running",
+    "composer_next_action=send-message",
+    "real_onion_external_peer_delivery_confirmed=true",
+    "real_onion_local_dev_roundtrip_result=true",
+  ].join("\n");
+  const blockedReport = readyReport
+    .replace("receive_enabled=true", "receive_enabled=false")
+    .replace("receive_state=running", "receive_state=stopped")
+    .replace("composer_next_action=send-message", "composer_next_action=none");
+
+  assert.deepEqual(desktopFirstCompletionStatus(readyReport), {
+    scope: "desktop-local-private-flow",
+    status: "ready-for-local-private-message-flow",
+    blockers: [],
+    externalOnionDeliveryVerified: false,
+    productionMessagingReady: false,
+    securityReadyClaimed: false,
+    sensitiveCommunicationAllowed: false,
+  });
+  assert.deepEqual(desktopFirstCompletionStatus(blockedReport), {
+    scope: "desktop-local-private-flow",
+    status: "incomplete",
+    blockers: ["receive", "send-or-recover"],
+    externalOnionDeliveryVerified: false,
+    productionMessagingReady: false,
+    securityReadyClaimed: false,
+    sensitiveCommunicationAllowed: false,
+  });
+
+  const diagnostics = publicBetaDiagnosticsReport(readyReport);
+  assert.match(diagnostics, /desktop_completion_status=ready-for-local-private-message-flow/);
+  assert.match(diagnostics, /desktop_completion_blockers=none/);
+  assert.match(diagnostics, /external_onion_delivery_verified=false/);
+  assert.match(diagnostics, /production_messaging_ready=false/);
+  assert.match(diagnostics, /security_ready_claimed=false/);
+  assert.match(diagnostics, /sensitive_communication_allowed=false/);
+  assert.doesNotMatch(diagnostics, /external_onion_delivery_verified=true/);
+  assert.doesNotMatch(diagnostics, /production_messaging_ready=true/);
 });
 
 test("public diagnostics failure class maps detailed blockers to broad support classes", () => {

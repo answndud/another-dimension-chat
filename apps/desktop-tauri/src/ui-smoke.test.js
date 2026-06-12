@@ -1772,3 +1772,22 @@ test("composer and delivery-route controls stay on the chat delivery path", () =
 test("dark chat palette does not use gold or yellow warning colors", () => {
   assert.doesNotMatch(stylesCss, /#b8a46f|#746842|\bgold\b|\byellow\b/i);
 });
+
+test("public diagnostics summary includes desktop completion without production claims", () => {
+  assert.match(privateDeliveryStateJs, /function desktopCompletionRouteReady/);
+  assert.match(privateDeliveryStateJs, /export function desktopFirstCompletionStatus/);
+  assert.match(privateDeliveryStateJs, /desktop_completion_scope=\$\{fieldTestReportValue\(desktopCompletion\.scope/);
+  assert.match(
+    privateDeliveryStateJs,
+    /external_onion_delivery_verified=\$\{desktopCompletion\.externalOnionDeliveryVerified === true\}/,
+  );
+  assert.match(privateDeliveryStateJs, /production_messaging_ready=\$\{desktopCompletion\.productionMessagingReady === true\}/);
+  assert.match(privateDeliveryStateJs, /security_ready_claimed=\$\{desktopCompletion\.securityReadyClaimed === true\}/);
+  assert.match(
+    privateDeliveryStateJs,
+    /sensitive_communication_allowed=\$\{desktopCompletion\.sensitiveCommunicationAllowed === true\}/,
+  );
+  assert.match(mainJs, /function desktopFirstCompletionStatus\(report\)/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_completion=\$\{desktopCompletion\.status\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /app_launch_network=false/);
+});
