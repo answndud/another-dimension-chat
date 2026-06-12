@@ -27,6 +27,7 @@ import {
   productionOnionReceiveFailureMessage,
   productionOnionReceiveLoopRefreshPlan,
   productionOnionReceiveRuntimeView,
+  productionPairwiseInviteGuidanceView,
   productionPairingPayloadView,
   productionProfileMessageReadiness,
   productionProfilePreset,
@@ -5835,6 +5836,7 @@ function removeSavedInviteRoom(room) {
   }
   setProductionTwoProfileState("Room removed from list");
   setText(fields.productionTwoProfileWarning, t("removeRoomNotice"));
+  applyPairwiseInviteGuidance("delete", { input: savedInviteRoomInput(room), role: room?.role });
   return true;
 }
 
@@ -5969,6 +5971,21 @@ function renderReceivedInviteCodeActionState() {
     fields.roomListJoinRoom.disabled = !roomListCode;
     fields.roomListJoinRoom.title = roomListCode ? t("roomActionCreate") : t("inviteCodeMissing");
   }
+}
+
+function applyPairwiseInviteGuidance(step, options = {}) {
+  const input = options.input ?? productionTwoProfileInput();
+  const role = options.role ?? currentInviteCodeRole();
+  const view = productionPairwiseInviteGuidanceView({
+    step,
+    role,
+    roomPresent: Boolean(input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase),
+  });
+  const next = t(view.nextKey);
+  setText(fields.productionTwoProfileBoundary, view.boundary);
+  setText(fields.productionProfileNextAction, next);
+  setProductionFollowupActions(true, next);
+  return view;
 }
 
 function resetFailedJoinInviteRoomState(code) {
@@ -7565,6 +7582,10 @@ async function startInviteRoomFromCode({ code, role, copyBeforePrepare = false }
     role === "inviter" ? t("inviteCodeCreatedHint") : t("receivedCodeReadyHint"),
   );
   renderManualInviteRoomRebuildFlow("invite-room-started");
+  applyPairwiseInviteGuidance(role === "inviter" ? "create" : "join", {
+    role,
+    input: productionTwoProfileInput(),
+  });
   setChatDeliveryNoticeByKey(role === "inviter" ? "inviteCodeReadyNotice" : "receivedInviteCodeReadyNotice", "success");
   closeChatSettingsPanel();
   renderCurrentInviteCodeDisplay();
@@ -7686,6 +7707,7 @@ async function openInviteRoomFromToken(input = productionTwoProfileInput()) {
   setProductionTwoProfileState(currentInviteCodeRole() === "inviter" ? "Opening room" : "Joining room");
   setText(fields.productionTwoProfileWarning, currentInviteCodeRole() === "inviter" ? t("inviteCodeCreatedHint") : t("receivedCodeReadyHint"));
   renderManualInviteRoomRebuildFlow("room-opening");
+  applyPairwiseInviteGuidance("room-opening", { role: currentInviteCodeRole(), input: openInput });
   if (!manualInviteRoomRebuildFlowActive()) {
     setText(fields.productionTwoProfileSession, t("setupSessionWaiting"));
   }
@@ -7703,6 +7725,7 @@ async function openInviteRoomFromToken(input = productionTwoProfileInput()) {
       const savedStatus = await invokeInviteRoomSessionStatus({ profileA, profileB, passphrase });
       if (savedStatus.both_ready_for_message_envelope) {
         await saveProductionMessageRetentionPreference(profileA, passphrase, messageTtlSeconds);
+        applyPairwiseInviteGuidance("saved-room-return", { role: currentInviteCodeRole(), input: openInput });
         return await finishInviteRoomReadyFromStatus(
           openInput,
           savedStatus,
@@ -7726,6 +7749,7 @@ async function openInviteRoomFromToken(input = productionTwoProfileInput()) {
     }
     await saveProductionMessageRetentionPreference(profileA, passphrase, messageTtlSeconds);
     const status = await invokeInviteRoomSessionStatus({ profileA, profileB, passphrase });
+    applyPairwiseInviteGuidance("room-ready", { role: currentInviteCodeRole(), input: openInput });
     return await finishInviteRoomReadyFromStatus(
       openInput,
       status,

@@ -489,6 +489,13 @@ test("room list controls are wired to room flow instead of settings", () => {
   assert.match(mainJs, /fields\.roomListCreateRoom\.addEventListener\("click", createNewInviteRoomFromList\)/);
   assert.match(mainJs, /fields\.roomListJoinRoom\.addEventListener\("click", createRoomFromRoomListInviteCode\)/);
   assert.match(mainJs, /fields\.backToRoomList\.addEventListener\("click", showRoomList\)/);
+  assert.match(mainJs, /productionPairwiseInviteGuidanceView/);
+  const pairwiseGuidanceBody = functionBody(mainJs, "applyPairwiseInviteGuidance");
+  assert.match(pairwiseGuidanceBody, /productionPairwiseInviteGuidanceView/);
+  assert.match(pairwiseGuidanceBody, /roomPresent: Boolean/);
+  assert.match(pairwiseGuidanceBody, /fields\.productionTwoProfileBoundary/);
+  assert.match(pairwiseGuidanceBody, /fields\.productionProfileNextAction/);
+  assert.match(pairwiseGuidanceBody, /setProductionFollowupActions\(true, next\)/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /runSavedInviteRoomListAction\(view\.room \?\? room, view\.nextAction\.action, \{ actionOrigin: view\.nextAction\.origin \}\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /await openSavedInviteRoom\(room\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /focusPrivateRouteNextAction\(input\)/);
@@ -505,6 +512,12 @@ test("room list controls are wired to room flow instead of settings", () => {
   assert.match(createBody, /return createInviteCode\(\)/);
   assert.doesNotMatch(createBody, /openChatSettingsPanel|openPrivateDeliverySettings/);
 
+  assert.match(functionBody(mainJs, "startInviteRoomFromCode"), /applyPairwiseInviteGuidance\(role === "inviter" \? "create" : "join"/);
+  assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /applyPairwiseInviteGuidance\("room-opening"/);
+  assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /applyPairwiseInviteGuidance\("saved-room-return"/);
+  assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /applyPairwiseInviteGuidance\("room-ready"/);
+  assert.match(functionBody(mainJs, "removeSavedInviteRoom"), /applyPairwiseInviteGuidance\("delete"/);
+
   assert.match(functionBody(mainJs, "createRoomFromRoomListInviteCode"), /fields\.roomListInviteCode/);
   assert.match(
     functionBody(mainJs, "createRoomFromRoomListInviteCode"),
@@ -518,6 +531,19 @@ test("room list controls are wired to room flow instead of settings", () => {
   assert.match(startBody, /twoProfileTranscriptInputStillCurrent\(openInput\)/);
   assert.match(startBody, /return openInviteRoomFromToken\(openInput\)/);
   assert.doesNotMatch(startBody, /openChatSettingsPanel|openPrivateDeliverySettings/);
+
+  for (const key of [
+    "pairwiseInviteNextShareCode",
+    "pairwiseInviteNextOpenRoom",
+    "pairwiseInviteNextVerifyPhrase",
+    "pairwiseInviteNextVerifyOrWrite",
+    "pairwiseInviteNextCreateOrPasteAgain",
+    "pairwiseInviteNextFreshCode",
+  ]) {
+    assert.match(i18nJs, new RegExp(`${key}:`));
+  }
+  assert.match(i18nJs, /No usernames or address book/);
+  assert.match(i18nJs, /사용자 이름이나 주소록 없이/);
 });
 
 test("room list create action does not overlap the app settings action", () => {
