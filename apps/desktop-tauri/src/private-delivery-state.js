@@ -478,7 +478,18 @@ function publicDiagnosticsDesktopNextAction(parsed, desktopCompletion) {
   return desktopCompletionBlockerNextAction(desktopCompletion?.blockers, parsed);
 }
 
-export function publicDiagnosticsFailureClass(parsed) {
+function desktopCompletionBlockerFailureClass(blockers = []) {
+  const blocker = blockers[0] ?? "none";
+  if (blocker === "receive") {
+    return "receive-blocked";
+  }
+  if (blocker === "send-or-recover") {
+    return "desktop-action-needed";
+  }
+  return "none";
+}
+
+export function publicDiagnosticsFailureClass(parsed, desktopCompletion = null) {
   if (parsed.room_present !== "true") {
     return "room-not-open";
   }
@@ -500,14 +511,14 @@ export function publicDiagnosticsFailureClass(parsed) {
   if (parsed.real_onion_next_blocker && parsed.real_onion_next_blocker !== "none") {
     return "advanced-transport-blocked";
   }
-  return "none";
+  return desktopCompletionBlockerFailureClass(desktopCompletion?.blockers);
 }
 
 export function publicBetaDiagnosticsReport(report, options = {}) {
   const parsed = parseFieldTestReport(report);
   const triage = fieldTestReportTriageState(report);
   const desktopCompletion = desktopFirstCompletionStatus(report);
-  const failureClass = publicDiagnosticsFailureClass(parsed);
+  const failureClass = publicDiagnosticsFailureClass(parsed, desktopCompletion);
   const recoveryNextAction = publicDiagnosticsDesktopNextAction(parsed, desktopCompletion);
   const desktopAcceptanceNonClaims = [
     "external-onion-delivery",

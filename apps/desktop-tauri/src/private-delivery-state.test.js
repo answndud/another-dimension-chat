@@ -476,9 +476,11 @@ test("desktop-first completion reports local private flow readiness without secu
   assert.doesNotMatch(diagnostics, /production_messaging_ready=true/);
 
   const receiveBlockedDiagnostics = publicBetaDiagnosticsReport(blockedReport);
+  assert.match(receiveBlockedDiagnostics, /failure_class=receive-blocked/);
   assert.match(receiveBlockedDiagnostics, /desktop_completion_blockers=receive#send-or-recover/);
   assert.match(receiveBlockedDiagnostics, /recovery_next_action=start-receiving/);
   assert.match(receiveBlockedDiagnostics, /desktop_acceptance_next_action=start-receiving/);
+  assert.doesNotMatch(receiveBlockedDiagnostics, /failure_class=none/);
   assert.doesNotMatch(receiveBlockedDiagnostics, /desktop_acceptance_next_action=none/);
 
   const receiveStoppingDiagnostics = publicBetaDiagnosticsReport(receiveStoppingReport);
@@ -488,9 +490,11 @@ test("desktop-first completion reports local private flow readiness without secu
   assert.doesNotMatch(receiveStoppingDiagnostics, /desktop_acceptance_next_action=start-receiving/);
 
   const composeBlockedDiagnostics = publicBetaDiagnosticsReport(composeBlockedReport);
+  assert.match(composeBlockedDiagnostics, /failure_class=desktop-action-needed/);
   assert.match(composeBlockedDiagnostics, /desktop_completion_blockers=send-or-recover/);
   assert.match(composeBlockedDiagnostics, /recovery_next_action=write-message/);
   assert.match(composeBlockedDiagnostics, /desktop_acceptance_next_action=write-message/);
+  assert.doesNotMatch(composeBlockedDiagnostics, /failure_class=none/);
   assert.doesNotMatch(composeBlockedDiagnostics, /desktop_acceptance_next_action=none/);
 });
 

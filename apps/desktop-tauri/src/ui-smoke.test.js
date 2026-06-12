@@ -1896,6 +1896,8 @@ test("public diagnostics summary includes desktop completion without production 
     /sensitive_communication_allowed=\$\{desktopCompletion\.sensitiveCommunicationAllowed === true\}/,
   );
   assert.match(mainJs, /function desktopFirstCompletionStatus\(report\)/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public diagnostics generated failure_class=/);
+  assert.doesNotMatch(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public diagnostics ready failure_class=/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_completion=\$\{desktopCompletion\.status\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_blockers=\$\{desktopCompletion\.blockerSummary\}/);
   assert.match(
