@@ -7426,12 +7426,17 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
   const desktopAcceptanceNextAction = fieldTestReportValue(publicDiagnostics.desktop_acceptance_next_action, "none");
   const localManualE2eeBoundary = fieldTestReportValue(publicDiagnostics.local_manual_e2ee_runtime_boundary, "unknown");
   const productionE2eeReady = fieldTestReportValue(publicDiagnostics.production_e2ee_ready, "false");
+  const defaultTransportPath = fieldTestReportValue(
+    publicDiagnostics.default_transport_path,
+    "local-manual-encrypted-envelope-exchange",
+  );
+  const defaultTransportNetworkIo = fieldTestReportValue(publicDiagnostics.default_transport_network_io, "false");
   const payloadNextActionMatchesSummary =
     recoveryNextAction === copyNextAction && recoveryNextAction === desktopAcceptanceNextAction;
   const rawStateExcluded =
     publicDiagnostics.diagnostics_copy_boundary === "redacted-status-build-failure-class-recovery-action-only";
   if (fields.publicBetaDiagnosticsSummary) {
-    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} local_manual_e2ee_runtime_boundary=${localManualE2eeBoundary} production_e2ee_ready=${productionE2eeReady} release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
+    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} local_manual_e2ee_runtime_boundary=${localManualE2eeBoundary} production_e2ee_ready=${productionE2eeReady} default_transport_path=${defaultTransportPath} default_transport_network_io=${defaultTransportNetworkIo} high_risk_onion_path=explicit-user-triggered-fail-closed release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
   }
   return payload;
 }
@@ -17343,16 +17348,27 @@ async function runProductionTwoProfileMessageRoundtrip() {
     return;
   }
 
-  setProductionTwoProfileState("Message send running");
-  setText(fields.productionTwoProfileWarning, t("messageRunningWarning"));
+  setProductionTwoProfileState("Manual envelope save running");
+  setText(
+    fields.productionTwoProfileWarning,
+    currentLanguage === "ko"
+      ? "암호화된 메시지를 이 기기에 저장합니다. 기본 경로는 수동 envelope 교환이며 네트워크 전송을 시작하지 않습니다."
+      : "Saving the encrypted message on this device. The default path is local manual envelope exchange and starts no network send.",
+  );
   setText(fields.productionTwoProfileProfiles, t("messageProfilesWaiting"));
   renderManualInviteRoomRebuildFlow("first-message-draft");
   if (!manualInviteRoomRebuildFlowActive()) {
     setText(fields.productionTwoProfileSession, t("messageSessionWaiting"));
   }
-  setText(fields.productionTwoProfileMessageState, t("setupMessageWaiting"));
+  setText(
+    fields.productionTwoProfileMessageState,
+    "default_transport_path=local-manual-encrypted-envelope-exchange network_io=false automatic_delivery=false",
+  );
   if (!manualInviteRoomRebuildFlowActive()) {
-    setText(fields.productionTwoProfileBoundary, t("setupBoundaryWaiting"));
+    setText(
+      fields.productionTwoProfileBoundary,
+      "default_transport_network_io=false high_risk_onion_path=explicit-user-triggered-fail-closed external_delivery_claim=false",
+    );
   }
   setProductionFollowupActions(false, t("messageFollowupLocked"));
   setTwoProfileMessageRoundtripBusy(input);
