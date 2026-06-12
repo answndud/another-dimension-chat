@@ -100,6 +100,7 @@ require_text "apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift
 require_text "apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift" "not production-ready"
 require_text "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift" "SourceBoundaryBlockedMobileCommandAdapter"
 require_text "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift" "policy_blocked"
+require_text "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift" "lifecycle_confirmation_required"
 require_text "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift" "ffi_unavailable"
 require_text "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift" "not production-ready"
 
@@ -113,6 +114,8 @@ require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "recovery_next
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "public_non_claims="
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "copyRedactedDiagnosticsPayload"
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "diagnostics_payload=redacted_status_support_only"
+require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "sharedCore.localDataLifecycle"
+require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "lifecycle_confirmation_boundary=display_only_no_local_data_mutation"
 
 require_text "apps/mobile/ffi/README.md" "production_mobile_shared_core_api_freeze_boundary_summary"
 require_text "apps/mobile/ffi/shared_core_mobile_api_contract.json" '"first_binding_unit": "status_and_redacted_diagnostics_read_only_adapter"'
