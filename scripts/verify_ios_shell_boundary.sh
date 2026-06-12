@@ -44,6 +44,7 @@ require_file "apps/mobile/ios/AnotherDimension/AnotherDimensionApp.swift"
 require_file "apps/mobile/ios/AnotherDimension/ContentView.swift"
 require_file "apps/mobile/ios/AnotherDimension/SharedCoreMobileApi.swift"
 require_file "apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift"
+require_file "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift"
 require_file "apps/mobile/ios/AnotherDimension/Info.plist"
 require_file "apps/mobile/ios/AnotherDimension/AnotherDimension.entitlements"
 require_file "apps/mobile/ios/README.md"
@@ -75,6 +76,8 @@ require_text "apps/mobile/ios/AnotherDimension/AnotherDimension.entitlements" "<
 require_text "apps/mobile/ios/AnotherDimension/SharedCoreMobileApi.swift" "protocol SharedCoreMobileApi"
 require_text "apps/mobile/ios/AnotherDimension/SharedCoreMobileApi.swift" "readOnlyStatusAdapter.sharedCoreStatusSurface()"
 require_text "apps/mobile/ios/AnotherDimension/SharedCoreMobileApi.swift" "readOnlyStatusAdapter.redactedSupportDiagnostics()"
+require_text "apps/mobile/ios/AnotherDimension/SharedCoreMobileApi.swift" "blockedCommandAdapter.profileUnlockLockStatus(passphraseProvided: passphraseProvided)"
+require_text "apps/mobile/ios/AnotherDimension/SharedCoreMobileApi.swift" "blockedCommandAdapter.localDataLifecycle(action: action)"
 require_text "apps/mobile/ios/AnotherDimension/SharedCoreMobileApi.swift" "func sharedCoreStatusSurface"
 require_text "apps/mobile/ios/AnotherDimension/SharedCoreMobileApi.swift" "func profileUnlockLockStatus"
 require_text "apps/mobile/ios/AnotherDimension/SharedCoreMobileApi.swift" "func inviteCodeCreateJoin"
@@ -95,6 +98,10 @@ require_text "apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift
 require_text "apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift" "shared_core_status_surface"
 require_text "apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift" "redacted_support_diagnostics"
 require_text "apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift" "not production-ready"
+require_text "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift" "SourceBoundaryBlockedMobileCommandAdapter"
+require_text "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift" "policy_blocked"
+require_text "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift" "ffi_unavailable"
+require_text "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift" "not production-ready"
 
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "SecureField"
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "sharedCore.profileUnlockLockStatus"
@@ -116,6 +123,9 @@ reject_text "apps/mobile/ios/AnotherDimension/SharedCoreMobileApi.swift" "UserNo
 reject_text "apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift" "URLSession"
 reject_text "apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift" "NWConnection"
 reject_text "apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift" "CloudKit"
+reject_text "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift" "URLSession"
+reject_text "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift" "NWConnection"
+reject_text "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift" "CloudKit"
 reject_find "iOS build outputs or app artifacts" \
   \( -type d -name DerivedData -o -name '*.ipa' \)
 

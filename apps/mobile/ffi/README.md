@@ -79,6 +79,27 @@ FFI implemented false, generated bindings claimed false, wrapper-specific
 protocol/storage/transport semantics false, mobile readiness claimed false, and
 security-ready claimed false.
 
+## Blocked Command Adapter Boundary
+
+Android and iOS also carry a source-only blocked command adapter path for every
+non-read-only mobile command surface. That adapter must return only
+`SharedCoreCommandResult(status = "blocked", ...)` style results using the
+shared error taxonomy: `locked_profile`, `policy_blocked`, and
+`ffi_unavailable` for the current source boundary.
+
+The blocked adapter covers `profile_unlock_lock_status`,
+`invite_code_create_join`, `pairing_payload_export_import`,
+`safety_transcript_confirm`, `manual_envelope_export_import`,
+`message_transcript_view`, and `local_data_lifecycle`. It must not implement
+unlock, invite, pairing, safety transcript confirmation, envelope import/export,
+message transcript loading, lifecycle mutation, native network I/O, runtime
+messaging, or destructive lifecycle execution.
+
+The blocked adapter path keeps binding generation implemented false, callable
+FFI implemented false, generated bindings claimed false, wrapper-specific
+protocol/storage/transport semantics false, mobile readiness claimed false, and
+security-ready claimed false.
+
 Allowed API groups mirror the shared core wrapper boundary:
 
 - `shared_core_status_surface`
