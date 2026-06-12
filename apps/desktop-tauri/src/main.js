@@ -8243,8 +8243,8 @@ async function saveInviteRoomOutboundMessage(input = productionTwoProfileInput()
   });
   appendProductionTwoProfileConversationStatus("sent", profileA, profileB, messageNumber, messageText, {
     ttlSeconds: result.message_ttl_seconds,
-    outboundDeliveryState: "pending",
-    outboundRetryable: true,
+    outboundDeliveryState: "sent",
+    outboundRetryable: false,
     allowRetryableMetadataFallback: true,
   }, input);
   selectTwoProfileConversationMessage(profileA, profileB, messageNumber, messageText, { input });
@@ -11390,6 +11390,13 @@ function twoProfileComposerPrimaryIntent({
       action: "verify",
       labelKey: "comparePhraseAction",
       disabledReason: t("sendLockedUntilVerified"),
+    };
+  }
+  if (input.message) {
+    return {
+      action: "send",
+      labelKey: "roomActionSend",
+      disabledReason: "",
     };
   }
   if (!manualNetworkPermission) {
@@ -17256,10 +17263,6 @@ async function runProductionTwoProfileMessageRoundtrip() {
     setText(fields.productionTwoProfileWarning, result.warning);
     if (renderManualRebuildFirstMessageDeliveryGate(input, messageNumber)) {
       await loadProductionProfileList();
-      return;
-    }
-    await completeInviteRoomOutboundDelivery(input, messageNumber);
-    if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
     await loadProductionProfileList();

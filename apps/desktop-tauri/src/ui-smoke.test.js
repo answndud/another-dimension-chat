@@ -1155,7 +1155,7 @@ test("manual invite room rebuild flow stays local-only across setup steps", () =
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /renderManualInviteRoomRebuildFlow\(ready \? "conversation-loaded" : "session-check"\)/);
 });
 
-test("rebuild first message stops at explicit private delivery gate", () => {
+test("rebuild first message stops at explicit manual delivery gate", () => {
   const stepViewBody = functionBody(mainJs, "manualInviteRoomRebuildStepView");
   assert.match(stepViewBody, /first-message-draft/);
   assert.match(stepViewBody, /local-message-saved/);
@@ -1182,7 +1182,7 @@ test("rebuild first message stops at explicit private delivery gate", () => {
   const messageBody = functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip");
   assert.match(messageBody, /renderManualInviteRoomRebuildFlow\("first-message-draft"\)/);
   assert.match(messageBody, /if \(renderManualRebuildFirstMessageDeliveryGate\(input, messageNumber\)\) \{[\s\S]*return;[\s\S]*\}/);
-  assert.match(messageBody, /completeInviteRoomOutboundDelivery\(input, messageNumber\)/);
+  assert.doesNotMatch(messageBody, /completeInviteRoomOutboundDelivery\(input, messageNumber\)/);
 });
 
 test("rebuild delivery retry and receive actions stay room-scoped", () => {
@@ -1769,10 +1769,16 @@ test("invite-code send path does not bypass private delivery gates", () => {
   assert.notEqual(intentStart, -1, "missing twoProfileComposerPrimaryIntent");
   assert.notEqual(intentEnd, -1, "missing function after twoProfileComposerPrimaryIntent");
   const intentSource = mainJs.slice(intentStart, intentEnd);
+  const draftSendIndex = intentSource.indexOf("if (input.message)");
+  const privateDeliveryIndex = intentSource.indexOf("if (!manualNetworkPermission)");
   assert.doesNotMatch(intentSource, /twoProfileInviteCodeModeActive/);
+  assert.notEqual(draftSendIndex, -1, "draft send intent must exist");
+  assert.notEqual(privateDeliveryIndex, -1, "private delivery intent must exist");
+  assert.ok(draftSendIndex < privateDeliveryIndex, "default send must stay before private delivery setup");
   assert.match(intentSource, /enable-private-delivery/);
   assert.match(intentSource, /prepare-private-route/);
   assert.doesNotMatch(functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip"), /invokeInviteRoomMessageSend/);
+  assert.doesNotMatch(functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip"), /completeInviteRoomOutboundDelivery/);
 });
 
 test("message send retry and cancel results stay scoped to the current room", () => {
@@ -1836,7 +1842,7 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(composerBody, /const input = productionTwoProfileInput\(\)/);
   assert.match(composerBody, /stillCurrent/);
   assert.match(composerBody, /if \(!stillCurrent \|\| !twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
-  assert.match(composerBody, /completeInviteRoomOutboundDelivery\(input, messageNumber\)/);
+  assert.doesNotMatch(composerBody, /completeInviteRoomOutboundDelivery\(input, messageNumber\)/);
 });
 
 test("conversation rows show manual lifecycle summary without stronger delivery claims", () => {
@@ -1938,10 +1944,8 @@ test("private delivery stays explicit before network work starts", () => {
   assert.match(functionBody(mainJs, "enablePrivateDeliveryPermission"), /setManualNetworkPermission\(true\)/);
   assert.doesNotMatch(functionBody(mainJs, "enablePrivateDeliveryPermission"), /production_onion_persistent_client_start/);
   assert.doesNotMatch(functionBody(mainJs, "enablePrivateDeliveryPermission"), /production_onion_service_launch_attempt/);
-  assert.match(
-    functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"),
-    /rememberPrivateRouteFollowup\(input\.message \? "send-draft" : "receive", input\);[\s\S]*enablePrivateDeliveryPermission\(\{ preserveFollowup: true \}\)/,
-  );
+  const intentBody = functionBody(mainJs, "twoProfileComposerPrimaryIntent");
+  assert.ok(intentBody.indexOf("if (input.message)") < intentBody.indexOf("if (!manualNetworkPermission)"));
   assert.match(functionBody(mainJs, "ensurePrivateDeliveryRuntimeReady"), /production_onion_persistent_client_start/);
 });
 
@@ -1975,6 +1979,10 @@ test("composer and delivery-route controls stay on the chat delivery path", () =
   assert.match(composerBody, /focusSafetyConfirmation\(\)/);
   assert.match(composerBody, /await runProductionTwoProfileMessageRoundtrip\(\)/);
   assert.doesNotMatch(composerBody, /openChatSettingsPanel|openPrivateDeliverySettings/);
+
+  const savedMessageBody = functionBody(mainJs, "saveInviteRoomOutboundMessage");
+  assert.match(savedMessageBody, /outboundDeliveryState: "sent"/);
+  assert.match(savedMessageBody, /outboundRetryable: false/);
 
   const prepareRouteBody = functionBody(mainJs, "preparePrivateDeliveryRoute");
   assert.match(prepareRouteBody, /const input = options\.input \?\? productionTwoProfileInput\(\)/);
