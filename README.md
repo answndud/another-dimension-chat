@@ -203,7 +203,7 @@ What exists today:
 - Repository governance guardrails for maintainer-driven main-branch work, unsigned beta non-claims, no-central-trusted-server scope, release file discipline, and private-data redaction.
 - A local Tauri desktop beta shell for invite-code rooms, safety phrase confirmation, encrypted local profile/session/message records, saved-room resume, manual private-delivery exchange UI, explicit receive start/stop, retry/cancel recovery, and redacted field-test reports.
 - Desktop-only v0.1 acceptance matrix: `desktop local/manual beta readiness`
-  covers `invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim`.
+  covers `invite#create#join#verify#send#export#import#reply#receive#retry#cancel#delete#unlock#reopen#diagnostics#release-non-claim`.
   It excludes
   `android-ios-runtime#external-peer-evidence#audit#production-ready#security-ready#sensitive-communication`.
   Passing this matrix does not claim external onion delivery, audited security,
