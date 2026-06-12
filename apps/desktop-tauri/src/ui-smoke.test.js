@@ -536,6 +536,14 @@ test("room list controls are wired to room flow instead of settings", () => {
   assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /applyPairwiseInviteGuidance\("room-opening"/);
   assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /applyPairwiseInviteGuidance\("saved-room-return"/);
   assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /applyPairwiseInviteGuidance\("room-ready"/);
+  assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /const safetyConfirmed = twoProfileSafetyConfirmedForInput\(roomInput\)/);
+  assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /const verifyBeforeMessaging = !safetyConfirmed && inviteRole !== "inviter"/);
+  assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /verifyBeforeMessaging \? t\("roomOnboardingNextVerify"\) : warningText/);
+  assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /verifyBeforeMessaging \? "sendLockedUntilVerified" : "inviteRoomReadyAfterSessionCode"/);
+  assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /else if \(!safetyConfirmed\) \{[\s\S]*focusSafetyConfirmation\(\)/);
+  assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /const safetyConfirmed = twoProfileSafetyConfirmedForInput\(twoProfileRoomIdentityInput\(currentInput\)\)/);
+  assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /: focusSafetyConfirmation/);
+  assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /typeof postCheckFocus === "function"[\s\S]*postCheckFocus\(\)/);
   assert.match(functionBody(mainJs, "removeSavedInviteRoom"), /applyPairwiseInviteGuidance\("delete"/);
 
   assert.match(functionBody(mainJs, "createRoomFromRoomListInviteCode"), /fields\.roomListInviteCode/);
@@ -562,6 +570,10 @@ test("room list controls are wired to room flow instead of settings", () => {
   ]) {
     assert.match(i18nJs, new RegExp(`${key}:`));
   }
+  assert.match(i18nJs, /inviteRoomReadyAfterSessionCode: "Room is ready\. Compare the verification phrase before writing\."/);
+  assert.match(i18nJs, /connectionGuideSetupText: "The invite code opens the room; compare the verification phrase before messaging\."/);
+  assert.doesNotMatch(i18nJs, /You can send a message now|바로 메시지를 보낼 수 있습니다|Room is ready\. Write a message to continue/);
+  assert.doesNotMatch(mainJs, /You can send a message now|바로 메시지를 보낼 수 있습니다|Room is ready\. Write a message to continue/);
   assert.match(i18nJs, /No usernames or address book/);
   assert.match(i18nJs, /사용자 이름이나 주소록 없이/);
 });
