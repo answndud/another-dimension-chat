@@ -4,6 +4,11 @@
   "binding_generation_implemented": false,
   "callable_ffi_implemented": false,
   "generated_bindings_claimed": false,
+  "read_only_adapter_implemented": true,
+  "read_only_adapter_files": [
+    "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt",
+    "apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift"
+  ],
   "android_adapter_required": true,
   "ios_adapter_required": true,
   "wrapper_neutral": true,
