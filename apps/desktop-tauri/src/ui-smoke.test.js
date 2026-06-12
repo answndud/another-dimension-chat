@@ -11,6 +11,7 @@ import {
 import {
   productionManualCurrentFocusTarget,
   productionManualPrimaryActions,
+  productionManualTransferStepLabel,
 } from "./action-state.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -1863,8 +1864,9 @@ test("conversation rows show manual lifecycle summary without stronger delivery 
   assert.match(renderBody, /manualLifecycle\.detail/);
   assert.match(renderBody, /manualLifecycle\.boundary/);
   assert.match(actionStateJs, /click Show plaintext before writing the reply/);
-  assert.match(actionStateJs, /step: "review plaintext"/);
-  assert.match(actionStateJs, /sender record and an envelope slot ready for peer import/);
+  assert.equal(productionManualTransferStepLabel("show-plaintext"), "show plaintext");
+  assert.match(actionStateJs, /productionManualTransferStepLabel\("show-plaintext"\)/);
+  assert.match(actionStateJs, /productionManualTransferStepLabel\("import-envelope"\)/);
   assert.equal(productionManualCurrentFocusTarget(actionState), "show-received");
   assert.deepEqual(productionManualPrimaryActions(actionState), {
     showReceived: true,

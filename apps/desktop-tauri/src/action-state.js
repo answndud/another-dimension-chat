@@ -364,6 +364,19 @@ export function productionOnionReceiveFailureMessage(backendLoop = {}) {
   }
 }
 
+export function productionManualTransferStepLabel(step) {
+  const labels = {
+    "export-envelope": "export envelope",
+    "load-or-paste-envelope": "load or paste envelope",
+    "import-envelope": "import envelope",
+    "show-plaintext": "show plaintext",
+    "write-reply": "write reply",
+    "retry-or-cancel": "retry or cancel",
+    "write-new-message": "write a new message",
+  };
+  return labels[step] ?? "review conversation";
+}
+
 export function productionTwoProfileConversationActionView(entry, senderEnvelopeSlotPresent = false) {
   if (!entry) {
     return {
@@ -378,9 +391,10 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
   const sentCopyPresent = entry.statuses?.has("sent") ?? false;
   const receivedCopyPresent = entry.statuses?.has("received") ?? false;
   if (sentCopyPresent && receivedCopyPresent) {
+    const step = productionManualTransferStepLabel("write-reply");
     return {
-      nextAction: `Complete: message #${entry.messageNumber} delivered. Next: write reply from ${entry.receiver} to ${entry.sender}.`,
-      rowLabel: `action: reply from ${entry.receiver}`,
+      nextAction: `Next: ${step} from ${entry.receiver} to ${entry.sender} for message #${entry.messageNumber}.`,
+      rowLabel: `action: ${step} from ${entry.receiver}`,
       state: "is-reply",
       focusTarget: "reply-message",
       manualTarget: null,
@@ -388,9 +402,10 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
     };
   }
   if (receivedCopyPresent) {
+    const step = productionManualTransferStepLabel("write-reply");
     return {
-      nextAction: `Received: message #${entry.messageNumber} is ready. Next: write reply from ${entry.receiver} to ${entry.sender}.`,
-      rowLabel: `action: reply from ${entry.receiver}`,
+      nextAction: `Next: ${step} from ${entry.receiver} to ${entry.sender} for message #${entry.messageNumber}.`,
+      rowLabel: `action: ${step} from ${entry.receiver}`,
       state: "is-reply",
       focusTarget: "reply-message",
       manualTarget: null,
@@ -398,8 +413,9 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
     };
   }
   if (sentCopyPresent && entry.outboundDeliveryState === "canceled") {
+    const step = productionManualTransferStepLabel("write-new-message");
     return {
-      nextAction: `Canceled: message #${entry.messageNumber} remains in the transcript. Next: write a new message from ${entry.sender}.`,
+      nextAction: `Next: ${step} from ${entry.sender}. Message #${entry.messageNumber} remains in the transcript.`,
       rowLabel: "action: canceled",
       state: "is-waiting",
       focusTarget: "message",
@@ -409,10 +425,11 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
   }
   if (sentCopyPresent && entry.outboundRetryable === true) {
     const needsEndpointRefresh = productionTwoProfileOutboundNeedsEndpointRefresh(entry);
+    const step = productionManualTransferStepLabel("retry-or-cancel");
     return {
       nextAction: needsEndpointRefresh
-        ? `Stale address: refresh the peer address, then retry message #${entry.messageNumber}.`
-        : `Retry send: message #${entry.messageNumber} can be sent again or canceled.`,
+        ? `Next: refresh the peer address, then ${step} message #${entry.messageNumber}.`
+        : `Next: ${step} message #${entry.messageNumber}.`,
       rowLabel: needsEndpointRefresh ? "action: refresh address and retry" : "action: retry send",
       state: "is-ready",
       focusTarget: needsEndpointRefresh ? "refresh-endpoint" : "retry-send",
@@ -421,9 +438,10 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
     };
   }
   if (sentCopyPresent && senderEnvelopeSlotPresent) {
+    const step = productionManualTransferStepLabel("import-envelope");
     return {
-      nextAction: `Next: import envelope for message #${entry.messageNumber} into ${entry.receiver}.`,
-      rowLabel: `action: import envelope into ${entry.receiver}`,
+      nextAction: `Next: ${step} for message #${entry.messageNumber} into ${entry.receiver}.`,
+      rowLabel: `action: ${step} into ${entry.receiver}`,
       state: "is-ready",
       focusTarget: "import-envelope",
       manualTarget: "inbound",
@@ -431,18 +449,20 @@ export function productionTwoProfileConversationActionView(entry, senderEnvelope
     };
   }
   if (sentCopyPresent) {
+    const step = productionManualTransferStepLabel("load-or-paste-envelope");
     return {
-      nextAction: `Next: load or paste ${entry.sender}'s envelope for message #${entry.messageNumber} into ${entry.receiver}.`,
-      rowLabel: `action: load envelope for ${entry.receiver}`,
+      nextAction: `Next: ${step} from ${entry.sender} for message #${entry.messageNumber} into ${entry.receiver}.`,
+      rowLabel: `action: ${step} for ${entry.receiver}`,
       state: "is-waiting",
       focusTarget: "remote-envelope",
       manualTarget: "inbound",
       manualButtonLabel: "Open envelope input",
     };
   }
+  const step = productionManualTransferStepLabel("export-envelope");
   return {
-    nextAction: `Next: export sender envelope for message #${entry.messageNumber} from ${entry.sender}.`,
-    rowLabel: `action: export sender copy from ${entry.sender}`,
+    nextAction: `Next: ${step} for message #${entry.messageNumber} from ${entry.sender}.`,
+    rowLabel: `action: ${step} from ${entry.sender}`,
     state: "is-ready",
     focusTarget: "export-envelope",
     manualTarget: "outbound",
@@ -459,65 +479,72 @@ export function productionTwoProfileManualLifecycleView(entry, senderEnvelopeSlo
   const label = number > 0 ? `message #${number}` : "message";
   const boundary = "manual lifecycle only; network_io=false";
   if (sentCopyPresent && receivedCopyPresent) {
+    const step = productionManualTransferStepLabel("write-reply");
     return {
       boundary,
-      detail: `${label} has sender and receiver records; write a reply if needed.`,
+      detail: `${label} has sender and receiver records; next: ${step}.`,
       phase: "complete",
       state: "is-complete",
-      step: "sender stored / receiver stored",
+      step,
     };
   }
   if (receivedCopyPresent) {
+    const step = productionManualTransferStepLabel("show-plaintext");
     return {
       boundary,
-      detail: `${label} has a receiver record; click Show plaintext before writing the reply.`,
+      detail: `${label} has a receiver record; next: ${step} before writing the reply.`,
       phase: "received",
       state: "is-received",
-      step: "review plaintext",
+      step,
     };
   }
   if (canceled) {
+    const step = productionManualTransferStepLabel("write-new-message");
     return {
       boundary,
-      detail: `${label} was canceled locally; write a new message to continue.`,
+      detail: `${label} was canceled locally; next: ${step}.`,
       phase: "canceled",
       state: "is-canceled",
-      step: "terminal local cancel",
+      step,
     };
   }
   if (retryable) {
+    const step = productionManualTransferStepLabel("retry-or-cancel");
     return {
       boundary,
-      detail: `${label} is saved and can be retried or canceled from this device.`,
+      detail: `${label} is saved; next: ${step} from this device.`,
       phase: "retryable",
       state: "is-retryable",
-      step: "retry or cancel",
+      step,
     };
   }
   if (sentCopyPresent && senderEnvelopeSlotPresent) {
+    const step = productionManualTransferStepLabel("import-envelope");
     return {
       boundary,
-      detail: `${label} has a sender record and an envelope slot ready for peer import.`,
+      detail: `${label} has a sender record and an envelope slot; next: ${step}.`,
       phase: "import-ready",
       state: "is-import-ready",
-      step: "import on receiver",
+      step,
     };
   }
   if (sentCopyPresent) {
+    const step = productionManualTransferStepLabel("load-or-paste-envelope");
     return {
       boundary,
-      detail: `${label} has a sender record; load or paste the envelope for receiver import.`,
+      detail: `${label} has a sender record; next: ${step} for receiver import.`,
       phase: "awaiting-import",
       state: "is-awaiting-import",
-      step: "load envelope",
+      step,
     };
   }
+  const step = productionManualTransferStepLabel("export-envelope");
   return {
     boundary,
-    detail: `${label} is pending local sender export before peer import.`,
+    detail: `${label} is pending local sender export; next: ${step}.`,
     phase: "export-needed",
     state: "is-export-needed",
-    step: "export sender envelope",
+    step,
   };
 }
 
