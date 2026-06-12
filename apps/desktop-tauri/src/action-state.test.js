@@ -9,6 +9,7 @@ import {
   productionInviteIdentityBoundaryView,
   productionInviteRoomConversationMetadata,
   productionManualMessageCheckView,
+  productionManualTransferStepLabel,
   productionOnionReceiveLoopRefreshPlan,
   productionOnionReceiveRuntimeView,
   productionTwoProfileCurrentAction,
@@ -355,7 +356,7 @@ test("manual lifecycle view summarizes envelope state without sensitive payloads
     outboundDeliveryState: "pending",
   });
   assert.equal(exportNeeded.phase, "export-needed");
-  assert.equal(exportNeeded.step, "export sender envelope");
+  assert.equal(exportNeeded.step, productionManualTransferStepLabel("export-envelope"));
   assert.match(exportNeeded.boundary, /network_io=false/);
 
   const importReady = productionTwoProfileManualLifecycleView(
@@ -367,7 +368,7 @@ test("manual lifecycle view summarizes envelope state without sensitive payloads
     true,
   );
   assert.equal(importReady.phase, "import-ready");
-  assert.equal(importReady.step, "import on receiver");
+  assert.equal(importReady.step, productionManualTransferStepLabel("import-envelope"));
 
   const retryable = productionTwoProfileManualLifecycleView({
     ...base,
@@ -384,7 +385,7 @@ test("manual lifecycle view summarizes envelope state without sensitive payloads
     outboundDeliveryState: "sent",
   });
   assert.equal(complete.phase, "complete");
-  assert.equal(complete.step, "sender stored / receiver stored");
+  assert.equal(complete.step, productionManualTransferStepLabel("write-reply"));
 
   const rendered = [exportNeeded, importReady, retryable, complete]
     .map((view) => Object.values(view).join(" "))
