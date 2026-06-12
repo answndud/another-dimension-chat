@@ -1157,6 +1157,15 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(allRoomClearBody, /clearAllProductionPayloadSlots\(\)/);
 
   const rebuildBody = functionBody(mainJs, "applyPostDestructiveLifecycleRebuildGuidance");
+  assert.match(rebuildBody, /const sessionDelete = action === "session-delete"/);
+  assert.match(rebuildBody, /const profileDelete = action === "profile-delete"/);
+  assert.match(rebuildBody, /postSessionDeleteRoomRebuildWarning/);
+  assert.match(rebuildBody, /postSessionDeleteRoomRebuildNext/);
+  assert.match(rebuildBody, /lifecycle_action=\$\{action\}/);
+  assert.match(rebuildBody, /session_records_removed=\$\{sessionDelete\}/);
+  assert.match(rebuildBody, /message_records_preserved_by_session_delete=\$\{sessionDelete\}/);
+  assert.match(rebuildBody, /profile_store_removed=\$\{profileDelete\}/);
+  assert.match(rebuildBody, /owned_app_data_removed=\$\{fullWipe\}/);
   assert.match(rebuildBody, /stale_room_retry_cleared=true/);
   assert.match(rebuildBody, /stale_receive_cleared=true/);
   assert.match(rebuildBody, /stale_delivery_code_cleared=true/);
@@ -1171,6 +1180,14 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(rebuildBody, /security_ready=false/);
   assert.match(rebuildBody, /clearCurrentInviteRoomInput\(\)/);
   assert.match(rebuildBody, /setProductionFollowupActions\(true/);
+  assert.ok(
+    rebuildBody.indexOf('renderManualInviteRoomRebuildFlow("rebuild-needed"') <
+      rebuildBody.indexOf("setText(fields.productionTwoProfileSession, lifecycleSession)"),
+    "lifecycle-specific session diagnostics must be restored after rebuild flow renders",
+  );
+  assert.match(i18nJs, /postSessionDeleteRoomRebuildWarning/);
+  assert.match(i18nJs, /Session resume records were cleared while local message records remain/);
+  assert.match(i18nJs, /세션 재개 기록을 정리했지만 로컬 메시지 기록은 남아 있습니다/);
 
   assert.match(functionBody(mainJs, "deleteProductionProfile"), /roomInputBeforeDelete = productionTwoProfileInput\(\)/);
   assert.match(functionBody(mainJs, "deleteProductionProfile"), /applyPostDestructiveLifecycleRebuildGuidance\("profile-delete"/);

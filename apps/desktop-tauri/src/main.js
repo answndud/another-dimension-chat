@@ -18162,10 +18162,35 @@ function applyPostDestructiveLifecycleRebuildGuidance(action, options = {}) {
   const deletedProfile = String(options.deletedProfile ?? "").trim();
   const input = options.input ?? productionTwoProfileInput();
   const fullWipe = action === "full-local-wipe";
+  const sessionDelete = action === "session-delete";
+  const profileDelete = action === "profile-delete";
   const affectedCurrentRoom = fullWipe || twoProfileInputReferencesProfile(input, deletedProfile);
   const clearedRooms = fullWipe
     ? savedInviteRooms().length
     : clearSavedInviteRoomRuntimeStateForProfile(deletedProfile);
+  const warningKey = fullWipe
+    ? "postWipeRoomRebuildWarning"
+    : sessionDelete
+      ? "postSessionDeleteRoomRebuildWarning"
+      : "postDeleteRoomRebuildWarning";
+  const nextKey = fullWipe
+    ? "postWipeRoomRebuildNext"
+    : sessionDelete
+      ? "postSessionDeleteRoomRebuildNext"
+      : "postDeleteRoomRebuildNext";
+  const lifecycleSemantics =
+    `lifecycle_action=${action} session_records_removed=${sessionDelete} ` +
+    `message_records_preserved_by_session_delete=${sessionDelete} ` +
+    `profile_store_removed=${profileDelete} owned_app_data_removed=${fullWipe}`;
+  const lifecycleSession =
+    `stale_room_retry_cleared=true stale_receive_cleared=true stale_delivery_code_cleared=true ` +
+    `stale_manual_rebuild_cleared=true stale_chat_notice_cleared=true ${lifecycleSemantics} ` +
+    `affected_current_room=${affectedCurrentRoom} saved_rooms_cleared=${clearedRooms}`;
+  const lifecycleBoundary =
+    `local_only=true stale_room_retry_cleared=true stale_receive_cleared=true stale_delivery_code_cleared=true ` +
+    `stale_manual_rebuild_cleared=true stale_chat_notice_cleared=true rebuild_required=true ${lifecycleSemantics} ` +
+    `external_evidence_claim=false backup_recovery=false cloud_backup_sync=false rollback_prevention=false ` +
+    `secure_delete_claim=false security_ready=false`;
 
   stopInviteRoomTranscriptRefresh();
   stopInviteRoomPresenceRefresh();
@@ -18184,25 +18209,12 @@ function applyPostDestructiveLifecycleRebuildGuidance(action, options = {}) {
     renderSavedInviteRooms();
   }
   setProductionTwoProfileState(fullWipe ? "Local rooms cleared" : "Room rebuild needed");
-  setText(
-    fields.productionTwoProfileWarning,
-    fullWipe ? t("postWipeRoomRebuildWarning") : t("postDeleteRoomRebuildWarning"),
-  );
-  setText(
-    fields.productionTwoProfileSession,
-    `stale_room_retry_cleared=true stale_receive_cleared=true stale_delivery_code_cleared=true ` +
-      `stale_manual_rebuild_cleared=true stale_chat_notice_cleared=true ` +
-      `affected_current_room=${affectedCurrentRoom} saved_rooms_cleared=${clearedRooms}`,
-  );
-  setText(
-    fields.productionTwoProfileBoundary,
-    `local_only=true stale_room_retry_cleared=true stale_receive_cleared=true stale_delivery_code_cleared=true ` +
-      `stale_manual_rebuild_cleared=true stale_chat_notice_cleared=true rebuild_required=true ` +
-      `external_evidence_claim=false backup_recovery=false cloud_backup_sync=false rollback_prevention=false ` +
-      `secure_delete_claim=false security_ready=false`,
-  );
-  setProductionFollowupActions(true, fullWipe ? t("postWipeRoomRebuildNext") : t("postDeleteRoomRebuildNext"));
   renderManualInviteRoomRebuildFlow("rebuild-needed", { force: true, warning: false });
+  setText(fields.productionTwoProfileWarning, t(warningKey));
+  setText(fields.productionTwoProfileSession, lifecycleSession);
+  setText(fields.productionTwoProfileBoundary, lifecycleBoundary);
+  setText(fields.productionProfileNextAction, t(nextKey));
+  setProductionFollowupActions(true, t(nextKey));
   return { affectedCurrentRoom, clearedRooms };
 }
 
