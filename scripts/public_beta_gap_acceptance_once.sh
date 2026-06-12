@@ -13,7 +13,7 @@ require_file() {
 require_text() {
   local file="$1"
   local text="$2"
-  if ! grep -Fq "$text" "$file"; then
+  if ! grep -Fq -- "$text" "$file"; then
     echo "FAIL missing required public beta text in $file: $text" >&2
     exit 1
   fi
@@ -22,7 +22,7 @@ require_text() {
 reject_text() {
   local file="$1"
   local text="$2"
-  if grep -Fq "$text" "$file"; then
+  if grep -Fq -- "$text" "$file"; then
     echo "FAIL forbidden public beta text in $file: $text" >&2
     exit 1
   fi
@@ -62,12 +62,17 @@ require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "No peer report 
 require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "Release body"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "status-build-failure-class-recovery-action-desktop-acceptance-only"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "desktop local-private-flow acceptance status/blockers/non-claims"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "--check-artifact-boundary"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/i18n.js" "desktop local-private-flow acceptance status/blockers/non-claims"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "desktop local-private-flow acceptance status/blockers/non-claims"
+require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "COMPONENT_BOUNDARIES.md"
+require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" "COMPONENT_BOUNDARIES.md"
+require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "desktop local-private-flow acceptance status/blockers/non-claims"
 reject_text "$ROOT_DIR/apps/desktop-tauri/README.md" "manual network permission state"
 reject_text "$ROOT_DIR/apps/desktop-tauri/src/i18n.js" "external delivery evidence must come from real peer reports"
 reject_text "$ROOT_DIR/apps/desktop-tauri/src/i18n.js" "실제 peer report에서만"
+reject_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "manual network"
 
 echo "status=public-beta-external-delivery-nonclaim-accepted"
 echo "external_delivery_claim=false"
