@@ -35,8 +35,9 @@ interface SharedCoreMobileApi {
 
 class AndroidSharedCoreBoundary(
     private val readOnlyStatusAdapter: ReadOnlyNativeStatusAdapter = SourceBoundaryReadOnlyNativeStatusAdapter(),
+    private val blockedCommandAdapter: BlockedMobileCommandAdapter = SourceBoundaryBlockedMobileCommandAdapter(),
 ) : SharedCoreMobileApi {
-    private val blockedCommandSurfaceInventory = listOf(
+    private val sourceBoundaryApiGroupInventory = listOf(
         "shared_core_status_surface",
         "profile_unlock_lock_status",
         "invite_code_create_join",
@@ -47,7 +48,7 @@ class AndroidSharedCoreBoundary(
         "local_data_lifecycle",
         "redacted_support_diagnostics",
     )
-    private val publicNonClaimsBoundary = listOf(
+    private val sourceBoundaryPublicNonClaims = listOf(
         "unsigned experimental public beta",
         "sensitive communication prohibited",
         "not audited",
@@ -55,54 +56,37 @@ class AndroidSharedCoreBoundary(
         "external onion delivery not claimed",
         "mobile readiness not claimed",
     )
+    private val sourceBoundaryBlockedErrorTaxonomy = listOf(
+        "locked_profile",
+        "policy_blocked",
+        "ffi_unavailable",
+        "explicit user action required",
+    )
 
     override fun sharedCoreStatusSurface(): SharedCoreStatusDto =
         readOnlyStatusAdapter.sharedCoreStatusSurface()
 
-    override fun profileUnlockLockStatus(passphraseProvided: Boolean): SharedCoreCommandResult {
-        return if (passphraseProvided) {
-            blocked("ffi_unavailable", "connect shared Rust core binding")
-        } else {
-            blocked("locked_profile", "enter passphrase")
-        }
-    }
+    override fun profileUnlockLockStatus(passphraseProvided: Boolean): SharedCoreCommandResult =
+        blockedCommandAdapter.profileUnlockLockStatus(passphraseProvided)
 
     override fun inviteCodeCreateJoin(action: ExplicitUserActionToken): SharedCoreCommandResult =
-        explicitActionBoundary(action, "invite_code_create_join")
+        blockedCommandAdapter.inviteCodeCreateJoin(action)
 
     override fun pairingPayloadExportImport(action: ExplicitUserActionToken): SharedCoreCommandResult =
-        explicitActionBoundary(action, "pairing_payload_export_import")
+        blockedCommandAdapter.pairingPayloadExportImport(action)
 
     override fun safetyTranscriptConfirm(action: ExplicitUserActionToken): SharedCoreCommandResult =
-        explicitActionBoundary(action, "safety_transcript_confirm")
+        blockedCommandAdapter.safetyTranscriptConfirm(action)
 
     override fun manualEnvelopeExportImport(action: ExplicitUserActionToken): SharedCoreCommandResult =
-        explicitActionBoundary(action, "manual_envelope_export_import")
+        blockedCommandAdapter.manualEnvelopeExportImport(action)
 
     override fun messageTranscriptView(): SharedCoreCommandResult =
-        blocked("ffi_unavailable", "load transcript through shared Rust core")
+        blockedCommandAdapter.messageTranscriptView()
 
     override fun localDataLifecycle(action: ExplicitUserActionToken): SharedCoreCommandResult =
-        explicitActionBoundary(action, "local_data_lifecycle")
+        blockedCommandAdapter.localDataLifecycle(action)
 
     override fun redactedSupportDiagnostics(): SharedCoreStatusDto =
         readOnlyStatusAdapter.redactedSupportDiagnostics()
-
-    private fun explicitActionBoundary(
-        action: ExplicitUserActionToken,
-        surface: String,
-    ): SharedCoreCommandResult {
-        return if (action.reason.isBlank()) {
-            blocked("policy_blocked", "explicit user action required")
-        } else {
-            blocked("ffi_unavailable", "connect shared Rust core binding for $surface")
-        }
-    }
-
-    private fun blocked(failureClass: String, recoveryNextAction: String): SharedCoreCommandResult =
-        SharedCoreCommandResult(
-            status = "blocked",
-            failureClass = failureClass,
-            recoveryNextAction = recoveryNextAction,
-        )
 }

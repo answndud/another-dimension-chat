@@ -7,6 +7,8 @@ ANDROID_API="$ROOT_DIR/apps/mobile/android/app/src/main/java/chat/anotherdimensi
 IOS_API="$ROOT_DIR/apps/mobile/ios/AnotherDimension/SharedCoreMobileApi.swift"
 ANDROID_ADAPTER="$ROOT_DIR/apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt"
 IOS_ADAPTER="$ROOT_DIR/apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift"
+ANDROID_BLOCKED_COMMAND_ADAPTER="$ROOT_DIR/apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt"
+IOS_BLOCKED_COMMAND_ADAPTER="$ROOT_DIR/apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift"
 
 require_file() {
   if [ ! -f "$1" ]; then
@@ -38,6 +40,8 @@ require_file "$ANDROID_API"
 require_file "$IOS_API"
 require_file "$ANDROID_ADAPTER"
 require_file "$IOS_ADAPTER"
+require_file "$ANDROID_BLOCKED_COMMAND_ADAPTER"
+require_file "$IOS_BLOCKED_COMMAND_ADAPTER"
 require_file "$ROOT_DIR/apps/mobile/ffi/README.md"
 require_file "$ROOT_DIR/crates/core/src/lib.rs"
 
@@ -46,6 +50,7 @@ require_text "$CONTRACT" '"binding_generation_implemented": false'
 require_text "$CONTRACT" '"callable_ffi_implemented": false'
 require_text "$CONTRACT" '"generated_bindings_claimed": false'
 require_text "$CONTRACT" '"read_only_adapter_implemented": true'
+require_text "$CONTRACT" '"blocked_command_adapter_implemented": true'
 require_text "$CONTRACT" '"wrapper_neutral": true'
 require_text "$CONTRACT" '"mobile_readiness_claimed": false'
 require_text "$CONTRACT" '"security_ready_claimed": false'
@@ -125,9 +130,12 @@ require_text "$IOS_API" "ffi_unavailable"
 require_text "$IOS_API" "explicit user action required"
 require_text "$ANDROID_ADAPTER" "SourceBoundaryReadOnlyNativeStatusAdapter"
 require_text "$IOS_ADAPTER" "SourceBoundaryReadOnlyNativeStatusAdapter"
+require_text "$ANDROID_BLOCKED_COMMAND_ADAPTER" "SourceBoundaryBlockedMobileCommandAdapter"
+require_text "$IOS_BLOCKED_COMMAND_ADAPTER" "SourceBoundaryBlockedMobileCommandAdapter"
 
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Native Binding Implementation Gate"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Read-Only Native Status Adapter Boundary"
+require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Blocked Command Adapter Boundary"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "status_and_redacted_diagnostics_read_only_adapter"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "shared_core_mobile_api_contract.json"
 require_text "$ROOT_DIR/crates/core/src/lib.rs" "production_mobile_shared_core_api_freeze_boundary_summary"

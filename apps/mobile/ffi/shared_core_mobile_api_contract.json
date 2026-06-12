@@ -9,6 +9,11 @@
     "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt",
     "apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift"
   ],
+  "blocked_command_adapter_implemented": true,
+  "blocked_command_adapter_files": [
+    "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/BlockedMobileCommandAdapter.kt",
+    "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift"
+  ],
   "android_adapter_required": true,
   "ios_adapter_required": true,
   "wrapper_neutral": true,
@@ -108,5 +113,14 @@
     "network_io",
     "runtime_messaging",
     "destructive_lifecycle"
+  ],
+  "blocked_command_adapter_surfaces": [
+    "profile_unlock_lock_status",
+    "invite_code_create_join",
+    "pairing_payload_export_import",
+    "safety_transcript_confirm",
+    "manual_envelope_export_import",
+    "message_transcript_view",
+    "local_data_lifecycle"
   ]
 }
