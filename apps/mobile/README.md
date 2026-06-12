@@ -1,8 +1,8 @@
 # Mobile Wrapper Boundary
 
-This directory contains the mobile wrapper boundary. Android now has a minimal
-source scaffold; iOS and FFI remain source-boundary documentation until their
-explicit implementation phases.
+This directory contains the mobile wrapper boundary. Android and iOS now have
+minimal source scaffolds; FFI remains source-boundary documentation until an
+explicit binding implementation phase.
 
 It is not a mobile public beta artifact and not an Android or iOS readiness
 claim. Mobile clients are not part of the current unsigned experimental public
@@ -81,6 +81,23 @@ AndroidManifest.xml, backup exclusion XML, and a placeholder shared-core boundar
 adapter that returns redacted blocked status until a later binding phase.
 
 The Android scaffold must keep wrapper-specific protocol, storage, transport,
+pairing, account, discovery, delivery, backup, and diagnostics semantics out of
+the wrapper. All command surfaces must mirror
+`production_mobile_shared_core_api_freeze_boundary_summary`.
+
+## iOS Shell Scaffold Kickoff Boundary
+
+Phase HQ records explicit authorization for an iOS source scaffold only. It does
+not authorize iOS release packaging, TestFlight/App Store work, external delivery
+evidence, APNs delivery, cloud backup, central account or contact discovery,
+generated FFI bindings, or security-ready claims.
+
+The iOS scaffold may include an Xcode project marker, Swift shell files,
+Info.plist, empty iCloud entitlement arrays, and a placeholder shared-core
+boundary adapter that returns redacted blocked status until a later binding
+phase.
+
+The iOS scaffold must keep wrapper-specific protocol, storage, transport,
 pairing, account, discovery, delivery, backup, and diagnostics semantics out of
 the wrapper. All command surfaces must mirror
 `production_mobile_shared_core_api_freeze_boundary_summary`.
