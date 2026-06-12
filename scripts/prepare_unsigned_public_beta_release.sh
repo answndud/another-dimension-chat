@@ -144,6 +144,10 @@ check_artifact_boundary() {
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"upload_release_body\": \"GITHUB_RELEASE_BODY.md\""
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"upload_forbidden\": \"docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data\""
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Operator Upload Boundary"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"windows_public_artifact_ready\": false"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"windows_packaging_hold_without_explicit_request\": true"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Windows packaging hold"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "windows_packaging_hold_without_explicit_request=true"
   echo "status=release-artifact-boundary-source-ready"
 }
 
@@ -271,6 +275,21 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "build_commit": "$BUILD_COMMIT",
   "platform": "$PLATFORM",
   "distribution": "unsigned-github-public-beta",
+  "windows_distribution": "local-build-candidate-only",
+  "windows_local_usable_criteria_defined": true,
+  "windows_local_runtime_smoke_status": "source-boundary-only",
+  "windows_local_runtime_recovery_action": "run-test-windows-boundary-on-real-windows",
+  "windows_public_artifact_ready": false,
+  "windows_installer_ready": false,
+  "windows_signing_ready": false,
+  "windows_store_ready": false,
+  "windows_public_artifact_upload_allowed": false,
+  "windows_packaging_hold_without_explicit_request": true,
+  "windows_packaging_upload_permitted_this_run": false,
+  "windows_public_artifact_release_request_required": true,
+  "windows_installer_signing_store_claim_allowed": false,
+  "windows_generated_artifact_commit_allowed": false,
+  "windows_packaging_prerequisites": "explicit-release-request#real-windows-runtime-smoke#packaging-review#installer-signing-decisions#checksum-provenance#upload-hold-review",
   "release_tag": "$RELEASE_TAG",
   "release_url": "$RELEASE_URL",
   "release_authority": "same-github-release-assets",
@@ -418,6 +437,20 @@ This folder is for a GitHub Release upload.
 - Build channel: \`$BUILD_CHANNEL\`
 - Build commit: \`$BUILD_COMMIT\`
 - Platform: \`$PLATFORM\`
+- Windows distribution: local-build-candidate-only
+- Windows local usable criteria defined: true
+- Windows local runtime smoke status: source-boundary-only
+- Windows runtime recovery action: run-test-windows-boundary-on-real-windows
+- Windows public artifact ready: false
+- Windows installer ready: false
+- Windows signing ready: false
+- Windows public artifact upload allowed: false
+- Windows packaging hold without explicit request: true
+- Windows packaging/upload permitted this run: false
+- Windows public artifact release request required: true
+- Windows installer/signing/store claim allowed: false
+- Windows generated artifact commit allowed: false
+- Windows packaging prerequisites: explicit-release-request#real-windows-runtime-smoke#packaging-review#installer-signing-decisions#checksum-provenance#upload-hold-review
 - Release tag: \`$RELEASE_TAG\`
 - Release URL: \`$RELEASE_URL\`
 - Release authority: same-github-release-assets
@@ -574,6 +607,10 @@ for sensitive communication.
 - Operation boundary: this handoff does not perform a GitHub Release upload,
   does not rebuild the DMG, does not run heavy verification, and does not add a
   mobile release scope.
+- Windows packaging hold: local Windows usability is not a public Windows
+  artifact, installer, signing/store claim, release upload permission, or
+  generated artifact commit permission without an explicit release request and
+  the Windows public artifact prerequisites.
 - Product boundary: this remains an unsigned experimental public beta, not
   audited, not production-ready, and sensitive communication prohibited.
 - Next development axis after this handoff: desktop post-release hardening or
@@ -591,6 +628,10 @@ for sensitive communication.
   \`source_acceptance=desktop-release-source-accepted-for-operator-staging\`
 - Confirm \`scripts/public_release_readiness_preflight.sh\` printed:
   \`decision=proceed-to-packaging-only-with-frozen-ignored-dmg\`
+- Confirm \`scripts/public_release_readiness_preflight.sh\` printed:
+  \`windows_packaging_hold_without_explicit_request=true\`
+- Confirm \`scripts/public_release_readiness_preflight.sh\` printed:
+  \`windows_packaging_upload_permitted_this_run=false\`
 - Confirm \`scripts/prepare_unsigned_public_beta_release.sh\` printed:
   \`status=unsigned-public-beta-release-ready\`
 - Confirm every upload file is listed in \`MANIFEST.md\`
@@ -668,6 +709,14 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact\": \"$RELEASE_DMG\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact_sha256\": \"$EXPECTED_DMG_SHA\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"release_tag\": \"$RELEASE_TAG\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"release_url\": \"$RELEASE_URL\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"windows_distribution\": \"local-build-candidate-only\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"windows_public_artifact_ready\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"windows_installer_ready\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"windows_packaging_hold_without_explicit_request\": true"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"windows_packaging_upload_permitted_this_run\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"windows_public_artifact_release_request_required\": true"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"windows_installer_signing_store_claim_allowed\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"windows_generated_artifact_commit_allowed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"release_authority\": \"same-github-release-assets\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"same_release_checksum_required\": true"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"same_release_asset_set_authority_required\": true"
@@ -751,6 +800,11 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Same-release checksum required: true"
 require_text "$RELEASE_DIR/MANIFEST.md" "Same-release asset set authority required: true"
 require_text "$RELEASE_DIR/MANIFEST.md" "Source branch release authority: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Branch or source archive update authority: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Windows packaging hold without explicit request: true"
+require_text "$RELEASE_DIR/MANIFEST.md" "Windows packaging/upload permitted this run: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Windows public artifact release request required: true"
+require_text "$RELEASE_DIR/MANIFEST.md" "Windows installer/signing/store claim allowed: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Windows generated artifact commit allowed: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Operator Upload Boundary"
 require_text "$RELEASE_DIR/MANIFEST.md" "Upload exactly the files listed in this \`MANIFEST.md\` from this generated"
 require_text "$RELEASE_DIR/MANIFEST.md" "Use \`GITHUB_RELEASE_BODY.md\` exactly as the GitHub Release"
@@ -873,6 +927,9 @@ require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Final Operation Decision 
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Upload decision: proceed only after the source preflight prints"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Hold decision: do not upload, do not announce, and return to desktop hardening"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Operation boundary: this handoff does not perform a GitHub Release upload"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Windows packaging hold: local Windows usability is not a public Windows"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "windows_packaging_hold_without_explicit_request=true"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "windows_packaging_upload_permitted_this_run=false"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Next development axis after this handoff: desktop post-release hardening or"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "source_acceptance=desktop-release-source-accepted-for-operator-staging"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "decision=proceed-to-packaging-only-with-frozen-ignored-dmg"
@@ -912,5 +969,14 @@ echo "operator_update_authority=same-release-assets-only-no-auto-update-manifest
 echo "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
 echo "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
 echo "operator_handoff_wrapup=upload-only-after-explicit-user-request-source-and-staging-statuses-otherwise-hold-and-return-to-desktop-hardening"
+echo "windows_packaging_hold_without_explicit_request=true"
+echo "windows_packaging_upload_permitted_this_run=false"
+echo "windows_public_artifact_release_request_required=true"
+echo "windows_public_artifact_ready=false"
+echo "windows_installer_ready=false"
+echo "windows_signing_ready=false"
+echo "windows_installer_signing_store_claim_allowed=false"
+echo "windows_generated_artifact_commit_allowed=false"
+echo "windows_packaging_prerequisites=explicit-release-request#real-windows-runtime-smoke#packaging-review#installer-signing-decisions#checksum-provenance#upload-hold-review"
 echo "next_development_axis=desktop-post-release-hardening-or-non-release-product-work"
 echo "status=unsigned-public-beta-release-ready"
