@@ -9503,7 +9503,7 @@ function renderProductionTwoProfileConversationList() {
     retention.className = `transcript-retention ${retentionView.state}`;
     retention.textContent = twoProfileRetentionLabel(entry);
 
-    const actionView = twoProfileConversationActionView(entry);
+    const actionView = twoProfileConversationActionView(entry, senderEnvelopeSlotPresent);
     const action = document.createElement("span");
     action.className = `transcript-action ${actionView.state}`;
     action.textContent = currentReplyTarget
@@ -9948,9 +9948,7 @@ function twoProfileConversationUserActionMessage(entry) {
       : `Message ${label} send was canceled. The conversation stays saved on this device.`;
   }
   if (entry.statuses?.has("sent") && !entry.statuses?.has("received")) {
-    return currentLanguage === "ko"
-      ? `메시지 ${label}가 전송 대기 중입니다. 상대가 수신하면 상태가 갱신됩니다.`
-      : `Message ${label} is waiting for delivery. The status will update after the peer receives it.`;
+    return selectedTwoProfileNextActionMessage(entry);
   }
   return selectedTwoProfileNextActionMessage(entry);
 }
@@ -12365,9 +12363,10 @@ function applyProductionActionState() {
   state.hasTwoProfileReplySelected = selectedDeliveredReplyReady || latestReplySelected;
   state.hasTwoProfileReplyDraftInput = twoProfileReplyDraftReady;
   const manualPrimaryActions = productionManualPrimaryActions(state);
+  const plaintextReviewPending = Boolean(hasImportedMessage && !hasReceivedMessage);
   const replyComposerCurrent = Boolean(
     twoProfileCurrentAction === "compose" ||
-      (state.hasTwoProfileReplySelected && !state.hasTwoProfileReplyDraftInput),
+      (state.hasTwoProfileReplySelected && !state.hasTwoProfileReplyDraftInput && !plaintextReviewPending),
   );
   const manualCurrentActions = productionManualRelayCurrentActions(manualAvailability, {
     hasFinishImportInput,
@@ -19600,8 +19599,8 @@ async function exportProductionReceivedMessage() {
     return;
   }
 
-  setProductionMessageState("Received message exporting");
-  setText(fields.productionMessageWarning, "Reading received message after local unlock.");
+  setProductionMessageState("Plaintext review running");
+  setText(fields.productionMessageWarning, "Reading received plaintext after local unlock.");
   productionBusyAction = "received-export";
   applyProductionActionState();
   if (fields.exportProductionReceivedMessage) {
@@ -19618,7 +19617,7 @@ async function exportProductionReceivedMessage() {
     }
     const view = productionReceivedMessageExportView(result);
     const expiredReceivedPurged = result.expired_received_message_purged === true;
-    setProductionMessageState(expiredReceivedPurged ? "Received message expired" : "Received message exported");
+    setProductionMessageState(expiredReceivedPurged ? "Received plaintext expired" : "Received plaintext reviewed");
     setText(fields.productionMessageWarning, appendMessageLifecyclePurgeWarning(result.warning, result));
     if (expiredReceivedPurged) {
       if (fields.productionReceivedMessage) {

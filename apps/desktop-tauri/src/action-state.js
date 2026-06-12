@@ -461,10 +461,10 @@ export function productionTwoProfileManualLifecycleView(entry, senderEnvelopeSlo
   if (receivedCopyPresent) {
     return {
       boundary,
-      detail: `${label} has a receiver record; review plaintext locally before replying.`,
+      detail: `${label} has a receiver record; click Show plaintext before writing the reply.`,
       phase: "received",
       state: "is-received",
-      step: "receiver stored",
+      step: "review plaintext",
     };
   }
   if (canceled) {
