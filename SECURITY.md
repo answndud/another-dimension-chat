@@ -176,6 +176,20 @@ boundary, and desktop flow blocker checks. The next development axis must be
 one of release packaging/upload only after explicit user request, Windows
 readiness, or real-user test preparation.
 
+Desktop Real-User Test Preparation Boundary means tester-facing reports must use
+redacted public support diagnostics, failure class, and recovery next action
+only. Allowed public fields are app version, build channel, build commit,
+platform, checksum result, public diagnostics, failure class, recovery next
+action, and whether app-launch network stayed false. Forbidden fields include
+raw logs, onion endpoints, invite codes, pairing/envelope/endpoint payloads,
+safety phrases, profile names, message text, local paths, passphrases, key
+material, and private planning notes. Hold criteria are missing redacted
+diagnostics, forbidden private data, network before explicit action, or checksum
+mismatch. Abort criteria are exposed secrets, requests for raw logs, requests
+for an external success claim, or requests to use the beta for sensitive
+communication. There is no external two-machine success claim, no production
+readiness claim, and sensitive communication prohibited remains in force.
+
 ```bash
 scripts/public_release_readiness_preflight.sh
 scripts/prepare_unsigned_public_beta_release.sh

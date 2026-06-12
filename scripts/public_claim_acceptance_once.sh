@@ -93,11 +93,13 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_public_beta_source_freeze_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_windows_readiness_source_audit_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_windows_local_runtime_smoke_boundary_once.sh"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_real_user_test_prep_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_beta_gap_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_claim_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_status=current"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_file_list=manifest-allowlist-only"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_reference_copies=current"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_reference_copies=strict-except-public-intake"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_public_intake=baseline-present-source-may-be-newer"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_lockfiles=current"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output file list differs from MANIFEST allowlist"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output dependency lockfile evidence is stale"
@@ -119,8 +121,8 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "scope=so
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "dmg_required=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "network_or_onion_work=false"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,public-beta-gap,public-claim-acceptance"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,public-beta-gap,public-claim-acceptance"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "generated_artifacts_created=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze=desktop-public-beta-source-candidate"
@@ -139,6 +141,11 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_redacted_diagnostics_behavior_review_required=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_explicit_user_action_review_required=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_upload_allowed=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_prep=redacted-intake-ready"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_forbidden_fields=raw-logs#endpoints#invite-codes#message-text#local-paths#payloads#passphrases#key-material#private-planning-notes"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_external_success_claim=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_hold_criteria=missing-redacted-diagnostics#forbidden-private-data#network-before-explicit-action#checksum-mismatch"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_abort_criteria=secrets-exposed#raw-logs-requested#external-success-claim-requested#sensitive-use-requested"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_delivery_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "security_ready_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_security_ready_acceptance=false"
@@ -158,6 +165,7 @@ require_file "$ROOT_DIR/scripts/desktop_beta_acceptance_matrix_once.sh"
 require_file "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh"
 require_file "$ROOT_DIR/scripts/desktop_windows_readiness_source_audit_once.sh"
 require_file "$ROOT_DIR/scripts/desktop_windows_local_runtime_smoke_boundary_once.sh"
+require_file "$ROOT_DIR/scripts/desktop_real_user_test_prep_once.sh"
 require_text "$ROOT_DIR/scripts/desktop_beta_acceptance_matrix_once.sh" 'ACCEPTED_ITEMS="invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim"'
 require_text "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh" "status=desktop-public-beta-source-freeze-candidate-ready"
 require_text "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh" "source_freeze_scope=desktop-source-only-no-dmg-rebuild-no-upload"
@@ -166,6 +174,8 @@ require_text "$ROOT_DIR/scripts/desktop_windows_readiness_source_audit_once.sh" 
 require_text "$ROOT_DIR/scripts/desktop_windows_readiness_source_audit_once.sh" "windows_readiness=local-build-candidate-only"
 require_text "$ROOT_DIR/scripts/desktop_windows_readiness_source_audit_once.sh" "windows_public_artifact_ready=false"
 require_text "$ROOT_DIR/scripts/desktop_windows_local_runtime_smoke_boundary_once.sh" "npm --prefix apps/desktop-tauri run test:windows-boundary"
+require_text "$ROOT_DIR/scripts/desktop_real_user_test_prep_once.sh" "status=desktop-real-user-test-prep-source-ready"
+require_text "$ROOT_DIR/scripts/desktop_real_user_test_prep_once.sh" "real_user_test_external_success_claim=false"
 require_text "$ROOT_DIR/apps/desktop-tauri/package.json" '"test:windows-boundary"'
 require_text "$ROOT_DIR/README.md" "Desktop-only v0.1 acceptance matrix"
 require_text "$ROOT_DIR/SECURITY.md" "Desktop-only v0.1 acceptance matrix"
@@ -288,8 +298,12 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
       echo "FAIL release readiness preflight missing exact file-list freshness" >&2
       exit 1
     }
-    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_reference_copies=current" || {
+    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_reference_copies=strict-except-public-intake" || {
       echo "FAIL release readiness preflight missing reference-copy freshness" >&2
+      exit 1
+    }
+    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_public_intake=baseline-present-source-may-be-newer" || {
+      echo "FAIL release readiness preflight missing public intake baseline" >&2
       exit 1
     }
     printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_lockfiles=current" || {
@@ -309,7 +323,7 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing hardening fallback" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,public-beta-gap,public-claim-acceptance" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,public-beta-gap,public-claim-acceptance" || {
     echo "FAIL release readiness preflight missing check list" >&2
     exit 1
   }
@@ -391,6 +405,30 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "windows_public_artifact_upload_allowed=false" || {
     echo "FAIL release readiness preflight missing Windows upload hold" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "real_user_test_prep=redacted-intake-ready" || {
+    echo "FAIL release readiness preflight missing real-user test prep status" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "real_user_test_allowed_fields=app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#app-launch-network" || {
+    echo "FAIL release readiness preflight missing real-user allowed fields" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "real_user_test_forbidden_fields=raw-logs#endpoints#invite-codes#message-text#local-paths#payloads#passphrases#key-material#private-planning-notes" || {
+    echo "FAIL release readiness preflight missing real-user forbidden fields" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "real_user_test_external_success_claim=false" || {
+    echo "FAIL release readiness preflight missing real-user external success non-claim" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "real_user_test_hold_criteria=missing-redacted-diagnostics#forbidden-private-data#network-before-explicit-action#checksum-mismatch" || {
+    echo "FAIL release readiness preflight missing real-user hold criteria" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "real_user_test_abort_criteria=secrets-exposed#raw-logs-requested#external-success-claim-requested#sensitive-use-requested" || {
+    echo "FAIL release readiness preflight missing real-user abort criteria" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "dmg_required=false" || {
