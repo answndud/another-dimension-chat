@@ -101,7 +101,7 @@ This project does not currently claim:
   session resume-record delete, profile delete, and full local app-data wipe
   scopes.
 - Desktop-only v0.1 acceptance matrix: `desktop local/manual beta readiness`
-  covers `invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim`
+  covers `invite#create#join#verify#send#export#import#reply#receive#retry#cancel#delete#unlock#reopen#diagnostics#release-non-claim`
   only. It excludes
   `android-ios-runtime#external-peer-evidence#audit#production-ready#security-ready#sensitive-communication`,
   and it is not external onion delivery evidence, an audit result, a
