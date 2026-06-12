@@ -12224,6 +12224,11 @@ function autoSelectPendingTwoProfileConversation() {
   return pending ? selectTwoProfileConversationEntryForReview(pending, { focusManual: false }) : false;
 }
 
+function autoSelectRetryableTwoProfileOutboundConversation() {
+  const retryable = automaticVisibleTwoProfileRetryableOutboundEntry();
+  return retryable ? selectTwoProfileConversationEntryForReview(retryable, { focusManual: false }) : false;
+}
+
 function autoSelectLatestDeliveredReply(options = {}) {
   const input = productionTwoProfileInput();
   if (input.message) {
@@ -12251,7 +12256,10 @@ function autoSelectTwoProfileResumeTarget(sessionStatus) {
     hasDeliveredConversation: Boolean(latestTwoProfileDeliveredConversationEntry()),
     hasMessageDraft: Boolean(productionTwoProfileInput().message),
   });
-  if (target === "retry-send" || target === "pending-review") {
+  if (target === "retry-send") {
+    return autoSelectRetryableTwoProfileOutboundConversation() ? target : null;
+  }
+  if (target === "pending-review") {
     return autoSelectPendingTwoProfileConversation() ? target : null;
   }
   if (target === "reply-latest") {

@@ -77,6 +77,26 @@ test("main chat surface keeps invite, message, receive, and retry entry points",
   assert.match(mainJs, /cancelTwoProfileOutboundEntry/);
 });
 
+test("resume retry selection keeps selected row aligned with retry notice", () => {
+  assert.match(mainJs, /function autoSelectRetryableTwoProfileOutboundConversation\(\)/);
+  assert.match(
+    functionBody(mainJs, "autoSelectRetryableTwoProfileOutboundConversation"),
+    /automaticVisibleTwoProfileRetryableOutboundEntry\(\)/,
+  );
+  assert.match(
+    functionBody(mainJs, "autoSelectRetryableTwoProfileOutboundConversation"),
+    /selectTwoProfileConversationEntryForReview\(retryable,[\s\S]*focusManual: false/,
+  );
+  assert.match(
+    functionBody(mainJs, "autoSelectTwoProfileResumeTarget"),
+    /if \(target === "retry-send"\) \{[\s\S]*autoSelectRetryableTwoProfileOutboundConversation\(\) \? target : null/,
+  );
+  assert.match(
+    functionBody(mainJs, "autoSelectTwoProfileResumeTarget"),
+    /if \(target === "pending-review"\) \{[\s\S]*autoSelectPendingTwoProfileConversation\(\) \? target : null/,
+  );
+});
+
 test("first launch public beta warning keeps release and network boundaries visible", () => {
   assert.match(indexHtml, /class="public-beta-warning"/);
   assert.match(indexHtml, /class="public-beta-gate"/);
