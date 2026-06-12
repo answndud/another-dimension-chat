@@ -100,6 +100,21 @@ FFI implemented false, generated bindings claimed false, wrapper-specific
 protocol/storage/transport semantics false, mobile readiness claimed false, and
 security-ready claimed false.
 
+## Operator Handoff Verification Boundary
+
+Use `scripts/verify_mobile_source_handoff.sh` to check the current mobile source
+scaffold state. It aggregates the targeted source-boundary verifiers for the
+read-only status adapter, blocked command adapter, shell presentation,
+redacted diagnostics copy, local lifecycle confirmation, no-network launch
+boundary, Android shell boundary, iOS shell boundary, binding gate, and mobile
+skeleton boundary.
+
+This handoff verifier is not a release build, not generated binding validation,
+not APK/AAB/IPA packaging, not store distribution, not runtime messaging
+validation, not network delivery evidence, and not a mobile readiness claim.
+
+It is not runtime messaging validation.
+
 Allowed API groups mirror the shared core wrapper boundary:
 
 - `shared_core_status_surface`

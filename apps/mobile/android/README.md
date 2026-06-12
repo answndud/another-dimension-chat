@@ -16,11 +16,27 @@ The scaffold provides:
 
 - Gradle Android application source layout.
 - A Kotlin `SharedCoreMobileApi` interface mirroring the Phase HO API groups.
-- A placeholder `AndroidSharedCoreBoundary` that returns redacted, blocked
-  status until a real shared Rust binding phase exists.
-- A passphrase-first `MainActivity` shell with invite, manual envelope, and
-  diagnostics controls routed through the shared-core boundary interface.
+- An `AndroidSharedCoreBoundary` that delegates read-only status calls and
+  blocked command calls to source-boundary adapters until a real shared Rust
+  binding phase exists.
+- A source-only read-only status adapter for
+  `status_and_redacted_diagnostics_read_only_adapter`.
+- A blocked command adapter for unlock, invite, pairing, safety transcript,
+  manual envelope, message transcript, and local data lifecycle surfaces.
+- A passphrase-first `MainActivity` shell with invite, manual envelope,
+  diagnostics copy, lifecycle confirmation, and no-network launch boundary
+  controls routed through the shared-core boundary interface.
 - Android backup exclusion XML with app data excluded from cloud/device backup.
+
+Operator handoff check:
+
+- run `scripts/verify_mobile_source_handoff.sh` from the repository root
+- this is source-boundary verification only
+- current controls include diagnostics copy, lifecycle confirmation, and
+  no-network launch boundary
+- it does not build APK/AAB artifacts, generate FFI bindings, start runtime
+  messaging, request network permissions, configure push notifications, or
+  claim Android readiness
 
 The scaffold must not define independent protocol, storage, transport, pairing,
 contact discovery, background delivery, push delivery, Google account, Play
