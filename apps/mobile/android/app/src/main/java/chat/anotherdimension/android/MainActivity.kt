@@ -40,7 +40,7 @@ class MainActivity : Activity() {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         }
         val statusView = TextView(this).apply {
-            text = renderStatus(status)
+            text = renderLaunchNetworkRuntimeBoundary(status)
         }
         val unlock = Button(this).apply {
             text = "Unlock"
@@ -155,5 +155,15 @@ class MainActivity : Activity() {
             "destructive_lifecycle_execution=false",
             "filesystem_path_exposed=false",
             "storage_delete_called=false",
+        ).joinToString(separator = "\n")
+
+    private fun renderLaunchNetworkRuntimeBoundary(status: SharedCoreStatusDto): String =
+        listOf(
+            renderStatus(status),
+            "launch_network_boundary=no_native_network_permission_no_bootstrap",
+            "launch_runtime_boundary=no_runtime_messaging_loop_no_background_delivery",
+            "push_notification_boundary=not_requested_not_configured",
+            "implicit_delivery_start=false",
+            "generated_callable_binding=false",
         ).joinToString(separator = "\n")
 }
