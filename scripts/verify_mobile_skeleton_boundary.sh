@@ -36,7 +36,8 @@ require_file "apps/mobile/ios/README.md"
 require_file "apps/mobile/ffi/README.md"
 require_file "crates/core/src/lib.rs"
 
-require_text "apps/mobile/README.md" "documentation-only boundary"
+require_text "apps/mobile/README.md" "Mobile Wrapper Boundary"
+require_text "apps/mobile/README.md" "Android now has a minimal"
 require_text "apps/mobile/README.md" "Mobile clients are not part of the current"
 require_text "apps/mobile/README.md" "unsigned experimental public beta"
 require_text "apps/mobile/README.md" "sensitive"
@@ -53,6 +54,11 @@ require_text "apps/mobile/README.md" "Non-claim copy lock: unsigned experimental
 require_text "apps/mobile/README.md" "Excluded dependencies: no phone number account, email account, global account"
 require_text "apps/mobile/README.md" "Kickoff blocker: no mobile source scaffold"
 require_text "apps/mobile/README.md" "not approval to implement mobile"
+require_text "apps/mobile/README.md" "Android Shell Scaffold Kickoff Boundary"
+require_text "apps/mobile/README.md" "explicit authorization for an Android source scaffold only"
+require_text "apps/mobile/README.md" "does not authorize Android release packaging"
+require_text "apps/mobile/README.md" "placeholder shared-core boundary"
+require_text "apps/mobile/README.md" "production_mobile_shared_core_api_freeze_boundary_summary"
 require_text "apps/mobile/README.md" "Status Screen Copy Boundary"
 require_text "apps/mobile/README.md" "documentation-only candidates"
 require_text "apps/mobile/README.md" "Status screens may show status only"
@@ -485,16 +491,14 @@ require_text "apps/mobile/README.md" "runtime messaging scaffold created"
 require_text "apps/mobile/README.md" "store distribution task opened"
 require_text "apps/mobile/README.md" "external delivery evidence task opened"
 
-require_text "apps/mobile/android/README.md" "documentation-only boundary"
-require_text "apps/mobile/android/README.md" "not a mobile wrapper source scaffold"
-require_text "apps/mobile/android/README.md" "not a Gradle project"
+require_text "apps/mobile/android/README.md" "Android Shell Scaffold Boundary"
+require_text "apps/mobile/android/README.md" "first Android shell source scaffold"
+require_text "apps/mobile/android/README.md" "thin Kotlin shell over the shared Rust core boundary"
 require_text "apps/mobile/android/README.md" "not an APK or AAB artifact"
-require_text "apps/mobile/android/README.md" "not Android app readiness"
-require_text "apps/mobile/android/README.md" "Android is the first target platform only after the mobile scope switch criteria"
-require_text "apps/mobile/android/README.md" "explicit owner authorization"
-require_text "apps/mobile/android/README.md" "shared-core API freeze prerequisite"
-require_text "apps/mobile/android/README.md" "does not create a Gradle"
-require_text "apps/mobile/android/README.md" "thin Kotlin shell over UniFFI or another"
+require_text "apps/mobile/android/README.md" "readiness, not production-ready"
+require_text "apps/mobile/android/README.md" "Phase HP records explicit implementation authorization"
+require_text "apps/mobile/android/README.md" "does not authorize release packaging"
+require_text "apps/mobile/android/README.md" "SharedCoreMobileApi"
 require_text "apps/mobile/android/README.md" "must not define independent protocol, storage, transport"
 
 require_text "apps/mobile/ios/README.md" "documentation-only boundary"
@@ -620,20 +624,18 @@ require_text "crates/core/src/lib.rs" "mobile_readiness_claimed = false"
 require_text "crates/core/src/lib.rs" "security_ready_claimed = false"
 require_text "crates/core/src/lib.rs" "lifecycle_confirmation_required"
 
-reject_find "Android build project files" \
-  \( -name build.gradle -o -name settings.gradle -o -name AndroidManifest.xml \)
 reject_find "iOS build project files" \
   \( -name Package.swift -o -name Info.plist -o -name '*.xcodeproj' -o -name '*.xcworkspace' \)
-reject_find "mobile runtime or generated binding source" \
-  \( -name '*.kt' -o -name '*.swift' -o -name '*.udl' \)
+reject_find "iOS runtime or generated binding source" \
+  \( -name '*.swift' -o -name '*.udl' \)
 reject_find "mobile app artifacts" \
   \( -name '*.apk' -o -name '*.aab' -o -name '*.ipa' \)
 reject_find "mobile build output directories" \
   \( -type d -name build -o -type d -name DerivedData \)
 
 printf 'status=mobile-shared-core-boundary-verified\n'
-printf 'mobile_source_scaffold_created=false\n'
-printf 'android_build_scaffold_created=false\n'
+printf 'mobile_source_scaffold_created=android-only\n'
+printf 'android_build_scaffold_created=true\n'
 printf 'ios_build_scaffold_created=false\n'
-printf 'runtime_app_implementation_created=false\n'
+printf 'runtime_messaging_implementation_created=false\n'
 printf 'mobile_readiness_claim=false\n'
