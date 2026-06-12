@@ -111,6 +111,8 @@ require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "sharedCore.re
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "failure_class="
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "recovery_next_action="
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "public_non_claims="
+require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "copyRedactedDiagnosticsPayload"
+require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "diagnostics_payload=redacted_status_support_only"
 
 require_text "apps/mobile/ffi/README.md" "production_mobile_shared_core_api_freeze_boundary_summary"
 require_text "apps/mobile/ffi/shared_core_mobile_api_contract.json" '"first_binding_unit": "status_and_redacted_diagnostics_read_only_adapter"'
