@@ -1763,7 +1763,7 @@ function currentComposerPendingOutboundAction(input = productionTwoProfileInput(
     input,
     twoProfileInviteCodeModeActive(),
   );
-  if (!actionState.showActions) {
+  if (!actionState.canRunNow) {
     return null;
   }
   return {
