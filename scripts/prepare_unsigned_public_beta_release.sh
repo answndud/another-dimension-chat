@@ -547,6 +547,12 @@ for sensitive communication.
 - Confirm DMG SHA-256: \`$EXPECTED_DMG_SHA\`
 - Confirm release body file: \`GITHUB_RELEASE_BODY.md\`
 - Confirm upload allowlist source: \`MANIFEST.md\`
+- Confirm \`scripts/public_release_readiness_preflight.sh\` printed:
+  \`source_acceptance=desktop-release-source-accepted-for-operator-staging\`
+- Confirm \`scripts/public_release_readiness_preflight.sh\` printed:
+  \`decision=proceed-to-packaging-only-with-frozen-ignored-dmg\`
+- Confirm \`scripts/prepare_unsigned_public_beta_release.sh\` printed:
+  \`status=unsigned-public-beta-release-ready\`
 - Confirm every upload file is listed in \`MANIFEST.md\`
 - Confirm no extra files are uploaded.
 
@@ -583,6 +589,16 @@ body.
 - Confirm no source archive, branch file, private file, raw log, crash dump,
   beta-artifacts folder, public-release folder, or docs folder was uploaded as
   a release asset.
+
+If any after-upload confirmation fails:
+
+- Do not announce the release as ready.
+- Remove the incorrect release assets or move the GitHub Release back to a held
+  draft/prerelease state before sharing it.
+- Re-run \`scripts/public_release_readiness_preflight.sh\` and
+  \`scripts/prepare_unsigned_public_beta_release.sh\` from source.
+- Return to desktop hardening if the source preflight or regenerated upload set
+  does not reproduce the required statuses above.
 
 ## Public User Boundary
 
@@ -789,11 +805,18 @@ require_text "$RELEASE_DIR/REPOSITORY_GOVERNANCE.md" "Release Guardrails"
 require_text "$RELEASE_DIR/COMPONENT_BOUNDARIES.md" "Release and updates"
 require_text "$RELEASE_DIR/COMPONENT_BOUNDARIES.md" "not a secure messenger release today"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Operator Final Handoff"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "source_acceptance=desktop-release-source-accepted-for-operator-staging"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "decision=proceed-to-packaging-only-with-frozen-ignored-dmg"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "status=unsigned-public-beta-release-ready"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Confirm every upload file is listed in \`MANIFEST.md\`"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Use \`GITHUB_RELEASE_BODY.md\` exactly as the GitHub Release"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Download the DMG and \`.sha256\` from the published GitHub Release"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "shasum -a 256 -c $RELEASE_DMG.sha256"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "$RELEASE_DMG: OK"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "If any after-upload confirmation fails"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Do not announce the release as ready"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Remove the incorrect release assets or move the GitHub Release back to a held"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Return to desktop hardening if the source preflight or regenerated upload set"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "external_delivery_claim=false"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "security_ready_claim=false"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Terminal quarantine-removal commands are not an"
