@@ -1001,11 +1001,11 @@ export function productionManualCurrentFocusTarget(state) {
   }
 
   const needsReceivedReview = Boolean(state.hasImportedMessage && !state.hasReceivedMessage);
-  if (state.hasTwoProfileReplyDraftInput) {
-    return "send-two-profile-message";
-  }
   if (needsReceivedReview) {
     return "show-received";
+  }
+  if (state.hasTwoProfileReplyDraftInput) {
+    return "send-two-profile-message";
   }
   if (state.hasTwoProfileReplySelected) {
     return "two-profile-message";
@@ -1087,9 +1087,9 @@ export function productionManualPrimaryActions(state) {
   const replySelected = Boolean(state?.hasTwoProfileReplySelected);
   const needsReceivedReview = Boolean(state?.hasImportedMessage && !state?.hasReceivedMessage);
   return {
-    showReceived: Boolean(needsReceivedReview && !replyDraft),
+    showReceived: needsReceivedReview,
     selectReply: Boolean(replySelected && !replyDraft && !needsReceivedReview),
-    sendReply: replyDraft,
+    sendReply: Boolean(replyDraft && !needsReceivedReview),
   };
 }
 
