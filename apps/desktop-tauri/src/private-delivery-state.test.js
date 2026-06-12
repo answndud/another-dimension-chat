@@ -503,9 +503,36 @@ test("desktop-first completion reports local private flow readiness without secu
   assert.match(composeBlockedDiagnostics, /desktop_acceptance_next_action=write-message/);
   assert.doesNotMatch(composeBlockedDiagnostics, /failure_class=none/);
   assert.doesNotMatch(composeBlockedDiagnostics, /desktop_acceptance_next_action=none/);
+
+  const rollbackRecoveryDiagnostics = publicBetaDiagnosticsReport(
+    [
+      "room_present=false",
+      "session_ready=false",
+      "safety_confirmed=false",
+      "local_recovery_action=check-data-lifecycle",
+      "rollback_suspicion=true",
+      "resume_blocked=true",
+    ].join("\n"),
+  );
+  assert.match(rollbackRecoveryDiagnostics, /failure_class=local-recovery-needed/);
+  assert.match(rollbackRecoveryDiagnostics, /recovery_next_action=check-data-lifecycle/);
+  assert.match(rollbackRecoveryDiagnostics, /desktop_acceptance_next_action=check-data-lifecycle/);
+  assert.doesNotMatch(rollbackRecoveryDiagnostics, /failure_class=room-not-open/);
 });
 
 test("public diagnostics failure class maps detailed blockers to broad support classes", () => {
+  assert.equal(
+    publicDiagnosticsFailureClass(
+      parseFieldTestReport("room_present=false\nlocal_recovery_action=check-data-lifecycle"),
+    ),
+    "local-recovery-needed",
+  );
+  assert.equal(
+    publicDiagnosticsFailureClass(
+      parseFieldTestReport("room_present=false\nrollback_suspicion=true\nresume_blocked=true"),
+    ),
+    "local-recovery-needed",
+  );
   assert.equal(publicDiagnosticsFailureClass(parseFieldTestReport("room_present=false")), "room-not-open");
   assert.equal(
     publicDiagnosticsFailureClass(parseFieldTestReport("room_present=true\nsession_ready=false")),

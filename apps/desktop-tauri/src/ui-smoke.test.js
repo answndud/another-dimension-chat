@@ -1017,6 +1017,12 @@ test("runtime resume rollback block routes users to local data recovery", () => 
   assert.match(applyBody, /fields\.productionDataLifecycle/);
   assert.match(applyBody, /fields\.productionProfileNextAction/);
   assert.match(applyBody, /setProductionFollowupActions\(true, view\.next\)/);
+  assert.match(mainJs, /function localRecoveryDiagnosticsBoundaryText/);
+  assert.match(functionBody(mainJs, "localRecoveryDiagnosticsBoundaryText"), /fields\.productionProfileStorage/);
+  assert.match(functionBody(mainJs, "localRecoveryDiagnosticsBoundaryText"), /fields\.productionDataLifecycle/);
+  assert.match(functionBody(mainJs, "buildFieldTestReport"), /local_recovery_action=/);
+  assert.match(functionBody(mainJs, "buildFieldTestReport"), /rollback_suspicion=/);
+  assert.match(functionBody(mainJs, "buildFieldTestReport"), /resume_blocked=/);
 
   const profileUnlockResumeBody = functionBody(mainJs, "refreshTwoProfileSessionAfterProfileUnlock");
   assert.match(profileUnlockResumeBody, /applyRuntimeResumeRollbackRecovery\(resume, \{ source: "profile-unlock-auto-resume" \}\)/);
@@ -1636,6 +1642,11 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(publicDiagnosticsBody, /diagnostic_scope=public-support/);
   assert.match(publicDiagnosticsBody, /payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only/);
   assert.match(publicDiagnosticsBody, /publicDiagnosticsFailureClass\(parsed, desktopCompletion\)/);
+  assert.match(privateDeliveryStateJs, /function publicDiagnosticsLocalRecoveryAction/);
+  assert.match(privateDeliveryStateJs, /localRecovery === "check-data-lifecycle"/);
+  assert.match(publicDiagnosticsBody, /publicDiagnosticsDesktopNextAction\(parsed, desktopCompletion\)/);
+  assert.match(functionBody(privateDeliveryStateJs, "publicDiagnosticsDesktopNextAction"), /publicDiagnosticsLocalRecoveryAction\(parsed\)/);
+  assert.match(functionBody(privateDeliveryStateJs, "publicDiagnosticsFailureClass"), /local-recovery-needed/);
   assert.match(publicDiagnosticsBody, /windows_public_artifact_ready=false/);
   assert.match(publicDiagnosticsBody, /windows_release_blocker=local-build-smoke-and-release-boundary-review/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /windows_public_artifact=false/);
