@@ -132,6 +132,13 @@ check_artifact_boundary() {
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next=upload all and only generated files listed in MANIFEST.md from release_dir"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_release_body=use GITHUB_RELEASE_BODY.md exactly"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"same_release_asset_set_authority_required\": true"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"branch_or_source_archive_update_authority\": false"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"auto_update_manifest_trusted\": false"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"platform_signing_trust_boundary\": false"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"notarization_trust_boundary\": false"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"store_trust_boundary\": false"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "not release or update authority for a downloaded DMG"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"upload_allowlist_source\": \"MANIFEST.md\""
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"upload_release_body\": \"GITHUB_RELEASE_BODY.md\""
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"upload_forbidden\": \"docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data\""
@@ -267,7 +274,9 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "release_url": "$RELEASE_URL",
   "release_authority": "same-github-release-assets",
   "same_release_checksum_required": true,
+  "same_release_asset_set_authority_required": true,
   "source_branch_release_authority": false,
+  "branch_or_source_archive_update_authority": false,
   "packaging_decision": "proceed-to-packaging-only-with-frozen-ignored-dmg",
   "packaging_fallback": "return-to-desktop-hardening-if-source-preflight-fails",
   "upload_allowlist_source": "MANIFEST.md",
@@ -278,6 +287,10 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "notarized": false,
   "signed": false,
   "auto_update": false,
+  "auto_update_manifest_trusted": false,
+  "platform_signing_trust_boundary": false,
+  "notarization_trust_boundary": false,
+  "store_trust_boundary": false,
   "startup_network_sockets": "none",
   "source_provenance_sha256": "$source_provenance_sha",
   "dependency_lockfiles_sha256_file": "DEPENDENCY_LOCKFILES.sha256",
@@ -409,7 +422,9 @@ This folder is for a GitHub Release upload.
 - Release authority: same-github-release-assets
 - DMG SHA-256: \`$EXPECTED_DMG_SHA\`
 - Same-release checksum required: true
+- Same-release asset set authority required: true
 - Source branch release authority: false
+- Branch or source archive update authority: false
 - Packaging decision: proceed-to-packaging-only-with-frozen-ignored-dmg
 - Packaging fallback: return-to-desktop-hardening-if-source-preflight-fails
 - Install allow path: macos-privacy-security-manual-allow-after-checksum
@@ -468,7 +483,11 @@ This folder is for a GitHub Release upload.
 - Support bundle export: disabled
 - Raw diagnostic file export: disabled
 - Auto-update: disabled
+- Auto-update manifest trusted: false
 - Signing/notarization: disabled
+- Platform signing trust boundary: false
+- Notarization trust boundary: false
+- Store trust boundary: false
 
 ## Operator Upload Boundary
 
@@ -490,10 +509,11 @@ External onion delivery is outside the v0.1 public product claim for this beta.
 Same-machine dual-profile rehearsal is development evidence only. No peer report
 is expected or required for this v0.1 claim, and no external delivery claim is made.
 
-Manual update integrity is limited to same GitHub Release assets, user-verified
-SHA-256 files, and the provenance/dependency-inventory/lockfile-hash evidence
-in this upload set. The source branch and source archive are not release
-authority for a downloaded DMG.
+Manual update integrity is limited to the same GitHub Release asset set,
+user-verified SHA-256 files, and the provenance/dependency-inventory/lockfile-hash
+evidence in this upload set. The source branch, source archive, copied checksum,
+auto-update manifest, platform signing, notarization, and app-store approval are
+not release or update authority for a downloaded DMG.
 There are exactly $dependency_lockfile_evidence_count lockfile hash evidence
 entries in this upload set: \`$dependency_lockfile_evidence_files\`.
 There is no live dependency scan, vulnerability triage signoff, auto-update,
@@ -572,6 +592,12 @@ for sensitive communication.
   \`status=unsigned-public-beta-release-ready\`
 - Confirm every upload file is listed in \`MANIFEST.md\`
 - Confirm no extra files are uploaded.
+- Confirm the DMG, \`.sha256\`, provenance JSON, \`MANIFEST.md\`, release notes,
+  install guide, update-integrity note, and \`GITHUB_RELEASE_BODY.md\` are all
+  attached to the same GitHub Release.
+- Confirm no branch file, source archive, copied checksum, auto-update manifest,
+  signing result, notarization result, or store approval is used as release or
+  update authority.
 
 Forbidden uploads:
 
@@ -603,6 +629,12 @@ body.
   not audited, not production-ready, and sensitive communication prohibited.
 - Confirm the GitHub Release body still says external_delivery_claim=false and
   security_ready_claim=false.
+- Confirm the GitHub Release contains the same-release DMG, \`.sha256\`,
+  provenance JSON, \`MANIFEST.md\`, release notes, install guide,
+  update-integrity note, and \`GITHUB_RELEASE_BODY.md\`.
+- Confirm no auto-update manifest, signing result, notarization result, store
+  approval, branch file, source archive, or copied checksum is described as
+  release or update authority.
 - Confirm no source archive, branch file, private file, raw log, crash dump,
   beta-artifacts folder, public-release folder, or docs folder was uploaded as
   a release asset.
@@ -635,7 +667,9 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"release_tag\": \"$RELEASE_TAG
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"release_url\": \"$RELEASE_URL\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"release_authority\": \"same-github-release-assets\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"same_release_checksum_required\": true"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"same_release_asset_set_authority_required\": true"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"source_branch_release_authority\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"branch_or_source_archive_update_authority\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"packaging_decision\": \"proceed-to-packaging-only-with-frozen-ignored-dmg\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"packaging_fallback\": \"return-to-desktop-hardening-if-source-preflight-fails\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"upload_allowlist_source\": \"MANIFEST.md\""
@@ -694,16 +728,26 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"automated_log_collection\": f
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"support_bundle_export\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"raw_diagnostic_file_export\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"auto_update\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"auto_update_manifest_trusted\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"signed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"notarized\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"platform_signing_trust_boundary\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"notarization_trust_boundary\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"store_trust_boundary\": false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Auto-update: disabled"
+require_text "$RELEASE_DIR/MANIFEST.md" "Auto-update manifest trusted: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "MANIFEST.md"
 require_text "$RELEASE_DIR/MANIFEST.md" "Signing/notarization: disabled"
+require_text "$RELEASE_DIR/MANIFEST.md" "Platform signing trust boundary: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Notarization trust boundary: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Store trust boundary: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Release tag: \`$RELEASE_TAG\`"
 require_text "$RELEASE_DIR/MANIFEST.md" "Release URL: \`$RELEASE_URL\`"
 require_text "$RELEASE_DIR/MANIFEST.md" "Release authority: same-github-release-assets"
 require_text "$RELEASE_DIR/MANIFEST.md" "Same-release checksum required: true"
+require_text "$RELEASE_DIR/MANIFEST.md" "Same-release asset set authority required: true"
 require_text "$RELEASE_DIR/MANIFEST.md" "Source branch release authority: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Branch or source archive update authority: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Operator Upload Boundary"
 require_text "$RELEASE_DIR/MANIFEST.md" "Upload exactly the files listed in this \`MANIFEST.md\` from this generated"
 require_text "$RELEASE_DIR/MANIFEST.md" "Use \`GITHUB_RELEASE_BODY.md\` exactly as the GitHub Release"
@@ -831,6 +875,10 @@ require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "source_acceptance=desktop
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "decision=proceed-to-packaging-only-with-frozen-ignored-dmg"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "status=unsigned-public-beta-release-ready"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Confirm every upload file is listed in \`MANIFEST.md\`"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "attached to the same GitHub Release"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "auto-update manifest"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "store approval"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "release or update authority"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Use \`GITHUB_RELEASE_BODY.md\` exactly as the GitHub Release"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Download the DMG and \`.sha256\` from the published GitHub Release"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "shasum -a 256 -c $RELEASE_DMG.sha256"
@@ -856,6 +904,7 @@ echo "next=upload all and only generated files listed in MANIFEST.md from releas
 echo "operator_upload_allowlist=MANIFEST.md"
 echo "operator_release_body=use GITHUB_RELEASE_BODY.md exactly"
 echo "operator_verify=downloaded users must verify ${RELEASE_DMG}.sha256 before opening"
+echo "operator_update_authority=same-release-assets-only-no-auto-update-manifest-signing-notarization-store-branch-source-archive"
 echo "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
 echo "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
 echo "operator_handoff_wrapup=upload-only-after-source-and-staging-statuses-otherwise-hold-and-return-to-desktop-hardening"

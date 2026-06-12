@@ -124,6 +124,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "security
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_security_ready_acceptance=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_final_handoff=OPERATOR_FINAL_HANDOFF.md"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_after_upload_verify=same-release-sha256-before-opening"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_update_authority=same-release-assets-only-no-auto-update-manifest-signing-notarization-store-branch-source-archive"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
 require_text "$ROOT_DIR/README.md" "scripts/public_release_readiness_preflight.sh"
@@ -168,7 +169,15 @@ require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "releas
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next=upload all and only generated files listed in MANIFEST.md from release_dir"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_upload_allowlist=MANIFEST.md"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" 'operator_final_handoff=$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md'
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_update_authority=same-release-assets-only-no-auto-update-manifest-signing-notarization-store-branch-source-archive"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"same_release_asset_set_authority_required": true'
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"branch_or_source_archive_update_authority": false'
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"auto_update_manifest_trusted": false'
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"platform_signing_trust_boundary": false'
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"notarization_trust_boundary": false'
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"store_trust_boundary": false'
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "not release or update authority for a downloaded DMG"
 require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "INSTALL_UNSIGNED_MACOS.md"
 require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "PUBLIC_THREAT_MODEL.md"
 require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "PRIVACY_MODEL_COMPARISON.md"
@@ -307,6 +316,10 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "operator_after_upload_verify=same-release-sha256-before-opening" || {
     echo "FAIL release readiness preflight missing after-upload verification" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "operator_update_authority=same-release-assets-only-no-auto-update-manifest-signing-notarization-store-branch-source-archive" || {
+    echo "FAIL release readiness preflight missing update authority boundary" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data" || {
