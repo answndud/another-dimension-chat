@@ -2166,6 +2166,11 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(privateDeliveryStateJs, /production_e2ee_ready=\$\{desktopCompletion\.productionE2eeReady === true\}/);
   assert.match(privateDeliveryStateJs, /production_key_management_ready=\$\{desktopCompletion\.productionKeyManagementReady === true\}/);
   assert.match(privateDeliveryStateJs, /diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only/);
+  assert.match(privateDeliveryStateJs, /PUBLIC_SUPPORT_DIAGNOSTICS_ALLOWED_FIELDS/);
+  assert.match(privateDeliveryStateJs, /PUBLIC_SUPPORT_DIAGNOSTICS_FORBIDDEN_FIELDS/);
+  assert.match(privateDeliveryStateJs, /allowed_public_intake_fields=\$\{publicSupportDiagnosticsAllowedFieldsValue\(\)\}/);
+  assert.match(privateDeliveryStateJs, /forbidden_public_intake_fields=\$\{publicSupportDiagnosticsForbiddenFieldsValue\(\)\}/);
+  assert.match(privateDeliveryStateJs, /excluded_fields=\$\{publicSupportDiagnosticsExcludedFieldsValue\(\)\}/);
   assert.match(privateDeliveryStateJs, /diagnostics_copy_next_action=\$\{recoveryNextAction\}/);
   assert.match(privateDeliveryStateJs, /diagnostics_support_bundle_export=false/);
   assert.match(privateDeliveryStateJs, /diagnostics_audit_evidence_claim=false/);
@@ -2191,8 +2196,14 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.failure_class/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.diagnostics_copy_next_action/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.desktop_acceptance_next_action/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.allowed_public_intake_fields/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.forbidden_public_intake_fields/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.excluded_fields/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /payload_next_action_match=\$\{payloadNextActionMatchesSummary\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /raw_state_excluded=\$\{rawStateExcluded\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public_intake_policy_fields_aligned=\$\{publicIntakePolicyFieldsAligned\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /allowed_public_intake_fields=\$\{allowedPublicIntakeFields\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /forbidden_public_intake_fields=\$\{forbiddenPublicIntakeFields\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /local_manual_e2ee_runtime_boundary=\$\{localManualE2eeBoundary\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /default_transport_path=\$\{defaultTransportPath\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /default_transport_network_io=\$\{defaultTransportNetworkIo\}/);

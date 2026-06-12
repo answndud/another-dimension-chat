@@ -9,6 +9,58 @@ export function fieldTestReportValue(value, fallback = "unknown") {
     .slice(0, 96);
 }
 
+export const PUBLIC_SUPPORT_DIAGNOSTICS_ALLOWED_FIELDS = Object.freeze([
+  "app-version",
+  "build-channel",
+  "build-commit",
+  "platform",
+  "public-diagnostics",
+  "checksum-result",
+  "failure-class",
+  "recovery-next-action",
+  "desktop-acceptance-status",
+  "desktop-acceptance-blockers",
+  "app-launch-network",
+]);
+
+export const PUBLIC_SUPPORT_DIAGNOSTICS_FORBIDDEN_FIELDS = Object.freeze([
+  "raw-logs",
+  "endpoints",
+  "invite-codes",
+  "message-text",
+  "local-paths",
+  "payloads",
+  "safety-phrases",
+  "profile-names",
+  "passphrases",
+  "key-material",
+  "private-planning-notes",
+]);
+
+export function publicSupportDiagnosticsAllowedFieldsValue() {
+  return PUBLIC_SUPPORT_DIAGNOSTICS_ALLOWED_FIELDS.join("#");
+}
+
+export function publicSupportDiagnosticsForbiddenFieldsValue() {
+  return PUBLIC_SUPPORT_DIAGNOSTICS_FORBIDDEN_FIELDS.join("#");
+}
+
+export function publicSupportDiagnosticsExcludedFieldsValue() {
+  return [
+    "codes",
+    "endpoints",
+    "messages",
+    "profiles",
+    "paths",
+    "logs",
+    "crash_dumps",
+    "screenshots",
+    "passphrases",
+    "key_material",
+    "private_planning_notes",
+  ].join(",");
+}
+
 export function fieldTestBoundarySummary(text) {
   const source = String(text ?? "");
   const allowedKeys = [
@@ -586,6 +638,8 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     "diagnostic_scope=public-support",
     "payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only",
     "diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only",
+    `allowed_public_intake_fields=${publicSupportDiagnosticsAllowedFieldsValue()}`,
+    `forbidden_public_intake_fields=${publicSupportDiagnosticsForbiddenFieldsValue()}`,
     `app_version=${fieldTestReportValue(triage.appVersion, "unknown")}`,
     `build_channel=${fieldTestReportValue(triage.buildChannel, "unknown")}`,
     `build_commit=${fieldTestReportValue(triage.buildCommit, "unknown")}`,
@@ -651,9 +705,7 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     lines.push("automated_log_collection=false");
     lines.push("support_bundle_export=false");
     lines.push("raw_diagnostic_file_export=false");
-    lines.push(
-      "excluded_fields=codes,endpoints,messages,profiles,paths,logs,crash_dumps,screenshots,passphrases,key_material,private_planning_notes",
-    );
+    lines.push(`excluded_fields=${publicSupportDiagnosticsExcludedFieldsValue()}`);
   }
   return lines.join("\n");
 }

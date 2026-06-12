@@ -7446,12 +7446,29 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
     "local-manual-encrypted-envelope-exchange",
   );
   const defaultTransportNetworkIo = fieldTestReportValue(publicDiagnostics.default_transport_network_io, "false");
+  const allowedPublicIntakeFields = String(publicDiagnostics.allowed_public_intake_fields ?? "unknown").trim() || "unknown";
+  const forbiddenPublicIntakeFields = String(publicDiagnostics.forbidden_public_intake_fields ?? "unknown").trim() || "unknown";
+  const excludedFields = String(publicDiagnostics.excluded_fields ?? "unknown").trim() || "unknown";
   const payloadNextActionMatchesSummary =
     recoveryNextAction === copyNextAction && recoveryNextAction === desktopAcceptanceNextAction;
   const rawStateExcluded =
     publicDiagnostics.diagnostics_copy_boundary === "redacted-status-build-failure-class-recovery-action-only";
+  const publicIntakePolicyFieldsAligned =
+    allowedPublicIntakeFields.includes("failure-class") &&
+    allowedPublicIntakeFields.includes("recovery-next-action") &&
+    forbiddenPublicIntakeFields.includes("raw-logs") &&
+    forbiddenPublicIntakeFields.includes("endpoints") &&
+    forbiddenPublicIntakeFields.includes("invite-codes") &&
+    forbiddenPublicIntakeFields.includes("message-text") &&
+    forbiddenPublicIntakeFields.includes("local-paths") &&
+    forbiddenPublicIntakeFields.includes("payloads") &&
+    forbiddenPublicIntakeFields.includes("passphrases") &&
+    forbiddenPublicIntakeFields.includes("key-material") &&
+    excludedFields.includes("logs") &&
+    excludedFields.includes("passphrases") &&
+    excludedFields.includes("key_material");
   if (fields.publicBetaDiagnosticsSummary) {
-    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} local_manual_e2ee_runtime_boundary=${localManualE2eeBoundary} production_e2ee_ready=${productionE2eeReady} default_transport_path=${defaultTransportPath} default_transport_network_io=${defaultTransportNetworkIo} high_risk_onion_path=explicit-user-triggered-fail-closed release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
+    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} public_intake_policy_fields_aligned=${publicIntakePolicyFieldsAligned} allowed_public_intake_fields=${allowedPublicIntakeFields} forbidden_public_intake_fields=${forbiddenPublicIntakeFields} excluded_fields=${excludedFields} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} local_manual_e2ee_runtime_boundary=${localManualE2eeBoundary} production_e2ee_ready=${productionE2eeReady} default_transport_path=${defaultTransportPath} default_transport_network_io=${defaultTransportNetworkIo} high_risk_onion_path=explicit-user-triggered-fail-closed release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
   }
   return payload;
 }

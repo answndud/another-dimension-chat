@@ -371,6 +371,14 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /diagnostic_scope=public-support/);
   assert.match(diagnostics, /payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only/);
   assert.match(diagnostics, /diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only/);
+  assert.match(
+    diagnostics,
+    /allowed_public_intake_fields=app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network/,
+  );
+  assert.match(
+    diagnostics,
+    /forbidden_public_intake_fields=raw-logs#endpoints#invite-codes#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#key-material#private-planning-notes/,
+  );
   assert.match(diagnostics, /app_version=0.1.0/);
   assert.match(diagnostics, /build_channel=beta-onion/);
   assert.match(diagnostics, /build_commit=806ecad1/);
@@ -438,6 +446,16 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /support_bundle_export=false/);
   assert.match(diagnostics, /raw_diagnostic_file_export=false/);
   assert.match(diagnostics, /excluded_fields=codes,endpoints,messages,profiles,paths,logs,crash_dumps,screenshots,passphrases,key_material,private_planning_notes/);
+  assert.doesNotMatch(diagnostics, /^bridge_line=/m);
+  assert.doesNotMatch(diagnostics, /^onion_endpoint=/m);
+  assert.doesNotMatch(diagnostics, /^invite_code=/m);
+  assert.doesNotMatch(diagnostics, /^safety_phrase=/m);
+  assert.doesNotMatch(diagnostics, /^message_text=/m);
+  assert.doesNotMatch(diagnostics, /^sender_profile=/m);
+  assert.doesNotMatch(diagnostics, /^envelope_payload=/m);
+  assert.doesNotMatch(diagnostics, /^local_path=/m);
+  assert.doesNotMatch(diagnostics, /^passphrase=/m);
+  assert.doesNotMatch(diagnostics, /^key_material=/m);
   assert.doesNotMatch(diagnostics, /^room_status=/m);
   assert.doesNotMatch(diagnostics, /^safety_status=/m);
   assert.doesNotMatch(diagnostics, /^delivery_status=/m);
