@@ -86,6 +86,15 @@ require_text "$ROOT_DIR/reference/PRIVACY_MODEL_COMPARISON.md" "desktop local-pr
 require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "desktop local-private-flow acceptance status/blockers/non-claims"
 require_text "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "desktop local-private-flow acceptance status/blockers/non-claims"
 require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "desktop local-private-flow acceptance status/blockers/non-claims"
+require_file "$ROOT_DIR/scripts/public_release_readiness_preflight.sh"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "prepare_unsigned_public_beta_release.sh\" --check-artifact-boundary"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "prepare_unsigned_public_beta_release.sh\" --check-policy"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_beta_gap_acceptance_once.sh"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_claim_acceptance_once.sh"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "scope=source-only-no-dmg-required-no-generated-artifacts"
+require_text "$ROOT_DIR/README.md" "scripts/public_release_readiness_preflight.sh"
+require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "scripts/public_release_readiness_preflight.sh"
+require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "status-build-failure-class-recovery-action-desktop-acceptance-only"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "--check-artifact-boundary"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "release output must stay under ignored apps/desktop-tauri/public-release/"
@@ -134,6 +143,7 @@ reject_text "$ROOT_DIR/apps/desktop-tauri/src/i18n.js" "실제 peer report에서
 reject_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "manual network"
 
 bash -n "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh"
+bash -n "$ROOT_DIR/scripts/public_release_readiness_preflight.sh"
 bash "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" --check-artifact-boundary
 if "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "$ROOT_DIR/release-upload-test" >/tmp/another-dimension-release-output-check.out 2>&1; then
   echo "FAIL release prepare accepted a non-ignored output directory" >&2
