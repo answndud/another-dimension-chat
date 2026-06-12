@@ -28,6 +28,7 @@ Users must download these files from the same GitHub Release:
 - `REPOSITORY_GOVERNANCE.md`
 - `COMPONENT_BOUNDARIES.md`
 - `DEPENDENCY_LOCKFILES.sha256`
+- `OPERATOR_FINAL_HANDOFF.md`
 - `MANIFEST.md`
 
 Then users must verify the DMG checksum before opening the app:

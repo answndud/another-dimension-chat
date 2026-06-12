@@ -100,12 +100,15 @@ require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "scripts/public_
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "release output must stay under ignored apps/desktop-tauri/public-release/"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Packaging decision: proceed-to-packaging-only-with-frozen-ignored-dmg"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Packaging fallback: return-to-desktop-hardening-if-source-preflight-fails"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "OPERATOR_FINAL_HANDOFF.md"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Operator Final Handoff"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_allowlist_source": "MANIFEST.md"'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_release_body": "GITHUB_RELEASE_BODY.md"'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_forbidden": "docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Operator Upload Boundary"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next=upload all and only generated files listed in MANIFEST.md from release_dir"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_upload_allowlist=MANIFEST.md"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" 'operator_final_handoff=$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
 require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "INSTALL_UNSIGNED_MACOS.md"
 require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "PUBLIC_THREAT_MODEL.md"
@@ -114,6 +117,9 @@ require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "INDEPENDENT_REVIEW_PACKE
 require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "COMPONENT_BOUNDARIES.md"
 require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "Upload boundary for operators"
 require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" 'Use `GITHUB_RELEASE_BODY.md` exactly as'
+require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "OPERATOR_FINAL_HANDOFF.md"
+require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "external_delivery_claim=false"
+require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "security_ready_claim=false"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/i18n.js" "desktop local-private-flow acceptance status/blockers/non-claims"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "desktop local-private-flow acceptance status/blockers/non-claims"

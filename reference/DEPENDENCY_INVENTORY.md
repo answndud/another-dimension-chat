@@ -59,10 +59,12 @@ Every unsigned public beta upload must ship:
 - DMG and matching `.sha256`
 - public provenance JSON
 - `MANIFEST.md`
+- `OPERATOR_FINAL_HANDOFF.md`
 - `UPDATE_INTEGRITY.md`
 - `SUPPLY_CHAIN_BASELINE.md`
 - `DEPENDENCY_INVENTORY.md`
 - `DEPENDENCY_LOCKFILES.sha256`
+- `OPERATOR_FINAL_HANDOFF.md`
 - `PUBLIC_THREAT_MODEL.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
 - `PUBLIC_INTAKE_POLICY.md`

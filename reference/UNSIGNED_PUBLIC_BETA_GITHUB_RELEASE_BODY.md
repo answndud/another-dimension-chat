@@ -24,6 +24,7 @@ Download all files from this same GitHub Release:
 - `REPOSITORY_GOVERNANCE.md`
 - `COMPONENT_BOUNDARIES.md`
 - `DEPENDENCY_LOCKFILES.sha256`
+- `OPERATOR_FINAL_HANDOFF.md`
 - `MANIFEST.md`
 
 Use the files attached to this GitHub Release as the release authority. The
@@ -60,6 +61,8 @@ Do not use terminal quarantine-removal commands as an install step.
 
 This beta does not claim:
 
+- external_delivery_claim=false
+- security_ready_claim=false
 - secure production messaging
 - audited security
 - production-ready E2EE
