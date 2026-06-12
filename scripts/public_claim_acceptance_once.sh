@@ -91,8 +91,15 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "prepare_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "prepare_unsigned_public_beta_release.sh\" --check-policy"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_beta_gap_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_claim_acceptance_once.sh"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "status=public-release-readiness-source-preflight-ready"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "scope=source-only-no-dmg-required-no-generated-artifacts"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_delivery_claim=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "security_ready_claim=false"
 require_text "$ROOT_DIR/README.md" "scripts/public_release_readiness_preflight.sh"
+require_text "$ROOT_DIR/SECURITY.md" "scripts/public_release_readiness_preflight.sh"
+require_text "$ROOT_DIR/SECURITY.md" "source-only preflight before staging artifacts"
+require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "scripts/public_release_readiness_preflight.sh"
+require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "source-only preflight"
 require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "status-build-failure-class-recovery-action-desktop-acceptance-only"
@@ -100,8 +107,6 @@ require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "--chec
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "release output must stay under ignored apps/desktop-tauri/public-release/"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next=upload all and only generated files listed in MANIFEST.md from release_dir"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
-require_text "$ROOT_DIR/README.md" "scripts/prepare_unsigned_public_beta_release.sh --check-artifact-boundary"
-require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "scripts/prepare_unsigned_public_beta_release.sh --check-artifact-boundary"
 require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "INSTALL_UNSIGNED_MACOS.md"
 require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "PUBLIC_THREAT_MODEL.md"
 require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "PRIVACY_MODEL_COMPARISON.md"
@@ -144,6 +149,25 @@ reject_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "manual 
 
 bash -n "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh"
 bash -n "$ROOT_DIR/scripts/public_release_readiness_preflight.sh"
+if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
+  preflight_output="$("$ROOT_DIR/scripts/public_release_readiness_preflight.sh")"
+  printf '%s\n' "$preflight_output" | grep -Fq -- "status=public-release-readiness-source-preflight-ready" || {
+    echo "FAIL release readiness preflight missing ready status" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "scope=source-only-no-dmg-required-no-generated-artifacts" || {
+    echo "FAIL release readiness preflight missing source-only scope" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "external_delivery_claim=false" || {
+    echo "FAIL release readiness preflight missing external delivery non-claim" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "security_ready_claim=false" || {
+    echo "FAIL release readiness preflight missing security-ready non-claim" >&2
+    exit 1
+  }
+fi
 bash "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" --check-artifact-boundary
 if "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "$ROOT_DIR/release-upload-test" >/tmp/another-dimension-release-output-check.out 2>&1; then
   echo "FAIL release prepare accepted a non-ignored output directory" >&2

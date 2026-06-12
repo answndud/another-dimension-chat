@@ -138,6 +138,11 @@ private planning notes:
 
 ```bash
 bash scripts/public_release_readiness_preflight.sh
+```
+
+Optional supplemental checks:
+
+```bash
 bash -n scripts/prepare_unsigned_public_beta_release.sh
 shasum -a 256 Cargo.lock apps/desktop-tauri/src-tauri/Cargo.lock apps/desktop-tauri/package-lock.json
 rg -n "secure messenger|production-ready|sensitive communication|not audited|not notarized|auto-update|backup recovery|rollback prevention|secure deletion" README.md SECURITY.md reference apps/desktop-tauri/README.md
