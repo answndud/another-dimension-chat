@@ -391,6 +391,9 @@ test("receive controls are scoped to the active room", () => {
   assert.match(mainJs, /receiveIntentForRoom\(input\)[\s\S]*!productionTwoProfileReceiveActiveInOtherRoom\(input\)[\s\S]*action: "start-receiving"/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /productionTwoProfileReceiveActiveInOtherRoom\(input\)/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /receiveOtherRoomActive/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /await invoke\("production_onion_receive_loop_stop"\)/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /rememberReceiveIntentForRoom\(input, false\)/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /!productionTwoProfileReceiveMatchesInput\(targetInput\)/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /receiveOtherRoomActive/);
   assert.match(i18nJs, /roomReceivingOther/);
@@ -533,6 +536,8 @@ test("reopened inviter rooms do not show the invite code share panel", () => {
   assert.match(functionBody(mainJs, "openSavedInviteRoom"), /const openInput = productionTwoProfileInput\(\)/);
   assert.match(functionBody(mainJs, "openSavedInviteRoom"), /twoProfileTranscriptInputStillCurrent\(openInput\)/);
   assert.match(functionBody(mainJs, "openSavedInviteRoom"), /return openInviteRoomFromToken\(openInput\)/);
+  assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /const transcriptLoaded = await loadProductionTwoProfileTranscript/);
+  assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /!transcriptLoaded \|\| !twoProfileTranscriptInputStillCurrent\(input\)/);
 });
 
 test("saved room removal is list-only and transcript switching rebuilds entries", () => {
@@ -617,6 +622,9 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(functionBody(mainJs, "twoProfileSafetyConfirmedForInput"), /legacyTwoProfileSafetyStorageKey\(input\)/);
   assert.match(functionBody(mainJs, "twoProfileSafetyConfirmedForInput"), /localStoreSet\(key, "confirmed"\)/);
   assert.match(functionBody(mainJs, "twoProfileSafetyStorageKeys"), /legacyTwoProfileSafetyStorageKey\(input\)/);
+  assert.match(functionBody(mainJs, "renderTwoProfileSafetyConfirm"), /const safetyLoaded = Boolean/);
+  assert.match(functionBody(mainJs, "renderTwoProfileSafetyConfirm"), /!safetyLoaded/);
+  assert.match(functionBody(mainJs, "confirmTwoProfileSafetyForInput"), /!twoProfileSafetyForInput\(input\)/);
   assert.doesNotMatch(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /confirmTwoProfileSafetyForInput/);
   assert.match(functionBody(mainJs, "confirmCurrentTwoProfileSafety"), /confirmTwoProfileSafetyForInput\(input\)/);
   assert.match(functionBody(mainJs, "twoProfileRoomIdentityInput"), /connectionCode/);
@@ -1003,6 +1011,17 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(roomRuntimeClearBody, /clearProductionPayloadSlotsForRoomFingerprint\(privateRouteRoomKey\(input\)\)/);
   assert.match(roomRuntimeClearBody, /clearSavedInviteRoomRetryableOutbound\(room\)/);
   assert.match(roomRuntimeClearBody, /clearSavedInviteRoomManualRebuildMetadata\(room\)/);
+
+  const roomConversationClearBody = functionBody(mainJs, "clearSavedInviteRoomConversationMetadata");
+  assert.match(roomConversationClearBody, /lastMessagePreview: ""/);
+  assert.match(roomConversationClearBody, /messageCount: 0/);
+  assert.match(roomConversationClearBody, /retryableOutboundCount: 0/);
+  assert.match(roomConversationClearBody, /clearMessageEnvelopeSlotsForRoomFingerprint\(privateRouteRoomKey\(savedInviteRoomInput\(room\)\)\)/);
+  assert.match(functionBody(mainJs, "clearSavedInviteRoomConversationMetadataForProfile"), /savedInviteRoomReferencesProfile\(room, profile\)/);
+  assert.match(functionBody(mainJs, "clearMessageEnvelopeSlotsForRoomFingerprint"), /productionPayloadSlots\.messageEnvelope\.entries\(\)/);
+  const conversationDeleteBody = functionBody(mainJs, "deleteProductionConversation");
+  assert.match(conversationDeleteBody, /clearSavedInviteRoomConversationMetadataForProfile\(profile\)/);
+  assert.match(conversationDeleteBody, /saved_rooms_cleared=\$\{savedRoomsCleared\}/);
 
   assert.match(functionBody(mainJs, "clearProductionPayloadSlotsForRoomFingerprint"), /Object\.values\(productionPayloadSlots\)/);
   assert.match(functionBody(mainJs, "clearProductionPayloadSlotsForRoomFingerprint"), /slot\?\.roomFingerprint/);
