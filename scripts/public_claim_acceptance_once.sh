@@ -91,10 +91,20 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "prepare_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "prepare_unsigned_public_beta_release.sh\" --check-policy"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_beta_gap_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_claim_acceptance_once.sh"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "preflight=public-release-readiness"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "status=public-release-readiness-source-preflight-ready"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "scope=source-only-no-dmg-required-no-generated-artifacts"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "artifact_generation=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "dmg_required=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "network_or_onion_work=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "generated_artifacts_created=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_delivery_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "security_ready_claim=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
 require_text "$ROOT_DIR/README.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/SECURITY.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/SECURITY.md" "source-only preflight before staging artifacts"
@@ -150,13 +160,46 @@ reject_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "manual 
 bash -n "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh"
 bash -n "$ROOT_DIR/scripts/public_release_readiness_preflight.sh"
 if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
+  release_dir="$ROOT_DIR/apps/desktop-tauri/public-release/unsigned-public-beta"
+  release_dir_existed=false
+  if [ -e "$release_dir" ]; then
+    release_dir_existed=true
+  fi
   preflight_output="$("$ROOT_DIR/scripts/public_release_readiness_preflight.sh")"
+  if [ "$release_dir_existed" = false ] && [ -e "$release_dir" ]; then
+    echo "FAIL release readiness preflight created generated release artifacts" >&2
+    exit 1
+  fi
   printf '%s\n' "$preflight_output" | grep -Fq -- "status=public-release-readiness-source-preflight-ready" || {
     echo "FAIL release readiness preflight missing ready status" >&2
     exit 1
   }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,public-beta-gap,public-claim-acceptance" || {
+    echo "FAIL release readiness preflight missing check list" >&2
+    exit 1
+  }
   printf '%s\n' "$preflight_output" | grep -Fq -- "scope=source-only-no-dmg-required-no-generated-artifacts" || {
     echo "FAIL release readiness preflight missing source-only scope" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "artifact_generation=false" || {
+    echo "FAIL release readiness preflight missing no-artifact-generation boundary" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "generated_artifacts_created=false" || {
+    echo "FAIL release readiness preflight missing generated-artifact side-effect boundary" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "release_artifact_generation=false" || {
+    echo "FAIL release readiness preflight missing release-artifact-generation boundary" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "dmg_required=false" || {
+    echo "FAIL release readiness preflight missing no-DMG-required boundary" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "network_or_onion_work=false" || {
+    echo "FAIL release readiness preflight missing no-network boundary" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "external_delivery_claim=false" || {
@@ -165,6 +208,18 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "security_ready_claim=false" || {
     echo "FAIL release readiness preflight missing security-ready non-claim" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data" || {
+    echo "FAIL release readiness preflight missing forbidden upload boundary" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false" || {
+    echo "FAIL release readiness preflight missing operator non-claims" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "next=if a frozen ignored DMG exists, run scripts/prepare_unsigned_public_beta_release.sh and upload only files listed in MANIFEST.md" || {
+    echo "FAIL release readiness preflight missing operator next step" >&2
     exit 1
   }
 fi
