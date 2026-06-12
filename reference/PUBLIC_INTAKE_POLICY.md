@@ -59,8 +59,8 @@ keys, paths, endpoints, or private data. Ask for a private contact path.
 The app's public support diagnostics are local-copy only. They do not upload crash
 reports, telemetry, raw logs, crash dumps, support bundles, raw diagnostic
 files, or local files. The intended public diagnostic payload is limited to app
-status, build identity, broad failure class, recovery next action, and
-app-launch network boundary. It must not include workflow state, manual network
+status, build identity, broad failure class, recovery next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary.
+It must not include workflow state, manual network
 permission state, invite codes, endpoints, payloads, safety material, profile
 names, message text, paths, logs, passphrases, private keys, key material, files
 from `docs/`, or local app data.

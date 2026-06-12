@@ -58,8 +58,7 @@ Review the unsigned experimental public beta boundary:
 - user-verified SHA-256 checksum
 - public support diagnostics export is redacted by design
 - public support diagnostics are local-copy only and limited to app status,
-  build identity, broad failure class, recovery next action, and app-launch
-  network boundary
+  build identity, broad failure class, recovery next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary
 - public support diagnostics do not provide crash upload, telemetry, raw log
   export, workflow-state export, support bundle export, or raw diagnostic file
   export
