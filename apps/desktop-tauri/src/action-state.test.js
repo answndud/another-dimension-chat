@@ -7,6 +7,7 @@ import {
   productionBridgeCensorshipBoundaryView,
   productionInviteCodeProfiles,
   productionInviteIdentityBoundaryView,
+  productionPairwiseInviteGuidanceView,
   productionInviteRoomConversationMetadata,
   productionManualMessageCheckView,
   productionManualTransferStepLabel,
@@ -83,6 +84,31 @@ test("invite identity boundary stays accountless and redacted", () => {
   assert.match(boundary, /invite_code_in_diagnostics=false/);
   assert.match(boundary, /qr_required=false/);
   assert.doesNotMatch(boundary, /ABCD-2345|inviter-abcd|joiner-abcd/);
+});
+
+test("pairwise invite guidance keeps discovery and messaging gates explicit", () => {
+  const create = productionPairwiseInviteGuidanceView({
+    step: "create",
+    role: "inviter",
+    roomPresent: true,
+  });
+  assert.equal(create.nextKey, "pairwiseInviteNextShareCode");
+  assert.match(create.boundary, /pairwise_invite_flow=true/);
+  assert.match(create.boundary, /step=create-code/);
+  assert.match(create.boundary, /role=inviter/);
+  assert.match(create.boundary, /send_code_over_existing_channel=true/);
+  assert.match(create.boundary, /verify_phrase_before_messaging=true/);
+  assert.match(create.boundary, /searchable_username=false/);
+  assert.match(create.boundary, /address_book=false/);
+  assert.match(create.boundary, /central_contact_discovery=false/);
+  assert.match(create.boundary, /central_message_server=false/);
+  assert.match(create.boundary, /invite_code_in_diagnostics=false/);
+  assert.match(create.boundary, /room_present=true/);
+
+  const remove = productionPairwiseInviteGuidanceView({ step: "delete", role: "joiner" });
+  assert.equal(remove.nextKey, "pairwiseInviteNextCreateOrPasteAgain");
+  assert.match(remove.boundary, /step=remove-list-entry/);
+  assert.match(remove.boundary, /room_present=false/);
 });
 
 test("chat action moves from setup to compose to stored send", () => {
