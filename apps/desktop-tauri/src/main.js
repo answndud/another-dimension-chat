@@ -9,6 +9,7 @@ import {
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
   productionManualMessageCheckView,
+  productionManualTransferStepLabel,
   productionManualCurrentFocusTarget,
   productionManualCurrentStepView,
   productionManualNextActions,
@@ -12090,39 +12091,38 @@ function applyPendingConversationToManualMessageReview(entry, options = {}) {
   if (focusManual) {
     openManualProductionTools();
   }
+  const exportStep = productionManualTransferStepLabel("export-envelope");
+  const loadStep = productionManualTransferStepLabel("load-or-paste-envelope");
+  const importStep = productionManualTransferStepLabel("import-envelope");
   let reviewState = "Manual sender review selected";
-  let reviewWarning = `Selected ${reviewProfile} to review missing local sent copy for message #${entry.messageNumber}.`;
+  let reviewWarning = `Next: ${exportStep} for message #${entry.messageNumber} from ${entry.sender}.`;
   let twoProfileWarning =
-    `Pending message #${entry.messageNumber} selected: ${entry.sender} -> ${entry.receiver}. ` +
-    `Review missing sender export in manual tools.`;
+    `Pending message #${entry.messageNumber} selected. Next: ${exportStep} from ${entry.sender}.`;
   if (canPrepareImport) {
     reviewState = "Manual import ready";
     reviewWarning =
-      `Loaded ${entry.sender} envelope slot for message #${entry.messageNumber} into ${reviewProfile}. ` +
-      "Click Import envelope to finish the explicit peer receive step.";
+      `Next: ${importStep} for message #${entry.messageNumber} into ${reviewProfile}. ` +
+      "The sender envelope is loaded.";
     twoProfileWarning =
-      `Pending message #${entry.messageNumber} selected for ${reviewProfile}. ` +
-      "Remote envelope is loaded; click Import envelope in manual tools.";
+      `Pending message #${entry.messageNumber} selected. Next: ${importStep} into ${reviewProfile}.`;
   } else if (sentCopyPresent && !receivedCopyPresent) {
     reviewState = "Manual import review selected";
     reviewWarning =
-      `Selected ${reviewProfile} to import pending message #${entry.messageNumber}. ` +
-      `Load or paste ${entry.sender}'s envelope, then click Import envelope.`;
+      `Next: ${loadStep} from ${entry.sender} for message #${entry.messageNumber} into ${reviewProfile}.`;
     twoProfileWarning =
-      `Pending message #${entry.messageNumber} selected for ${reviewProfile}. ` +
-      `Sender envelope slot is missing; load or paste ${entry.sender}'s envelope first.`;
+      `Pending message #${entry.messageNumber} selected. Next: ${loadStep} from ${entry.sender}.`;
   }
-  let manualCheck = `Needs sender review: local sent copy is missing for ${entry.sender} message #${entry.messageNumber}.`;
+  let manualCheck = `Next: ${exportStep} for message #${entry.messageNumber} from ${entry.sender}.`;
   let inboundReadiness = receivedCopyPresent
     ? "Received copy present in transcript"
     : "Pending peer received copy";
   let outboundReadiness = "Local sent copy missing";
   if (canPrepareImport) {
-    manualCheck = `Ready: import envelope for ${reviewProfile} message #${entry.messageNumber}.`;
+    manualCheck = `Next: ${importStep} for message #${entry.messageNumber} into ${reviewProfile}.`;
     inboundReadiness = "Ready to import explicit remote envelope";
     outboundReadiness = `Sender envelope slot ready for ${entry.sender}`;
   } else if (sentCopyPresent && !receivedCopyPresent) {
-    manualCheck = `Needs envelope: load or paste sender envelope for ${entry.sender} message #${entry.messageNumber}.`;
+    manualCheck = `Next: ${loadStep} from ${entry.sender} for message #${entry.messageNumber}.`;
     outboundReadiness = senderEnvelopeSlot
       ? `Sender envelope slot ready for ${entry.sender}`
       : "Local sent copy present; sender envelope slot missing";
@@ -19202,6 +19202,8 @@ function syncTwoProfileConversationAfterManualExport(
   setProductionTwoProfileState("Conversation updated after export");
   const refreshedEntry = selectedTwoProfileConversationEntry();
   if (!selectReplyAfterDeliveredReview(refreshedEntry)) {
+    const importStep = productionManualTransferStepLabel("import-envelope");
+    const loadStep = productionManualTransferStepLabel("load-or-paste-envelope");
     if (
       refreshedEntry &&
       refreshedEntry.statuses?.has("sent") &&
@@ -19219,18 +19221,18 @@ function syncTwoProfileConversationAfterManualExport(
       setProductionMessageState("Manual import ready");
       setText(
         fields.productionMessageWarning,
-        `Manual export for ${exportedProfile} completed. Selected ${refreshedEntry.receiver} and loaded the sender envelope for explicit import.`,
+        `Export envelope complete for message #${exportedNumber}. Next: ${importStep} into ${refreshedEntry.receiver}.`,
       );
       setText(
         fields.productionTwoProfileWarning,
-        `Manual export for ${exportedProfile} completed; import is ready for ${refreshedEntry.receiver}.`,
+        `Export envelope complete. Next: ${importStep} into ${refreshedEntry.receiver}.`,
       );
       applyProductionActionState();
       return { conversationUpdated: true, peerImportReady: true };
     }
     setText(
       fields.productionTwoProfileWarning,
-      `Manual export for ${exportedProfile} completed; sender envelope slot is stored for explicit peer import.`,
+      `Export envelope complete for message #${exportedNumber}. Next: ${loadStep} on the receiving device, then ${importStep}.`,
     );
     applyProductionActionState();
   }
@@ -19758,6 +19760,8 @@ async function importProductionMessageEnvelope() {
     const clearedEnvelopeInput = clearImportedRemoteMessageEnvelopeInput(envelopePayload);
     const clearedEnvelopeOutput = clearImportedLocalMessageEnvelopeOutput(envelopePayload);
     const importWarning = appendMessageLifecyclePurgeWarning(result.warning, result);
+    const showPlaintextStep = productionManualTransferStepLabel("show-plaintext");
+    const writeReplyStep = productionManualTransferStepLabel("write-reply");
     setProductionMessageState("Message envelope imported");
     setText(
       fields.productionMessageWarning,
@@ -19765,7 +19769,7 @@ async function importProductionMessageEnvelope() {
         clearedEnvelopeSlot ? " Consumed matching stored sender envelope slot." : ""
       }${clearedEnvelopeInput ? " Cleared imported remote envelope input." : ""}${
         clearedEnvelopeOutput ? " Cleared matching local envelope output." : ""
-      } Click Show plaintext to verify the decrypted message.`,
+      } Next: ${showPlaintextStep} before writing the reply.`,
     );
     setText(fields.productionMessageOutbound, "Not exported in this profile");
     setText(fields.productionMessageInbound, view.inbound);
@@ -19783,7 +19787,7 @@ async function importProductionMessageEnvelope() {
           clearedEnvelopeSlot ? " Consumed matching stored sender envelope slot." : ""
         }${clearedEnvelopeInput ? " Cleared imported remote envelope input." : ""}${
           clearedEnvelopeOutput ? " Cleared matching local envelope output." : ""
-        } Reply target selected in the two-profile conversation. Show plaintext remains available for local plaintext review.`,
+        } Reply target selected. Next: ${showPlaintextStep}, then ${writeReplyStep}.`,
       );
     }
   } catch (error) {
@@ -19875,7 +19879,7 @@ async function exportProductionReceivedMessage() {
       postBusyFocus = "reply-composer";
       setText(
         fields.productionMessageWarning,
-        `${result.warning} Received review is complete; write the reply in the two-profile composer.`,
+        `${result.warning} Received review is complete. Next: ${productionManualTransferStepLabel("write-reply")} in the two-profile composer.`,
       );
     }
   } catch (error) {
