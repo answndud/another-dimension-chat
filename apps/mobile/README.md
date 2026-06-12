@@ -30,6 +30,35 @@ communication prohibited, not audited, not production-ready, redacted status
 only, manual update verification required, and external onion delivery not
 claimed.
 
+## Current Source Scaffold Operator Handoff
+
+Current mobile source scaffold state is source-boundary only. It is useful for
+local operator inspection of the mobile wrapper shape, not for release,
+packaging, store distribution, generated bindings, native runtime messaging, or
+mobile readiness.
+
+Implemented source boundaries:
+
+- read-only status adapter:
+  `status_and_redacted_diagnostics_read_only_adapter`
+- blocked command adapter for profile unlock, invite, pairing, safety
+  transcript, manual envelope, message transcript, and local data lifecycle
+- shell presentation labels using `status`, `failure_class`,
+  `recovery_next_action`, status DTO fields, and `public_non_claims`
+- user-initiated redacted diagnostics copy boundary
+- display-only local data lifecycle confirmation boundary
+- launch boundary with no native network permission, no runtime messaging loop,
+  no background delivery, and no push notification configuration
+
+Use `scripts/verify_mobile_source_handoff.sh` for the targeted mobile source
+handoff check. It runs the mobile source-boundary verifiers only and does not
+build APKs, AABs, IPAs, DMGs, store uploads, generated bindings, or release
+artifacts.
+
+The handoff still keeps binding generation implemented false,
+callable FFI implemented false, generated bindings claimed false,
+mobile readiness claimed false, and security-ready claimed false.
+
 ## Mobile Development Scope Switch Criteria
 
 This section is the scope-switch record for future mobile development. It is
