@@ -55,10 +55,47 @@ require_file() {
 require_text() {
   local file="$1"
   local expected="$2"
-  if ! grep -Fq "$expected" "$file"; then
+  if ! grep -Fq -- "$expected" "$file"; then
     echo "FAIL missing expected text in $file: $expected" >&2
     exit 1
   fi
+}
+
+reject_text() {
+  local file="$1"
+  local forbidden="$2"
+  if grep -Fq -- "$forbidden" "$file"; then
+    echo "FAIL forbidden text in $file: $forbidden" >&2
+    exit 1
+  fi
+}
+
+require_ignored_path() {
+  local path="$1"
+  if ! git -C "$ROOT_DIR" check-ignore -q "$path"; then
+    echo "FAIL generated artifact path is not ignored: $path" >&2
+    exit 1
+  fi
+}
+
+check_artifact_boundary() {
+  require_ignored_path "$ROOT_DIR/apps/desktop-tauri/public-release/"
+  require_ignored_path "$ROOT_DIR/apps/desktop-tauri/beta-artifacts/"
+  if git -C "$ROOT_DIR" ls-files apps/desktop-tauri/public-release apps/desktop-tauri/beta-artifacts | grep -q .; then
+    echo "FAIL generated release or beta artifact paths are tracked" >&2
+    git -C "$ROOT_DIR" ls-files apps/desktop-tauri/public-release apps/desktop-tauri/beta-artifacts >&2
+    exit 1
+  fi
+
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "COMPONENT_BOUNDARIES.md"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" "COMPONENT_BOUNDARIES.md"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "desktop local-private-flow acceptance status/blockers/non-claims"
+  reject_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "manual network"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"public_diagnostics_boundary\": \"status-build-failure-class-recovery-action-desktop-acceptance-only\""
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Public diagnostics boundary: status-build-failure-class-recovery-action-desktop-acceptance-only"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "desktop local-private-flow acceptance status/blockers/non-claims"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "COMPONENT_BOUNDARIES.md"
+  echo "status=release-artifact-boundary-source-ready"
 }
 
 check_release_integrity_policy() {
@@ -97,6 +134,11 @@ check_release_integrity_policy() {
 
 if [ "${1:-}" = "--check-policy" ]; then
   check_release_integrity_policy
+  exit 0
+fi
+
+if [ "${1:-}" = "--check-artifact-boundary" ]; then
+  check_artifact_boundary
   exit 0
 fi
 
@@ -305,6 +347,7 @@ This folder is for a GitHub Release upload.
 - \`REPOSITORY_GOVERNANCE.md\`
 - \`COMPONENT_BOUNDARIES.md\`
 - \`DEPENDENCY_LOCKFILES.sha256\`
+- \`MANIFEST.md\`
 
 ## Build
 
@@ -494,6 +537,7 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"auto_update\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"signed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"notarized\": false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Auto-update: disabled"
+require_text "$RELEASE_DIR/MANIFEST.md" "MANIFEST.md"
 require_text "$RELEASE_DIR/MANIFEST.md" "Signing/notarization: disabled"
 require_text "$RELEASE_DIR/MANIFEST.md" "Release tag: \`$RELEASE_TAG\`"
 require_text "$RELEASE_DIR/MANIFEST.md" "Release URL: \`$RELEASE_URL\`"
@@ -550,6 +594,7 @@ require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not audited"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not production-ready"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "sensitive communication prohibited"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GITHUB_RELEASE_BODY.md"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "COMPONENT_BOUNDARIES.md"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GitHub source archives"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "completed independent review"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "fabricated external review"
@@ -574,11 +619,14 @@ require_text "$RELEASE_DIR/UPDATE_INTEGRITY.md" "branch-file or source-archive r
 require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "Use the files attached to that GitHub Release as the release authority"
 require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "branch files copied from GitHub's source"
 require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "GitHub source archives"
+require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "COMPONENT_BOUNDARIES.md"
 require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "Privacy & Security"
 require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "Do not use terminal quarantine-removal commands"
 require_text "$RELEASE_DIR/INSTALL_UNSIGNED_MACOS.md" "no auto-update channel"
 require_text "$RELEASE_DIR/RELEASE_NOTES.md" "Same GitHub Release assets are the release authority"
 require_text "$RELEASE_DIR/RELEASE_NOTES.md" "Do not use terminal quarantine-removal commands"
+require_text "$RELEASE_DIR/RELEASE_NOTES.md" "desktop local-private-flow acceptance status/blockers/non-claims"
+reject_text "$RELEASE_DIR/RELEASE_NOTES.md" "manual network"
 require_text "$RELEASE_DIR/SUPPLY_CHAIN_BASELINE.md" "not a supply-chain audit"
 require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "not an SBOM"
 require_text "$RELEASE_DIR/DEPENDENCY_INVENTORY.md" "Lockfile Evidence Summary"

@@ -22,6 +22,7 @@ Download all files from this same GitHub Release:
 - `INDEPENDENT_REVIEW_PACKET.md`
 - `PUBLIC_INTAKE_POLICY.md`
 - `REPOSITORY_GOVERNANCE.md`
+- `COMPONENT_BOUNDARIES.md`
 - `DEPENDENCY_LOCKFILES.sha256`
 - `MANIFEST.md`
 
