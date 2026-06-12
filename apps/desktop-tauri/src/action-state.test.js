@@ -23,6 +23,7 @@ import {
   productionTwoProfileResumeTarget,
   productionSessionLifecycleView,
   productionTwoProfileSendAttemptUserView,
+  productionTwoProfileShouldClearPendingOutboundNotice,
   productionTwoProfileShouldShowOutboundRecovery,
 } from "./action-state.js";
 
@@ -535,6 +536,38 @@ test("send recovery notice waits until the room is ready", () => {
       hasRetryableOutbound: true,
     }),
     true,
+  );
+});
+
+test("stale pending outbound notice clears even when another pending row remains", () => {
+  assert.equal(
+    productionTwoProfileShouldClearPendingOutboundNotice({
+      busy: false,
+      hasPendingOutboundNotice: true,
+      noticeMatchesCurrentRoom: true,
+      noticePendingOutboundRetryable: false,
+      hasPendingConversation: true,
+    }),
+    true,
+  );
+  assert.equal(
+    productionTwoProfileShouldClearPendingOutboundNotice({
+      busy: false,
+      hasPendingOutboundNotice: true,
+      noticeMatchesCurrentRoom: true,
+      noticePendingOutboundRetryable: true,
+      hasPendingConversation: true,
+    }),
+    false,
+  );
+  assert.equal(
+    productionTwoProfileShouldClearPendingOutboundNotice({
+      busy: true,
+      hasPendingOutboundNotice: true,
+      noticeMatchesCurrentRoom: true,
+      noticePendingOutboundRetryable: false,
+    }),
+    false,
   );
 });
 
