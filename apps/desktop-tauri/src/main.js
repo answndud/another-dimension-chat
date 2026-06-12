@@ -7384,7 +7384,7 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
   const failureClass = fieldTestReportValue(publicDiagnosticsFailureClass(parsed, desktopCompletion), "none");
   const recoveryNextAction = fieldTestReportValue(publicDiagnostics.recovery_next_action, "none");
   if (fields.publicBetaDiagnosticsSummary) {
-    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication app_launch_network=false`;
+    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
   }
   return payload;
 }
@@ -14052,7 +14052,12 @@ async function renderPrototypeStatus() {
     setText(fields.transportIo, localizedBoundaryStatus(status.transport_io_status));
     setText(fields.privacyModelBoundary, localizedBoundaryStatus(status.privacy_model_boundary));
     setText(fields.storage, localizedBoundaryStatus(status.storage_status));
-    setText(fields.releaseIntegrity, localizedBoundaryStatus(status.release_integrity_status));
+    setText(
+      fields.releaseIntegrity,
+      localizedBoundaryStatus(
+        `${status.release_integrity_status} ${status.desktop_platform_readiness_boundary ?? ""}`.trim(),
+      ),
+    );
     setText(fields.supplyChainBoundary, localizedBoundaryStatus(status.supply_chain_integrity_boundary));
     setText(fields.verification, localizedBoundaryStatus(status.verification_status));
   } catch (_error) {
@@ -14098,7 +14103,7 @@ async function renderPrototypeStatus() {
     setText(fields.transportIo, t("transportIoValue"));
     setText(fields.privacyModelBoundary, t("privacyModelBoundaryValue"));
     setText(fields.storage, t("storageValue"));
-    setText(fields.releaseIntegrity, t("releaseIntegrityValue"));
+    setText(fields.releaseIntegrity, `${t("releaseIntegrityValue")}; ${t("desktopPlatformBoundaryValue")}`);
     setText(fields.supplyChainBoundary, t("supplyChainBoundaryValue"));
     setText(fields.verification, t("verificationValue"));
   }
