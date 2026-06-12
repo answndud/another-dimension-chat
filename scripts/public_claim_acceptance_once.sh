@@ -92,9 +92,15 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "prepare_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_beta_gap_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_claim_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_status=current"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_file_list=manifest-allowlist-only"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_reference_copies=current"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_lockfiles=current"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output file list differs from MANIFEST allowlist"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output dependency lockfile evidence is stale"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "stale existing release output"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "preflight=public-release-readiness"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "status=public-release-readiness-source-preflight-ready"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_acceptance=desktop-release-source-accepted-for-operator-staging"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "decision=proceed-to-packaging-only-with-frozen-ignored-dmg"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "fallback=return-to-desktop-hardening-if-source-preflight-fails"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "scope=source-only-no-dmg-required-no-generated-artifacts"
@@ -107,6 +113,9 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "generate
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_delivery_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "security_ready_claim=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_security_ready_acceptance=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_final_handoff=OPERATOR_FINAL_HANDOFF.md"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_after_upload_verify=same-release-sha256-before-opening"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
 require_text "$ROOT_DIR/README.md" "scripts/public_release_readiness_preflight.sh"
@@ -207,6 +216,24 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing ready status" >&2
     exit 1
   }
+  if [ "$release_dir_existed" = true ]; then
+    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_file_list=manifest-allowlist-only" || {
+      echo "FAIL release readiness preflight missing exact file-list freshness" >&2
+      exit 1
+    }
+    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_reference_copies=current" || {
+      echo "FAIL release readiness preflight missing reference-copy freshness" >&2
+      exit 1
+    }
+    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_lockfiles=current" || {
+      echo "FAIL release readiness preflight missing lockfile freshness" >&2
+      exit 1
+    }
+  fi
+  printf '%s\n' "$preflight_output" | grep -Fq -- "source_acceptance=desktop-release-source-accepted-for-operator-staging" || {
+    echo "FAIL release readiness preflight missing source acceptance" >&2
+    exit 1
+  }
   printf '%s\n' "$preflight_output" | grep -Fq -- "decision=proceed-to-packaging-only-with-frozen-ignored-dmg" || {
     echo "FAIL release readiness preflight missing packaging decision" >&2
     exit 1
@@ -251,6 +278,18 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing security-ready non-claim" >&2
     exit 1
   }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "final_security_ready_acceptance=false" || {
+    echo "FAIL release readiness preflight missing final acceptance non-claim" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "operator_final_handoff=OPERATOR_FINAL_HANDOFF.md" || {
+    echo "FAIL release readiness preflight missing operator handoff" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "operator_after_upload_verify=same-release-sha256-before-opening" || {
+    echo "FAIL release readiness preflight missing after-upload verification" >&2
+    exit 1
+  }
   printf '%s\n' "$preflight_output" | grep -Fq -- "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data" || {
     echo "FAIL release readiness preflight missing forbidden upload boundary" >&2
     exit 1
@@ -284,8 +323,8 @@ printf '%s\n' "$final_acceptance_output" | grep -Fq -- "external_delivery_claim=
   echo "FAIL final acceptance missing external delivery non-claim" >&2
   exit 1
 }
-printf '%s\n' "$final_acceptance_output" | grep -Fq -- "scripts/public_beta_gap_acceptance_once.sh" || {
-  echo "FAIL final acceptance missing public beta gap next step" >&2
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "scripts/public_release_readiness_preflight.sh" || {
+  echo "FAIL final acceptance missing public release source gate next step" >&2
   exit 1
 }
 
