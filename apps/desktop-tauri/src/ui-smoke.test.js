@@ -269,7 +269,15 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(mainJs, /function outboundRecoveryMessage/);
   assert.match(mainJs, /function outboundRecoveryNextText/);
   assert.match(mainJs, /function currentComposerPendingOutboundAction/);
-  assert.match(functionBody(mainJs, "currentComposerPendingOutboundAction"), /restoreLatestChatDeliveryPendingOutbound\(input\) \?\? automaticVisibleTwoProfileRetryableOutboundEntry\(input\)/);
+  assert.match(functionBody(mainJs, "currentComposerPendingOutboundAction"), /selectedTwoProfileRetryableOutboundEntry\(input\) \?\?/);
+  assert.match(functionBody(mainJs, "currentComposerPendingOutboundAction"), /restoreLatestChatDeliveryPendingOutbound\(input\) \?\?/);
+  assert.match(functionBody(mainJs, "currentComposerPendingOutboundAction"), /automaticVisibleTwoProfileRetryableOutboundEntry\(input\)/);
+  assert.ok(
+    functionBody(mainJs, "currentComposerPendingOutboundAction").indexOf("selectedTwoProfileRetryableOutboundEntry(input)") <
+      functionBody(mainJs, "currentComposerPendingOutboundAction").indexOf("restoreLatestChatDeliveryPendingOutbound(input)"),
+  );
+  assert.match(functionBody(mainJs, "showLatestRetryableOutboundNotice"), /const selected = selectedTwoProfileRetryableOutboundEntry\(input\)/);
+  assert.match(functionBody(mainJs, "showLatestRetryableOutboundNotice"), /setChatDeliveryNoticeForPendingOutbound\(selected, input\)/);
   assert.match(functionBody(mainJs, "currentComposerPendingOutboundAction"), /if \(!actionState\.canRunNow\) \{\s*return null;\s*\}/);
   assert.match(functionBody(mainJs, "twoProfileComposerPrimaryIntent"), /currentComposerPendingOutboundAction\(input\)/);
   assert.match(functionBody(mainJs, "twoProfileComposerPrimaryIntent"), /pendingOutboundEntry: pendingOutboundAction\.entry/);
