@@ -290,7 +290,7 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         storage_status:
             "ADREC1 storage spike plus forward-only schema and local data lifecycle boundary",
         release_integrity_status:
-            "unsigned GitHub beta uses manual GitHub Release download, same GitHub Release assets as release authority, manual SHA-256 verification, same-release SHA-256 verification, macOS Privacy & Security manual allow only after checksum match, source branch is not release authority, public provenance, manifest, dependency inventory, dependency lockfile hashes, no branch-file release proof, no terminal quarantine-removal install step, no auto-update, no signing, no notarization, no supply-chain audit claim",
+            "unsigned GitHub beta uses manual GitHub Release download, same GitHub Release assets as release authority, manual SHA-256 verification, same-release SHA-256 verification, macOS Privacy & Security manual allow only after checksum match, source branch is not release authority, source archives are not release authority, auto-update manifests are not trusted update authority, platform signing is not a v0.1 security boundary, notarization is not a v0.1 security boundary, store approval is not a v0.1 security boundary, public provenance, manifest, dependency inventory, dependency lockfile hashes, no branch-file release proof, no terminal quarantine-removal install step, no auto-update, no signing, no notarization, no supply-chain audit claim",
         desktop_platform_readiness_boundary:
             "desktop_platform_scope=macos-public-beta-windows-local-build-candidate windows_public_artifact_ready=false windows_installer_ready=false windows_signing_ready=false microsoft_store_ready=false smart_screen_reputation_claim=false notarization_equivalent_claim=false windows_runtime_smoke_required=true windows_app_data_path_review_required=true windows_path_separator_review_required=true no_auto_update=true public_artifact_upload_allowed=false remaining_blocker=windows-local-build-smoke-and-release-boundary-review".to_string(),
         supply_chain_integrity_boundary: format!(
@@ -525,6 +525,21 @@ mod tests {
         assert!(status
             .release_integrity_status
             .contains("source branch is not release authority"));
+        assert!(status
+            .release_integrity_status
+            .contains("source archives are not release authority"));
+        assert!(status
+            .release_integrity_status
+            .contains("auto-update manifests are not trusted update authority"));
+        assert!(status
+            .release_integrity_status
+            .contains("platform signing is not a v0.1 security boundary"));
+        assert!(status
+            .release_integrity_status
+            .contains("notarization is not a v0.1 security boundary"));
+        assert!(status
+            .release_integrity_status
+            .contains("store approval is not a v0.1 security boundary"));
         assert!(status
             .release_integrity_status
             .contains("no branch-file release proof"));
