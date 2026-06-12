@@ -3751,14 +3751,29 @@ function clearSavedInviteRoomConversationMetadataForProfile(profile) {
   return cleared;
 }
 
+function clearActiveRoomInteractionStateAfterLocalLifecycle(input = productionTwoProfileInput(), options = {}) {
+  const roomFingerprint = privateRouteRoomKey(input);
+  clearChatDeliveryNoticeForInput(input);
+  clearPrivateRouteFollowupForRoom(input);
+  clearManualMessagePayloadsForRoomContextChange();
+  selectedTwoProfileConversationKey = null;
+  latestClearedRetryableSelection = null;
+  if (options.preserveSessionRuntime !== true) {
+    rememberReceiveIntentForRoom(input, false);
+    forgetTwoProfileSessionStatusForInput(input);
+    clearPrivateRouteRuntimeStateForInput(input);
+    persistPrivateRouteRuntimeState();
+  }
+  clearMessageEnvelopeSlotsForRoomFingerprint(roomFingerprint);
+  return true;
+}
+
 function clearActiveConversationStateAfterLocalDelete(profile, input = productionTwoProfileInput()) {
   const targetProfile = String(profile ?? "").trim();
   if (!targetProfile || !twoProfileInputReferencesProfile(input, targetProfile)) {
     return false;
   }
-  clearChatDeliveryNoticeForInput(input);
-  clearManualMessagePayloadsForRoomContextChange();
-  clearMessageEnvelopeSlotsForRoomFingerprint(privateRouteRoomKey(input));
+  clearActiveRoomInteractionStateAfterLocalLifecycle(input, { preserveSessionRuntime: true });
   resetProductionTwoProfileTranscript();
   renderRoomStatusSummary(input, twoProfileSessionsReadyForInput(input));
   renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
@@ -18232,11 +18247,14 @@ function applyPostDestructiveLifecycleRebuildGuidance(action, options = {}) {
     `profile_store_removed=${profileDelete} owned_app_data_removed=${fullWipe}`;
   const lifecycleSession =
     `stale_room_retry_cleared=true stale_receive_cleared=true stale_delivery_code_cleared=true ` +
-    `stale_manual_rebuild_cleared=true stale_chat_notice_cleared=true ${lifecycleSemantics} ` +
+    `stale_manual_rebuild_cleared=true stale_chat_notice_cleared=true stale_selected_message_cleared=true ` +
+    `stale_followup_cleared=true stale_import_review_cleared=true stale_runtime_cleared=true ${lifecycleSemantics} ` +
     `affected_current_room=${affectedCurrentRoom} saved_rooms_cleared=${clearedRooms}`;
   const lifecycleBoundary =
     `local_only=true stale_room_retry_cleared=true stale_receive_cleared=true stale_delivery_code_cleared=true ` +
-    `stale_manual_rebuild_cleared=true stale_chat_notice_cleared=true rebuild_required=true ${lifecycleSemantics} ` +
+    `stale_manual_rebuild_cleared=true stale_chat_notice_cleared=true stale_selected_message_cleared=true ` +
+    `stale_followup_cleared=true stale_import_review_cleared=true stale_runtime_cleared=true ` +
+    `rebuild_required=true ${lifecycleSemantics} ` +
     `external_evidence_claim=false backup_recovery=false cloud_backup_sync=false rollback_prevention=false ` +
     `secure_delete_claim=false security_ready=false`;
 
@@ -18245,8 +18263,10 @@ function applyPostDestructiveLifecycleRebuildGuidance(action, options = {}) {
   latestProductionTwoProfileSessionStatus = null;
   latestProductionTwoProfileSafety = null;
   rememberManualInviteRoomRebuildFlow(action);
+  if (affectedCurrentRoom) {
+    clearActiveRoomInteractionStateAfterLocalLifecycle(input);
+  }
   resetProductionTwoProfileTranscript();
-  clearManualMessagePayloadsForRoomContextChange();
   if (fullWipe) {
     clearAllSavedInviteRoomLocalState();
     clearCurrentInviteRoomInput();

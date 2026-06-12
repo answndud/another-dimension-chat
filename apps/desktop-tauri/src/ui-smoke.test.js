@@ -1158,11 +1158,21 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(roomConversationClearBody, /clearMessageEnvelopeSlotsForRoomFingerprint\(privateRouteRoomKey\(savedInviteRoomInput\(room\)\)\)/);
   assert.match(functionBody(mainJs, "clearSavedInviteRoomConversationMetadataForProfile"), /savedInviteRoomReferencesProfile\(room, profile\)/);
   assert.match(functionBody(mainJs, "clearMessageEnvelopeSlotsForRoomFingerprint"), /productionPayloadSlots\.messageEnvelope\.entries\(\)/);
+  const activeLifecycleClearBody = functionBody(mainJs, "clearActiveRoomInteractionStateAfterLocalLifecycle");
+  assert.match(activeLifecycleClearBody, /clearChatDeliveryNoticeForInput\(input\)/);
+  assert.match(activeLifecycleClearBody, /clearPrivateRouteFollowupForRoom\(input\)/);
+  assert.match(activeLifecycleClearBody, /clearManualMessagePayloadsForRoomContextChange\(\)/);
+  assert.match(activeLifecycleClearBody, /selectedTwoProfileConversationKey = null/);
+  assert.match(activeLifecycleClearBody, /latestClearedRetryableSelection = null/);
+  assert.match(activeLifecycleClearBody, /options\.preserveSessionRuntime !== true/);
+  assert.match(activeLifecycleClearBody, /rememberReceiveIntentForRoom\(input, false\)/);
+  assert.match(activeLifecycleClearBody, /forgetTwoProfileSessionStatusForInput\(input\)/);
+  assert.match(activeLifecycleClearBody, /clearPrivateRouteRuntimeStateForInput\(input\)/);
+  assert.match(activeLifecycleClearBody, /persistPrivateRouteRuntimeState\(\)/);
+  assert.match(activeLifecycleClearBody, /clearMessageEnvelopeSlotsForRoomFingerprint\(roomFingerprint\)/);
   const activeConversationClearBody = functionBody(mainJs, "clearActiveConversationStateAfterLocalDelete");
   assert.match(activeConversationClearBody, /twoProfileInputReferencesProfile\(input, targetProfile\)/);
-  assert.match(activeConversationClearBody, /clearChatDeliveryNoticeForInput\(input\)/);
-  assert.match(activeConversationClearBody, /clearManualMessagePayloadsForRoomContextChange\(\)/);
-  assert.match(activeConversationClearBody, /clearMessageEnvelopeSlotsForRoomFingerprint\(privateRouteRoomKey\(input\)\)/);
+  assert.match(activeConversationClearBody, /clearActiveRoomInteractionStateAfterLocalLifecycle\(input, \{ preserveSessionRuntime: true \}\)/);
   assert.match(activeConversationClearBody, /resetProductionTwoProfileTranscript\(\)/);
   assert.match(activeConversationClearBody, /renderRoomStatusSummary\(input, twoProfileSessionsReadyForInput\(input\)\)/);
   const conversationDeleteBody = functionBody(mainJs, "deleteProductionConversation");
@@ -1199,6 +1209,10 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(rebuildBody, /stale_delivery_code_cleared=true/);
   assert.match(rebuildBody, /stale_manual_rebuild_cleared=true/);
   assert.match(rebuildBody, /stale_chat_notice_cleared=true/);
+  assert.match(rebuildBody, /stale_selected_message_cleared=true/);
+  assert.match(rebuildBody, /stale_followup_cleared=true/);
+  assert.match(rebuildBody, /stale_import_review_cleared=true/);
+  assert.match(rebuildBody, /stale_runtime_cleared=true/);
   assert.match(rebuildBody, /rebuild_required=true/);
   assert.match(rebuildBody, /external_evidence_claim=false/);
   assert.match(rebuildBody, /backup_recovery=false/);
@@ -1206,6 +1220,7 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(rebuildBody, /rollback_prevention=false/);
   assert.match(rebuildBody, /secure_delete_claim=false/);
   assert.match(rebuildBody, /security_ready=false/);
+  assert.match(rebuildBody, /affectedCurrentRoom\)[\s\S]*clearActiveRoomInteractionStateAfterLocalLifecycle\(input\)/);
   assert.match(rebuildBody, /clearCurrentInviteRoomInput\(\)/);
   assert.match(rebuildBody, /setProductionFollowupActions\(true/);
   assert.ok(
