@@ -265,11 +265,11 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "savedInviteRoomResumePriority"), /return 18/);
   assert.match(
     functionBody(mainJs, "savedInviteRoomState"),
-    /receiveState === "listening"[\s\S]*receiveState === "stopping"[\s\S]*receiveState === "paused"[\s\S]*savedInviteRoomHasRetryableOutbound\(room\)/,
+    /receiveState === "listening"[\s\S]*receiveState === "stopping"[\s\S]*waitingPeerCode[\s\S]*receiveState === "paused"[\s\S]*savedInviteRoomHasRetryableOutbound\(room\)/,
   );
   assert.match(
     functionBody(mainJs, "savedInviteRoomListAction"),
-    /receiveState === "stopping"[\s\S]*receiveState === "paused"[\s\S]*savedInviteRoomHasRetryableOutbound\(room\)/,
+    /receiveState === "stopping"[\s\S]*waitingPeerCode[\s\S]*receiveState === "paused"[\s\S]*savedInviteRoomHasRetryableOutbound\(room\)/,
   );
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateResumeNext/);
   assert.match(functionBody(mainJs, "savedInviteRoomRetryableState"), /roomStateRetrySend/);
@@ -278,6 +278,9 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(i18nJs, /roomStateSetupDelivery/);
   assert.match(i18nJs, /roomStateRefreshAddress/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /needs-receive-restart/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /const currentInput = productionTwoProfileInput\(\)/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /const currentRole = currentInput\.inviteRole/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /const currentRoomFingerprint = privateRouteRoomKey\(currentInput\)/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /savedInviteRoomListItemView\(room,[\s\S]*currentCode,[\s\S]*resumeRoom,[\s\S]*persistStaleRetryableClear: true/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /is-waiting-peer-code/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /has-retryable-send/);
@@ -288,6 +291,11 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(mainJs, /function savedInviteRoomReadinessBlockerKey/);
   assert.match(mainJs, /function savedInviteRoomReadinessSummaryKey/);
   assert.match(mainJs, /function savedInviteRoomReadinessNextDetailKey/);
+  assert.match(functionBody(mainJs, "savedInviteRoomListItemView"), /const currentRole = context\.currentRole === "inviter" \|\| context\.currentRole === "joiner"/);
+  assert.match(functionBody(mainJs, "savedInviteRoomListItemView"), /const currentRoomFingerprint = String\(context\.currentRoomFingerprint \?\? ""\)\.trim\(\)/);
+  assert.match(functionBody(mainJs, "savedInviteRoomListItemView"), /const roomFingerprint = privateRouteRoomKey\(savedInviteRoomInput\(viewRoom\)\)/);
+  assert.match(functionBody(mainJs, "savedInviteRoomListItemView"), /currentRoomFingerprint[\s\S]*roomFingerprint === currentRoomFingerprint[\s\S]*viewRoom\.code === currentCode && \(!currentRole \|\| viewRoom\.role === currentRole\)/);
+  assert.match(functionBody(mainJs, "savedInviteRoomListItemView"), /current,[\s\S]*hasRetryableSend/);
   assert.match(functionBody(mainJs, "savedInviteRoomListItemView"), /const nextAction = savedInviteRoomListAction/);
   assert.match(
     functionBody(mainJs, "savedInviteRoomListItemView"),
@@ -302,14 +310,14 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "savedInviteRoomReadinessBlockerKey"), /retryable-outbound/);
   assert.match(
     functionBody(mainJs, "savedInviteRoomReadinessBlockerKey"),
-    /receiveState === "stopping"[\s\S]*receiveState === "paused"[\s\S]*hasRetryableSend/,
+    /receiveState === "stopping"[\s\S]*hasRetryableSend[\s\S]*waitingPeerCode[\s\S]*receiveState === "paused"/,
   );
   assert.match(functionBody(mainJs, "savedInviteRoomReadinessBlockerKey"), /peer-delivery-code/);
   assert.match(functionBody(mainJs, "savedInviteRoomReadinessBlockerKey"), /safety-unverified/);
   assert.match(functionBody(mainJs, "savedInviteRoomReadinessNextDetailKey"), /roomReadinessNextRetrySavedMessage/);
   assert.match(
     functionBody(mainJs, "savedInviteRoomReadinessNextDetailKey"),
-    /receiveState === "stopping"[\s\S]*receiveState === "paused"[\s\S]*hasRetryableSend/,
+    /receiveState === "stopping"[\s\S]*hasRetryableSend[\s\S]*waitingPeerCode[\s\S]*receiveState === "paused"/,
   );
   assert.match(functionBody(mainJs, "savedInviteRoomReadinessNextDetailKey"), /roomReadinessNextPastePeerCode/);
   assert.match(functionBody(mainJs, "savedInviteRoomReadinessNextDetailKey"), /roomReadinessNextStartReceive/);
