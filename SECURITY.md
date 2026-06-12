@@ -78,6 +78,16 @@ This project does not currently claim:
   default practical transport path is explicit local manual encrypted envelope
   exchange, and the advanced onion/Tor envelope I/O boundary is fail-closed and
   explicit user-triggered only.
+- Desktop Default Practical Transport Boundary: the desktop default practical
+  path is local manual encrypted envelope exchange. It is the only default
+  source boundary for v0.1 and has `network_io=false`,
+  `automatic_delivery=false`, `central_message_server=false`,
+  `push_notification_dependency=false`, and `central_contact_discovery=false`.
+  The high-risk onion/Tor path is separate, explicit-user-triggered,
+  fail-closed, onion-only, and has `direct_fallback=false`. This boundary is a
+  product decision and first implementation slice, not a reliable external
+  delivery claim, production-ready claim, audited security claim, or
+  sensitive-communication allowance.
 - Audited production transport adapter implementation.
 - Audited bridge or censorship-circumvention support.
 - Production-ready Arti transport bootstrap, onion service launch, system Tor discovery, runtime Tor connectivity, or bridge/censorship behavior.
@@ -174,7 +184,7 @@ no DMG rebuild, no upload, and no generated release artifact commit. Final
 source acceptance is limited to non-claims, redacted diagnostics, release
 boundary, and desktop flow blocker checks. The next development axis must be
 one of release packaging/upload only after explicit user request, Windows
-readiness, or real-user test preparation.
+readiness, real-user test preparation, or default-transport-boundary.
 
 Desktop Real-User Test Preparation Boundary means tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action

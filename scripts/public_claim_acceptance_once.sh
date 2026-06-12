@@ -94,6 +94,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_windows_readiness_source_audit_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_windows_local_runtime_smoke_boundary_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_real_user_test_prep_once.sh"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_default_transport_boundary_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_beta_gap_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_claim_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_status=current"
@@ -110,7 +111,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Final Op
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Upload decision: proceed only after the source preflight prints"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Hold decision: do not upload, do not announce, and return to desktop hardening"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Operation boundary: this handoff does not perform a GitHub Release upload"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "next_development_axis=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "next_development_axis=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep#default-transport-boundary"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "stale existing release output"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "preflight=public-release-readiness"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "status=public-release-readiness-source-preflight-ready"
@@ -121,13 +122,13 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "scope=so
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "dmg_required=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "network_or_onion_work=false"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,public-beta-gap,public-claim-acceptance"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "generated_artifacts_created=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze=desktop-public-beta-source-candidate"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze_scope=desktop-source-only-no-dmg-rebuild-no-upload"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze_next_axes=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze_next_axes=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep#default-transport-boundary"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_upload_performed=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "dmg_rebuild_performed=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_readiness=local-build-candidate-only"
@@ -146,6 +147,14 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_use
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_external_success_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_hold_criteria=missing-redacted-diagnostics#forbidden-private-data#network-before-explicit-action#checksum-mismatch"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_abort_criteria=secrets-exposed#raw-logs-requested#external-success-claim-requested#sensitive-use-requested"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "default_transport_boundary=local-manual-envelope-default-high-risk-onion-explicit"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "default_transport_network_io=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "default_transport_automatic_delivery=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "default_transport_central_message_server=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "default_transport_push_dependency=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "default_transport_central_contact_discovery=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "high_risk_onion_path=explicit-user-triggered-fail-closed"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "high_risk_onion_direct_fallback=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_delivery_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "security_ready_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_security_ready_acceptance=false"
@@ -166,16 +175,21 @@ require_file "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh"
 require_file "$ROOT_DIR/scripts/desktop_windows_readiness_source_audit_once.sh"
 require_file "$ROOT_DIR/scripts/desktop_windows_local_runtime_smoke_boundary_once.sh"
 require_file "$ROOT_DIR/scripts/desktop_real_user_test_prep_once.sh"
+require_file "$ROOT_DIR/scripts/desktop_default_transport_boundary_once.sh"
 require_text "$ROOT_DIR/scripts/desktop_beta_acceptance_matrix_once.sh" 'ACCEPTED_ITEMS="invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim"'
 require_text "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh" "status=desktop-public-beta-source-freeze-candidate-ready"
 require_text "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh" "source_freeze_scope=desktop-source-only-no-dmg-rebuild-no-upload"
-require_text "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh" "next_development_axis=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep"
+require_text "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh" "next_development_axis=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep#default-transport-boundary"
 require_text "$ROOT_DIR/scripts/desktop_windows_readiness_source_audit_once.sh" "status=desktop-windows-readiness-source-audit-ready"
 require_text "$ROOT_DIR/scripts/desktop_windows_readiness_source_audit_once.sh" "windows_readiness=local-build-candidate-only"
 require_text "$ROOT_DIR/scripts/desktop_windows_readiness_source_audit_once.sh" "windows_public_artifact_ready=false"
 require_text "$ROOT_DIR/scripts/desktop_windows_local_runtime_smoke_boundary_once.sh" "npm --prefix apps/desktop-tauri run test:windows-boundary"
 require_text "$ROOT_DIR/scripts/desktop_real_user_test_prep_once.sh" "status=desktop-real-user-test-prep-source-ready"
 require_text "$ROOT_DIR/scripts/desktop_real_user_test_prep_once.sh" "real_user_test_external_success_claim=false"
+require_text "$ROOT_DIR/scripts/desktop_default_transport_boundary_once.sh" "status=desktop-default-transport-boundary-source-ready"
+require_text "$ROOT_DIR/scripts/desktop_default_transport_boundary_once.sh" "default_transport_boundary=local-manual-envelope-default-high-risk-onion-explicit"
+require_text "$ROOT_DIR/scripts/desktop_default_transport_boundary_once.sh" "default_transport_network_io=false"
+require_text "$ROOT_DIR/scripts/desktop_default_transport_boundary_once.sh" "high_risk_onion_direct_fallback=false"
 require_text "$ROOT_DIR/apps/desktop-tauri/package.json" '"test:windows-boundary"'
 require_text "$ROOT_DIR/README.md" "Desktop-only v0.1 acceptance matrix"
 require_text "$ROOT_DIR/SECURITY.md" "Desktop-only v0.1 acceptance matrix"
@@ -323,7 +337,7 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing hardening fallback" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,public-beta-gap,public-claim-acceptance" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance" || {
     echo "FAIL release readiness preflight missing check list" >&2
     exit 1
   }
@@ -351,7 +365,7 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing desktop source freeze scope" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "source_freeze_next_axes=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "source_freeze_next_axes=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep#default-transport-boundary" || {
     echo "FAIL release readiness preflight missing desktop source freeze next axes" >&2
     exit 1
   }
@@ -431,6 +445,22 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing real-user abort criteria" >&2
     exit 1
   }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "default_transport_boundary=local-manual-envelope-default-high-risk-onion-explicit" || {
+    echo "FAIL release readiness preflight missing default transport boundary" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "default_transport_network_io=false" || {
+    echo "FAIL release readiness preflight missing default transport network non-claim" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "default_transport_central_message_server=false" || {
+    echo "FAIL release readiness preflight missing central message server exclusion" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "high_risk_onion_direct_fallback=false" || {
+    echo "FAIL release readiness preflight missing high-risk direct fallback exclusion" >&2
+    exit 1
+  }
   printf '%s\n' "$preflight_output" | grep -Fq -- "dmg_required=false" || {
     echo "FAIL release readiness preflight missing no-DMG-required boundary" >&2
     exit 1
@@ -479,7 +509,7 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing operator handoff wrap-up" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "next_development_axis=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "next_development_axis=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep#default-transport-boundary" || {
     echo "FAIL release readiness preflight missing next development axis" >&2
     exit 1
   }
