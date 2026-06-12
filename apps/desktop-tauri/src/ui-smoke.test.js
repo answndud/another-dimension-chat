@@ -217,6 +217,7 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(mainJs, /function outboundRecoveryNextText/);
   assert.match(mainJs, /function currentComposerPendingOutboundAction/);
   assert.match(functionBody(mainJs, "currentComposerPendingOutboundAction"), /restoreLatestChatDeliveryPendingOutbound\(input\) \?\? automaticVisibleTwoProfileRetryableOutboundEntry\(input\)/);
+  assert.match(functionBody(mainJs, "currentComposerPendingOutboundAction"), /if \(!actionState\.canRunNow\) \{\s*return null;\s*\}/);
   assert.match(functionBody(mainJs, "twoProfileComposerPrimaryIntent"), /currentComposerPendingOutboundAction\(input\)/);
   assert.match(functionBody(mainJs, "twoProfileComposerPrimaryIntent"), /pendingOutboundEntry: pendingOutboundAction\.entry/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"), /runTwoProfileOutboundPrimaryAction\(intent\.pendingOutboundEntry, intent\.expectedPrimaryAction\)/);
