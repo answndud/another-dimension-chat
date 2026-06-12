@@ -143,6 +143,14 @@ the same local app-data, encrypted-store, local deletion, diagnostics redaction,
 explicit network action, and no-auto-update semantics as the macOS desktop shell
 before it can be documented as a public artifact.
 
+Windows desktop readiness source audit status is local build candidate only.
+There is no public Windows artifact, no Windows installer, no public artifact
+upload, and no production-ready claim. Windows remains blocked on WebView2
+runtime smoke, app-data path review, path separator review, redacted diagnostics
+review, and explicit user action review. Signing, Microsoft Store approval, and
+SmartScreen reputation are distribution concerns, not a security boundary, and
+sensitive communication prohibited remains in force.
+
 External onion delivery is outside the v0.1 public product claim for this public
 beta. Do not treat same-machine dual-profile rehearsal, local smoke tests, or
 operator-prepared peer packets as proof of real external onion delivery. No peer
