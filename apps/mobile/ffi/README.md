@@ -10,23 +10,24 @@ The FFI direction is placeholder-only: Android and iOS wrappers may call a thin
 shared Rust core boundary later, but this file does not create that boundary or
 claim it is implemented.
 
-## Shared-Core API Freeze Criteria
+## Shared-Core API Freeze Boundary
 
-The mobile API freeze is a future Phase HO source-boundary task. This inventory
-records criteria only and does not define callable FFI, generated bindings,
-stable ABI, Kotlin source, Swift source, Gradle source, Xcode source, or runtime
-mobile implementation.
+The mobile API freeze is a Phase HO source-boundary record. It defines the
+wrapper-neutral contract that Android and iOS must share, but it does not define
+callable FFI, generated bindings, stable ABI, Kotlin source, Swift source,
+Gradle source, Xcode source, or runtime mobile implementation.
 
-The API freeze must close these items before mobile wrapper implementation:
+The shared-core API freeze closes these source-boundary items before mobile
+wrapper implementation:
 
 - mobile-callable API groups and command names
 - redacted DTO vocabulary and public non-claim fields
 - error taxonomy for locked profile, malformed payload, replay rejected, policy
   blocked, transport unavailable, unsupported mobile surface, and lifecycle
   confirmation required
-- serialization contract with deterministic UTF-8 JSON, explicit schema version,
-  sorted keys, string enums, bounded status arrays, and reject-unknown-fields
-  parsing
+- serialization contract with deterministic UTF-8 JSON object shape, explicit
+  schema version, sorted keys, string enums, bounded status arrays, and
+  reject-unknown-fields parsing
 - local data lifecycle command contract for conversation delete, session delete,
   profile delete, and full local wipe
 - diagnostics redaction contract for status/build/failure/recovery only
@@ -34,9 +35,14 @@ The API freeze must close these items before mobile wrapper implementation:
 - explicit user action token requirement for destructive or transport-adjacent
   calls
 
-Until those criteria are closed, wrappers must not add independent protocol,
-storage, transport, pairing, lifecycle, diagnostics, account, discovery,
-delivery, backup, or security-ready semantics.
+The core source summary is `production_mobile_shared_core_api_freeze_boundary_summary`.
+It keeps callable FFI implemented false, generated bindings claimed false,
+wrapper-specific semantics allowed false, mobile readiness claimed false, and
+security-ready claimed false.
+
+Wrappers must not add independent protocol, storage, transport, pairing,
+lifecycle, diagnostics, account, discovery, delivery, backup, or security-ready
+semantics.
 
 Allowed API groups mirror the shared core wrapper boundary:
 
@@ -121,8 +127,9 @@ The future mobile diagnostics payload is documentation-only and local-copy-only
 until a separate implementation phase exists.
 
 Allowed diagnostics payload fields are limited to status, build, failure class,
-manual network permission, app launch network boundary, redacted runtime flags,
-diagnostics redaction state, schema version, platform, and public non-claims.
+recovery next action, manual network permission, app launch network boundary,
+redacted runtime flags, diagnostics redaction state, schema version, platform,
+and public non-claims.
 
 Allowed diagnostics channels are limited to in-app redacted text view.
 Allowed diagnostics channels are limited to explicit user-initiated copy.
