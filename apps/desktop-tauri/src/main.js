@@ -7414,13 +7414,18 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
   }
   const payload = publicBetaDiagnosticsReport(report, { includeCopyBoundary: true });
   fields.publicBetaDiagnostics.value = payload;
-  const parsed = parseFieldTestReport(report);
   const publicDiagnostics = parseFieldTestReport(payload);
   const desktopCompletion = desktopFirstCompletionStatus(report);
-  const failureClass = fieldTestReportValue(publicDiagnosticsFailureClass(parsed, desktopCompletion), "none");
+  const failureClass = fieldTestReportValue(publicDiagnostics.failure_class, "none");
   const recoveryNextAction = fieldTestReportValue(publicDiagnostics.recovery_next_action, "none");
+  const copyNextAction = fieldTestReportValue(publicDiagnostics.diagnostics_copy_next_action, "none");
+  const desktopAcceptanceNextAction = fieldTestReportValue(publicDiagnostics.desktop_acceptance_next_action, "none");
+  const payloadNextActionMatchesSummary =
+    recoveryNextAction === copyNextAction && recoveryNextAction === desktopAcceptanceNextAction;
+  const rawStateExcluded =
+    publicDiagnostics.diagnostics_copy_boundary === "redacted-status-build-failure-class-recovery-action-only";
   if (fields.publicBetaDiagnosticsSummary) {
-    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
+    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
   }
   return payload;
 }

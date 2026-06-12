@@ -369,11 +369,13 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /diagnostic_version=2/);
   assert.match(diagnostics, /diagnostic_scope=public-support/);
   assert.match(diagnostics, /payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only/);
+  assert.match(diagnostics, /diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only/);
   assert.match(diagnostics, /app_version=0.1.0/);
   assert.match(diagnostics, /build_channel=beta-onion/);
   assert.match(diagnostics, /build_commit=806ecad1/);
   assert.match(diagnostics, /failure_class=safety-unverified/);
   assert.match(diagnostics, /recovery_next_action=verify/);
+  assert.match(diagnostics, /diagnostics_copy_next_action=verify/);
   assert.match(diagnostics, /desktop_completion_scope=desktop-local-private-flow/);
   assert.match(diagnostics, /desktop_completion_status=incomplete/);
   assert.match(diagnostics, /desktop_completion_blockers=safety#private-route#receive/);
@@ -400,6 +402,10 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /security_ready_claimed=false/);
   assert.match(diagnostics, /sensitive_communication_allowed=false/);
   assert.match(diagnostics, /app_launch_network=false/);
+  assert.match(diagnostics, /diagnostics_support_bundle_export=false/);
+  assert.match(diagnostics, /diagnostics_audit_evidence_claim=false/);
+  assert.match(diagnostics, /diagnostics_external_delivery_evidence_claim=false/);
+  assert.match(diagnostics, /diagnostics_security_ready_proof_claim=false/);
   assert.match(diagnostics, /crash_upload=false/);
   assert.match(diagnostics, /telemetry=false/);
   assert.match(diagnostics, /raw_log_export=false/);
