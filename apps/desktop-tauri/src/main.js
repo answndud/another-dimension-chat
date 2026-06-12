@@ -3617,6 +3617,29 @@ function rememberInviteRoom(code, role, metadata = {}, options = {}) {
   }
 }
 
+function clearPrivateRouteRuntimeStateForInput(input) {
+  let cleared = false;
+  for (const roomKey of privateRouteRoomKeys(input)) {
+    clearProductionPayloadSlotsForRoomFingerprint(roomKey);
+    localPrivateRouteCodesByRoom.delete(roomKey);
+    activeLocalPrivateRouteCodesByRoom.delete(roomKey);
+    localPrivateRouteLifecycleByRoom.delete(roomKey);
+    peerPrivateRouteDraftsByRoom.delete(roomKey);
+    latestProductionTwoProfileRealOnionResultsByRoom.delete(roomKey);
+    latestProductionTwoProfileRealOnionRecoveriesByRoom.delete(roomKey);
+    latestProductionTwoProfileRealOnionWaitCanceledFingerprints.delete(roomKey);
+    cleared = true;
+  }
+  return cleared;
+}
+
+function persistPrivateRouteRuntimeState() {
+  persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
+  persistPrivateRouteLifecycleMap(localPrivateRouteLifecycleStorageKey, localPrivateRouteLifecycleByRoom);
+  persistPrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
+  persistRealOnionRecoveries();
+}
+
 function forgetInviteRoom(code) {
   const trimmedCode = String(code ?? "").trim();
   if (!trimmedCode) {
@@ -3634,24 +3657,13 @@ function forgetInviteRoom(code) {
     rememberReceiveIntentForRoom(roomInput, false);
     forgetTwoProfileSessionStatusForInput(roomInput);
     clearPrivateRouteFollowupForRoom(roomInput);
+    clearChatDeliveryNoticeForInput(roomInput);
     for (const key of twoProfileSafetyStorageKeys(roomInput)) {
       localStoreRemove(key);
     }
-    for (const roomKey of privateRouteRoomKeys(roomInput)) {
-      clearProductionPayloadSlotsForRoomFingerprint(roomKey);
-      localPrivateRouteCodesByRoom.delete(roomKey);
-      activeLocalPrivateRouteCodesByRoom.delete(roomKey);
-      localPrivateRouteLifecycleByRoom.delete(roomKey);
-      peerPrivateRouteDraftsByRoom.delete(roomKey);
-      latestProductionTwoProfileRealOnionResultsByRoom.delete(roomKey);
-      latestProductionTwoProfileRealOnionRecoveriesByRoom.delete(roomKey);
-      latestProductionTwoProfileRealOnionWaitCanceledFingerprints.delete(roomKey);
-    }
+    clearPrivateRouteRuntimeStateForInput(roomInput);
   }
-  persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
-  persistPrivateRouteLifecycleMap(localPrivateRouteLifecycleStorageKey, localPrivateRouteLifecycleByRoom);
-  persistPrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
-  persistRealOnionRecoveries();
+  persistPrivateRouteRuntimeState();
   const rooms = savedInviteRooms().filter((room) => room.code !== trimmedCode);
   localStoreSet(inviteRoomsStorageKey, JSON.stringify(roomListStoragePayload(rooms)));
   renderSavedInviteRooms();
@@ -3686,8 +3698,9 @@ function clearSavedInviteRoomRuntimeState(room) {
     forgetTwoProfileSessionStatusForInput(input);
     clearPrivateRouteFollowupForRoom(input);
     clearChatDeliveryNoticeForInput(input);
-    clearProductionPayloadSlotsForRoomFingerprint(privateRouteRoomKey(input));
+    clearPrivateRouteRuntimeStateForInput(input);
   }
+  persistPrivateRouteRuntimeState();
   clearSavedInviteRoomRetryableOutbound(room);
   clearSavedInviteRoomManualRebuildMetadata(room);
   return true;
@@ -3759,10 +3772,7 @@ function clearAllSavedInviteRoomLocalState() {
   latestProductionTwoProfileRealOnionRecoveriesByRoom.clear();
   latestProductionTwoProfileRealOnionWaitCanceledFingerprints.clear();
   clearAllProductionPayloadSlots();
-  persistPrivateRouteMap(localPrivateRouteCodesStorageKey, localPrivateRouteCodesByRoom);
-  persistPrivateRouteLifecycleMap(localPrivateRouteLifecycleStorageKey, localPrivateRouteLifecycleByRoom);
-  persistPrivateRouteMap(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom);
-  persistRealOnionRecoveries();
+  persistPrivateRouteRuntimeState();
   renderSavedInviteRooms();
 }
 
