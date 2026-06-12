@@ -88,6 +88,71 @@ export function productionInviteIdentityBoundaryView(input = {}) {
   ].join(" ");
 }
 
+const pairwiseInviteGuidanceSteps = {
+  create: {
+    step: "create-code",
+    nextKey: "pairwiseInviteNextShareCode",
+  },
+  join: {
+    step: "paste-received-code",
+    nextKey: "pairwiseInviteNextOpenRoom",
+  },
+  "room-opening": {
+    step: "open-room",
+    nextKey: "pairwiseInviteNextOpenRoom",
+  },
+  "room-ready": {
+    step: "verify-phrase",
+    nextKey: "pairwiseInviteNextVerifyPhrase",
+  },
+  "saved-room-return": {
+    step: "return-saved-room",
+    nextKey: "pairwiseInviteNextVerifyOrWrite",
+  },
+  delete: {
+    step: "remove-list-entry",
+    nextKey: "pairwiseInviteNextCreateOrPasteAgain",
+  },
+  regenerate: {
+    step: "fresh-code",
+    nextKey: "pairwiseInviteNextFreshCode",
+  },
+  rebuild: {
+    step: "rebuild-with-fresh-code",
+    nextKey: "pairwiseInviteNextFreshCode",
+  },
+};
+
+export function productionPairwiseInviteGuidanceView(input = {}) {
+  const normalizedStep = String(input.step ?? "").trim() || "create";
+  const config = pairwiseInviteGuidanceSteps[normalizedStep] ?? pairwiseInviteGuidanceSteps.create;
+  const role = input.role === "inviter" ? "inviter" : input.role === "joiner" ? "joiner" : "unknown";
+  const roomPresent = Boolean(input.roomPresent);
+  return {
+    step: config.step,
+    role,
+    nextKey: config.nextKey,
+    boundary: [
+      "pairwise_invite_flow=true",
+      `step=${config.step}`,
+      `role=${role}`,
+      "accountless=true",
+      "pairwise_identity=true",
+      "one_code_one_room=true",
+      "send_code_over_existing_channel=true",
+      "verify_phrase_before_messaging=true",
+      "searchable_username=false",
+      "address_book=false",
+      "public_directory=false",
+      "central_contact_discovery=false",
+      "central_message_server=false",
+      "invite_code_in_diagnostics=false",
+      "qr_required=false",
+      `room_present=${roomPresent}`,
+    ].join(" "),
+  };
+}
+
 export function productionTwoProfileCurrentAction(state) {
   const input = state?.input ?? {};
   if (state?.busy) {
