@@ -24,10 +24,11 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Retry/cancel recovery.
 - Explicit onion/Tor attempt paths after manual user action.
 - Redacted diagnostics and field-test reporting.
-- Public diagnostics limited to status, build, failure class, manual network
-  permission, and app-launch network boundary, with no crash upload, telemetry,
-  raw log export, crash dump export, automated log collection, support bundle
-  export, or raw diagnostic file export.
+- Public diagnostics limited to status, build, failure class, recovery next
+  action, desktop local-private-flow acceptance status/blockers/non-claims, and
+  app-launch network boundary, with no crash upload, telemetry, raw log export,
+  crash dump export, automated log collection, support bundle export, or raw
+  diagnostic file export.
 - Manual GitHub Release download with SHA-256 verification.
 - Same GitHub Release assets are the release authority; source branch files and
   GitHub source archives are not DMG verification authority.
