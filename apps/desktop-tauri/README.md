@@ -244,6 +244,15 @@ Platform prerequisites:
 - Linux requires distribution-specific WebKitGTK and related system packages.
 - Android and iOS are out of scope for this scaffold slice.
 
+Windows desktop readiness source audit status is local build candidate only:
+there is no public Windows artifact, no Windows installer, no public artifact
+upload, and no production-ready claim. Before any public Windows artifact,
+Windows still needs WebView2 runtime smoke, app-data path review, path separator
+review, redacted diagnostics review, explicit user action review, and
+no-auto-update verification. Windows signing, Microsoft Store approval, and
+SmartScreen reputation are distribution concerns, not a security boundary, and
+sensitive communication prohibited remains in force.
+
 Why full Tauri build is not in CI yet:
 
 - The root Rust workspace verification should remain lightweight.
