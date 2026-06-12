@@ -11,6 +11,7 @@ import {
   fieldTestReportRoomListAction,
   fieldTestReportSummary,
   fieldTestReportTriageState,
+  localManualE2eeRuntimeBoundaryStatus,
   parseFieldTestReport,
   publicBetaDiagnosticsReport,
   publicDiagnosticsFailureClass,
@@ -387,6 +388,20 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
     diagnostics,
     /desktop_acceptance_non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication#windows-public-artifact/,
   );
+  assert.match(diagnostics, /local_manual_e2ee_runtime_boundary=noise-xx-session-key-replay-reviewed/);
+  assert.match(diagnostics, /local_manual_e2ee_runtime_ready=true/);
+  assert.match(diagnostics, /noise_xx_transport_state_required=true/);
+  assert.match(diagnostics, /remote_static_verification_required=true/);
+  assert.match(diagnostics, /safety_transcript_bound=true/);
+  assert.match(diagnostics, /channel_binding_required=true/);
+  assert.match(diagnostics, /message_number_nonce_binding_required=true/);
+  assert.match(diagnostics, /replay_commit_after_decrypt=true/);
+  assert.match(diagnostics, /tamper_failure_non_advance=true/);
+  assert.match(diagnostics, /passphrase_first_storage_required=true/);
+  assert.match(diagnostics, /explicit_envelope_export_import_ready=true/);
+  assert.match(diagnostics, /production_e2ee_ready=false/);
+  assert.match(diagnostics, /production_key_management_ready=false/);
+  assert.match(diagnostics, /app_key_wrapping_ready=false/);
   assert.match(diagnostics, /desktop_acceptance_external_delivery_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_production_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_sensitive_use_claim=false/);
@@ -460,6 +475,30 @@ test("default transport boundary keeps the public diagnostic path manual and non
   assert.match(diagnostics, /high_risk_onion_direct_fallback=false/);
 });
 
+test("local manual E2EE runtime boundary exposes key lifecycle guardrails without production claims", () => {
+  const boundary = localManualE2eeRuntimeBoundaryStatus();
+
+  assert.deepEqual(boundary, {
+    boundary: "noise-xx-session-key-replay-reviewed",
+    localManualE2eeRuntimeReady: true,
+    noiseXxTransportStateRequired: true,
+    remoteStaticVerificationRequired: true,
+    safetyTranscriptBound: true,
+    channelBindingRequired: true,
+    messageNumberNonceBindingRequired: true,
+    replayCommitAfterDecrypt: true,
+    tamperFailureNonAdvance: true,
+    passphraseFirstStorageRequired: true,
+    explicitEnvelopeExportImportReady: true,
+    automaticNetworkOnLaunchAllowed: false,
+    networkIoAttempted: false,
+    productionE2eeReady: false,
+    productionKeyManagementReady: false,
+    appKeyWrappingReady: false,
+    securityReadyClaimed: false,
+  });
+});
+
 test("desktop-first completion reports local private flow readiness without security claims", () => {
   const readyReport = [
     "room_present=true",
@@ -488,8 +527,16 @@ test("desktop-first completion reports local private flow readiness without secu
     status: "local-private-flow-no-current-blockers",
     blockers: [],
     blockerSummary: "none",
+    localManualE2eeRuntimeBoundary: "noise-xx-session-key-replay-reviewed",
+    localManualE2eeRuntimeReady: true,
+    replayCommitAfterDecrypt: true,
+    tamperFailureNonAdvance: true,
+    passphraseFirstStorageRequired: true,
     externalOnionDeliveryVerified: false,
     productionMessagingReady: false,
+    productionE2eeReady: false,
+    productionKeyManagementReady: false,
+    appKeyWrappingReady: false,
     securityReadyClaimed: false,
     sensitiveCommunicationAllowed: false,
   });
@@ -498,8 +545,16 @@ test("desktop-first completion reports local private flow readiness without secu
     status: "incomplete",
     blockers: ["receive", "send-or-recover"],
     blockerSummary: "receive#send-or-recover",
+    localManualE2eeRuntimeBoundary: "noise-xx-session-key-replay-reviewed",
+    localManualE2eeRuntimeReady: true,
+    replayCommitAfterDecrypt: true,
+    tamperFailureNonAdvance: true,
+    passphraseFirstStorageRequired: true,
     externalOnionDeliveryVerified: false,
     productionMessagingReady: false,
+    productionE2eeReady: false,
+    productionKeyManagementReady: false,
+    appKeyWrappingReady: false,
     securityReadyClaimed: false,
     sensitiveCommunicationAllowed: false,
   });
@@ -510,6 +565,14 @@ test("desktop-first completion reports local private flow readiness without secu
   assert.match(diagnostics, /desktop_acceptance_status=local-private-flow-no-current-blockers/);
   assert.match(diagnostics, /desktop_acceptance_blockers=none/);
   assert.match(diagnostics, /desktop_acceptance_next_action=none/);
+  assert.match(diagnostics, /local_manual_e2ee_runtime_boundary=noise-xx-session-key-replay-reviewed/);
+  assert.match(diagnostics, /local_manual_e2ee_runtime_ready=true/);
+  assert.match(diagnostics, /replay_commit_after_decrypt=true/);
+  assert.match(diagnostics, /tamper_failure_non_advance=true/);
+  assert.match(diagnostics, /passphrase_first_storage_required=true/);
+  assert.match(diagnostics, /production_e2ee_ready=false/);
+  assert.match(diagnostics, /production_key_management_ready=false/);
+  assert.match(diagnostics, /app_key_wrapping_ready=false/);
   assert.match(diagnostics, /desktop_acceptance_external_delivery_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_production_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_sensitive_use_claim=false/);

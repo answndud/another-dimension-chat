@@ -7420,12 +7420,14 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
   const recoveryNextAction = fieldTestReportValue(publicDiagnostics.recovery_next_action, "none");
   const copyNextAction = fieldTestReportValue(publicDiagnostics.diagnostics_copy_next_action, "none");
   const desktopAcceptanceNextAction = fieldTestReportValue(publicDiagnostics.desktop_acceptance_next_action, "none");
+  const localManualE2eeBoundary = fieldTestReportValue(publicDiagnostics.local_manual_e2ee_runtime_boundary, "unknown");
+  const productionE2eeReady = fieldTestReportValue(publicDiagnostics.production_e2ee_ready, "false");
   const payloadNextActionMatchesSummary =
     recoveryNextAction === copyNextAction && recoveryNextAction === desktopAcceptanceNextAction;
   const rawStateExcluded =
     publicDiagnostics.diagnostics_copy_boundary === "redacted-status-build-failure-class-recovery-action-only";
   if (fields.publicBetaDiagnosticsSummary) {
-    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
+    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} local_manual_e2ee_runtime_boundary=${localManualE2eeBoundary} production_e2ee_ready=${productionE2eeReady} release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
   }
   return payload;
 }

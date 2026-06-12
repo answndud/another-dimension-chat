@@ -392,9 +392,32 @@ function desktopCompletionCanSendOrRecover(parsed) {
   return fieldTestReportNextActionValue(parsed) !== "none";
 }
 
+export function localManualE2eeRuntimeBoundaryStatus() {
+  return {
+    boundary: "noise-xx-session-key-replay-reviewed",
+    localManualE2eeRuntimeReady: true,
+    noiseXxTransportStateRequired: true,
+    remoteStaticVerificationRequired: true,
+    safetyTranscriptBound: true,
+    channelBindingRequired: true,
+    messageNumberNonceBindingRequired: true,
+    replayCommitAfterDecrypt: true,
+    tamperFailureNonAdvance: true,
+    passphraseFirstStorageRequired: true,
+    explicitEnvelopeExportImportReady: true,
+    automaticNetworkOnLaunchAllowed: false,
+    networkIoAttempted: false,
+    productionE2eeReady: false,
+    productionKeyManagementReady: false,
+    appKeyWrappingReady: false,
+    securityReadyClaimed: false,
+  };
+}
+
 export function desktopFirstCompletionStatus(report) {
   const parsed = parseFieldTestReport(report);
   const blockers = [];
+  const localE2eeBoundary = localManualE2eeRuntimeBoundaryStatus();
   if (parsed.room_present !== "true") {
     blockers.push("room");
   }
@@ -418,8 +441,16 @@ export function desktopFirstCompletionStatus(report) {
     status: blockers.length === 0 ? "local-private-flow-no-current-blockers" : "incomplete",
     blockers,
     blockerSummary: blockers.length > 0 ? blockers.join("#") : "none",
+    localManualE2eeRuntimeBoundary: localE2eeBoundary.boundary,
+    localManualE2eeRuntimeReady: localE2eeBoundary.localManualE2eeRuntimeReady,
+    replayCommitAfterDecrypt: localE2eeBoundary.replayCommitAfterDecrypt,
+    tamperFailureNonAdvance: localE2eeBoundary.tamperFailureNonAdvance,
+    passphraseFirstStorageRequired: localE2eeBoundary.passphraseFirstStorageRequired,
     externalOnionDeliveryVerified: false,
     productionMessagingReady: false,
+    productionE2eeReady: localE2eeBoundary.productionE2eeReady,
+    productionKeyManagementReady: localE2eeBoundary.productionKeyManagementReady,
+    appKeyWrappingReady: localE2eeBoundary.appKeyWrappingReady,
     securityReadyClaimed: false,
     sensitiveCommunicationAllowed: false,
   };
@@ -569,6 +600,20 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     `desktop_acceptance_blockers=${desktopCompletion.blockerSummary}`,
     `desktop_acceptance_next_action=${recoveryNextAction}`,
     `desktop_acceptance_non_claims=${desktopAcceptanceNonClaims}`,
+    `local_manual_e2ee_runtime_boundary=${fieldTestReportValue(desktopCompletion.localManualE2eeRuntimeBoundary, "unknown")}`,
+    `local_manual_e2ee_runtime_ready=${desktopCompletion.localManualE2eeRuntimeReady === true}`,
+    `noise_xx_transport_state_required=true`,
+    `remote_static_verification_required=true`,
+    `safety_transcript_bound=true`,
+    `channel_binding_required=true`,
+    `message_number_nonce_binding_required=true`,
+    `replay_commit_after_decrypt=${desktopCompletion.replayCommitAfterDecrypt === true}`,
+    `tamper_failure_non_advance=${desktopCompletion.tamperFailureNonAdvance === true}`,
+    `passphrase_first_storage_required=${desktopCompletion.passphraseFirstStorageRequired === true}`,
+    `explicit_envelope_export_import_ready=true`,
+    `production_e2ee_ready=${desktopCompletion.productionE2eeReady === true}`,
+    `production_key_management_ready=${desktopCompletion.productionKeyManagementReady === true}`,
+    `app_key_wrapping_ready=${desktopCompletion.appKeyWrappingReady === true}`,
     `desktop_acceptance_external_delivery_claim=false`,
     `desktop_acceptance_production_claim=false`,
     `desktop_acceptance_sensitive_use_claim=false`,
