@@ -134,6 +134,15 @@ export function productionTwoProfileShouldShowOutboundRecovery(state) {
   return Boolean(!state?.busy && state?.sessionsReady && state?.hasRetryableOutbound);
 }
 
+export function productionTwoProfileShouldClearPendingOutboundNotice(state) {
+  return Boolean(
+    !state?.busy &&
+      state?.hasPendingOutboundNotice &&
+      state?.noticeMatchesCurrentRoom &&
+      !state?.noticePendingOutboundRetryable,
+  );
+}
+
 export function productionProfilePreset(peer) {
   const normalizedPeer = String(peer ?? "").trim().toLowerCase();
   if (normalizedPeer === "alice") {
