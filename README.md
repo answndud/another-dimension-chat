@@ -30,6 +30,16 @@ runtime smoke, app-data path review, path separator review, redacted diagnostics
 review, and explicit user action review; signing, Microsoft Store approval, and
 SmartScreen reputation are distribution concerns, not a security boundary.
 
+Windows local runtime smoke boundary is source-only until a real Windows machine
+runs the local app. The source command is
+`npm --prefix apps/desktop-tauri run test:windows-boundary`; it checks that the
+required Windows smoke still covers WebView2 runtime smoke, app-data path review,
+path separator review, local deletion behavior, redacted diagnostics behavior,
+and explicit user action review. Passing this source command is not a Windows
+local runtime smoke passed result, not a public Windows artifact, not a Windows
+installer, not a public artifact upload, not production-ready, and sensitive
+communication prohibited.
+
 The shared core boundary means Rust owns profile identity, pairing payload and
 safety transcript logic, message orchestration, protocol envelopes and replay,
 encrypted local storage policy, and fail-closed transport policy. UI shells may
@@ -231,8 +241,9 @@ What does not exist yet:
   local build candidate only: no public Windows artifact, no Windows installer,
   no public artifact upload, WebView2 runtime smoke still required, app-data and
   path separator review still required, redacted diagnostics and explicit user
-  action review still required, no auto-update, and signing/Microsoft Store or
-  SmartScreen reputation is not a security boundary.
+  action review still required, local deletion behavior review still required,
+  no auto-update, and signing/Microsoft Store or SmartScreen reputation is not a
+  security boundary.
 - Android or iOS app. Android and iOS are shared-core shell candidates, not
   implemented mobile apps or mobile security claims.
 - Offline mailbox.
