@@ -23,6 +23,12 @@ local desktop build candidate only: it must use the same Tauri app-data
 resolver, encrypted local store, local deletion controls, redacted diagnostics,
 explicit user-action boundary, no auto-update channel, and no
 signing/notarization/app-store trust claim before it becomes a public artifact.
+Windows desktop readiness source audit status is local build candidate only:
+there is no public Windows artifact, no Windows installer, no public artifact
+upload, and no production-ready claim. Windows remains blocked on WebView2
+runtime smoke, app-data path review, path separator review, redacted diagnostics
+review, and explicit user action review; signing, Microsoft Store approval, and
+SmartScreen reputation are distribution concerns, not a security boundary.
 
 The shared core boundary means Rust owns profile identity, pairing payload and
 safety transcript logic, message orchestration, protocol envelopes and replay,
@@ -221,7 +227,12 @@ What does not exist yet:
 - Production Tauri desktop app. The current Tauri shell is a local beta candidate, not a secure release.
 - Public Windows installer or Windows public beta artifact. Windows is only a
   local build candidate until the desktop boundary is satisfied and documented
-  for a release artifact.
+  for a release artifact. Windows desktop readiness source audit keeps this as
+  local build candidate only: no public Windows artifact, no Windows installer,
+  no public artifact upload, WebView2 runtime smoke still required, app-data and
+  path separator review still required, redacted diagnostics and explicit user
+  action review still required, no auto-update, and signing/Microsoft Store or
+  SmartScreen reputation is not a security boundary.
 - Android or iOS app. Android and iOS are shared-core shell candidates, not
   implemented mobile apps or mobile security claims.
 - Offline mailbox.
