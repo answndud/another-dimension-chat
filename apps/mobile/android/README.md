@@ -1,23 +1,40 @@
-# Android Documentation-Only Boundary
+# Android Shell Scaffold Boundary
 
-This is a documentation-only boundary for a future Android shell candidate. It
-is not a mobile wrapper source scaffold.
+This is the first Android shell source scaffold. It is intentionally narrow and
+must stay a thin Kotlin shell over the shared Rust core boundary.
 
-It is not a Gradle project, not an APK or AAB artifact, not Play Store
-distribution, and not Android app readiness.
+It is not an APK or AAB artifact, not Play Store distribution, not Android app
+readiness, not production-ready, not audited, and not suitable for sensitive
+communication.
 
-Android is the first target platform only after the mobile scope switch criteria,
-explicit owner authorization, and shared-core API freeze prerequisite are closed.
-This file does not grant that authorization and does not create a Gradle,
-Kotlin, runtime, APK, AAB, Play Store, or external delivery evidence task.
+Phase HP records explicit implementation authorization for a minimal Android
+source scaffold only. It does not authorize release packaging, Play Store work,
+external delivery evidence, push notification delivery, cloud backup, central
+account or contact discovery, or security-ready claims.
 
-The intended Android boundary is a thin Kotlin shell over UniFFI or another
-narrow FFI boundary into the shared Rust core. The wrapper may provide platform
-private storage root resolution, backup-exclusion verification evidence,
-redacted status display, local permission explanations, and explicit
-user-triggered actions.
+The scaffold provides:
 
-This Android boundary must not define independent protocol, storage, transport,
-pairing, contact discovery, background delivery, push delivery, Google account,
-Play Services, Firebase Cloud Messaging, Android Keystore-only unlock, cloud
-backup, Play Store trust, or security-ready behavior.
+- Gradle Android application source layout.
+- A Kotlin `SharedCoreMobileApi` interface mirroring the Phase HO API groups.
+- A placeholder `AndroidSharedCoreBoundary` that returns redacted, blocked
+  status until a real shared Rust binding phase exists.
+- A passphrase-first `MainActivity` shell with invite, manual envelope, and
+  diagnostics controls routed through the shared-core boundary interface.
+- Android backup exclusion XML with app data excluded from cloud/device backup.
+
+The scaffold must not define independent protocol, storage, transport, pairing,
+contact discovery, background delivery, push delivery, Google account, Play
+Services, Firebase Cloud Messaging, Android Keystore-only unlock, cloud backup,
+Play Store trust, external onion delivery success, or security-ready behavior.
+
+The only allowed mobile command surface remains:
+
+- `shared_core_status_surface`
+- `profile_unlock_lock_status`
+- `invite_code_create_join`
+- `pairing_payload_export_import`
+- `safety_transcript_confirm`
+- `manual_envelope_export_import`
+- `message_transcript_view`
+- `local_data_lifecycle`
+- `redacted_support_diagnostics`
