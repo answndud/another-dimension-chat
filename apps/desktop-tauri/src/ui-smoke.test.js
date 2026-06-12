@@ -331,7 +331,7 @@ test("saved room list shows receive runtime and restart intent", () => {
   );
   assert.match(
     functionBody(mainJs, "startProductionTwoProfileOnionReceive"),
-    /backendLoop\.duplicate_loop_blocked \|\| !backendLoop\.enabled[\s\S]*renderSavedInviteRooms\(\);[\s\S]*applyProductionActionState\(\);/,
+    /backendLoop\.duplicate_loop_blocked \|\| !backendLoop\.enabled[\s\S]*refreshReceiveIntentRecoveryUi\(input\);/,
   );
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /renderSavedInviteRooms\(\)/);
   assert.match(stylesCss, /\.saved-room-state\.is-listening/);
@@ -442,6 +442,16 @@ test("receive restart intent owns the room primary action", () => {
   assert.match(mainJs, /function twoProfileComposerPrimaryIntent/);
   assert.match(mainJs, /receiveIntentForRoom\(input\)[\s\S]*action: "start-receiving"/);
   assert.match(mainJs, /action: "start-receiving"[\s\S]*labelKey: "startReceiving"/);
+  assert.match(functionBody(mainJs, "refreshReceiveIntentRecoveryUi"), /renderSavedInviteRooms\(\)/);
+  assert.match(functionBody(mainJs, "refreshReceiveIntentRecoveryUi"), /renderRoomIdentityBar\(input, twoProfileSessionsReadyForInput\(input\)\)/);
+  assert.match(functionBody(mainJs, "refreshReceiveIntentRecoveryUi"), /renderRoomStatusSummary\(input\)/);
+  assert.match(functionBody(mainJs, "refreshReceiveIntentRecoveryUi"), /applyProductionActionState\(\)/);
+  const startReceiveBody = functionBody(mainJs, "startProductionTwoProfileOnionReceive");
+  assert.match(startReceiveBody, /rememberReceiveIntentForRoom\(input, true\);\s*refreshReceiveIntentRecoveryUi\(input\)/);
+  assert.match(startReceiveBody, /!manualNetworkPermission[\s\S]*openPrivateDeliverySettings\(input\);[\s\S]*refreshReceiveIntentRecoveryUi\(input\);[\s\S]*return;/);
+  assert.match(startReceiveBody, /productionTwoProfileOnionReceiveMode\.enabled[\s\S]*receiveAlreadyListening[\s\S]*refreshReceiveIntentRecoveryUi\(input\);[\s\S]*return;/);
+  assert.match(startReceiveBody, /privateRouteCodeFailed[\s\S]*refreshReceiveIntentRecoveryUi\(input\);[\s\S]*return;/);
+  assert.match(startReceiveBody, /backendLoop\.duplicate_loop_blocked \|\| !backendLoop\.enabled[\s\S]*refreshReceiveIntentRecoveryUi\(input\);[\s\S]*return;/);
   assert.match(mainJs, /function savedInviteRoomListAction/);
   assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /receiveState === "paused"/);
   assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /savedRoomActionLabelKey\("start-receiving"\)/);
@@ -1795,6 +1805,7 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(cancelBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(cancelBody, /setSelectedTwoProfileConversationEntry\(null\)/);
   assert.match(cancelBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*quiet: true,[\s\S]*refreshSessionStatus: false,[\s\S]*allowRetryableMetadataFallback: false,[\s\S]*input/);
+  assert.match(cancelBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*allowRetryableMetadataFallback: false,[\s\S]*input,[\s\S]*\}\);\s*renderSavedInviteRooms\(\);\s*showLatestRetryableOutboundNotice\(input, \{ allowAutomatic: false \}\)/);
   assert.match(cancelBody, /showLatestRetryableOutboundNotice\(input, \{ allowAutomatic: false \}\)/);
   assert.match(cancelBody, /setChatDeliveryNoticeByKey\("sendCanceling", "progress", input\)/);
 

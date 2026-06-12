@@ -7956,6 +7956,13 @@ function rememberReceiveIntentForRoom(input = productionTwoProfileInput(), enabl
   return true;
 }
 
+function refreshReceiveIntentRecoveryUi(input = productionTwoProfileInput()) {
+  renderSavedInviteRooms();
+  renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
+  renderRoomStatusSummary(input);
+  applyProductionActionState();
+}
+
 function receiveIntentForRoom(input = productionTwoProfileInput()) {
   const roomKey = privateRouteRoomKey(input);
   if (!roomKey) {
@@ -16453,6 +16460,7 @@ async function cancelTwoProfileOutboundEntry(entry) {
       allowRetryableMetadataFallback: false,
       input,
     });
+    renderSavedInviteRooms();
     showLatestRetryableOutboundNotice(input, { allowAutomatic: false });
   } catch (error) {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
@@ -16508,14 +16516,17 @@ async function startProductionTwoProfileOnionReceive(options = {}) {
     clearPrivateRouteFollowupForRoom(input);
   }
   rememberReceiveIntentForRoom(input, true);
+  refreshReceiveIntentRecoveryUi(input);
   if (!manualNetworkPermission) {
     setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning", input);
     openPrivateDeliverySettings(input);
+    refreshReceiveIntentRecoveryUi(input);
     return;
   }
   if (productionTwoProfileOnionReceiveMode.enabled) {
     setProductionTwoProfileState("Message listening already running");
     setText(fields.productionTwoProfileWarning, t("receiveAlreadyListening"));
+    refreshReceiveIntentRecoveryUi(input);
     return;
   }
   if (!currentActiveLocalPrivateRouteCode(input)) {
@@ -16540,6 +16551,7 @@ async function startProductionTwoProfileOnionReceive(options = {}) {
       setProductionTwoProfileState("Local endpoint needed");
       setText(fields.productionTwoProfileWarning, t("privateRouteCodeNotReady"));
       setChatDeliveryNoticeByKey("privateRouteCodeFailed", "warning", input);
+      refreshReceiveIntentRecoveryUi(input);
       return;
     }
   }
@@ -16589,8 +16601,7 @@ async function startProductionTwoProfileOnionReceive(options = {}) {
       fields.productionTwoProfileBoundary,
       productionTwoProfileOnionReceiveBackendBoundary(backendLoop),
     );
-    renderSavedInviteRooms();
-    applyProductionActionState();
+    refreshReceiveIntentRecoveryUi(input);
     return;
   }
 
