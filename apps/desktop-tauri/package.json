@@ -11,6 +11,7 @@
     "build": "vite build",
     "test:state": "node --test src/action-state.test.js src/private-delivery-state.test.js src/i18n.test.js src/ui-smoke.test.js",
     "test:browser-preview-peers": "node --test src/browser-preview-tauri.test.js",
+    "test:windows-boundary": "node scripts/verify-windows-local-runtime-boundary.mjs",
     "test:local-peers": "node scripts/verify-local-peer-flow.mjs",
     "preview": "vite preview --host 127.0.0.1 --port 1420 --strictPort",
     "tauri": "node scripts/with-cargo-target.mjs tauri",
