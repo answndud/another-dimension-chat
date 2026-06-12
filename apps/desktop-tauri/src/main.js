@@ -7182,7 +7182,7 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
   const failureClass = fieldTestReportValue(publicDiagnosticsFailureClass(parsed), "none");
   const desktopCompletion = desktopFirstCompletionStatus(report);
   if (fields.publicBetaDiagnosticsSummary) {
-    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics ready failure_class=${failureClass} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication app_launch_network=false`;
+    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics ready failure_class=${failureClass} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication app_launch_network=false`;
   }
   return payload;
 }
