@@ -525,6 +525,7 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     "production-messaging",
     "security-ready",
     "sensitive-communication",
+    "windows-public-artifact",
   ].join("#");
   const lines = [
     "Another Dimension Chat public support diagnostics",
@@ -547,6 +548,13 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     `desktop_acceptance_external_delivery_claim=false`,
     `desktop_acceptance_production_claim=false`,
     `desktop_acceptance_sensitive_use_claim=false`,
+    `windows_public_artifact_ready=false`,
+    `windows_installer_ready=false`,
+    `windows_signing_ready=false`,
+    `windows_store_ready=false`,
+    `windows_app_data_path_review_required=true`,
+    `windows_path_separator_review_required=true`,
+    `windows_release_blocker=local-build-smoke-and-release-boundary-review`,
     `external_onion_delivery_verified=${desktopCompletion.externalOnionDeliveryVerified === true}`,
     `production_messaging_ready=${desktopCompletion.productionMessagingReady === true}`,
     `security_ready_claimed=${desktopCompletion.securityReadyClaimed === true}`,

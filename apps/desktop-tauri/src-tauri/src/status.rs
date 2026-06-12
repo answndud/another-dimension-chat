@@ -33,6 +33,7 @@ pub struct PrototypeStatus {
     privacy_model_boundary: &'static str,
     storage_status: &'static str,
     release_integrity_status: &'static str,
+    desktop_platform_readiness_boundary: String,
     supply_chain_integrity_boundary: String,
     independent_review_boundary: String,
     diagnostics_redaction_boundary: String,
@@ -290,6 +291,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             "ADREC1 storage spike plus forward-only schema and local data lifecycle boundary",
         release_integrity_status:
             "unsigned GitHub beta uses manual GitHub Release download, same GitHub Release assets as release authority, manual SHA-256 verification, same-release SHA-256 verification, macOS Privacy & Security manual allow only after checksum match, source branch is not release authority, public provenance, manifest, dependency inventory, dependency lockfile hashes, no branch-file release proof, no terminal quarantine-removal install step, no auto-update, no signing, no notarization, no supply-chain audit claim",
+        desktop_platform_readiness_boundary:
+            "desktop_platform_scope=macos-public-beta-windows-local-build-candidate windows_public_artifact_ready=false windows_installer_ready=false windows_signing_ready=false microsoft_store_ready=false smart_screen_reputation_claim=false notarization_equivalent_claim=false windows_runtime_smoke_required=true windows_app_data_path_review_required=true windows_path_separator_review_required=true no_auto_update=true public_artifact_upload_allowed=false remaining_blocker=windows-local-build-smoke-and-release-boundary-review".to_string(),
         supply_chain_integrity_boundary: format!(
             "boundary_closed={} manual_github_release_download_required={} dmg_sha256_required={} public_provenance_required={} release_manifest_required={} dependency_inventory_required={} dependency_lockfile_hash_baseline_required={} dependency_lockfile_evidence_count={} dependency_lockfile_evidence_files={} dependency_inventory_runtime_visible={} vulnerability_triage_signoff_complete={} live_dependency_scan_performed={} auto_update_enabled={} signing_or_notarization_claimed={} sbom_published={} dependency_audit_complete={} reproducible_build_proof_available={} security_ready_claimed={} policies={}",
             supply_chain.boundary_closed(),
@@ -531,6 +534,30 @@ mod tests {
         assert!(status
             .release_integrity_status
             .contains("no auto-update"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("desktop_platform_scope=macos-public-beta-windows-local-build-candidate"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("windows_public_artifact_ready=false"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("windows_installer_ready=false"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("windows_signing_ready=false"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("microsoft_store_ready=false"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("notarization_equivalent_claim=false"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("windows_app_data_path_review_required=true"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("public_artifact_upload_allowed=false"));
         assert!(status
             .supply_chain_integrity_boundary
             .contains("boundary_closed=true"));

@@ -383,11 +383,18 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /desktop_acceptance_next_action=verify/);
   assert.match(
     diagnostics,
-    /desktop_acceptance_non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication/,
+    /desktop_acceptance_non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication#windows-public-artifact/,
   );
   assert.match(diagnostics, /desktop_acceptance_external_delivery_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_production_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_sensitive_use_claim=false/);
+  assert.match(diagnostics, /windows_public_artifact_ready=false/);
+  assert.match(diagnostics, /windows_installer_ready=false/);
+  assert.match(diagnostics, /windows_signing_ready=false/);
+  assert.match(diagnostics, /windows_store_ready=false/);
+  assert.match(diagnostics, /windows_app_data_path_review_required=true/);
+  assert.match(diagnostics, /windows_path_separator_review_required=true/);
+  assert.match(diagnostics, /windows_release_blocker=local-build-smoke-and-release-boundary-review/);
   assert.match(diagnostics, /external_onion_delivery_verified=false/);
   assert.match(diagnostics, /production_messaging_ready=false/);
   assert.match(diagnostics, /security_ready_claimed=false/);

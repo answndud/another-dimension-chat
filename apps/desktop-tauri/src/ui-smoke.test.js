@@ -1626,6 +1626,13 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(publicDiagnosticsBody, /diagnostic_scope=public-support/);
   assert.match(publicDiagnosticsBody, /payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only/);
   assert.match(publicDiagnosticsBody, /publicDiagnosticsFailureClass\(parsed, desktopCompletion\)/);
+  assert.match(publicDiagnosticsBody, /windows_public_artifact_ready=false/);
+  assert.match(publicDiagnosticsBody, /windows_release_blocker=local-build-smoke-and-release-boundary-review/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /windows_public_artifact=false/);
+  assert.match(functionBody(mainJs, "renderPrototypeStatus"), /desktop_platform_readiness_boundary/);
+  assert.match(functionBody(mainJs, "renderPrototypeStatus"), /desktopPlatformBoundaryValue/);
+  assert.match(i18nJs, /desktopPlatformBoundaryValue/);
+  assert.match(i18nJs, /Windows is a local build candidate/);
   assert.doesNotMatch(publicDiagnosticsBody, /rebuild_delivery_scope=/);
   assert.doesNotMatch(publicDiagnosticsBody, /rebuild_delivery_action=/);
   assert.doesNotMatch(publicDiagnosticsBody, /rebuild_delivery_network_io=/);
