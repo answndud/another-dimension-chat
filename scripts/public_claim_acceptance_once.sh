@@ -97,6 +97,9 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_lockfiles=current"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output file list differs from MANIFEST allowlist"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output dependency lockfile evidence is stale"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "If any after-upload confirmation fails"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Do not announce the release as ready"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Return to desktop hardening if the source preflight or regenerated upload set"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "stale existing release output"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "preflight=public-release-readiness"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "status=public-release-readiness-source-preflight-ready"
@@ -139,7 +142,13 @@ require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Packag
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Public diagnostics include: desktop local-private-flow acceptance status/blockers/non-claims"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "OPERATOR_FINAL_HANDOFF.md"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Operator Final Handoff"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "source_acceptance=desktop-release-source-accepted-for-operator-staging"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "decision=proceed-to-packaging-only-with-frozen-ignored-dmg"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "status=unsigned-public-beta-release-ready"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" 'Download the DMG and \`.sha256\` from the published GitHub Release'
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "If any after-upload confirmation fails"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Do not announce the release as ready"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Return to desktop hardening if the source preflight or regenerated upload set"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_allowlist_source": "MANIFEST.md"'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_release_body": "GITHUB_RELEASE_BODY.md"'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_forbidden": "docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"'
