@@ -394,6 +394,9 @@ test("receive controls are scoped to the active room", () => {
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /await invoke\("production_onion_receive_loop_stop"\)/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /rememberReceiveIntentForRoom\(input, false\)/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /localEndpointReady = await prepareInviteRoomPrivateRouteExchange/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{[\s\S]*rememberReceiveIntentForRoom\(input, false\)[\s\S]*return;/);
+  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /catch \(error\) \{[\s\S]*if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{[\s\S]*rememberReceiveIntentForRoom\(input, false\)/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /!productionTwoProfileReceiveMatchesInput\(targetInput\)/);
   assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /receiveOtherRoomActive/);
   assert.match(i18nJs, /roomReceivingOther/);
@@ -591,10 +594,14 @@ test("room transcript refresh is scoped to the current room", () => {
   assert.match(mainJs, /function twoProfileTranscriptInputStillCurrent/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /transcriptInput/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /twoProfileTranscriptInputStillCurrent\(transcriptInput\)/);
+  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /return true;/);
+  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /catch \(error\)[\s\S]*return false;/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /invokeInviteRoomSessionStatus/);
   assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /reconcileCurrentInviteRoomMetadataFromTranscriptEntries\(entries,[\s\S]*sessionStatus/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /const sessionCheckInput = twoProfileRoomIdentityInput\(input\)/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /twoProfileTranscriptInputStillCurrent\(sessionCheckInput\)/);
+  assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /const transcriptLoaded = await loadProductionTwoProfileTranscript/);
+  assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /!transcriptLoaded \|\| !twoProfileTranscriptInputStillCurrent\(sessionCheckInput\)/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /rememberTwoProfileSessionStatus\(sessionCheckInput, result\)/);
   assert.match(functionBody(mainJs, "twoProfileTranscriptInputStillCurrent"), /twoProfileSessionStatusFingerprint\(current\) === twoProfileSessionStatusFingerprint\(input\)/);
 });
@@ -1053,10 +1060,11 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(functionBody(mainJs, "deleteProductionProfile"), /roomInputBeforeDelete = productionTwoProfileInput\(\)/);
   assert.match(functionBody(mainJs, "deleteProductionProfile"), /applyPostDestructiveLifecycleRebuildGuidance\("profile-delete"/);
   const sessionDeleteBody = functionBody(mainJs, "deleteProductionSessionLifecycle");
+  assert.match(sessionDeleteBody, /roomInputBeforeDelete = productionTwoProfileInput\(\)/);
   assert.match(sessionDeleteBody, /result\.session_resume_closed/);
   assert.match(sessionDeleteBody, /applyPostDestructiveLifecycleRebuildGuidance\("session-delete"/);
   assert.match(sessionDeleteBody, /deletedProfile: profile/);
-  assert.match(sessionDeleteBody, /input: productionTwoProfileInput\(\)/);
+  assert.match(sessionDeleteBody, /input: roomInputBeforeDelete/);
   assert.match(functionBody(mainJs, "wipeProductionLocalData"), /roomInputBeforeWipe = productionTwoProfileInput\(\)/);
   assert.match(functionBody(mainJs, "wipeProductionLocalData"), /applyPostDestructiveLifecycleRebuildGuidance\("full-local-wipe"/);
 });

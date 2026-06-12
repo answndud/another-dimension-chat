@@ -16500,6 +16500,15 @@ async function startProductionTwoProfileOnionReceive(options = {}) {
       allowRetryRecovery: options.preserveFollowup === true,
     });
     if (!twoProfileTranscriptInputStillCurrent(input)) {
+      rememberReceiveIntentForRoom(input, false);
+      rememberLocalPrivateRouteLifecycle(input, {
+        state: "stopped",
+        endpoint: currentActiveLocalPrivateRouteCode(input) ||
+          routeMapValueForRoom(localPrivateRouteCodesByRoom, input, localPrivateRouteCodesStorageKey),
+        generation: productionTwoProfileOnionReceiveMode.generation,
+      });
+      renderSavedInviteRooms();
+      applyProductionActionState();
       return;
     }
     if (!localEndpointReady || !currentActiveLocalPrivateRouteCode(input)) {
@@ -16518,6 +16527,12 @@ async function startProductionTwoProfileOnionReceive(options = {}) {
       manualNetworkPermission,
     });
   } catch (error) {
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      rememberReceiveIntentForRoom(input, false);
+      renderSavedInviteRooms();
+      applyProductionActionState();
+      return;
+    }
     setProductionTwoProfileState("Message listening failed");
     setText(fields.productionTwoProfileWarning, t("receiveStartFailed"));
     setChatDeliveryNoticeByKey("receiveStartFailed", "warning", input);
@@ -18625,6 +18640,7 @@ async function checkProductionSessionLifecycle(input = productionPairingInput())
 
 async function deleteProductionSessionLifecycle(input = productionPairingInput()) {
   const { profile, passphrase } = input;
+  const roomInputBeforeDelete = productionTwoProfileInput();
   if (!profile || !passphrase) {
     setProductionPairingState("Session delete needs profile");
     setText(fields.productionPairingWarning, "Enter profile and passphrase.");
@@ -18651,7 +18667,7 @@ async function deleteProductionSessionLifecycle(input = productionPairingInput()
     if (result.session_resume_closed) {
       applyPostDestructiveLifecycleRebuildGuidance("session-delete", {
         deletedProfile: profile,
-        input: productionTwoProfileInput(),
+        input: roomInputBeforeDelete,
       });
     }
     setProductionPairingState(
@@ -18722,7 +18738,14 @@ async function checkProductionTwoProfileSessionStatus() {
     renderProductionTwoProfileSessionStatusResult(result);
     setText(fields.productionPairingWarning, result.warning);
     if (result.both_ready_for_message_envelope) {
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input: sessionCheckInput });
+      const transcriptLoaded = await loadProductionTwoProfileTranscript({
+        quiet: true,
+        refreshSessionStatus: false,
+        input: sessionCheckInput,
+      });
+      if (!transcriptLoaded || !twoProfileTranscriptInputStillCurrent(sessionCheckInput)) {
+        return;
+      }
       startInviteRoomTranscriptRefresh(sessionCheckInput);
       const currentInput = productionTwoProfileInput();
       const hasDraft = Boolean(currentInput.message);
@@ -18963,6 +18986,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
         "Stored conversation was found, but message-ready sessions were not confirmed. Check sessions or run full setup.",
       );
     }
+    return true;
   } catch (error) {
     if (!quiet) {
       setProductionTwoProfileState("Conversation load failed");
@@ -18972,6 +18996,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       setProductionTwoProfileState("Resume needs review");
       setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("session-status", error));
     }
+    return false;
   } finally {
     if (!quiet) {
       clearProductionBusyAction("two-profile-transcript-load");
