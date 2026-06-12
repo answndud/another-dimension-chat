@@ -102,7 +102,7 @@ check_artifact_boundary() {
   require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "COMPONENT_BOUNDARIES.md"
   require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" "COMPONENT_BOUNDARIES.md"
   require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "PRIVACY_MODEL_COMPARISON.md"
-  require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "scripts/prepare_unsigned_public_beta_release.sh --check-artifact-boundary"
+  require_text "$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md" "scripts/public_release_readiness_preflight.sh"
   require_text "$ROOT_DIR/README.md" "scripts/public_release_readiness_preflight.sh"
   require_text "$ROOT_DIR/SECURITY.md" "scripts/public_release_readiness_preflight.sh"
   require_text "$ROOT_DIR/SECURITY.md" "source-only preflight before staging artifacts"

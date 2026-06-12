@@ -153,19 +153,7 @@ scripts/public_release_readiness_preflight.sh
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-Run the source-only preflight from the repository root before staging artifacts; it does not require a DMG and does not generate release files. Then run the release staging command after the frozen local DMG and provenance JSON exist in `apps/desktop-tauri/beta-artifacts/`. It writes the ignored upload set to `apps/desktop-tauri/public-release/unsigned-public-beta/`:
-
-- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
-- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
-- `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
-- `INSTALL_UNSIGNED_MACOS.md`
-- `RELEASE_NOTES.md`
-- `UPDATE_INTEGRITY.md`
-- `SUPPLY_CHAIN_BASELINE.md`
-- `PUBLIC_THREAT_MODEL.md`
-- `INDEPENDENT_REVIEW_PACKET.md`
-- `DEPENDENCY_LOCKFILES.sha256`
-- `MANIFEST.md`
+Run the source-only preflight from the repository root before staging artifacts; it does not require a DMG and does not generate release files. Then run the release staging command after the frozen local DMG and provenance JSON exist in `apps/desktop-tauri/beta-artifacts/`. It writes the ignored upload set to `apps/desktop-tauri/public-release/unsigned-public-beta/`; upload only the files listed in the generated `MANIFEST.md`.
 
 This public path is still an unsigned experimental public beta. It is not notarized, not audited, not production-ready, and sensitive communication prohibited. External onion delivery is outside the v0.1 public product claim; same-machine dual-profile rehearsal is development evidence only. No peer report is expected or required for this v0.1 claim, and no external delivery claim is made. Users must verify the checksum attached to the same GitHub Release as the DMG before using the normal macOS Privacy & Security manual allow path. Branch source files, source archives, or copied docs are not release proof. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
