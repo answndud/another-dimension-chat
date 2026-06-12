@@ -76,6 +76,7 @@ for script in \
   verify_mobile_diagnostics_copy_boundary.sh \
   verify_mobile_lifecycle_boundary.sh \
   verify_mobile_launch_network_boundary.sh \
+  verify_mobile_binding_readiness_gate.sh \
   verify_mobile_binding_gate.sh \
   verify_android_shell_boundary.sh \
   verify_ios_shell_boundary.sh \
