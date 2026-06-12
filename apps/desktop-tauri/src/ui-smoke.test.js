@@ -98,8 +98,10 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(i18nJs, /Local send attempt recorded\./);
   assert.match(i18nJs, /External receipt remains unconfirmed\./);
   assert.doesNotMatch(i18nJs, /New messages arrive after you turn this on\./);
-  assert.doesNotMatch(i18nJs, /Message sent\./);
+  assert.doesNotMatch(i18nJs, /Message (was )?sent\./);
   assert.doesNotMatch(i18nJs, /Message delivered\. You can continue the conversation\./);
+  assert.doesNotMatch(i18nJs, /statusSent:\s*"sent"/);
+  assert.match(i18nJs, /statusSent:\s*"send attempt recorded"/);
   assert.match(stylesCss, /\.public-beta-gate/);
 });
 
@@ -939,7 +941,9 @@ test("runtime resume rollback block routes users to local data recovery", () => 
   assert.match(recoveryBody, /cloud_backup_sync=false/);
   assert.match(recoveryBody, /security_ready=false/);
   assert.match(recoveryBody, /rollback_prevention/);
+  assert.match(recoveryBody, /rollback_prevention=false/);
   assert.match(recoveryBody, /secure_delete_claim/);
+  assert.match(recoveryBody, /secure_delete_claim=false/);
 
   const applyBody = functionBody(mainJs, "applyRuntimeResumeRollbackRecovery");
   assert.match(applyBody, /fields\.productionDataLifecycle/);
@@ -962,7 +966,9 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(viewBody, /cloud_backup_sync=false/);
   assert.match(viewBody, /security_ready=false/);
   assert.match(viewBody, /rollback_prevention/);
+  assert.match(viewBody, /rollback_prevention=false/);
   assert.match(viewBody, /secure_delete_claim/);
+  assert.match(viewBody, /secure_delete_claim=false/);
   assert.match(viewBody, /profile_deleted/);
   assert.match(viewBody, /full_local_data_wiped/);
 
@@ -1948,6 +1954,8 @@ test("public diagnostics summary includes desktop completion without production 
   );
   assert.match(mainJs, /function desktopFirstCompletionStatus\(report\)/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public diagnostics generated failure_class=/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /recovery_next_action=\$\{recoveryNextAction\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /parseFieldTestReport\(payload\)/);
   assert.doesNotMatch(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public diagnostics ready failure_class=/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_completion=\$\{desktopCompletion\.status\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_blockers=\$\{desktopCompletion\.blockerSummary\}/);

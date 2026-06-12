@@ -1390,11 +1390,9 @@ export function productionLocalLifecycleBoundaryView(result = {}, options = {}) 
   const cloudBackupSync = false;
   const backupRecovery = false;
   const markerOnlyRollback = true;
-  const rollbackPrevention = result.rollback_prevention_claimed === true;
-  const secureDeletion =
-    result.secure_deletion_from_media_claimed === true ||
-    result.secure_deletion_from_media === true ||
-    result.secure_delete_claim === true;
+  const rollbackDetection = result.rollback_detection_ready === true;
+  const rollbackPrevention = false;
+  const secureDeletion = false;
   const pathReturned = result.store_path_returned === true;
   const passphraseRetained = result.passphrase_retained === true;
   const keyMaterial = result.key_material_exposed === true;
@@ -1412,6 +1410,7 @@ export function productionLocalLifecycleBoundaryView(result = {}, options = {}) 
     `cloud_backup_sync=${cloudBackupSync}`,
     `backup_recovery=${backupRecovery}`,
     `marker_only_rollback=${markerOnlyRollback}`,
+    `rollback_detection=${rollbackDetection}`,
     `rollback_prevention=${rollbackPrevention}`,
     `secure_delete_claim=${secureDeletion}`,
   ];
