@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTRACT="$ROOT_DIR/apps/mobile/ffi/shared_core_mobile_api_contract.json"
 ANDROID_API="$ROOT_DIR/apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt"
 IOS_API="$ROOT_DIR/apps/mobile/ios/AnotherDimension/SharedCoreMobileApi.swift"
+ANDROID_ADAPTER="$ROOT_DIR/apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt"
+IOS_ADAPTER="$ROOT_DIR/apps/mobile/ios/AnotherDimension/ReadOnlyNativeStatusAdapter.swift"
 
 require_file() {
   if [ ! -f "$1" ]; then
@@ -34,6 +36,8 @@ reject_text() {
 require_file "$CONTRACT"
 require_file "$ANDROID_API"
 require_file "$IOS_API"
+require_file "$ANDROID_ADAPTER"
+require_file "$IOS_ADAPTER"
 require_file "$ROOT_DIR/apps/mobile/ffi/README.md"
 require_file "$ROOT_DIR/crates/core/src/lib.rs"
 
@@ -41,6 +45,7 @@ require_text "$CONTRACT" '"status": "source-boundary-contract"'
 require_text "$CONTRACT" '"binding_generation_implemented": false'
 require_text "$CONTRACT" '"callable_ffi_implemented": false'
 require_text "$CONTRACT" '"generated_bindings_claimed": false'
+require_text "$CONTRACT" '"read_only_adapter_implemented": true'
 require_text "$CONTRACT" '"wrapper_neutral": true'
 require_text "$CONTRACT" '"mobile_readiness_claimed": false'
 require_text "$CONTRACT" '"security_ready_claimed": false'
@@ -109,13 +114,20 @@ for forbidden in \
 done
 
 require_text "$ANDROID_API" "class AndroidSharedCoreBoundary"
+require_text "$ANDROID_API" "readOnlyStatusAdapter.sharedCoreStatusSurface()"
+require_text "$ANDROID_API" "readOnlyStatusAdapter.redactedSupportDiagnostics()"
 require_text "$ANDROID_API" "ffi_unavailable"
 require_text "$ANDROID_API" "explicit user action required"
 require_text "$IOS_API" "final class IOSSharedCoreBoundary"
+require_text "$IOS_API" "readOnlyStatusAdapter.sharedCoreStatusSurface()"
+require_text "$IOS_API" "readOnlyStatusAdapter.redactedSupportDiagnostics()"
 require_text "$IOS_API" "ffi_unavailable"
 require_text "$IOS_API" "explicit user action required"
+require_text "$ANDROID_ADAPTER" "SourceBoundaryReadOnlyNativeStatusAdapter"
+require_text "$IOS_ADAPTER" "SourceBoundaryReadOnlyNativeStatusAdapter"
 
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Native Binding Implementation Gate"
+require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Read-Only Native Status Adapter Boundary"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "status_and_redacted_diagnostics_read_only_adapter"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "shared_core_mobile_api_contract.json"
 require_text "$ROOT_DIR/crates/core/src/lib.rs" "production_mobile_shared_core_api_freeze_boundary_summary"

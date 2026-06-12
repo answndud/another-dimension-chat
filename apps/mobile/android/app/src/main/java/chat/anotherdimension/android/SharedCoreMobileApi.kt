@@ -33,12 +33,31 @@ interface SharedCoreMobileApi {
     fun redactedSupportDiagnostics(): SharedCoreStatusDto
 }
 
-class AndroidSharedCoreBoundary : SharedCoreMobileApi {
-    override fun sharedCoreStatusSurface(): SharedCoreStatusDto = redactedStatus(
-        profileLockState = "locked",
-        localDataLifecycleState = "app-private storage required",
-        diagnosticsRedactionState = "redacted status only",
+class AndroidSharedCoreBoundary(
+    private val readOnlyStatusAdapter: ReadOnlyNativeStatusAdapter = SourceBoundaryReadOnlyNativeStatusAdapter(),
+) : SharedCoreMobileApi {
+    private val blockedCommandSurfaceInventory = listOf(
+        "shared_core_status_surface",
+        "profile_unlock_lock_status",
+        "invite_code_create_join",
+        "pairing_payload_export_import",
+        "safety_transcript_confirm",
+        "manual_envelope_export_import",
+        "message_transcript_view",
+        "local_data_lifecycle",
+        "redacted_support_diagnostics",
     )
+    private val publicNonClaimsBoundary = listOf(
+        "unsigned experimental public beta",
+        "sensitive communication prohibited",
+        "not audited",
+        "not production-ready",
+        "external onion delivery not claimed",
+        "mobile readiness not claimed",
+    )
+
+    override fun sharedCoreStatusSurface(): SharedCoreStatusDto =
+        readOnlyStatusAdapter.sharedCoreStatusSurface()
 
     override fun profileUnlockLockStatus(passphraseProvided: Boolean): SharedCoreCommandResult {
         return if (passphraseProvided) {
@@ -66,11 +85,8 @@ class AndroidSharedCoreBoundary : SharedCoreMobileApi {
     override fun localDataLifecycle(action: ExplicitUserActionToken): SharedCoreCommandResult =
         explicitActionBoundary(action, "local_data_lifecycle")
 
-    override fun redactedSupportDiagnostics(): SharedCoreStatusDto = redactedStatus(
-        profileLockState = "locked",
-        localDataLifecycleState = "local lifecycle status only",
-        diagnosticsRedactionState = "status/build/failure/recovery only",
-    )
+    override fun redactedSupportDiagnostics(): SharedCoreStatusDto =
+        readOnlyStatusAdapter.redactedSupportDiagnostics()
 
     private fun explicitActionBoundary(
         action: ExplicitUserActionToken,
@@ -82,41 +98,6 @@ class AndroidSharedCoreBoundary : SharedCoreMobileApi {
             blocked("ffi_unavailable", "connect shared Rust core binding for $surface")
         }
     }
-
-    private fun redactedStatus(
-        profileLockState: String,
-        localDataLifecycleState: String,
-        diagnosticsRedactionState: String,
-    ): SharedCoreStatusDto = SharedCoreStatusDto(
-        schemaVersion = 1,
-        platform = "android_shell_candidate",
-        profileLockState = profileLockState,
-        runtimeCommandSurface = listOf("shared_core_runtime_command_surface"),
-        mobileCommandSurface = listOf(
-            "shared_core_status_surface",
-            "profile_unlock_lock_status",
-            "invite_code_create_join",
-            "pairing_payload_export_import",
-            "safety_transcript_confirm",
-            "manual_envelope_export_import",
-            "message_transcript_view",
-            "local_data_lifecycle",
-            "redacted_support_diagnostics",
-        ),
-        localDataLifecycleState = localDataLifecycleState,
-        backupExclusionState = "cloud backup not claimed",
-        installUpdateIntegrityState = "manual update verification required",
-        diagnosticsRedactionState = diagnosticsRedactionState,
-        publicNonClaims = listOf(
-            "unsigned experimental public beta",
-            "sensitive communication prohibited",
-            "not audited",
-            "not production-ready",
-            "external onion delivery not claimed",
-            "security-ready not claimed",
-            "mobile readiness not claimed",
-        ),
-    )
 
     private fun blocked(failureClass: String, recoveryNextAction: String): SharedCoreCommandResult =
         SharedCoreCommandResult(

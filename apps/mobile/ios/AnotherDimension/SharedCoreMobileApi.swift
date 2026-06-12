@@ -36,12 +36,33 @@ protocol SharedCoreMobileApi {
 }
 
 final class IOSSharedCoreBoundary: SharedCoreMobileApi {
+    private let readOnlyStatusAdapter: ReadOnlyNativeStatusAdapter
+    private let blockedCommandSurfaceInventory = [
+        "shared_core_status_surface",
+        "profile_unlock_lock_status",
+        "invite_code_create_join",
+        "pairing_payload_export_import",
+        "safety_transcript_confirm",
+        "manual_envelope_export_import",
+        "message_transcript_view",
+        "local_data_lifecycle",
+        "redacted_support_diagnostics",
+    ]
+    private let publicNonClaimsBoundary = [
+        "unsigned experimental public beta",
+        "sensitive communication prohibited",
+        "not audited",
+        "not production-ready",
+        "external onion delivery not claimed",
+        "mobile readiness not claimed",
+    ]
+
+    init(readOnlyStatusAdapter: ReadOnlyNativeStatusAdapter = SourceBoundaryReadOnlyNativeStatusAdapter()) {
+        self.readOnlyStatusAdapter = readOnlyStatusAdapter
+    }
+
     func sharedCoreStatusSurface() -> SharedCoreStatusDto {
-        redactedStatus(
-            profileLockState: "locked",
-            localDataLifecycleState: "app-container storage required",
-            diagnosticsRedactionState: "redacted status only"
-        )
+        readOnlyStatusAdapter.sharedCoreStatusSurface()
     }
 
     func profileUnlockLockStatus(passphraseProvided: Bool) -> SharedCoreCommandResult {
@@ -76,11 +97,7 @@ final class IOSSharedCoreBoundary: SharedCoreMobileApi {
     }
 
     func redactedSupportDiagnostics() -> SharedCoreStatusDto {
-        redactedStatus(
-            profileLockState: "locked",
-            localDataLifecycleState: "local lifecycle status only",
-            diagnosticsRedactionState: "status/build/failure/recovery only"
-        )
+        readOnlyStatusAdapter.redactedSupportDiagnostics()
     }
 
     private func explicitActionBoundary(action: ExplicitUserActionToken, surface: String) -> SharedCoreCommandResult {
@@ -88,43 +105,6 @@ final class IOSSharedCoreBoundary: SharedCoreMobileApi {
             return blocked(failureClass: "policy_blocked", recoveryNextAction: "explicit user action required")
         }
         return blocked(failureClass: "ffi_unavailable", recoveryNextAction: "connect shared Rust core binding for \(surface)")
-    }
-
-    private func redactedStatus(
-        profileLockState: String,
-        localDataLifecycleState: String,
-        diagnosticsRedactionState: String
-    ) -> SharedCoreStatusDto {
-        SharedCoreStatusDto(
-            schemaVersion: 1,
-            platform: "ios_shell_candidate",
-            profileLockState: profileLockState,
-            runtimeCommandSurface: ["shared_core_runtime_command_surface"],
-            mobileCommandSurface: [
-                "shared_core_status_surface",
-                "profile_unlock_lock_status",
-                "invite_code_create_join",
-                "pairing_payload_export_import",
-                "safety_transcript_confirm",
-                "manual_envelope_export_import",
-                "message_transcript_view",
-                "local_data_lifecycle",
-                "redacted_support_diagnostics",
-            ],
-            localDataLifecycleState: localDataLifecycleState,
-            backupExclusionState: "iCloud backup not claimed",
-            installUpdateIntegrityState: "manual update verification required",
-            diagnosticsRedactionState: diagnosticsRedactionState,
-            publicNonClaims: [
-                "unsigned experimental public beta",
-                "sensitive communication prohibited",
-                "not audited",
-                "not production-ready",
-                "external onion delivery not claimed",
-                "security-ready not claimed",
-                "mobile readiness not claimed",
-            ]
-        )
     }
 
     private func blocked(failureClass: String, recoveryNextAction: String) -> SharedCoreCommandResult {

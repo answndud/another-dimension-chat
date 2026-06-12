@@ -47,6 +47,7 @@ require_file "apps/mobile/android/app/src/main/AndroidManifest.xml"
 require_file "apps/mobile/android/app/src/main/res/xml/data_extraction_rules.xml"
 require_file "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt"
 require_file "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt"
+require_file "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt"
 require_file "apps/mobile/android/README.md"
 require_file "apps/mobile/ffi/README.md"
 require_file "apps/mobile/ffi/shared_core_mobile_api_contract.json"
@@ -79,6 +80,8 @@ require_text "apps/mobile/android/app/src/main/res/xml/data_extraction_rules.xml
 require_text "apps/mobile/android/app/src/main/res/xml/data_extraction_rules.xml" "<exclude domain=\"sharedpref\" path=\".\""
 
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "interface SharedCoreMobileApi"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "readOnlyStatusAdapter.sharedCoreStatusSurface()"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "readOnlyStatusAdapter.redactedSupportDiagnostics()"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "fun sharedCoreStatusSurface"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "fun profileUnlockLockStatus"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "fun inviteCodeCreateJoin"
@@ -95,6 +98,10 @@ require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/androi
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "not production-ready"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "external onion delivery not claimed"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "mobile readiness not claimed"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "SourceBoundaryReadOnlyNativeStatusAdapter"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "shared_core_status_surface"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "redacted_support_diagnostics"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "not production-ready"
 
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "InputType.TYPE_TEXT_VARIATION_PASSWORD"
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "sharedCore.profileUnlockLockStatus"
@@ -114,6 +121,9 @@ reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android
 reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "Telephony"
 reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "HttpURLConnection"
 reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/SharedCoreMobileApi.kt" "Socket"
+reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "HttpURLConnection"
+reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "Socket"
+reject_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/ReadOnlyNativeStatusAdapter.kt" "Firebase"
 reject_find "Android build outputs or app artifacts" \
   \( -type d -name build -o -name '*.apk' -o -name '*.aab' \)
 

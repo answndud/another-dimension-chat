@@ -62,6 +62,23 @@ This gate keeps binding generation implemented false, callable FFI implemented
 false, generated bindings claimed false, mobile readiness claimed false, and
 security-ready claimed false.
 
+## Read-Only Native Status Adapter Boundary
+
+Android and iOS now carry a source-only read-only adapter path for the first
+binding unit, `status_and_redacted_diagnostics_read_only_adapter`.
+
+That adapter may return only the redacted `shared_core_status_surface` and
+`redacted_support_diagnostics` status DTOs. It must not unlock profiles, create
+or join invites, import or export pairing payloads, confirm safety transcripts,
+import or export manual envelopes, view message transcripts, run lifecycle
+commands, open native network I/O, run runtime messaging, or perform destructive
+lifecycle operations.
+
+The read-only adapter path keeps binding generation implemented false, callable
+FFI implemented false, generated bindings claimed false, wrapper-specific
+protocol/storage/transport semantics false, mobile readiness claimed false, and
+security-ready claimed false.
+
 Allowed API groups mirror the shared core wrapper boundary:
 
 - `shared_core_status_surface`
