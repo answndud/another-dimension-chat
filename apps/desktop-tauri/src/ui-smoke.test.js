@@ -142,6 +142,12 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(stylesCss, /\.saved-room-primary-action/);
   assert.match(stylesCss, /\.room-list-sync-status/);
   assert.match(stylesCss, /\.saved-room-list-item\.is-resume-recommended/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /const displayRoom = view\.room \?\? room/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /savedInviteRoomLabel\(displayRoom\)/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /savedInviteRoomShortSlug\(displayRoom\)/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /count: displayRoom\.messageCount/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /openSavedInviteRoom\(displayRoom\)/);
+  assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /removeSavedInviteRoom\(displayRoom\)/);
   assert.doesNotMatch(mainJs, /restoreLastInviteRoom\(\);/);
   assert.match(functionBody(mainJs, "showRoomList"), /prepareRoomListReturnState\(\)/);
   assert.match(functionBody(mainJs, "prepareRoomListReturnState"), /reconcileCurrentInviteRoomMetadataFromTranscriptEntries/);
@@ -611,6 +617,8 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(functionBody(mainJs, "twoProfileSafetyConfirmedForInput"), /legacyTwoProfileSafetyStorageKey\(input\)/);
   assert.match(functionBody(mainJs, "twoProfileSafetyConfirmedForInput"), /localStoreSet\(key, "confirmed"\)/);
   assert.match(functionBody(mainJs, "twoProfileSafetyStorageKeys"), /legacyTwoProfileSafetyStorageKey\(input\)/);
+  assert.doesNotMatch(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /confirmTwoProfileSafetyForInput/);
+  assert.match(functionBody(mainJs, "confirmCurrentTwoProfileSafety"), /confirmTwoProfileSafetyForInput\(input\)/);
   assert.match(functionBody(mainJs, "twoProfileRoomIdentityInput"), /connectionCode/);
   assert.match(functionBody(mainJs, "twoProfileRoomIdentityInput"), /inviteRole/);
   assert.match(functionBody(mainJs, "latestTwoProfileSuccessForInput"), /roomFingerprint === twoProfileSessionStatusFingerprint\(input\)/);
@@ -1025,6 +1033,11 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
 
   assert.match(functionBody(mainJs, "deleteProductionProfile"), /roomInputBeforeDelete = productionTwoProfileInput\(\)/);
   assert.match(functionBody(mainJs, "deleteProductionProfile"), /applyPostDestructiveLifecycleRebuildGuidance\("profile-delete"/);
+  const sessionDeleteBody = functionBody(mainJs, "deleteProductionSessionLifecycle");
+  assert.match(sessionDeleteBody, /result\.session_resume_closed/);
+  assert.match(sessionDeleteBody, /applyPostDestructiveLifecycleRebuildGuidance\("session-delete"/);
+  assert.match(sessionDeleteBody, /deletedProfile: profile/);
+  assert.match(sessionDeleteBody, /input: productionTwoProfileInput\(\)/);
   assert.match(functionBody(mainJs, "wipeProductionLocalData"), /roomInputBeforeWipe = productionTwoProfileInput\(\)/);
   assert.match(functionBody(mainJs, "wipeProductionLocalData"), /applyPostDestructiveLifecycleRebuildGuidance\("full-local-wipe"/);
 });

@@ -5651,6 +5651,7 @@ function renderSavedInviteRooms() {
       resumeRoom,
       persistStaleRetryableClear: true,
     });
+    const displayRoom = view.room ?? room;
     const item = document.createElement("li");
     item.className = "saved-room-list-item";
     item.classList.toggle("is-current", view.current);
@@ -5663,14 +5664,14 @@ function renderSavedInviteRooms() {
     summary.className = "saved-room-summary";
     const title = document.createElement("span");
     title.className = "saved-room-title";
-    title.textContent = savedInviteRoomLabel(room);
+    title.textContent = savedInviteRoomLabel(displayRoom);
     const preview = document.createElement("span");
     preview.className = "saved-room-preview";
     preview.textContent = view.preview;
     const meta = document.createElement("span");
     meta.className = "saved-room-meta";
-    meta.textContent = `${savedInviteRoomShortSlug(room)} / ${formatTemplate("roomMessageCount", {
-      count: room.messageCount,
+    meta.textContent = `${savedInviteRoomShortSlug(displayRoom)} / ${formatTemplate("roomMessageCount", {
+      count: displayRoom.messageCount,
     })}`;
     summary.append(title, preview, meta);
     const state = document.createElement("span");
@@ -5701,14 +5702,14 @@ function renderSavedInviteRooms() {
         runSavedInviteRoomListAction(view.room ?? room, view.nextAction.action, { actionOrigin: view.nextAction.origin });
         return;
       }
-      openSavedInviteRoom(room);
+      openSavedInviteRoom(displayRoom);
     });
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "flow-control is-secondary saved-room-remove";
     remove.textContent = t("removeRoom");
     remove.addEventListener("click", () => {
-      removeSavedInviteRoom(room);
+      removeSavedInviteRoom(displayRoom);
     });
     item.append(summary, state, primaryAction, remove, readiness);
     fields.savedRoomList.append(item);
@@ -7491,7 +7492,6 @@ async function finishInviteRoomReadyFromStatus(input, status, warningText) {
   }
   const inviteRole = currentInviteCodeRole();
   rememberLastInviteRoom(passphrase, currentInviteCodeRole());
-  confirmTwoProfileSafetyForInput(roomInput);
   rememberTwoProfileSessionStatus(roomInput, status);
   renderProductionTwoProfileSessionStatusResult(status);
   renderRoomIdentityBar(roomInput, status.both_ready_for_message_envelope);
@@ -18573,6 +18573,12 @@ async function deleteProductionSessionLifecycle(input = productionPairingInput()
     }
     const view = productionSessionLifecycleView(result);
     rememberProductionSessionState(input, null);
+    if (result.session_resume_closed) {
+      applyPostDestructiveLifecycleRebuildGuidance("session-delete", {
+        deletedProfile: profile,
+        input: productionTwoProfileInput(),
+      });
+    }
     setProductionPairingState(
       result.session_resume_closed ? "Session lifecycle deleted" : "Session lifecycle delete incomplete",
     );
