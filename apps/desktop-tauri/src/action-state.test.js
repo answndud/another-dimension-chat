@@ -9,7 +9,10 @@ import {
   productionInviteIdentityBoundaryView,
   productionPairwiseInviteGuidanceView,
   productionInviteRoomConversationMetadata,
+  productionManualCurrentFocusTarget,
+  productionManualCurrentStepView,
   productionManualMessageCheckView,
+  productionManualNextActions,
   productionManualTransferStepLabel,
   productionOnionReceiveLoopRefreshPlan,
   productionOnionReceiveRuntimeView,
@@ -1034,4 +1037,31 @@ test("manual check keeps imported message review before reply writing", () => {
     }),
     "Manual check: imported envelope is decrypted; click Show plaintext before writing the reply.",
   );
+});
+
+test("manual current action keeps pairing artifacts before message compose", () => {
+  const relayPairingState = {
+    hasProfileUnlockInput: true,
+    hasLocalPairingPayload: true,
+    counterpartProfile: "bob",
+    sessionReadyForMessages: true,
+  };
+  assert.equal(productionManualNextActions(relayPairingState).pairing, "Next: click Relay pairing to peer.");
+  assert.equal(
+    productionManualCurrentStepView(relayPairingState),
+    "Pairing | Next: click Relay pairing to peer.",
+  );
+  assert.equal(productionManualCurrentFocusTarget(relayPairingState), "relay-pairing");
+
+  const finishSlotState = {
+    hasProfileUnlockInput: true,
+    hasRemoteHandshakeFinishSlot: true,
+    sessionReadyForMessages: true,
+  };
+  assert.equal(productionManualNextActions(finishSlotState).pairing, "Next: click Fill remote finish.");
+  assert.equal(
+    productionManualCurrentStepView(finishSlotState),
+    "Pairing | Next: click Fill remote finish.",
+  );
+  assert.equal(productionManualCurrentFocusTarget(finishSlotState), "load-handshake-finish");
 });

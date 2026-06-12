@@ -1077,6 +1077,26 @@ export function productionManualCurrentStepView(state) {
     return `Reply | ${nextActions.message}`;
   }
 
+  const pairingActive = Boolean(
+    state.hasPairingInput ||
+      state.hasLocalPairingPayload ||
+      state.hasRemotePairingSlot ||
+      state.hasSessionDraftInput ||
+      state.hasSessionDraftSaved ||
+      state.hasHandshakeInitPayload ||
+      state.hasRemoteHandshakeInitSlot ||
+      state.hasHandshakeReplyInput ||
+      state.hasHandshakeReplyPayload ||
+      state.hasRemoteHandshakeReplySlot ||
+      state.hasHandshakeFinishInput ||
+      state.hasHandshakeFinishPayload ||
+      state.hasRemoteHandshakeFinishSlot ||
+      state.hasFinishImportInput,
+  );
+  if (pairingActive) {
+    return `Pairing | ${nextActions.pairing}`;
+  }
+
   const messageActive = Boolean(
     state.sessionReadyForMessages ||
       state.hasOutboundMessageInput ||
@@ -1114,22 +1134,6 @@ export function productionManualCurrentFocusTarget(state) {
   if (state.hasReceivedMessage) {
     return "received-message";
   }
-  if (state.hasInboundEnvelopeInput) {
-    return "import-envelope";
-  }
-  if (state.hasRemoteMessageEnvelopeSlot) {
-    return "load-message-envelope";
-  }
-  if (state.hasLocalMessageEnvelope) {
-    return state.counterpartProfile ? "relay-message-envelope" : "store-message-envelope";
-  }
-  if (state.hasOutboundMessageInput) {
-    return "export-message-envelope";
-  }
-  if (state.sessionReadyForMessages) {
-    return "message-body";
-  }
-
   if (state.hasFinishImportInput) {
     return "import-finish";
   }
@@ -1171,6 +1175,21 @@ export function productionManualCurrentFocusTarget(state) {
   }
   if (state.hasPairingInput) {
     return "export-pairing";
+  }
+  if (state.hasInboundEnvelopeInput) {
+    return "import-envelope";
+  }
+  if (state.hasRemoteMessageEnvelopeSlot) {
+    return "load-message-envelope";
+  }
+  if (state.hasLocalMessageEnvelope) {
+    return state.counterpartProfile ? "relay-message-envelope" : "store-message-envelope";
+  }
+  if (state.hasOutboundMessageInput) {
+    return "export-message-envelope";
+  }
+  if (state.sessionReadyForMessages) {
+    return "message-body";
   }
 
   return "unlock-profile";
