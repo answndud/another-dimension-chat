@@ -100,6 +100,11 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "If any after-upload confirmation fails"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Do not announce the release as ready"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Return to desktop hardening if the source preflight or regenerated upload set"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Final Operation Decision Summary"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Upload decision: proceed only after the source preflight prints"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Hold decision: do not upload, do not announce, and return to desktop hardening"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Operation boundary: this handoff does not perform a GitHub Release upload"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "next_development_axis=desktop-post-release-hardening-or-non-release-product-work"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "stale existing release output"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "preflight=public-release-readiness"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "status=public-release-readiness-source-preflight-ready"
@@ -149,6 +154,11 @@ require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" 'Downlo
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "If any after-upload confirmation fails"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Do not announce the release as ready"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Return to desktop hardening if the source preflight or regenerated upload set"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Final Operation Decision Summary"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Upload decision: proceed only after the source preflight prints"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Hold decision: do not upload, do not announce, and return to desktop hardening"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "Operation boundary: this handoff does not perform a GitHub Release upload"
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next_development_axis=desktop-post-release-hardening-or-non-release-product-work"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_allowlist_source": "MANIFEST.md"'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_release_body": "GITHUB_RELEASE_BODY.md"'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" '"upload_forbidden": "docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"'
@@ -305,6 +315,14 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false" || {
     echo "FAIL release readiness preflight missing operator non-claims" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "operator_handoff_wrapup=upload-only-after-source-and-staging-statuses-otherwise-hold-and-return-to-desktop-hardening" || {
+    echo "FAIL release readiness preflight missing operator handoff wrap-up" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "next_development_axis=desktop-post-release-hardening-or-non-release-product-work" || {
+    echo "FAIL release readiness preflight missing next development axis" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "next=if a frozen ignored DMG exists, run scripts/prepare_unsigned_public_beta_release.sh and upload only files listed in MANIFEST.md" || {
