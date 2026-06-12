@@ -5939,6 +5939,10 @@ function fieldTestReportTriageState(report) {
   return privateDeliveryState.fieldTestReportTriageState(report);
 }
 
+function desktopFirstCompletionStatus(report) {
+  return privateDeliveryState.desktopFirstCompletionStatus(report);
+}
+
 function fieldTestReportComparison(localReport, peerReport) {
   return privateDeliveryState.fieldTestReportComparison(localReport, peerReport);
 }
@@ -7173,8 +7177,9 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
   fields.publicBetaDiagnostics.value = payload;
   const parsed = parseFieldTestReport(report);
   const failureClass = fieldTestReportValue(publicDiagnosticsFailureClass(parsed), "none");
+  const desktopCompletion = desktopFirstCompletionStatus(report);
   if (fields.publicBetaDiagnosticsSummary) {
-    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics ready failure_class=${failureClass} app_launch_network=false`;
+    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics ready failure_class=${failureClass} desktop_completion=${desktopCompletion.status} app_launch_network=false`;
   }
   return payload;
 }

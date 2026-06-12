@@ -371,6 +371,59 @@ export function fieldTestReportTriageState(report) {
   };
 }
 
+function desktopCompletionReceiveReady(parsed) {
+  if (parsed.receive_enabled !== "true") {
+    return false;
+  }
+  return !new Set(["receive-stopping", "receive-stopped", "receive-off"]).has(
+    fieldTestReportReceiveValue(parsed),
+  );
+}
+
+function desktopCompletionRouteReady(parsed) {
+  return parsed.route_ready === "true" && parsed.route_readiness_ready === "true";
+}
+
+function desktopCompletionCanSendOrRecover(parsed) {
+  const composerAction = fieldTestReportValue(parsed.composer_next_action, "none");
+  if (composerAction === "write-message" || composerAction === "send-message") {
+    return true;
+  }
+  return fieldTestReportNextActionValue(parsed) !== "none";
+}
+
+export function desktopFirstCompletionStatus(report) {
+  const parsed = parseFieldTestReport(report);
+  const blockers = [];
+  if (parsed.room_present !== "true") {
+    blockers.push("room");
+  }
+  if (parsed.session_ready !== "true") {
+    blockers.push("session");
+  }
+  if (parsed.safety_confirmed !== "true") {
+    blockers.push("safety");
+  }
+  if (!desktopCompletionRouteReady(parsed)) {
+    blockers.push("private-route");
+  }
+  if (!desktopCompletionReceiveReady(parsed)) {
+    blockers.push("receive");
+  }
+  if (!desktopCompletionCanSendOrRecover(parsed)) {
+    blockers.push("send-or-recover");
+  }
+  return {
+    scope: "desktop-local-private-flow",
+    status: blockers.length === 0 ? "ready-for-local-private-message-flow" : "incomplete",
+    blockers,
+    externalOnionDeliveryVerified: false,
+    productionMessagingReady: false,
+    securityReadyClaimed: false,
+    sensitiveCommunicationAllowed: false,
+  };
+}
+
 const publicDiagnosticsRecoveryActions = new Set([
   "check-session",
   "enable-private-delivery",
@@ -421,6 +474,7 @@ export function publicDiagnosticsFailureClass(parsed) {
 export function publicBetaDiagnosticsReport(report, options = {}) {
   const parsed = parseFieldTestReport(report);
   const triage = fieldTestReportTriageState(report);
+  const desktopCompletion = desktopFirstCompletionStatus(report);
   const failureClass = publicDiagnosticsFailureClass(parsed);
   const recoveryNextAction = publicDiagnosticsRecoveryNextAction(parsed);
   const lines = [
@@ -433,6 +487,13 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     `build_commit=${fieldTestReportValue(triage.buildCommit, "unknown")}`,
     `failure_class=${fieldTestReportValue(failureClass, "none")}`,
     `recovery_next_action=${recoveryNextAction}`,
+    `desktop_completion_scope=${fieldTestReportValue(desktopCompletion.scope, "unknown")}`,
+    `desktop_completion_status=${fieldTestReportValue(desktopCompletion.status, "unknown")}`,
+    `desktop_completion_blockers=${desktopCompletion.blockers.length > 0 ? desktopCompletion.blockers.join("#") : "none"}`,
+    `external_onion_delivery_verified=${desktopCompletion.externalOnionDeliveryVerified === true}`,
+    `production_messaging_ready=${desktopCompletion.productionMessagingReady === true}`,
+    `security_ready_claimed=${desktopCompletion.securityReadyClaimed === true}`,
+    `sensitive_communication_allowed=${desktopCompletion.sensitiveCommunicationAllowed === true}`,
     `app_launch_network=false`,
   ];
   if (options.includeCopyBoundary === true) {
