@@ -99,7 +99,6 @@ The public beta path starts from the ignored local DMG and creates a separate ig
 
 ```bash
 scripts/public_release_readiness_preflight.sh
-scripts/prepare_unsigned_public_beta_release.sh --check-artifact-boundary
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
