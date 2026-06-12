@@ -7204,6 +7204,18 @@ function manualRebuildDeliveryDiagnostics(input, boundaryText) {
   };
 }
 
+function localRecoveryDiagnosticsBoundaryText() {
+  return [
+    fields.productionTwoProfileBoundary?.textContent,
+    fields.productionProfileBoundary?.textContent,
+    fields.productionProfileStorage?.textContent,
+    fields.productionDataLifecycle?.textContent,
+  ]
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
 function buildFieldTestReport(input = productionTwoProfileInput()) {
   const hasRoom = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase);
   const route = twoProfilePeerEndpointState(input);
@@ -7226,6 +7238,13 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const outboundRecoveryNoticeKey = currentOutboundRecovery?.noticeKey ?? "none";
   const receiveMode = fieldTestReceiveModeSnapshot(input);
   const boundaryText = fields.productionTwoProfileBoundary?.textContent ?? "";
+  const localRecoveryBoundaryText = localRecoveryDiagnosticsBoundaryText();
+  const localRecoveryAction = fieldTestBoundaryValue(localRecoveryBoundaryText, "local_recovery", "none");
+  const localRecoveryFallback = fieldTestBoundaryValue(localRecoveryBoundaryText, "recovery", "none");
+  const rollbackSuspicion =
+    fieldTestBoundaryValue(localRecoveryBoundaryText, "rollback_suspicion", "false") === "true";
+  const resumeBlocked =
+    fieldTestBoundaryValue(localRecoveryBoundaryText, "resume_blocked", "false") === "true";
   const rebuildDeliveryDiagnostics = manualRebuildDeliveryDiagnostics(input, boundaryText);
   const sendAttemptBoundaryText = fields.onionOutboundEnvelopeSendAttempt?.textContent ?? "";
   const receiveFailureKind = receiveMode.ownerCurrentRoom
@@ -7350,6 +7369,9 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `room_runtime_owner_matches_receive_profile=${fieldTestBoundaryValue(boundaryText, "owner_matches_receive") === "true"}`,
     `send_runtime_owner_profile_bound=${fieldTestBoundaryValue(sendAttemptBoundaryText, "owner_profile_bound") === "true"}`,
     `send_runtime_owner_matches_send_profile=${fieldTestBoundaryValue(sendAttemptBoundaryText, "owner_matches_send") === "true"}`,
+    `local_recovery_action=${fieldTestReportValue(localRecoveryAction !== "none" ? localRecoveryAction : localRecoveryFallback, "none")}`,
+    `rollback_suspicion=${rollbackSuspicion}`,
+    `resume_blocked=${resumeBlocked}`,
     `real_onion_network_io=${realOnionResult?.network_io_attempted === true}`,
     `real_onion_transport_io=${realOnionResult?.transport_io_opened === true}`,
     `real_onion_runtime=${realOnionResult?.runtime_messaging_enabled === true}`,

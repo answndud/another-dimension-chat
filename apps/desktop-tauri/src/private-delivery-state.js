@@ -439,8 +439,23 @@ const publicDiagnosticsRecoveryActions = new Set([
   "verify",
   "wait-receive-stop",
   "write-message",
+  "check-data-lifecycle",
   "none",
 ]);
+
+function publicDiagnosticsLocalRecoveryAction(parsed) {
+  const localRecovery = fieldTestReportValue(parsed.local_recovery_action, "none");
+  if (localRecovery === "check-data-lifecycle") {
+    return "check-data-lifecycle";
+  }
+  if (
+    parsed.rollback_suspicion === "true" ||
+    parsed.resume_blocked === "true"
+  ) {
+    return "check-data-lifecycle";
+  }
+  return "";
+}
 
 function publicDiagnosticsRecoveryNextAction(parsed) {
   const action = fieldTestReportValue(fieldTestReportNextActionValue(parsed), "none");
@@ -471,6 +486,10 @@ function desktopCompletionBlockerNextAction(blockers = [], parsed = {}) {
 }
 
 function publicDiagnosticsDesktopNextAction(parsed, desktopCompletion) {
+  const localRecoveryAction = publicDiagnosticsLocalRecoveryAction(parsed);
+  if (localRecoveryAction) {
+    return localRecoveryAction;
+  }
   const action = publicDiagnosticsRecoveryNextAction(parsed);
   if (action !== "none") {
     return action;
@@ -490,6 +509,9 @@ function desktopCompletionBlockerFailureClass(blockers = []) {
 }
 
 export function publicDiagnosticsFailureClass(parsed, desktopCompletion = null) {
+  if (publicDiagnosticsLocalRecoveryAction(parsed)) {
+    return "local-recovery-needed";
+  }
   if (parsed.room_present !== "true") {
     return "room-not-open";
   }
