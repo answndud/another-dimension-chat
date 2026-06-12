@@ -1567,6 +1567,14 @@ function clearMismatchedChatDeliveryNotice(input = productionTwoProfileInput()) 
   return true;
 }
 
+function clearChatDeliveryNoticeForInput(input = productionTwoProfileInput()) {
+  if (!latestChatDeliveryNoticeKey || !chatDeliveryNoticeMatchesInput(input)) {
+    return false;
+  }
+  setChatDeliveryNoticeByKey("", "neutral", input);
+  return true;
+}
+
 function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
   if (!fields.chatDeliveryNotice) {
     return;
@@ -3677,6 +3685,7 @@ function clearSavedInviteRoomRuntimeState(room) {
     rememberReceiveIntentForRoom(input, false);
     forgetTwoProfileSessionStatusForInput(input);
     clearPrivateRouteFollowupForRoom(input);
+    clearChatDeliveryNoticeForInput(input);
     clearProductionPayloadSlotsForRoomFingerprint(privateRouteRoomKey(input));
   }
   clearSavedInviteRoomRetryableOutbound(room);
@@ -4437,7 +4446,9 @@ function refreshReceiveStopCompletedNotice(input = productionTwoProfileInput()) 
     return false;
   }
   const current = currentSavedInviteRoomView(input);
-  if (current.action?.action === "wait-receive-stop") {
+  const currentAction = String(current.action ?? "").trim();
+  const currentActionLabelKey = current.view?.nextAction?.labelKey ?? savedRoomActionLabelKey(currentAction);
+  if (currentAction === "wait-receive-stop") {
     return false;
   }
   const resumeRoom = savedInviteRoomResumeRoom();
@@ -4450,7 +4461,7 @@ function refreshReceiveStopCompletedNotice(input = productionTwoProfileInput()) 
   setProductionTwoProfileState("Message listening stopped");
   setText(fields.productionTwoProfileWarning, t("receiveStopped"));
   setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted", input);
-  if (current.action?.action === "start-receiving") {
+  if (currentAction === "start-receiving") {
     setProductionFollowupActions(
       true,
       currentLanguage === "ko"
@@ -4469,12 +4480,12 @@ function refreshReceiveStopCompletedNotice(input = productionTwoProfileInput()) 
     );
     return true;
   }
-  if (current.action) {
+  if (currentAction) {
     setProductionFollowupActions(
       true,
       currentLanguage === "ko"
-        ? `다음: 현재 채팅방에서 '${t(current.action.labelKey)}' 작업을 진행하세요.`
-        : `Next: run '${t(current.action.labelKey)}' in this room.`,
+        ? `다음: 현재 채팅방에서 '${t(currentActionLabelKey)}' 작업을 진행하세요.`
+        : `Next: run '${t(currentActionLabelKey)}' in this room.`,
     );
     return true;
   }
@@ -18027,13 +18038,15 @@ function applyPostDestructiveLifecycleRebuildGuidance(action, options = {}) {
   setText(
     fields.productionTwoProfileSession,
     `stale_room_retry_cleared=true stale_receive_cleared=true stale_delivery_code_cleared=true ` +
-      `stale_manual_rebuild_cleared=true affected_current_room=${affectedCurrentRoom} saved_rooms_cleared=${clearedRooms}`,
+      `stale_manual_rebuild_cleared=true stale_chat_notice_cleared=true ` +
+      `affected_current_room=${affectedCurrentRoom} saved_rooms_cleared=${clearedRooms}`,
   );
   setText(
     fields.productionTwoProfileBoundary,
     `local_only=true stale_room_retry_cleared=true stale_receive_cleared=true stale_delivery_code_cleared=true ` +
-      `stale_manual_rebuild_cleared=true rebuild_required=true external_evidence_claim=false backup_recovery=false ` +
-      `cloud_backup_sync=false rollback_prevention=false secure_delete_claim=false security_ready=false`,
+      `stale_manual_rebuild_cleared=true stale_chat_notice_cleared=true rebuild_required=true ` +
+      `external_evidence_claim=false backup_recovery=false cloud_backup_sync=false rollback_prevention=false ` +
+      `secure_delete_claim=false security_ready=false`,
   );
   setProductionFollowupActions(true, fullWipe ? t("postWipeRoomRebuildNext") : t("postDeleteRoomRebuildNext"));
   renderManualInviteRoomRebuildFlow("rebuild-needed", { force: true, warning: false });
