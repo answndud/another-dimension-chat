@@ -75,6 +75,8 @@ require_text "$ROOT_DIR/apps/desktop-tauri/package.json" '"test:windows-boundary
 require_text "$ROOT_DIR/apps/desktop-tauri/package.json" "verify-windows-local-runtime-boundary.mjs"
 require_text "$ROOT_DIR/apps/desktop-tauri/scripts/verify-windows-local-runtime-boundary.mjs" "status=desktop-windows-local-runtime-smoke-boundary-ready"
 require_text "$ROOT_DIR/apps/desktop-tauri/scripts/verify-windows-local-runtime-boundary.mjs" "windows_runtime_smoke_source_command=npm --prefix apps/desktop-tauri run test:windows-boundary"
+require_text "$ROOT_DIR/apps/desktop-tauri/scripts/verify-windows-local-runtime-boundary.mjs" "windows_local_runtime_smoke_status=source-boundary-only"
+require_text "$ROOT_DIR/apps/desktop-tauri/scripts/verify-windows-local-runtime-boundary.mjs" "windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows"
 require_text "$ROOT_DIR/apps/desktop-tauri/scripts/verify-windows-local-runtime-boundary.mjs" "windows_local_deletion_behavior_review_required=true"
 require_text "$ROOT_DIR/apps/desktop-tauri/scripts/verify-windows-local-runtime-boundary.mjs" "windows_redacted_diagnostics_behavior_review_required=true"
 require_text "$ROOT_DIR/apps/desktop-tauri/scripts/verify-windows-local-runtime-boundary.mjs" "windows_explicit_user_action_review_required=true"
@@ -82,6 +84,8 @@ require_text "$ROOT_DIR/apps/desktop-tauri/scripts/verify-windows-local-runtime-
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_windows_local_runtime_smoke_boundary_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_real_user_test_prep_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_runtime_smoke_source_command=npm --prefix apps/desktop-tauri run test:windows-boundary"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_local_runtime_smoke_status=source-boundary-only"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_local_deletion_behavior_review_required=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_redacted_diagnostics_behavior_review_required=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_explicit_user_action_review_required=true"
@@ -93,3 +97,13 @@ require_text "$ROOT_DIR/scripts/public_claim_acceptance_once.sh" "desktop_window
   cd "$ROOT_DIR"
   npm --prefix apps/desktop-tauri run test:windows-boundary
 )
+
+echo "status=desktop-windows-local-runtime-smoke-boundary-ready"
+echo "windows_local_runtime_smoke_status=source-boundary-only"
+echo "windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows"
+echo "windows_runtime_smoke_source_command=npm --prefix apps/desktop-tauri run test:windows-boundary"
+echo "windows_public_artifact_ready=false"
+echo "windows_installer_ready=false"
+echo "windows_public_artifact_upload_allowed=false"
+echo "production_ready_claim=false"
+echo "sensitive_communication_allowed=false"
