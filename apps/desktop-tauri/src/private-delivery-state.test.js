@@ -65,6 +65,25 @@ test("field test summary reports receive recovery before stale real onion room a
   assert.match(fieldTestReportSummary(report), /next=start-receiving/);
 });
 
+test("field test summary keeps retryable room action before route readiness", () => {
+  const report = [
+    "room_present=true",
+    "session_ready=true",
+    "safety_confirmed=true",
+    "room_list_next_action=retry",
+    "room_list_next_origin=retryable-outbound",
+    "retryable_outbound_present=true",
+    "route_readiness_ready=false",
+    "route_readiness_next_action=prepare-private-route",
+    "route_readiness_failure_kind=PeerEndpointMissing",
+  ].join("\n");
+  const parsed = parseFieldTestReport(report);
+
+  assert.equal(fieldTestReportRoomListAction(parsed), "retry");
+  assert.equal(fieldTestReportNextActionValue(parsed), "retry");
+  assert.match(fieldTestReportSummary(report), /next=retry/);
+});
+
 test("field test summary maps receive owner mismatch to stop receiving", () => {
   const report = [
     "room_present=true",
@@ -414,6 +433,7 @@ test("desktop-first completion reports local private flow readiness without secu
     .replace("receive_enabled=true", "receive_enabled=false")
     .replace("receive_state=running", "receive_state=stopped")
     .replace("composer_next_action=send-message", "composer_next_action=none");
+  const composeBlockedReport = readyReport.replace("composer_next_action=send-message", "composer_next_action=none");
 
   assert.deepEqual(desktopFirstCompletionStatus(readyReport), {
     scope: "desktop-local-private-flow",
@@ -441,6 +461,7 @@ test("desktop-first completion reports local private flow readiness without secu
   assert.match(diagnostics, /desktop_completion_blockers=none/);
   assert.match(diagnostics, /desktop_acceptance_status=ready-for-local-private-message-flow/);
   assert.match(diagnostics, /desktop_acceptance_blockers=none/);
+  assert.match(diagnostics, /desktop_acceptance_next_action=none/);
   assert.match(diagnostics, /desktop_acceptance_external_delivery_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_production_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_sensitive_use_claim=false/);
@@ -450,6 +471,18 @@ test("desktop-first completion reports local private flow readiness without secu
   assert.match(diagnostics, /sensitive_communication_allowed=false/);
   assert.doesNotMatch(diagnostics, /external_onion_delivery_verified=true/);
   assert.doesNotMatch(diagnostics, /production_messaging_ready=true/);
+
+  const receiveBlockedDiagnostics = publicBetaDiagnosticsReport(blockedReport);
+  assert.match(receiveBlockedDiagnostics, /desktop_completion_blockers=receive#send-or-recover/);
+  assert.match(receiveBlockedDiagnostics, /recovery_next_action=start-receiving/);
+  assert.match(receiveBlockedDiagnostics, /desktop_acceptance_next_action=start-receiving/);
+  assert.doesNotMatch(receiveBlockedDiagnostics, /desktop_acceptance_next_action=none/);
+
+  const composeBlockedDiagnostics = publicBetaDiagnosticsReport(composeBlockedReport);
+  assert.match(composeBlockedDiagnostics, /desktop_completion_blockers=send-or-recover/);
+  assert.match(composeBlockedDiagnostics, /recovery_next_action=write-message/);
+  assert.match(composeBlockedDiagnostics, /desktop_acceptance_next_action=write-message/);
+  assert.doesNotMatch(composeBlockedDiagnostics, /desktop_acceptance_next_action=none/);
 });
 
 test("public diagnostics failure class maps detailed blockers to broad support classes", () => {

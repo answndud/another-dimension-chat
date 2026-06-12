@@ -6284,10 +6284,12 @@ function fieldTestNextActionKey(report, peerReport = "") {
   const outboundAction = fieldTestReportValue(fieldTestReportStandaloneOutboundRecoveryAction(parsed), "none");
   const routeReadinessAction = fieldTestReportValue(fieldTestRouteReadinessRecoveryAction(parsed), "none");
   let currentRecoveryAction = "none";
-  if (routeReadinessAction !== "none") {
+  if (roomListAction !== "none") {
+    currentRecoveryAction = parsed.room_list_next_origin !== "retryable-outbound" && routeReadinessAction !== "none"
+      ? routeReadinessAction
+      : roomListAction;
+  } else if (routeReadinessAction !== "none") {
     currentRecoveryAction = routeReadinessAction;
-  } else if (roomListAction !== "none") {
-    currentRecoveryAction = roomListAction;
   } else if (outboundAction !== "none") {
     currentRecoveryAction = outboundAction;
   }
@@ -12994,7 +12996,7 @@ function applyProductionActionState() {
         ? "Send a stored-session message after preparing onion pairing endpoints first."
       : !externalSendReadiness.ready
         ? externalSendReadiness.disabledReason
-        : `Attempt external onion send for message #${latestOnionOutbound.messageNumber}.`,
+        : `Attempt explicit private delivery for message #${latestOnionOutbound.messageNumber}.`,
     false,
   );
   setActionButtonState(

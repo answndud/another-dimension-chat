@@ -447,6 +447,34 @@ function publicDiagnosticsRecoveryNextAction(parsed) {
   return publicDiagnosticsRecoveryActions.has(action) ? action : "review-field-test-report";
 }
 
+function desktopCompletionBlockerNextAction(blockers = []) {
+  const blocker = blockers[0] ?? "none";
+  if (blocker === "room" || blocker === "session") {
+    return "check-session";
+  }
+  if (blocker === "safety") {
+    return "verify";
+  }
+  if (blocker === "private-route") {
+    return "prepare-private-route";
+  }
+  if (blocker === "receive") {
+    return "start-receiving";
+  }
+  if (blocker === "send-or-recover") {
+    return "write-message";
+  }
+  return "none";
+}
+
+function publicDiagnosticsDesktopNextAction(parsed, desktopCompletion) {
+  const action = publicDiagnosticsRecoveryNextAction(parsed);
+  if (action !== "none") {
+    return action;
+  }
+  return desktopCompletionBlockerNextAction(desktopCompletion?.blockers);
+}
+
 export function publicDiagnosticsFailureClass(parsed) {
   if (parsed.room_present !== "true") {
     return "room-not-open";
@@ -477,7 +505,7 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
   const triage = fieldTestReportTriageState(report);
   const desktopCompletion = desktopFirstCompletionStatus(report);
   const failureClass = publicDiagnosticsFailureClass(parsed);
-  const recoveryNextAction = publicDiagnosticsRecoveryNextAction(parsed);
+  const recoveryNextAction = publicDiagnosticsDesktopNextAction(parsed, desktopCompletion);
   const desktopAcceptanceNonClaims = [
     "external-onion-delivery",
     "production-messaging",
