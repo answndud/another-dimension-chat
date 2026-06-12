@@ -1089,6 +1089,29 @@ pub mod production {
         }
 
         #[test]
+        fn sqlcipher_store_rejects_replay_state_missing_highest_seen_message() {
+            let (_dir, path) = unique_test_database_path("replay-window-missing-highest");
+            let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let record_id = EncryptedRecordId::new("replay_0001").expect("record id");
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::ReplayWindowState,
+                EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile")),
+                b"sqlcipher-page-encryption-v1".to_vec(),
+                b"ADREPLAY1|4|6|4,5".to_vec(),
+            )
+            .expect("record");
+
+            store.put(&record_id, &record).expect("put replay record");
+
+            assert_eq!(
+                store.load_replay_window(&record_id),
+                Err(ProductionStorageError::InvalidRecord)
+            );
+        }
+
+        #[test]
         fn replay_persistence_guarantees_do_not_claim_rollback_protection() {
             assert_eq!(
                 replay_persistence_guarantees(),

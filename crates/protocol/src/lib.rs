@@ -204,6 +204,9 @@ impl ReplayWindow {
         {
             return Err(ProtocolError::InvalidMessageNumber);
         }
+        if highest_seen != 0 && !seen.contains(&highest_seen) {
+            return Err(ProtocolError::InvalidMessageNumber);
+        }
         let min_allowed = highest_seen.saturating_sub(window_size.saturating_sub(1));
         seen.retain(|message_number| *message_number >= min_allowed);
         Ok(Self {
@@ -308,5 +311,17 @@ mod tests {
 
         assert_eq!(restored.highest_seen(), 6);
         assert_eq!(restored, window);
+    }
+
+    #[test]
+    fn replay_window_rejects_state_missing_highest_seen_message() {
+        assert_eq!(
+            ReplayWindow::decode_state("ADREPLAY1|4|6|4,5"),
+            Err(ProtocolError::InvalidMessageNumber)
+        );
+        assert_eq!(
+            ReplayWindow::decode_state("ADREPLAY1|4|6|"),
+            Err(ProtocolError::InvalidMessageNumber)
+        );
     }
 }
