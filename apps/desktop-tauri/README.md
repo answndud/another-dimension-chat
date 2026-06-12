@@ -50,12 +50,14 @@ npm run dev
 npm run build
 ```
 
-Build an installable desktop beta:
+Build a local-only installable desktop beta:
 
 ```bash
 cd apps/desktop-tauri
 npm run tauri:build
 ```
+
+This generic Tauri build output is not a public release upload artifact. Public staging accepts only the pinned frozen DMG and provenance checked by `scripts/prepare_unsigned_public_beta_release.sh`; update that script's commit and SHA constants deliberately before changing the public release input.
 
 Build the beta with the manual onion networking attempt feature compiled in:
 
@@ -133,7 +135,7 @@ The GUI-less preflight checks the peer-a/peer-b app data roots and the invite-de
 
 Local beta artifacts can be copied to `apps/desktop-tauri/beta-artifacts/` for tester handoff. That directory is ignored and must not be committed.
 
-Current local beta handoff:
+Current local beta handoff, separate from the public release packaging input:
 
 - Artifact: `apps/desktop-tauri/beta-artifacts/Another Dimension Chat_0.1.0_aarch64.dmg`
 - SHA-256: `625ee389d930330b0f2e369a53c4f582df076dd612920f6cf0366aab4a3edb95`
@@ -153,7 +155,7 @@ scripts/public_release_readiness_preflight.sh
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
-Run the source-only preflight from the repository root before staging artifacts; it does not require a DMG and does not generate release files. Then run the release staging command after the frozen local DMG and provenance JSON exist in `apps/desktop-tauri/beta-artifacts/`. It writes the ignored upload set to `apps/desktop-tauri/public-release/unsigned-public-beta/`; upload only the files listed in the generated `MANIFEST.md`.
+Run the source-only preflight from the repository root before staging artifacts; it does not require a DMG and does not generate release files. Treat `decision=proceed-to-packaging-only-with-frozen-ignored-dmg` as the packaging go signal, and return to desktop hardening if the source preflight fails. Then run the release staging command after the frozen local DMG and provenance JSON exist in `apps/desktop-tauri/beta-artifacts/`. It writes the ignored upload set to `apps/desktop-tauri/public-release/unsigned-public-beta/`; upload only the files listed in the generated `MANIFEST.md`.
 
 This public path is still an unsigned experimental public beta. It is not notarized, not audited, not production-ready, and sensitive communication prohibited. External onion delivery is outside the v0.1 public product claim; same-machine dual-profile rehearsal is development evidence only. No peer report is expected or required for this v0.1 claim, and no external delivery claim is made. Users must verify the checksum attached to the same GitHub Release as the DMG before using the normal macOS Privacy & Security manual allow path. Branch source files, source archives, or copied docs are not release proof. Updates are manual GitHub Release downloads only; there is no auto-update channel.
 
