@@ -540,6 +540,23 @@ This file is for the release operator. It is not a security audit, notarization,
 production-readiness statement, external onion delivery report, or permission
 for sensitive communication.
 
+## Final Operation Decision Summary
+
+- Upload decision: proceed only after the source preflight prints
+  \`source_acceptance=desktop-release-source-accepted-for-operator-staging\`
+  and the generated upload set prints \`status=unsigned-public-beta-release-ready\`.
+- Hold decision: do not upload, do not announce, and return to desktop hardening
+  if either required status is missing, if the generated files differ from
+  \`MANIFEST.md\`, or if the post-upload checksum/body/asset checks fail.
+- Operation boundary: this handoff does not perform a GitHub Release upload,
+  does not rebuild the DMG, does not run heavy verification, and does not add a
+  mobile release scope.
+- Product boundary: this remains an unsigned experimental public beta, not
+  audited, not production-ready, and sensitive communication prohibited.
+- Next development axis after this handoff: desktop post-release hardening or
+  non-release product work, not external onion delivery claims or mobile wrapper
+  implementation.
+
 ## Before Upload
 
 - Confirm this file lives inside: \`$RELEASE_DIR\`
@@ -805,6 +822,11 @@ require_text "$RELEASE_DIR/REPOSITORY_GOVERNANCE.md" "Release Guardrails"
 require_text "$RELEASE_DIR/COMPONENT_BOUNDARIES.md" "Release and updates"
 require_text "$RELEASE_DIR/COMPONENT_BOUNDARIES.md" "not a secure messenger release today"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Operator Final Handoff"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Final Operation Decision Summary"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Upload decision: proceed only after the source preflight prints"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Hold decision: do not upload, do not announce, and return to desktop hardening"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Operation boundary: this handoff does not perform a GitHub Release upload"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Next development axis after this handoff: desktop post-release hardening or"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "source_acceptance=desktop-release-source-accepted-for-operator-staging"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "decision=proceed-to-packaging-only-with-frozen-ignored-dmg"
 require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "status=unsigned-public-beta-release-ready"
@@ -836,4 +858,6 @@ echo "operator_release_body=use GITHUB_RELEASE_BODY.md exactly"
 echo "operator_verify=downloaded users must verify ${RELEASE_DMG}.sha256 before opening"
 echo "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
 echo "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
+echo "operator_handoff_wrapup=upload-only-after-source-and-staging-statuses-otherwise-hold-and-return-to-desktop-hardening"
+echo "next_development_axis=desktop-post-release-hardening-or-non-release-product-work"
 echo "status=unsigned-public-beta-release-ready"
