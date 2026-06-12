@@ -455,6 +455,13 @@ test("receive restart intent owns the room primary action", () => {
   assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /action\.textContent = t\("startReceiving"\)/);
   assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /action\.addEventListener\("click", startProductionTwoProfileOnionReceive\)/);
   assert.match(functionBody(mainJs, "applyProductionActionState"), /composerPrimaryAvailableWithoutDraft/);
+  const stopCompletedBody = functionBody(mainJs, "refreshReceiveStopCompletedNotice");
+  assert.match(stopCompletedBody, /const currentAction = String\(current\.action \?\? ""\)\.trim\(\)/);
+  assert.match(stopCompletedBody, /currentAction === "wait-receive-stop"/);
+  assert.match(stopCompletedBody, /currentAction === "start-receiving"/);
+  assert.match(stopCompletedBody, /current\.view\?\.nextAction\?\.labelKey \?\? savedRoomActionLabelKey\(currentAction\)/);
+  assert.doesNotMatch(stopCompletedBody, /current\.action\?\.action/);
+  assert.doesNotMatch(stopCompletedBody, /current\.action\.labelKey/);
   assert.match(i18nJs, /receiveIntentRestartReady/);
   assert.match(i18nJs, /chatNoticeReceiveRestart/);
 });
@@ -1021,9 +1028,12 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(roomRuntimeClearBody, /rememberReceiveIntentForRoom\(input, false\)/);
   assert.match(roomRuntimeClearBody, /forgetTwoProfileSessionStatusForInput\(input\)/);
   assert.match(roomRuntimeClearBody, /clearPrivateRouteFollowupForRoom\(input\)/);
+  assert.match(roomRuntimeClearBody, /clearChatDeliveryNoticeForInput\(input\)/);
   assert.match(roomRuntimeClearBody, /clearProductionPayloadSlotsForRoomFingerprint\(privateRouteRoomKey\(input\)\)/);
   assert.match(roomRuntimeClearBody, /clearSavedInviteRoomRetryableOutbound\(room\)/);
   assert.match(roomRuntimeClearBody, /clearSavedInviteRoomManualRebuildMetadata\(room\)/);
+  assert.match(functionBody(mainJs, "clearChatDeliveryNoticeForInput"), /chatDeliveryNoticeMatchesInput\(input\)/);
+  assert.match(functionBody(mainJs, "clearChatDeliveryNoticeForInput"), /setChatDeliveryNoticeByKey\("", "neutral", input\)/);
 
   const roomConversationClearBody = functionBody(mainJs, "clearSavedInviteRoomConversationMetadata");
   assert.match(roomConversationClearBody, /lastMessagePreview: ""/);
@@ -1053,6 +1063,7 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(rebuildBody, /stale_receive_cleared=true/);
   assert.match(rebuildBody, /stale_delivery_code_cleared=true/);
   assert.match(rebuildBody, /stale_manual_rebuild_cleared=true/);
+  assert.match(rebuildBody, /stale_chat_notice_cleared=true/);
   assert.match(rebuildBody, /rebuild_required=true/);
   assert.match(rebuildBody, /external_evidence_claim=false/);
   assert.match(rebuildBody, /backup_recovery=false/);
