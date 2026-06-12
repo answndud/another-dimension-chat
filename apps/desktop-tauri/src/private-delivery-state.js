@@ -415,7 +415,7 @@ export function desktopFirstCompletionStatus(report) {
   }
   return {
     scope: "desktop-local-private-flow",
-    status: blockers.length === 0 ? "ready-for-local-private-message-flow" : "incomplete",
+    status: blockers.length === 0 ? "local-private-flow-no-current-blockers" : "incomplete",
     blockers,
     blockerSummary: blockers.length > 0 ? blockers.join("#") : "none",
     externalOnionDeliveryVerified: false,
@@ -530,7 +530,7 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     "Another Dimension Chat public support diagnostics",
     "diagnostic_version=2",
     "diagnostic_scope=public-support",
-    "payload_boundary=status-build-failure-class-recovery-action-only",
+    "payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only",
     `app_version=${fieldTestReportValue(triage.appVersion, "unknown")}`,
     `build_channel=${fieldTestReportValue(triage.buildChannel, "unknown")}`,
     `build_commit=${fieldTestReportValue(triage.buildCommit, "unknown")}`,

@@ -94,6 +94,12 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(i18nJs, /Explicit local\/manual messaging path available/);
   assert.match(i18nJs, /nothing starts on app launch/);
   assert.match(i18nJs, /앱 실행 시 자동 시작되지 않습니다/);
+  assert.match(i18nJs, /Receive attempts start after this explicit action; external delivery is not claimed\./);
+  assert.match(i18nJs, /Local send attempt recorded\./);
+  assert.match(i18nJs, /External receipt remains unconfirmed\./);
+  assert.doesNotMatch(i18nJs, /New messages arrive after you turn this on\./);
+  assert.doesNotMatch(i18nJs, /Message sent\./);
+  assert.doesNotMatch(i18nJs, /Message delivered\. You can continue the conversation\./);
   assert.match(stylesCss, /\.public-beta-gate/);
 });
 
@@ -1484,8 +1490,8 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(privateDeliveryStateJs, /manual_rebuild_flow/);
   assert.match(privateDeliveryStateJs, /delivery_code_exchange_scoped/);
   assert.match(publicDiagnosticsBody, /diagnostic_scope=public-support/);
-  assert.match(publicDiagnosticsBody, /payload_boundary=status-build-failure-class-recovery-action-only/);
-  assert.match(publicDiagnosticsBody, /publicDiagnosticsFailureClass\(parsed\)/);
+  assert.match(publicDiagnosticsBody, /payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only/);
+  assert.match(publicDiagnosticsBody, /publicDiagnosticsFailureClass\(parsed, desktopCompletion\)/);
   assert.doesNotMatch(publicDiagnosticsBody, /rebuild_delivery_scope=/);
   assert.doesNotMatch(publicDiagnosticsBody, /rebuild_delivery_action=/);
   assert.doesNotMatch(publicDiagnosticsBody, /rebuild_delivery_network_io=/);
@@ -1876,6 +1882,8 @@ test("dark chat palette does not use gold or yellow warning colors", () => {
 test("public diagnostics summary includes desktop completion without production claims", () => {
   assert.match(privateDeliveryStateJs, /function desktopCompletionRouteReady/);
   assert.match(privateDeliveryStateJs, /export function desktopFirstCompletionStatus/);
+  assert.match(privateDeliveryStateJs, /local-private-flow-no-current-blockers/);
+  assert.doesNotMatch(privateDeliveryStateJs, /ready-for-local-private-message-flow/);
   assert.match(privateDeliveryStateJs, /blockerSummary: blockers\.length > 0 \? blockers\.join\("#"\) : "none"/);
   assert.match(privateDeliveryStateJs, /desktop_completion_scope=\$\{fieldTestReportValue\(desktopCompletion\.scope/);
   assert.match(privateDeliveryStateJs, /desktop_acceptance_surface=\$\{fieldTestReportValue\(desktopCompletion\.scope/);

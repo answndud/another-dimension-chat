@@ -1874,7 +1874,7 @@ export function productionTwoProfileRealOnionUserView(result) {
       state: "Private delivery completed",
       profiles: "Room is ready.",
       session: "Both devices exchanged messages.",
-      message: "Message delivered. You can continue the conversation.",
+      message: "Delivery attempt finished. Continue only after the peer confirms receipt.",
       boundary: "Private delivery completed without showing private details.",
     };
   }
