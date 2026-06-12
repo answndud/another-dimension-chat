@@ -7678,13 +7678,19 @@ async function finishInviteRoomReadyFromStatus(input, status, warningText) {
   }
   const recoveryNoticeShown = showSavedInviteRoomRecoveryAfterOpen(roomInput);
   const rebuildNoticeShown = renderManualInviteRoomRebuildFlow("room-ready");
+  const safetyConfirmed = twoProfileSafetyConfirmedForInput(roomInput);
+  const verifyBeforeMessaging = !safetyConfirmed && inviteRole !== "inviter";
   if (rebuildNoticeShown) {
     setProductionTwoProfileState("Room ready");
   }
   if (!recoveryNoticeShown && !rebuildNoticeShown) {
     setProductionTwoProfileState("Room ready");
-    setText(fields.productionTwoProfileWarning, warningText);
-    setChatDeliveryNoticeByKey("inviteRoomReadyAfterSessionCode", "success", input);
+    setText(fields.productionTwoProfileWarning, verifyBeforeMessaging ? t("roomOnboardingNextVerify") : warningText);
+    setChatDeliveryNoticeByKey(
+      verifyBeforeMessaging ? "sendLockedUntilVerified" : "inviteRoomReadyAfterSessionCode",
+      verifyBeforeMessaging ? "warning" : "success",
+      input,
+    );
   }
   startInviteRoomPresenceRefresh(roomInput);
   startInviteRoomTranscriptRefresh(roomInput);
@@ -7692,6 +7698,8 @@ async function finishInviteRoomReadyFromStatus(input, status, warningText) {
     refreshFieldTestReport();
   } else if (inviteRole === "inviter") {
     focusCurrentInviteCodeDisplay();
+  } else if (!safetyConfirmed) {
+    focusSafetyConfirmation();
   } else {
     fields.productionTwoProfileMessage?.focus?.();
   }
@@ -7773,8 +7781,8 @@ async function openInviteRoomFromToken(input = productionTwoProfileInput()) {
           openInput,
           savedStatus,
           currentLanguage === "ko"
-            ? "저장된 채팅방을 열었습니다. 바로 메시지를 보낼 수 있습니다."
-            : "Saved room opened. You can send a message now.",
+            ? "저장된 채팅방을 열었습니다. 메시지 전 확인 문구를 비교하세요."
+            : "Saved room opened. Compare the verification phrase before messaging.",
         );
       }
     } catch {
@@ -7801,8 +7809,8 @@ async function openInviteRoomFromToken(input = productionTwoProfileInput()) {
           ? "방이 열렸습니다. 초대 코드를 복사해 상대에게 보내세요."
           : "Room is open. Copy the invite code and send it to the other device."
         : currentLanguage === "ko"
-          ? "초대 코드로 방에 들어왔습니다. 바로 메시지를 보낼 수 있습니다."
-          : "Joined with the invite code. You can send a message now.",
+          ? "초대 코드로 방에 들어왔습니다. 메시지 전 확인 문구를 비교하세요."
+          : "Joined with the invite code. Compare the verification phrase before messaging.",
     );
   } catch (error) {
     if (!twoProfileTranscriptInputStillCurrent(openInput)) {
@@ -18934,6 +18942,7 @@ async function checkProductionTwoProfileSessionStatus() {
       const currentInput = productionTwoProfileInput();
       const hasDraft = Boolean(currentInput.message);
       const resumeTarget = autoSelectTwoProfileResumeTarget(result);
+      const safetyConfirmed = twoProfileSafetyConfirmedForInput(twoProfileRoomIdentityInput(currentInput));
       if (resumeTarget === "retry-send" || resumeTarget === "pending-review") {
         setProductionTwoProfileState("Resume needs review");
         setText(
@@ -18949,13 +18958,15 @@ async function checkProductionTwoProfileSessionStatus() {
           setText(
             fields.productionTwoProfileWarning,
             hasDraft
-              ? "Room is ready. Send the message."
-              : "Room is ready. Write a message to continue.",
+              ? "Room is ready. Compare the verification phrase before sending."
+              : "Room is ready. Compare the verification phrase before writing.",
           );
         }
-        postCheckFocus = hasDraft
-          ? fields.runProductionTwoProfileMessageRoundtrip
-          : fields.productionTwoProfileMessage;
+        postCheckFocus = safetyConfirmed
+          ? hasDraft
+            ? fields.runProductionTwoProfileMessageRoundtrip
+            : fields.productionTwoProfileMessage
+          : focusSafetyConfirmation;
       }
     } else {
       stopInviteRoomTranscriptRefresh();
@@ -18987,7 +18998,11 @@ async function checkProductionTwoProfileSessionStatus() {
     }
     applyProductionActionState();
     if (twoProfileTranscriptInputStillCurrent(sessionCheckInput)) {
-      postCheckFocus?.focus();
+      if (typeof postCheckFocus === "function") {
+        postCheckFocus();
+      } else {
+        postCheckFocus?.focus();
+      }
     }
   }
 }
@@ -19144,7 +19159,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       const resumeTarget = autoSelectTwoProfileResumeTarget(sessionStatus);
       const autoResumeBaseWarning = appendExpiredMessagesPurged(
         appendStaleMessageEnvelopeSlotsPruned(
-          "Local stored conversation and message-ready sessions loaded after local unlock. Write a message to continue.",
+          "Local stored conversation and message-ready sessions loaded after local unlock. Compare the verification phrase before messaging.",
           staleMessageEnvelopeSlotsPruned,
         ),
         expiredMessagesPurged,
