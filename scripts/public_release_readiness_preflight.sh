@@ -28,9 +28,13 @@ check_existing_release_output() {
 
   echo "existing_release_output=present"
   require_text "$release_dir/MANIFEST.md" "Operator Upload Boundary"
+  require_text "$release_dir/MANIFEST.md" "OPERATOR_FINAL_HANDOFF.md"
   require_text "$release_dir/MANIFEST.md" "Do not upload \`docs/\`, \`beta-artifacts/\`, the \`public-release/\` folder itself"
   require_text "$release_dir/GITHUB_RELEASE_BODY.md" "Upload boundary for operators"
+  require_text "$release_dir/GITHUB_RELEASE_BODY.md" "OPERATOR_FINAL_HANDOFF.md"
   require_text "$release_dir/GITHUB_RELEASE_BODY.md" "Use \`GITHUB_RELEASE_BODY.md\` exactly as"
+  require_text "$release_dir/OPERATOR_FINAL_HANDOFF.md" "Operator Final Handoff"
+  require_text "$release_dir/OPERATOR_FINAL_HANDOFF.md" "Download the DMG and \`.sha256\` from the published GitHub Release"
   require_text "$release_dir/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json" "\"upload_allowlist_source\": \"MANIFEST.md\""
   require_text "$release_dir/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json" "\"upload_forbidden\": \"docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data\""
   echo "existing_release_output_status=current"

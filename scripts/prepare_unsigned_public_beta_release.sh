@@ -35,6 +35,7 @@ REQUIRED_RELEASE_FILES=(
   "REPOSITORY_GOVERNANCE.md"
   "COMPONENT_BOUNDARIES.md"
   "DEPENDENCY_LOCKFILES.sha256"
+  "OPERATOR_FINAL_HANDOFF.md"
   "MANIFEST.md"
 )
 
@@ -394,6 +395,7 @@ This folder is for a GitHub Release upload.
 - \`REPOSITORY_GOVERNANCE.md\`
 - \`COMPONENT_BOUNDARIES.md\`
 - \`DEPENDENCY_LOCKFILES.sha256\`
+- \`OPERATOR_FINAL_HANDOFF.md\`
 - \`MANIFEST.md\`
 
 ## Build
@@ -531,6 +533,65 @@ main-branch changes, no-central-trusted-server scope, unsigned release
 non-claims, private-data redaction, and no fabricated external peer evidence.
 EOF
 
+cat > "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" <<EOF
+# Operator Final Handoff - Unsigned Public Beta
+
+This file is for the release operator. It is not a security audit, notarization,
+production-readiness statement, external onion delivery report, or permission
+for sensitive communication.
+
+## Before Upload
+
+- Confirm this file lives inside: \`$RELEASE_DIR\`
+- Confirm release tag: \`$RELEASE_TAG\`
+- Confirm DMG SHA-256: \`$EXPECTED_DMG_SHA\`
+- Confirm release body file: \`GITHUB_RELEASE_BODY.md\`
+- Confirm upload allowlist source: \`MANIFEST.md\`
+- Confirm every upload file is listed in \`MANIFEST.md\`
+- Confirm no extra files are uploaded.
+
+Forbidden uploads:
+
+- \`docs/\`
+- \`beta-artifacts/\`
+- the \`public-release/\` folder itself
+- branch files
+- source archives
+- raw logs
+- crash dumps
+- screenshots
+- local app data
+- private diagnostics
+- private planning notes
+- any file not listed in \`MANIFEST.md\`
+
+## Upload
+
+Upload all and only the generated files listed in \`MANIFEST.md\` from this
+release directory. Use \`GITHUB_RELEASE_BODY.md\` exactly as the GitHub Release
+body.
+
+## After Upload
+
+- Download the DMG and \`.sha256\` from the published GitHub Release.
+- Run: \`shasum -a 256 -c $RELEASE_DMG.sha256\`
+- Confirm the output is: \`$RELEASE_DMG: OK\`
+- Confirm the GitHub Release body still says: unsigned experimental public beta,
+  not audited, not production-ready, and sensitive communication prohibited.
+- Confirm the GitHub Release body still says external_delivery_claim=false and
+  security_ready_claim=false.
+- Confirm no source archive, branch file, private file, raw log, crash dump,
+  beta-artifacts folder, public-release folder, or docs folder was uploaded as
+  a release asset.
+
+## Public User Boundary
+
+Public users must verify the same-release \`.sha256\` file before opening the
+DMG. The normal macOS Privacy & Security manual allow path is permitted only
+after checksum verification. Terminal quarantine-removal commands are not an
+install step.
+EOF
+
 for release_file in "${REQUIRED_RELEASE_FILES[@]}"; do
   require_file "$RELEASE_DIR/$release_file"
 done
@@ -641,6 +702,7 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Reproducible-build proof: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Live dependency scan performed: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Privacy model comparison: \`PRIVACY_MODEL_COMPARISON.md\`"
 require_text "$RELEASE_DIR/MANIFEST.md" "Component boundaries: \`COMPONENT_BOUNDARIES.md\`"
+require_text "$RELEASE_DIR/MANIFEST.md" "OPERATOR_FINAL_HANDOFF.md"
 require_text "$RELEASE_DIR/MANIFEST.md" "Briar/Cwtch-equivalent claim: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Audited E2EE claim: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Repeated external onion evidence: false"
@@ -665,7 +727,10 @@ require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "unsigned experimental public
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not audited"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "not production-ready"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "sensitive communication prohibited"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "external_delivery_claim=false"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "security_ready_claim=false"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "GITHUB_RELEASE_BODY.md"
+require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "OPERATOR_FINAL_HANDOFF.md"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "COMPONENT_BOUNDARIES.md"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "Upload boundary for operators"
 require_text "$RELEASE_DIR/GITHUB_RELEASE_BODY.md" "Use \`GITHUB_RELEASE_BODY.md\` exactly as"
@@ -723,6 +788,15 @@ require_text "$RELEASE_DIR/REPOSITORY_GOVERNANCE.md" "Direction Lock"
 require_text "$RELEASE_DIR/REPOSITORY_GOVERNANCE.md" "Release Guardrails"
 require_text "$RELEASE_DIR/COMPONENT_BOUNDARIES.md" "Release and updates"
 require_text "$RELEASE_DIR/COMPONENT_BOUNDARIES.md" "not a secure messenger release today"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Operator Final Handoff"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Confirm every upload file is listed in \`MANIFEST.md\`"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Use \`GITHUB_RELEASE_BODY.md\` exactly as the GitHub Release"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Download the DMG and \`.sha256\` from the published GitHub Release"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "shasum -a 256 -c $RELEASE_DMG.sha256"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "$RELEASE_DMG: OK"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "external_delivery_claim=false"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "security_ready_claim=false"
+require_text "$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md" "Terminal quarantine-removal commands are not an"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "Cargo.lock"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/src-tauri/Cargo.lock"
 require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/package-lock.json"
@@ -730,6 +804,7 @@ require_text "$RELEASE_DIR/DEPENDENCY_LOCKFILES.sha256" "apps/desktop-tauri/pack
 echo "release_dir=$RELEASE_DIR"
 echo "release_dmg=$RELEASE_DMG"
 echo "manifest=$RELEASE_DIR/MANIFEST.md"
+echo "operator_final_handoff=$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md"
 echo "dmg_sha256=$EXPECTED_DMG_SHA"
 echo "source_provenance_sha256=$source_provenance_sha"
 echo "next=upload all and only generated files listed in MANIFEST.md from release_dir; use GITHUB_RELEASE_BODY.md as the release body"

@@ -26,6 +26,7 @@ Download these files from the GitHub Release:
 - `REPOSITORY_GOVERNANCE.md`
 - `COMPONENT_BOUNDARIES.md`
 - `DEPENDENCY_LOCKFILES.sha256`
+- `OPERATOR_FINAL_HANDOFF.md`
 - `MANIFEST.md`
 
 Use the files attached to that GitHub Release as the release authority. The

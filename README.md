@@ -96,6 +96,7 @@ Expected public GitHub Release files:
 - `REPOSITORY_GOVERNANCE.md`
 - `COMPONENT_BOUNDARIES.md`
 - `DEPENDENCY_LOCKFILES.sha256`
+- `OPERATOR_FINAL_HANDOFF.md`
 - `MANIFEST.md`
 
 Prepare the ignored local upload folder from the frozen local DMG:

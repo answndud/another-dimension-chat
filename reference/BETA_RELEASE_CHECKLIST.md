@@ -128,6 +128,7 @@ Upload exactly these generated files to the GitHub Release:
 - `REPOSITORY_GOVERNANCE.md`
 - `COMPONENT_BOUNDARIES.md`
 - `DEPENDENCY_LOCKFILES.sha256`
+- `OPERATOR_FINAL_HANDOFF.md`
 - `MANIFEST.md`
 
 Use `GITHUB_RELEASE_BODY.md` as the GitHub Release body. Public release notes

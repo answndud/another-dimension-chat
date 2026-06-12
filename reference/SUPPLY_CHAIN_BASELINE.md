@@ -14,6 +14,7 @@ The generated release file is:
 
 - `DEPENDENCY_LOCKFILES.sha256`
 - `DEPENDENCY_INVENTORY.md`
+- `OPERATOR_FINAL_HANDOFF.md`
 
 The public beta currently treats exactly three lockfiles as release evidence:
 
