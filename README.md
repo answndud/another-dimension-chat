@@ -160,6 +160,13 @@ What exists today:
 - Public intake policy and GitHub issue templates that require redacted public support diagnostics or minimal private-contact requests instead of raw logs, payloads, endpoints, paths, passphrases, private keys, key material, crash dumps, or private planning notes.
 - Repository governance guardrails for maintainer-driven main-branch work, unsigned beta non-claims, no-central-trusted-server scope, release file discipline, and private-data redaction.
 - A local Tauri desktop beta shell for invite-code rooms, safety phrase confirmation, encrypted local profile/session/message records, saved-room resume, manual private-delivery exchange UI, explicit receive start/stop, retry/cancel recovery, and redacted field-test reports.
+- Desktop-only v0.1 acceptance matrix: `desktop local/manual beta readiness`
+  covers `invite#verify#send#receive#retry#cancel#import#delete#unlock#diagnostics#release-non-claim`.
+  It excludes
+  `android-ios-runtime#external-peer-evidence#audit#production-ready#security-ready#sensitive-communication`.
+  Passing this matrix does not claim external onion delivery, audited security,
+  production readiness, security readiness, or permission for sensitive
+  communication.
 - A desktop platform boundary for macOS and Windows: macOS public beta remains
   an unsigned experimental DMG, Windows remains a local build candidate, and
   both desktop shells must preserve the same local app-data, encrypted-store,
