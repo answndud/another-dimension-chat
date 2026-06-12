@@ -1,6 +1,9 @@
 package chat.anotherdimension.android
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import android.text.InputType
 import android.view.ViewGroup
@@ -72,6 +75,12 @@ class MainActivity : Activity() {
                 statusView.text = renderStatus(sharedCore.redactedSupportDiagnostics())
             }
         }
+        val copyDiagnostics = Button(this).apply {
+            text = "Copy Diagnostics"
+            setOnClickListener {
+                statusView.text = copyRedactedDiagnosticsPayload(sharedCore.redactedSupportDiagnostics())
+            }
+        }
 
         root.addView(title)
         root.addView(warning)
@@ -80,6 +89,7 @@ class MainActivity : Activity() {
         root.addView(invite)
         root.addView(envelope)
         root.addView(diagnostics)
+        root.addView(copyDiagnostics)
         root.addView(statusView)
         setContentView(root)
     }
@@ -107,4 +117,24 @@ class MainActivity : Activity() {
 
     private fun renderPublicNonClaims(status: SharedCoreStatusDto): String =
         "public_non_claims=${status.publicNonClaims.joinToString(separator = "|")}"
+
+    private fun copyRedactedDiagnosticsPayload(status: SharedCoreStatusDto): String {
+        val payload = renderRedactedDiagnosticsPayload(status)
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("another-dimension-redacted-diagnostics", payload))
+        return listOf(
+            "status=blocked",
+            "failure_class=policy_blocked",
+            "recovery_next_action=redacted diagnostics copied by explicit user action",
+            "diagnostics_copy_boundary=user_initiated_local_clipboard_only",
+            "copied_payload=${payload.replace("\n", "|")}",
+        ).joinToString(separator = "\n")
+    }
+
+    private fun renderRedactedDiagnosticsPayload(status: SharedCoreStatusDto): String =
+        listOf(
+            "diagnostics_copy_boundary=user_initiated_local_clipboard_only",
+            "diagnostics_payload=redacted_status_support_only",
+            renderStatus(status),
+        ).joinToString(separator = "\n")
 }

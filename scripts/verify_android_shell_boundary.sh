@@ -118,6 +118,8 @@ require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/androi
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "failure_class="
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "recovery_next_action="
 require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "public_non_claims="
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "copyRedactedDiagnosticsPayload"
+require_text "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/MainActivity.kt" "diagnostics_payload=redacted_status_support_only"
 
 require_text "apps/mobile/ffi/README.md" "production_mobile_shared_core_api_freeze_boundary_summary"
 require_text "apps/mobile/ffi/shared_core_mobile_api_contract.json" '"first_binding_unit": "status_and_redacted_diagnostics_read_only_adapter"'
