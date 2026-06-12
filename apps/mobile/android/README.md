@@ -1,6 +1,7 @@
-# Android Wrapper Candidate Skeleton
+# Android Documentation-Only Boundary
 
-This is a documentation-only skeleton for a future Android shell candidate.
+This is a documentation-only boundary for a future Android shell candidate. It
+is not a mobile wrapper source scaffold.
 
 It is not a Gradle project, not an APK or AAB artifact, not Play Store
 distribution, and not Android app readiness.
@@ -11,7 +12,7 @@ private storage root resolution, backup-exclusion verification evidence,
 redacted status display, local permission explanations, and explicit
 user-triggered actions.
 
-The Android skeleton must not define independent protocol, storage, transport,
+This Android boundary must not define independent protocol, storage, transport,
 pairing, contact discovery, background delivery, push delivery, Google account,
 Play Services, Firebase Cloud Messaging, Android Keystore-only unlock, cloud
 backup, Play Store trust, or security-ready behavior.
