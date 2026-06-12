@@ -820,6 +820,10 @@ test("profile unlock and manual import refresh the room captured at action start
 
 test("manual message actions ignore stale inputs before updating current UI", () => {
   assert.match(mainJs, /function productionMessageInputStillCurrent/);
+  assert.match(functionBody(mainJs, "productionMessageInput"), /roomFingerprint: twoProfileSessionStatusFingerprint\(productionTwoProfileInput\(\)\)/);
+  assert.match(functionBody(mainJs, "productionMessageImportFingerprint"), /const roomFingerprint = String\(input\.roomFingerprint \?\? ""\)\.trim\(\)/);
+  assert.match(functionBody(mainJs, "productionMessageImportFingerprint"), /\$\{roomFingerprint\}\\n\$\{profile\}/);
+  assert.match(functionBody(mainJs, "productionMessageInputStillCurrent"), /current\.roomFingerprint === input\.roomFingerprint/);
   assert.match(functionBody(mainJs, "productionMessageInputStillCurrent"), /current\.envelopePayload === input\.envelopePayload/);
   assert.match(functionBody(mainJs, "productionMessageImportFingerprint"), /input\.passphrase/);
   assert.match(functionBody(mainJs, "productionMessageImportFingerprint"), /input\.envelopePayload/);
@@ -844,6 +848,10 @@ test("manual message actions ignore stale inputs before updating current UI", ()
 
   assert.match(functionBody(mainJs, "syncTwoProfileConversationAfterManualExport"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
   assert.match(functionBody(mainJs, "syncTwoProfileConversationAfterReceivedExport"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
+  assert.match(functionBody(mainJs, "selectedManualMessageActionBlocker"), /action === "show plaintext"/);
+  assert.match(functionBody(mainJs, "selectedManualMessageActionBlocker"), /Select \$\{entry\.receiver\} before showing plaintext/);
+  assert.match(functionBody(mainJs, "selectedManualMessageActionBlocker"), /!latestProductionMessageImportMatches\(input\)/);
+  assert.match(functionBody(mainJs, "selectedManualMessageActionBlocker"), /Import selected pending message #\$\{entry\.messageNumber\} in this room before showing plaintext/);
   assert.match(functionBody(actionStateJs, "productionActionAvailability"), /exportReceivedMessage: !busy && selectedMessageInputMatches && hasReceivedExportInput/);
   assert.match(functionBody(actionStateJs, "productionManualMessageCheckView"), /click Show plaintext before writing the reply/);
 });

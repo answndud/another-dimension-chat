@@ -3075,7 +3075,8 @@ function productionMessageImportFingerprint(input = productionMessageInput()) {
   const profile = String(input.profile ?? "").trim().toLowerCase();
   const messageNumber = Number.isInteger(input.messageNumber) ? input.messageNumber : "invalid";
   const envelopePayload = String(input.envelopePayload ?? "").trim();
-  return `${profile}\n${input.passphrase || ""}\n${messageNumber}\n${envelopePayload}`;
+  const roomFingerprint = String(input.roomFingerprint ?? "").trim();
+  return `${roomFingerprint}\n${profile}\n${input.passphrase || ""}\n${messageNumber}\n${envelopePayload}`;
 }
 
 function latestProductionMessageImportMatches(input = productionMessageInput()) {
@@ -10065,6 +10066,17 @@ function selectedManualMessageActionBlocker(action, input = productionMessageInp
       return `Select ${entry.receiver} before importing selected pending message #${entry.messageNumber}.`;
     }
   }
+  if (action === "show plaintext") {
+    if (!entry.statuses?.has("sent") || entry.statuses?.has("received")) {
+      return `Selected pending message #${entry.messageNumber} is not waiting for plaintext review.`;
+    }
+    if (profile !== entry.receiver) {
+      return `Select ${entry.receiver} before showing plaintext for selected pending message #${entry.messageNumber}.`;
+    }
+    if (!latestProductionMessageImportMatches(input)) {
+      return `Import selected pending message #${entry.messageNumber} in this room before showing plaintext.`;
+    }
+  }
   return "";
 }
 
@@ -13951,6 +13963,7 @@ function resetProductionPairingSafety(status = "Not checked yet") {
 function productionMessageInput() {
   return {
     ...productionProfileInput(),
+    roomFingerprint: twoProfileSessionStatusFingerprint(productionTwoProfileInput()),
     autoMessageNumber: productionMessageUsesAutoNumber(),
     messageNumber: Number.parseInt(fields.productionMessageNumber?.value ?? "1", 10),
     messageTtlSeconds: messageTtlInputValue(fields.productionMessageTtl),
@@ -13964,6 +13977,7 @@ function productionMessageInputStillCurrent(input) {
   return (
     current.profile === input.profile &&
     current.passphrase === input.passphrase &&
+    current.roomFingerprint === input.roomFingerprint &&
     current.autoMessageNumber === input.autoMessageNumber &&
     current.messageNumber === input.messageNumber &&
     current.messageTtlSeconds === input.messageTtlSeconds &&
