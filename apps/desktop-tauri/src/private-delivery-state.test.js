@@ -358,6 +358,17 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /desktop_completion_scope=desktop-local-private-flow/);
   assert.match(diagnostics, /desktop_completion_status=incomplete/);
   assert.match(diagnostics, /desktop_completion_blockers=safety#private-route#receive/);
+  assert.match(diagnostics, /desktop_acceptance_surface=desktop-local-private-flow/);
+  assert.match(diagnostics, /desktop_acceptance_status=incomplete/);
+  assert.match(diagnostics, /desktop_acceptance_blockers=safety#private-route#receive/);
+  assert.match(diagnostics, /desktop_acceptance_next_action=verify/);
+  assert.match(
+    diagnostics,
+    /desktop_acceptance_non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication/,
+  );
+  assert.match(diagnostics, /desktop_acceptance_external_delivery_claim=false/);
+  assert.match(diagnostics, /desktop_acceptance_production_claim=false/);
+  assert.match(diagnostics, /desktop_acceptance_sensitive_use_claim=false/);
   assert.match(diagnostics, /external_onion_delivery_verified=false/);
   assert.match(diagnostics, /production_messaging_ready=false/);
   assert.match(diagnostics, /security_ready_claimed=false/);
@@ -408,6 +419,7 @@ test("desktop-first completion reports local private flow readiness without secu
     scope: "desktop-local-private-flow",
     status: "ready-for-local-private-message-flow",
     blockers: [],
+    blockerSummary: "none",
     externalOnionDeliveryVerified: false,
     productionMessagingReady: false,
     securityReadyClaimed: false,
@@ -417,6 +429,7 @@ test("desktop-first completion reports local private flow readiness without secu
     scope: "desktop-local-private-flow",
     status: "incomplete",
     blockers: ["receive", "send-or-recover"],
+    blockerSummary: "receive#send-or-recover",
     externalOnionDeliveryVerified: false,
     productionMessagingReady: false,
     securityReadyClaimed: false,
@@ -426,6 +439,11 @@ test("desktop-first completion reports local private flow readiness without secu
   const diagnostics = publicBetaDiagnosticsReport(readyReport);
   assert.match(diagnostics, /desktop_completion_status=ready-for-local-private-message-flow/);
   assert.match(diagnostics, /desktop_completion_blockers=none/);
+  assert.match(diagnostics, /desktop_acceptance_status=ready-for-local-private-message-flow/);
+  assert.match(diagnostics, /desktop_acceptance_blockers=none/);
+  assert.match(diagnostics, /desktop_acceptance_external_delivery_claim=false/);
+  assert.match(diagnostics, /desktop_acceptance_production_claim=false/);
+  assert.match(diagnostics, /desktop_acceptance_sensitive_use_claim=false/);
   assert.match(diagnostics, /external_onion_delivery_verified=false/);
   assert.match(diagnostics, /production_messaging_ready=false/);
   assert.match(diagnostics, /security_ready_claimed=false/);
