@@ -2,6 +2,28 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RELEASE_DMG="another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg"
+EXPECTED_DMG_SHA="7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a"
+EXPECTED_RELEASE_FILES=(
+  "$RELEASE_DMG"
+  "$RELEASE_DMG.sha256"
+  "$RELEASE_DMG.provenance.json"
+  "INSTALL_UNSIGNED_MACOS.md"
+  "RELEASE_NOTES.md"
+  "GITHUB_RELEASE_BODY.md"
+  "UPDATE_INTEGRITY.md"
+  "SUPPLY_CHAIN_BASELINE.md"
+  "DEPENDENCY_INVENTORY.md"
+  "PUBLIC_THREAT_MODEL.md"
+  "PRIVACY_MODEL_COMPARISON.md"
+  "INDEPENDENT_REVIEW_PACKET.md"
+  "PUBLIC_INTAKE_POLICY.md"
+  "REPOSITORY_GOVERNANCE.md"
+  "COMPONENT_BOUNDARIES.md"
+  "DEPENDENCY_LOCKFILES.sha256"
+  "OPERATOR_FINAL_HANDOFF.md"
+  "MANIFEST.md"
+)
 
 run_step() {
   local name="$1"
@@ -19,6 +41,15 @@ require_text() {
   fi
 }
 
+require_same_file() {
+  local source="$1"
+  local copied="$2"
+  if ! cmp -s "$source" "$copied"; then
+    echo "FAIL stale existing release output differs from source: $copied" >&2
+    exit 1
+  fi
+}
+
 check_existing_release_output() {
   local release_dir="$ROOT_DIR/apps/desktop-tauri/public-release/unsigned-public-beta"
   if [ ! -d "$release_dir" ]; then
@@ -27,6 +58,16 @@ check_existing_release_output() {
   fi
 
   echo "existing_release_output=present"
+  local expected_files
+  local actual_files
+  expected_files="$(printf '%s\n' "${EXPECTED_RELEASE_FILES[@]}" | LC_ALL=C sort)"
+  actual_files="$(cd "$release_dir" && find . -maxdepth 1 -type f -print | sed 's#^\./##' | LC_ALL=C sort)"
+  if [ "$actual_files" != "$expected_files" ]; then
+    echo "FAIL existing release output file list differs from MANIFEST allowlist" >&2
+    printf 'expected:\n%s\nactual:\n%s\n' "$expected_files" "$actual_files" >&2
+    exit 1
+  fi
+
   require_text "$release_dir/MANIFEST.md" "Operator Upload Boundary"
   require_text "$release_dir/MANIFEST.md" "OPERATOR_FINAL_HANDOFF.md"
   require_text "$release_dir/MANIFEST.md" "Do not upload \`docs/\`, \`beta-artifacts/\`, the \`public-release/\` folder itself"
@@ -37,6 +78,49 @@ check_existing_release_output() {
   require_text "$release_dir/OPERATOR_FINAL_HANDOFF.md" "Download the DMG and \`.sha256\` from the published GitHub Release"
   require_text "$release_dir/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json" "\"upload_allowlist_source\": \"MANIFEST.md\""
   require_text "$release_dir/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json" "\"upload_forbidden\": \"docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data\""
+  require_text "$release_dir/$RELEASE_DMG.sha256" "$EXPECTED_DMG_SHA"
+
+  local actual_dmg_sha
+  actual_dmg_sha="$(shasum -a 256 "$release_dir/$RELEASE_DMG" | awk '{print $1}')"
+  if [ "$actual_dmg_sha" != "$EXPECTED_DMG_SHA" ]; then
+    echo "FAIL existing release output DMG SHA-256 mismatch" >&2
+    echo "expected: $EXPECTED_DMG_SHA" >&2
+    echo "actual:   $actual_dmg_sha" >&2
+    exit 1
+  fi
+
+  require_same_file "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" "$release_dir/INSTALL_UNSIGNED_MACOS.md"
+  require_same_file "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "$release_dir/RELEASE_NOTES.md"
+  require_same_file "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "$release_dir/GITHUB_RELEASE_BODY.md"
+  require_same_file "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "$release_dir/UPDATE_INTEGRITY.md"
+  require_same_file "$ROOT_DIR/reference/SUPPLY_CHAIN_BASELINE.md" "$release_dir/SUPPLY_CHAIN_BASELINE.md"
+  require_same_file "$ROOT_DIR/reference/DEPENDENCY_INVENTORY.md" "$release_dir/DEPENDENCY_INVENTORY.md"
+  require_same_file "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "$release_dir/PUBLIC_THREAT_MODEL.md"
+  require_same_file "$ROOT_DIR/reference/PRIVACY_MODEL_COMPARISON.md" "$release_dir/PRIVACY_MODEL_COMPARISON.md"
+  require_same_file "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "$release_dir/INDEPENDENT_REVIEW_PACKET.md"
+  require_same_file "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "$release_dir/PUBLIC_INTAKE_POLICY.md"
+  require_same_file "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md" "$release_dir/REPOSITORY_GOVERNANCE.md"
+  require_same_file "$ROOT_DIR/reference/COMPONENT_BOUNDARIES.md" "$release_dir/COMPONENT_BOUNDARIES.md"
+
+  local lockfile_hashes
+  lockfile_hashes="$(mktemp)"
+  (
+    cd "$ROOT_DIR"
+    shasum -a 256 \
+      Cargo.lock \
+      apps/desktop-tauri/src-tauri/Cargo.lock \
+      apps/desktop-tauri/package-lock.json
+  ) > "$lockfile_hashes"
+  if ! cmp -s "$lockfile_hashes" "$release_dir/DEPENDENCY_LOCKFILES.sha256"; then
+    rm -f "$lockfile_hashes"
+    echo "FAIL existing release output dependency lockfile evidence is stale" >&2
+    exit 1
+  fi
+  rm -f "$lockfile_hashes"
+
+  echo "existing_release_output_file_list=manifest-allowlist-only"
+  echo "existing_release_output_reference_copies=current"
+  echo "existing_release_output_lockfiles=current"
   echo "existing_release_output_status=current"
 }
 
@@ -55,6 +139,7 @@ run_step public-claim-acceptance env PUBLIC_RELEASE_PREFLIGHT_CHILD=1 "$ROOT_DIR
 run_step existing-release-output check_existing_release_output
 
 echo "status=public-release-readiness-source-preflight-ready"
+echo "source_acceptance=desktop-release-source-accepted-for-operator-staging"
 echo "decision=proceed-to-packaging-only-with-frozen-ignored-dmg"
 echo "fallback=return-to-desktop-hardening-if-source-preflight-fails"
 echo "scope=source-only-no-dmg-required-no-generated-artifacts"
@@ -65,6 +150,9 @@ echo "dmg_required=false"
 echo "network_or_onion_work=false"
 echo "external_delivery_claim=false"
 echo "security_ready_claim=false"
+echo "final_security_ready_acceptance=false"
+echo "operator_final_handoff=OPERATOR_FINAL_HANDOFF.md"
+echo "operator_after_upload_verify=same-release-sha256-before-opening"
 echo "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
 echo "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
 echo "next=if a frozen ignored DMG exists, run scripts/prepare_unsigned_public_beta_release.sh and upload only files listed in MANIFEST.md"
