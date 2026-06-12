@@ -1228,6 +1228,8 @@ test("rebuild delivery retry and receive actions stay room-scoped", () => {
   const recoveryFocusBody = functionBody(mainJs, "focusManualRebuildRecoveryAction");
   assert.match(recoveryFocusBody, /action === "start-receiving"[\s\S]*startProductionTwoProfileOnionReceive/);
   assert.match(recoveryFocusBody, /action === "wait-receive-stop"[\s\S]*savedRoomList/);
+  assert.match(recoveryFocusBody, /action === "verify-safety"[\s\S]*focusSafetyConfirmation\(\)/);
+  assert.ok(recoveryFocusBody.indexOf('action === "verify-safety"') < recoveryFocusBody.indexOf("fields.runProductionTwoProfileMessageRoundtrip"));
   assert.doesNotMatch(recoveryFocusBody, /action === "start-receiving" \|\| action === "wait-receive-stop"/);
 
   const composerBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
@@ -1248,6 +1250,7 @@ test("manual rebuild recovery resumes from saved room metadata", () => {
   assert.match(mainJs, /function rememberManualRebuildRecoveryForInput/);
   assert.match(mainJs, /function savedInviteRoomManualRebuildRecoveryCandidate/);
   assert.match(mainJs, /function showManualRebuildRecoveryAfterSavedRoomOpen/);
+  assert.match(mainJs, /function showSavedInviteRoomPeerCodePrompt/);
   assert.match(mainJs, /function clearSavedInviteRoomManualRebuildMetadata/);
   assert.match(mainJs, /function savedInviteRoomManualRebuildNeedsRecovery/);
   assert.match(mainJs, /function savedInviteRoomWithoutResolvedManualRebuild/);
@@ -1295,7 +1298,19 @@ test("manual rebuild recovery resumes from saved room metadata", () => {
 
   const openRecoveryBody = functionBody(mainJs, "showSavedInviteRoomRecoveryAfterOpen");
   assert.match(openRecoveryBody, /showManualRebuildRecoveryAfterSavedRoomOpen\(current, input\)[\s\S]*return true/);
+  assert.match(openRecoveryBody, /current\.action === "paste-peer-code"[\s\S]*showSavedInviteRoomPeerCodePrompt\(input\)/);
   assert.ok(openRecoveryBody.indexOf("showManualRebuildRecoveryAfterSavedRoomOpen") < openRecoveryBody.indexOf("!current.action"));
+  assert.ok(openRecoveryBody.indexOf('current.action === "paste-peer-code"') < openRecoveryBody.indexOf("externalPeerSendReadiness"));
+
+  const peerCodePromptBody = functionBody(mainJs, "showSavedInviteRoomPeerCodePrompt");
+  assert.match(peerCodePromptBody, /twoProfileTranscriptInputStillCurrent\(input\)/);
+  assert.match(peerCodePromptBody, /setProductionTwoProfileState\("Peer delivery code needed"\)/);
+  assert.match(peerCodePromptBody, /privateRouteWaitingPeerCode/);
+  assert.match(peerCodePromptBody, /roomReadinessNextPastePeerCode/);
+  assert.match(peerCodePromptBody, /setChatDeliveryNoticeByKey\("privateDeliveryRouteNeeded", "warning", input\)/);
+  assert.match(peerCodePromptBody, /setProductionFollowupActions\(true, t\("roomReadinessNextPastePeerCode"\)\)/);
+  assert.match(peerCodePromptBody, /focusPrivateRouteNextAction\(input\)/);
+  assert.doesNotMatch(peerCodePromptBody, /manual_rebuild_flow=true/);
 });
 
 test("manual session readiness is scoped to the active profile passphrase", () => {
