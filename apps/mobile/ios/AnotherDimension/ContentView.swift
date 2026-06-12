@@ -4,6 +4,7 @@ struct ContentView: View {
     let sharedCore: SharedCoreMobileApi
     @State private var passphrase = ""
     @State private var statusText: String
+    @State private var redactedDiagnosticsCopyBuffer = ""
 
     init(sharedCore: SharedCoreMobileApi) {
         self.sharedCore = sharedCore
@@ -38,6 +39,9 @@ struct ContentView: View {
             Button("Diagnostics") {
                 statusText = ContentView.renderStatus(sharedCore.redactedSupportDiagnostics())
             }
+            Button("Copy Diagnostics") {
+                statusText = copyRedactedDiagnosticsPayload(sharedCore.redactedSupportDiagnostics())
+            }
             Text(statusText)
                 .font(.system(.body, design: .monospaced))
         }
@@ -69,5 +73,25 @@ struct ContentView: View {
 
     private static func renderPublicNonClaims(_ status: SharedCoreStatusDto) -> String {
         "public_non_claims=\(status.publicNonClaims.joined(separator: "|"))"
+    }
+
+    private func copyRedactedDiagnosticsPayload(_ status: SharedCoreStatusDto) -> String {
+        let payload = ContentView.renderRedactedDiagnosticsPayload(status)
+        redactedDiagnosticsCopyBuffer = payload
+        return [
+            "status=blocked",
+            "failure_class=policy_blocked",
+            "recovery_next_action=redacted diagnostics copied by explicit user action",
+            "diagnostics_copy_boundary=user_initiated_local_clipboard_only",
+            "copied_payload=\(payload.replacingOccurrences(of: "\n", with: "|"))",
+        ].joined(separator: "\n")
+    }
+
+    private static func renderRedactedDiagnosticsPayload(_ status: SharedCoreStatusDto) -> String {
+        [
+            "diagnostics_copy_boundary=user_initiated_local_clipboard_only",
+            "diagnostics_payload=redacted_status_support_only",
+            renderStatus(status),
+        ].joined(separator: "\n")
     }
 }
