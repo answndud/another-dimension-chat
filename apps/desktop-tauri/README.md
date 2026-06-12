@@ -253,6 +253,20 @@ no-auto-update verification. Windows signing, Microsoft Store approval, and
 SmartScreen reputation are distribution concerns, not a security boundary, and
 sensitive communication prohibited remains in force.
 
+Windows local runtime smoke boundary is source-only until a real Windows machine
+runs the local app. The source command is:
+
+```bash
+npm --prefix apps/desktop-tauri run test:windows-boundary
+```
+
+It checks that the required Windows smoke still covers WebView2 runtime smoke,
+app-data path review, path separator review, local deletion behavior, redacted
+diagnostics behavior, and explicit user action review. Passing this source
+command is not a Windows local runtime smoke passed result, not a public Windows
+artifact, not a Windows installer, not a public artifact upload, not
+production-ready, and sensitive communication prohibited.
+
 Why full Tauri build is not in CI yet:
 
 - The root Rust workspace verification should remain lightweight.

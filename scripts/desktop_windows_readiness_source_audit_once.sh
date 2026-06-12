@@ -105,6 +105,7 @@ require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.test.js" "
 require_text "$ROOT_DIR/apps/desktop-tauri/src/ui-smoke.test.js" "windows_public_artifact_ready=false"
 
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_windows_readiness_source_audit_once.sh"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_windows_local_runtime_smoke_boundary_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_readiness=local-build-candidate-only"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_ready=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_installer_ready=false"

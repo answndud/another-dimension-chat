@@ -151,6 +151,16 @@ review, and explicit user action review. Signing, Microsoft Store approval, and
 SmartScreen reputation are distribution concerns, not a security boundary, and
 sensitive communication prohibited remains in force.
 
+Windows local runtime smoke boundary is source-only until a real Windows machine
+runs the local app. The source command is
+`npm --prefix apps/desktop-tauri run test:windows-boundary`; it checks that the
+required Windows smoke still covers WebView2 runtime smoke, app-data path review,
+path separator review, local deletion behavior, redacted diagnostics behavior,
+and explicit user action review. Passing this source command is not a Windows
+local runtime smoke passed result, not a public Windows artifact, not a Windows
+installer, not a public artifact upload, not production-ready, and sensitive
+communication prohibited.
+
 External onion delivery is outside the v0.1 public product claim for this public
 beta. Do not treat same-machine dual-profile rehearsal, local smoke tests, or
 operator-prepared peer packets as proof of real external onion delivery. No peer
