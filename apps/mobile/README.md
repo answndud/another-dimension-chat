@@ -1,11 +1,12 @@
-# Mobile Wrapper Skeleton Boundary
+# Mobile Wrapper Boundary
 
-This directory is a documentation-only boundary for future Android and iOS
-wrapper candidates.
+This directory contains the mobile wrapper boundary. Android now has a minimal
+source scaffold; iOS and FFI remain source-boundary documentation until their
+explicit implementation phases.
 
-It is not a buildable mobile app, not a mobile public beta artifact, and not an
-Android or iOS readiness claim. Mobile clients are not part of the current
-unsigned experimental public beta.
+It is not a mobile public beta artifact and not an Android or iOS readiness
+claim. Mobile clients are not part of the current unsigned experimental public
+beta.
 
 The mobile direction remains:
 
@@ -67,6 +68,22 @@ Mobile implementation remains blocked until all criteria below are recorded:
 This scope switch record is not approval to implement mobile. It records the
 conditions that must be true before a later explicit implementation phase can
 create mobile source.
+
+## Android Shell Scaffold Kickoff Boundary
+
+Phase HP records explicit authorization for an Android source scaffold only. It
+does not authorize Android release packaging, Play Store work, external delivery
+evidence, push notification delivery, cloud backup, central account or contact
+discovery, iOS source scaffold, generated FFI bindings, or security-ready claims.
+
+The Android scaffold may include Gradle project files, Kotlin shell files,
+AndroidManifest.xml, backup exclusion XML, and a placeholder shared-core boundary
+adapter that returns redacted blocked status until a later binding phase.
+
+The Android scaffold must keep wrapper-specific protocol, storage, transport,
+pairing, account, discovery, delivery, backup, and diagnostics semantics out of
+the wrapper. All command surfaces must mirror
+`production_mobile_shared_core_api_freeze_boundary_summary`.
 
 ## Status Screen Copy Boundary
 
