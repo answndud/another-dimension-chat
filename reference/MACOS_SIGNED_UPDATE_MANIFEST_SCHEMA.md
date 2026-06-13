@@ -85,4 +85,4 @@ release page, owner approval, external review, and stable gate.
 - production_ready_claim_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false
-- next_required_phase=C100-2 Pairwise Identity And Safety Verification Closure
+- next_required_phase=C100-3 Key Management, Rollback Prevention, And Storage Lifecycle

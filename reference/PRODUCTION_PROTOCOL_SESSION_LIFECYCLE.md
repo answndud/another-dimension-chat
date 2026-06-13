@@ -159,4 +159,4 @@ These questions remain unresolved and must stay in the external review packet:
 - runtime_messaging_ready=false
 - production_e2ee_ready=false
 - security_ready_claimed=false
-- next_required_phase=Phase C100-2 - Pairwise Identity And Safety Verification Closure
+- next_required_phase=Phase C100-3 - Key Management, Rollback Prevention, And Storage Lifecycle

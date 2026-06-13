@@ -1,7 +1,8 @@
 # Pairwise Identity And Safety Product Closure
 
 Status: C100-2 source gate closed for product review input, not production
-identity audit ready. This record connects the existing pairwise identity,
+identity audit ready. C100-2 is closed for active-queue progress by explicit
+owner policy waiver only. This record connects the existing pairwise identity,
 invite, safety transcript, duplicate-contact, and re-pairing boundaries to a
 focused verifier without upgrading public claims.
 
@@ -23,6 +24,12 @@ This closure does not claim audited identity management, safe sensitive-use
 identity handling, global identity discovery, directory search, or Briar/Cwtch
 equivalence. Public wording remains not production-ready, not audited, and
 sensitive communication prohibited.
+
+The selected workaround is an explicit owner policy waiver for C100-2 only:
+missing external identity audit/review evidence no longer keeps C100-2 in the
+active queue, but production identity audit, security-ready, audited,
+global-identity, sensitive-use, and Briar/Cwtch-equivalent claims remain
+blocked until real evidence or a later explicit claim-policy decision exists.
 
 ## Evidence Anchors
 
@@ -46,6 +53,11 @@ sensitive communication prohibited.
 ## Current Flags
 
 - pairwise_identity_safety_product_closure_reviewed=true
+- c100_2_identity_blocker_closed=true
+- pairwise_identity_policy_waiver_authorized=true
+- pairwise_identity_waiver_scope=active-queue-unblock-only
+- pairwise_identity_external_audit_required_for_claims=true
+- pairwise_identity_field_evidence_required_for_claims=true
 - local_identity_persistence_source_present=true
 - signed_pairing_payload_source_present=true
 - canonical_safety_transcript_source_present=true
@@ -65,4 +77,4 @@ sensitive communication prohibited.
 - production_identity_audit_ready=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=C100-3 key management rollback prevention storage lifecycle
+- next_required_phase=Phase C100-3 - Key Management, Rollback Prevention, And Storage Lifecycle

@@ -86,6 +86,10 @@ These cannot be made true by editing source files alone:
 - macos_universal_intel_scope_still_hold=true
 - onboarding_recovery_source_ready=true
 - pairwise_identity_source_ready=true
+- c100_2_identity_blocker_closed=true
+- pairwise_identity_policy_waiver_authorized=true
+- pairwise_identity_external_audit_required_for_claims=true
+- pairwise_identity_field_evidence_required_for_claims=true
 - production_e2ee_source_gate_reviewed=true
 - c100_1_e2ee_blocker_closed=true
 - production_e2ee_policy_waiver_authorized=true

@@ -166,5 +166,5 @@ release_upload_authorized=false
 dmg_rebuild_authorized=false
 production_distribution_ready=false
 production_ready_claim_allowed=false
-next_required_phase=C100-2-Pairwise-Identity-And-Safety-Verification-Closure
+next_required_phase=C100-3-Key-Management-Rollback-Prevention-And-Storage-Lifecycle
 STATUS
