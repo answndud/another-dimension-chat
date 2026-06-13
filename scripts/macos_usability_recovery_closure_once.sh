@@ -32,9 +32,12 @@ PACKET="reference/INDEPENDENT_REVIEW_PACKET.md"
 STABLE_GATE="reference/STABLE_MACOS_V1_RELEASE_GATE.md"
 USABILITY_PACKET="reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md"
 USABILITY_VALIDATOR="scripts/validate_representative_usability_reports.mjs"
+USABILITY_MATRIX="reference/MACOS_FIRST_RUN_RECOVERY_USABILITY_MATRIX.md"
+USABILITY_MATRIX_GATE="scripts/macos_first_run_recovery_usability_matrix_once.sh"
 
 for file in "$DOC" "$UX_DOC" "$PRIVATE_STATE" "$MAIN_JS" "$UI_SMOKE" \
-  "$PACKET" "$STABLE_GATE" "$USABILITY_PACKET" "$USABILITY_VALIDATOR" "README.md" "SECURITY.md"; do
+  "$PACKET" "$STABLE_GATE" "$USABILITY_PACKET" "$USABILITY_VALIDATOR" \
+  "$USABILITY_MATRIX" "$USABILITY_MATRIX_GATE" "README.md" "SECURITY.md"; do
   [ -f "$file" ] || fail "missing RB-4 macOS usability/recovery input: $file"
 done
 
@@ -50,6 +53,11 @@ must_contain "$DOC" "friend_family_next_actions_visible=true"
 must_contain "$DOC" "recovery_guide_visible=true"
 must_contain "$DOC" "recovery_vocabulary_aligned=true"
 must_contain "$DOC" "redacted_diagnostics_copy_visible=true"
+must_contain "$DOC" "macos_first_run_recovery_usability_matrix_available=true"
+must_contain "$DOC" "redacted_support_report_copy_visible=true"
+must_contain "$DOC" "support_report_raw_logs_allowed=false"
+must_contain "$DOC" "support_report_private_payload_allowed=false"
+must_contain "$DOC" "support_report_key_material_allowed=false"
 must_contain "$DOC" "destructive_local_lifecycle_confirmations_visible=true"
 must_contain "$DOC" "advanced_transport_explicit_fail_closed=true"
 must_contain "$DOC" "representative_usability_report_packet_available=true"
@@ -87,6 +95,9 @@ must_contain "$PACKET" "reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md"
 must_contain "$USABILITY_PACKET" "representative_usability_report_packet_available=true"
 must_contain "$USABILITY_PACKET" "consent_non_sensitive_use_notice_ready=true"
 must_contain "$USABILITY_VALIDATOR" "status=representative-usability-evidence-candidate-requires-review"
+must_contain "$USABILITY_MATRIX" "macos_first_run_recovery_usability_matrix_available=true"
+must_contain "$USABILITY_MATRIX" "redacted_support_report_copy_visible=true"
+must_contain "$USABILITY_MATRIX_GATE" "status=macos-first-run-recovery-usability-matrix-ready"
 must_contain "$STABLE_GATE" "supported_owner_observed_usability_rehearsal_ready=true"
 must_contain "$STABLE_GATE" "usability_study_completed=false"
 must_contain "README.md" "reference/MACOS_USABILITY_RECOVERY_CLOSURE.md"
@@ -106,6 +117,7 @@ scripts/macos_production_ux_onboarding_once.sh >/dev/null
 scripts/desktop_manual_flow_usability_once.sh >/dev/null
 scripts/desktop_error_recovery_copy_once.sh >/dev/null
 scripts/desktop_lifecycle_safety_once.sh >/dev/null
+scripts/macos_first_run_recovery_usability_matrix_once.sh >/dev/null
 
 cat <<'STATUS'
 status=macos-usability-recovery-closure-ready
@@ -120,6 +132,11 @@ friend_family_next_actions_visible=true
 recovery_guide_visible=true
 recovery_vocabulary_aligned=true
 redacted_diagnostics_copy_visible=true
+macos_first_run_recovery_usability_matrix_available=true
+redacted_support_report_copy_visible=true
+support_report_raw_logs_allowed=false
+support_report_private_payload_allowed=false
+support_report_key_material_allowed=false
 destructive_local_lifecycle_confirmations_visible=true
 advanced_transport_explicit_fail_closed=true
 representative_usability_report_packet_available=true

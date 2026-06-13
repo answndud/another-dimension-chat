@@ -61,6 +61,11 @@ wording changes.
 - recovery_guide_visible=true
 - recovery_vocabulary_aligned=true
 - redacted_diagnostics_copy_visible=true
+- macos_first_run_recovery_usability_matrix_available=true
+- redacted_support_report_copy_visible=true
+- support_report_raw_logs_allowed=false
+- support_report_private_payload_allowed=false
+- support_report_key_material_allowed=false
 - destructive_local_lifecycle_confirmations_visible=true
 - advanced_transport_explicit_fail_closed=true
 - representative_usability_report_packet_available=true
