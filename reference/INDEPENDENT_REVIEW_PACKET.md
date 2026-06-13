@@ -142,6 +142,16 @@ Review the unsigned experimental public beta boundary:
   no-audit/no-signoff flags.
 - `reference/AUDIT_FINDING_TRACKER.md`: public-safe finding tracker template
   with current zero-finding/no-audit status and required non-claims.
+- `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md`: field evidence ladder,
+  required macOS flow coverage, report data boundary, reliability decision
+  rule, and current no-external-success/no-reliability flags.
+- `reference/REDACTED_FIELD_REPORT_PACKET.md`: public-safe field report
+  template, forbidden private fields, current empty evidence ledger, and
+  required non-claims.
+- `reference/PUBLIC_SUPPORT_TRIAGE.md`: public-safe maintainer routing matrix
+  for redacted support reports and private security-contact routing.
+- `reference/TRANSPORT_EXPERIMENT_RUNBOOK.md`: public-safe manual network
+  experiment boundary and coarse transport status vocabulary.
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and
   no-reviewer-signoff/no-public-user-safety-signoff flags.

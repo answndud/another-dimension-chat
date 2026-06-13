@@ -98,4 +98,9 @@ not production readiness by themselves.
 - audit_completed=false
 - reviewer_signoff_claimed=false
 - public_user_safety_signoff_claimed=false
-- next_required_phase=OPS-8 field evidence and reliability program
+- ops_8_field_evidence_reliability_program_reviewed=true
+- redacted_field_report_packet_available=true
+- macos_two_machine_real_user_flow_repeated=false
+- repeated_redacted_field_reports_available=false
+- production_field_evidence_ready=false
+- next_required_phase=OPS-9 operational support, incident, and vulnerability process
