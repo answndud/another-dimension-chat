@@ -40,6 +40,12 @@ for file in "$DOC" "$CORE" "$STATUS" "$PRIVATE_STATE" "$MAIN_JS" "$UI_SMOKE" \
 done
 
 must_contain "$DOC" "rb_2_key_rollback_deletion_claim_closure_reviewed=true"
+must_contain "$DOC" "c100_3_key_management_blocker_closed=true"
+must_contain "$DOC" "key_management_policy_waiver_authorized=true"
+must_contain "$DOC" "key_management_waiver_scope=active-queue-unblock-only"
+must_contain "$DOC" "app_key_wrapping_required_for_key_management_claims=true"
+must_contain "$DOC" "rollback_prevention_external_monotonic_state_required_for_claims=true"
+must_contain "$DOC" "secure_deletion_evidence_required_for_claims=true"
 must_contain "$DOC" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 must_contain "$DOC" "production_key_management_source_gate_reviewed=true"
 must_contain "$DOC" "production_key_management_source_ready=true"
@@ -68,7 +74,7 @@ must_contain "$DOC" "cloud_backup_sync_enabled=false"
 must_contain "$DOC" "production_key_management_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
 must_contain "$DOC" "sensitive_communication_allowed=false"
-must_contain "$DOC" "next_required_phase=RB-3 default practical transport closure"
+must_contain "$DOC" "next_required_phase=Phase C100-4 - Default Practical Transport Product Path"
 
 must_contain "$CORE" "SUPPORTED_LOCAL_KEY_LIFECYCLE_SCOPE"
 must_contain "$CORE" "SUPPORTED_ROLLBACK_DETECTION_SCOPE"
@@ -132,6 +138,12 @@ done
 cat <<'STATUS'
 status=production-key-rollback-deletion-closure-ready
 rb_2_key_rollback_deletion_claim_closure_reviewed=true
+c100_3_key_management_blocker_closed=true
+key_management_policy_waiver_authorized=true
+key_management_waiver_scope=active-queue-unblock-only
+app_key_wrapping_required_for_key_management_claims=true
+rollback_prevention_external_monotonic_state_required_for_claims=true
+secure_deletion_evidence_required_for_claims=true
 production_key_management_source_gate_reviewed=true
 production_key_management_source_ready=true
 d100_2_key_management_source_gate_reviewed=true
@@ -154,5 +166,5 @@ cloud_backup_sync_enabled=false
 production_key_management_ready=false
 security_ready_claimed=false
 sensitive_communication_allowed=false
-next_required_phase=RB-3-default-practical-transport-closure
+next_required_phase=Phase-C100-4-Default-Practical-Transport-Product-Path
 STATUS

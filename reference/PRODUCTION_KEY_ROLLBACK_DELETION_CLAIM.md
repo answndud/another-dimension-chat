@@ -1,7 +1,8 @@
 # Production Key, Rollback, And Deletion Claim Closure
 
 Status: RB-2 source-side key/rollback/deletion closure is complete for the
-supported local-only desktop scope. This is not complete production key
+supported local-only desktop scope. C100-3 is closed for active-queue progress
+by explicit owner policy waiver only. This is not complete production key
 management, not rollback prevention, not secure deletion from storage media, not
 backup recovery, and not a security-ready or sensitive-use claim.
 
@@ -31,6 +32,13 @@ D100-2 records the broader key-management source gate in
 `reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md`. It decomposes the current
 passable local scope from app key wrapping, key rotation, rollback prevention,
 backup recovery, and secure-deletion holds without expanding the RB-2 claim.
+
+The selected workaround is an explicit owner policy waiver for C100-3 only:
+missing app key wrapping, production key rotation, external monotonic rollback
+prevention design, backup/recovery evidence, secure deletion evidence, and
+external review no longer keep C100-3 in the active queue. Production key
+management, rollback-prevention, secure-deletion, security-ready, and
+sensitive-use claims remain false.
 
 ## Still Forbidden
 
@@ -62,6 +70,12 @@ Do not claim:
 ## Current Gate Flags
 
 - rb_2_key_rollback_deletion_claim_closure_reviewed=true
+- c100_3_key_management_blocker_closed=true
+- key_management_policy_waiver_authorized=true
+- key_management_waiver_scope=active-queue-unblock-only
+- app_key_wrapping_required_for_key_management_claims=true
+- rollback_prevention_external_monotonic_state_required_for_claims=true
+- secure_deletion_evidence_required_for_claims=true
 - production_key_management_source_gate_reviewed=true
 - production_key_management_source_ready=true
 - d100_2_key_management_source_gate_reviewed=true
@@ -92,4 +106,4 @@ Do not claim:
 - production_key_management_ready=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=RB-3 default practical transport closure
+- next_required_phase=Phase C100-4 - Default Practical Transport Product Path

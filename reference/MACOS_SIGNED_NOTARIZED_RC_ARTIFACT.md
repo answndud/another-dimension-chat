@@ -70,4 +70,4 @@ checksum, and optional generated provenance while holding without credentials.
 - production_ready_claim_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false
-- next_required_phase=Phase C100-3 - Key Management, Rollback Prevention, And Storage Lifecycle
+- next_required_phase=Phase C100-4 - Default Practical Transport Product Path

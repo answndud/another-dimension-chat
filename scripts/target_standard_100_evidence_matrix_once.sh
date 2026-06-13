@@ -203,6 +203,11 @@ for flag in \
   "pairwise_identity_policy_waiver_authorized=true" \
   "pairwise_identity_external_audit_required_for_claims=true" \
   "pairwise_identity_field_evidence_required_for_claims=true" \
+  "c100_3_key_management_blocker_closed=true" \
+  "key_management_policy_waiver_authorized=true" \
+  "app_key_wrapping_required_for_key_management_claims=true" \
+  "rollback_prevention_external_monotonic_state_required_for_claims=true" \
+  "secure_deletion_evidence_required_for_claims=true" \
   "macos_release_credential_evidence_schema_available=true" \
   "macos_release_credential_evidence_validator_available=true" \
   "macos_release_credential_evidence_collector_available=true" \
@@ -405,5 +410,5 @@ production_ready_claim_allowed=false
 audited_claim_allowed=false
 sensitive_communication_allowed=false
 reliable_external_delivery_claim_allowed=false
-next_required_phase=Phase-C100-3-Key-Management-Rollback-Prevention-And-Storage-Lifecycle
+next_required_phase=Phase-C100-4-Default-Practical-Transport-Product-Path
 STATUS

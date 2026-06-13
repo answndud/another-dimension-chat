@@ -49,6 +49,12 @@ done
 
 for flag in \
   "production_key_management_source_gate_reviewed=true" \
+  "c100_3_key_management_blocker_closed=true" \
+  "key_management_policy_waiver_authorized=true" \
+  "key_management_waiver_scope=active-queue-unblock-only" \
+  "app_key_wrapping_required_for_key_management_claims=true" \
+  "rollback_prevention_external_monotonic_state_required_for_claims=true" \
+  "secure_deletion_evidence_required_for_claims=true" \
   "production_key_management_source_ready=true" \
   "d100_2_key_management_source_gate_reviewed=true" \
   "key_management_source_scope=passphrase-first-sqlcipher-local-profile-store-marker-rollback-local-delete-only" \
@@ -80,19 +86,31 @@ for flag in \
 done
 
 must_contain "$KEY_DOC" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
+must_contain "$KEY_DOC" "c100_3_key_management_blocker_closed=true"
+must_contain "$KEY_DOC" "key_management_policy_waiver_authorized=true"
+must_contain "$KEY_DOC" "rollback_prevention_external_monotonic_state_required_for_claims=true"
+must_contain "$KEY_DOC" "secure_deletion_evidence_required_for_claims=true"
 must_contain "$KEY_DOC" "production_key_management_source_gate_reviewed=true"
 must_contain "$KEY_DOC" "production_key_management_source_ready=true"
 must_contain "$KEY_DOC" "sqlcipher_passphrase_rekey_source_ready=true"
 must_contain "$KEY_DOC" "tauri_profile_passphrase_rekey_command_ready=true"
 must_contain "$RB2_DOC" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
+must_contain "$RB2_DOC" "c100_3_key_management_blocker_closed=true"
+must_contain "$RB2_DOC" "key_management_policy_waiver_authorized=true"
 must_contain "$RB2_DOC" "d100_2_key_management_source_gate_reviewed=true"
 must_contain "$RB2_DOC" "sqlcipher_passphrase_rekey_source_ready=true"
 must_contain "$RB2_DOC" "tauri_profile_passphrase_rekey_command_ready=true"
 must_contain "$MATRIX" "production_key_management_source_ready=true"
+must_contain "$MATRIX" "c100_3_key_management_blocker_closed=true"
+must_contain "$MATRIX" "key_management_policy_waiver_authorized=true"
+must_contain "$MATRIX" "rollback_prevention_external_monotonic_state_required_for_claims=true"
+must_contain "$MATRIX" "secure_deletion_evidence_required_for_claims=true"
 must_contain "$MATRIX" "sqlcipher_passphrase_rekey_source_ready=true"
 must_contain "$MATRIX" "tauri_profile_passphrase_rekey_command_ready=true"
 must_contain "$MATRIX" "production_key_management_ready=false"
 must_contain "$GAP_REGISTER" "production_key_management_source_ready=true"
+must_contain "$GAP_REGISTER" "c100_3_key_management_blocker_closed=true"
+must_contain "$GAP_REGISTER" "key_management_policy_waiver_authorized=true"
 must_contain "$GAP_REGISTER" "sqlcipher_passphrase_rekey_source_ready=true"
 must_contain "$GAP_REGISTER" "tauri_profile_passphrase_rekey_command_ready=true"
 must_contain "$GAP_REGISTER" "production_key_management_ready=false"
@@ -151,6 +169,12 @@ scripts/production_key_rollback_deletion_closure_once.sh >/dev/null
 cat <<'STATUS'
 status=production-key-management-source-gate-ready
 production_key_management_source_gate_reviewed=true
+c100_3_key_management_blocker_closed=true
+key_management_policy_waiver_authorized=true
+key_management_waiver_scope=active-queue-unblock-only
+app_key_wrapping_required_for_key_management_claims=true
+rollback_prevention_external_monotonic_state_required_for_claims=true
+secure_deletion_evidence_required_for_claims=true
 production_key_management_source_ready=true
 d100_2_key_management_source_gate_reviewed=true
 key_management_source_scope=passphrase-first-sqlcipher-local-profile-store-marker-rollback-local-delete-only
@@ -178,5 +202,5 @@ cloud_backup_sync_enabled=false
 production_key_management_ready=false
 security_ready_claimed=false
 sensitive_communication_allowed=false
-next_required_phase=D100-3-macos-signed-notarized-artifact-execution-path
+next_required_phase=Phase-C100-4-Default-Practical-Transport-Product-Path
 STATUS

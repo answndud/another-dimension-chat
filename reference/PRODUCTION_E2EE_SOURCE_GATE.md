@@ -100,4 +100,4 @@ These remain false or hold until separate evidence exists:
 - external_review_completed=false
 - audit_completed=false
 - security_ready_claimed=false
-- next_required_phase=Phase C100-3 - Key Management, Rollback Prevention, And Storage Lifecycle
+- next_required_phase=Phase C100-4 - Default Practical Transport Product Path
