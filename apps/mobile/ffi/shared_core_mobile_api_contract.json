@@ -152,5 +152,79 @@
       "push_notification_delivery",
       "release_packaging"
     ]
+  },
+  "ffi_error_mapping_table_finalized": true,
+  "ffi_error_mapping_table": [
+    {
+      "failure_class": "locked_profile",
+      "status": "blocked",
+      "ffi_result_kind": "blocked",
+      "kotlin_result_type": "SharedCoreCommandResult",
+      "swift_result_type": "SharedCoreCommandResult",
+      "recovery_next_action": "enter passphrase"
+    },
+    {
+      "failure_class": "malformed_payload",
+      "status": "blocked",
+      "ffi_result_kind": "rejected_input",
+      "kotlin_result_type": "SharedCoreCommandResult",
+      "swift_result_type": "SharedCoreCommandResult",
+      "recovery_next_action": "show redacted parse failure"
+    },
+    {
+      "failure_class": "replay_rejected",
+      "status": "blocked",
+      "ffi_result_kind": "rejected_state",
+      "kotlin_result_type": "SharedCoreCommandResult",
+      "swift_result_type": "SharedCoreCommandResult",
+      "recovery_next_action": "show redacted replay rejection"
+    },
+    {
+      "failure_class": "policy_blocked",
+      "status": "blocked",
+      "ffi_result_kind": "blocked",
+      "kotlin_result_type": "SharedCoreCommandResult",
+      "swift_result_type": "SharedCoreCommandResult",
+      "recovery_next_action": "explicit user action required"
+    },
+    {
+      "failure_class": "transport_unavailable",
+      "status": "blocked",
+      "ffi_result_kind": "unavailable",
+      "kotlin_result_type": "SharedCoreCommandResult",
+      "swift_result_type": "SharedCoreCommandResult",
+      "recovery_next_action": "manual transport action required"
+    },
+    {
+      "failure_class": "unsupported_mobile_surface",
+      "status": "blocked",
+      "ffi_result_kind": "unsupported",
+      "kotlin_result_type": "SharedCoreCommandResult",
+      "swift_result_type": "SharedCoreCommandResult",
+      "recovery_next_action": "use desktop source boundary"
+    },
+    {
+      "failure_class": "lifecycle_confirmation_required",
+      "status": "blocked",
+      "ffi_result_kind": "confirmation_required",
+      "kotlin_result_type": "SharedCoreCommandResult",
+      "swift_result_type": "SharedCoreCommandResult",
+      "recovery_next_action": "confirm lifecycle intent before any shared Rust core binding for local_data_lifecycle"
+    },
+    {
+      "failure_class": "ffi_unavailable",
+      "status": "blocked",
+      "ffi_result_kind": "unavailable",
+      "kotlin_result_type": "SharedCoreCommandResult",
+      "swift_result_type": "SharedCoreCommandResult",
+      "recovery_next_action": "connect shared Rust core binding"
+    }
+  ],
+  "ffi_error_mapping_blocks": {
+    "raw_exception_bridge": true,
+    "platform_specific_error_taxonomy": true,
+    "panic_string_exposure": true,
+    "private_payload_in_error": true,
+    "callable_ffi_implemented": false
   }
 }
