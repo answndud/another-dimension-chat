@@ -79,6 +79,7 @@ updated, and a later explicit release/claim task authorizes the wording.
 
 | Gate class | Required linked evidence | Current state |
 | --- | --- | --- |
+| Deployment 100 blocker resolution | [DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md](DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md), [TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md](TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md), [DEPLOYMENT_READINESS_GAP_REGISTER.md](DEPLOYMENT_READINESS_GAP_REGISTER.md) | linked; every false/hold flag is assigned to a source, external evidence, platform artifact, credential, or explicit release-authorization phase |
 | Deployment readiness gap reconciliation | [DEPLOYMENT_READINESS_GAP_REGISTER.md](DEPLOYMENT_READINESS_GAP_REGISTER.md), [TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md](TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md) | linked; source-solved supported scopes separated from remaining external blockers |
 | Production claim gate | [PRODUCTION_READINESS_CLAIM_GATE.md](PRODUCTION_READINESS_CLAIM_GATE.md), [PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md](PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md), [STABLE_MACOS_V1_RELEASE_GATE.md](STABLE_MACOS_V1_RELEASE_GATE.md) | linked; production claim false |
 | Audit/review | [EXTERNAL_REVIEW_AUDIT_READINESS.md](EXTERNAL_REVIEW_AUDIT_READINESS.md), [EXTERNAL_REVIEW_INTAKE_RUNBOOK.md](EXTERNAL_REVIEW_INTAKE_RUNBOOK.md), [AUDIT_FINDING_TRACKER.md](AUDIT_FINDING_TRACKER.md), [INDEPENDENT_REVIEW_PACKET.md](INDEPENDENT_REVIEW_PACKET.md), [EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md](EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md) | linked; intake operator-ready; audit/review completion false |
@@ -105,6 +106,7 @@ updated, and a later explicit release/claim task authorizes the wording.
 - evidence_matrix_machine_checkable=true
 - target_standard_100_evidence_matrix_available=true
 - target_standard_100_active_queue_source_closure_available=true
+- deployment_100_blocker_resolution_plan_available=true
 - target_standard_100_deployment_gap_reconciled=true
 - target_standard_criteria_complete=true
 - macos_public_app_100_criteria_complete=true

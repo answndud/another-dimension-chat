@@ -7,6 +7,9 @@ claim, stable release approval, audit result, reliable external delivery claim,
 or permission for sensitive communication. Public wording remains not
 production-ready, not audited, and sensitive communication prohibited.
 
+The ordered 100% blocker resolution plan is tracked in
+`reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md`.
+
 Required public labels: `not production-ready`, `not audited`, `sensitive
 communication prohibited`.
 
@@ -72,6 +75,7 @@ These cannot be made true by editing source files alone:
 ## Current Flags
 
 - deployment_readiness_gap_register_reviewed=true
+- deployment_100_blocker_resolution_plan_available=true
 - target_standard_100_deployment_gap_reconciled=true
 - stale_generic_partial_or_hold_reduced=true
 - source_solved_items_promoted_to_named_supported_scope=true

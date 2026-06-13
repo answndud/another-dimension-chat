@@ -1,0 +1,153 @@
+# Deployment 100 Blocker Resolution Plan
+
+Status: deployment 100 blocker resolution plan is available and machine
+checkable. This is not a 100% completion claim, not a production-ready claim,
+not a stable release approval, not an audit result, not reliable external
+delivery evidence, and not permission for sensitive communication.
+
+This plan turns the current false/hold flags into an ordered execution queue.
+It separates source work that can be completed in this repository from evidence
+that must come from credentials, real artifacts, external reviewers, real field
+participants, platform hardware, or explicit owner release authorization.
+False and hold states must remain visible until the matching evidence exists.
+
+The focused verifier is `scripts/deployment_100_blocker_resolution_once.sh`.
+This record is `reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md`.
+
+Current public wording must remain:
+
+- `unsigned experimental public beta`
+- `sensitive communication prohibited`
+- `not audited`
+- `not production-ready`
+
+## Resolution Queue
+
+| Order | Phase | Current blocker class | Resolution evidence |
+| --- | --- | --- | --- |
+| 1 | M100-1 macOS Public App Distribution Credential Unblock | external credential | Apple Developer Program Team ID, Developer ID Application identity in keychain, certificate expiry inspection, validated notary credential, and explicit no-release-mutation hold. |
+| 2 | M100-2 macOS Universal Or Explicitly Scoped Artifact | source policy with artifact hold | Either current Apple Silicon-only scope stays explicit, or future universal/Intel artifacts have matching build, checksum, provenance, and copy evidence. |
+| 3 | M100-3 Signed And Notarized macOS RC Artifact | credential/artifact hold | Signed and notarized RC DMG in ignored generated artifact path, codesign verify, stapler validate, Gatekeeper assessment, SHA-256, and provenance. |
+| 4 | M100-4 macOS First-Run And Onboarding Production UX | source gate | First run, profile unlock, invite, safety verification, manual envelope, retry/cancel, and redacted diagnostics are source-gated. |
+| 5 | M100-5 macOS Error Recovery And Destructive Action Completion | source gate | Wrong passphrase, corrupt store, retry/cancel, profile delete, conversation delete, session delete, and full local wipe remain redacted and user-visible. |
+| 6 | C100-1 Production E2EE State Machine Closure | source gate with review hold | Local/manual 1:1 message-content encryption, replay, retry, cancel, delete, and session lifecycle are source-ready; broad production E2EE waits for review and field evidence. |
+| 7 | C100-2 Pairwise Identity And Safety Verification Closure | source gate with audit hold | Pairwise identity persistence, signed invite payloads, canonical transcript, duplicate rejection, and mismatch revocation remain reviewable. |
+| 8 | C100-3 Key Management, Rollback Prevention, And Storage Lifecycle | source gate with key/rollback hold | Passphrase-first SQLCipher local store and marker-only rollback detection are source-ready; app key wrapping, key rotation, rollback prevention, backup recovery, and secure deletion remain holds. |
+| 9 | C100-4 Default Practical Transport Product Path | source gate with transport hold | Local/manual courier envelope exchange stays the supported default; production transport and reliable external delivery remain false. |
+| 10 | C100-5 Advanced Onion/Tor Evidence Boundary | source gate with field hold | Onion/Tor remains explicit, advanced, fail-closed, and non-claim until repeated external two-machine evidence exists. |
+| 11 | M100-6 Representative macOS Usability Evidence | external evidence | Required representative user sample completes install, first run, invite, manual envelope, recovery, diagnostics, and deletion with accepted redacted reports. |
+| 12 | M100-7 macOS Update And Rollback-Safe Release Channel | source gate with update hold | Manual same-release update policy is source-ready; signed update manifest and rollback prevention remain holds. |
+| 13 | M100-8 macOS Stable Release Gate And Public Copy Upgrade | final macOS hold gate | Signed/notarized artifact, external review, field evidence, operations, production gates, and owner stable approval all pass. |
+| 14 | A100-1 External Security Review Packet Freeze | source packet gate | Independent review packet remains frozen and public-safe. |
+| 15 | A100-2 External Review Execution And Finding Closure | external review hold | Named reviewer or audit completes; findings are fixed, held, or waived with public-safe signoff. |
+| 16 | F100-1 External Two-Machine Field Evidence Program | external field hold | Repeated real two-machine/different-network reports are accepted by validators. |
+| 17 | O100-1 Operations, Incident, And Vulnerability Readiness | source gate with operations hold | Support, vulnerability intake, incident severity, dependency advisory, emergency release, and user notification paths are rehearsed. |
+| 18 | W100-1 Windows Runtime Parity Scope Unlock | platform runtime | Real Windows runtime smoke and parity evidence exist. |
+| 19 | W100-2 Windows Public Artifact And Distribution | platform artifact hold | Windows public artifact, installer/signing decision, checksum/provenance, support diagnostics, public copy, and upload authorization pass. |
+| 20 | X100-1 Cross-Desktop Product Parity | source matrix gate | macOS and Windows public claims align with actual artifacts. |
+| 21 | MOB100-0 Mobile Scope Unlock Decision | explicit owner authorization | User explicitly authorizes real Android/iOS runtime implementation scope. |
+| 22 | MOB100-1 Shared Rust Core Mobile API Stabilization | source boundary | Mobile APIs preserve shared Rust core ownership of security-sensitive behavior. |
+| 23 | MOB100-2 Android Public App Candidate | platform artifact hold | Android shell, APK/AAB, signing/distribution decision, no FCM/cloud backup dependency, and public artifact evidence pass. |
+| 24 | MOB100-3 iOS Public App Candidate | platform artifact hold | iOS shell, IPA/TestFlight/App Store decision, no APNs/iCloud dependency, and public artifact evidence pass. |
+| 25 | X100-2 Cross-Platform Field Evidence And Support | external evidence hold | macOS, Windows, Android, and iOS support/evidence paths are accepted without overclaiming. |
+| 26 | R100-1 Production Claim Gate Pass | final claim hold | Functional, security, transport, distribution, operations, audit/review, field evidence, and release gates all pass. |
+| 27 | R100-2 Stable macOS Public Release | explicit release mutation hold | Owner authorizes release upload/edit; stable public copy matches evidence and non-claims are updated only where allowed. |
+| 28 | R100-3 Whole-Product TARGET_STANDARD 100 Release Gate | final target hold | General macOS public app 100% and whole TARGET_STANDARD 100% are both proven by the evidence matrix. |
+
+## Current External And Evidence Blockers
+
+- Developer ID Application identity is not locally available.
+- Apple Developer Team ID is not locally recorded.
+- Notarization credential is not locally available or validated.
+- Signed/notarized RC artifact is not available.
+- Stable signed/notarized macOS artifact is not available.
+- Gatekeeper no-exception open is not proven for a signed/notarized artifact.
+- External review is not completed.
+- Audit is not completed.
+- Reviewer signoff is not claimed.
+- Repeated real two-machine field evidence is not available.
+- Representative usability evidence is not completed.
+- Real Windows runtime smoke is not passed.
+- Windows public artifact, installer, signing, upload, and public copy are not ready.
+- Android and iOS public artifacts are not available.
+- Stable release upload/edit is not authorized.
+
+## Source Work Still Not Claim-Ready
+
+- `production_e2ee_ready=false` until review/evidence gates pass.
+- `production_key_management_ready=false` until key wrapping, key rotation,
+  rollback prevention, backup/recovery, and review gates pass.
+- `app_key_wrapping_ready=false`.
+- `key_rotation_ready=false`.
+- `rollback_prevention_claimed=false`.
+- `secure_deletion_claim_allowed=false`.
+- `production_transport_ready=false`.
+- `production_operational_readiness_claim_allowed=false`.
+- `update_signature_ready=false`.
+
+## Evidence Links
+
+- 100% criteria: `reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md`
+- Active queue source/hold mapping:
+  `reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md`
+- Deployment gap register: `reference/DEPLOYMENT_READINESS_GAP_REGISTER.md`
+- M100-1 credential gate: `reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md`
+- M100-2 artifact scope: `reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md`
+- M100-3 signed/notarized artifact:
+  `reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md`
+- D100-3 execution path:
+  `reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md`
+- Stable gate: `reference/STABLE_MACOS_V1_RELEASE_GATE.md`
+- External evidence intake:
+  `reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`
+- Windows artifact execution:
+  `reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md`
+- Mobile holds:
+  `reference/ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md` and
+  `reference/IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md`
+
+## Current Flags
+
+- deployment_100_blocker_resolution_plan_available=true
+- deployment_100_blocker_resolution_machine_checkable=true
+- all_false_hold_flags_categorized=true
+- m100_1_release_credentials_ready=false
+- developer_id_signing_available=false
+- apple_developer_team_id_recorded=false
+- notarization_credential_available=false
+- notarytool_credential_validated=false
+- signed_notarized_rc_artifact_available=false
+- stable_signed_notarized_artifact_available=false
+- gatekeeper_no_exception_open_proven=false
+- external_review_completed=false
+- audit_completed=false
+- reviewer_signoff_claimed=false
+- macos_two_machine_real_user_flow_repeated=false
+- repeated_redacted_field_reports_available=false
+- representative_usability_evidence_completed=false
+- windows_real_runtime_smoke_passed=false
+- windows_public_artifact_ready=false
+- android_public_artifact_available=false
+- ios_public_artifact_available=false
+- production_e2ee_ready=false
+- production_key_management_ready=false
+- app_key_wrapping_ready=false
+- key_rotation_ready=false
+- rollback_prevention_claimed=false
+- secure_deletion_claim_allowed=false
+- production_transport_ready=false
+- production_operational_readiness_claim_allowed=false
+- update_signature_ready=false
+- production_ready_claim_allowed=false
+- audited_claim_allowed=false
+- sensitive_communication_allowed=false
+- macos_public_app_100_claim_allowed=false
+- whole_target_standard_100_claim_allowed=false
+- stable_release_allowed=false
+- release_upload_authorized=false
+- dmg_rebuild_authorized=false
+- false_or_hold_items_hidden=false
+- public_claim_ahead_of_evidence=false
+- docs_private_uncommitted=true
+- agents_md_stage_allowed=false
+- next_required_phase=Phase M100-1 - macOS Public App Distribution Credential Unblock

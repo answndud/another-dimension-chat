@@ -15,6 +15,9 @@ hold states remain visible.
 
 | Phase | Closure type | Evidence |
 | --- | --- | --- |
+| M100-1 macOS public app distribution credential unblock | external credential hold gate | `reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md`, `scripts/release_authority_credential_unblock_once.sh` |
+| M100-2 macOS universal or explicitly scoped artifact | source policy with artifact hold | `reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md`, `scripts/macos_universal_scoped_artifact_policy_once.sh` |
+| M100-3 signed and notarized macOS RC artifact | credential/artifact hold gate | `reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md`, `reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md`, `scripts/macos_signed_notarized_rc_artifact_once.sh` |
 | M100-4 macOS first-run and onboarding UX | source gate | `reference/MACOS_PRODUCTION_UX_ONBOARDING.md`, `scripts/macos_production_ux_onboarding_once.sh` |
 | M100-5 macOS error recovery and destructive action completion | source gate | `reference/MACOS_USABILITY_RECOVERY_CLOSURE.md`, `scripts/macos_usability_recovery_closure_once.sh` |
 | C100-1 production E2EE state machine closure | source gate with production hold | `reference/PRODUCTION_E2EE_SOURCE_GATE.md`, `scripts/production_e2ee_source_gate_once.sh`, `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`, `scripts/production_protocol_session_lifecycle_once.sh` |
@@ -77,3 +80,4 @@ censorship-resistant.
 - generated_release_artifacts_staged=false
 - docs_private_uncommitted=true
 - agents_md_stage_allowed=false
+- deployment_100_blocker_resolution_plan_available=true

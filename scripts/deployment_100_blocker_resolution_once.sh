@@ -1,0 +1,184 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+  echo "error=$*" >&2
+  exit 1
+}
+
+must_contain() {
+  local file="$1"
+  local needle="$2"
+  grep -Fq "$needle" "$file" || fail "$file missing required text: $needle"
+}
+
+must_not_match() {
+  local file="$1"
+  local pattern="$2"
+  if grep -Eq "$pattern" "$file"; then
+    fail "$file contains forbidden deployment 100 blocker pattern: $pattern"
+  fi
+}
+
+output_must_contain() {
+  local output="$1"
+  local needle="$2"
+  printf '%s\n' "$output" | grep -Fq "$needle" || fail "credential probe missing: $needle"
+}
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+PLAN="reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
+MATRIX="reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
+ACTIVE="reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md"
+REGISTER="reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
+
+for file in "$PLAN" "$MATRIX" "$ACTIVE" "$REGISTER" \
+  "reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md" \
+  "reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md" \
+  "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md" \
+  "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
+  "reference/STABLE_MACOS_V1_RELEASE_GATE.md" \
+  "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
+  "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md" \
+  "reference/ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md" \
+  "reference/IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md" \
+  "README.md" "SECURITY.md"; do
+  [ -f "$file" ] || fail "missing deployment 100 blocker resolution input: $file"
+done
+
+must_contain "$PLAN" "deployment_100_blocker_resolution_plan_available=true"
+must_contain "$PLAN" "deployment_100_blocker_resolution_machine_checkable=true"
+must_contain "$PLAN" "all_false_hold_flags_categorized=true"
+must_contain "$PLAN" "next_required_phase=Phase M100-1 - macOS Public App Distribution Credential Unblock"
+
+for phase in \
+  "M100-1" "M100-2" "M100-3" "M100-4" "M100-5" "C100-1" "C100-2" \
+  "C100-3" "C100-4" "C100-5" "M100-6" "M100-7" "M100-8" \
+  "A100-1" "A100-2" "F100-1" "O100-1" "W100-1" "W100-2" \
+  "X100-1" "MOB100-0" "MOB100-1" "MOB100-2" "MOB100-3" \
+  "X100-2" "R100-1" "R100-2" "R100-3"; do
+  must_contain "$PLAN" "$phase"
+  must_contain "$ACTIVE" "$phase"
+done
+
+for linked in \
+  "DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md" \
+  "TARGET_STANDARD_100_EVIDENCE_MATRIX.md" \
+  "TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md" \
+  "DEPLOYMENT_READINESS_GAP_REGISTER.md" \
+  "RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md" \
+  "MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md" \
+  "MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md" \
+  "MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
+  "STABLE_MACOS_V1_RELEASE_GATE.md" \
+  "EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
+  "WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md" \
+  "ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md" \
+  "IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md"; do
+  must_contain "$PLAN" "$linked"
+done
+
+must_contain "README.md" "reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
+must_contain "SECURITY.md" "reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
+must_contain "$MATRIX" "DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
+must_contain "$REGISTER" "DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
+
+for flag in \
+  "developer_id_signing_available=false" \
+  "apple_developer_team_id_recorded=false" \
+  "notarization_credential_available=false" \
+  "notarytool_credential_validated=false" \
+  "signed_notarized_rc_artifact_available=false" \
+  "stable_signed_notarized_artifact_available=false" \
+  "gatekeeper_no_exception_open_proven=false" \
+  "external_review_completed=false" \
+  "audit_completed=false" \
+  "reviewer_signoff_claimed=false" \
+  "macos_two_machine_real_user_flow_repeated=false" \
+  "repeated_redacted_field_reports_available=false" \
+  "representative_usability_evidence_completed=false" \
+  "windows_real_runtime_smoke_passed=false" \
+  "windows_public_artifact_ready=false" \
+  "android_public_artifact_available=false" \
+  "ios_public_artifact_available=false" \
+  "production_e2ee_ready=false" \
+  "production_key_management_ready=false" \
+  "app_key_wrapping_ready=false" \
+  "key_rotation_ready=false" \
+  "rollback_prevention_claimed=false" \
+  "secure_deletion_claim_allowed=false" \
+  "production_transport_ready=false" \
+  "production_operational_readiness_claim_allowed=false" \
+  "update_signature_ready=false" \
+  "production_ready_claim_allowed=false" \
+  "audited_claim_allowed=false" \
+  "sensitive_communication_allowed=false" \
+  "macos_public_app_100_claim_allowed=false" \
+  "whole_target_standard_100_claim_allowed=false" \
+  "stable_release_allowed=false" \
+  "release_upload_authorized=false" \
+  "dmg_rebuild_authorized=false" \
+  "false_or_hold_items_hidden=false" \
+  "public_claim_ahead_of_evidence=false"; do
+  must_contain "$PLAN" "$flag"
+done
+
+for file in "$PLAN" "$MATRIX" "$REGISTER" "$ACTIVE" "README.md" "SECURITY.md"; do
+  must_contain "$file" "not production-ready"
+  must_contain "$file" "sensitive communication prohibited"
+  must_not_match "$file" "production_ready_claim_allowed=true"
+  must_not_match "$file" "audited_claim_allowed=true"
+  must_not_match "$file" "sensitive_communication_allowed=true"
+  must_not_match "$file" "macos_public_app_100_claim_allowed=true"
+  must_not_match "$file" "whole_target_standard_100_claim_allowed=true"
+  must_not_match "$file" "stable_release_allowed=true"
+  must_not_match "$file" "release_upload_authorized=true"
+  must_not_match "$file" "dmg_rebuild_authorized=true"
+done
+
+scripts/target_standard_100_evidence_matrix_once.sh >/dev/null
+scripts/target_standard_100_active_queue_closure_once.sh >/dev/null
+scripts/deployment_readiness_gap_reconciliation_once.sh >/dev/null
+scripts/stable_macos_v1_release_gate_once.sh >/dev/null
+scripts/macos_universal_scoped_artifact_policy_once.sh >/dev/null
+scripts/macos_signed_notarized_rc_artifact_once.sh >/dev/null
+scripts/macos_signed_notarized_execution_path_once.sh >/dev/null
+
+credential_status=0
+credential_output="$(scripts/release_authority_credential_unblock_once.sh 2>&1)" || credential_status=$?
+if [ "$credential_status" -eq 0 ]; then
+  output_must_contain "$credential_output" "signed_notarized_release_ready=true"
+  m100_1_release_credentials_ready=true
+else
+  output_must_contain "$credential_output" "developer_id_signing_available=false"
+  output_must_contain "$credential_output" "notarization_credential_available=false"
+  output_must_contain "$credential_output" "notarytool_credential_validated=false"
+  output_must_contain "$credential_output" "signed_notarized_release_ready=false"
+  output_must_contain "$credential_output" "release credentials blocked"
+  m100_1_release_credentials_ready=false
+fi
+
+if git -C "$ROOT" diff --cached --name-only | grep -Eq '^(docs/|AGENTS.md|apps/desktop-tauri/(public-release|beta-artifacts)/|public-release/|beta-artifacts/)'; then
+  fail "private docs, AGENTS.md, or generated artifact path is staged"
+fi
+
+cat <<STATUS
+status=deployment-100-blocker-resolution-plan-ready
+deployment_100_blocker_resolution_plan_available=true
+deployment_100_blocker_resolution_machine_checkable=true
+all_false_hold_flags_categorized=true
+m100_1_release_credentials_ready=$m100_1_release_credentials_ready
+false_or_hold_items_hidden=false
+public_claim_ahead_of_evidence=false
+macos_public_app_100_claim_allowed=false
+whole_target_standard_100_claim_allowed=false
+production_ready_claim_allowed=false
+audited_claim_allowed=false
+sensitive_communication_allowed=false
+stable_release_allowed=false
+release_upload_authorized=false
+dmg_rebuild_authorized=false
+next_required_phase=Phase-M100-1-macOS-Public-App-Distribution-Credential-Unblock
+STATUS

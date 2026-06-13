@@ -57,12 +57,21 @@ must_contain "$DOC" "docs_private_uncommitted=true"
 must_contain "$DOC" "agents_md_stage_allowed=false"
 
 for phase in \
-  "M100-4" "M100-5" "C100-1" "C100-2" "C100-3" "C100-4" "C100-5" \
+  "M100-1" "M100-2" "M100-3" "M100-4" "M100-5" \
+  "C100-1" "C100-2" "C100-3" "C100-4" "C100-5" \
   "M100-6" "M100-7" "M100-8" "A100-1" "A100-2" "F100-1" "O100-1" \
   "W100-1" "W100-2" "X100-1" "MOB100-0" "MOB100-1" "MOB100-2" \
   "MOB100-3" "X100-2" "R100-1" "R100-2" "R100-3"; do
   must_contain "$DOC" "$phase"
 done
+
+must_contain "$DOC" "reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md"
+must_contain "$DOC" "scripts/release_authority_credential_unblock_once.sh"
+must_contain "$DOC" "reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md"
+must_contain "$DOC" "scripts/macos_universal_scoped_artifact_policy_once.sh"
+must_contain "$DOC" "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md"
+must_contain "$DOC" "scripts/macos_signed_notarized_rc_artifact_once.sh"
+must_contain "$DOC" "deployment_100_blocker_resolution_plan_available=true"
 
 must_contain "README.md" "reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md"
 must_contain "SECURITY.md" "reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md"
