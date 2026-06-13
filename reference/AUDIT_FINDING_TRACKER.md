@@ -4,6 +4,8 @@ Status: tracker available; no external audit findings have been received or
 resolved. D100-4 intake execution is tracked in
 `reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`. This tracker is not an audit
 result, reviewer signoff, public user safety signoff, or security-ready claim.
+It is synced into the A100-1 public-safe reviewer packet freeze as the current
+zero-finding intake ledger only.
 
 ## Tracker Rules
 
@@ -34,6 +36,8 @@ result, reviewer signoff, public user safety signoff, or security-ready claim.
 ## Current Counts
 
 - audit_finding_tracker_ready=true
+- a100_1_external_security_review_packet_frozen=true
+- review_packet_finding_tracker_synced=true
 - audit_finding_tracker_schema_machine_checkable=true
 - audit_finding_counts_machine_checked=true
 - sensitive_finding_private_route_required=true

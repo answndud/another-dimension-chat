@@ -52,6 +52,14 @@ It checks the intake path without fabricating external evidence.
 - external_evidence_intake_operator_ready=true
 - external_review_intake_runbook_available=true
 - external_review_intake_operator_ready=true
+- a100_1_external_security_review_packet_frozen=true
+- review_packet_synced_to_latest_source_gates=true
+- review_packet_includes_c100_5_onion_boundary=true
+- review_packet_includes_target_standard_matrix=true
+- review_packet_includes_deployment_blocker_plan=true
+- review_packet_finding_tracker_synced=true
+- private_docs_excluded_from_review_packet=true
+- generated_release_artifacts_excluded_from_review_packet=true
 - reviewer_packet_freeze_ready=true
 - audit_finding_tracker_ready=true
 - audit_finding_tracker_schema_machine_checkable=true

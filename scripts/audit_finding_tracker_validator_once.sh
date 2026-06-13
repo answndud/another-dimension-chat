@@ -27,6 +27,8 @@ must_contain "$RUNBOOK" "external_review_intake_runbook_available=true"
 must_contain "$RUNBOOK" "audit_finding_tracker_schema_machine_checkable=true"
 must_contain "$RUNBOOK" "sensitive_finding_private_route_required=true"
 must_contain "$TRACKER" "audit_finding_tracker_schema_machine_checkable=true"
+must_contain "$TRACKER" "a100_1_external_security_review_packet_frozen=true"
+must_contain "$TRACKER" "review_packet_finding_tracker_synced=true"
 must_contain "$TRACKER" "audit_finding_counts_machine_checked=true"
 must_contain "$TRACKER" "external_review_completed=false"
 must_contain "$TRACKER" "audit_completed=false"
@@ -135,6 +137,8 @@ grep -Fq "forbidden-content:envelope-payload" /tmp/audit-tracker-forbidden.out |
 cat <<'STATUS'
 status=audit-finding-tracker-validator-ready
 audit_finding_tracker_schema_machine_checkable=true
+a100_1_external_security_review_packet_frozen=true
+review_packet_finding_tracker_synced=true
 audit_finding_counts_machine_checked=true
 external_review_completed=false
 audit_completed=false

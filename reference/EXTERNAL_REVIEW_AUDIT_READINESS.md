@@ -90,6 +90,18 @@ machine-checkable for real external intake. The runbook is
 performed by `scripts/validate_audit_finding_tracker.mjs`. This only makes the
 intake path operator-ready; it does not create an external review result.
 
+## A100-1 Packet Freeze
+
+A100-1 freezes the current public-safe reviewer packet for handoff. The packet
+is synced to the latest source gates, including C100-5 advanced onion/Tor
+evidence boundary, `reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md`,
+`reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md`,
+`reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md`, and
+`reference/AUDIT_FINDING_TRACKER.md`.
+
+This freeze is a source packet state only. A100-2 remains required for real
+review execution, finding closure, reviewer signoff, or audit wording.
+
 ## RB-6 Scope-Down
 
 RB-6 does not fabricate an external reviewer or audit. Instead, it removes the
@@ -103,6 +115,14 @@ Public wording must still say `not audited`, `not production-ready`, and
 ## Current Gate Flags
 
 - external_review_audit_readiness_gate_reviewed=true
+- a100_1_external_security_review_packet_frozen=true
+- review_packet_synced_to_latest_source_gates=true
+- review_packet_includes_c100_5_onion_boundary=true
+- review_packet_includes_target_standard_matrix=true
+- review_packet_includes_deployment_blocker_plan=true
+- review_packet_finding_tracker_synced=true
+- private_docs_excluded_from_review_packet=true
+- generated_release_artifacts_excluded_from_review_packet=true
 - d100_4_external_evidence_intake_execution_reviewed=true
 - external_review_intake_runbook_available=true
 - external_review_intake_operator_ready=true

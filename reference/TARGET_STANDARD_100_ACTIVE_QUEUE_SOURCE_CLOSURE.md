@@ -28,7 +28,7 @@ hold states remain visible.
 | M100-6 macOS representative usability evidence | closed by active-queue waiver, evidence claims held | `reference/MACOS_USABILITY_RECOVERY_CLOSURE.md`, `reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md` |
 | M100-7 macOS update and rollback-safe release channel | closed by active-queue waiver, signed update and rollback claims held | `reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md`, `scripts/macos_update_rollback_safe_release_channel_once.sh` |
 | M100-8 macOS stable release gate and public copy upgrade | closed by active-queue waiver, stable/public copy claims held | `reference/STABLE_MACOS_V1_RELEASE_GATE.md`, `scripts/stable_macos_v1_release_gate_once.sh` |
-| A100-1 external security review packet freeze | source packet gate | `reference/INDEPENDENT_REVIEW_PACKET.md`, `scripts/external_review_audit_readiness_once.sh` |
+| A100-1 external security review packet freeze | closed by source packet freeze, review completion claims held | `reference/INDEPENDENT_REVIEW_PACKET.md`, `scripts/external_review_audit_readiness_once.sh` |
 | A100-2 external review execution and finding closure | hold gate | `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`, `reference/AUDIT_FINDING_TRACKER.md` |
 | F100-1 external two-machine field evidence program | hold gate | `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md`, `scripts/field_evidence_reliability_program_once.sh` |
 | O100-1 operational support, incident, and vulnerability readiness | source gate with production operations hold | `reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md`, `scripts/operational_support_incident_process_once.sh` |
@@ -88,6 +88,14 @@ censorship-resistant.
 - advanced_onion_field_evidence_required_for_claims=true
 - advanced_onion_repeated_external_evidence_required_for_claims=true
 - external_delivery_success_claim_allowed=false
+- a100_1_external_security_review_packet_frozen=true
+- review_packet_synced_to_latest_source_gates=true
+- review_packet_includes_c100_5_onion_boundary=true
+- review_packet_includes_target_standard_matrix=true
+- review_packet_includes_deployment_blocker_plan=true
+- review_packet_finding_tracker_synced=true
+- private_docs_excluded_from_review_packet=true
+- generated_release_artifacts_excluded_from_review_packet=true
 - beta_wording_removal_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false

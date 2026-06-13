@@ -52,6 +52,14 @@ for flag in \
   "external_evidence_intake_operator_ready=true" \
   "external_review_intake_runbook_available=true" \
   "external_review_intake_operator_ready=true" \
+  "a100_1_external_security_review_packet_frozen=true" \
+  "review_packet_synced_to_latest_source_gates=true" \
+  "review_packet_includes_c100_5_onion_boundary=true" \
+  "review_packet_includes_target_standard_matrix=true" \
+  "review_packet_includes_deployment_blocker_plan=true" \
+  "review_packet_finding_tracker_synced=true" \
+  "private_docs_excluded_from_review_packet=true" \
+  "generated_release_artifacts_excluded_from_review_packet=true" \
   "reviewer_packet_freeze_ready=true" \
   "audit_finding_tracker_ready=true" \
   "audit_finding_tracker_schema_machine_checkable=true" \
@@ -99,8 +107,12 @@ for file in "$USABILITY_DOC" "$MATRIX" "$STABLE_GATE" "README.md" "SECURITY.md";
 done
 
 must_contain "$REVIEW_DOC" "reviewer_packet_freeze_ready=true"
+must_contain "$REVIEW_DOC" "a100_1_external_security_review_packet_frozen=true"
+must_contain "$REVIEW_DOC" "review_packet_synced_to_latest_source_gates=true"
+must_contain "$REVIEW_DOC" "review_packet_finding_tracker_synced=true"
 must_contain "$REVIEW_RUNBOOK" "external_review_intake_operator_ready=true"
 must_contain "$TRACKER" "audit_finding_tracker_ready=true"
+must_contain "$TRACKER" "review_packet_finding_tracker_synced=true"
 must_contain "$TRACKER_VALIDATOR" "status=audit-finding-tracker-valid"
 must_contain "$FIELD_PROGRAM" "field_report_validator_ready=true"
 must_contain "$USABILITY_DOC" "usability_report_validator_ready=true"
@@ -220,6 +232,12 @@ external_evidence_intake_operator_ready=true
 external_review_intake_runbook_available=true
 external_review_intake_operator_ready=true
 reviewer_packet_freeze_ready=true
+a100_1_external_security_review_packet_frozen=true
+review_packet_synced_to_latest_source_gates=true
+review_packet_includes_c100_5_onion_boundary=true
+review_packet_includes_target_standard_matrix=true
+review_packet_includes_deployment_blocker_plan=true
+review_packet_finding_tracker_synced=true
 audit_finding_tracker_ready=true
 audit_finding_tracker_schema_machine_checkable=true
 audit_finding_counts_machine_checked=true

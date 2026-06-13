@@ -119,6 +119,9 @@ audit, field evidence, usability evidence, or any production claim.
 - signed_artifact_no_longer_blocks_lower_release_class=true
 - signed_artifact_still_blocks_stable_or_production_claims=true
 - ops_7_external_review_audit_readiness_gate_reviewed=true
+- a100_1_external_security_review_packet_frozen=true
+- review_packet_synced_to_latest_source_gates=true
+- review_packet_finding_tracker_synced=true
 - d100_4_external_evidence_intake_execution_reviewed=true
 - external_evidence_intake_operator_ready=true
 - external_review_intake_runbook_available=true
