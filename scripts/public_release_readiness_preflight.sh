@@ -197,11 +197,12 @@ echo "scope=source-only-no-dmg-required-no-generated-artifacts"
 echo "artifact_generation=false"
 echo "dmg_required=false"
 echo "network_or_onion_work=false"
-echo "checks=artifact-boundary,update-integrity-policy,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
-echo "checks_run=artifact-boundary,update-integrity-policy,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
+echo "checks=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
+echo "checks_run=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
 
 run_step artifact-boundary "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" --check-artifact-boundary
 run_step update-integrity-policy "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" --check-policy
+run_step high-risk-release-integrity-gate "$ROOT_DIR/scripts/high_risk_release_integrity_gate_once.sh"
 run_step public-release-source-path "$ROOT_DIR/scripts/prepare_public_release.sh"
 run_step desktop-supply-chain-surface "$ROOT_DIR/scripts/desktop_supply_chain_surface_guard_once.sh"
 run_step desktop-beta-acceptance-matrix "$ROOT_DIR/scripts/desktop_beta_acceptance_matrix_once.sh"

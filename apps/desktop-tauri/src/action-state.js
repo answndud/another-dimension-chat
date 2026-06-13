@@ -219,6 +219,7 @@ export function productionVersionIntegrityView(input = {}) {
   const expectedReleaseAuthority = "same-github-release-assets";
   const checksumVerification = "matching-sha256-before-open";
   const emergencyAdvisoryPath = "scripts/prepare_macos_emergency_release_advisory_packet.sh";
+  const highRiskReleaseIntegrityGatePath = "scripts/high_risk_release_integrity_gate_once.sh";
   const versionComparison =
     latestVersion === "manual-check-required"
       ? "manual-update-check-required"
@@ -238,6 +239,10 @@ export function productionVersionIntegrityView(input = {}) {
     "signed_update_manifest_ready=false",
     "rollback_prevention_claimed=false",
     `emergency_advisory_path=${emergencyAdvisoryPath}`,
+    `high_risk_release_integrity_gate_path=${highRiskReleaseIntegrityGatePath}`,
+    "dependency_lockfile_hash_inputs=3",
+    "tauri_csp_permissions_remote_code_boundary=true",
+    "high_risk_release_claim_allowed=false",
   ].join(" ");
   return {
     currentVersion,
@@ -249,6 +254,7 @@ export function productionVersionIntegrityView(input = {}) {
     expectedReleaseAuthority,
     checksumVerification,
     emergencyAdvisoryPath,
+    highRiskReleaseIntegrityGatePath,
     autoUpdateReady: false,
     signedUpdateManifestReady: false,
     rollbackPreventionClaimed: false,
@@ -271,8 +277,14 @@ export function productionVersionIntegrityView(input = {}) {
       "rollback_prevention_claimed=false",
       "bad_release_advisory_path_ready=true",
       `emergency_advisory_path=${emergencyAdvisoryPath}`,
+      `high_risk_release_integrity_gate_path=${highRiskReleaseIntegrityGatePath}`,
+      "release_artifact_checksum_policy=same-release-sha256-required",
+      "signed_manifest_source_gate=true",
+      "dependency_inventory_lockfile_hash_bound=true",
+      "tauri_csp_permissions_remote_code_boundary=true",
       "branch_source_release_authority_allowed=false",
       "source_archive_release_authority_allowed=false",
+      "high_risk_release_claim_allowed=false",
       "security_ready_claim=false",
     ].join(" "),
   };
