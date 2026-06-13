@@ -127,6 +127,180 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionLocalDestructiveAction {
+        ConversationDelete,
+        SessionDelete,
+        ProfileDelete,
+        FullLocalWipe,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionLocalDestructiveActionDecision {
+        action: ProductionLocalDestructiveAction,
+        scope: &'static str,
+        confirmation: &'static str,
+        removes_message_records: bool,
+        preserves_session_records: bool,
+        removes_session_resume_records: bool,
+        preserves_message_records: bool,
+        removes_profile_store: bool,
+        locks_unlock_state: bool,
+        removes_owned_app_data: bool,
+        redacted_result: bool,
+        backup_recovery_claimed: bool,
+        cloud_backup_sync_claimed: bool,
+        rollback_prevention_claimed: bool,
+        secure_media_deletion_claimed: bool,
+        network_io_attempted: bool,
+    }
+
+    impl ProductionLocalDestructiveActionDecision {
+        pub fn action(self) -> ProductionLocalDestructiveAction {
+            self.action
+        }
+
+        pub fn scope(self) -> &'static str {
+            self.scope
+        }
+
+        pub fn confirmation(self) -> &'static str {
+            self.confirmation
+        }
+
+        pub fn removes_message_records(self) -> bool {
+            self.removes_message_records
+        }
+
+        pub fn preserves_session_records(self) -> bool {
+            self.preserves_session_records
+        }
+
+        pub fn removes_session_resume_records(self) -> bool {
+            self.removes_session_resume_records
+        }
+
+        pub fn preserves_message_records(self) -> bool {
+            self.preserves_message_records
+        }
+
+        pub fn removes_profile_store(self) -> bool {
+            self.removes_profile_store
+        }
+
+        pub fn locks_unlock_state(self) -> bool {
+            self.locks_unlock_state
+        }
+
+        pub fn removes_owned_app_data(self) -> bool {
+            self.removes_owned_app_data
+        }
+
+        pub fn redacted_result(self) -> bool {
+            self.redacted_result
+        }
+
+        pub fn backup_recovery_claimed(self) -> bool {
+            self.backup_recovery_claimed
+        }
+
+        pub fn cloud_backup_sync_claimed(self) -> bool {
+            self.cloud_backup_sync_claimed
+        }
+
+        pub fn rollback_prevention_claimed(self) -> bool {
+            self.rollback_prevention_claimed
+        }
+
+        pub fn secure_media_deletion_claimed(self) -> bool {
+            self.secure_media_deletion_claimed
+        }
+
+        pub fn network_io_attempted(self) -> bool {
+            self.network_io_attempted
+        }
+    }
+
+    pub fn production_local_destructive_action_decision(
+        action: ProductionLocalDestructiveAction,
+    ) -> ProductionLocalDestructiveActionDecision {
+        let (
+            scope,
+            confirmation,
+            removes_message_records,
+            preserves_session_records,
+            removes_session_resume_records,
+            preserves_message_records,
+            removes_profile_store,
+            locks_unlock_state,
+            removes_owned_app_data,
+        ) = match action {
+            ProductionLocalDestructiveAction::ConversationDelete => (
+                "local-message-records-only",
+                "explicit-conversation-delete-action",
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+            ),
+            ProductionLocalDestructiveAction::SessionDelete => (
+                "local-session-resume-records-only",
+                "explicit-session-delete-action",
+                false,
+                false,
+                true,
+                true,
+                false,
+                false,
+                false,
+            ),
+            ProductionLocalDestructiveAction::ProfileDelete => (
+                "exact-profile-local-store",
+                "exact-profile-name",
+                false,
+                false,
+                true,
+                false,
+                true,
+                true,
+                false,
+            ),
+            ProductionLocalDestructiveAction::FullLocalWipe => (
+                "owned-app-data-on-this-device",
+                "WIPE LOCAL DATA",
+                true,
+                false,
+                true,
+                false,
+                true,
+                true,
+                true,
+            ),
+        };
+
+        ProductionLocalDestructiveActionDecision {
+            action,
+            scope,
+            confirmation,
+            removes_message_records,
+            preserves_session_records,
+            removes_session_resume_records,
+            preserves_message_records,
+            removes_profile_store,
+            locks_unlock_state,
+            removes_owned_app_data,
+            redacted_result: true,
+            backup_recovery_claimed: false,
+            cloud_backup_sync_claimed: false,
+            rollback_prevention_claimed: false,
+            secure_media_deletion_claimed: false,
+            network_io_attempted: false,
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ReplayPersistenceGuarantees {
         pub at_rest_encrypted: bool,
         pub commit_after_decrypt: bool,
@@ -425,9 +599,12 @@ pub mod production {
             ProfileStoreUnlockFailureKind::MissingStore => {
                 (false, true, false, "create-new-local-profile")
             }
-            ProfileStoreUnlockFailureKind::CorruptStore => {
-                (false, true, false, "inspect-local-store-or-create-new-profile")
-            }
+            ProfileStoreUnlockFailureKind::CorruptStore => (
+                false,
+                true,
+                false,
+                "inspect-local-store-or-create-new-profile",
+            ),
             ProfileStoreUnlockFailureKind::MigrationNeeded => {
                 (false, false, true, "run-supported-local-store-migration")
             }
@@ -567,9 +744,12 @@ pub mod production {
                 LocalProfileRecoveryFailureKind::PassphraseLoss => {
                     (false, false, true, "create-new-local-profile")
                 }
-                LocalProfileRecoveryFailureKind::CorruptStore => {
-                    (false, false, true, "inspect-local-store-or-create-new-profile")
-                }
+                LocalProfileRecoveryFailureKind::CorruptStore => (
+                    false,
+                    false,
+                    true,
+                    "inspect-local-store-or-create-new-profile",
+                ),
                 LocalProfileRecoveryFailureKind::MigrationFailure => {
                     (true, true, false, "retry-supported-local-store-migration")
                 }
@@ -1320,6 +1500,57 @@ pub mod production {
         }
 
         #[test]
+        fn production_local_destructive_action_scope_decisions_are_distinct() {
+            let conversation = production_local_destructive_action_decision(
+                ProductionLocalDestructiveAction::ConversationDelete,
+            );
+            let session = production_local_destructive_action_decision(
+                ProductionLocalDestructiveAction::SessionDelete,
+            );
+            let profile = production_local_destructive_action_decision(
+                ProductionLocalDestructiveAction::ProfileDelete,
+            );
+            let wipe = production_local_destructive_action_decision(
+                ProductionLocalDestructiveAction::FullLocalWipe,
+            );
+
+            assert_eq!(conversation.scope(), "local-message-records-only");
+            assert_eq!(
+                conversation.confirmation(),
+                "explicit-conversation-delete-action"
+            );
+            assert!(conversation.removes_message_records());
+            assert!(conversation.preserves_session_records());
+            assert!(!conversation.removes_session_resume_records());
+
+            assert_eq!(session.scope(), "local-session-resume-records-only");
+            assert_eq!(session.confirmation(), "explicit-session-delete-action");
+            assert!(session.removes_session_resume_records());
+            assert!(session.preserves_message_records());
+            assert!(!session.removes_message_records());
+
+            assert_eq!(profile.scope(), "exact-profile-local-store");
+            assert_eq!(profile.confirmation(), "exact-profile-name");
+            assert!(profile.removes_profile_store());
+            assert!(profile.locks_unlock_state());
+
+            assert_eq!(wipe.scope(), "owned-app-data-on-this-device");
+            assert_eq!(wipe.confirmation(), "WIPE LOCAL DATA");
+            assert!(wipe.removes_owned_app_data());
+            assert!(wipe.removes_profile_store());
+            assert!(wipe.removes_session_resume_records());
+
+            for decision in [conversation, session, profile, wipe] {
+                assert!(decision.redacted_result());
+                assert!(!decision.backup_recovery_claimed());
+                assert!(!decision.cloud_backup_sync_claimed());
+                assert!(!decision.rollback_prevention_claimed());
+                assert!(!decision.secure_media_deletion_claimed());
+                assert!(!decision.network_io_attempted());
+            }
+        }
+
+        #[test]
         fn encrypted_record_round_trips_with_associated_data_scope() {
             let record = EncryptedRecord::new(
                 ProductionRecordKind::MessageEnvelope,
@@ -1433,7 +1664,10 @@ pub mod production {
                     decision.retry_with_passphrase_allowed(),
                     retry_with_passphrase_allowed
                 );
-                assert_eq!(decision.create_new_profile_allowed(), create_new_profile_allowed);
+                assert_eq!(
+                    decision.create_new_profile_allowed(),
+                    create_new_profile_allowed
+                );
                 assert_eq!(decision.migration_required(), migration_required);
                 assert_eq!(decision.next_action(), next_action);
                 assert!(decision.passphrase_required());
@@ -1542,7 +1776,10 @@ pub mod production {
                 assert!(!decision.silent_data_loss_allowed());
                 assert!(!decision.rollback_prevention_claimed());
                 assert!(!decision.secure_media_deletion_claimed());
-                assert_eq!(decision.create_new_profile_allowed(), create_new_profile_allowed);
+                assert_eq!(
+                    decision.create_new_profile_allowed(),
+                    create_new_profile_allowed
+                );
                 assert_eq!(decision.next_action(), next_action);
             }
         }

@@ -289,6 +289,7 @@ const fields = {
   checkProductionSessionState: document.querySelector("#check-production-session-state"),
   checkProductionSessionLifecycle: document.querySelector("#check-production-session-lifecycle"),
   deleteProductionSessionLifecycle: document.querySelector("#delete-production-session-lifecycle"),
+  productionSessionDeleteConfirmation: document.querySelector("#production-session-delete-confirmation"),
   productionPairingStorage: document.querySelector("#production-pairing-storage"),
   productionPairingSession: document.querySelector("#production-pairing-session"),
   productionHandshakeState: document.querySelector("#production-handshake-state"),
@@ -300,6 +301,7 @@ const fields = {
   productionMessageBody: document.querySelector("#production-message-body"),
   exportProductionMessageEnvelope: document.querySelector("#export-production-message-envelope"),
   deleteProductionConversation: document.querySelector("#delete-production-conversation"),
+  productionConversationDeleteConfirmation: document.querySelector("#production-conversation-delete-confirmation"),
   productionMessageState: document.querySelector("#production-message-state"),
   productionMessageNextAction: document.querySelector("#production-message-next-action"),
   productionMessageWarning: document.querySelector("#production-message-warning"),
@@ -12772,6 +12774,11 @@ function applyProductionActionState() {
   );
   const hasMessageRetentionPolicy = messageRetentionPolicyReady();
   const retentionPolicyBlocker = messageRetentionPolicyBlocker();
+  const sessionDeleteConfirmed =
+    (fields.productionSessionDeleteConfirmation?.value ?? "").trim() === "DELETE SESSION";
+  const conversationDeleteConfirmed =
+    (fields.productionConversationDeleteConfirmation?.value ?? "").trim() ===
+    "DELETE CONVERSATION";
   const state = {
     busy,
     hasMessageRetentionPolicy,
@@ -13013,8 +13020,12 @@ function applyProductionActionState() {
   );
   setActionButtonState(
     fields.deleteProductionSessionLifecycle,
-    !availability.checkSessionState,
-    busy ? "Wait for the active production action." : "Enter profile and passphrase first.",
+    !availability.checkSessionState || !sessionDeleteConfirmed,
+    busy
+      ? "Wait for the active production action."
+      : !availability.checkSessionState
+        ? "Enter profile and passphrase first."
+        : "Type DELETE SESSION before deleting local session resume records.",
     false,
   );
   setActionButtonState(
@@ -13057,8 +13068,12 @@ function applyProductionActionState() {
   );
   setActionButtonState(
     fields.deleteProductionConversation,
-    !availability.checkSessionState,
-    busy ? "Wait for the active production action." : "Enter profile and passphrase first.",
+    !availability.checkSessionState || !conversationDeleteConfirmed,
+    busy
+      ? "Wait for the active production action."
+      : !availability.checkSessionState
+        ? "Enter profile and passphrase first."
+        : "Type DELETE CONVERSATION before deleting local message records.",
     false,
   );
   setActionButtonState(
@@ -18220,7 +18235,11 @@ function dataLifecycleBoundary(result) {
 }
 
 function dataLifecycleActionView(result = {}, action = "status") {
-  const destructiveAction = action === "profile-delete" || action === "full-local-wipe";
+  const destructiveAction =
+    action === "conversation-delete" ||
+    action === "session-delete" ||
+    action === "profile-delete" ||
+    action === "full-local-wipe";
   const rollbackDetection = result?.rollback_detection_ready === true;
   const rollbackSuspicion = result?.rollback_suspicion_detected === true;
   const summaryParts = [
@@ -18277,6 +18296,8 @@ function renderProductionDataLifecycleAction(result, action = "status") {
 function dataLifecycleDestructivePreflightView(action, options = {}) {
   const fullWipe = action === "full-local-wipe";
   const profileDelete = action === "profile-delete";
+  const sessionDelete = action === "session-delete";
+  const conversationDelete = action === "conversation-delete";
   const confirmationMatched = options.confirmationMatched === true;
   const profilePresent = String(options.profile ?? "").trim().length > 0;
   const summary = [
@@ -18284,6 +18305,8 @@ function dataLifecycleDestructivePreflightView(action, options = {}) {
     `action=${action}`,
     `profile_target_present=${profilePresent}`,
     `confirmation_matched=${confirmationMatched}`,
+    `conversation_delete=${conversationDelete}`,
+    `session_delete=${sessionDelete}`,
     `profile_delete=${profileDelete}`,
     `full_local_wipe=${fullWipe}`,
     `local_only=true`,
@@ -19181,6 +19204,18 @@ async function deleteProductionSessionLifecycle(input = productionPairingInput()
     setText(fields.productionPairingWarning, "Enter profile and passphrase.");
     return;
   }
+  const confirmation = (fields.productionSessionDeleteConfirmation?.value ?? "").trim();
+  const preflight = renderDataLifecycleDestructivePreflight("session-delete", {
+    confirmationMatched: confirmation === "DELETE SESSION",
+    profile,
+  });
+  if (confirmation !== "DELETE SESSION") {
+    setProductionPairingState("Session delete needs confirmation");
+    setText(fields.productionPairingWarning, preflight.warning);
+    setText(fields.productionPairingNextAction, preflight.next);
+    setText(fields.productionSessionLifecycle, preflight.summary);
+    return;
+  }
 
   setProductionPairingState("Session lifecycle deleting");
   setText(
@@ -19193,7 +19228,11 @@ async function deleteProductionSessionLifecycle(input = productionPairingInput()
     fields.deleteProductionSessionLifecycle.disabled = true;
   }
   try {
-    const result = await invoke("production_session_lifecycle_delete", { profile, passphrase });
+    const result = await invoke("production_session_lifecycle_delete", {
+      profile,
+      passphrase,
+      confirmation,
+    });
     if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
       return;
     }
@@ -20109,6 +20148,18 @@ async function deleteProductionConversation() {
     setText(fields.productionMessageWarning, "Enter profile and passphrase first.");
     return;
   }
+  const confirmation = (fields.productionConversationDeleteConfirmation?.value ?? "").trim();
+  const preflight = renderDataLifecycleDestructivePreflight("conversation-delete", {
+    confirmationMatched: confirmation === "DELETE CONVERSATION",
+    profile,
+  });
+  if (confirmation !== "DELETE CONVERSATION") {
+    setProductionMessageState("Conversation delete needs confirmation");
+    setText(fields.productionMessageWarning, preflight.warning);
+    setText(fields.productionMessageNextAction, preflight.next);
+    setText(fields.productionMessageBoundary, preflight.summary);
+    return;
+  }
   setProductionMessageState("Conversation deleting");
   setText(
     fields.productionMessageWarning,
@@ -20117,7 +20168,11 @@ async function deleteProductionConversation() {
   productionBusyAction = "conversation-delete";
   applyProductionActionState();
   try {
-    const result = await invoke("production_conversation_delete", { profile, passphrase });
+    const result = await invoke("production_conversation_delete", {
+      profile,
+      passphrase,
+      confirmation,
+    });
     if (!productionProfileInputStillCurrent(input)) {
       return;
     }
@@ -20836,6 +20891,14 @@ if (fields.productionFullWipeConfirmation) {
 
 if (fields.wipeProductionLocalData) {
   fields.wipeProductionLocalData.addEventListener("click", wipeProductionLocalData);
+}
+
+if (fields.productionSessionDeleteConfirmation) {
+  fields.productionSessionDeleteConfirmation.addEventListener("input", applyProductionActionState);
+}
+
+if (fields.productionConversationDeleteConfirmation) {
+  fields.productionConversationDeleteConfirmation.addEventListener("input", applyProductionActionState);
 }
 
 if (fields.exportProductionPairing) {

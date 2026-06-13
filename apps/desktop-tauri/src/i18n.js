@@ -950,6 +950,8 @@ const dictionaries = {
       "Deletes local conversation message records only; session resume records are preserved.",
     sessionDeleteScopeNote:
       "Deletes local session resume records only; conversation message records are preserved.",
+    conversationDeleteConfirm: "Type DELETE CONVERSATION to delete local messages",
+    sessionDeleteConfirm: "Type DELETE SESSION to delete session records",
     profileDeleteScopeNote:
       "Deletes the local profile store and clears affected room runtime only; no cloud backup recovery is performed.",
     fullWipeScopeNote:
@@ -2099,6 +2101,8 @@ const dictionaries = {
       "로컬 대화 메시지 기록만 지웁니다. 세션 재개 기록은 보존됩니다.",
     sessionDeleteScopeNote:
       "로컬 세션 재개 기록만 지웁니다. 대화 메시지 기록은 보존됩니다.",
+    conversationDeleteConfirm: "로컬 메시지를 지우려면 DELETE CONVERSATION을 입력하세요.",
+    sessionDeleteConfirm: "세션 기록을 지우려면 DELETE SESSION을 입력하세요.",
     profileDeleteScopeNote:
       "로컬 프로필 저장소와 영향을 받은 채팅방 실행 상태만 지웁니다. 클라우드 백업 복구는 수행하지 않습니다.",
     fullWipeScopeNote:
