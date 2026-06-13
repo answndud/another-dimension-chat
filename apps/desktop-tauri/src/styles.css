@@ -1337,6 +1337,7 @@ body.is-room-list-mode .safety-confirm-state,
 body.is-room-list-mode .chat-transcript-toolbar,
 body.is-room-list-mode #production-two-profile-transcript,
 body.is-room-list-mode .chat-delivery-notice,
+body.is-room-list-mode .manual-flow-guide,
 body.is-room-list-mode .chat-composer,
 body.is-room-list-mode .room-receive-controls,
 body.is-room-list-mode .private-route-exchange {
@@ -1398,6 +1399,10 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
 .production-workflow[aria-labelledby="production-two-profile-title"] > #production-two-profile-transcript {
   order: 4;
   min-height: clamp(220px, 36vh, 520px);
+}
+
+.production-workflow[aria-labelledby="production-two-profile-title"] > .manual-flow-guide {
+  order: 4;
 }
 
 .production-workflow[aria-labelledby="production-two-profile-title"] > label[for="production-two-profile-message"] {
@@ -1660,6 +1665,37 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
 .chat-diagnostics {
   display: grid;
   gap: 10px;
+}
+
+.manual-flow-guide {
+  display: grid;
+  gap: 6px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 24%, var(--panel-border));
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--panel) 92%, var(--accent-cyan));
+}
+
+.manual-flow-guide h5 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.manual-flow-guide p,
+.manual-flow-guide li {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.manual-flow-guide ol {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
 }
 
 .chat-diagnostics[open] {

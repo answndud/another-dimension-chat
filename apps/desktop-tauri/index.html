@@ -831,6 +831,22 @@
               <li class="is-empty" data-i18n="emptyConversation">No messages yet.</li>
             </ol>
             <p id="chat-delivery-notice" class="chat-delivery-notice" aria-live="polite"></p>
+            <section class="manual-flow-guide" aria-labelledby="manual-flow-guide-title">
+              <p class="eyebrow" data-i18n="manualFlowGuideEyebrow">Manual default path</p>
+              <h5 id="manual-flow-guide-title" data-i18n="manualFlowGuideTitle">Manual encrypted envelope flow</h5>
+              <p data-i18n="manualFlowGuideHint">
+                Default path is local/manual encrypted envelope exchange: export, carry through your existing channel, import, then reply.
+              </p>
+              <ol aria-label="Manual message steps" data-i18n-aria-label="manualFlowGuideStepsLabel">
+                <li data-i18n="manualFlowGuideStepInvite">Create or join an invite room, then compare the safety phrase.</li>
+                <li data-i18n="manualFlowGuideStepExport">Write a message and export the encrypted envelope from this device.</li>
+                <li data-i18n="manualFlowGuideStepImport">Import the remote envelope, show plaintext locally, then write the reply.</li>
+                <li data-i18n="manualFlowGuideStepRecovery">Use the selected row to retry or cancel pending sends; delete only local conversation records.</li>
+              </ol>
+              <p data-i18n="manualFlowGuideBoundary">
+                Manual local/default path: no network I/O, no automatic delivery, and no external delivery claim.
+              </p>
+            </section>
             <div class="chat-composer">
               <label class="loop-label chat-message-label" for="production-two-profile-message" data-i18n="writeMessage">Write message</label>
               <textarea
@@ -855,7 +871,7 @@
             </div>
             <section class="room-receive-controls" aria-label="Receive controls" data-i18n-aria-label="receiveControls">
               <p class="retention-note" data-i18n="receiveControlHint">
-                New messages arrive after you turn this on.
+                Receive attempts start after this explicit action; external delivery is not claimed.
               </p>
               <div class="loop-actions">
                 <button id="open-private-delivery-settings" type="button" class="flow-control is-secondary" data-i18n="enablePrivateDelivery">
