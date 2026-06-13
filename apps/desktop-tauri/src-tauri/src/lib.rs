@@ -879,6 +879,8 @@ pub struct ProductionProfilePassphraseRekeyResult {
     app_data_profile_store: bool,
     profile_marker_present: bool,
     passphrase_rekeyed: bool,
+    key_rotation_generation: u64,
+    key_rotation_marker_written: bool,
     old_passphrase_rejected: bool,
     new_passphrase_verified: bool,
     product_unlock_locked: bool,
@@ -4256,6 +4258,8 @@ fn run_production_profile_passphrase_rekey(
         app_data_profile_store: true,
         profile_marker_present: summary.profile_marker_present(),
         passphrase_rekeyed: summary.passphrase_rekeyed(),
+        key_rotation_generation: summary.key_rotation_generation(),
+        key_rotation_marker_written: summary.key_rotation_marker_written(),
         old_passphrase_rejected: summary.old_passphrase_rejected(),
         new_passphrase_verified: summary.new_passphrase_verified(),
         product_unlock_locked: false,
@@ -16690,6 +16694,8 @@ replay check: no replayed messages after message 2
         assert!(result.app_data_profile_store);
         assert!(result.profile_marker_present);
         assert!(result.passphrase_rekeyed);
+        assert_eq!(result.key_rotation_generation, 1);
+        assert!(result.key_rotation_marker_written);
         assert!(result.old_passphrase_rejected);
         assert!(result.new_passphrase_verified);
         assert!(!result.product_unlock_locked);

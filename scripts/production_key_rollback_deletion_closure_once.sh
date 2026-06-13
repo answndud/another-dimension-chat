@@ -60,6 +60,8 @@ must_contain "$DOC" "passphrase_first_unlock_required=true"
 must_contain "$DOC" "os_keystore_only_rejected=true"
 must_contain "$DOC" "sqlcipher_adrec1_local_store_ready=true"
 must_contain "$DOC" "sqlcipher_passphrase_kdf_scope_ready=true"
+must_contain "$DOC" "sqlcipher_passphrase_rotation_generation_source_ready=true"
+must_contain "$DOC" "minimum_forward_key_rotation_generation_ready=true"
 must_contain "$DOC" "project_owned_argon2_scrypt_kdf_ready=false"
 must_contain "$DOC" "app_key_wrapping_ready=false"
 must_contain "$DOC" "key_rotation_ready=false"
@@ -80,6 +82,7 @@ must_contain "$CORE" "SUPPORTED_LOCAL_KEY_LIFECYCLE_SCOPE"
 must_contain "$CORE" "SUPPORTED_ROLLBACK_DETECTION_SCOPE"
 must_contain "$CORE" "SUPPORTED_LOCAL_DELETION_SCOPE"
 must_contain "$CORE" "pub fn supported_local_key_lifecycle_ready"
+must_contain "$CORE" "minimum_forward_key_rotation_generation_ready"
 must_contain "$CORE" "pub fn supported_rollback_detection_ready"
 must_contain "$CORE" "pub fn supported_local_deletion_scope_ready"
 must_contain "$CORE" "secure_deletion_claim_allowed: false"
@@ -111,6 +114,7 @@ must_contain "$KEY_DOC" "reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md"
 must_contain "$KEY_DOC" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 must_contain "$KEY_DOC" "production_key_management_source_ready=true"
 must_contain "$KEY_DOC" "supported_local_key_lifecycle_ready=true"
+must_contain "$KEY_DOC" "minimum_forward_key_rotation_generation_ready=true"
 must_contain "$KEY_DOC" "rollback_prevention_claimed=false"
 must_contain "$KEY_DOC" "secure_deletion_claim_allowed=false"
 must_contain "$STABLE_GATE" "supported_local_key_lifecycle_ready=true"
@@ -149,6 +153,8 @@ production_key_management_source_ready=true
 d100_2_key_management_source_gate_reviewed=true
 supported_local_key_lifecycle_ready=true
 supported_local_key_lifecycle_scope=passphrase-first-sqlcipher-local-profile-store-only
+sqlcipher_passphrase_rotation_generation_source_ready=true
+minimum_forward_key_rotation_generation_ready=true
 supported_rollback_detection_ready=true
 supported_rollback_detection_scope=marker-only-detection-user-visible-reset-required
 supported_local_deletion_scope_ready=true

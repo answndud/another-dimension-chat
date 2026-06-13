@@ -40,6 +40,12 @@ external review no longer keep C100-3 in the active queue. Production key
 management, rollback-prevention, secure-deletion, security-ready, and
 sensitive-use claims remain false.
 
+The supported local key lifecycle includes SQLCipher passphrase rekey plus an
+encrypted one-generation-forward rotation marker. That marker is source
+evidence for local passphrase rotation continuity only; it is not app key
+wrapping, recovery, rollback prevention, or a complete production key-rotation
+claim.
+
 ## Still Forbidden
 
 Do not claim:
@@ -91,6 +97,8 @@ Do not claim:
 - sqlcipher_adrec1_local_store_ready=true
 - sqlcipher_passphrase_kdf_scope_ready=true
 - sqlcipher_passphrase_rekey_source_ready=true
+- sqlcipher_passphrase_rotation_generation_source_ready=true
+- minimum_forward_key_rotation_generation_ready=true
 - tauri_profile_passphrase_rekey_command_ready=true
 - project_owned_argon2_scrypt_kdf_ready=false
 - app_key_wrapping_ready=false

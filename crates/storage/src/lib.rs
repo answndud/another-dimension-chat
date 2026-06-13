@@ -51,6 +51,7 @@ pub mod production {
         ReceivedMessage,
         LocalMessageIndex,
         MessageCounter,
+        KeyRotationMarker,
         RendezvousEndpointState,
         RendezvousEndpointStatus,
         SessionDraft,
@@ -73,6 +74,7 @@ pub mod production {
                 Self::ReceivedMessage => "received-message",
                 Self::LocalMessageIndex => "local-message-index",
                 Self::MessageCounter => "message-counter",
+                Self::KeyRotationMarker => "key-rotation-marker",
                 Self::RendezvousEndpointState => "rendezvous-endpoint-state",
                 Self::RendezvousEndpointStatus => "rendezvous-endpoint-status",
                 Self::SessionDraft => "session-draft",
@@ -95,6 +97,7 @@ pub mod production {
                 "received-message" => Ok(Self::ReceivedMessage),
                 "local-message-index" => Ok(Self::LocalMessageIndex),
                 "message-counter" => Ok(Self::MessageCounter),
+                "key-rotation-marker" => Ok(Self::KeyRotationMarker),
                 "rendezvous-endpoint-state" => Ok(Self::RendezvousEndpointState),
                 "rendezvous-endpoint-status" => Ok(Self::RendezvousEndpointStatus),
                 "session-draft" => Ok(Self::SessionDraft),
@@ -144,6 +147,7 @@ pub mod production {
         passphrase_first_unlock: bool,
         encrypted_record_body_store: bool,
         sqlcipher_passphrase_rekey_source_ready: bool,
+        sqlcipher_passphrase_rotation_generation_source_ready: bool,
         production_key_management_ready: bool,
         rollback_protection: ReplayRollbackProtection,
         secure_deletion_from_media: bool,
@@ -165,6 +169,10 @@ pub mod production {
 
         pub fn sqlcipher_passphrase_rekey_source_ready(self) -> bool {
             self.sqlcipher_passphrase_rekey_source_ready
+        }
+
+        pub fn sqlcipher_passphrase_rotation_generation_source_ready(self) -> bool {
+            self.sqlcipher_passphrase_rotation_generation_source_ready
         }
 
         pub fn production_key_management_ready(self) -> bool {
@@ -247,6 +255,7 @@ pub mod production {
             passphrase_first_unlock: true,
             encrypted_record_body_store: true,
             sqlcipher_passphrase_rekey_source_ready: true,
+            sqlcipher_passphrase_rotation_generation_source_ready: true,
             production_key_management_ready: false,
             rollback_protection: replay_persistence_guarantees().rollback_protection,
             secure_deletion_from_media: false,
@@ -593,6 +602,19 @@ pub mod production {
             verify_sqlcipher_key(&self.connection)
         }
 
+        pub fn rekey_with_passphrase_rotation_generation(
+            &self,
+            new_passphrase: &ProfilePassphrase,
+        ) -> Result<KeyRotationGeneration, ProductionStorageError> {
+            let next_generation = self
+                .load_key_rotation_generation()?
+                .map(|generation| generation.next())
+                .unwrap_or_else(KeyRotationGeneration::first);
+            self.rekey_with_passphrase(new_passphrase)?;
+            self.save_key_rotation_generation(next_generation)?;
+            Ok(next_generation)
+        }
+
         pub fn put(
             &self,
             record_id: &EncryptedRecordId,
@@ -693,6 +715,37 @@ pub mod production {
                 && record.sealed_body == b"profile-state-v1")
         }
 
+        pub fn save_key_rotation_generation(
+            &self,
+            generation: KeyRotationGeneration,
+        ) -> Result<(), ProductionStorageError> {
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::KeyRotationMarker,
+                EncryptedRecordScope::profile(
+                    ProfileName::new("local-key-lifecycle")
+                        .map_err(|_| ProductionStorageError::InvalidRecord)?,
+                ),
+                b"sqlcipher-page-encryption-v1".to_vec(),
+                generation.encode().into_bytes(),
+            )?;
+            self.put(&key_rotation_marker_record_id(), &record)
+        }
+
+        pub fn load_key_rotation_generation(
+            &self,
+        ) -> Result<Option<KeyRotationGeneration>, ProductionStorageError> {
+            self.get(&key_rotation_marker_record_id())?
+                .map(|record| {
+                    if record.kind != ProductionRecordKind::KeyRotationMarker {
+                        return Err(ProductionStorageError::InvalidRecord);
+                    }
+                    let state = String::from_utf8(record.sealed_body)
+                        .map_err(|_| ProductionStorageError::InvalidRecord)?;
+                    KeyRotationGeneration::decode(&state)
+                })
+                .transpose()
+        }
+
         pub fn save_replay_window(
             &self,
             record_id: &EncryptedRecordId,
@@ -781,6 +834,7 @@ pub mod production {
             | ProductionRecordKind::ReceivedMessage
             | ProductionRecordKind::LocalMessageIndex
             | ProductionRecordKind::MessageCounter
+            | ProductionRecordKind::KeyRotationMarker
             | ProductionRecordKind::RendezvousEndpointState
             | ProductionRecordKind::RendezvousEndpointStatus
             | ProductionRecordKind::HandshakeState
@@ -829,6 +883,46 @@ pub mod production {
             .expect("static production profile marker record id is valid")
     }
 
+    fn key_rotation_marker_record_id() -> EncryptedRecordId {
+        EncryptedRecordId::new("key_rotation_generation_v1")
+            .expect("static production key rotation marker record id is valid")
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct KeyRotationGeneration(u64);
+
+    impl KeyRotationGeneration {
+        pub fn first() -> Self {
+            Self(1)
+        }
+
+        pub fn value(self) -> u64 {
+            self.0
+        }
+
+        pub fn next(self) -> Self {
+            Self(self.0.saturating_add(1))
+        }
+
+        fn encode(self) -> String {
+            format!("ADKEYROT1|{}", self.0)
+        }
+
+        fn decode(value: &str) -> Result<Self, ProductionStorageError> {
+            let parts = value.trim().split('|').collect::<Vec<_>>();
+            if parts.len() != 2 || parts[0] != "ADKEYROT1" {
+                return Err(ProductionStorageError::InvalidRecord);
+            }
+            let generation = parts[1]
+                .parse::<u64>()
+                .map_err(|_| ProductionStorageError::InvalidRecord)?;
+            if generation == 0 {
+                return Err(ProductionStorageError::InvalidRecord);
+            }
+            Ok(Self(generation))
+        }
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -852,6 +946,7 @@ pub mod production {
                 ProductionRecordKind::ReceivedMessage,
                 ProductionRecordKind::LocalMessageIndex,
                 ProductionRecordKind::MessageCounter,
+                ProductionRecordKind::KeyRotationMarker,
                 ProductionRecordKind::RendezvousEndpointState,
                 ProductionRecordKind::RendezvousEndpointStatus,
                 ProductionRecordKind::SessionDraft,
@@ -879,6 +974,7 @@ pub mod production {
                 ProductionRecordKind::ReceivedMessage,
                 ProductionRecordKind::LocalMessageIndex,
                 ProductionRecordKind::MessageCounter,
+                ProductionRecordKind::KeyRotationMarker,
                 ProductionRecordKind::RendezvousEndpointState,
                 ProductionRecordKind::RendezvousEndpointStatus,
                 ProductionRecordKind::SessionDraft,
@@ -1091,6 +1187,64 @@ pub mod production {
         }
 
         #[test]
+        fn sqlcipher_store_rekey_records_forward_rotation_generation_without_plaintext_marker() {
+            let (_dir, path) = unique_test_database_path("rekey-generation");
+            let old_passphrase = ProfilePassphrase::new("old-passphrase").expect("passphrase");
+            let new_passphrase = ProfilePassphrase::new("new-passphrase").expect("passphrase");
+            let second_passphrase =
+                ProfilePassphrase::new("second-passphrase").expect("passphrase");
+
+            {
+                let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &old_passphrase)
+                    .expect("open with old passphrase");
+                assert_eq!(
+                    store
+                        .load_key_rotation_generation()
+                        .expect("load generation"),
+                    None
+                );
+                let generation = store
+                    .rekey_with_passphrase_rotation_generation(&new_passphrase)
+                    .expect("first rotation");
+                assert_eq!(generation.value(), 1);
+            }
+
+            assert_eq!(
+                SqlCipherRecordStore::unlock_with_passphrase(&path, &old_passphrase)
+                    .map(|store| store.load_key_rotation_generation()),
+                Err(ProductionStorageError::UnlockFailed)
+            );
+
+            {
+                let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &new_passphrase)
+                    .expect("open with new passphrase");
+                assert_eq!(
+                    store
+                        .load_key_rotation_generation()
+                        .expect("load generation"),
+                    Some(KeyRotationGeneration::first())
+                );
+                let generation = store
+                    .rekey_with_passphrase_rotation_generation(&second_passphrase)
+                    .expect("second rotation");
+                assert_eq!(generation.value(), 2);
+            }
+
+            let reopened = SqlCipherRecordStore::unlock_with_passphrase(&path, &second_passphrase)
+                .expect("open with second passphrase");
+            assert_eq!(
+                reopened
+                    .load_key_rotation_generation()
+                    .expect("load generation"),
+                Some(KeyRotationGeneration::first().next())
+            );
+
+            let database_bytes = std::fs::read(&path).expect("read database");
+            assert!(!contains_bytes(&database_bytes, b"ADKEYROT1"));
+            assert!(!contains_bytes(&database_bytes, b"key-rotation-marker"));
+        }
+
+        #[test]
         fn sqlcipher_store_schema_migration_is_forward_only() {
             let (_dir, path) = unique_test_database_path("schema-version");
             let key = StorageDatabaseKey::test_only("test-key");
@@ -1189,6 +1343,7 @@ pub mod production {
             assert!(summary.passphrase_first_unlock());
             assert!(summary.encrypted_record_body_store());
             assert!(summary.sqlcipher_passphrase_rekey_source_ready());
+            assert!(summary.sqlcipher_passphrase_rotation_generation_source_ready());
             assert!(!summary.production_key_management_ready());
             assert_eq!(
                 summary.rollback_protection(),

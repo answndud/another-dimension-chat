@@ -41,6 +41,8 @@ must_contain "$DOC" "passphrase_first_unlock_required=true"
 must_contain "$DOC" "encrypted_profile_session_message_store_ready=true"
 must_contain "$DOC" "sqlcipher_adrec1_local_store_ready=true"
 must_contain "$DOC" "sqlcipher_passphrase_kdf_scope_ready=true"
+must_contain "$DOC" "sqlcipher_passphrase_rotation_generation_source_ready=true"
+must_contain "$DOC" "minimum_forward_key_rotation_generation_ready=true"
 must_contain "$DOC" "project_owned_argon2_scrypt_kdf_ready=false"
 must_contain "$DOC" "forward_only_schema_version_ready=true"
 must_contain "$DOC" "prototype_data_migration_ready=false"
@@ -69,6 +71,7 @@ must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_4_default_trans
 
 must_contain "crates/storage/src/lib.rs" "unlock_policy_requires_passphrase_for_all_modes"
 must_contain "crates/storage/src/lib.rs" "sqlcipher_store_rejects_wrong_passphrase_before_returning_records"
+must_contain "crates/storage/src/lib.rs" "sqlcipher_store_rekey_records_forward_rotation_generation_without_plaintext_marker"
 must_contain "crates/storage/src/lib.rs" "storage_backend_integration_summary_keeps_non_ready_boundaries_explicit"
 must_contain "crates/storage/src/lib.rs" "production_message_storage_summary_allows_encrypted_session_transport"
 must_contain "crates/core/src/lib.rs" "production_local_data_lifecycle_policy_summary"
@@ -77,6 +80,7 @@ must_contain "crates/core/src/lib.rs" "production_key_rollback_boundary_summary"
 must_contain "crates/core/src/lib.rs" "production_local_data_lifecycle_policy_is_passphrase_first_with_non_claims"
 must_contain "crates/core/src/lib.rs" "production_local_storage_lifecycle_product_matrix_closes_without_backup_or_rollback_claims"
 must_contain "crates/core/src/lib.rs" "production_key_rollback_boundary_closes_policy_without_claiming_wrapping_or_rollback"
+must_contain "crates/core/src/lib.rs" "minimum_forward_key_rotation_generation_ready"
 must_contain "apps/desktop-tauri/src-tauri/src/lib.rs" "production_profile_unlock_uses_app_data_store_without_returning_secrets"
 must_contain "apps/desktop-tauri/src-tauri/src/lib.rs" "production_session_lifecycle_status_and_delete_are_redacted"
 must_contain "apps/desktop-tauri/src-tauri/src/lib.rs" "production_data_lifecycle_delete_migration_and_wipe_are_redacted"
@@ -118,6 +122,8 @@ backup_recovery_claimed=false
 production_key_management_source_gate_reviewed=true
 production_key_management_source_ready=true
 d100_2_key_management_source_gate_reviewed=true
+sqlcipher_passphrase_rotation_generation_source_ready=true
+minimum_forward_key_rotation_generation_ready=true
 rollback_detection_marker_only=true
 rollback_prevention_claimed=false
 secure_media_deletion_claimed=false
