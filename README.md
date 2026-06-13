@@ -346,6 +346,9 @@ macOS architecture support policy is tracked in
 the current public artifact is explicitly Apple Silicon `aarch64` only, with
 universal and Intel support claims false until matching build/provenance
 evidence exists.
+Signed/notarized RC artifact handling is tracked in
+[reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md](reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md):
+the runbook and verifier exist, but no signed/notarized RC artifact is present.
 
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action

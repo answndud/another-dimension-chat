@@ -74,6 +74,8 @@ Public wording must still say `not production-ready` and
   `reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md`
 - Fresh install rehearsal result:
   `reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md`
+- Signed/notarized RC artifact runbook and verifier:
+  `reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md`
 - Release page update gate: `scripts/macos_release_page_update_gate_once.sh`
 - Public beta source preflight:
   `scripts/macos_public_beta_final_source_preflight_once.sh`
@@ -98,6 +100,8 @@ Public wording must still say `not production-ready` and
 - release_body_edit_performed=false
 - dmg_rebuild_performed=false
 - generated_release_artifacts_staged=false
+- m100_3_signed_notarized_rc_runbook_reviewed=true
+- signed_notarized_rc_artifact_available=false
 - production_distribution_ready=false
 - signed_notarized_security_boundary=false
 - security_ready_claimed=false

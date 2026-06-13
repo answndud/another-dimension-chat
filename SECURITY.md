@@ -175,6 +175,9 @@ macOS architecture support policy is tracked in
 `reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md`: the current public
 artifact is explicitly Apple Silicon `aarch64` only, with universal and Intel
 support claims false until matching build/provenance evidence exists.
+Signed/notarized RC artifact handling is tracked in
+`reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md`: the runbook and verifier
+exist, but no signed/notarized RC artifact is present.
 
 The public privacy-model comparison is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`. It maps the intended Korean Briar/Cwtch-style direction to current public beta gaps and LINDDUN categories; it is not a claim that the current beta has reached that level.
 
