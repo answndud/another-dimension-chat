@@ -287,6 +287,40 @@ private room data, passphrases, private keys, key material, support bundles,
 Android logcat, iOS sysdiagnose, telemetry uploads, and share-sheet private
 data prefill.
 
+## Android/iOS Adapter Parity Gate
+
+The Android/iOS adapter parity gate is source-level only. It verifies that
+Kotlin and Swift wrapper sources keep the same shared status adapter methods,
+blocked command methods, API groups, command result vocabulary, diagnostics
+copy boundary, lifecycle confirmation boundary, and no-network launch boundary.
+It does not create callable FFI, generated bindings, native runtime messaging,
+native network delivery, or release packaging.
+
+The parity contract file is `adapter_parity_contract.json`.
+
+Shared status adapter methods: `sharedCoreStatusSurface`,
+`redactedSupportDiagnostics`.
+
+Shared blocked command methods: `profileUnlockLockStatus`,
+`inviteCodeCreateJoin`, `pairingPayloadExportImport`,
+`safetyTranscriptConfirm`, `manualEnvelopeExportImport`,
+`messageTranscriptView`, `localDataLifecycle`.
+
+Shared result vocabulary: `status`, `failure_class`,
+`recovery_next_action`, `blocked`, `locked_profile`, `policy_blocked`,
+`lifecycle_confirmation_required`, `ffi_unavailable`.
+
+Shared shell boundaries:
+`diagnostics_copy_boundary=user_initiated_local_clipboard_only`,
+`diagnostics_payload=redacted_status_support_only`,
+`lifecycle_confirmation_boundary=display_only_no_local_data_mutation`,
+`launch_network_boundary=no_native_network_permission_no_bootstrap`,
+`launch_runtime_boundary=no_runtime_messaging_loop_no_background_delivery`,
+`implicit_delivery_start=false`, and `generated_callable_binding=false`.
+
+Allowed platform differences are limited to platform label, app-private versus
+app-container storage wording, and cloud backup versus iCloud backup wording.
+
 Allowed API groups mirror the shared core wrapper boundary:
 
 - `shared_core_status_surface`
