@@ -5,6 +5,10 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   verify:
@@ -33,6 +37,13 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci --prefix apps/desktop-tauri
+
+      - name: Check generated release artifacts are not tracked
+        run: |
+          if git ls-files 'apps/desktop-tauri/public-release/*' 'apps/desktop-tauri/beta-artifacts/*' | grep -q .; then
+            echo "generated release or beta artifact paths are tracked" >&2
+            exit 1
+          fi
 
       - name: Verify
         run: scripts/verify_all.sh

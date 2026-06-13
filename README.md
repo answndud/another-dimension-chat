@@ -1,5 +1,7 @@
 # Another Dimension Chat
 
+[![Verify](https://github.com/answndud/another-dimension-chat/actions/workflows/verify.yml/badge.svg)](https://github.com/answndud/another-dimension-chat/actions/workflows/verify.yml)
+
 Another Dimension Chat is an early Rust prototype for a high-risk 1:1 messenger architecture.
 
 The project goal is not "a serverless chat app" in the loose sense. The long-term goal is a no-central-trusted-server messenger that avoids phone-number identity, global accounts, centralized contact discovery, centralized push notifications, central message servers, and default direct P2P transport in high-risk mode. The current practical default transport path is explicit user-mediated encrypted envelope exchange; advanced onion/Tor work remains an opt-in, fail-closed, user-triggered path.
@@ -424,6 +426,10 @@ rustup component add rustfmt clippy
 ```
 
 ## Verify
+
+GitHub Actions runs the lightweight verify workflow on `main`, pull requests,
+and manual dispatch. It runs source/test validation only; it does not build,
+sign, notarize, upload, or commit release artifacts.
 
 Run the lightweight local verification suite:
 
