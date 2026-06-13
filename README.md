@@ -59,6 +59,19 @@ artifact. The intake keeps Windows local build candidate only, no public Windows
 artifact, no Windows installer, no public artifact upload, not audited,
 not production-ready, and sensitive communication prohibited.
 
+Windows local runtime smoke handoff is tracked in
+`apps/desktop-tauri/windows_local_runtime_smoke_handoff.json`. It is a
+source-boundary checklist for a future real Windows machine run of
+`npm --prefix apps/desktop-tauri run test:windows-boundary`.
+This handoff is not a Windows local runtime smoke passed claim.
+Required checklist items are WebView2 runtime
+smoke, Tauri app-data path review, path separator review, local deletion
+behavior review, redacted diagnostics behavior review, explicit user action
+before network review, local-manual envelope default path review, no auto-update
+channel review, and public non-claim copy review. The handoff keeps no public
+Windows artifact, no Windows installer, no public artifact upload,
+not production-ready, and sensitive communication prohibited.
+
 The shared core boundary means Rust owns profile identity, pairing payload and
 safety transcript logic, message orchestration, protocol envelopes and replay,
 encrypted local storage policy, and fail-closed transport policy. UI shells may
