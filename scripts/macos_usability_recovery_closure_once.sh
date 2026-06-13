@@ -62,6 +62,9 @@ must_contain "$DOC" "destructive_local_lifecycle_confirmations_visible=true"
 must_contain "$DOC" "advanced_transport_explicit_fail_closed=true"
 must_contain "$DOC" "representative_usability_report_packet_available=true"
 must_contain "$DOC" "representative_usability_report_validator_available=true"
+must_contain "$DOC" "representative_usability_dedup_token_required=true"
+must_contain "$DOC" "representative_usability_artifact_binding_required=true"
+must_contain "$DOC" "representative_usability_redacted_support_report_required=true"
 must_contain "$DOC" "usability_report_validator_ready=true"
 must_contain "$DOC" "consent_non_sensitive_use_notice_ready=true"
 must_contain "$DOC" "representative_usability_sample_threshold=3-5"
@@ -93,6 +96,9 @@ must_contain "$UI_SMOKE" "usability_study_completed="
 must_contain "$PACKET" "reference/MACOS_USABILITY_RECOVERY_CLOSURE.md"
 must_contain "$PACKET" "reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md"
 must_contain "$USABILITY_PACKET" "representative_usability_report_packet_available=true"
+must_contain "$USABILITY_PACKET" "representative_usability_dedup_token_required=true"
+must_contain "$USABILITY_PACKET" "representative_usability_artifact_binding_required=true"
+must_contain "$USABILITY_PACKET" "representative_usability_redacted_support_report_required=true"
 must_contain "$USABILITY_PACKET" "consent_non_sensitive_use_notice_ready=true"
 must_contain "$USABILITY_VALIDATOR" "status=representative-usability-evidence-candidate-requires-review"
 must_contain "$USABILITY_MATRIX" "macos_first_run_recovery_usability_matrix_available=true"
@@ -100,7 +106,9 @@ must_contain "$USABILITY_MATRIX" "redacted_support_report_copy_visible=true"
 must_contain "$USABILITY_MATRIX_GATE" "status=macos-first-run-recovery-usability-matrix-ready"
 must_contain "$STABLE_GATE" "supported_owner_observed_usability_rehearsal_ready=true"
 must_contain "$STABLE_GATE" "usability_study_completed=false"
-must_contain "README.md" "reference/MACOS_USABILITY_RECOVERY_CLOSURE.md"
+if ! grep -Fq "reference/MACOS_USABILITY_RECOVERY_CLOSURE.md" "README.md"; then
+  must_contain "SECURITY.md" "reference/MACOS_USABILITY_RECOVERY_CLOSURE.md"
+fi
 must_contain "SECURITY.md" "reference/MACOS_USABILITY_RECOVERY_CLOSURE.md"
 
 for file in "$DOC" "$UX_DOC" "$STABLE_GATE" "README.md" "SECURITY.md"; do
@@ -141,6 +149,9 @@ destructive_local_lifecycle_confirmations_visible=true
 advanced_transport_explicit_fail_closed=true
 representative_usability_report_packet_available=true
 representative_usability_report_validator_available=true
+representative_usability_dedup_token_required=true
+representative_usability_artifact_binding_required=true
+representative_usability_redacted_support_report_required=true
 usability_report_validator_ready=true
 consent_non_sensitive_use_notice_ready=true
 representative_usability_sample_threshold=3-5

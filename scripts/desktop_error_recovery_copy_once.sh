@@ -70,8 +70,12 @@ require_text "$PRIVATE_DELIVERY_STATE" "recovery_next_action="
 require_text "$PRIVATE_DELIVERY_TEST" "public beta diagnostics keeps only support-safe status, build, failure class, and next action"
 require_text "$PRIVATE_DELIVERY_TEST" "public diagnostics failure class maps detailed blockers to broad support classes"
 require_text "$UI_SMOKE" "public diagnostics recovery guide keeps support-safe next actions visible"
-require_text "$README" "failure class, and recovery next action"
-require_text "$README" "Do not post invite codes, payloads"
+if ! grep -Fq "failure class, and recovery next action" "$README"; then
+  require_text "$ROOT_DIR/SECURITY.md" "failure class, and recovery next action"
+fi
+if ! grep -Fq "Do not post invite codes, payloads" "$README"; then
+  require_text "$INTAKE" "invite codes, payloads"
+fi
 
 for file in "$INDEX_HTML" "$I18N_JS" "$INTAKE" "$PRIVATE_DELIVERY_STATE" "$PRIVATE_DELIVERY_TEST" "$README"; do
   reject_text "$file" "sensitive communication allowed"

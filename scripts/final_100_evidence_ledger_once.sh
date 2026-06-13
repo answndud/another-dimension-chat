@@ -30,6 +30,8 @@ for flag in \
   "final_100_evidence_ledger_rejects_private_material=true" \
   "final_100_evidence_ledger_requires_child_evidence_files=true" \
   "final_100_evidence_ledger_child_files_sha_verified=true" \
+  "final_100_evidence_ledger_child_files_content_redacted=true" \
+  "final_100_evidence_ledger_requires_valid_representative_usability_reports=true" \
   "final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true" \
   "final_100_evidence_candidate_requires_owner_claim_decision=true" \
   "macos_public_app_100_claim_allowed=false" \
@@ -43,6 +45,9 @@ done
 must_contain "$VALIDATOR" "final-100-evidence-ledger-v1"
 must_contain "$VALIDATOR" "real-external-and-device-evidence"
 must_contain "$VALIDATOR" "final_100_evidence_ledger_child_files_sha_verified=true"
+must_contain "$VALIDATOR" "final_100_evidence_ledger_child_files_content_redacted=true"
+must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_valid_representative_usability_reports=true"
+must_contain "$VALIDATOR" "validate_representative_usability_reports.mjs"
 must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true"
 must_contain "$VALIDATOR" "status=final-100-evidence-candidate-requires-review"
 must_contain "reference/FINAL_100_CLAIM_GATE.md" "final_100_evidence_ledger_schema_available=true"
@@ -63,13 +68,55 @@ write_evidence() {
   printf '%s\n' "$body" >"$tmp_dir/$rel"
 }
 
+write_usability_report() {
+  local rel="$1"
+  local participant="$2"
+  local dedup_token="$3"
+  local required_status="${4:-pass}"
+  mkdir -p "$tmp_dir/$(dirname "$rel")"
+  cat >"$tmp_dir/$rel" <<REPORT
+participant_label=$participant
+participant_dedup_token=$dedup_token
+representative_user_type=non-developer
+app_version=0.1.0
+build_channel=beta-onion
+build_commit=abcdef1234567890
+artifact_sha256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+distribution_manifest_sha256=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+platform=macos
+session_scope=first-run-invite-manual-envelope-recovery-diagnostics-delete
+consent_notice_acknowledged=true
+non_sensitive_use_confirmed=true
+clean_install_checksum_status=pass
+first_launch_warning_status=pass
+profile_create_unlock_status=pass
+invite_join_status=pass
+safety_verification_status=pass
+manual_envelope_exchange_status=pass
+retry_cancel_recovery_status=pass
+local_delete_wipe_status=pass
+public_diagnostics_copy_status=pass
+redacted_support_report_copy_status=pass
+support_report_raw_logs_allowed=false
+support_report_private_payload_allowed=false
+support_report_key_material_allowed=false
+recovery_next_action_understood=pass
+required_task_status=$required_status
+blocker_class=none-redacted
+redacted_blocker_summary=none-redacted
+app_launch_network_stayed_false=true
+default_transport_path=local-manual-encrypted-envelope-exchange
+non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-prohibited#not-audited#not-production-ready
+REPORT
+}
+
 write_evidence "macos/artifact.provenance.json" '{"schema":"macos-provenance","result":"signed-notarized-stapled"}'
 write_evidence "macos/distribution-manifest.json" '{"schema":"macos-release-distribution-manifest-v1","result":"verified"}'
 write_evidence "macos/gatekeeper-assessment.txt" 'spctl assessment passed on clean macOS host'
 write_evidence "macos/dmg-contained-app-assessment.txt" 'mounted DMG app codesign, execute assessment, and source bundle match passed'
-for index in 1 2 3; do
-  write_evidence "macos/usability-$index.md" "representative usability report $index: completed required macOS public app flow"
-done
+write_usability_report "macos/usability-1.md" "R01" "dedup_11111111111111111111111111111111"
+write_usability_report "macos/usability-2.md" "R02" "dedup_22222222222222222222222222222222"
+write_usability_report "macos/usability-3.md" "R03" "dedup_33333333333333333333333333333333"
 write_evidence "windows/artifact-manifest.json" '{"schema":"windows-public-artifact-manifest-v1","result":"verified"}'
 write_evidence "windows/runtime-result.md" 'real Windows runtime result: WebView2 and app-data checks passed'
 write_evidence "android/artifact-manifest.json" '{"schema":"android-public-artifact-manifest-v1","result":"verified"}'
@@ -215,6 +262,10 @@ printf '%s\n' "$candidate_output" | grep -Fq "accepted_final_100_evidence_ledger
   fail "valid final 100 evidence ledger was not accepted"
 printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_child_files_sha_verified=true" ||
   fail "final 100 ledger validator did not verify child evidence file SHAs"
+printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_child_files_content_redacted=true" ||
+  fail "final 100 ledger validator did not scan child evidence content"
+printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_requires_valid_representative_usability_reports=true" ||
+  fail "final 100 ledger validator did not require valid representative usability reports"
 printf '%s\n' "$candidate_output" | grep -Fq "macos_public_app_100_claim_allowed=false" ||
   fail "final 100 ledger validator must not auto-open macOS claim"
 printf '%s\n' "$candidate_output" | grep -Fq "status=final-100-evidence-candidate-requires-review" ||
@@ -225,6 +276,26 @@ if AD_REQUIRE_CURRENT_HEAD=1 node "$VALIDATOR" "$tmp_dir/valid-ledger.json" >"$t
 fi
 grep -Fq "source-commit-not-current-head" "$tmp_dir/stale.out" ||
   fail "strict final 100 evidence ledger validator did not report stale source commit"
+
+write_usability_report "macos/usability-1.md" "R01" "dedup_11111111111111111111111111111111" "fail"
+node - "$tmp_dir" <<'NODE'
+const { createHash } = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+const root = process.argv[2];
+const ledgerFile = path.join(root, "valid-ledger.json");
+const ledger = JSON.parse(fs.readFileSync(ledgerFile, "utf8"));
+const usability = path.join(root, "macos/usability-1.md");
+ledger.evidence_files.macos.representative_usability_reports[0].sha256 =
+  createHash("sha256").update(fs.readFileSync(usability)).digest("hex");
+fs.writeFileSync(path.join(root, "invalid-usability-ledger.json"), `${JSON.stringify(ledger, null, 2)}\n`);
+NODE
+if node "$VALIDATOR" "$tmp_dir/invalid-usability-ledger.json" >"$tmp_dir/invalid-usability.out" 2>&1; then
+  fail "final 100 evidence ledger accepted invalid representative usability report evidence"
+fi
+grep -Fq "macos.representative_usability_reports:required-tasks-not-passed" \
+  "$tmp_dir/invalid-usability.out" ||
+  fail "final 100 ledger validator did not report invalid representative usability reports"
 
 cat >"$tmp_dir/local-only-ledger.json" <<'JSON'
 {
@@ -255,6 +326,8 @@ final_100_evidence_ledger_rejects_fabricated_or_local_only=true
 final_100_evidence_ledger_rejects_private_material=true
 final_100_evidence_ledger_requires_child_evidence_files=true
 final_100_evidence_ledger_child_files_sha_verified=true
+final_100_evidence_ledger_child_files_content_redacted=true
+final_100_evidence_ledger_requires_valid_representative_usability_reports=true
 final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true
 final_100_evidence_candidate_requires_owner_claim_decision=true
 macos_public_app_100_claim_allowed=false

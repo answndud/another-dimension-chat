@@ -70,6 +70,9 @@ wording changes.
 - advanced_transport_explicit_fail_closed=true
 - representative_usability_report_packet_available=true
 - representative_usability_report_validator_available=true
+- representative_usability_dedup_token_required=true
+- representative_usability_artifact_binding_required=true
+- representative_usability_redacted_support_report_required=true
 - usability_report_validator_ready=true
 - consent_non_sensitive_use_notice_ready=true
 - representative_usability_sample_threshold=3-5
