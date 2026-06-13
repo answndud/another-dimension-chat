@@ -9,6 +9,7 @@ import {
   productionHighRiskThreatModelClaimMatrix,
   productionInviteCodeProfiles,
   productionInviteIdentityBoundaryView,
+  productionLocalDataRecoveryView,
   productionPairwiseInviteCreateView,
   productionPairwiseInviteImportFailureView,
   productionPairwiseInviteGuidanceView,
@@ -253,6 +254,37 @@ test("profile unlock recovery view splits passphrase store and migration failure
     assert.match(view.boundary, /not_protected_device_compromise=true/);
     assert.doesNotMatch(view.warning, /\/tmp|profiles\/|correct horse|private key/i);
   }
+});
+
+test("local data recovery view keeps backup migration and corrupt store limits explicit", () => {
+  const passphraseLoss = productionLocalDataRecoveryView({ kind: "passphrase_loss" });
+  const corrupt = productionLocalDataRecoveryView({ kind: "corrupt_store" });
+  const migration = productionLocalDataRecoveryView({ kind: "migration_failure" });
+
+  assert.equal(passphraseLoss.kind, "passphrase_loss");
+  assert.equal(passphraseLoss.createNewProfileAllowed, true);
+  assert.equal(corrupt.kind, "corrupt_store");
+  assert.equal(corrupt.createNewProfileAllowed, true);
+  assert.equal(migration.kind, "migration_failure");
+  assert.equal(migration.migrationRequired, true);
+  assert.equal(migration.migrationRetryAllowed, true);
+  assert.equal(migration.createNewProfileAllowed, false);
+  for (const view of [passphraseLoss, corrupt, migration]) {
+    assert.match(view.boundary, /local_export_backup=encrypted_only/);
+    assert.match(view.boundary, /restore_requires_profile_passphrase=true/);
+    assert.match(view.boundary, /cloud_backup_sync=false/);
+    assert.match(view.boundary, /backup_recovery_claim=false/);
+    assert.match(view.boundary, /destructive_migration=false/);
+    assert.match(view.boundary, /silent_data_loss=false/);
+    assert.match(view.boundary, /rollback_prevention_claim=false/);
+    assert.match(view.boundary, /secure_media_deletion_claim=false/);
+    assert.doesNotMatch(view.warning, /\/tmp|profiles\/|correct horse|private key/i);
+  }
+
+  const unlockMigration = productionProfileUnlockRecoveryView({ kind: "migration_needed" });
+  assert.match(unlockMigration.boundary, /local_data_recovery=true/);
+  assert.match(unlockMigration.boundary, /failure=migration_failure/);
+  assert.match(unlockMigration.boundary, /silent_data_loss=false/);
 });
 
 test("chat action moves from setup to compose to stored send", () => {

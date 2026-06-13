@@ -481,6 +481,117 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum LocalProfileRecoveryFailureKind {
+        PassphraseLoss,
+        CorruptStore,
+        MigrationFailure,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct LocalProfileRecoveryDecision {
+        kind: LocalProfileRecoveryFailureKind,
+        encrypted_local_export_only: bool,
+        restore_requires_profile_passphrase: bool,
+        cloud_backup_or_sync_available: bool,
+        backup_recovery_claimed: bool,
+        migration_required: bool,
+        migration_retry_allowed: bool,
+        destructive_migration_allowed: bool,
+        silent_data_loss_allowed: bool,
+        rollback_prevention_claimed: bool,
+        secure_media_deletion_claimed: bool,
+        create_new_profile_allowed: bool,
+        next_action: &'static str,
+    }
+
+    impl LocalProfileRecoveryDecision {
+        pub fn kind(self) -> LocalProfileRecoveryFailureKind {
+            self.kind
+        }
+
+        pub fn encrypted_local_export_only(self) -> bool {
+            self.encrypted_local_export_only
+        }
+
+        pub fn restore_requires_profile_passphrase(self) -> bool {
+            self.restore_requires_profile_passphrase
+        }
+
+        pub fn cloud_backup_or_sync_available(self) -> bool {
+            self.cloud_backup_or_sync_available
+        }
+
+        pub fn backup_recovery_claimed(self) -> bool {
+            self.backup_recovery_claimed
+        }
+
+        pub fn migration_required(self) -> bool {
+            self.migration_required
+        }
+
+        pub fn migration_retry_allowed(self) -> bool {
+            self.migration_retry_allowed
+        }
+
+        pub fn destructive_migration_allowed(self) -> bool {
+            self.destructive_migration_allowed
+        }
+
+        pub fn silent_data_loss_allowed(self) -> bool {
+            self.silent_data_loss_allowed
+        }
+
+        pub fn rollback_prevention_claimed(self) -> bool {
+            self.rollback_prevention_claimed
+        }
+
+        pub fn secure_media_deletion_claimed(self) -> bool {
+            self.secure_media_deletion_claimed
+        }
+
+        pub fn create_new_profile_allowed(self) -> bool {
+            self.create_new_profile_allowed
+        }
+
+        pub fn next_action(self) -> &'static str {
+            self.next_action
+        }
+    }
+
+    pub fn local_profile_recovery_decision(
+        kind: LocalProfileRecoveryFailureKind,
+    ) -> LocalProfileRecoveryDecision {
+        let (migration_required, migration_retry_allowed, create_new_profile_allowed, next_action) =
+            match kind {
+                LocalProfileRecoveryFailureKind::PassphraseLoss => {
+                    (false, false, true, "create-new-local-profile")
+                }
+                LocalProfileRecoveryFailureKind::CorruptStore => {
+                    (false, false, true, "inspect-local-store-or-create-new-profile")
+                }
+                LocalProfileRecoveryFailureKind::MigrationFailure => {
+                    (true, true, false, "retry-supported-local-store-migration")
+                }
+            };
+
+        LocalProfileRecoveryDecision {
+            kind,
+            encrypted_local_export_only: true,
+            restore_requires_profile_passphrase: true,
+            cloud_backup_or_sync_available: false,
+            backup_recovery_claimed: false,
+            migration_required,
+            migration_retry_allowed,
+            destructive_migration_allowed: false,
+            silent_data_loss_allowed: false,
+            rollback_prevention_claimed: false,
+            secure_media_deletion_claimed: false,
+            create_new_profile_allowed,
+            next_action,
+        }
+    }
+
     impl From<ProductionStoragePolicyError> for ProductionStorageError {
         fn from(value: ProductionStoragePolicyError) -> Self {
             Self::Policy(value)
@@ -1383,6 +1494,57 @@ pub mod production {
                 ),
                 ProfileStoreUnlockFailureKind::UnsupportedUnlockFactor
             );
+        }
+
+        #[test]
+        fn local_profile_recovery_decision_limits_backup_migration_and_corrupt_store_claims() {
+            let cases = [
+                (
+                    LocalProfileRecoveryFailureKind::PassphraseLoss,
+                    false,
+                    false,
+                    true,
+                    "create-new-local-profile",
+                ),
+                (
+                    LocalProfileRecoveryFailureKind::CorruptStore,
+                    false,
+                    false,
+                    true,
+                    "inspect-local-store-or-create-new-profile",
+                ),
+                (
+                    LocalProfileRecoveryFailureKind::MigrationFailure,
+                    true,
+                    true,
+                    false,
+                    "retry-supported-local-store-migration",
+                ),
+            ];
+
+            for (
+                kind,
+                migration_required,
+                migration_retry_allowed,
+                create_new_profile_allowed,
+                next_action,
+            ) in cases
+            {
+                let decision = local_profile_recovery_decision(kind);
+                assert_eq!(decision.kind(), kind);
+                assert!(decision.encrypted_local_export_only());
+                assert!(decision.restore_requires_profile_passphrase());
+                assert!(!decision.cloud_backup_or_sync_available());
+                assert!(!decision.backup_recovery_claimed());
+                assert_eq!(decision.migration_required(), migration_required);
+                assert_eq!(decision.migration_retry_allowed(), migration_retry_allowed);
+                assert!(!decision.destructive_migration_allowed());
+                assert!(!decision.silent_data_loss_allowed());
+                assert!(!decision.rollback_prevention_claimed());
+                assert!(!decision.secure_media_deletion_claimed());
+                assert_eq!(decision.create_new_profile_allowed(), create_new_profile_allowed);
+                assert_eq!(decision.next_action(), next_action);
+            }
         }
 
         #[test]

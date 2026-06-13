@@ -413,6 +413,71 @@ const profileUnlockRecoveryCopy = {
   },
 };
 
+const localDataRecoveryCopy = {
+  passphrase_loss: {
+    warning: "Without the profile passphrase, this device cannot recover the encrypted local profile.",
+    nextAction: "Create a new local profile.",
+  },
+  corrupt_store: {
+    warning: "The local profile store cannot be trusted for recovery.",
+    nextAction: "Inspect local storage or create a new local profile.",
+  },
+  migration_failure: {
+    warning: "Local store migration failed before data was changed.",
+    nextAction: "Retry with a supported local store migration.",
+  },
+};
+
+function normalizedLocalDataRecoveryKind(value) {
+  const text = String(value?.failure_kind ?? value?.failureKind ?? value?.kind ?? value?.redacted_reason ?? value?.error ?? value ?? "")
+    .trim()
+    .toLowerCase();
+  if (text.includes("migration")) {
+    return "migration_failure";
+  }
+  if (text.includes("corrupt") || text.includes("malformed database")) {
+    return "corrupt_store";
+  }
+  return "passphrase_loss";
+}
+
+export function productionLocalDataRecoveryView(input = {}) {
+  const kind = normalizedLocalDataRecoveryKind(input);
+  const copy = localDataRecoveryCopy[kind] ?? localDataRecoveryCopy.passphrase_loss;
+  const migrationRequired = kind === "migration_failure";
+  const migrationRetryAllowed = kind === "migration_failure";
+  const createNewProfileAllowed = kind !== "migration_failure";
+  return {
+    kind,
+    warning: copy.warning,
+    nextAction: copy.nextAction,
+    migrationRequired,
+    migrationRetryAllowed,
+    createNewProfileAllowed,
+    boundary: [
+      "local_data_recovery=true",
+      `failure=${kind}`,
+      "passphrase_loss_split=true",
+      "corrupt_store_split=true",
+      "migration_failure_split=true",
+      "local_export_backup=encrypted_only",
+      "restore_requires_profile_passphrase=true",
+      "cloud_backup_sync=false",
+      "backup_recovery_claim=false",
+      `migration_required=${migrationRequired}`,
+      `migration_retry_allowed=${migrationRetryAllowed}`,
+      "destructive_migration=false",
+      "silent_data_loss=false",
+      "rollback_prevention_claim=false",
+      "secure_media_deletion_claim=false",
+      `create_new_profile=${createNewProfileAllowed}`,
+      "raw_path_returned=false",
+      "passphrase_returned=false",
+      "key_material=false",
+    ].join(" "),
+  };
+}
+
 function normalizedProfileUnlockRecoveryKind(value) {
   const text = String(value?.failure_kind ?? value?.failureKind ?? value?.kind ?? value?.redacted_reason ?? value?.error ?? value ?? "")
     .trim()
@@ -439,6 +504,12 @@ export function productionProfileUnlockRecoveryView(input = {}) {
     kind === "wrong_passphrase" || kind === "unsupported_unlock_factor";
   const createNewProfileAllowed = kind === "missing_store" || kind === "corrupt_store";
   const migrationRequired = kind === "migration_needed";
+  const localDataRecovery =
+    kind === "corrupt_store"
+      ? productionLocalDataRecoveryView({ kind: "corrupt_store" })
+      : kind === "migration_needed"
+        ? productionLocalDataRecoveryView({ kind: "migration_failure" })
+        : null;
   return {
     kind,
     warning: copy.warning,
@@ -468,6 +539,7 @@ export function productionProfileUnlockRecoveryView(input = {}) {
       "passphrase_returned=false",
       "key_material=false",
       "generic_error=false",
+      localDataRecovery?.boundary ?? "local_data_recovery=not_required",
     ].join(" "),
   };
 }
