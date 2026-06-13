@@ -162,6 +162,9 @@ Review the unsigned experimental public beta boundary:
   mutation boundary.
 - `reference/STABLE_RELEASE_HOLD_REPORT.md`: public-safe hold report and
   allowed maintainer wording for the current non-claim beta state.
+- `reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md`: RB-0 release authority,
+  local credential observations, scope-down decision, and external-dependency
+  execution paths.
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and
   no-reviewer-signoff/no-public-user-safety-signoff flags.

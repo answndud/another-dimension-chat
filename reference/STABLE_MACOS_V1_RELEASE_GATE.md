@@ -10,6 +10,11 @@ The current public artifact remains the macOS Apple Silicon unsigned
 experimental public beta. The stable release gate is complete as a public-safe
 hold decision only.
 
+RB-0 release authority and credential unblock is recorded in
+`reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md`. GitHub admin access and
+Xcode/notarytool availability are observed, but local code-signing identities,
+Developer ID signing, and notarization credentials are unavailable.
+
 ## Gate Decision
 
 Decision: hold.
@@ -99,4 +104,12 @@ preflight after the blockers below are resolved.
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false
 - release_body_beta_wording_removal_authorized=false
+- release_authority_credential_unblock_reviewed=true
+- github_admin_observed=true
+- xcode_available=true
+- notarytool_available=true
+- codesigning_identity_available=false
+- developer_id_signing_available=false
+- notarization_credential_available=false
+- stable_release_scope_down_until_credentials=true
 - next_required_action=external-audit-field-evidence-signed-notarized-artifact-owner-release-decision

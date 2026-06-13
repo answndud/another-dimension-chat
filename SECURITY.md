@@ -96,6 +96,13 @@ stable release, beta wording removal, release upload, DMG rebuild,
 production-ready claim, audited claim, reliable external delivery claim, or
 sensitive-use permission is authorized.
 
+Release authority and credential unblock status is tracked in
+`reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md`. The repository admin path
+and Xcode/notarytool availability are recorded, but no Apple Developer ID
+signing identity or notarization credential is available locally; stable
+signed/notarized release remains scoped down until credentials and explicit
+release authorization exist.
+
 The public privacy-model comparison is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`. It maps the intended Korean Briar/Cwtch-style direction to current public beta gaps and LINDDUN categories; it is not a claim that the current beta has reached that level.
 
 The public threat model is tracked in `reference/PUBLIC_THREAT_MODEL.md`, and the independent review packet is tracked in `reference/INDEPENDENT_REVIEW_PACKET.md`. These are review inputs, not evidence that a review has been completed. The public beta upload set explicitly records the current review gap, private-reporting boundary, public-safe review-command boundary, and fabricated-review/peer-evidence-forbidden boundary; it does not claim reviewer signoff or public user safety signoff.

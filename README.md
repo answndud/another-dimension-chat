@@ -263,6 +263,13 @@ The current decision is hold: no stable release, beta wording removal, release
 upload, DMG rebuild, production-ready claim, audited claim, reliable external
 delivery claim, or sensitive-use permission is authorized.
 
+Release authority and credential unblock status is tracked in
+[reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md](reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md).
+The repository admin path and Xcode/notarytool availability are recorded, but
+no Apple Developer ID signing identity or notarization credential is available
+locally; stable signed/notarized release remains scoped down until credentials
+and explicit release authorization exist.
+
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
 only. Allowed public fields are app version, build channel, build commit,
