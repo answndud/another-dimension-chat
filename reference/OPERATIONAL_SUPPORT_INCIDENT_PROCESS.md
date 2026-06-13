@@ -1,9 +1,9 @@
 # Operational Support, Incident, And Vulnerability Process
 
 Status: OPS-9 source-side operational process gate closed for the current
-non-claim beta posture. This is not proof of production operations, not an
-external audit, not security-ready status, and not permission for sensitive
-communication.
+non-claim beta posture. O100-1 is closed only as a source process and tabletop
+gate. This is not proof of production operations, not an external audit, not
+security-ready status, and not permission for sensitive communication.
 
 This process separates public support, private vulnerability reporting,
 incident response, emergency release/update decisions, dependency vulnerability
@@ -102,8 +102,24 @@ diagnostic file export, and raw log export remain disabled by default. Future
 collection would require a separate explicit opt-in design and review before
 implementation.
 
+## O100-1 Source Gate Boundary
+
+O100-1 closes because the repository now has machine-checkable public support,
+private vulnerability intake, incident severity, dependency advisory,
+emergency release, rollback, user-notification, key-compromise, and redacted
+support boundaries.
+
+This is a production-decision input, not production operations evidence. A
+production operations claim still requires real incident or exercise output,
+stable release authority, owner approval, and later claim-policy review.
+
 ## Current Gate Flags
 
+- o100_1_operations_blocker_closed=true
+- operations_source_gate_closed=true
+- operations_source_gate_scope=public-support-private-vulnerability-incident-dependency-emergency-release-key-compromise-boundary
+- production_operations_evidence_required_for_claims=true
+- real_incident_response_execution_required_for_claims=true
 - operational_support_incident_process_reviewed=true
 - private_vulnerability_reporting_defined=true
 - public_support_intake_defined=true
@@ -119,4 +135,4 @@ implementation.
 - production_operational_readiness_claim_allowed=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=OPS-10 stable macOS v1.0 release gate
+- next_required_phase=Phase W100-1 - Windows Runtime Parity Scope Unlock

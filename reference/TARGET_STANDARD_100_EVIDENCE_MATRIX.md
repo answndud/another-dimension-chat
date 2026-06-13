@@ -38,7 +38,7 @@ updated, and a later explicit release/claim task authorizes the wording.
 | Redacted support report | User can produce support diagnostics with no invite codes, payloads, endpoints, message text, paths, raw logs, passphrases, keys, or private planning notes. | pass for current beta boundary | [PUBLIC_SUPPORT_TRIAGE.md](PUBLIC_SUPPORT_TRIAGE.md), [PUBLIC_INTAKE_POLICY.md](PUBLIC_INTAKE_POLICY.md) |
 | Representative usability evidence | At least the required representative macOS user sample completes install, first run, invite, manual envelope, recovery, diagnostics, and local deletion tasks with redacted reports. | intake path ready; real sample hold | [MACOS_USABILITY_RECOVERY_CLOSURE.md](MACOS_USABILITY_RECOVERY_CLOSURE.md), [REPRESENTATIVE_USABILITY_REPORT_PACKET.md](REPRESENTATIVE_USABILITY_REPORT_PACKET.md), [EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md](EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md) |
 | Update and rollback-safe release channel | Update manifest/signature or explicit manual update policy, version monotonicity, rollback warning/prevention, emergency release path, and checksum continuity are ready. | source pass for manual same-release policy and signed manifest candidate verification; signed update/rollback-prevention hold | [MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md](MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md), [MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md](MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md), [UPDATE_INTEGRITY.md](UPDATE_INTEGRITY.md), [OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md](OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md) |
-| Incident, vulnerability, and support operation | Public support, private vulnerability reporting, incident severity, dependency advisory handling, emergency release, and user notification copy are rehearsed. | source pass; production operations claim false | [OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md](OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md), [INCIDENT_TABLETOP_RECORD.md](INCIDENT_TABLETOP_RECORD.md) |
+| Incident, vulnerability, and support operation | Public support, private vulnerability reporting, incident severity, dependency advisory handling, emergency release, and user notification copy are rehearsed. | source gate closed; production operations claim false | [OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md](OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md), [INCIDENT_TABLETOP_RECORD.md](INCIDENT_TABLETOP_RECORD.md) |
 | Stable macOS release decision | Production/security/distribution/evidence/support blockers are all pass and owner release approval exists. | hold | [STABLE_MACOS_V1_RELEASE_GATE.md](STABLE_MACOS_V1_RELEASE_GATE.md), [STABLE_RELEASE_HOLD_REPORT.md](STABLE_RELEASE_HOLD_REPORT.md) |
 
 ## TARGET_STANDARD 100%
@@ -281,6 +281,10 @@ updated, and a later explicit release/claim task authorizes the wording.
 - secure_deletion_claim_allowed=false
 - production_transport_ready=false
 - production_distribution_ready=false
+- o100_1_operations_blocker_closed=true
+- operations_source_gate_closed=true
+- production_operations_evidence_required_for_claims=true
+- real_incident_response_execution_required_for_claims=true
 - production_operational_readiness_claim_allowed=false
 - windows_public_artifact_available=false
 - android_public_artifact_available=false
@@ -291,4 +295,4 @@ updated, and a later explicit release/claim task authorizes the wording.
 - generated_release_artifacts_staged=false
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false
-- next_required_phase=Phase O100-1 - Operations, Incident, And Vulnerability Readiness
+- next_required_phase=Phase W100-1 - Windows Runtime Parity Scope Unlock

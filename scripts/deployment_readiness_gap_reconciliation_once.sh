@@ -105,6 +105,11 @@ must_contain "$REGISTER" "real_external_two_machine_field_evidence_required_for_
 must_contain "$REGISTER" "accepted_redacted_field_reports_required_for_claims=true"
 must_contain "$REGISTER" "field_evidence_execution_claim_allowed=false"
 must_contain "$REGISTER" "accepted_production_field_reports=0"
+must_contain "$REGISTER" "o100_1_operations_blocker_closed=true"
+must_contain "$REGISTER" "operations_source_gate_closed=true"
+must_contain "$REGISTER" "production_operations_evidence_required_for_claims=true"
+must_contain "$REGISTER" "real_incident_response_execution_required_for_claims=true"
+must_contain "$REGISTER" "production_operational_readiness_claim_allowed=false"
 must_contain "$REGISTER" "review_packet_synced_to_latest_source_gates=true"
 must_contain "$REGISTER" "review_packet_includes_c100_5_onion_boundary=true"
 must_contain "$REGISTER" "review_packet_includes_target_standard_matrix=true"
@@ -179,7 +184,7 @@ must_contain "$MATRIX" "source pass; representative usability hold"
 must_contain "$MATRIX" "supported-scope pass; external delivery false"
 must_contain "$MATRIX" "supported-scope pass; secure media deletion false"
 must_contain "$MATRIX" "source pass for manual same-release policy and signed manifest candidate verification; signed update/rollback-prevention hold"
-must_contain "$MATRIX" "source pass; production operations claim false"
+must_contain "$MATRIX" "source gate closed; production operations claim false"
 must_contain "$MATRIX" "pass for current boundary; C100-5 active blocker closed by waiver; reliable external delivery false"
 must_contain "$MATRIX" "source pass; identity audit false"
 must_contain "$MATRIX" "D100-1 source-ready protocol/session pass; production/audit/sensitive-use/external-delivery false"
@@ -293,6 +298,8 @@ review_packet_finding_tracker_synced=true
 field_report_validator_ready=true
 usability_report_validator_ready=true
 fabricated_or_local_only_evidence_rejected=true
+o100_1_operations_blocker_closed=true
+operations_source_gate_closed=true
 d100_5_windows_public_artifact_execution_path_reviewed=true
 windows_public_artifact_execution_path_available=true
 windows_real_runtime_result_schema_available=true

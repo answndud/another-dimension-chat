@@ -54,7 +54,7 @@ done
 must_contain "$PLAN" "deployment_100_blocker_resolution_plan_available=true"
 must_contain "$PLAN" "deployment_100_blocker_resolution_machine_checkable=true"
 must_contain "$PLAN" "all_false_hold_flags_categorized=true"
-must_contain "$PLAN" "next_required_phase=Phase O100-1 - Operations, Incident, And Vulnerability Readiness"
+must_contain "$PLAN" "next_required_phase=Phase W100-1 - Windows Runtime Parity Scope Unlock"
 
 for phase in \
   "M100-1" "M100-2" "M100-3" "M100-4" "M100-5" "C100-1" "C100-2" \
@@ -185,6 +185,10 @@ for flag in \
   "rollback_prevention_claimed=false" \
   "secure_deletion_claim_allowed=false" \
   "production_transport_ready=false" \
+  "o100_1_operations_blocker_closed=true" \
+  "operations_source_gate_closed=true" \
+  "production_operations_evidence_required_for_claims=true" \
+  "real_incident_response_execution_required_for_claims=true" \
   "production_operational_readiness_claim_allowed=false" \
   "macos_signed_update_manifest_schema_available=true" \
   "macos_signed_update_manifest_validator_available=true" \
@@ -271,6 +275,8 @@ c100_5_onion_evidence_blocker_closed=true
 a100_1_external_security_review_packet_frozen=true
 a100_2_external_review_execution_blocker_closed=true
 f100_1_field_evidence_blocker_closed=true
+o100_1_operations_blocker_closed=true
+operations_source_gate_closed=true
 m100_1_release_credentials_ready=$m100_1_release_credentials_ready
 false_or_hold_items_hidden=false
 public_claim_ahead_of_evidence=false
@@ -282,5 +288,5 @@ sensitive_communication_allowed=false
 stable_release_allowed=false
 release_upload_authorized=false
 dmg_rebuild_authorized=false
-next_required_phase=Phase-O100-1-Operations-Incident-And-Vulnerability-Readiness
+next_required_phase=Phase-W100-1-Windows-Runtime-Parity-Scope-Unlock
 STATUS

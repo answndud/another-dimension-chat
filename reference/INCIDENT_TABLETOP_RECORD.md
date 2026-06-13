@@ -36,6 +36,10 @@ files from `docs/`, and local app data.
 
 ## Current Tabletop Flags
 
+- o100_1_operations_blocker_closed=true
+- operations_source_gate_closed=true
+- production_operations_evidence_required_for_claims=true
+- real_incident_response_execution_required_for_claims=true
 - incident_tabletop_completed=true
 - support_template_review_completed=true
 - public_private_intake_split_verified=true

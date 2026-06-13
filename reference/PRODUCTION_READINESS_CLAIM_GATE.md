@@ -164,6 +164,10 @@ audit, field evidence, usability evidence, or any production claim.
 - field_evidence_no_longer_blocks_lower_release_class=true
 - field_evidence_still_blocks_stable_or_production_claims=true
 - ops_9_operational_support_incident_process_reviewed=true
+- o100_1_operations_blocker_closed=true
+- operations_source_gate_closed=true
+- production_operations_evidence_required_for_claims=true
+- real_incident_response_execution_required_for_claims=true
 - incident_response_tabletop_completed=true
 - support_template_review_completed=true
 - production_operational_readiness_claim_allowed=false

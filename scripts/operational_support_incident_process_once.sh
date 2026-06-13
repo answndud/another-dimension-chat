@@ -43,6 +43,11 @@ for file in "$PROCESS" "$TABLETOP" "$PACKET" "$GATE" \
 done
 
 must_contain "$PROCESS" "operational_support_incident_process_reviewed=true"
+must_contain "$PROCESS" "o100_1_operations_blocker_closed=true"
+must_contain "$PROCESS" "operations_source_gate_closed=true"
+must_contain "$PROCESS" "operations_source_gate_scope=public-support-private-vulnerability-incident-dependency-emergency-release-key-compromise-boundary"
+must_contain "$PROCESS" "production_operations_evidence_required_for_claims=true"
+must_contain "$PROCESS" "real_incident_response_execution_required_for_claims=true"
 must_contain "$PROCESS" "private_vulnerability_reporting_defined=true"
 must_contain "$PROCESS" "public_support_intake_defined=true"
 must_contain "$PROCESS" "incident_response_tabletop_completed=true"
@@ -57,9 +62,13 @@ must_contain "$PROCESS" "raw_log_request_allowed=false"
 must_contain "$PROCESS" "production_operational_readiness_claim_allowed=false"
 must_contain "$PROCESS" "security_ready_claimed=false"
 must_contain "$PROCESS" "sensitive_communication_allowed=false"
-must_contain "$PROCESS" "next_required_phase=OPS-10 stable macOS v1.0 release gate"
+must_contain "$PROCESS" "next_required_phase=Phase W100-1 - Windows Runtime Parity Scope Unlock"
 
 must_contain "$TABLETOP" "incident_tabletop_completed=true"
+must_contain "$TABLETOP" "o100_1_operations_blocker_closed=true"
+must_contain "$TABLETOP" "operations_source_gate_closed=true"
+must_contain "$TABLETOP" "production_operations_evidence_required_for_claims=true"
+must_contain "$TABLETOP" "real_incident_response_execution_required_for_claims=true"
 must_contain "$TABLETOP" "support_template_review_completed=true"
 must_contain "$TABLETOP" "public_private_intake_split_verified=true"
 must_contain "$TABLETOP" "private_data_publication_response_defined=true"
@@ -79,6 +88,10 @@ must_contain "SECURITY.md" "reference/INCIDENT_TABLETOP_RECORD.md"
 must_contain "$PACKET" "reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md"
 must_contain "$PACKET" "reference/INCIDENT_TABLETOP_RECORD.md"
 must_contain "$GATE" "ops_9_operational_support_incident_process_reviewed=true"
+must_contain "$GATE" "o100_1_operations_blocker_closed=true"
+must_contain "$GATE" "operations_source_gate_closed=true"
+must_contain "$GATE" "production_operations_evidence_required_for_claims=true"
+must_contain "$GATE" "real_incident_response_execution_required_for_claims=true"
 must_contain "$GATE" "incident_response_tabletop_completed=true"
 must_contain "$GATE" "support_template_review_completed=true"
 must_contain "$GATE" "production_operational_readiness_claim_allowed=false"
@@ -108,6 +121,10 @@ scripts/desktop_real_user_test_prep_once.sh >/dev/null
 
 cat <<'STATUS'
 status=operational-support-incident-process-ready
+o100_1_operations_blocker_closed=true
+operations_source_gate_closed=true
+production_operations_evidence_required_for_claims=true
+real_incident_response_execution_required_for_claims=true
 operational_support_incident_process_reviewed=true
 private_vulnerability_reporting_defined=true
 public_support_intake_defined=true
@@ -123,5 +140,5 @@ raw_log_request_allowed=false
 production_operational_readiness_claim_allowed=false
 security_ready_claimed=false
 sensitive_communication_allowed=false
-next_required_phase=OPS-10-stable-macos-v1.0-release-gate
+next_required_phase=Phase-W100-1-Windows-Runtime-Parity-Scope-Unlock
 STATUS
