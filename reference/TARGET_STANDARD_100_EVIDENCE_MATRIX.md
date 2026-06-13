@@ -119,6 +119,11 @@ updated, and a later explicit release/claim task authorizes the wording.
 - m100_7_update_blocker_closed=true
 - update_channel_policy_waiver_authorized=true
 - signed_update_or_rollback_evidence_required_for_stable_claims=true
+- m100_8_stable_release_blocker_closed=true
+- stable_release_policy_waiver_authorized=true
+- stable_release_evidence_required_for_public_copy_upgrade=true
+- public_copy_upgrade_authorized=false
+- public_copy_upgrade_performed=false
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
 - macos_release_credential_evidence_collector_available=true
@@ -240,4 +245,4 @@ updated, and a later explicit release/claim task authorizes the wording.
 - generated_release_artifacts_staged=false
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false
-- next_required_phase=Phase M100-8 - macOS Stable Release Gate And Public Copy Upgrade
+- next_required_phase=Phase C100-1 - Production E2EE State Machine Closure

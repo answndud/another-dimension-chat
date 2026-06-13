@@ -166,5 +166,5 @@ release_upload_authorized=false
 dmg_rebuild_authorized=false
 production_distribution_ready=false
 production_ready_claim_allowed=false
-next_required_phase=M100-8-macOS-stable-release-gate-and-public-copy-upgrade
+next_required_phase=C100-1-Production-E2EE-State-Machine-Closure
 STATUS

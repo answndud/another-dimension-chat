@@ -27,7 +27,7 @@ hold states remain visible.
 | C100-5 advanced onion/Tor path evidence boundary | source gate with external evidence hold | `reference/TRANSPORT_EXPERIMENT_RUNBOOK.md`, `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md` |
 | M100-6 macOS representative usability evidence | closed by active-queue waiver, evidence claims held | `reference/MACOS_USABILITY_RECOVERY_CLOSURE.md`, `reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md` |
 | M100-7 macOS update and rollback-safe release channel | closed by active-queue waiver, signed update and rollback claims held | `reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md`, `scripts/macos_update_rollback_safe_release_channel_once.sh` |
-| M100-8 macOS stable release gate and public copy upgrade | hold gate | `reference/STABLE_MACOS_V1_RELEASE_GATE.md`, `scripts/stable_macos_v1_release_gate_once.sh` |
+| M100-8 macOS stable release gate and public copy upgrade | closed by active-queue waiver, stable/public copy claims held | `reference/STABLE_MACOS_V1_RELEASE_GATE.md`, `scripts/stable_macos_v1_release_gate_once.sh` |
 | A100-1 external security review packet freeze | source packet gate | `reference/INDEPENDENT_REVIEW_PACKET.md`, `scripts/external_review_audit_readiness_once.sh` |
 | A100-2 external review execution and finding closure | hold gate | `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`, `reference/AUDIT_FINDING_TRACKER.md` |
 | F100-1 external two-machine field evidence program | hold gate | `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md`, `scripts/field_evidence_reliability_program_once.sh` |
@@ -75,6 +75,11 @@ censorship-resistant.
 - macos_public_app_100_claim_allowed=false
 - whole_target_standard_100_claim_allowed=false
 - stable_release_allowed=false
+- m100_8_stable_release_blocker_closed=true
+- stable_release_policy_waiver_authorized=true
+- stable_release_evidence_required_for_public_copy_upgrade=true
+- public_copy_upgrade_authorized=false
+- public_copy_upgrade_performed=false
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false
 - generated_release_artifacts_staged=false

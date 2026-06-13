@@ -1,10 +1,11 @@
 # Stable macOS v1.0 Release Gate
 
-Status: OPS-10 stable macOS v1.0 gate reviewed with decision hold. This does
-not authorize a stable release, release upload, DMG rebuild, GitHub Release
-edit, beta wording removal, production-ready claim, audited claim,
-security-ready claim, reliable external delivery claim, or sensitive
-communication permission.
+Status: OPS-10 stable macOS v1.0 gate reviewed with decision hold. M100-8 is
+closed for active-queue progress by explicit owner policy waiver only. This
+does not authorize a stable release, release upload, DMG rebuild, GitHub
+Release edit, beta wording removal, production-ready claim, audited claim,
+security-ready claim, reliable external delivery claim, public copy upgrade, or
+sensitive communication permission.
 
 The current public artifact remains the macOS Apple Silicon unsigned
 experimental public beta. The stable release gate is complete as a public-safe
@@ -88,12 +89,20 @@ creation is authorized.
 
 ## Gate Decision
 
-Decision: hold.
+Decision: hold for stable release and public copy upgrade; active-queue
+blocker closed by owner policy waiver.
 
 Reason: the source-side readiness inputs from OPS-2 through OPS-9 are present,
 but stable release prerequisites are still false. A stable release requires
 actual signed/notarized artifact work, completed external review or audit,
 field evidence, and a separate owner release decision.
+
+The selected workaround is an explicit owner policy waiver for M100-8 only:
+missing stable release evidence no longer keeps M100-8 in the active queue, but
+stable macOS release, public copy upgrade, production, audited, security-ready,
+macOS public app 100%, TARGET_STANDARD 100%, reliable delivery, and
+sensitive-use claims all remain blocked until real evidence or a later explicit
+claim-policy decision exists.
 
 ## Required Inputs And Current Result
 
@@ -158,6 +167,12 @@ preflight after the blockers below are resolved.
 ## Current Gate Flags
 
 - stable_macos_v1_release_gate_reviewed=true
+- m100_8_stable_release_blocker_closed=true
+- stable_release_policy_waiver_authorized=true
+- stable_release_waiver_scope=active-queue-unblock-only
+- stable_release_evidence_required_for_public_copy_upgrade=true
+- public_copy_upgrade_authorized=false
+- public_copy_upgrade_performed=false
 - rb_8_production_claim_release_class_decision_reviewed=true
 - rb_9_github_release_publication_scope_down_reviewed=true
 - stable_release_gate_decision=hold

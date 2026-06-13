@@ -225,4 +225,4 @@ separate explicit phases. They do not inherit macOS release authority.
 - android_runtime_implementation_authorized=false
 - ios_runtime_implementation_authorized=false
 - stable_release_scope_down_until_credentials=true
-- next_required_phase=Phase M100-8 - macOS Stable Release Gate And Public Copy Upgrade
+- next_required_phase=Phase C100-1 - Production E2EE State Machine Closure

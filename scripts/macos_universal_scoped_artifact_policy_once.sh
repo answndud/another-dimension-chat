@@ -53,7 +53,7 @@ must_contain "$POLICY" "macos_minimum_version_policy_recorded=true"
 must_contain "$POLICY" "tauri_bundle_active=true"
 must_contain "$POLICY" "artifact_naming_platform_consistent=true"
 must_contain "$POLICY" "checksum_provenance_platform_consistent=true"
-must_contain "$POLICY" "next_required_phase=Phase M100-8 - macOS Stable Release Gate And Public Copy Upgrade"
+must_contain "$POLICY" "next_required_phase=Phase C100-1 - Production E2EE State Machine Closure"
 
 must_contain "$TAURI_CONFIG" '"productName": "Another Dimension Chat"'
 must_contain "$TAURI_CONFIG" '"version": "0.1.0"'
@@ -125,5 +125,5 @@ macos_intel_support_claim_allowed=false
 macos_minimum_version_claimed=false
 artifact_naming_platform_consistent=true
 checksum_provenance_platform_consistent=true
-next_required_phase=Phase-M100-8-macOS-Stable-Release-Gate-And-Public-Copy-Upgrade
+next_required_phase=Phase-C100-1-Production-E2EE-State-Machine-Closure
 STATUS

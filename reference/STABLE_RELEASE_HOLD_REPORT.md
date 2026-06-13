@@ -1,8 +1,10 @@
 # Stable Release Hold Report
 
-Status: public-safe stable release hold report available. This is not a stable
-release note, not a GitHub Release body, not an audit result, not production
-readiness, and not permission for sensitive communication.
+Status: public-safe stable release hold report available. M100-8 is closed for
+active-queue progress by explicit owner policy waiver only. This is not a
+stable release note, not a GitHub Release body, not an audit result, not
+production readiness, not a public copy upgrade, and not permission for
+sensitive communication.
 
 ## Hold Summary
 
@@ -45,6 +47,12 @@ are complete.
 ## Current Hold Flags
 
 - stable_release_hold_report_available=true
+- m100_8_stable_release_blocker_closed=true
+- stable_release_policy_waiver_authorized=true
+- stable_release_waiver_scope=active-queue-unblock-only
+- stable_release_evidence_required_for_public_copy_upgrade=true
+- public_copy_upgrade_authorized=false
+- public_copy_upgrade_performed=false
 - stable_release_gate_decision=hold
 - stable_macos_v1_release_allowed=false
 - public_stable_release_allowed=false
