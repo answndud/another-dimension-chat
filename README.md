@@ -184,7 +184,15 @@ This handoff is not a public release, not signed or notarized, not audited, and 
 
 The current unsigned public beta release path repackages only the pinned public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`: build channel `beta-onion`, commit `e8954df9`, and SHA-256 `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`. It is still an unsigned experimental public beta, not notarized, not audited, not production-ready, and sensitive communication prohibited. External onion delivery is outside the v0.1 public product claim; same-machine dual-profile rehearsal is development evidence only. No peer report is expected or required for this v0.1 claim, and no external delivery claim is made. The public review packet is included as reviewer input, and the independent-review gap remains explicit.
 
-Desktop public beta source freeze candidate: this is a source-only candidate, with no DMG rebuild, no upload, and no generated release artifact commit. Final source acceptance is limited to non-claims, redacted diagnostics, release boundary, and desktop flow blocker checks. The next development axis must be one of: release packaging/upload only after explicit user request, Windows readiness, real-user test preparation, or default-transport-boundary.
+macOS unsigned public beta source closure: the constrained source/maintainer
+readiness target is 100% for the already public Apple Silicon unsigned DMG
+path, with no DMG rebuild, no upload, no release body edit, and no generated
+release artifact commit. This closure covers non-claims, redacted diagnostics,
+release boundary, reviewed public screenshots, fresh-install result record,
+public support triage, and desktop flow blocker checks. It is still not
+production-ready, not audited, and sensitive communication prohibited. The next
+development axis is the production-readiness track, starting with the
+production readiness definition and claim gate.
 
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
