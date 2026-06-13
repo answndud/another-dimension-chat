@@ -37,6 +37,12 @@ for flag in \
   "macos_release_distribution_manifest_validator_available=true" \
   "macos_release_distribution_checksum_bytes_verified=true" \
   "macos_release_distribution_provenance_consistency_verified=true" \
+  "macos_release_distribution_dmg_contained_app_evidence_required=true" \
+  "macos_dmg_contained_app_verifier_available=false" \
+  "dmg_mounted_app_found=false" \
+  "dmg_contained_app_codesign_verify_passed=false" \
+  "dmg_contained_app_gatekeeper_assess_passed=false" \
+  "dmg_contained_app_matches_signed_source_app=false" \
   "macos_release_distribution_metadata_generator_ready=true" \
   "macos_release_upload_script_ready=true" \
   "macos_current_public_support_scope=apple-silicon-aarch64-only" \
@@ -51,7 +57,12 @@ for flag in \
 done
 
 must_contain "$VALIDATOR" "macos-release-distribution-manifest-v1"
+must_contain "$VALIDATOR" "macos_release_distribution_dmg_contained_app_evidence_verified=true"
+must_contain "$VALIDATOR" "macos_dmg_contained_app_verifier_available"
+must_contain "$VALIDATOR" "dmg_contained_app_matches_signed_source_app"
 must_contain "$GENERATOR" "AD_PREPARE_MACOS_RELEASE_DISTRIBUTION_METADATA"
+must_contain "$GENERATOR" "AD_MACOS_SIGNED_RC_PROVENANCE_IN"
+must_contain "$GENERATOR" "AD_MACOS_DMG_CONTAINED_APP_MATCHES_SIGNED_SOURCE_APP"
 must_contain "$UPLOAD" "AD_RELEASE_UPLOAD_AUTHORIZED"
 must_contain "$UPLOAD" "gh release upload"
 
@@ -71,7 +82,11 @@ printf '%s\n' "$empty_output" | grep -Fq "status=waiting-for-macos-release-distr
   fail "empty distribution manifest validator did not wait"
 
 tmp_dir="$(mktemp -d)"
-trap 'rm -rf "$tmp_dir"' EXIT
+generator_fixture_dir="$ROOT/apps/desktop-tauri/beta-artifacts/macos-distribution-generator-fixture.$$"
+cleanup() {
+  rm -rf "$tmp_dir" "$generator_fixture_dir"
+}
+trap cleanup EXIT
 artifact_name="another-dimension-chat-0.1.0-beta-onion-macos-aarch64-signed-notarized.dmg"
 printf 'macos focused validator fixture\n' >"$tmp_dir/$artifact_name"
 artifact_sha="$(shasum -a 256 "$tmp_dir/$artifact_name" | awk '{print $1}')"
@@ -90,6 +105,11 @@ cat >"$tmp_dir/$artifact_name.provenance.json" <<JSON
   "signing_status": "signed",
   "notarization_status": "notarized",
   "stapled": true,
+  "macos_dmg_contained_app_verifier_available": true,
+  "dmg_mounted_app_found": true,
+  "dmg_contained_app_codesign_verify_passed": true,
+  "dmg_contained_app_gatekeeper_assess_passed": true,
+  "dmg_contained_app_matches_signed_source_app": true,
   "release_upload_authorized": false,
   "macos_release_distribution_artifact_ready": false,
   "generated_release_artifacts_commit_allowed": false
@@ -121,6 +141,11 @@ cat >"$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json" <<'JSON'
       "signing_status": "signed",
       "notarization_status": "notarized",
       "stapled": true,
+      "macos_dmg_contained_app_verifier_available": true,
+      "dmg_mounted_app_found": true,
+      "dmg_contained_app_codesign_verify_passed": true,
+      "dmg_contained_app_gatekeeper_assess_passed": true,
+      "dmg_contained_app_matches_signed_source_app": true,
       "checksum_file": "__ARTIFACT_NAME__.sha256",
       "provenance_file": "__ARTIFACT_NAME__.provenance.json"
     }
@@ -137,8 +162,75 @@ printf '%s\n' "$candidate_output" | grep -Fq "macos_release_distribution_checksu
   fail "manifest validator did not verify checksum bytes"
 printf '%s\n' "$candidate_output" | grep -Fq "macos_release_distribution_provenance_consistency_verified=true" ||
   fail "manifest validator did not verify provenance consistency"
+printf '%s\n' "$candidate_output" | grep -Fq "macos_release_distribution_dmg_contained_app_evidence_verified=true" ||
+  fail "manifest validator did not verify DMG contained app evidence"
 printf '%s\n' "$candidate_output" | grep -Fq "macos_release_distribution_artifact_ready=false" ||
   fail "manifest validator must not claim artifact readiness"
+
+cp "$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json" "$tmp_dir/missing-contained-app-manifest.json"
+node - "$tmp_dir/missing-contained-app-manifest.json" <<'NODE'
+const fs = require("node:fs");
+const file = process.argv[2];
+const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
+manifest.artifacts[0].dmg_contained_app_matches_signed_source_app = false;
+fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
+NODE
+if node "$VALIDATOR" "$tmp_dir/missing-contained-app-manifest.json" >"$tmp_dir/missing-contained-app.out" 2>&1; then
+  fail "distribution manifest validator accepted signed artifact without contained-app source match evidence"
+fi
+grep -Fq "dmg_contained_app_matches_signed_source_app-required-for-signed-distribution" \
+  "$tmp_dir/missing-contained-app.out" ||
+  fail "distribution manifest validator did not report missing contained-app source match evidence"
+
+cp "$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json" "$tmp_dir/missing-contained-verifier-manifest.json"
+node - "$tmp_dir/missing-contained-verifier-manifest.json" <<'NODE'
+const fs = require("node:fs");
+const file = process.argv[2];
+const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
+delete manifest.artifacts[0].macos_dmg_contained_app_verifier_available;
+fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
+NODE
+if node "$VALIDATOR" "$tmp_dir/missing-contained-verifier-manifest.json" >"$tmp_dir/missing-contained-verifier.out" 2>&1; then
+  fail "distribution manifest validator accepted signed artifact without contained-app verifier evidence"
+fi
+grep -Fq "invalid-macos_dmg_contained_app_verifier_available" \
+  "$tmp_dir/missing-contained-verifier.out" ||
+  fail "distribution manifest validator did not report missing contained-app verifier evidence"
+
+mkdir -p "$generator_fixture_dir"
+generator_artifact="$generator_fixture_dir/$artifact_name"
+generator_provenance="$generator_fixture_dir/signed-build.provenance.json"
+generator_out="$generator_fixture_dir/out"
+printf 'macos distribution metadata generator fixture\n' >"$generator_artifact"
+
+if AD_PREPARE_MACOS_RELEASE_DISTRIBUTION_METADATA=1 \
+  AD_MACOS_RELEASE_ARTIFACT="$generator_artifact" \
+  AD_MACOS_RELEASE_METADATA_OUT_DIR="$generator_out" \
+  "$GENERATOR" >"$tmp_dir/generator-missing-provenance.out" 2>&1; then
+  fail "metadata generator accepted signed/notarized artifact without signed-build provenance"
+fi
+grep -Fq "AD_MACOS_SIGNED_RC_PROVENANCE_IN is required" \
+  "$tmp_dir/generator-missing-provenance.out" ||
+  fail "metadata generator did not report missing signed-build provenance input"
+
+cat >"$generator_provenance" <<'JSON'
+{
+  "schema_version": "macos-signed-notarized-rc-provenance-v1",
+  "macos_dmg_contained_app_verifier_available": true,
+  "dmg_mounted_app_found": true,
+  "dmg_contained_app_codesign_verify_passed": true,
+  "dmg_contained_app_gatekeeper_assess_passed": true,
+  "dmg_contained_app_matches_signed_source_app": true
+}
+JSON
+AD_PREPARE_MACOS_RELEASE_DISTRIBUTION_METADATA=1 \
+  AD_MACOS_RELEASE_ARTIFACT="$generator_artifact" \
+  AD_MACOS_SIGNED_RC_PROVENANCE_IN="$generator_provenance" \
+  AD_MACOS_RELEASE_METADATA_OUT_DIR="$generator_out" \
+  "$GENERATOR" >"$tmp_dir/generator-prepared.out"
+grep -Fq "macos_release_distribution_dmg_contained_app_evidence_verified=true" \
+  "$tmp_dir/generator-prepared.out" ||
+  fail "metadata generator did not prepare contained-app distribution evidence"
 
 if AD_REQUIRE_CURRENT_HEAD=1 node "$VALIDATOR" "$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json" >"$tmp_dir/stale.out" 2>&1; then
   fail "strict distribution manifest validator accepted stale source commit"
@@ -162,6 +254,12 @@ macos_release_distribution_manifest_schema_available=true
 macos_release_distribution_manifest_validator_available=true
 macos_release_distribution_checksum_bytes_verified=true
 macos_release_distribution_provenance_consistency_verified=true
+macos_release_distribution_dmg_contained_app_evidence_required=true
+macos_dmg_contained_app_verifier_available=false
+dmg_mounted_app_found=false
+dmg_contained_app_codesign_verify_passed=false
+dmg_contained_app_gatekeeper_assess_passed=false
+dmg_contained_app_matches_signed_source_app=false
 macos_release_distribution_metadata_generator_ready=true
 macos_release_upload_script_ready=true
 macos_current_public_support_scope=apple-silicon-aarch64-only
