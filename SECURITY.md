@@ -89,6 +89,13 @@ intake separation, key-compromise guidance, manual emergency release/update
 handling, dependency vulnerability triage, and template review while keeping
 production operational readiness and security-ready claims false.
 
+The stable macOS v1.0 release gate is tracked in
+`reference/STABLE_MACOS_V1_RELEASE_GATE.md`, with the public-safe hold report in
+`reference/STABLE_RELEASE_HOLD_REPORT.md`. The current decision is hold: no
+stable release, beta wording removal, release upload, DMG rebuild,
+production-ready claim, audited claim, reliable external delivery claim, or
+sensitive-use permission is authorized.
+
 The public privacy-model comparison is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`. It maps the intended Korean Briar/Cwtch-style direction to current public beta gaps and LINDDUN categories; it is not a claim that the current beta has reached that level.
 
 The public threat model is tracked in `reference/PUBLIC_THREAT_MODEL.md`, and the independent review packet is tracked in `reference/INDEPENDENT_REVIEW_PACKET.md`. These are review inputs, not evidence that a review has been completed. The public beta upload set explicitly records the current review gap, private-reporting boundary, public-safe review-command boundary, and fabricated-review/peer-evidence-forbidden boundary; it does not claim reviewer signoff or public user safety signoff.

@@ -157,6 +157,11 @@ Review the unsigned experimental public beta boundary:
   release/update, and dependency vulnerability process boundary.
 - `reference/INCIDENT_TABLETOP_RECORD.md`: public-safe tabletop record and
   support template review for OPS-9 operational readiness input.
+- `reference/STABLE_MACOS_V1_RELEASE_GATE.md`: stable macOS v1.0 release gate
+  hold decision, stable blocker ledger, public wording decision, and release
+  mutation boundary.
+- `reference/STABLE_RELEASE_HOLD_REPORT.md`: public-safe hold report and
+  allowed maintainer wording for the current non-claim beta state.
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and
   no-reviewer-signoff/no-public-user-safety-signoff flags.

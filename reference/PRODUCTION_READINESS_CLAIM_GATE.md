@@ -107,4 +107,11 @@ not production readiness by themselves.
 - incident_response_tabletop_completed=true
 - support_template_review_completed=true
 - production_operational_readiness_claim_allowed=false
-- next_required_phase=OPS-10 stable macOS v1.0 release gate
+- ops_10_stable_macos_v1_release_gate_reviewed=true
+- stable_release_gate_decision=hold
+- stable_macos_v1_release_allowed=false
+- public_stable_release_allowed=false
+- release_upload_authorized=false
+- dmg_rebuild_authorized=false
+- release_body_beta_wording_removal_authorized=false
+- next_required_action=external-audit-field-evidence-signed-notarized-artifact-owner-release-decision
