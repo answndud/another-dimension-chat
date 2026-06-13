@@ -117,8 +117,8 @@ require_text "$FFI_README" "source_boundary_cleanup.json"
 require_text "$FFI_README" "Canonical false state"
 require_text "$FFI_README" "Canonical blocked state"
 require_text "$FFI_README" "Canonical allowed state while blocked"
-require_text "$FFI_README" "callable FFI authorization hold and"
-require_text "$FFI_README" "source boundary cleanup verifiers"
+require_text "$FFI_README" "callable FFI authorization hold, source"
+require_text "$FFI_README" "boundary cleanup, and authorization hold regression matrix verifiers"
 
 for text in \
   "binding generation implemented false" \

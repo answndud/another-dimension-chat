@@ -92,6 +92,25 @@ Canonical allowed state while blocked: source boundary docs, static verifiers,
 read-only status adapter source, blocked command adapter source, and operator
 handoff docs.
 
+## Authorization Hold Regression Matrix
+
+`authorization_hold_regression_matrix.json` records the forbidden implementation
+patterns that must stay absent while owner authorization for callable FFI is
+false and explicit callable FFI implementation request is false.
+
+The regression matrix checks for generated binding artifacts, callable FFI
+definition files, Android native bridge calls, iOS native bridge calls, native
+network/runtime messaging entry points, mobile release packaging artifacts, and
+forbidden readiness/security claims.
+
+Expected matrix output:
+
+- forbidden file extensions absent
+- forbidden path fragments absent
+- forbidden Android source patterns absent
+- forbidden iOS source patterns absent
+- forbidden claim patterns absent
+
 ## Read-Only Native Status Adapter Boundary
 
 Android and iOS now carry a source-only read-only adapter path for the first
@@ -137,8 +156,8 @@ scaffold state. It aggregates the targeted source-boundary verifiers for the
 read-only status adapter, blocked command adapter, shell presentation,
 redacted diagnostics copy, local lifecycle confirmation, no-network launch
 boundary, Android shell boundary, iOS shell boundary, binding gate, and mobile
-skeleton boundary. It also includes the callable FFI authorization hold and
-source boundary cleanup verifiers.
+skeleton boundary. It also includes the callable FFI authorization hold, source
+boundary cleanup, and authorization hold regression matrix verifiers.
 
 This handoff verifier is not a release build, not generated binding validation,
 not APK/AAB/IPA packaging, not store distribution, not runtime messaging

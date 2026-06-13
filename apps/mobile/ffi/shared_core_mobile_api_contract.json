@@ -275,6 +275,8 @@
   "callable_ffi_authorization_hold_file": "apps/mobile/ffi/callable_ffi_authorization_hold.json",
   "source_boundary_cleanup_verified": true,
   "source_boundary_cleanup_file": "apps/mobile/ffi/source_boundary_cleanup.json",
+  "authorization_hold_regression_matrix_verified": true,
+  "authorization_hold_regression_matrix_file": "apps/mobile/ffi/authorization_hold_regression_matrix.json",
   "callable_ffi_authorization_hold_blocks": [
     "udl_file_creation",
     "uniffi_scaffolding",
