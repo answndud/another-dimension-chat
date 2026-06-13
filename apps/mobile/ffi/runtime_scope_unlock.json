@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "status": "mobile-runtime-scope-unlocked-source-candidate",
+  "owner_authorization_for_callable_mobile_binding": true,
+  "explicit_callable_mobile_binding_request": true,
+  "binding_strategy": "shared_core_json_bridge",
+  "first_callable_scope": [
+    "shared_core_status_surface",
+    "redacted_support_diagnostics"
+  ],
+  "shared_rust_core_crate": "crates/mobile",
+  "shared_rust_core_functions": [
+    "shared_core_status_surface_json",
+    "redacted_support_diagnostics_json",
+    "mobile_command_result_json"
+  ],
+  "android_adapter_file": "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/JsonBridgeSharedCoreAdapter.kt",
+  "ios_adapter_file": "apps/mobile/ios/AnotherDimension/JsonBridgeSharedCoreAdapter.swift",
+  "callable_json_bridge_implemented": true,
+  "callable_ffi_implemented": false,
+  "generated_bindings_claimed": false,
+  "wrapper_specific_protocol_storage_transport_allowed": false,
+  "native_runtime_messaging_may_start": false,
+  "network_delivery_may_start": false,
+  "release_packaging_may_start": false,
+  "android_public_artifact_ready": false,
+  "ios_public_artifact_ready": false,
+  "mobile_readiness_claimed": false,
+  "security_ready_claimed": false,
+  "public_non_claims": [
+    "sensitive communication prohibited",
+    "not audited",
+    "not production-ready",
+    "no Android public artifact",
+    "no iOS public artifact"
+  ],
+  "forbidden_mobile_dependencies": [
+    "phone_number_account",
+    "email_account",
+    "global_account",
+    "contacts_permission",
+    "telephony_permission",
+    "firebase_fcm",
+    "push_notification_delivery",
+    "cloud_backup"
+  ]
+}
