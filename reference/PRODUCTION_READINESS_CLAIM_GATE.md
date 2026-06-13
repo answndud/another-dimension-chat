@@ -103,6 +103,7 @@ audit, field evidence, usability evidence, or any production claim.
 - ops_3_key_storage_lifecycle_gate_reviewed=true
 - d100_2_key_management_source_gate_reviewed=true
 - production_key_management_source_ready=true
+- sqlcipher_passphrase_rekey_source_ready=true
 - ops_4_default_transport_product_path_reviewed=true
 - production_transport_ready=false
 - ops_5_macos_production_ux_onboarding_gate_reviewed=true

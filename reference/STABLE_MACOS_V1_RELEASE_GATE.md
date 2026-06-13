@@ -195,6 +195,7 @@ preflight after the blockers below are resolved.
 - rb_2_key_rollback_deletion_claim_closure_reviewed=true
 - d100_2_key_management_source_gate_reviewed=true
 - production_key_management_source_ready=true
+- sqlcipher_passphrase_rekey_source_ready=true
 - supported_local_key_lifecycle_ready=true
 - supported_local_key_lifecycle_scope=passphrase-first-sqlcipher-local-profile-store-only
 - supported_rollback_detection_ready=true

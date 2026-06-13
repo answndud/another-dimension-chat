@@ -59,6 +59,7 @@ for flag in \
   "os_keystore_only_rejected=true" \
   "encrypted_profile_session_message_store_ready=true" \
   "forward_only_schema_version_ready=true" \
+  "sqlcipher_passphrase_rekey_source_ready=true" \
   "prototype_data_migration_ready=false" \
   "app_key_wrapping_ready=false" \
   "key_rotation_ready=false" \
@@ -80,24 +81,33 @@ done
 must_contain "$KEY_DOC" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 must_contain "$KEY_DOC" "production_key_management_source_gate_reviewed=true"
 must_contain "$KEY_DOC" "production_key_management_source_ready=true"
+must_contain "$KEY_DOC" "sqlcipher_passphrase_rekey_source_ready=true"
 must_contain "$RB2_DOC" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 must_contain "$RB2_DOC" "d100_2_key_management_source_gate_reviewed=true"
+must_contain "$RB2_DOC" "sqlcipher_passphrase_rekey_source_ready=true"
 must_contain "$MATRIX" "production_key_management_source_ready=true"
+must_contain "$MATRIX" "sqlcipher_passphrase_rekey_source_ready=true"
 must_contain "$MATRIX" "production_key_management_ready=false"
 must_contain "$GAP_REGISTER" "production_key_management_source_ready=true"
+must_contain "$GAP_REGISTER" "sqlcipher_passphrase_rekey_source_ready=true"
 must_contain "$GAP_REGISTER" "production_key_management_ready=false"
 must_contain "$CLAIM_GATE" "production_key_management_source_ready=true"
+must_contain "$CLAIM_GATE" "sqlcipher_passphrase_rekey_source_ready=true"
 must_contain "$STABLE_GATE" "production_key_management_source_ready=true"
+must_contain "$STABLE_GATE" "sqlcipher_passphrase_rekey_source_ready=true"
 
 must_contain "$STORAGE_DECISION" "SQLCipher passphrase"
-must_contain "$STORAGE_DECISION" "Add key rotation through SQLCipher rekey"
+must_contain "$STORAGE_DECISION" "Expose user-visible key rotation through SQLCipher rekey"
 must_contain "$STORAGE_DECISION" "No recovery code, backup key, or remote reset behavior has been selected"
 must_contain "$STORAGE" "pub fn storage_backend_integration_boundary_summary()"
 must_contain "$STORAGE" "passphrase_first_unlock: true"
+must_contain "$STORAGE" "sqlcipher_passphrase_rekey_source_ready: true"
 must_contain "$STORAGE" "production_key_management_ready: false"
 must_contain "$STORAGE" "secure_deletion_from_media: false"
+must_contain "$STORAGE" "pub fn rekey_with_passphrase"
 must_contain "$STORAGE" "apply_forward_only_schema_version"
 must_contain "$STORAGE" "fn unlock_policy_requires_passphrase_for_all_modes"
+must_contain "$STORAGE" "fn sqlcipher_store_rekey_rotates_passphrase_without_plaintext_exposure"
 must_contain "$STORAGE" "fn sqlcipher_store_schema_migration_is_forward_only"
 must_contain "$STORAGE" "fn storage_backend_integration_summary_keeps_non_ready_boundaries_explicit"
 must_contain "$CORE" "pub fn production_key_rollback_boundary_summary()"
@@ -140,6 +150,7 @@ project_owned_argon2_scrypt_kdf_ready=false
 os_keystore_only_rejected=true
 encrypted_profile_session_message_store_ready=true
 forward_only_schema_version_ready=true
+sqlcipher_passphrase_rekey_source_ready=true
 prototype_data_migration_ready=false
 app_key_wrapping_ready=false
 key_rotation_ready=false

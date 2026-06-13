@@ -76,6 +76,7 @@ Do not claim:
 - os_keystore_only_rejected=true
 - sqlcipher_adrec1_local_store_ready=true
 - sqlcipher_passphrase_kdf_scope_ready=true
+- sqlcipher_passphrase_rekey_source_ready=true
 - project_owned_argon2_scrypt_kdf_ready=false
 - app_key_wrapping_ready=false
 - key_rotation_ready=false
