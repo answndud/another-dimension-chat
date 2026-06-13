@@ -10,6 +10,11 @@ Current boundary:
   Android is the next mobile client candidate only after the shared Rust
   core/API boundary stays platform-neutral; iOS follows after that same
   boundary is preserved. Mobile clients are not part of this public beta.
+- macOS production UX and onboarding review input is tracked in
+  `../../reference/MACOS_PRODUCTION_UX_ONBOARDING.md`. It binds the first-run
+  checklist, invite/verify/message flow, manual envelope guide, recovery guide,
+  redacted diagnostics, local lifecycle confirmations, and advanced transport
+  UX boundary while keeping beta/non-claim copy in place.
 - Rust owns security-sensitive state and future protocol/storage/transport behavior.
 - Shared Rust core owns profile identity, pairing payload and safety
   transcript logic, message orchestration, protocol envelopes and replay,

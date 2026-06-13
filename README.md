@@ -217,6 +217,13 @@ It records the local manual encrypted envelope exchange default, the separate
 explicit fail-closed onion/Tor advanced path, the no-central-server boundaries,
 the evidence order, and why reliable external delivery remains false.
 
+macOS production UX and onboarding review input is tracked in
+[reference/MACOS_PRODUCTION_UX_ONBOARDING.md](reference/MACOS_PRODUCTION_UX_ONBOARDING.md).
+It records the first-run checklist, invite/verify/message flow, manual envelope
+guide, recovery guide, redacted diagnostics, destructive local lifecycle
+confirmations, advanced transport UX boundary, and why production wording stays
+blocked.
+
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
 only. Allowed public fields are app version, build channel, build commit,

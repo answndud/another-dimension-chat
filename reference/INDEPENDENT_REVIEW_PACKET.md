@@ -125,6 +125,10 @@ Review the unsigned experimental public beta boundary:
   envelope default path, separate explicit fail-closed onion/Tor advanced path,
   no-central-server boundaries, evidence order, and unresolved reliable
   external delivery review questions.
+- `reference/MACOS_PRODUCTION_UX_ONBOARDING.md`: first-run checklist,
+  invite/verify/message flow, manual envelope guide, recovery guide, redacted
+  diagnostics, destructive local lifecycle confirmations, advanced transport UX
+  boundary, and remaining production wording blockers.
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and
   no-reviewer-signoff/no-public-user-safety-signoff flags.
