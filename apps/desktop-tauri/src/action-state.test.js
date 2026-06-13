@@ -4,6 +4,7 @@ import {
   chatNoticeForSendReceiveText,
   productionActionAvailability,
   productionEncryptedEnvelopeExchangeStepperView,
+  productionFirstRunDesktopSummaryView,
   productionLocalLifecycleBoundaryView,
   productionBridgeCensorshipBoundaryView,
   productionHighRiskThreatModelBoundaryView,
@@ -16,6 +17,7 @@ import {
   productionPairwiseInviteGuidanceView,
   productionPairwiseSafetyVerificationFlowView,
   productionProfileUnlockRecoveryView,
+  productionProfileRecoveryActionsView,
   productionInviteRoomConversationMetadata,
   productionManualCurrentFocusTarget,
   productionManualCurrentStepView,
@@ -127,6 +129,47 @@ test("high-risk threat model matrix keeps public claims bounded", () => {
   assert.match(boundary.boundary, /briar_cwtch_equivalence_claim=false/);
   assert.match(boundary.boundary, /coercion_safe_claim=false/);
   assert.match(boundary.boundary, /full_global_traffic_correlation_safe_claim=false/);
+});
+
+test("first-run desktop summary keeps purpose release status and next action visible", () => {
+  const initial = productionFirstRunDesktopSummaryView();
+  const locked = productionFirstRunDesktopSummaryView({ profileInputPresent: true });
+  const noRoom = productionFirstRunDesktopSummaryView({
+    profileInputPresent: true,
+    profileUnlocked: true,
+  });
+  const unverified = productionFirstRunDesktopSummaryView({
+    profileInputPresent: true,
+    profileUnlocked: true,
+    roomPresent: true,
+  });
+  const readyToWrite = productionFirstRunDesktopSummaryView({
+    profileInputPresent: true,
+    profileUnlocked: true,
+    roomPresent: true,
+    safetyVerified: true,
+  });
+  const active = productionFirstRunDesktopSummaryView({
+    profileInputPresent: true,
+    profileUnlocked: true,
+    roomPresent: true,
+    safetyVerified: true,
+    messageFlowReady: true,
+  });
+
+  assert.equal(initial.purpose, "No-central-trusted-server 1:1 private messenger");
+  assert.equal(initial.releaseStatus, "Unsigned public beta; no production security claim");
+  assert.equal(initial.primaryNextAction, "Enter a local profile and passphrase.");
+  assert.equal(locked.primaryNextAction, "Unlock or create the local profile.");
+  assert.equal(noRoom.primaryNextAction, "Create an invite room or paste the invite code you received.");
+  assert.equal(unverified.primaryNextAction, "Compare the safety phrase before messaging.");
+  assert.equal(readyToWrite.primaryNextAction, "Write a message and export the encrypted envelope.");
+  assert.equal(active.primaryNextAction, "Import, decrypt/display, reply, retry, or cancel from the room.");
+  assert.match(initial.boundary, /first_run_summary=true/);
+  assert.match(initial.boundary, /primary_next_action_visible=true/);
+  assert.match(initial.boundary, /sensitive_communication_claim=false/);
+  assert.match(initial.boundary, /security_ready_claim=false/);
+  assert.match(initial.boundary, /network_on_launch=false/);
 });
 
 test("pairwise invite guidance keeps discovery and messaging gates explicit", () => {
@@ -255,6 +298,40 @@ test("profile unlock recovery view splits passphrase store and migration failure
     assert.match(view.boundary, /secure_media_deletion_claim=false/);
     assert.match(view.boundary, /not_protected_device_compromise=true/);
     assert.doesNotMatch(view.warning, /\/tmp|profiles\/|correct horse|private key/i);
+  }
+});
+
+test("profile recovery actions stay structured and redacted", () => {
+  const wrong = productionProfileRecoveryActionsView(
+    productionProfileUnlockRecoveryView({ redacted_reason: "wrong-passphrase" }),
+  );
+  const missing = productionProfileRecoveryActionsView(
+    productionProfileUnlockRecoveryView({ kind: "missing_store" }),
+  );
+  const corrupt = productionProfileRecoveryActionsView(
+    productionProfileUnlockRecoveryView({ kind: "corrupt_store" }),
+  );
+  const migration = productionProfileRecoveryActionsView(
+    productionProfileUnlockRecoveryView({ kind: "migration_needed" }),
+  );
+
+  assert.equal(wrong.primaryAction, "retry");
+  assert.equal(wrong.retryEnabled, true);
+  assert.equal(missing.primaryAction, "create");
+  assert.equal(missing.createEnabled, true);
+  assert.equal(corrupt.rebuildEnabled, true);
+  assert.equal(migration.rebuildEnabled, true);
+  for (const view of [wrong, missing, corrupt, migration]) {
+    assert.equal(view.chooseAnotherProfileEnabled, true);
+    assert.equal(view.copySupportReportEnabled, true);
+    assert.match(view.boundary, /profile_recovery_actions=true/);
+    assert.match(view.boundary, /support_report_redacted=true/);
+    assert.match(view.boundary, /string_parsing_security_state=false/);
+    assert.match(view.boundary, /raw_path_returned=false/);
+    assert.match(view.boundary, /passphrase_returned=false/);
+    assert.match(view.boundary, /key_material=false/);
+    assert.match(view.boundary, /message_body_returned=false/);
+    assert.match(view.boundary, /envelope_payload_returned=false/);
   }
 });
 

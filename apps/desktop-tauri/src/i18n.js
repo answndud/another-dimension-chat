@@ -22,6 +22,7 @@ const dictionaries = {
       "Export/import the manual encrypted envelope, then reply, retry, cancel, or delete locally.",
     firstRunDiagnosticsStep:
       "Copy public diagnostics only after redaction; blocked actions show the reason and next recovery action.",
+    firstRunPrimaryNextAction: "Next: enter a local profile and passphrase.",
     displayMode: "Display mode",
     language: "Language",
     darkMode: "Dark mode",
@@ -1174,6 +1175,7 @@ const dictionaries = {
       "manual encrypted envelope를 export/import한 뒤 reply, retry, cancel, delete를 로컬에서 처리합니다.",
     firstRunDiagnosticsStep:
       "public diagnostics는 redaction 후에만 복사합니다. blocked action은 reason과 next recovery action을 표시합니다.",
+    firstRunPrimaryNextAction: "다음: 로컬 profile과 passphrase를 입력하세요.",
     displayMode: "화면 모드",
     language: "언어",
     darkMode: "다크 모드",

@@ -107,6 +107,7 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(indexHtml, /class="public-beta-warning"/);
   assert.match(indexHtml, /class="public-beta-gate"/);
   assert.match(indexHtml, /class="first-run-checklist"/);
+  assert.match(indexHtml, /id="first-run-primary-next-action"/);
   assert.match(indexHtml, /data-i18n="publicBetaChecksumBody"/);
   assert.match(indexHtml, /data-i18n="publicBetaInstallBody"/);
   assert.match(indexHtml, /data-i18n="publicBetaNoUpdateBody"/);
@@ -115,6 +116,7 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(indexHtml, /data-i18n="firstRunVerifyStep"/);
   assert.match(indexHtml, /data-i18n="firstRunManualMessageStep"/);
   assert.match(indexHtml, /data-i18n="firstRunDiagnosticsStep"/);
+  assert.match(indexHtml, /data-i18n="firstRunPrimaryNextAction"/);
   assert.match(i18nJs, /same GitHub Release/);
   assert.match(i18nJs, /Privacy & Security manual allow/);
   assert.match(i18nJs, /unsigned experimental public beta/);
@@ -130,6 +132,10 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(i18nJs, /Compare the safety phrase, then write a message\./);
   assert.match(i18nJs, /Export\/import the manual encrypted envelope, then reply, retry, cancel, or delete locally\./);
   assert.match(i18nJs, /blocked actions show the reason and next recovery action/);
+  assert.match(i18nJs, /Next: enter a local profile and passphrase\./);
+  assert.match(i18nJs, /다음: 로컬 profile과 passphrase를 입력하세요\./);
+  assert.match(mainJs, /productionFirstRunDesktopSummaryView/);
+  assert.match(functionBody(mainJs, "renderFirstRunDesktopSummary"), /fields\.firstRunPrimaryNextAction/);
   assert.match(i18nJs, /nothing starts on app launch/);
   assert.match(i18nJs, /앱 실행 시 자동 시작되지 않습니다/);
   assert.match(i18nJs, /Receive attempts start after this explicit action; external delivery is not claimed\./);
@@ -1242,6 +1248,9 @@ test("product unlock lockout shows local-only recovery actions", () => {
   assert.match(recoveryBody, /productionProfileUnlockRecoveryView\(result\)/);
   assert.match(recoveryBody, /local_recovery=\$\{profileRecovery\.kind\}/);
   assert.match(recoveryBody, /profileRecovery\.boundary/);
+  assert.match(recoveryBody, /productionProfileRecoveryActionsView\(profileRecovery\)/);
+  assert.match(recoveryBody, /recoveryActions\.primaryNextAction/);
+  assert.match(recoveryBody, /recoveryActions\.boundary/);
 
   const renderBody = functionBody(mainJs, "renderProductionProductUnlockRecovery");
   assert.match(renderBody, /fields\.productionProfileNextAction/);

@@ -170,6 +170,46 @@ export function productionHighRiskThreatModelBoundaryView() {
   };
 }
 
+export function productionFirstRunDesktopSummaryView(input = {}) {
+  const profileInputPresent = Boolean(input.profileInputPresent);
+  const profileUnlocked = Boolean(input.profileUnlocked);
+  const roomPresent = Boolean(input.roomPresent);
+  const safetyVerified = Boolean(input.safetyVerified);
+  const messageFlowReady = Boolean(input.messageFlowReady);
+  const purpose = "No-central-trusted-server 1:1 private messenger";
+  const releaseStatus = "Unsigned public beta; no production security claim";
+  const primaryNextAction = !profileInputPresent
+    ? "Enter a local profile and passphrase."
+    : !profileUnlocked
+      ? "Unlock or create the local profile."
+      : !roomPresent
+        ? "Create an invite room or paste the invite code you received."
+        : !safetyVerified
+          ? "Compare the safety phrase before messaging."
+          : !messageFlowReady
+            ? "Write a message and export the encrypted envelope."
+            : "Import, decrypt/display, reply, retry, or cancel from the room.";
+  return {
+    purpose,
+    releaseStatus,
+    primaryNextAction,
+    boundary: [
+      "first_run_summary=true",
+      "purpose=no-central-trusted-server-1:1-private-messenger",
+      "release_status=unsigned-public-beta",
+      "primary_next_action_visible=true",
+      `profile_input_present=${profileInputPresent}`,
+      `profile_unlocked=${profileUnlocked}`,
+      `room_present=${roomPresent}`,
+      `safety_verified=${safetyVerified}`,
+      `message_flow_ready=${messageFlowReady}`,
+      "sensitive_communication_claim=false",
+      "security_ready_claim=false",
+      "network_on_launch=false",
+    ].join(" "),
+  };
+}
+
 const pairwiseInviteGuidanceSteps = {
   create: {
     step: "create-code",
@@ -540,6 +580,77 @@ export function productionProfileUnlockRecoveryView(input = {}) {
       "key_material=false",
       "generic_error=false",
       localDataRecovery?.boundary ?? "local_data_recovery=not_required",
+    ].join(" "),
+  };
+}
+
+export function productionProfileRecoveryActionsView(recovery = {}) {
+  const kind = String(recovery?.kind ?? "wrong_passphrase").trim() || "wrong_passphrase";
+  const retryEnabled = Boolean(
+    recovery?.retryWithPassphraseAllowed ??
+      (kind === "wrong_passphrase" || kind === "unsupported_unlock_factor"),
+  );
+  const createEnabled = Boolean(
+    recovery?.createNewProfileAllowed ?? (kind === "missing_store" || kind === "corrupt_store"),
+  );
+  const rebuildEnabled = kind === "corrupt_store" || kind === "migration_needed";
+  const chooseAnotherProfileEnabled = true;
+  const copySupportReportEnabled = true;
+  const actions = [
+    {
+      id: "retry",
+      label: "Retry passphrase",
+      enabled: retryEnabled,
+    },
+    {
+      id: "create",
+      label: "Create local profile",
+      enabled: createEnabled,
+    },
+    {
+      id: "choose-another-profile",
+      label: "Choose another profile",
+      enabled: chooseAnotherProfileEnabled,
+    },
+    {
+      id: "rebuild",
+      label: "Rebuild local profile",
+      enabled: rebuildEnabled,
+    },
+    {
+      id: "copy-support-report",
+      label: "Copy redacted support report",
+      enabled: copySupportReportEnabled,
+    },
+  ];
+  const primary = actions.find((action) => action.enabled) ?? actions[actions.length - 1];
+  return {
+    kind,
+    actions,
+    retryEnabled,
+    createEnabled,
+    chooseAnotherProfileEnabled,
+    rebuildEnabled,
+    copySupportReportEnabled,
+    primaryAction: primary.id,
+    primaryNextAction: primary.label,
+    boundary: [
+      "profile_recovery_actions=true",
+      `failure=${kind}`,
+      `retry_enabled=${retryEnabled}`,
+      `create_enabled=${createEnabled}`,
+      `choose_another_profile_enabled=${chooseAnotherProfileEnabled}`,
+      `rebuild_enabled=${rebuildEnabled}`,
+      `copy_support_report_enabled=${copySupportReportEnabled}`,
+      `primary_action=${primary.id}`,
+      "support_report_redacted=true",
+      "string_parsing_security_state=false",
+      "raw_path_returned=false",
+      "passphrase_returned=false",
+      "key_material=false",
+      "invite_body_returned=false",
+      "message_body_returned=false",
+      "envelope_payload_returned=false",
     ].join(" "),
   };
 }
