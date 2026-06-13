@@ -11,6 +11,10 @@ supported 1:1 local/manual encrypted envelope flow after explicit pairing,
 safety transcript, local profile unlock, message-number/nonce binding, and
 replay-after-decrypt handling.
 
+D100-1 broadens the reviewable source gate, not the public claim, in
+`reference/PRODUCTION_E2EE_SOURCE_GATE.md`. RB-1 remains the only allowed
+local/manual E2EE wording boundary.
+
 ## Allowed Claim Scope
 
 Allowed public-safe wording:

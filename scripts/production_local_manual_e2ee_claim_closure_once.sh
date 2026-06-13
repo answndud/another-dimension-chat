@@ -71,6 +71,9 @@ must_contain "$MAIN_JS" "supported_local_manual_e2ee_scope=\${supportedLocalManu
 must_contain "$UI_SMOKE" "supported_local_manual_e2ee_ready="
 
 must_contain "$PROTOCOL_DOC" "reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md"
+must_contain "$PROTOCOL_DOC" "reference/PRODUCTION_E2EE_SOURCE_GATE.md"
+must_contain "$PROTOCOL_DOC" "d100_1_e2ee_source_gate_reviewed=true"
+must_contain "$PROTOCOL_DOC" "protocol_session_e2ee_source_ready=true"
 must_contain "$PROTOCOL_DOC" "supported_local_manual_e2ee_ready=true"
 must_contain "$PROTOCOL_DOC" "production_e2ee_ready=false"
 must_contain "$STABLE_GATE" "supported_local_manual_e2ee_ready=true"

@@ -127,9 +127,9 @@ Review the unsigned experimental public beta boundary:
 - `reference/DEPLOYMENT_READINESS_GAP_REGISTER.md`: reconciled deployment
   gap register separating source-solved supported scopes from remaining
   external blockers.
-- `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`: 1:1 protocol/session
-  state machine, replay/retry/cancel/delete semantics, and unresolved
-  production E2EE review questions.
+- `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`: D100-1 source-ready
+  1:1 protocol/session state machine, replay/retry/cancel/delete semantics,
+  and unresolved production E2EE review questions.
 - `reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md`: pairwise identity,
   signed invite payload, canonical safety transcript, duplicate-contact,
   re-pairing, and safety mismatch source gate.
@@ -137,6 +137,10 @@ Review the unsigned experimental public beta boundary:
   local/manual 1:1 envelope message-content E2EE claim boundary, while broad
   production E2EE, audited, secure messenger, sensitive-use, automatic network
   messaging, remote acknowledgement, and external delivery claims remain false.
+- `reference/PRODUCTION_E2EE_SOURCE_GATE.md`: D100-1 source gate connecting
+  the supported local/manual E2EE scope, protocol/session semantics, pairwise
+  safety transcript, replay/tamper/retry/cancel/delete behavior, and local
+  session-record boundary while production E2EE and audit claims remain false.
 - `reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md`: passphrase-first unlock,
   encrypted local profile/session/message store lifecycle, destructive local
   actions, backup/migration boundaries, marker-only rollback detection, and

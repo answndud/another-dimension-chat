@@ -88,7 +88,7 @@ field evidence, and a separate owner release decision.
 
 | Area | Current result | Stable impact |
 | --- | --- | --- |
-| Protocol/session lifecycle | Supported local/manual envelope message-content scope is ready; broad `production_e2ee_ready=false`. | Hold production-ready and security-ready claims. |
+| Protocol/session lifecycle | D100-1 source-ready protocol/session surface is pass-capable for supported local/manual envelope message-content scope; broad `production_e2ee_ready=false`. | Hold production-ready and security-ready claims. |
 | Key/storage lifecycle | Supported local key/deletion scope exists; broad `production_key_management_ready=false`. | Hold sensitive-use and security-ready claims. |
 | Default transport | Supported local/manual courier envelope default exists; broad `production_transport_ready=false`. | Hold reliable external delivery claims. |
 | macOS UX/onboarding | Owner-observed task script exists; `usability_study_completed=false`. | Hold production wording removal. |
@@ -164,6 +164,8 @@ preflight after the blockers below are resolved.
 - rb_5_field_evidence_release_class_scope_down_reviewed=true
 - real_external_macos_two_machine_reports_available=false
 - rb_1_local_manual_e2ee_claim_closure_reviewed=true
+- d100_1_e2ee_source_gate_reviewed=true
+- protocol_session_e2ee_source_ready=true
 - supported_local_manual_e2ee_ready=true
 - supported_local_manual_e2ee_scope=1:1-local-manual-envelope-message-content-only
 - rb_2_key_rollback_deletion_claim_closure_reviewed=true

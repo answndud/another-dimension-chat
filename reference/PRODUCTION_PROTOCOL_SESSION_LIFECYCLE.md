@@ -90,6 +90,14 @@ This boundary still keeps automatic network messaging, remote delivery
 acknowledgement, reliable external delivery, audited E2EE, secure messenger,
 sensitive-use, and broad production E2EE claims false.
 
+## D100-1 Source Gate
+
+The pass-capable source gate for this supported protocol/session surface is
+recorded in `reference/PRODUCTION_E2EE_SOURCE_GATE.md`. It joins the existing
+state machine, local/manual E2EE claim boundary, pairwise identity/safety
+transcript gate, and encrypted local session-record boundary without upgrading
+production, audit, reliable-delivery, or sensitive-use claims.
+
 ## Existing Test Anchors
 
 The source gate relies on the following targeted tests and code boundaries:
@@ -127,6 +135,11 @@ These questions remain unresolved and must stay in the external review packet:
 - local_manual_and_future_transport_semantics_shared=true
 - replay_duplicate_retry_cancel_edges_documented=true
 - dev_insecure_surface_blocked_from_production_claim=true
+- production_e2ee_source_gate_reviewed=true
+- production_e2ee_source_ready=true
+- d100_1_e2ee_source_gate_reviewed=true
+- protocol_session_e2ee_source_ready=true
+- protocol_session_e2ee_source_scope=1:1-local-manual-envelope-message-content-session-replay-retry-cancel-delete
 - rb_1_local_manual_e2ee_claim_closure_reviewed=true
 - supported_local_manual_e2ee_ready=true
 - supported_local_manual_e2ee_scope=1:1-local-manual-envelope-message-content-only

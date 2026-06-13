@@ -92,6 +92,8 @@ not production readiness by themselves.
 - public_wording_matches_lower_release_class=true
 - owner_stable_release_approval_recorded=false
 - ops_2_protocol_session_lifecycle_gate_reviewed=true
+- d100_1_e2ee_source_gate_reviewed=true
+- protocol_session_e2ee_source_ready=true
 - ops_3_key_storage_lifecycle_gate_reviewed=true
 - ops_4_default_transport_product_path_reviewed=true
 - production_transport_ready=false
