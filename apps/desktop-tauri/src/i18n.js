@@ -18,6 +18,8 @@ const dictionaries = {
       "current_version=unknown release_authority=same-github-release-assets checksum_verification=matching-sha256-before-open auto_update_ready=false rollback_prevention_claimed=false",
     windowsRuntimeParityStatusInitial:
       "platform_scope=desktop-shared-core windows_distribution=local-build-candidate-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false",
+    highRiskThreatModelStatusInitial:
+      "high_risk_matrix=remote_passive_observer:mitigated,remote_active_attacker:mitigated,malicious_peer:mitigated,local_at_rest_attacker:mitigated,supply_chain_update_attacker:mitigated,compromised_endpoint:not_protected,direct_coercion:not_protected,global_traffic_correlation:not_protected claimable_statuses=protected,mitigated not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation",
     firstRunChecklistLabel: "First-run private message flow",
     firstRunProfileStep: "Create, unlock, or reopen your local profile before room actions.",
     firstRunRoomStep: "Create a pairwise invite room or paste the invite code you received.",
@@ -1184,6 +1186,8 @@ const dictionaries = {
       "current_version=unknown release_authority=same-github-release-assets checksum_verification=matching-sha256-before-open auto_update_ready=false rollback_prevention_claimed=false",
     windowsRuntimeParityStatusInitial:
       "platform_scope=desktop-shared-core windows_distribution=local-build-candidate-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false",
+    highRiskThreatModelStatusInitial:
+      "high_risk_matrix=remote_passive_observer:mitigated,remote_active_attacker:mitigated,malicious_peer:mitigated,local_at_rest_attacker:mitigated,supply_chain_update_attacker:mitigated,compromised_endpoint:not_protected,direct_coercion:not_protected,global_traffic_correlation:not_protected claimable_statuses=protected,mitigated not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation",
     firstRunChecklistLabel: "첫 private message 흐름",
     firstRunProfileStep: "방 작업 전에 로컬 profile을 create, unlock, reopen 합니다.",
     firstRunRoomStep: "pairwise invite room을 만들거나 받은 invite code를 붙여넣습니다.",

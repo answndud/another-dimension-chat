@@ -672,6 +672,8 @@ correlation. The project does not claim audited security, full censorship
 resistance, Briar/Cwtch-equivalent privacy, compromised-device safety, coercion
 safety, full global-correlation safety, or reliable external onion delivery.
 
+The fixed public matrix is [reference/HIGH_RISK_THREAT_MODEL.md](reference/HIGH_RISK_THREAT_MODEL.md).
+
 ## Repository Layout
 
 ```text
