@@ -37,7 +37,7 @@ updated, and a later explicit release/claim task authorizes the wording.
 | Local deletion and wipe | Conversation delete, session delete, profile delete, and full local wipe have distinct in-app semantics and recovery copy. | partial | [PRODUCTION_KEY_STORAGE_LIFECYCLE.md](PRODUCTION_KEY_STORAGE_LIFECYCLE.md), [PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md](PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md) |
 | Redacted support report | User can produce support diagnostics with no invite codes, payloads, endpoints, message text, paths, raw logs, passphrases, keys, or private planning notes. | pass for current beta boundary | [PUBLIC_SUPPORT_TRIAGE.md](PUBLIC_SUPPORT_TRIAGE.md), [PUBLIC_INTAKE_POLICY.md](PUBLIC_INTAKE_POLICY.md) |
 | Representative usability evidence | At least the required representative macOS user sample completes install, first run, invite, manual envelope, recovery, diagnostics, and local deletion tasks with redacted reports. | hold | [MACOS_USABILITY_RECOVERY_CLOSURE.md](MACOS_USABILITY_RECOVERY_CLOSURE.md), [FIELD_EVIDENCE_RELIABILITY_PROGRAM.md](FIELD_EVIDENCE_RELIABILITY_PROGRAM.md) |
-| Update and rollback-safe release channel | Update manifest/signature or explicit manual update policy, version monotonicity, rollback warning/prevention, emergency release path, and checksum continuity are ready. | hold | [UPDATE_INTEGRITY.md](UPDATE_INTEGRITY.md), [OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md](OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md) |
+| Update and rollback-safe release channel | Update manifest/signature or explicit manual update policy, version monotonicity, rollback warning/prevention, emergency release path, and checksum continuity are ready. | hold | [MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md](MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md), [UPDATE_INTEGRITY.md](UPDATE_INTEGRITY.md), [OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md](OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md) |
 | Incident, vulnerability, and support operation | Public support, private vulnerability reporting, incident severity, dependency advisory handling, emergency release, and user notification copy are rehearsed. | partial | [OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md](OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md), [INCIDENT_TABLETOP_RECORD.md](INCIDENT_TABLETOP_RECORD.md) |
 | Stable macOS release decision | Production/security/distribution/evidence/support blockers are all pass and owner release approval exists. | hold | [STABLE_MACOS_V1_RELEASE_GATE.md](STABLE_MACOS_V1_RELEASE_GATE.md), [STABLE_RELEASE_HOLD_REPORT.md](STABLE_RELEASE_HOLD_REPORT.md) |
 
@@ -54,7 +54,7 @@ updated, and a later explicit release/claim task authorizes the wording.
 | No central message server dependency | Default transport path does not depend on a central message server. | pass for local/manual default | [PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md](PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md) |
 | No required push notification | Product flow does not depend on push notification services. | pass for current beta/source boundary | [CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md](CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md) |
 | No cloud backup | Product does not provide or require cloud backup/sync. | pass for current beta/source boundary | [PRODUCTION_KEY_STORAGE_LIFECYCLE.md](PRODUCTION_KEY_STORAGE_LIFECYCLE.md) |
-| Pairwise identity and invite/QR default | Pairwise identity persistence, re-pairing, duplicate prevention, and identity-change warnings are implemented and tested. | partial | [PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md) |
+| Pairwise identity and invite/QR default | Pairwise identity persistence, re-pairing, duplicate prevention, and identity-change warnings are implemented and tested. | partial; identity audit false | [PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md](PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md), [PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md) |
 | Message-content E2EE | Supported 1:1 local/manual message-content encryption is tested; broad production E2EE review gates are closed before production wording. | partial; production false | [PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md](PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md), [PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md) |
 | Passphrase-first encrypted local storage | Passphrase-first SQLCipher-backed local stores, migration, backup exclusion, rollback policy, reset/rebuild, and local wipe semantics are closed. | partial; production false | [PRODUCTION_KEY_STORAGE_LIFECYCLE.md](PRODUCTION_KEY_STORAGE_LIFECYCLE.md), [PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md](PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md) |
 | Redacted public diagnostics and support | Public diagnostics/support never request or export raw logs, payloads, paths, message text, passphrases, keys, or private notes. | pass for current beta/source boundary | [PUBLIC_INTAKE_POLICY.md](PUBLIC_INTAKE_POLICY.md), [PUBLIC_SUPPORT_TRIAGE.md](PUBLIC_SUPPORT_TRIAGE.md) |
@@ -79,6 +79,7 @@ updated, and a later explicit release/claim task authorizes the wording.
 
 | Gate class | Required linked evidence | Current state |
 | --- | --- | --- |
+| PLAN active queue closure | [TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md](TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md) | linked; all active phases mapped to source/hold gates |
 | Production claim gate | [PRODUCTION_READINESS_CLAIM_GATE.md](PRODUCTION_READINESS_CLAIM_GATE.md), [PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md](PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md), [STABLE_MACOS_V1_RELEASE_GATE.md](STABLE_MACOS_V1_RELEASE_GATE.md) | linked; production claim false |
 | Audit/review | [EXTERNAL_REVIEW_AUDIT_READINESS.md](EXTERNAL_REVIEW_AUDIT_READINESS.md), [AUDIT_FINDING_TRACKER.md](AUDIT_FINDING_TRACKER.md), [INDEPENDENT_REVIEW_PACKET.md](INDEPENDENT_REVIEW_PACKET.md) | linked; audit/review completion false |
 | Field evidence | [FIELD_EVIDENCE_RELIABILITY_PROGRAM.md](FIELD_EVIDENCE_RELIABILITY_PROGRAM.md), [FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md](FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md), [REDACTED_FIELD_REPORT_PACKET.md](REDACTED_FIELD_REPORT_PACKET.md) | linked; repeated external evidence false |
@@ -103,8 +104,11 @@ updated, and a later explicit release/claim task authorizes the wording.
 
 - evidence_matrix_machine_checkable=true
 - target_standard_100_evidence_matrix_available=true
+- target_standard_100_active_queue_source_closure_available=true
 - target_standard_criteria_complete=true
 - macos_public_app_100_criteria_complete=true
+- pairwise_identity_safety_product_closure_reviewed=true
+- macos_update_rollback_safe_release_channel_reviewed=true
 - production_claim_gate_linked=true
 - audit_review_gate_linked=true
 - field_evidence_gate_linked=true

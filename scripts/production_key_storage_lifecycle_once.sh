@@ -38,14 +38,14 @@ must_contain "$DOC" "rollback_prevention_claimed=false"
 must_contain "$DOC" "secure_media_deletion_claimed=false"
 must_contain "$DOC" "production_key_management_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
-must_contain "$DOC" "next_required_phase=OPS-4 reliable default transport product path"
+must_contain "$DOC" "next_required_phase=RB-3 default practical transport closure"
 
 must_contain "README.md" "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
 must_contain "SECURITY.md" "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
 must_contain "reference/STORAGE_DECISION.md" "PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_3_key_storage_lifecycle_gate_reviewed=true"
-must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "next_required_phase=OPS-4 reliable default transport product path"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_4_default_transport_product_path_reviewed=true"
 
 must_contain "crates/storage/src/lib.rs" "unlock_policy_requires_passphrase_for_all_modes"
 must_contain "crates/storage/src/lib.rs" "sqlcipher_store_rejects_wrong_passphrase_before_returning_records"
@@ -91,5 +91,5 @@ rollback_prevention_claimed=false
 secure_media_deletion_claimed=false
 production_key_management_ready=false
 security_ready_claimed=false
-next_required_phase=OPS-4-reliable-default-transport-product-path
+next_required_phase=RB-3-default-practical-transport-closure
 STATUS

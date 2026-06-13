@@ -121,9 +121,15 @@ Review the unsigned experimental public beta boundary:
 - `reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md`: P100-0 evidence matrix
   for judging general macOS public app 100% and full target-standard 100%
   without upgrading current public non-claims.
+- `reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md`: current
+  PLAN active queue source/hold gate map, with all stable, production, audit,
+  reliability, platform-artifact, and sensitive-use claims kept false.
 - `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`: 1:1 protocol/session
   state machine, replay/retry/cancel/delete semantics, and unresolved
   production E2EE review questions.
+- `reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md`: pairwise identity,
+  signed invite payload, canonical safety transcript, duplicate-contact,
+  re-pairing, and safety mismatch source gate.
 - `reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md`: RB-1 supported
   local/manual 1:1 envelope message-content E2EE claim boundary, while broad
   production E2EE, audited, secure messenger, sensitive-use, automatic network
@@ -168,6 +174,10 @@ Review the unsigned experimental public beta boundary:
   and universal/Intel claim blockers.
 - `reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md`: M100-3 signed/notarized
   RC runbook and focused artifact verifier, with current no-artifact hold.
+- `reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md`: M100-7 manual
+  same-release update integrity and rollback-warning source gate, with no
+  auto-update, signed update channel, release upload, or rollback-prevention
+  claim.
 - `reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md`: RB-7
   release-class scope-down that keeps stable signing/notarization claims false
   while allowing lower release classes to continue without production

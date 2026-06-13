@@ -71,11 +71,23 @@ P100-0 100% definition lock is tracked in
 `reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md`: it defines the evidence
 matrix for judging general macOS public app 100% and full target-standard 100%
 while keeping the current non-claims unchanged.
+The current active queue source/hold closure is tracked in
+`reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md`: each remaining
+100% phase is mapped to a source-side or explicit hold gate, with macOS 100%,
+whole-product 100%, stable, production-ready, audited, reliable-delivery, and
+sensitive-use claims still false.
 
 The production protocol/session lifecycle review input is tracked in
 `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`. It documents the current
 1:1 state machine, replay/retry/cancel/delete semantics, unresolved review
 questions, and why production E2EE readiness remains false.
+
+Pairwise identity and safety product closure is tracked in
+`reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md`. It connects pairwise
+local identity persistence, signed invite payloads, canonical safety
+transcripts, duplicate-contact rejection, explicit rebuild/re-pairing, and
+safety mismatch revocation while identity audit, security-ready, and
+sensitive-use claims remain false.
 
 Supported local/manual E2EE claim closure is tracked in
 `reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md`. It allows only the narrow
@@ -132,6 +144,11 @@ distribution readiness remains false. RB-7 release-class scope-down is tracked
 in `reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md`; it allows
 lower release classes to continue while stable signed/notarized artifact,
 production distribution, and security-ready claims remain false.
+The macOS update and rollback-safe release channel source gate is tracked in
+`reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md`. The current update
+path remains manual same-release GitHub Release verification only, with no
+auto-update, signed update manifest, release upload, rollback-prevention, or
+stable distribution claim.
 
 External review and audit readiness is tracked in
 `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`, with the public-safe finding
