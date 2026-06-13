@@ -268,5 +268,9 @@
     "shared_result_vocabulary",
     "shared_shell_boundaries",
     "allowed_platform_differences"
-  ]
+  ],
+  "binding_prerequisite_closure_verified": true,
+  "binding_prerequisite_closure_file": "apps/mobile/ffi/binding_prerequisite_closure.json",
+  "owner_authorization_for_callable_ffi": false,
+  "explicit_callable_ffi_implementation_request": false
 }
