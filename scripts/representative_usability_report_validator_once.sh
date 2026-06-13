@@ -155,5 +155,5 @@ representative_usability_sample_threshold=3-5
 accepted_representative_usability_reports=0
 usability_study_completed=false
 representative_usability_evidence_completed=false
-next_required_phase=Phase-C100-1-Production-E2EE-State-Machine-Closure
+next_required_phase=Phase-C100-2-Pairwise-Identity-And-Safety-Verification-Closure
 STATUS

@@ -65,7 +65,7 @@ must_contain "$DOC" "stable_release_allowed=false"
 must_contain "$DOC" "production_distribution_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
 must_contain "$DOC" "sensitive_communication_allowed=false"
-must_contain "$DOC" "next_required_phase=C100-1 Production E2EE State Machine Closure"
+must_contain "$DOC" "next_required_phase=C100-2 Pairwise Identity And Safety Verification Closure"
 
 must_contain "README.md" "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
 must_contain "SECURITY.md" "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
@@ -129,5 +129,5 @@ stable_release_allowed=false
 production_distribution_ready=false
 security_ready_claimed=false
 sensitive_communication_allowed=false
-next_required_phase=C100-1-Production-E2EE-State-Machine-Closure
+next_required_phase=C100-2-Pairwise-Identity-And-Safety-Verification-Closure
 STATUS

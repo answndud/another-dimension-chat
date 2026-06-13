@@ -70,6 +70,10 @@ require_text "$DOC" "cancelled_pending_pairing_cannot_be_confirmed"
 require_text "$DOC" "ReplayWindow::accept_after_decrypt"
 require_text "$DOC" "ProductionEnvelopeSession"
 require_text "$DOC" "protocol_session_lifecycle_gate_reviewed=true"
+require_text "$DOC" "c100_1_e2ee_blocker_closed=true"
+require_text "$DOC" "production_e2ee_policy_waiver_authorized=true"
+require_text "$DOC" "production_e2ee_external_review_required_for_claims=true"
+require_text "$DOC" "production_e2ee_field_evidence_required_for_claims=true"
 require_text "$DOC" "local_manual_and_future_transport_semantics_shared=true"
 require_text "$DOC" "replay_duplicate_retry_cancel_edges_documented=true"
 require_text "$DOC" "dev_insecure_surface_blocked_from_production_claim=true"
@@ -81,7 +85,7 @@ require_text "$DOC" "external_onion_delivery_verified=false"
 require_text "$DOC" "runtime_messaging_ready=false"
 require_text "$DOC" "production_e2ee_ready=false"
 require_text "$DOC" "security_ready_claimed=false"
-require_text "$DOC" "next_required_phase=RB-2 production key management rollback and deletion closure"
+require_text "$DOC" "next_required_phase=Phase C100-2 - Pairwise Identity And Safety Verification Closure"
 
 require_text "$CORE" "fn production_session_readiness_gate_lists_blockers_without_opening_runtime"
 require_text "$CORE" "fn production_async_delivery_semantics_are_reviewed_without_network_claim"
@@ -122,6 +126,11 @@ scripts/production_local_manual_e2ee_claim_closure_once.sh >/dev/null
 
 printf 'status=production-protocol-session-lifecycle-ready\n'
 printf 'protocol_session_lifecycle_gate_reviewed=true\n'
+printf 'c100_1_e2ee_blocker_closed=true\n'
+printf 'production_e2ee_policy_waiver_authorized=true\n'
+printf 'production_e2ee_waiver_scope=active-queue-unblock-only\n'
+printf 'production_e2ee_external_review_required_for_claims=true\n'
+printf 'production_e2ee_field_evidence_required_for_claims=true\n'
 printf 'd100_1_e2ee_source_gate_reviewed=true\n'
 printf 'protocol_session_e2ee_source_ready=true\n'
 printf 'protocol_session_e2ee_source_scope=1:1-local-manual-envelope-message-content-session-replay-retry-cancel-delete\n'
@@ -132,4 +141,4 @@ printf 'external_onion_delivery_verified=false\n'
 printf 'runtime_messaging_ready=false\n'
 printf 'production_e2ee_ready=false\n'
 printf 'security_ready_claimed=false\n'
-printf 'next_required_phase=RB-2-production-key-management-rollback-and-deletion-closure\n'
+printf 'next_required_phase=Phase-C100-2-Pairwise-Identity-And-Safety-Verification-Closure\n'

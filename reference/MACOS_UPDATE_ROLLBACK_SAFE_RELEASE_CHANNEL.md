@@ -73,4 +73,4 @@ and owner release authorization before public wording changes.
 - production_distribution_ready=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=C100-1 Production E2EE State Machine Closure
+- next_required_phase=C100-2 Pairwise Identity And Safety Verification Closure

@@ -75,4 +75,4 @@ wording changes.
 - external_delivery_claim_allowed=false
 - sensitive_communication_allowed=false
 - security_ready_claimed=false
-- next_required_phase=Phase C100-1 - Production E2EE State Machine Closure
+- next_required_phase=Phase C100-2 - Pairwise Identity And Safety Verification Closure

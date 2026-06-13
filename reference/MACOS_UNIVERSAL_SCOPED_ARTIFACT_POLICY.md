@@ -87,4 +87,4 @@ guide, and support copy, then verified on representative supported systems.
 - generated_release_artifacts_staged=false
 - signed_notarized_release_ready=false
 - sensitive_communication_allowed=false
-- next_required_phase=Phase C100-1 - Production E2EE State Machine Closure
+- next_required_phase=Phase C100-2 - Pairwise Identity And Safety Verification Closure

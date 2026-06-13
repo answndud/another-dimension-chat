@@ -87,6 +87,10 @@ These cannot be made true by editing source files alone:
 - onboarding_recovery_source_ready=true
 - pairwise_identity_source_ready=true
 - production_e2ee_source_gate_reviewed=true
+- c100_1_e2ee_blocker_closed=true
+- production_e2ee_policy_waiver_authorized=true
+- production_e2ee_external_review_required_for_claims=true
+- production_e2ee_field_evidence_required_for_claims=true
 - production_e2ee_source_ready=true
 - d100_1_e2ee_source_gate_reviewed=true
 - protocol_session_e2ee_source_ready=true
