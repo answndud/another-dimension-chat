@@ -86,6 +86,7 @@ for script in \
   verify_mobile_callable_ffi_authorization_hold.sh \
   verify_mobile_source_boundary_cleanup.sh \
   verify_mobile_authorization_hold_regression_matrix.sh \
+  verify_mobile_owner_authorization_transition.sh \
   verify_mobile_binding_gate.sh \
   verify_android_shell_boundary.sh \
   verify_ios_shell_boundary.sh \
