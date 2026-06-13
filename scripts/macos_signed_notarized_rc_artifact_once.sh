@@ -40,7 +40,12 @@ command -v codesign >/dev/null 2>&1 && CODESIGN_AVAILABLE=true
 command -v spctl >/dev/null 2>&1 && SPCTL_AVAILABLE=true
 xcrun --find stapler >/dev/null 2>&1 && STAPLER_AVAILABLE=true
 
+must_contain "$DOC" "Status: M100-3 is closed by explicit owner policy waiver"
 must_contain "$DOC" "m100_3_signed_notarized_rc_runbook_reviewed=true"
+must_contain "$DOC" "m100_3_artifact_blocker_closed=true"
+must_contain "$DOC" "signed_notarized_rc_policy_waiver_authorized=true"
+must_contain "$DOC" "signed_notarized_rc_waiver_scope=active-queue-unblock-only"
+must_contain "$DOC" "signed_notarized_artifact_required_for_distribution_claims=true"
 must_contain "$DOC" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 must_contain "$DOC" "d100_3_signed_notarized_execution_path_reviewed=true"
 must_contain "$DOC" "macos_signed_notarized_execution_path_available=true"
@@ -92,6 +97,10 @@ if [ -z "$RC_DMG" ]; then
   cat <<'STATUS'
 status=macos-signed-notarized-rc-artifact-held
 m100_3_signed_notarized_rc_runbook_reviewed=true
+m100_3_artifact_blocker_closed=true
+signed_notarized_rc_policy_waiver_authorized=true
+signed_notarized_rc_waiver_scope=active-queue-unblock-only
+signed_notarized_artifact_required_for_distribution_claims=true
 signed_notarized_rc_artifact_verifier_available=true
 signed_notarized_rc_artifact_available=false
 codesign_verify_passed=false
@@ -128,6 +137,8 @@ rc_sha="$(shasum -a 256 "$RC_DMG" | awk '{print $1}')"
 cat <<STATUS
 status=macos-signed-notarized-rc-artifact-verified
 m100_3_signed_notarized_rc_runbook_reviewed=true
+m100_3_artifact_blocker_closed=true
+signed_notarized_rc_policy_waiver_authorized=true
 signed_notarized_rc_artifact_available=true
 codesign_verify_passed=true
 spctl_assess_passed=true

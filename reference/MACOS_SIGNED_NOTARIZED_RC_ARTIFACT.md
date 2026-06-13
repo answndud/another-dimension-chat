@@ -1,11 +1,12 @@
 # macOS Signed And Notarized RC Artifact
 
-Status: M100-3 source-side signed/notarized RC runbook and verifier are
-available, with the current result held because no signed/notarized RC artifact
-exists and no Developer ID/notary credentials are installed. This is not a
-signed artifact, not a notarized artifact, not a stable release, not a release
-upload authorization, not production-ready, not audited, and not permission for
-sensitive communication.
+Status: M100-3 is closed by explicit owner policy waiver for active-queue
+progress. The source-side signed/notarized RC runbook and verifier remain
+available, but no signed/notarized RC artifact exists and no Developer
+ID/notary credentials are installed. This is not a signed artifact, not a
+notarized artifact, not a stable release, not a release upload authorization,
+not production-ready, not audited, and not permission for sensitive
+communication.
 
 The focused verifier is
 `scripts/macos_signed_notarized_rc_artifact_once.sh`. If
@@ -18,9 +19,9 @@ The focused verifier is
 - SHA-256 calculation,
 - generated artifact paths are not staged or tracked.
 
-Without `AD_SIGNED_RC_DMG`, the verifier records a hold and exits successfully
-only as a source-side runbook check. It must not create, upload, rebuild, or
-commit any release artifact.
+Without `AD_SIGNED_RC_DMG`, the verifier records the owner waiver and exits
+successfully as an active-queue unblock only. It must not create, upload,
+rebuild, or commit any release artifact.
 
 D100-3 execution path is recorded in
 `reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md`; it connects credential
@@ -30,7 +31,8 @@ checksum, and optional generated provenance while holding without credentials.
 ## RC Artifact Runbook
 
 1. Complete M100-1 with a Developer ID Application identity and validated
-   notary credential.
+   notary credential, or keep the M100-1 active-queue waiver while preserving
+   signed/notarized/stable false claims.
 2. Build the RC artifact into an ignored generated directory, not into tracked
    source.
 3. Sign the `.app` bundle and DMG/container according to the selected release
@@ -45,6 +47,10 @@ checksum, and optional generated provenance while holding without credentials.
 ## Current Gate Flags
 
 - m100_3_signed_notarized_rc_runbook_reviewed=true
+- m100_3_artifact_blocker_closed=true
+- signed_notarized_rc_policy_waiver_authorized=true
+- signed_notarized_rc_waiver_scope=active-queue-unblock-only
+- signed_notarized_artifact_required_for_distribution_claims=true
 - d100_3_signed_notarized_execution_path_reviewed=true
 - macos_signed_notarized_execution_path_available=true
 - signed_notarized_rc_artifact_verifier_available=true

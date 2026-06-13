@@ -87,4 +87,4 @@ guide, and support copy, then verified on representative supported systems.
 - generated_release_artifacts_staged=false
 - signed_notarized_release_ready=false
 - sensitive_communication_allowed=false
-- next_required_phase=Phase M100-3 - Signed And Notarized macOS RC Artifact
+- next_required_phase=Phase M100-6 - macOS Representative Usability Evidence
