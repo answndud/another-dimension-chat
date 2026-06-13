@@ -37,6 +37,9 @@ fail-closed until later implementation and field evidence phases.
 4. Both users compare the safety phrase before messaging.
 5. The sender writes a message, exports the encrypted envelope, and transfers it
    through an explicit user-mediated channel.
+   The stored manual envelope slot is accepted only when it carries the
+   explicit user export marker and the no-network/no-automatic-delivery
+   boundary.
 6. The receiver imports the envelope, sees the received transcript entry, and
    can reply by exporting a new encrypted envelope.
 7. Retry and cancel remain local lifecycle actions. They do not imply remote
@@ -49,8 +52,9 @@ central-server-free, and compatible with the current source evidence.
 ## Advanced Onion/Tor Boundary
 
 The advanced onion/Tor path is not the default user path. It can only be exposed
-as explicit user action behind fail-closed checks. Current source boundaries
-keep automatic network on launch false, direct fallback false, send/receive
+as explicit user action behind developer-mode, fail-closed checks. Current
+source boundaries keep the advanced controls hidden outside developer mode,
+automatic network on launch false, direct fallback false, send/receive
 availability false, and external two-machine delivery verification false.
 
 Any future change that opens real onion send/receive must keep:
@@ -107,7 +111,10 @@ Targeted tests that anchor this gate:
 - `production_transport_envelope_io_boundary_closes_without_external_evidence_claim`
 - `manual message envelope slots are import-ready only for active lifecycle rows`
 - `manual message envelope slots are scoped to the room fingerprint`
+- `manual message envelope slots require explicit manual export markers`
 - `private delivery stays explicit before network work starts`
+- `default public surface hides advanced onion controls outside developer mode`
+- `startup invokes only redacted local onion status`
 - `default transport boundary keeps the public diagnostic path manual and non-centralized`
 
 ## Current Gate Flags
@@ -123,10 +130,16 @@ Targeted tests that anchor this gate:
 - supported_default_transport_scope=local-manual-courier-envelope-exchange-only
 - default_transport_product_path=local-manual-encrypted-envelope-exchange
 - manual_courier_envelope_recovery_available=true
+- manual_envelope_explicit_user_export_required=true
+- manual_envelope_slot_network_io=false
+- manual_envelope_slot_automatic_delivery=false
 - legacy_unscoped_envelope_import_ready=false
+- implicit_envelope_import_ready=false
 - wrong_room_envelope_import_ready=false
 - stale_envelope_import_ready=false
 - stale_envelope_recovery_hint_ready=true
+- canceled_envelope_recovery_hint_ready=true
+- duplicate_received_envelope_recovery_hint_ready=true
 - default_transport_network_io=false
 - default_transport_automatic_delivery=false
 - default_transport_central_message_server=false
@@ -136,6 +149,8 @@ Targeted tests that anchor this gate:
 - untrusted_relay_store_and_forward_decided=false
 - untrusted_relay_store_and_forward_allowed=false
 - advanced_onion_path=explicit-user-triggered-fail-closed-onion-only
+- advanced_onion_controls_hidden_by_default=true
+- startup_onion_status_only=true
 - advanced_onion_direct_fallback=false
 - advanced_onion_send_receive_available=false
 - automatic_network_on_launch_allowed=false

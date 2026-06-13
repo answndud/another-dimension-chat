@@ -28,11 +28,15 @@ Allowed public-safe wording:
   exchange,
 - users explicitly export and import encrypted envelopes through a user-chosen
   courier channel,
+- stored manual envelope slots require an explicit manual export marker before
+  they can become import-ready,
 - default transport performs no app-start network I/O, no automatic background
   delivery, and no push delivery,
 - no phone, email, global account, searchable username, central contact
   discovery, or central message server is required,
 - high-risk onion/Tor is an advanced explicit path and is not the default.
+- advanced onion controls stay hidden outside developer mode, and app startup
+  only reads redacted local bridge status.
 
 ## Still Forbidden
 
@@ -74,10 +78,16 @@ Do not claim:
 - supported_default_transport_scope=local-manual-courier-envelope-exchange-only
 - default_transport_product_path=local-manual-encrypted-envelope-exchange
 - manual_courier_envelope_recovery_available=true
+- manual_envelope_explicit_user_export_required=true
+- manual_envelope_slot_network_io=false
+- manual_envelope_slot_automatic_delivery=false
 - legacy_unscoped_envelope_import_ready=false
+- implicit_envelope_import_ready=false
 - wrong_room_envelope_import_ready=false
 - stale_envelope_import_ready=false
 - stale_envelope_recovery_hint_ready=true
+- canceled_envelope_recovery_hint_ready=true
+- duplicate_received_envelope_recovery_hint_ready=true
 - default_transport_network_io=false
 - default_transport_automatic_delivery=false
 - default_transport_central_message_server=false
@@ -87,6 +97,8 @@ Do not claim:
 - untrusted_relay_store_and_forward_decided=false
 - untrusted_relay_store_and_forward_allowed=false
 - advanced_onion_path=explicit-user-triggered-fail-closed-onion-only
+- advanced_onion_controls_hidden_by_default=true
+- startup_onion_status_only=true
 - advanced_onion_direct_fallback=false
 - advanced_onion_send_receive_available=false
 - automatic_network_on_launch_allowed=false

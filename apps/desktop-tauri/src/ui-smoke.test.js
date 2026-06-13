@@ -5,6 +5,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
   createMessageEnvelopeSlot,
+  messageEnvelopeSlotCreatedByExplicitUserAction,
   messageEnvelopeSlotImportReadyForEntry,
   messageEnvelopeSlotMatchesEntry,
   messageEnvelopeSlotMismatchReason,
@@ -134,12 +135,40 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.doesNotMatch(indexHtml, /New messages arrive after you turn this on\./);
   assert.match(i18nJs, /Local send attempt recorded\./);
   assert.match(i18nJs, /External receipt remains unconfirmed\./);
+  assert.match(i18nJs, /Single private delivery attempt completed; reliability is not claimed\./);
+  assert.doesNotMatch(i18nJs, /Private delivery completed without showing private details\./);
   assert.doesNotMatch(i18nJs, /New messages arrive after you turn this on\./);
   assert.doesNotMatch(i18nJs, /Message (was )?sent\./);
   assert.doesNotMatch(i18nJs, /Message delivered\. You can continue the conversation\./);
   assert.doesNotMatch(i18nJs, /statusSent:\s*"sent"/);
   assert.match(i18nJs, /statusSent:\s*"send attempt recorded"/);
   assert.match(stylesCss, /\.public-beta-gate/);
+});
+
+test("default public surface hides advanced onion controls outside developer mode", () => {
+  assert.match(indexHtml, /class="onion-advanced-controls"/);
+  assert.match(
+    stylesCss,
+    /\.onion-advanced-controls\s*\{\s*display:\s*none;\s*\}/,
+  );
+  assert.match(
+    stylesCss,
+    /body\.is-developer-mode \.onion-advanced-controls\s*\{\s*display:\s*grid;\s*\}/,
+  );
+  assert.doesNotMatch(
+    stylesCss,
+    /\.onion-advanced-controls,\s*body\.is-developer-mode \.onion-advanced-controls\s*\{\s*display:\s*grid;/,
+  );
+});
+
+test("startup invokes only redacted local onion status", () => {
+  const startupBlock = mainJs.slice(mainJs.indexOf("initializeLanguage();"));
+  assert.match(startupBlock, /loadProductionOnionBridgeConfigStatus\(\);/);
+  assert.doesNotMatch(startupBlock, /production_onion_service_launch_attempt/);
+  assert.doesNotMatch(startupBlock, /production_onion_client_start/);
+  assert.doesNotMatch(startupBlock, /production_onion_outbound_envelope_send_attempt/);
+  assert.doesNotMatch(startupBlock, /production_onion_receive_loop_start/);
+  assert.doesNotMatch(startupBlock, /startProductionTwoProfileOnionReceive\(\)/);
 });
 
 test("screenshot-safe browser preview blanks public screenshot fields", () => {
@@ -916,6 +945,8 @@ test("manual message envelope slots require the active pending message", () => {
   assert.match(functionBody(mainJs, "messageEnvelopeSlotRecord"), /messageEnvelopeSlotKey\(profile, roomFingerprint\)/);
   assert.match(functionBody(mainJs, "storeMessageEnvelopeSlot"), /roomFingerprint/);
   assert.match(functionBody(mainJs, "storeMessageEnvelopeSlot"), /messageEnvelopeSlotKey\(slot\.sender, slot\.roomFingerprint\)/);
+  assert.match(functionBody(mainJs, "selectedMessageEnvelopeMetadata"), /explicitUserAction: true/);
+  assert.match(functionBody(mainJs, "selectedMessageEnvelopeMetadata"), /manualAction: "export-envelope"/);
   assert.match(functionBody(mainJs, "pruneStaleMessageEnvelopeSlots"), /stillImportReadyForConversation/);
   assert.match(functionBody(mainJs, "pruneStaleMessageEnvelopeSlots"), /messageEnvelopeSlotImportReadyForEntry\(slot, entry\)/);
   assert.doesNotMatch(functionBody(mainJs, "pruneStaleMessageEnvelopeSlots"), /typeof slot === "string"[\s\S]*continue/);
@@ -930,6 +961,8 @@ test("manual message envelope slots require the active pending message", () => {
 
 test("manual message envelope slots are import-ready only for active lifecycle rows", () => {
   const slot = createMessageEnvelopeSlot("alice", "ADENV1PAYLOAD", {
+    explicitUserAction: true,
+    manualAction: "export-envelope",
     receiver: "bob",
     roomFingerprint: "room-1",
     messageNumber: 9,
@@ -944,6 +977,7 @@ test("manual message envelope slots are import-ready only for active lifecycle r
     statuses: new Set(["sent"]),
     outboundDeliveryState: "sent",
   };
+  assert.equal(messageEnvelopeSlotCreatedByExplicitUserAction(slot), true);
   assert.equal(messageEnvelopeSlotMatchesEntry(slot, sentEntry), true);
   assert.equal(messageEnvelopeSlotImportReadyForEntry(slot, sentEntry), true);
   assert.equal(messageEnvelopeSlotMismatchReason(slot, sentEntry), "matched");
@@ -955,20 +989,87 @@ test("manual message envelope slots are import-ready only for active lifecycle r
     false,
   );
   assert.equal(
+    messageEnvelopeSlotMismatchReason(slot, {
+      ...sentEntry,
+      outboundDeliveryState: "canceled",
+    }),
+    "canceled-entry",
+  );
+  assert.match(
+    messageEnvelopeSlotRecoveryHint(slot, {
+      ...sentEntry,
+      outboundDeliveryState: "canceled",
+    }),
+    /canceled/,
+  );
+  assert.equal(
     messageEnvelopeSlotImportReadyForEntry(slot, {
       ...sentEntry,
       statuses: new Set(["sent", "received"]),
     }),
     false,
   );
+  assert.equal(
+    messageEnvelopeSlotMismatchReason(slot, {
+      ...sentEntry,
+      statuses: new Set(["sent", "received"]),
+    }),
+    "already-received-entry",
+  );
+  assert.match(
+    messageEnvelopeSlotRecoveryHint(slot, {
+      ...sentEntry,
+      statuses: new Set(["sent", "received"]),
+    }),
+    /already received/,
+  );
   assert.equal(messageEnvelopeSlotImportReadyForEntry("ADENV1LEGACY", sentEntry), false);
   assert.equal(messageEnvelopeSlotMismatchReason("ADENV1LEGACY", sentEntry), "legacy-unscoped-slot");
   assert.match(messageEnvelopeSlotRecoveryHint("ADENV1LEGACY", sentEntry), /unscoped/);
+  assert.equal(
+    createMessageEnvelopeSlot("alice", "ADENV1IMPLICIT", {
+      receiver: "bob",
+      roomFingerprint: "room-1",
+      messageNumber: 9,
+      message: "hello",
+    }),
+    null,
+  );
+  assert.equal(
+    messageEnvelopeSlotImportReadyForEntry(
+      {
+        payload: "ADENV1IMPLICIT",
+        sender: "alice",
+        receiver: "bob",
+        roomFingerprint: "room-1",
+        messageNumber: 9,
+        message: "hello",
+      },
+      sentEntry,
+    ),
+    false,
+  );
+  assert.equal(
+    messageEnvelopeSlotMismatchReason(
+      {
+        payload: "ADENV1IMPLICIT",
+        sender: "alice",
+        receiver: "bob",
+        roomFingerprint: "room-1",
+        messageNumber: 9,
+        message: "hello",
+      },
+      sentEntry,
+    ),
+    "missing-explicit-user-action",
+  );
   assert.match(functionBody(mainJs, "cancelTwoProfileOutboundEntry"), /clearMessageEnvelopeSlotForConversationEntry\(currentEntry\)/);
 });
 
 test("manual message envelope slots are scoped to the room fingerprint", () => {
   const slot = createMessageEnvelopeSlot("Alice", "payload", {
+    explicitUserAction: true,
+    manualAction: "export-envelope",
     receiver: "Bob",
     roomFingerprint: "room-a",
     messageNumber: 7,

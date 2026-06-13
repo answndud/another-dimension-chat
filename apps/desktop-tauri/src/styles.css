@@ -4241,7 +4241,10 @@ label[for="production-two-profile-transcript-export"],
   display: none;
 }
 
-.onion-advanced-controls,
+.onion-advanced-controls {
+  display: none;
+}
+
 body.is-developer-mode .onion-advanced-controls {
   display: grid;
 }

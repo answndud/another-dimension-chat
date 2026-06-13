@@ -616,7 +616,8 @@ const dictionaries = {
     userMessageNumberSavedRetryWhenReady: "Message {number} is still saved. Retry when the room is ready.",
     userBothDevicesExchanged: "Both devices exchanged messages.",
     userDeliveredContinue: "Delivery attempt finished. Continue only after the peer confirms receipt.",
-    userDeliveryCompletedNoDetails: "Private delivery completed without showing private details.",
+    userDeliveryCompletedNoDetails:
+      "Single private delivery attempt completed; reliability is not claimed.",
     userTurnOnPrivateDelivery: "Turn on private delivery before trying again.",
     userSomeDeliveryWorkFinished: "Some delivery work finished, but not all messages were confirmed.",
     userReviewRetryCancelPending: "Review the conversation, then retry or cancel any pending message.",

@@ -13480,6 +13480,27 @@ replay check: no replayed messages after message 2
         );
     }
 
+    #[test]
+    fn production_onion_bridge_config_status_is_launch_safe() {
+        let root = unique_production_roundtrip_dir().expect("root");
+
+        let status =
+            super::run_production_onion_bridge_config_status(&root).expect("bridge config status");
+        let serialized = serde_json::to_string(&status).expect("serialized");
+
+        assert!(!status.bridge_configured_for_bootstrap);
+        assert!(!status.config_path_returned);
+        assert!(!status.raw_bridge_lines_returned);
+        assert!(!status.network_io_attempted);
+        assert!(!status.transport_io_opened);
+        assert!(!status.runtime_messaging_enabled);
+        assert!(status.warning.contains("redacted"));
+        assert!(!serialized.contains(&root.to_string_lossy().to_string()));
+        assert!(!serialized.contains("bridge-lines"));
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
     #[cfg(feature = "manual-onion-bridge-client")]
     #[test]
     fn production_onion_bridge_config_save_is_redacted_and_private() {

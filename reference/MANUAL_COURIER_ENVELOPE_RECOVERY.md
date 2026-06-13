@@ -12,30 +12,41 @@ as import-ready.
 
 ## Recovery Contract
 
+- A stored envelope slot must be created by an explicit manual envelope export
+  action and carry the local/manual transport boundary.
 - A stored envelope slot must match sender, receiver, room fingerprint, message
   number, and message text for the selected pending row.
 - Legacy string-only slots are treated as unscoped and require re-export before
+  import.
+- Slots without the explicit manual export marker require re-export before
   import.
 - Wrong-room envelope slots return a recovery hint to reopen the matching room
   or export the selected pending message again.
 - Stale message number or message-body slots return a recovery hint to export
   the selected pending message again.
-- Canceled or already received rows are not import-ready.
+- Canceled or already received rows are not import-ready and show lifecycle
+  recovery hints instead of treating the envelope as usable.
 - Stale slot pruning may remove unscoped legacy slots.
 
 ## Current Gate Flags
 
 - manual_courier_envelope_recovery_available=true
 - manual_envelope_active_pending_row_required=true
+- manual_envelope_explicit_user_export_required=true
+- manual_envelope_slot_network_io=false
+- manual_envelope_slot_automatic_delivery=false
 - manual_envelope_sender_receiver_match_required=true
 - manual_envelope_room_fingerprint_match_required=true
 - manual_envelope_message_number_match_required=true
 - manual_envelope_message_body_match_required=true
 - legacy_unscoped_envelope_import_ready=false
+- implicit_envelope_import_ready=false
 - wrong_room_envelope_import_ready=false
 - stale_envelope_import_ready=false
 - canceled_envelope_import_ready=false
 - duplicate_received_envelope_import_ready=false
+- canceled_envelope_recovery_hint_ready=true
+- duplicate_received_envelope_recovery_hint_ready=true
 - stale_envelope_recovery_hint_ready=true
 - default_transport_network_io=false
 - default_transport_automatic_delivery=false

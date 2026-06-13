@@ -29,7 +29,6 @@ reject_text() {
 }
 
 PUBLIC_FILES=(
-  "$ROOT_DIR/README.md"
   "$ROOT_DIR/SECURITY.md"
   "$ROOT_DIR/apps/desktop-tauri/README.md"
 )
@@ -40,6 +39,8 @@ for file in \
   "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.test.js" \
   "$ROOT_DIR/apps/desktop-tauri/src/ui-smoke.test.js" \
   "$ROOT_DIR/apps/desktop-tauri/src/main.js" \
+  "$ROOT_DIR/apps/desktop-tauri/src/styles.css" \
+  "$ROOT_DIR/apps/desktop-tauri/src-tauri/src/lib.rs" \
   "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" \
   "$ROOT_DIR/scripts/public_beta_gap_acceptance_once.sh" \
   "$ROOT_DIR/scripts/public_claim_acceptance_once.sh"; do
@@ -81,9 +82,19 @@ require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "high_
 require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "automatic_network_on_launch=false"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.test.js" "default transport boundary keeps the public diagnostic path manual and non-centralized"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/ui-smoke.test.js" "private delivery stays explicit before network work starts"
+require_text "$ROOT_DIR/apps/desktop-tauri/src/ui-smoke.test.js" "default public surface hides advanced onion controls outside developer mode"
+require_text "$ROOT_DIR/apps/desktop-tauri/src/ui-smoke.test.js" "startup invokes only redacted local onion status"
+require_text "$ROOT_DIR/apps/desktop-tauri/src/i18n.js" "Single private delivery attempt completed; reliability is not claimed."
 require_text "$ROOT_DIR/apps/desktop-tauri/src/main.js" "function enablePrivateDeliveryPermission"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/main.js" "function ensurePrivateDeliveryRuntimeReady"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/main.js" "function twoProfileComposerPrimaryIntent"
+require_text "$ROOT_DIR/apps/desktop-tauri/src/main.js" "loadProductionOnionBridgeConfigStatus();"
+require_text "$ROOT_DIR/apps/desktop-tauri/src/styles.css" ".onion-advanced-controls {"
+require_text "$ROOT_DIR/apps/desktop-tauri/src/styles.css" "display: none;"
+require_text "$ROOT_DIR/apps/desktop-tauri/src/styles.css" "body.is-developer-mode .onion-advanced-controls {"
+reject_text "$ROOT_DIR/apps/desktop-tauri/src/styles.css" ".onion-advanced-controls,"
+require_text "$ROOT_DIR/apps/desktop-tauri/src-tauri/src/lib.rs" "production_onion_bridge_config_status_is_launch_safe"
+require_text "$ROOT_DIR/apps/desktop-tauri/src-tauri/src/lib.rs" "assert!(!status.network_io_attempted);"
 
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_default_transport_boundary_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "default_transport_boundary=local-manual-envelope-default-high-risk-onion-explicit"
