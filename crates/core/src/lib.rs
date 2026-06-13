@@ -3422,6 +3422,64 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionSessionLifecycleState {
+        Created,
+        Paired,
+        Verified,
+        Pending,
+        Imported,
+        Canceled,
+        Deleted,
+        RevokedRePairRequired,
+    }
+
+    impl ProductionSessionLifecycleState {
+        pub fn as_str(self) -> &'static str {
+            match self {
+                Self::Created => "created",
+                Self::Paired => "paired",
+                Self::Verified => "verified",
+                Self::Pending => "pending",
+                Self::Imported => "imported",
+                Self::Canceled => "canceled",
+                Self::Deleted => "deleted",
+                Self::RevokedRePairRequired => "revoked_re_pair_required",
+            }
+        }
+
+        pub fn terminal(self) -> bool {
+            matches!(
+                self,
+                Self::Canceled | Self::Deleted | Self::RevokedRePairRequired
+            )
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionSessionLifecycleEvent {
+        PairInvite,
+        ConfirmSafety,
+        QueueOutbound,
+        ImportInbound,
+        MarkOutboundDelivered,
+        CancelOutbound,
+        DeleteLocal,
+        RevokeRePairRequired,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionSessionLifecycleTransition {
+        before: ProductionSessionLifecycleState,
+        event: ProductionSessionLifecycleEvent,
+        after: ProductionSessionLifecycleState,
+        accepted: bool,
+        imported: bool,
+        delivered: bool,
+        terminal_blocked: bool,
+        reason: &'static str,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionSupplyChainIntegrityBoundarySummary {
         policies: &'static [&'static str],
         manual_github_release_download_required: bool,
@@ -6744,6 +6802,40 @@ pub mod production {
 
         pub fn boundary_closed(self) -> bool {
             self.boundary_closed
+        }
+    }
+
+    impl ProductionSessionLifecycleTransition {
+        pub fn before(self) -> ProductionSessionLifecycleState {
+            self.before
+        }
+
+        pub fn event(self) -> ProductionSessionLifecycleEvent {
+            self.event
+        }
+
+        pub fn after(self) -> ProductionSessionLifecycleState {
+            self.after
+        }
+
+        pub fn accepted(self) -> bool {
+            self.accepted
+        }
+
+        pub fn imported(self) -> bool {
+            self.imported
+        }
+
+        pub fn delivered(self) -> bool {
+            self.delivered
+        }
+
+        pub fn terminal_blocked(self) -> bool {
+            self.terminal_blocked
+        }
+
+        pub fn reason(self) -> &'static str {
+            self.reason
         }
     }
 
@@ -18474,12 +18566,13 @@ pub mod production {
                 entry.attacker_class == "compromised_endpoint"
                     && entry.status == ProductionHighRiskProtectionStatus::NotProtected
             });
-        let direct_coercion_not_protected = PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX
-            .iter()
-            .any(|entry| {
-                entry.attacker_class == "direct_coercion"
-                    && entry.status == ProductionHighRiskProtectionStatus::NotProtected
-            });
+        let direct_coercion_not_protected =
+            PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX
+                .iter()
+                .any(|entry| {
+                    entry.attacker_class == "direct_coercion"
+                        && entry.status == ProductionHighRiskProtectionStatus::NotProtected
+                });
         let global_traffic_correlation_not_protected = PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX
             .iter()
             .any(|entry| {
@@ -18496,15 +18589,16 @@ pub mod production {
             && !audited_security_claim_allowed
             && !briar_cwtch_equivalence_claim_allowed
             && PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX.len() == 8
-            && PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX.iter().all(|entry| {
-                PRODUCTION_HIGH_RISK_CLAIMABLE_STATUSES.contains(&entry.status)
-                    || entry.status == ProductionHighRiskProtectionStatus::NotProtected
-            })
+            && PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX
+                .iter()
+                .all(|entry| {
+                    PRODUCTION_HIGH_RISK_CLAIMABLE_STATUSES.contains(&entry.status)
+                        || entry.status == ProductionHighRiskProtectionStatus::NotProtected
+                })
             && PRODUCTION_HIGH_RISK_ORDINARY_USE_CLAIMS.contains(&"no_phone_number")
             && PRODUCTION_HIGH_RISK_ORDINARY_USE_CLAIMS.contains(&"no_email")
             && PRODUCTION_HIGH_RISK_ORDINARY_USE_CLAIMS.contains(&"no_global_account")
-            && PRODUCTION_HIGH_RISK_ORDINARY_USE_CLAIMS
-                .contains(&"no_central_contact_discovery")
+            && PRODUCTION_HIGH_RISK_ORDINARY_USE_CLAIMS.contains(&"no_central_contact_discovery")
             && PRODUCTION_HIGH_RISK_ORDINARY_USE_CLAIMS
                 .contains(&"user_mediated_encrypted_exchange")
             && PRODUCTION_HIGH_RISK_FORBIDDEN_CLAIMS.contains(&"audited_security")
@@ -18527,6 +18621,126 @@ pub mod production {
             audited_security_claim_allowed,
             briar_cwtch_equivalence_claim_allowed,
             boundary_closed,
+        }
+    }
+
+    pub fn production_session_lifecycle_transition(
+        before: ProductionSessionLifecycleState,
+        event: ProductionSessionLifecycleEvent,
+    ) -> ProductionSessionLifecycleTransition {
+        let terminal_blocked = before.terminal()
+            && !matches!(
+                event,
+                ProductionSessionLifecycleEvent::DeleteLocal
+                    | ProductionSessionLifecycleEvent::RevokeRePairRequired
+            );
+        if terminal_blocked {
+            return ProductionSessionLifecycleTransition {
+                before,
+                event,
+                after: before,
+                accepted: false,
+                imported: false,
+                delivered: false,
+                terminal_blocked: true,
+                reason: "terminal_state_cannot_be_promoted",
+            };
+        }
+
+        let (after, accepted, imported, delivered, reason) = match (before, event) {
+            (
+                ProductionSessionLifecycleState::Created,
+                ProductionSessionLifecycleEvent::PairInvite,
+            ) => (
+                ProductionSessionLifecycleState::Paired,
+                true,
+                false,
+                false,
+                "paired_after_invite",
+            ),
+            (
+                ProductionSessionLifecycleState::Paired,
+                ProductionSessionLifecycleEvent::ConfirmSafety,
+            ) => (
+                ProductionSessionLifecycleState::Verified,
+                true,
+                false,
+                false,
+                "verified_after_safety_confirm",
+            ),
+            (
+                ProductionSessionLifecycleState::Verified
+                | ProductionSessionLifecycleState::Imported,
+                ProductionSessionLifecycleEvent::QueueOutbound,
+            )
+            | (
+                ProductionSessionLifecycleState::Pending,
+                ProductionSessionLifecycleEvent::QueueOutbound,
+            ) => (
+                ProductionSessionLifecycleState::Pending,
+                true,
+                false,
+                false,
+                "outbound_pending",
+            ),
+            (
+                ProductionSessionLifecycleState::Verified
+                | ProductionSessionLifecycleState::Pending
+                | ProductionSessionLifecycleState::Imported,
+                ProductionSessionLifecycleEvent::ImportInbound,
+            ) => (
+                ProductionSessionLifecycleState::Imported,
+                true,
+                true,
+                false,
+                "inbound_imported_after_replay_and_decrypt",
+            ),
+            (
+                ProductionSessionLifecycleState::Pending,
+                ProductionSessionLifecycleEvent::MarkOutboundDelivered,
+            ) => (
+                ProductionSessionLifecycleState::Pending,
+                true,
+                false,
+                true,
+                "outbound_delivery_recorded",
+            ),
+            (
+                ProductionSessionLifecycleState::Pending,
+                ProductionSessionLifecycleEvent::CancelOutbound,
+            ) => (
+                ProductionSessionLifecycleState::Canceled,
+                true,
+                false,
+                false,
+                "outbound_canceled_terminal",
+            ),
+            (_, ProductionSessionLifecycleEvent::DeleteLocal) => (
+                ProductionSessionLifecycleState::Deleted,
+                true,
+                false,
+                false,
+                "local_delete_terminal",
+            ),
+            (_, ProductionSessionLifecycleEvent::RevokeRePairRequired) => (
+                ProductionSessionLifecycleState::RevokedRePairRequired,
+                true,
+                false,
+                false,
+                "revoked_re_pair_required_terminal",
+            ),
+            _ => (before, false, false, false, "transition_not_allowed"),
+        };
+
+        ProductionSessionLifecycleTransition {
+            before,
+            event,
+            after,
+            accepted,
+            imported,
+            delivered,
+            terminal_blocked: false,
+            reason,
         }
     }
 
@@ -20612,6 +20826,9 @@ pub mod production {
         {
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
+        if !outbound_delivery_state_transition_allowed(sent.delivery_state, delivery_state) {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
         let updated = sent.with_delivery_state(
             delivery_state,
             failure_kind.map(sanitize_outbound_failure_kind),
@@ -20632,6 +20849,40 @@ pub mod production {
             ))?;
         }
         Ok(())
+    }
+
+    fn outbound_delivery_state_transition_allowed(
+        current: OutboundDeliveryState,
+        requested: OutboundDeliveryState,
+    ) -> bool {
+        if current == requested {
+            return true;
+        }
+        if current == OutboundDeliveryState::Canceled {
+            let event = match requested {
+                OutboundDeliveryState::Sent => {
+                    ProductionSessionLifecycleEvent::MarkOutboundDelivered
+                }
+                OutboundDeliveryState::Pending | OutboundDeliveryState::Failed => {
+                    ProductionSessionLifecycleEvent::QueueOutbound
+                }
+                OutboundDeliveryState::Canceled => ProductionSessionLifecycleEvent::CancelOutbound,
+            };
+            return production_session_lifecycle_transition(
+                ProductionSessionLifecycleState::Canceled,
+                event,
+            )
+            .accepted();
+        }
+        match current {
+            OutboundDeliveryState::Pending | OutboundDeliveryState::Failed => matches!(
+                requested,
+                OutboundDeliveryState::Sent
+                    | OutboundDeliveryState::Failed
+                    | OutboundDeliveryState::Canceled
+            ),
+            OutboundDeliveryState::Sent | OutboundDeliveryState::Canceled => false,
+        }
     }
 
     fn sanitize_outbound_failure_kind(value: &str) -> String {
@@ -24748,7 +24999,9 @@ pub mod production {
             assert!(!boundary.briar_cwtch_equivalence_claim_allowed());
             assert!(boundary.ordinary_use_claims().contains(&"no_phone_number"));
             assert!(boundary.ordinary_use_claims().contains(&"no_email"));
-            assert!(boundary.ordinary_use_claims().contains(&"no_global_account"));
+            assert!(boundary
+                .ordinary_use_claims()
+                .contains(&"no_global_account"));
             assert!(boundary
                 .ordinary_use_claims()
                 .contains(&"no_central_contact_discovery"));
@@ -24766,6 +25019,104 @@ pub mod production {
             assert!(boundary
                 .forbidden_claims()
                 .contains(&"full_global_traffic_correlation_safe"));
+        }
+
+        #[test]
+        fn production_session_lifecycle_blocks_terminal_promotion() {
+            let pair = production_session_lifecycle_transition(
+                ProductionSessionLifecycleState::Created,
+                ProductionSessionLifecycleEvent::PairInvite,
+            );
+            let verify = production_session_lifecycle_transition(
+                pair.after(),
+                ProductionSessionLifecycleEvent::ConfirmSafety,
+            );
+            let pending = production_session_lifecycle_transition(
+                verify.after(),
+                ProductionSessionLifecycleEvent::QueueOutbound,
+            );
+            let imported = production_session_lifecycle_transition(
+                verify.after(),
+                ProductionSessionLifecycleEvent::ImportInbound,
+            );
+            let delivered = production_session_lifecycle_transition(
+                pending.after(),
+                ProductionSessionLifecycleEvent::MarkOutboundDelivered,
+            );
+            let canceled = production_session_lifecycle_transition(
+                pending.after(),
+                ProductionSessionLifecycleEvent::CancelOutbound,
+            );
+            let deleted = production_session_lifecycle_transition(
+                verify.after(),
+                ProductionSessionLifecycleEvent::DeleteLocal,
+            );
+            let revoked = production_session_lifecycle_transition(
+                verify.after(),
+                ProductionSessionLifecycleEvent::RevokeRePairRequired,
+            );
+
+            assert!(pair.accepted());
+            assert_eq!(pair.after(), ProductionSessionLifecycleState::Paired);
+            assert!(verify.accepted());
+            assert_eq!(verify.after(), ProductionSessionLifecycleState::Verified);
+            assert!(pending.accepted());
+            assert_eq!(pending.after(), ProductionSessionLifecycleState::Pending);
+            assert!(imported.accepted());
+            assert!(imported.imported());
+            assert_eq!(imported.after(), ProductionSessionLifecycleState::Imported);
+            assert!(delivered.accepted());
+            assert!(delivered.delivered());
+            assert_eq!(delivered.after(), ProductionSessionLifecycleState::Pending);
+
+            for terminal in [canceled, deleted, revoked] {
+                assert!(terminal.accepted());
+                assert!(terminal.after().terminal());
+                for event in [
+                    ProductionSessionLifecycleEvent::ImportInbound,
+                    ProductionSessionLifecycleEvent::MarkOutboundDelivered,
+                    ProductionSessionLifecycleEvent::QueueOutbound,
+                ] {
+                    let blocked = production_session_lifecycle_transition(terminal.after(), event);
+                    assert!(!blocked.accepted());
+                    assert!(!blocked.imported());
+                    assert!(!blocked.delivered());
+                    assert!(blocked.terminal_blocked());
+                    assert_eq!(blocked.reason(), "terminal_state_cannot_be_promoted");
+                }
+            }
+        }
+
+        #[test]
+        fn production_outbound_delivery_state_transition_blocks_canceled_delivery() {
+            assert!(outbound_delivery_state_transition_allowed(
+                OutboundDeliveryState::Pending,
+                OutboundDeliveryState::Sent
+            ));
+            assert!(outbound_delivery_state_transition_allowed(
+                OutboundDeliveryState::Failed,
+                OutboundDeliveryState::Sent
+            ));
+            assert!(outbound_delivery_state_transition_allowed(
+                OutboundDeliveryState::Pending,
+                OutboundDeliveryState::Canceled
+            ));
+            assert!(!outbound_delivery_state_transition_allowed(
+                OutboundDeliveryState::Canceled,
+                OutboundDeliveryState::Sent
+            ));
+            assert!(!outbound_delivery_state_transition_allowed(
+                OutboundDeliveryState::Canceled,
+                OutboundDeliveryState::Failed
+            ));
+            assert!(!outbound_delivery_state_transition_allowed(
+                OutboundDeliveryState::Sent,
+                OutboundDeliveryState::Failed
+            ));
+            assert!(!outbound_delivery_state_transition_allowed(
+                OutboundDeliveryState::Sent,
+                OutboundDeliveryState::Canceled
+            ));
         }
 
         #[test]
