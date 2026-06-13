@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -48,12 +49,58 @@ function sha256File(file) {
   return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 }
 
+function currentHead() {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "";
+  }
+}
+
 function readJson(file) {
   try {
     return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch {
     return null;
   }
+}
+
+function listZipEntries(file) {
+  const bytes = fs.readFileSync(file);
+  const entries = [];
+  for (let offset = 0; offset <= bytes.length - 30; offset += 1) {
+    if (bytes.readUInt32LE(offset) !== 0x04034b50) continue;
+    const nameLength = bytes.readUInt16LE(offset + 26);
+    const extraLength = bytes.readUInt16LE(offset + 28);
+    const nameStart = offset + 30;
+    const nameEnd = nameStart + nameLength;
+    if (nameEnd > bytes.length) continue;
+    const name = bytes.toString("utf8", nameStart, nameEnd);
+    if (name && !name.includes("\u0000")) entries.push(name);
+    offset = nameEnd + extraLength - 1;
+  }
+  return entries;
+}
+
+function validatePackageStructure(file, artifactKind) {
+  const entries = listZipEntries(file);
+  const issues = [];
+  if (entries.length === 0) return ["artifact-not-zip-package"];
+  if (artifactKind === "apk") {
+    if (!entries.includes("AndroidManifest.xml")) issues.push("apk-missing-android-manifest");
+    if (!entries.some((entry) => /^classes(?:\d*)?\.dex$/.test(entry))) {
+      issues.push("apk-missing-dex");
+    }
+  } else if (artifactKind === "aab") {
+    if (!entries.includes("base/manifest/AndroidManifest.xml")) {
+      issues.push("aab-missing-base-manifest");
+    }
+    if (!entries.includes("BundleConfig.pb")) issues.push("aab-missing-bundle-config");
+  }
+  return issues;
 }
 
 function sibling(base, name) {
@@ -65,7 +112,7 @@ function hasRequiredNonClaims(value) {
   return Array.isArray(value) && REQUIRED_NON_CLAIMS.every((claim) => value.includes(claim));
 }
 
-function validateManifest(file) {
+function validateManifest(file, { requireCurrentHead, head }) {
   const text = fs.readFileSync(file, "utf8");
   const issues = [];
   for (const [pattern, label] of FORBIDDEN_PATTERNS) {
@@ -76,6 +123,7 @@ function validateManifest(file) {
   if (manifest.schema_version !== "android-public-artifact-manifest-v1") issues.push("invalid-schema-version");
   if (manifest.platform !== "android") issues.push("invalid-platform");
   if (!/^[0-9a-f]{7,40}$/i.test(manifest.source_commit ?? "")) issues.push("invalid-source-commit");
+  if (requireCurrentHead && manifest.source_commit !== head) issues.push("source-commit-not-current-head");
   if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(manifest.version ?? "")) issues.push("invalid-version");
   if (!ALLOWED_ARTIFACT_KINDS.has(manifest.artifact_kind)) issues.push("invalid-artifact-kind");
   if (!ALLOWED_DISTRIBUTION_PATHS.has(manifest.distribution_path)) issues.push("invalid-distribution-path");
@@ -105,6 +153,7 @@ function validateManifest(file) {
   if (!new Set([".apk", ".aab"]).has(path.extname(artifact.filename).toLowerCase())) {
     issues.push("invalid-artifact-extension");
   }
+  issues.push(...validatePackageStructure(artifactFile, manifest.artifact_kind));
   const checksumFile = sibling(file, artifact.checksum_file);
   if (!checksumFile || !fs.existsSync(checksumFile)) {
     issues.push("missing-checksum-file");
@@ -119,12 +168,27 @@ function validateManifest(file) {
     if (provenance.schema_version !== "android-public-artifact-provenance-v1") issues.push("invalid-provenance-schema");
     if (provenance.artifact_sha256 !== actualSha) issues.push("provenance-sha-mismatch");
     if (provenance.source_commit !== manifest.source_commit) issues.push("provenance-source-commit-mismatch");
+    if (provenance.artifact_kind !== manifest.artifact_kind) issues.push("provenance-artifact-kind-mismatch");
+    if (provenance.distribution_path !== manifest.distribution_path) {
+      issues.push("provenance-distribution-path-mismatch");
+    }
+    if (provenance.signing_status !== manifest.signing_status) {
+      issues.push("provenance-signing-status-mismatch");
+    }
+    if (provenance.real_device_smoke_passed !== manifest.real_device_smoke_passed) {
+      issues.push("provenance-real-device-smoke-mismatch");
+    }
     if (provenance.android_public_artifact_ready !== false) issues.push("provenance-public-ready-must-stay-false");
   }
   return { file, valid: issues.length === 0, issues };
 }
 
-const files = collectFiles(process.argv.slice(2));
+const rawArgs = process.argv.slice(2);
+const requireCurrentHead =
+  rawArgs.includes("--require-current-head") || process.env.AD_REQUIRE_CURRENT_HEAD === "1";
+const inputs = rawArgs.filter((arg) => arg !== "--require-current-head");
+const files = collectFiles(inputs);
+console.log(`android_public_artifact_manifest_current_head_required=${requireCurrentHead}`);
 console.log(`android_public_artifact_manifest_files_found=${files.length}`);
 if (files.length === 0) {
   console.log("accepted_android_public_artifact_manifests=0");
@@ -134,7 +198,8 @@ if (files.length === 0) {
 }
 
 let failures = 0;
-for (const result of files.map(validateManifest)) {
+const head = requireCurrentHead ? currentHead() : "";
+for (const result of files.map((file) => validateManifest(file, { requireCurrentHead, head }))) {
   if (result.valid) {
     console.log(`ok ${path.basename(result.file)}`);
   } else {
@@ -148,6 +213,7 @@ if (failures > 0) {
 }
 
 console.log(`accepted_android_public_artifact_manifests=${files.length}`);
+console.log("android_artifact_package_structure_verified=true");
 console.log("android_public_artifact_ready=false");
 console.log("android_public_artifact_upload_allowed=false");
 console.log("status=android-public-artifact-candidate-requires-release-gate");
