@@ -90,4 +90,7 @@ not production readiness by themselves.
 - ops_5_macos_production_ux_onboarding_gate_reviewed=true
 - production_wording_ready=false
 - usability_study_completed=false
-- next_required_phase=OPS-6 macOS production distribution
+- ops_6_macos_production_distribution_gate_reviewed=true
+- stable_signed_notarized_artifact_available=false
+- production_distribution_ready=false
+- next_required_phase=OPS-7 external review and audit readiness
