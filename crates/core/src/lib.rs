@@ -2549,6 +2549,7 @@ pub mod production {
         network_io_attempted: bool,
         external_onion_delivery_verified: bool,
         local_manual_e2ee_runtime_ready: bool,
+        supported_local_manual_e2ee_ready: bool,
         production_e2ee_ready: bool,
         security_ready_claimed: bool,
     }
@@ -4019,6 +4020,10 @@ pub mod production {
 
         pub fn local_manual_e2ee_runtime_ready(self) -> bool {
             self.local_manual_e2ee_runtime_ready
+        }
+
+        pub fn supported_local_manual_e2ee_ready(self) -> bool {
+            self.supported_local_manual_e2ee_ready
         }
 
         pub fn production_e2ee_ready(self) -> bool {
@@ -15313,6 +15318,7 @@ pub mod production {
             network_io_attempted: false,
             external_onion_delivery_verified: async_delivery.external_onion_delivery_verified(),
             local_manual_e2ee_runtime_ready,
+            supported_local_manual_e2ee_ready: local_manual_e2ee_runtime_ready,
             production_e2ee_ready: false,
             security_ready_claimed: false,
         }
@@ -23857,6 +23863,7 @@ pub mod production {
 
             assert!(gate.gate_reviewed());
             assert!(gate.local_manual_e2ee_runtime_ready());
+            assert!(gate.supported_local_manual_e2ee_ready());
             assert!(gate.selected_protocol().contains("Noise XX"));
             assert!(gate.noise_xx_transport_state_required());
             assert!(gate.remote_static_verification_required());

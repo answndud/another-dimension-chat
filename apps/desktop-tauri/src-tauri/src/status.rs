@@ -114,9 +114,10 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             manual_runtime.operations().join(","),
         ),
         production_local_manual_e2ee_runtime: format!(
-            "gate_reviewed={} local_manual_e2ee_runtime_ready={} selected_protocol={} noise_xx_transport_state_required={} remote_static_verification_required={} safety_transcript_bound={} channel_binding_required={} message_number_nonce_binding_required={} replay_commit_after_decrypt={} tamper_failure_non_advance={} passphrase_first_storage_required={} envelope_export_import_ready={} automatic_network_on_launch={} network_io_attempted={} external_onion_delivery_verified={} production_e2ee_ready={} security_ready_claimed={} failure_model={}",
+            "gate_reviewed={} local_manual_e2ee_runtime_ready={} supported_local_manual_e2ee_ready={} selected_protocol={} noise_xx_transport_state_required={} remote_static_verification_required={} safety_transcript_bound={} channel_binding_required={} message_number_nonce_binding_required={} replay_commit_after_decrypt={} tamper_failure_non_advance={} passphrase_first_storage_required={} envelope_export_import_ready={} automatic_network_on_launch={} network_io_attempted={} external_onion_delivery_verified={} production_e2ee_ready={} security_ready_claimed={} failure_model={}",
             local_manual_e2ee.gate_reviewed(),
             local_manual_e2ee.local_manual_e2ee_runtime_ready(),
+            local_manual_e2ee.supported_local_manual_e2ee_ready(),
             local_manual_e2ee.selected_protocol(),
             local_manual_e2ee.noise_xx_transport_state_required(),
             local_manual_e2ee.remote_static_verification_required(),
@@ -405,6 +406,9 @@ mod tests {
         assert!(status
             .production_local_manual_e2ee_runtime
             .contains("local_manual_e2ee_runtime_ready=true"));
+        assert!(status
+            .production_local_manual_e2ee_runtime
+            .contains("supported_local_manual_e2ee_ready=true"));
         assert!(status
             .production_local_manual_e2ee_runtime
             .contains("production_e2ee_ready=false"));

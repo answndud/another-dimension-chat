@@ -45,6 +45,13 @@ The production protocol/session lifecycle review input is tracked in
 1:1 state machine, replay/retry/cancel/delete semantics, unresolved review
 questions, and why production E2EE readiness remains false.
 
+Supported local/manual E2EE claim closure is tracked in
+`reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md`. It allows only the narrow
+supported 1:1 local/manual envelope message-content encryption statement while
+keeping broad `production_e2ee_ready=false`, audited E2EE, secure messenger,
+sensitive-use, automatic network messaging, remote acknowledgement, and external
+delivery claims false.
+
 The production key and local storage lifecycle review input is tracked in
 `reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md`. It documents the current
 passphrase-first unlock, encrypted profile/session/message store, destructive
@@ -145,7 +152,9 @@ This project does not currently claim:
 - Secure production end-to-end encryption.
 - The local manual envelope runtime has a reviewed Noise XX/session/key/replay
   failure-model gate, but this is not an audit, production-ready E2EE claim, or
-  sensitive-communication guarantee.
+  sensitive-communication guarantee. The only allowed E2EE wording is the
+  supported local/manual envelope message-content scope tracked in
+  `reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md`.
 - Reliable real-network Tor/onion delivery.
 - Completed independent external two-machine onion delivery evidence. Current
   single-machine local rehearsal is not external peer evidence.

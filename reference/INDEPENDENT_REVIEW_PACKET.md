@@ -121,6 +121,10 @@ Review the unsigned experimental public beta boundary:
 - `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`: 1:1 protocol/session
   state machine, replay/retry/cancel/delete semantics, and unresolved
   production E2EE review questions.
+- `reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md`: RB-1 supported
+  local/manual 1:1 envelope message-content E2EE claim boundary, while broad
+  production E2EE, audited, secure messenger, sensitive-use, automatic network
+  messaging, remote acknowledgement, and external delivery claims remain false.
 - `reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md`: passphrase-first unlock,
   encrypted local profile/session/message store lifecycle, destructive local
   actions, backup/migration boundaries, marker-only rollback detection, and
