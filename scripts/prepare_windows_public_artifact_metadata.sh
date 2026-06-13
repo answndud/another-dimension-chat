@@ -68,6 +68,13 @@ artifact_name="$(basename "$ARTIFACT")"
 sha256="$(shasum -a 256 "$ARTIFACT" | awk '{print $1}')"
 size_bytes="$(wc -c <"$ARTIFACT" | tr -d ' ')"
 version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
+expected_artifact_prefix="another-dimension-chat-${version}-${RELEASE_CLASS}-${ARCHITECTURE}"
+case "$artifact_name" in
+  "$expected_artifact_prefix"-*|"$expected_artifact_prefix".*) ;;
+  *)
+    fail "AD_WINDOWS_ARTIFACT filename must start with $expected_artifact_prefix"
+    ;;
+esac
 source_commit="$(git rev-parse HEAD)"
 checksum_file="$artifact_name.sha256"
 manifest_file="$OUT_DIR/WINDOWS_ARTIFACT_MANIFEST.json"
@@ -147,6 +154,7 @@ Windows artifact, checksum, provenance, and manifest must agree before running
 the app.
 
 - Artifact: \`$artifact_name\`
+- Expected artifact prefix: \`$expected_artifact_prefix\`
 - SHA-256: \`$sha256\`
 - Architecture: \`$ARCHITECTURE\`
 - Bundle target: \`$BUNDLE_TARGET\`
