@@ -270,10 +270,13 @@ false.
 Field evidence and reliability readiness is tracked in
 [reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md](reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md),
 with the redacted report template in
-[reference/REDACTED_FIELD_REPORT_PACKET.md](reference/REDACTED_FIELD_REPORT_PACKET.md).
-These files define the evidence ladder, report data boundary, and reliability
-decision rule while keeping real macOS two-machine repeated evidence, reliable
-external delivery, production field evidence, and sensitive-use claims false.
+[reference/REDACTED_FIELD_REPORT_PACKET.md](reference/REDACTED_FIELD_REPORT_PACKET.md),
+and the RB-5 release-class scope-down in
+[reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md](reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md).
+These files define the evidence ladder, report data boundary, reliability
+decision rule, and lower-release-class workaround while keeping real macOS
+two-machine repeated evidence, reliable external delivery, production field
+evidence, and sensitive-use claims false.
 
 Operational support, incident, and vulnerability process readiness is tracked in
 [reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md](reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md),

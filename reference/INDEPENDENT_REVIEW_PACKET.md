@@ -162,6 +162,9 @@ Review the unsigned experimental public beta boundary:
 - `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md`: field evidence ladder,
   required macOS flow coverage, report data boundary, reliability decision
   rule, and current no-external-success/no-reliability flags.
+- `reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md`: RB-5 release-class
+  scope-down that keeps real field evidence false while allowing lower release
+  classes to continue without reliable-delivery or production claims.
 - `reference/REDACTED_FIELD_REPORT_PACKET.md`: public-safe field report
   template, forbidden private fields, current empty evidence ledger, and
   required non-claims.

@@ -99,10 +99,16 @@ not production readiness by themselves.
 - reviewer_signoff_claimed=false
 - public_user_safety_signoff_claimed=false
 - ops_8_field_evidence_reliability_program_reviewed=true
+- rb_5_field_evidence_release_class_scope_down_reviewed=true
 - redacted_field_report_packet_available=true
+- redacted_field_report_validator_available=true
 - macos_two_machine_real_user_flow_repeated=false
 - repeated_redacted_field_reports_available=false
 - production_field_evidence_ready=false
+- stable_or_production_release_allowed_without_field_evidence=false
+- signed_public_beta_or_rc_release_class_allowed_without_field_evidence=true
+- field_evidence_no_longer_blocks_lower_release_class=true
+- field_evidence_still_blocks_stable_or_production_claims=true
 - ops_9_operational_support_incident_process_reviewed=true
 - incident_response_tabletop_completed=true
 - support_template_review_completed=true
