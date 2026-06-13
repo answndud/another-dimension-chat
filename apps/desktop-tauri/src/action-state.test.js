@@ -9,6 +9,7 @@ import {
   productionBridgeCensorshipBoundaryView,
   productionHighRiskThreatModelBoundaryView,
   productionHighRiskThreatModelClaimMatrix,
+  productionHighRiskTransportMetadataBoundaryView,
   productionVersionIntegrityView,
   productionWindowsRuntimeParityView,
   productionInviteCodeProfiles,
@@ -133,6 +134,31 @@ test("high-risk threat model matrix keeps public claims bounded", () => {
   assert.match(boundary.boundary, /coercion_safe_claim=false/);
   assert.match(boundary.boundary, /full_global_traffic_correlation_safe_claim=false/);
   assert.match(boundary.boundary, /full_censorship_resistance_claim=false/);
+});
+
+test("high-risk transport metadata boundary stays onion-only and redacted", () => {
+  const view = productionHighRiskTransportMetadataBoundaryView();
+
+  assert.equal(view.status, "not-ready");
+  assert.equal(view.notReadyReason, "runtime-network-disabled-until-explicit-user-action");
+  assert.match(view.boundary, /high_risk_transport_mode=onion-only/);
+  assert.match(view.boundary, /high_risk_transport_onion_only=true/);
+  assert.match(view.boundary, /high_risk_transport_direct_fallback=false/);
+  assert.match(view.boundary, /high_risk_transport_dns_endpoint=false/);
+  assert.match(view.boundary, /high_risk_transport_ip_endpoint=false/);
+  assert.match(view.boundary, /high_risk_transport_explicit_user_permission=true/);
+  assert.match(view.boundary, /high_risk_transport_app_launch_bootstrap=false/);
+  assert.match(view.boundary, /high_risk_transport_bridge_failure_class=redacted/);
+  assert.match(view.boundary, /high_risk_transport_bridge_line_exposed=false/);
+  assert.match(view.boundary, /high_risk_transport_onion_endpoint_exposed=false/);
+  assert.match(view.boundary, /high_risk_transport_descriptor_exposed=false/);
+  assert.match(view.boundary, /high_risk_transport_local_path_exposed=false/);
+  assert.match(view.boundary, /high_risk_transport_envelope_size_bucket=bucket-4k/);
+  assert.match(view.boundary, /high_risk_transport_optional_send_delay=true/);
+  assert.match(view.boundary, /high_risk_transport_timestamp_precision=minute/);
+  assert.match(view.boundary, /high_risk_transport_redacted_contact_id=true/);
+  assert.match(view.boundary, /high_risk_transport_redacted_session_id=true/);
+  assert.match(view.boundary, /high_risk_transport_ready=false/);
 });
 
 test("version integrity view keeps manual update and rollback claims bounded", () => {

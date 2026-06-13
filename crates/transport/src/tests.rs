@@ -96,6 +96,51 @@ fn advanced_high_risk_onion_policy_keeps_direct_fallback_rejected() {
 }
 
 #[test]
+fn high_risk_transport_policy_enforces_onion_only_metadata_minimization() {
+    let summary = high_risk_transport_metadata_minimization_summary();
+    let policy = TransportPolicy::advanced_high_risk_onion();
+    let onion = TransportRoute::onion("metadata-preflight.onion").expect("onion route");
+    let direct = TransportRoute::direct_peer("peer.example").expect("direct route");
+    let local = TransportRoute::local("manual-envelope-exchange").expect("local route");
+
+    assert_eq!(summary.policy_mode(), TransportMode::HighRiskOnionOnly);
+    assert_eq!(summary.advanced_route_kind(), TransportKind::OnionService);
+    assert!(summary.onion_only());
+    assert_eq!(policy.require_allowed(&onion), Ok(()));
+    assert_eq!(
+        policy.require_allowed(&direct),
+        Err(TransportError::PolicyViolation)
+    );
+    assert_eq!(
+        policy.require_allowed(&local),
+        Err(TransportError::PolicyViolation)
+    );
+    assert!(!summary.direct_fallback_allowed());
+    assert!(!summary.dns_endpoint_allowed());
+    assert!(!summary.ip_endpoint_allowed());
+    assert!(summary.explicit_user_permission_required());
+    assert!(!summary.app_launch_bootstrap_allowed());
+    assert!(summary.bridge_censorship_failure_class_redacted());
+    assert!(!summary.bridge_line_exposed_in_status());
+    assert!(!summary.onion_endpoint_exposed_in_status());
+    assert!(!summary.descriptor_exposed_in_status());
+    assert!(!summary.local_path_exposed_in_status());
+    assert_eq!(summary.envelope_size_bucket(), "bucket-4k");
+    assert!(summary.optional_send_delay_supported());
+    assert_eq!(summary.timestamp_precision(), "minute");
+    assert!(summary.redacted_contact_id());
+    assert!(summary.redacted_session_id());
+    assert!(summary.endpoint_creation_state_separated());
+    assert!(summary.endpoint_rotation_state_separated());
+    assert!(summary.encrypted_endpoint_update_state_separated());
+    assert!(summary.stream_send_receive_retry_cancel_state_separated());
+    assert_eq!(
+        summary.not_ready_reason(),
+        "runtime-network-disabled-until-explicit-user-action"
+    );
+}
+
+#[test]
 fn direct_peer_requires_explicit_low_risk_policy() {
     let policy = TransportPolicy::low_risk_direct_allowed();
     let onion = TransportRoute::onion("example.onion").expect("onion route");

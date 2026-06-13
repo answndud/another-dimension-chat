@@ -146,6 +146,164 @@ pub fn no_silent_network_transport_boundary_summary(
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HighRiskTransportMetadataMinimizationSummary {
+    policy_mode: TransportMode,
+    advanced_route_kind: TransportKind,
+    onion_only: bool,
+    direct_fallback_allowed: bool,
+    dns_endpoint_allowed: bool,
+    ip_endpoint_allowed: bool,
+    explicit_user_permission_required: bool,
+    app_launch_bootstrap_allowed: bool,
+    bridge_censorship_failure_class_redacted: bool,
+    bridge_line_exposed_in_status: bool,
+    onion_endpoint_exposed_in_status: bool,
+    descriptor_exposed_in_status: bool,
+    local_path_exposed_in_status: bool,
+    envelope_size_bucket: &'static str,
+    optional_send_delay_supported: bool,
+    timestamp_precision: &'static str,
+    redacted_contact_id: bool,
+    redacted_session_id: bool,
+    endpoint_creation_state_separated: bool,
+    endpoint_rotation_state_separated: bool,
+    encrypted_endpoint_update_state_separated: bool,
+    stream_send_receive_retry_cancel_state_separated: bool,
+    not_ready_reason: &'static str,
+}
+
+impl HighRiskTransportMetadataMinimizationSummary {
+    pub fn policy_mode(self) -> TransportMode {
+        self.policy_mode
+    }
+
+    pub fn advanced_route_kind(self) -> TransportKind {
+        self.advanced_route_kind
+    }
+
+    pub fn onion_only(self) -> bool {
+        self.onion_only
+    }
+
+    pub fn direct_fallback_allowed(self) -> bool {
+        self.direct_fallback_allowed
+    }
+
+    pub fn dns_endpoint_allowed(self) -> bool {
+        self.dns_endpoint_allowed
+    }
+
+    pub fn ip_endpoint_allowed(self) -> bool {
+        self.ip_endpoint_allowed
+    }
+
+    pub fn explicit_user_permission_required(self) -> bool {
+        self.explicit_user_permission_required
+    }
+
+    pub fn app_launch_bootstrap_allowed(self) -> bool {
+        self.app_launch_bootstrap_allowed
+    }
+
+    pub fn bridge_censorship_failure_class_redacted(self) -> bool {
+        self.bridge_censorship_failure_class_redacted
+    }
+
+    pub fn bridge_line_exposed_in_status(self) -> bool {
+        self.bridge_line_exposed_in_status
+    }
+
+    pub fn onion_endpoint_exposed_in_status(self) -> bool {
+        self.onion_endpoint_exposed_in_status
+    }
+
+    pub fn descriptor_exposed_in_status(self) -> bool {
+        self.descriptor_exposed_in_status
+    }
+
+    pub fn local_path_exposed_in_status(self) -> bool {
+        self.local_path_exposed_in_status
+    }
+
+    pub fn envelope_size_bucket(self) -> &'static str {
+        self.envelope_size_bucket
+    }
+
+    pub fn optional_send_delay_supported(self) -> bool {
+        self.optional_send_delay_supported
+    }
+
+    pub fn timestamp_precision(self) -> &'static str {
+        self.timestamp_precision
+    }
+
+    pub fn redacted_contact_id(self) -> bool {
+        self.redacted_contact_id
+    }
+
+    pub fn redacted_session_id(self) -> bool {
+        self.redacted_session_id
+    }
+
+    pub fn endpoint_creation_state_separated(self) -> bool {
+        self.endpoint_creation_state_separated
+    }
+
+    pub fn endpoint_rotation_state_separated(self) -> bool {
+        self.endpoint_rotation_state_separated
+    }
+
+    pub fn encrypted_endpoint_update_state_separated(self) -> bool {
+        self.encrypted_endpoint_update_state_separated
+    }
+
+    pub fn stream_send_receive_retry_cancel_state_separated(self) -> bool {
+        self.stream_send_receive_retry_cancel_state_separated
+    }
+
+    pub fn not_ready_reason(self) -> &'static str {
+        self.not_ready_reason
+    }
+}
+
+pub fn high_risk_transport_metadata_minimization_summary(
+) -> HighRiskTransportMetadataMinimizationSummary {
+    let policy = TransportPolicy::advanced_high_risk_onion();
+    let onion_route =
+        TransportRoute::onion("metadata-preflight.onion").expect("static onion route is valid");
+    let direct_fallback_allowed = TransportRoute::direct_peer("direct-peer")
+        .ok()
+        .is_some_and(|route| policy.require_allowed(&route).is_ok());
+
+    HighRiskTransportMetadataMinimizationSummary {
+        policy_mode: policy.mode(),
+        advanced_route_kind: onion_route.kind(),
+        onion_only: policy.mode() == TransportMode::HighRiskOnionOnly
+            && policy.require_allowed(&onion_route).is_ok(),
+        direct_fallback_allowed,
+        dns_endpoint_allowed: TransportRoute::onion("example.com").is_ok(),
+        ip_endpoint_allowed: TransportRoute::onion("192.0.2.10").is_ok(),
+        explicit_user_permission_required: true,
+        app_launch_bootstrap_allowed: false,
+        bridge_censorship_failure_class_redacted: true,
+        bridge_line_exposed_in_status: false,
+        onion_endpoint_exposed_in_status: false,
+        descriptor_exposed_in_status: false,
+        local_path_exposed_in_status: false,
+        envelope_size_bucket: "bucket-4k",
+        optional_send_delay_supported: true,
+        timestamp_precision: "minute",
+        redacted_contact_id: true,
+        redacted_session_id: true,
+        endpoint_creation_state_separated: true,
+        endpoint_rotation_state_separated: true,
+        encrypted_endpoint_update_state_separated: true,
+        stream_send_receive_retry_cancel_state_separated: true,
+        not_ready_reason: "runtime-network-disabled-until-explicit-user-action",
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TransportRoute {
     OnionService(OnionServiceEndpoint),

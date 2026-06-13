@@ -30,6 +30,7 @@ pub mod production {
         UnlockFactor, UnlockMode, UnlockRequest,
     };
     use another_dimension_transport::{
+        high_risk_transport_metadata_minimization_summary,
         BoundOutboundStreamSession, EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
         EndpointUpdateChannel, EndpointUpdateControlPlaintext, EnvelopeIoAdapterReady,
         OnionEnvelopeTransport, OnionOutboundStreamBoundary, OnionServiceEndpoint,
@@ -1277,6 +1278,21 @@ pub mod production {
         "no_central_contact_discovery",
         "no_external_onion_delivery_claim_without_peer_reports",
         "relay_store_and_forward_requires_separate_no_trusted_server_decision",
+    ];
+
+    const PRODUCTION_HIGH_RISK_TRANSPORT_METADATA_POLICIES: &[&str] = &[
+        "onion_only_advanced_transport",
+        "direct_fallback_rejected",
+        "dns_ip_endpoints_rejected",
+        "explicit_user_permission_before_bootstrap",
+        "no_app_launch_bootstrap",
+        "redacted_bridge_censorship_failure_class",
+        "no_raw_bridge_endpoint_descriptor_path_status",
+        "bucketed_envelope_size",
+        "optional_send_delay",
+        "minute_timestamp_precision",
+        "redacted_contact_and_session_ids",
+        "separated_endpoint_stream_retry_cancel_state",
     ];
 
     const PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX: &[ProductionHighRiskThreatModelEntry] = &[
@@ -3367,6 +3383,38 @@ pub mod production {
         relay_store_and_forward_decided: bool,
         relay_store_and_forward_allowed: bool,
         split_closed: bool,
+        production_transport_ready: bool,
+        reliable_external_delivery_claim_allowed: bool,
+        security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionHighRiskTransportMetadataBoundarySummary {
+        policies: &'static [&'static str],
+        policy_mode: TransportMode,
+        advanced_route_kind: TransportKind,
+        onion_only: bool,
+        direct_fallback_allowed: bool,
+        dns_endpoint_allowed: bool,
+        ip_endpoint_allowed: bool,
+        explicit_user_permission_required: bool,
+        app_launch_bootstrap_allowed: bool,
+        bridge_censorship_failure_class_redacted: bool,
+        raw_bridge_line_exposed: bool,
+        raw_onion_endpoint_exposed: bool,
+        descriptor_exposed: bool,
+        local_path_exposed: bool,
+        envelope_size_bucket: &'static str,
+        optional_send_delay_supported: bool,
+        timestamp_precision: &'static str,
+        redacted_contact_id: bool,
+        redacted_session_id: bool,
+        endpoint_creation_state_separated: bool,
+        endpoint_rotation_state_separated: bool,
+        encrypted_endpoint_update_state_separated: bool,
+        stream_send_receive_retry_cancel_state_separated: bool,
+        not_ready_reason: &'static str,
+        boundary_closed: bool,
         production_transport_ready: bool,
         reliable_external_delivery_claim_allowed: bool,
         security_ready_claimed: bool,
@@ -6957,6 +7005,120 @@ pub mod production {
 
         pub fn split_closed(self) -> bool {
             self.split_closed
+        }
+
+        pub fn production_transport_ready(self) -> bool {
+            self.production_transport_ready
+        }
+
+        pub fn reliable_external_delivery_claim_allowed(self) -> bool {
+            self.reliable_external_delivery_claim_allowed
+        }
+
+        pub fn security_ready_claimed(self) -> bool {
+            self.security_ready_claimed
+        }
+    }
+
+    impl ProductionHighRiskTransportMetadataBoundarySummary {
+        pub fn policies(self) -> &'static [&'static str] {
+            self.policies
+        }
+
+        pub fn policy_mode(self) -> TransportMode {
+            self.policy_mode
+        }
+
+        pub fn advanced_route_kind(self) -> TransportKind {
+            self.advanced_route_kind
+        }
+
+        pub fn onion_only(self) -> bool {
+            self.onion_only
+        }
+
+        pub fn direct_fallback_allowed(self) -> bool {
+            self.direct_fallback_allowed
+        }
+
+        pub fn dns_endpoint_allowed(self) -> bool {
+            self.dns_endpoint_allowed
+        }
+
+        pub fn ip_endpoint_allowed(self) -> bool {
+            self.ip_endpoint_allowed
+        }
+
+        pub fn explicit_user_permission_required(self) -> bool {
+            self.explicit_user_permission_required
+        }
+
+        pub fn app_launch_bootstrap_allowed(self) -> bool {
+            self.app_launch_bootstrap_allowed
+        }
+
+        pub fn bridge_censorship_failure_class_redacted(self) -> bool {
+            self.bridge_censorship_failure_class_redacted
+        }
+
+        pub fn raw_bridge_line_exposed(self) -> bool {
+            self.raw_bridge_line_exposed
+        }
+
+        pub fn raw_onion_endpoint_exposed(self) -> bool {
+            self.raw_onion_endpoint_exposed
+        }
+
+        pub fn descriptor_exposed(self) -> bool {
+            self.descriptor_exposed
+        }
+
+        pub fn local_path_exposed(self) -> bool {
+            self.local_path_exposed
+        }
+
+        pub fn envelope_size_bucket(self) -> &'static str {
+            self.envelope_size_bucket
+        }
+
+        pub fn optional_send_delay_supported(self) -> bool {
+            self.optional_send_delay_supported
+        }
+
+        pub fn timestamp_precision(self) -> &'static str {
+            self.timestamp_precision
+        }
+
+        pub fn redacted_contact_id(self) -> bool {
+            self.redacted_contact_id
+        }
+
+        pub fn redacted_session_id(self) -> bool {
+            self.redacted_session_id
+        }
+
+        pub fn endpoint_creation_state_separated(self) -> bool {
+            self.endpoint_creation_state_separated
+        }
+
+        pub fn endpoint_rotation_state_separated(self) -> bool {
+            self.endpoint_rotation_state_separated
+        }
+
+        pub fn encrypted_endpoint_update_state_separated(self) -> bool {
+            self.encrypted_endpoint_update_state_separated
+        }
+
+        pub fn stream_send_receive_retry_cancel_state_separated(self) -> bool {
+            self.stream_send_receive_retry_cancel_state_separated
+        }
+
+        pub fn not_ready_reason(self) -> &'static str {
+            self.not_ready_reason
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
         }
 
         pub fn production_transport_ready(self) -> bool {
@@ -19073,6 +19235,75 @@ pub mod production {
         }
     }
 
+    pub fn production_high_risk_transport_metadata_boundary_summary(
+    ) -> ProductionHighRiskTransportMetadataBoundarySummary {
+        let metadata = high_risk_transport_metadata_minimization_summary();
+        let not_ready_reason = metadata.not_ready_reason();
+        let production_transport_ready = false;
+        let reliable_external_delivery_claim_allowed = false;
+        let security_ready_claimed = false;
+        let boundary_closed = metadata.onion_only()
+            && metadata.policy_mode() == TransportMode::HighRiskOnionOnly
+            && metadata.advanced_route_kind() == TransportKind::OnionService
+            && !metadata.direct_fallback_allowed()
+            && !metadata.dns_endpoint_allowed()
+            && !metadata.ip_endpoint_allowed()
+            && metadata.explicit_user_permission_required()
+            && !metadata.app_launch_bootstrap_allowed()
+            && metadata.bridge_censorship_failure_class_redacted()
+            && !metadata.bridge_line_exposed_in_status()
+            && !metadata.onion_endpoint_exposed_in_status()
+            && !metadata.descriptor_exposed_in_status()
+            && !metadata.local_path_exposed_in_status()
+            && metadata.envelope_size_bucket() == "bucket-4k"
+            && metadata.optional_send_delay_supported()
+            && metadata.timestamp_precision() == "minute"
+            && metadata.redacted_contact_id()
+            && metadata.redacted_session_id()
+            && metadata.endpoint_creation_state_separated()
+            && metadata.endpoint_rotation_state_separated()
+            && metadata.encrypted_endpoint_update_state_separated()
+            && metadata.stream_send_receive_retry_cancel_state_separated()
+            && !not_ready_reason.is_empty()
+            && !production_transport_ready
+            && !reliable_external_delivery_claim_allowed
+            && !security_ready_claimed;
+
+        ProductionHighRiskTransportMetadataBoundarySummary {
+            policies: PRODUCTION_HIGH_RISK_TRANSPORT_METADATA_POLICIES,
+            policy_mode: metadata.policy_mode(),
+            advanced_route_kind: metadata.advanced_route_kind(),
+            onion_only: metadata.onion_only(),
+            direct_fallback_allowed: metadata.direct_fallback_allowed(),
+            dns_endpoint_allowed: metadata.dns_endpoint_allowed(),
+            ip_endpoint_allowed: metadata.ip_endpoint_allowed(),
+            explicit_user_permission_required: metadata.explicit_user_permission_required(),
+            app_launch_bootstrap_allowed: metadata.app_launch_bootstrap_allowed(),
+            bridge_censorship_failure_class_redacted: metadata
+                .bridge_censorship_failure_class_redacted(),
+            raw_bridge_line_exposed: metadata.bridge_line_exposed_in_status(),
+            raw_onion_endpoint_exposed: metadata.onion_endpoint_exposed_in_status(),
+            descriptor_exposed: metadata.descriptor_exposed_in_status(),
+            local_path_exposed: metadata.local_path_exposed_in_status(),
+            envelope_size_bucket: metadata.envelope_size_bucket(),
+            optional_send_delay_supported: metadata.optional_send_delay_supported(),
+            timestamp_precision: metadata.timestamp_precision(),
+            redacted_contact_id: metadata.redacted_contact_id(),
+            redacted_session_id: metadata.redacted_session_id(),
+            endpoint_creation_state_separated: metadata.endpoint_creation_state_separated(),
+            endpoint_rotation_state_separated: metadata.endpoint_rotation_state_separated(),
+            encrypted_endpoint_update_state_separated: metadata
+                .encrypted_endpoint_update_state_separated(),
+            stream_send_receive_retry_cancel_state_separated: metadata
+                .stream_send_receive_retry_cancel_state_separated(),
+            not_ready_reason,
+            boundary_closed,
+            production_transport_ready,
+            reliable_external_delivery_claim_allowed,
+            security_ready_claimed,
+        }
+    }
+
     pub fn production_high_risk_threat_model_claim_boundary_summary(
     ) -> ProductionHighRiskThreatModelClaimBoundarySummary {
         let app_matrix_required = true;
@@ -25907,6 +26138,45 @@ pub mod production {
             assert!(split
                 .policies()
                 .contains(&"relay_store_and_forward_requires_separate_no_trusted_server_decision"));
+        }
+
+        #[test]
+        fn high_risk_transport_state_reports_onion_only_metadata_minimized_boundary() {
+            let boundary = production_high_risk_transport_metadata_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert_eq!(boundary.policy_mode(), TransportMode::HighRiskOnionOnly);
+            assert_eq!(boundary.advanced_route_kind(), TransportKind::OnionService);
+            assert!(boundary.onion_only());
+            assert!(!boundary.direct_fallback_allowed());
+            assert!(!boundary.dns_endpoint_allowed());
+            assert!(!boundary.ip_endpoint_allowed());
+            assert!(boundary.explicit_user_permission_required());
+            assert!(!boundary.app_launch_bootstrap_allowed());
+            assert!(boundary.bridge_censorship_failure_class_redacted());
+            assert!(!boundary.raw_bridge_line_exposed());
+            assert!(!boundary.raw_onion_endpoint_exposed());
+            assert!(!boundary.descriptor_exposed());
+            assert!(!boundary.local_path_exposed());
+            assert_eq!(boundary.envelope_size_bucket(), "bucket-4k");
+            assert!(boundary.optional_send_delay_supported());
+            assert_eq!(boundary.timestamp_precision(), "minute");
+            assert!(boundary.redacted_contact_id());
+            assert!(boundary.redacted_session_id());
+            assert!(boundary.endpoint_creation_state_separated());
+            assert!(boundary.endpoint_rotation_state_separated());
+            assert!(boundary.encrypted_endpoint_update_state_separated());
+            assert!(boundary.stream_send_receive_retry_cancel_state_separated());
+            assert_eq!(
+                boundary.not_ready_reason(),
+                "runtime-network-disabled-until-explicit-user-action"
+            );
+            assert!(!boundary.production_transport_ready());
+            assert!(!boundary.reliable_external_delivery_claim_allowed());
+            assert!(!boundary.security_ready_claimed());
+            assert!(boundary
+                .policies()
+                .contains(&"separated_endpoint_stream_retry_cancel_state"));
         }
 
         #[test]

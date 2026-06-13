@@ -11,6 +11,7 @@ import {
   fieldTestReportRoomListAction,
   fieldTestReportSummary,
   fieldTestReportTriageState,
+  highRiskTransportMetadataBoundaryStatus,
   localManualE2eeRuntimeBoundaryStatus,
   noSilentNetworkBoundaryStatus,
   parseFieldTestReport,
@@ -497,6 +498,34 @@ test("default transport boundary keeps the public diagnostic path manual and non
   assert.match(diagnostics, /automatic_network_on_launch=false/);
   assert.match(diagnostics, /high_risk_onion_path=explicit-user-triggered-fail-closed/);
   assert.match(diagnostics, /high_risk_onion_direct_fallback=false/);
+  assert.match(diagnostics, /high_risk_transport_onion_only=true/);
+  assert.match(diagnostics, /high_risk_transport_direct_fallback=false/);
+  assert.match(diagnostics, /high_risk_transport_dns_endpoint=false/);
+  assert.match(diagnostics, /high_risk_transport_ip_endpoint=false/);
+  assert.match(diagnostics, /high_risk_transport_app_launch_bootstrap=false/);
+  assert.match(diagnostics, /high_risk_transport_not_ready_reason=runtime-network-disabled-until-explicit-user-action/);
+});
+
+test("high-risk transport metadata boundary exposes only redacted status", () => {
+  const boundary = highRiskTransportMetadataBoundaryStatus();
+
+  assert.equal(boundary.mode, "onion-only");
+  assert.equal(boundary.onionOnly, true);
+  assert.equal(boundary.directFallbackAllowed, false);
+  assert.equal(boundary.dnsEndpointAllowed, false);
+  assert.equal(boundary.ipEndpointAllowed, false);
+  assert.equal(boundary.appLaunchBootstrapAllowed, false);
+  assert.equal(boundary.bridgeFailureClassRedacted, true);
+  assert.equal(boundary.bridgeLineExposed, false);
+  assert.equal(boundary.onionEndpointExposed, false);
+  assert.equal(boundary.descriptorExposed, false);
+  assert.equal(boundary.localPathExposed, false);
+  assert.equal(boundary.envelopeSizeBucket, "bucket-4k");
+  assert.equal(boundary.timestampPrecision, "minute");
+  assert.equal(boundary.highRiskTransportReady, false);
+  assert.equal(boundary.notReadyReason, "runtime-network-disabled-until-explicit-user-action");
+  assert.match(boundary.boundary, /high_risk_transport_bridge_failure_class=redacted/);
+  assert.doesNotMatch(boundary.boundary, /bridge_line=|onion_endpoint=|descriptor=|local_path=/);
 });
 
 test("local manual E2EE runtime boundary exposes key lifecycle guardrails without production claims", () => {

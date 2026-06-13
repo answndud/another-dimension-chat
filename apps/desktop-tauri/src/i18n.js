@@ -20,6 +20,8 @@ const dictionaries = {
       "platform_scope=desktop-shared-core windows_distribution=local-build-candidate-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false",
     highRiskThreatModelStatusInitial:
       "high_risk_matrix=remote_passive_observer:mitigated,remote_active_attacker:mitigated,malicious_peer:mitigated,local_at_rest_attacker:mitigated,supply_chain_update_attacker:mitigated,compromised_endpoint:not_protected,direct_coercion:not_protected,global_traffic_correlation:not_protected claimable_statuses=protected,mitigated not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation",
+    highRiskTransportMetadataStatusInitial:
+      "high_risk_transport_mode=onion-only high_risk_transport_onion_only=true high_risk_transport_direct_fallback=false high_risk_transport_dns_endpoint=false high_risk_transport_ip_endpoint=false high_risk_transport_app_launch_bootstrap=false high_risk_transport_not_ready_reason=runtime-network-disabled-until-explicit-user-action",
     firstRunChecklistLabel: "First-run private message flow",
     firstRunProfileStep: "Create, unlock, or reopen your local profile before room actions.",
     firstRunRoomStep: "Create a pairwise invite room or paste the invite code you received.",
@@ -1188,6 +1190,8 @@ const dictionaries = {
       "platform_scope=desktop-shared-core windows_distribution=local-build-candidate-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false",
     highRiskThreatModelStatusInitial:
       "high_risk_matrix=remote_passive_observer:mitigated,remote_active_attacker:mitigated,malicious_peer:mitigated,local_at_rest_attacker:mitigated,supply_chain_update_attacker:mitigated,compromised_endpoint:not_protected,direct_coercion:not_protected,global_traffic_correlation:not_protected claimable_statuses=protected,mitigated not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation",
+    highRiskTransportMetadataStatusInitial:
+      "high_risk_transport_mode=onion-only high_risk_transport_onion_only=true high_risk_transport_direct_fallback=false high_risk_transport_dns_endpoint=false high_risk_transport_ip_endpoint=false high_risk_transport_app_launch_bootstrap=false high_risk_transport_not_ready_reason=runtime-network-disabled-until-explicit-user-action",
     firstRunChecklistLabel: "첫 private message 흐름",
     firstRunProfileStep: "방 작업 전에 로컬 profile을 create, unlock, reopen 합니다.",
     firstRunRoomStep: "pairwise invite room을 만들거나 받은 invite code를 붙여넣습니다.",
