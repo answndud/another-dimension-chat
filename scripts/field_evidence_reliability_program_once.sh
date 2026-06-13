@@ -27,8 +27,9 @@ PROGRAM="reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md"
 PACKET="reference/REDACTED_FIELD_REPORT_PACKET.md"
 REVIEW_PACKET="reference/INDEPENDENT_REVIEW_PACKET.md"
 GATE="reference/PRODUCTION_READINESS_CLAIM_GATE.md"
+VALIDATOR="scripts/validate_redacted_field_reports.mjs"
 
-for file in "$PROGRAM" "$PACKET" "$REVIEW_PACKET" "$GATE" "README.md" "SECURITY.md"; do
+for file in "$PROGRAM" "$PACKET" "$REVIEW_PACKET" "$GATE" "$VALIDATOR" "README.md" "SECURITY.md"; do
   [ -f "$file" ] || fail "missing required field evidence input: $file"
 done
 
@@ -51,7 +52,11 @@ must_contain "$PROGRAM" "sensitive_communication_allowed=false"
 must_contain "$PROGRAM" "next_required_phase=OPS-9 operational support, incident, and vulnerability process"
 
 must_contain "$PACKET" "redacted_field_report_packet_available=true"
+must_contain "$PACKET" "redacted_field_report_validator_available=true"
 must_contain "$PACKET" "accepted_production_field_reports=0"
+must_contain "$PACKET" "clean_install_checksum_status=pass|fail|partial|not-run"
+must_contain "$PACKET" "manual_envelope_round_trip_status=pass|fail|partial|not-run"
+must_contain "$PACKET" "failed_delivery_recovery_status=pass|fail|partial|not-run"
 must_contain "$PACKET" "default_transport_path=local-manual-encrypted-envelope-exchange"
 must_contain "$PACKET" "raw_logs_or_private_payloads_allowed=false"
 must_contain "$PACKET" "fabricated_peer_evidence_allowed=false"
@@ -74,6 +79,9 @@ must_contain "README.md" "reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md"
 must_contain "README.md" "reference/REDACTED_FIELD_REPORT_PACKET.md"
 must_contain "SECURITY.md" "reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md"
 must_contain "SECURITY.md" "reference/REDACTED_FIELD_REPORT_PACKET.md"
+must_contain "$VALIDATOR" "status=waiting-for-redacted-field-reports"
+must_contain "$VALIDATOR" "status=redacted-field-evidence-candidate-requires-review"
+must_contain "$VALIDATOR" "production_field_evidence_ready=false"
 must_contain "$GATE" "ops_8_field_evidence_reliability_program_reviewed=true"
 must_contain "$GATE" "redacted_field_report_packet_available=true"
 must_contain "$GATE" "macos_two_machine_real_user_flow_repeated=false"
@@ -96,11 +104,13 @@ for file in "$PROGRAM" "$PACKET" "$REVIEW_PACKET" "$GATE" "README.md" "SECURITY.
 done
 
 scripts/desktop_real_user_test_prep_once.sh >/dev/null
+scripts/redacted_field_report_validator_once.sh >/dev/null
 
 cat <<'STATUS'
 status=field-evidence-reliability-program-ready
 field_evidence_reliability_program_reviewed=true
 redacted_field_report_packet_available=true
+redacted_field_report_validator_available=true
 same_machine_rehearsal_source_available=true
 local_two_instance_rehearsal_completed=false
 macos_two_machine_real_user_flow_repeated=false
