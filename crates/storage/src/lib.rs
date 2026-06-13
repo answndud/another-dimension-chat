@@ -148,6 +148,9 @@ pub mod production {
         encrypted_record_body_store: bool,
         sqlcipher_passphrase_rekey_source_ready: bool,
         sqlcipher_passphrase_rotation_generation_source_ready: bool,
+        key_rotation_marker_monotonic_write_enforced: bool,
+        key_rotation_marker_scope_bound: bool,
+        replay_window_scope_bound_loader_ready: bool,
         production_key_management_ready: bool,
         rollback_protection: ReplayRollbackProtection,
         secure_deletion_from_media: bool,
@@ -173,6 +176,18 @@ pub mod production {
 
         pub fn sqlcipher_passphrase_rotation_generation_source_ready(self) -> bool {
             self.sqlcipher_passphrase_rotation_generation_source_ready
+        }
+
+        pub fn key_rotation_marker_monotonic_write_enforced(self) -> bool {
+            self.key_rotation_marker_monotonic_write_enforced
+        }
+
+        pub fn key_rotation_marker_scope_bound(self) -> bool {
+            self.key_rotation_marker_scope_bound
+        }
+
+        pub fn replay_window_scope_bound_loader_ready(self) -> bool {
+            self.replay_window_scope_bound_loader_ready
         }
 
         pub fn production_key_management_ready(self) -> bool {
@@ -256,6 +271,9 @@ pub mod production {
             encrypted_record_body_store: true,
             sqlcipher_passphrase_rekey_source_ready: true,
             sqlcipher_passphrase_rotation_generation_source_ready: true,
+            key_rotation_marker_monotonic_write_enforced: true,
+            key_rotation_marker_scope_bound: true,
+            replay_window_scope_bound_loader_ready: true,
             production_key_management_ready: false,
             rollback_protection: replay_persistence_guarantees().rollback_protection,
             secure_deletion_from_media: false,
@@ -715,16 +733,18 @@ pub mod production {
                 && record.sealed_body == b"profile-state-v1")
         }
 
-        pub fn save_key_rotation_generation(
+        fn save_key_rotation_generation(
             &self,
             generation: KeyRotationGeneration,
         ) -> Result<(), ProductionStorageError> {
+            if let Some(current) = self.load_key_rotation_generation()? {
+                if generation.value() <= current.value() {
+                    return Err(ProductionStorageError::InvalidRecord);
+                }
+            }
             let record = EncryptedRecord::new(
                 ProductionRecordKind::KeyRotationMarker,
-                EncryptedRecordScope::profile(
-                    ProfileName::new("local-key-lifecycle")
-                        .map_err(|_| ProductionStorageError::InvalidRecord)?,
-                ),
+                key_rotation_marker_scope()?,
                 b"sqlcipher-page-encryption-v1".to_vec(),
                 generation.encode().into_bytes(),
             )?;
@@ -737,6 +757,9 @@ pub mod production {
             self.get(&key_rotation_marker_record_id())?
                 .map(|record| {
                     if record.kind != ProductionRecordKind::KeyRotationMarker {
+                        return Err(ProductionStorageError::InvalidRecord);
+                    }
+                    if record.scope != key_rotation_marker_scope()? {
                         return Err(ProductionStorageError::InvalidRecord);
                     }
                     let state = String::from_utf8(record.sealed_body)
@@ -765,10 +788,31 @@ pub mod production {
             &self,
             record_id: &EncryptedRecordId,
         ) -> Result<Option<ReplayWindow>, ProductionStorageError> {
+            self.load_replay_window_with_scope(record_id, None)
+        }
+
+        pub fn load_replay_window_for_scope(
+            &self,
+            record_id: &EncryptedRecordId,
+            expected_scope: &EncryptedRecordScope,
+        ) -> Result<Option<ReplayWindow>, ProductionStorageError> {
+            self.load_replay_window_with_scope(record_id, Some(expected_scope))
+        }
+
+        fn load_replay_window_with_scope(
+            &self,
+            record_id: &EncryptedRecordId,
+            expected_scope: Option<&EncryptedRecordScope>,
+        ) -> Result<Option<ReplayWindow>, ProductionStorageError> {
             self.get(record_id)?
                 .map(|record| {
                     if record.kind != ProductionRecordKind::ReplayWindowState {
                         return Err(ProductionStorageError::InvalidRecord);
+                    }
+                    if let Some(scope) = expected_scope {
+                        if &record.scope != scope {
+                            return Err(ProductionStorageError::InvalidRecord);
+                        }
                     }
                     let state = String::from_utf8(record.sealed_body)
                         .map_err(|_| ProductionStorageError::InvalidRecord)?;
@@ -886,6 +930,13 @@ pub mod production {
     fn key_rotation_marker_record_id() -> EncryptedRecordId {
         EncryptedRecordId::new("key_rotation_generation_v1")
             .expect("static production key rotation marker record id is valid")
+    }
+
+    fn key_rotation_marker_scope() -> Result<EncryptedRecordScope, ProductionStorageError> {
+        Ok(EncryptedRecordScope::profile(
+            ProfileName::new("local-key-lifecycle")
+                .map_err(|_| ProductionStorageError::InvalidRecord)?,
+        ))
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1245,6 +1296,71 @@ pub mod production {
         }
 
         #[test]
+        fn sqlcipher_store_key_rotation_generation_marker_is_monotonic() {
+            let (_dir, path) = unique_test_database_path("rekey-generation-monotonic");
+            let passphrase = ProfilePassphrase::new("test-passphrase").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let first = KeyRotationGeneration::first();
+            let second = first.next();
+
+            store
+                .save_key_rotation_generation(first)
+                .expect("save first generation");
+            assert_eq!(
+                store
+                    .save_key_rotation_generation(first)
+                    .expect_err("duplicate generation must fail"),
+                ProductionStorageError::InvalidRecord
+            );
+            store
+                .save_key_rotation_generation(second)
+                .expect("save second generation");
+            assert_eq!(
+                store
+                    .save_key_rotation_generation(first)
+                    .expect_err("downgrade generation must fail"),
+                ProductionStorageError::InvalidRecord
+            );
+            assert_eq!(
+                store
+                    .load_key_rotation_generation()
+                    .expect("load generation"),
+                Some(second)
+            );
+
+            let database_bytes = std::fs::read(&path).expect("read database");
+            assert!(!contains_bytes(&database_bytes, b"ADKEYROT1"));
+            assert!(!contains_bytes(&database_bytes, b"key-rotation-marker"));
+        }
+
+        #[test]
+        fn sqlcipher_store_rejects_key_rotation_marker_scope_mismatch() {
+            let (_dir, path) = unique_test_database_path("rekey-generation-scope");
+            let passphrase = ProfilePassphrase::new("test-passphrase").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let wrong_scope_record = EncryptedRecord::new(
+                ProductionRecordKind::KeyRotationMarker,
+                EncryptedRecordScope::profile(ProfileName::new("wrong-profile").expect("profile")),
+                b"sqlcipher-page-encryption-v1".to_vec(),
+                KeyRotationGeneration::first().encode().into_bytes(),
+            )
+            .expect("wrong scope record");
+
+            store
+                .put(&key_rotation_marker_record_id(), &wrong_scope_record)
+                .expect("write wrong scope marker");
+
+            assert_eq!(
+                store
+                    .load_key_rotation_generation()
+                    .expect_err("wrong marker scope must fail"),
+                ProductionStorageError::InvalidRecord
+            );
+        }
+
+        #[test]
         fn sqlcipher_store_schema_migration_is_forward_only() {
             let (_dir, path) = unique_test_database_path("schema-version");
             let key = StorageDatabaseKey::test_only("test-key");
@@ -1324,6 +1440,41 @@ pub mod production {
         }
 
         #[test]
+        fn sqlcipher_store_rejects_replay_window_scope_mismatch() {
+            let (_dir, path) = unique_test_database_path("replay-window-scope");
+            let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let mut replay_window = ReplayWindow::new(4).expect("replay window");
+            replay_window.accept(1).expect("accept first");
+            let record_id = EncryptedRecordId::new("replay_scope_0001").expect("record id");
+            let stored_scope = EncryptedRecordScope::contact(
+                ProfileName::new("alice").expect("profile"),
+                ContactId::new("bob").expect("contact"),
+            );
+            let wrong_scope = EncryptedRecordScope::contact(
+                ProfileName::new("alice").expect("profile"),
+                ContactId::new("mallory").expect("contact"),
+            );
+
+            store
+                .save_replay_window(&record_id, stored_scope.clone(), &replay_window)
+                .expect("save replay window");
+            assert_eq!(
+                store
+                    .load_replay_window_for_scope(&record_id, &stored_scope)
+                    .expect("load scoped replay"),
+                Some(replay_window)
+            );
+            assert_eq!(
+                store
+                    .load_replay_window_for_scope(&record_id, &wrong_scope)
+                    .expect_err("wrong replay scope must fail"),
+                ProductionStorageError::InvalidRecord
+            );
+        }
+
+        #[test]
         fn replay_persistence_guarantees_do_not_claim_rollback_protection() {
             assert_eq!(
                 replay_persistence_guarantees(),
@@ -1344,6 +1495,9 @@ pub mod production {
             assert!(summary.encrypted_record_body_store());
             assert!(summary.sqlcipher_passphrase_rekey_source_ready());
             assert!(summary.sqlcipher_passphrase_rotation_generation_source_ready());
+            assert!(summary.key_rotation_marker_monotonic_write_enforced());
+            assert!(summary.key_rotation_marker_scope_bound());
+            assert!(summary.replay_window_scope_bound_loader_ready());
             assert!(!summary.production_key_management_ready());
             assert_eq!(
                 summary.rollback_protection(),

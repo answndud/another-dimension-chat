@@ -19,6 +19,10 @@ This gate treats the following supported local scope as pass-capable:
 - forward-only schema version handling,
 - SQLCipher passphrase rekey primitive,
 - SQLCipher passphrase forward rotation generation marker,
+- monotonic encrypted key-rotation marker writes that reject duplicate or
+  downgraded generation values,
+- key-rotation marker scope validation and a replay-window expected-scope
+  loader for follow-up production call-site hardening,
 - redacted Tauri profile passphrase-change command surface,
 - marker-only rollback detection with user-visible reset/rebuild recovery,
 - explicit local conversation delete, session delete, profile delete, and owned
@@ -74,6 +78,9 @@ claim-policy decision exists.
 - `sqlcipher_store_rejects_wrong_passphrase_before_returning_records`
 - `sqlcipher_store_rekey_rotates_passphrase_without_plaintext_exposure`
 - `sqlcipher_store_rekey_records_forward_rotation_generation_without_plaintext_marker`
+- `sqlcipher_store_key_rotation_generation_marker_is_monotonic`
+- `sqlcipher_store_rejects_key_rotation_marker_scope_mismatch`
+- `sqlcipher_store_rejects_replay_window_scope_mismatch`
 - `production_profile_passphrase_rekey_changes_unlock_secret_without_runtime`
 - `production_profile_passphrase_rekey_is_redacted_and_invalidates_old_passphrase`
 - `sqlcipher_store_schema_migration_is_forward_only`
@@ -104,6 +111,9 @@ claim-policy decision exists.
 - forward_only_schema_version_ready=true
 - sqlcipher_passphrase_rekey_source_ready=true
 - sqlcipher_passphrase_rotation_generation_source_ready=true
+- key_rotation_marker_monotonic_write_enforced=true
+- key_rotation_marker_scope_bound=true
+- replay_window_scope_bound_loader_ready=true
 - minimum_forward_key_rotation_generation_ready=true
 - tauri_profile_passphrase_rekey_command_ready=true
 - prototype_data_migration_ready=false

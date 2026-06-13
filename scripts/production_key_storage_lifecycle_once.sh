@@ -20,6 +20,16 @@ must_not_match() {
   fi
 }
 
+must_contain_in_any() {
+  local needle="$1"
+  shift
+  local file
+  for file in "$@"; do
+    grep -Fq "$needle" "$file" && return 0
+  done
+  fail "missing required text in public entrypoint/reference files: $needle"
+}
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
@@ -42,6 +52,9 @@ must_contain "$DOC" "encrypted_profile_session_message_store_ready=true"
 must_contain "$DOC" "sqlcipher_adrec1_local_store_ready=true"
 must_contain "$DOC" "sqlcipher_passphrase_kdf_scope_ready=true"
 must_contain "$DOC" "sqlcipher_passphrase_rotation_generation_source_ready=true"
+must_contain "$DOC" "key_rotation_marker_monotonic_write_enforced=true"
+must_contain "$DOC" "key_rotation_marker_scope_bound=true"
+must_contain "$DOC" "replay_window_scope_bound_loader_ready=true"
 must_contain "$DOC" "minimum_forward_key_rotation_generation_ready=true"
 must_contain "$DOC" "project_owned_argon2_scrypt_kdf_ready=false"
 must_contain "$DOC" "forward_only_schema_version_ready=true"
@@ -60,8 +73,7 @@ must_contain "$DOC" "production_key_management_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
 must_contain "$DOC" "next_required_phase=Phase O100-1 - Operations, Incident, And Vulnerability Readiness"
 
-must_contain "README.md" "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
-must_contain "SECURITY.md" "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
+must_contain_in_any "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md" "README.md" "SECURITY.md"
 must_contain "reference/STORAGE_DECISION.md" "PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
@@ -72,6 +84,13 @@ must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_4_default_trans
 must_contain "crates/storage/src/lib.rs" "unlock_policy_requires_passphrase_for_all_modes"
 must_contain "crates/storage/src/lib.rs" "sqlcipher_store_rejects_wrong_passphrase_before_returning_records"
 must_contain "crates/storage/src/lib.rs" "sqlcipher_store_rekey_records_forward_rotation_generation_without_plaintext_marker"
+must_contain "crates/storage/src/lib.rs" "sqlcipher_store_key_rotation_generation_marker_is_monotonic"
+must_contain "crates/storage/src/lib.rs" "key_rotation_marker_monotonic_write_enforced: true"
+must_contain "crates/storage/src/lib.rs" "sqlcipher_store_rejects_key_rotation_marker_scope_mismatch"
+must_contain "crates/storage/src/lib.rs" "sqlcipher_store_rejects_replay_window_scope_mismatch"
+must_contain "crates/storage/src/lib.rs" "key_rotation_marker_scope_bound: true"
+must_contain "crates/storage/src/lib.rs" "replay_window_scope_bound_loader_ready: true"
+must_contain "crates/storage/src/lib.rs" "pub fn load_replay_window_for_scope"
 must_contain "crates/storage/src/lib.rs" "storage_backend_integration_summary_keeps_non_ready_boundaries_explicit"
 must_contain "crates/storage/src/lib.rs" "production_message_storage_summary_allows_encrypted_session_transport"
 must_contain "crates/core/src/lib.rs" "production_local_data_lifecycle_policy_summary"
@@ -80,6 +99,7 @@ must_contain "crates/core/src/lib.rs" "production_key_rollback_boundary_summary"
 must_contain "crates/core/src/lib.rs" "production_local_data_lifecycle_policy_is_passphrase_first_with_non_claims"
 must_contain "crates/core/src/lib.rs" "production_local_storage_lifecycle_product_matrix_closes_without_backup_or_rollback_claims"
 must_contain "crates/core/src/lib.rs" "production_key_rollback_boundary_closes_policy_without_claiming_wrapping_or_rollback"
+must_contain "crates/core/src/lib.rs" "key_rotation_marker_monotonic_write_enforced"
 must_contain "crates/core/src/lib.rs" "minimum_forward_key_rotation_generation_ready"
 must_contain "apps/desktop-tauri/src-tauri/src/lib.rs" "production_profile_unlock_uses_app_data_store_without_returning_secrets"
 must_contain "apps/desktop-tauri/src-tauri/src/lib.rs" "production_session_lifecycle_status_and_delete_are_redacted"
@@ -123,6 +143,9 @@ production_key_management_source_gate_reviewed=true
 production_key_management_source_ready=true
 d100_2_key_management_source_gate_reviewed=true
 sqlcipher_passphrase_rotation_generation_source_ready=true
+key_rotation_marker_monotonic_write_enforced=true
+key_rotation_marker_scope_bound=true
+replay_window_scope_bound_loader_ready=true
 minimum_forward_key_rotation_generation_ready=true
 rollback_detection_marker_only=true
 rollback_prevention_claimed=false
