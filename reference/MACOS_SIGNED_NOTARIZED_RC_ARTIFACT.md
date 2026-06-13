@@ -64,4 +64,4 @@ checksum, and optional generated provenance while holding without credentials.
 - production_ready_claim_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false
-- next_required_phase=Phase M100-4 - macOS First-Run And Onboarding Production UX
+- next_required_phase=Phase M100-6 - macOS Representative Usability Evidence
