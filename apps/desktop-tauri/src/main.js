@@ -28,7 +28,10 @@ import {
   productionOnionReceiveFailureMessage,
   productionOnionReceiveLoopRefreshPlan,
   productionOnionReceiveRuntimeView,
+  productionPairwiseInviteCreateView,
   productionPairwiseInviteGuidanceView,
+  productionPairwiseInviteImportFailureView,
+  productionPairwiseSafetyVerificationFlowView,
   productionPairingPayloadView,
   productionProfileMessageReadiness,
   productionProfilePreset,
@@ -323,6 +326,10 @@ const fields = {
   createInviteCode: document.querySelector("#create-invite-code"),
   createInviteCodeSettings: document.querySelector("#create-invite-code-settings"),
   createdInviteCodeDisplay: document.querySelector("#created-invite-code-display"),
+  createdInviteSummary: document.querySelector("#created-invite-summary"),
+  createdInviteLocalProfile: document.querySelector("#created-invite-local-profile"),
+  createdInvitePeerLabel: document.querySelector("#created-invite-peer-label"),
+  createdInviteManualInstruction: document.querySelector("#created-invite-manual-instruction"),
   copyCreatedInviteCode: document.querySelector("#copy-created-invite-code"),
   receivedInviteCode: document.querySelector("#received-invite-code"),
   createRoomFromReceivedCode: document.querySelector("#create-room-from-received-code"),
@@ -5997,6 +6004,19 @@ function renderCurrentInviteCodeDisplay() {
     fields.createdInviteCodeDisplay.value = inviterCode ? code : "";
     fields.createdInviteCodeDisplay.hidden = !fields.createdInviteCodeDisplay.value;
   }
+  if (fields.createdInviteSummary) {
+    fields.createdInviteSummary.hidden = !inviterCode;
+  }
+  if (inviterCode) {
+    const inviteView = productionPairwiseInviteCreateView({ code, role });
+    setText(fields.createdInviteLocalProfile, inviteView.localProfile);
+    setText(fields.createdInvitePeerLabel, inviteView.intendedPeerLabel);
+    setText(fields.createdInviteManualInstruction, inviteView.manualSendInstruction);
+  } else {
+    setText(fields.createdInviteLocalProfile, "");
+    setText(fields.createdInvitePeerLabel, "");
+    setText(fields.createdInviteManualInstruction, "");
+  }
   if (fields.roomInviteTokenDisplay) {
     fields.roomInviteTokenDisplay.value = inviterCode ? code : "";
   }
@@ -7812,10 +7832,13 @@ async function startInviteRoomFromCode({ code, role, copyBeforePrepare = false }
   rememberConnectionCodeRole(trimmedCode, role);
   syncTwoProfileDerivedConnectionFields();
   renderProductionTwoProfileDirection(productionTwoProfileInput());
+  const inviteCreateView = productionPairwiseInviteCreateView({ code: trimmedCode, role });
   setProductionTwoProfileState(role === "inviter" ? "Invite code created" : "Received invite code ready");
   setText(
     fields.productionTwoProfileWarning,
-    role === "inviter" ? t("inviteCodeCreatedHint") : t("receivedCodeReadyHint"),
+    role === "inviter"
+      ? `${t("inviteCodeCreatedHint")} Local profile: ${inviteCreateView.localProfile}. Intended peer: ${inviteCreateView.intendedPeerLabel}. ${inviteCreateView.manualSendInstruction}`
+      : t("receivedCodeReadyHint"),
   );
   renderManualInviteRoomRebuildFlow("invite-room-started");
   applyPairwiseInviteGuidance(role === "inviter" ? "create" : "join", {
@@ -18890,8 +18913,13 @@ async function saveProductionSessionDraft() {
     return;
   }
   if (!currentPairingSafetyVerified()) {
+    const flow = productionPairwiseSafetyVerificationFlowView({
+      safetyTranscriptBound: Boolean(latestProductionPairingSafety?.safetyNumber),
+    });
     setProductionPairingState("Session draft needs safety check");
     setText(fields.productionPairingWarning, "Check the safety number and mark it verified before saving the draft.");
+    setText(fields.productionPairingSafetyBoundary, flow.boundary);
+    setProductionFollowupActions(true, flow.nextAction);
     return;
   }
 
@@ -18928,10 +18956,16 @@ async function saveProductionSessionDraft() {
     if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "localPayload", "remotePayload", "safetyConfirmed"])) {
       return;
     }
-    setProductionPairingState("Session draft save failed");
-    setText(fields.productionPairingWarning, String(error));
+    const failure = String(error).includes("pairwise_safety_verification=")
+      ? productionPairwiseSafetyVerificationFlowView({ safetyTranscriptBound: true })
+      : productionPairwiseInviteImportFailureView({ error });
+    setProductionPairingState(
+      failure.kind ? `Session draft save failed: ${failure.kind}` : `Session draft save blocked: ${failure.state}`,
+    );
+    setText(fields.productionPairingWarning, failure.message ?? failure.nextAction);
     setText(fields.productionPairingSession, "Failed");
-    setText(fields.productionPairingBoundary, "Failed");
+    setText(fields.productionPairingBoundary, failure.boundary);
+    setProductionFollowupActions(true, failure.nextAction);
   } finally {
     clearProductionBusyAction("session-draft");
     if (fields.saveProductionSessionDraft) {
@@ -18942,6 +18976,12 @@ async function saveProductionSessionDraft() {
 }
 
 function applyProductionPairingSafetyPreviewResult(result, input) {
+  const flow = productionPairwiseSafetyVerificationFlowView({
+    safetyTranscriptBound: result.safety_transcript_bound,
+    safetyNumber: result.safety_number,
+    safetyPhrase: result.safety_phrase,
+    safetyConfirmed: result.safety_confirmed,
+  });
   latestProductionPairingSafety = {
     fingerprint: pairingSafetyFingerprint(input),
     safetyNumber: result.safety_number,
@@ -18953,7 +18993,7 @@ function applyProductionPairingSafetyPreviewResult(result, input) {
   setText(fields.productionPairingSafetyPhrase, result.safety_phrase);
   setText(
     fields.productionPairingSafetyBoundary,
-    `verified=${result.safety_confirmed} payloads=${result.payloads_decodable} transcript_bound=${result.safety_transcript_bound} payloads_returned=${result.payloads_returned} transcript_returned=${result.safety_transcript_returned} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
+    `${flow.boundary} verified=${result.safety_confirmed} payloads=${result.payloads_decodable} transcript_bound=${result.safety_transcript_bound} payloads_returned=${result.payloads_returned} transcript_returned=${result.safety_transcript_returned} path_returned=${result.store_path_returned} passphrase_retained=${result.passphrase_retained} key_material=${result.key_material_exposed} network_io=${result.network_io_attempted} transport_io=${result.transport_io_opened} runtime=${result.runtime_messaging_enabled}`,
   );
 }
 
@@ -18985,9 +19025,12 @@ async function checkProductionPairingSafety() {
     if (!productionPairingInputStillCurrent(input, ["profile", "passphrase", "localPayload", "remotePayload"])) {
       return;
     }
-    setProductionPairingState("Safety check failed");
-    setText(fields.productionPairingWarning, String(error));
+    const failure = productionPairwiseInviteImportFailureView({ error });
+    setProductionPairingState(`Safety check failed: ${failure.kind}`);
+    setText(fields.productionPairingWarning, failure.message);
     resetProductionPairingSafety("Failed");
+    setText(fields.productionPairingSafetyBoundary, failure.boundary);
+    setProductionFollowupActions(true, failure.nextAction);
   } finally {
     if (fields.checkProductionPairingSafety) {
       fields.checkProductionPairingSafety.disabled = false;
@@ -20803,11 +20846,16 @@ if (fields.productionPairingSafetyVerified) {
       setProductionPairingState("Safety check required");
       setText(fields.productionPairingWarning, "Check the safety number before marking it verified.");
     }
+    const verified = currentPairingSafetyVerified();
+    const flow = productionPairwiseSafetyVerificationFlowView({
+      safetyTranscriptBound: Boolean(latestProductionPairingSafety?.safetyNumber),
+      confirmedMatch: verified,
+    });
     setText(
       fields.productionPairingSafetyBoundary,
-      currentPairingSafetyVerified()
-        ? "verified=true payloads_returned=false transcript_returned=false network_io=false"
-        : "verified=false network_io=false",
+      verified
+        ? `${flow.boundary} verified=true payloads_returned=false transcript_returned=false network_io=false`
+        : `${flow.boundary} verified=false network_io=false`,
     );
     applyProductionActionState();
   });

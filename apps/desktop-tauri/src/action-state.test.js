@@ -9,7 +9,10 @@ import {
   productionHighRiskThreatModelClaimMatrix,
   productionInviteCodeProfiles,
   productionInviteIdentityBoundaryView,
+  productionPairwiseInviteCreateView,
+  productionPairwiseInviteImportFailureView,
   productionPairwiseInviteGuidanceView,
+  productionPairwiseSafetyVerificationFlowView,
   productionInviteRoomConversationMetadata,
   productionManualCurrentFocusTarget,
   productionManualCurrentStepView,
@@ -145,6 +148,82 @@ test("pairwise invite guidance keeps discovery and messaging gates explicit", ()
   assert.equal(remove.nextKey, "pairwiseInviteNextCreateOrPasteAgain");
   assert.match(remove.boundary, /step=remove-list-entry/);
   assert.match(remove.boundary, /room_present=false/);
+});
+
+test("pairwise invite create view exposes local peer labels without diagnostic payload claims", () => {
+  const view = productionPairwiseInviteCreateView({
+    code: "ABCD-2345",
+    role: "inviter",
+  });
+
+  assert.equal(view.localProfile, "inviter-abcd-2345-1ufszcs");
+  assert.equal(view.intendedPeerLabel, "joiner device");
+  assert.equal(view.intendedPeerProfile, "joiner-abcd-2345-1ufszcs");
+  assert.equal(view.payload, "ABCD-2345");
+  assert.match(view.manualSendInstruction, /Send this invite code/);
+  assert.match(view.boundary, /local_profile_visible=true/);
+  assert.match(view.boundary, /intended_peer_label_visible=true/);
+  assert.match(view.boundary, /payload_visible_to_user=true/);
+  assert.match(view.boundary, /payload_in_diagnostics=false/);
+});
+
+test("pairwise invite import failure view splits non-generic recovery kinds", () => {
+  const malformed = productionPairwiseInviteImportFailureView({
+    error: "pairwise_invite_import_failure=malformed",
+  });
+  const duplicate = productionPairwiseInviteImportFailureView({
+    error: "CoreError::PairingAlreadyPending",
+  });
+  const paired = productionPairwiseInviteImportFailureView({
+    error: "CoreError::ContactAlreadyActive",
+  });
+  const mismatch = productionPairwiseInviteImportFailureView({
+    error: "ProductionSessionError::LocalPairingPayloadMismatch",
+  });
+  const unsupported = productionPairwiseInviteImportFailureView({
+    error: "ProductionSessionError::NonProductionPairingPayload",
+  });
+  const revoked = productionPairwiseInviteImportFailureView({
+    error: "pairwise_invite_import_failure=revoked_re_pair_required",
+  });
+
+  assert.equal(malformed.kind, "malformed");
+  assert.equal(duplicate.kind, "duplicate");
+  assert.equal(paired.kind, "already_paired");
+  assert.equal(mismatch.kind, "identity_mismatch");
+  assert.equal(unsupported.kind, "unsupported");
+  assert.equal(revoked.kind, "revoked_re_pair_required");
+  for (const view of [malformed, duplicate, paired, mismatch, unsupported, revoked]) {
+    assert.match(view.boundary, /generic_error=false/);
+    assert.doesNotMatch(view.message, /ADPAIR2|\/tmp|passphrase|private key/i);
+  }
+});
+
+test("pairwise safety verification flow routes mismatch and revoked to re-pair", () => {
+  const compare = productionPairwiseSafetyVerificationFlowView({
+    safetyTranscriptBound: true,
+  });
+  const confirmed = productionPairwiseSafetyVerificationFlowView({
+    safetyTranscriptBound: true,
+    confirmedMatch: true,
+  });
+  const mismatch = productionPairwiseSafetyVerificationFlowView({
+    safetyTranscriptBound: true,
+    failure_kind: "identity_mismatch",
+  });
+  const revoked = productionPairwiseSafetyVerificationFlowView({
+    failure_kind: "revoked_re_pair_required",
+  });
+
+  assert.equal(compare.state, "compare");
+  assert.equal(compare.confirmMatchAllowed, true);
+  assert.equal(confirmed.state, "confirmed_match");
+  assert.match(confirmed.boundary, /compare_required=false/);
+  assert.equal(mismatch.state, "marked_mismatch");
+  assert.equal(mismatch.rePairRequired, true);
+  assert.equal(revoked.state, "revoked_re_pair_required");
+  assert.equal(revoked.rePairRequired, true);
+  assert.match(revoked.boundary, /generic_error=false/);
 });
 
 test("chat action moves from setup to compose to stored send", () => {
