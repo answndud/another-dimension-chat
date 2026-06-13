@@ -4,6 +4,39 @@ Another Dimension Chat is an early Rust prototype for a high-risk 1:1 messenger 
 
 The project goal is not "a serverless chat app" in the loose sense. The long-term goal is a no-central-trusted-server messenger that avoids phone-number identity, global accounts, centralized contact discovery, centralized push notifications, central message servers, and default direct P2P transport in high-risk mode. The current practical default transport path is explicit user-mediated encrypted envelope exchange; advanced onion/Tor work remains an opt-in, fail-closed, user-triggered path.
 
+## macOS Public Beta Quick Start
+
+This is an unsigned experimental public beta for macOS Apple Silicon
+(`aarch64`). It is not audited, not production-ready, and sensitive
+communication prohibited. Do not use it for real communication.
+
+1. Download the DMG from the GitHub Release:
+   <https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-beta-onion-unsigned/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg>
+2. Download the matching `.sha256` file from the same GitHub Release:
+   <https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-beta-onion-unsigned/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256>
+3. Verify the download before opening:
+
+   ```bash
+   shasum -a 256 -c another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256
+   ```
+
+   Expected SHA-256:
+   `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`
+4. Open the DMG. If macOS blocks the unsigned app, use System Settings >
+   Privacy & Security to allow it only after the checksum matches.
+5. First run: use the app to test local profile unlock, invite room setup,
+   manual encrypted envelope export/import, reply/retry/cancel, local deletion,
+   and redacted diagnostics copy. This beta does not prove external onion
+   delivery.
+6. Feedback: public issues must include only redacted diagnostics, broad
+   failure class, and recovery next action. Do not post invite codes, payloads,
+   endpoints, message text, local paths, raw logs, passphrases, private keys, or
+   key material.
+
+Release authority: use the files attached to the GitHub Release, not branch
+files or source archives. The `main` branch may contain later documentation or
+source changes after the published DMG.
+
 ## Current Status
 
 This repository is a prototype moving toward a local desktop beta.
