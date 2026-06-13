@@ -112,6 +112,7 @@ updated, and a later explicit release/claim task authorizes the wording.
 - macos_release_credential_evidence_collector_available=true
 - macos_release_credential_evidence_collector_source_ready=true
 - macos_release_credential_evidence_intake_ready=true
+- macos_release_credential_evidence_current_head_bound=true
 - target_standard_100_deployment_gap_reconciled=true
 - target_standard_criteria_complete=true
 - macos_public_app_100_criteria_complete=true

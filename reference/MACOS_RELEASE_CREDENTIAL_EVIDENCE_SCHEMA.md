@@ -16,6 +16,9 @@ The release-machine collector is
 `scripts/collect_macos_release_credential_evidence.sh`; it writes only
 redacted/public-safe fields and refuses to produce evidence until Developer ID
 and notary credentials validate locally.
+For release-gate use, the validator must run with `AD_REQUIRE_CURRENT_HEAD=1`
+or `--require-current-head` so stale evidence from a different commit cannot
+advance M100-1.
 
 Current public wording must remain:
 
@@ -75,7 +78,8 @@ does not itself authorize signing, notarization, release upload, release body
 edit, asset deletion, or DMG rebuild. The live M100-1 gate still requires
 `scripts/release_authority_credential_unblock_once.sh` to pass on the release
 machine with the actual keychain identity and validated notarization
-credential.
+credential. Release-gate validation must also bind `source_commit` to the
+current repository `HEAD`.
 
 ## Current Gate Flags
 
@@ -84,6 +88,7 @@ credential.
 - macos_release_credential_evidence_collector_available=true
 - macos_release_credential_evidence_collector_source_ready=true
 - macos_release_credential_evidence_intake_ready=true
+- macos_release_credential_evidence_current_head_bound=true
 - macos_release_credential_evidence_private_docs_required=true
 - macos_release_credential_evidence_secret_redaction_required=true
 - m100_1_release_credential_evidence_candidate=false
