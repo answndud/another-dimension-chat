@@ -410,7 +410,7 @@ cat > "$RELEASE_DIR/MANIFEST.md" <<EOF
 
 This folder is for a GitHub Release upload.
 
-## Files
+## Upload Allowlist
 
 - \`$RELEASE_DMG\`
 - \`$RELEASE_DMG.sha256\`
@@ -528,6 +528,8 @@ This folder is for a GitHub Release upload.
 Upload exactly the files listed in this \`MANIFEST.md\` from this generated
 release directory. Use \`GITHUB_RELEASE_BODY.md\` exactly as the GitHub Release
 body.
+
+## Forbidden Uploads
 
 Do not upload \`docs/\`, \`beta-artifacts/\`, the \`public-release/\` folder itself,
 branch files, source archives, raw logs, crash dumps, screenshots, local app
@@ -796,6 +798,8 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Store trust boundary: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Release tag: \`$RELEASE_TAG\`"
 require_text "$RELEASE_DIR/MANIFEST.md" "Release URL: \`$RELEASE_URL\`"
 require_text "$RELEASE_DIR/MANIFEST.md" "Release authority: same-github-release-assets"
+require_text "$RELEASE_DIR/MANIFEST.md" "Upload Allowlist"
+require_text "$RELEASE_DIR/MANIFEST.md" "Forbidden Uploads"
 require_text "$RELEASE_DIR/MANIFEST.md" "Same-release checksum required: true"
 require_text "$RELEASE_DIR/MANIFEST.md" "Same-release asset set authority required: true"
 require_text "$RELEASE_DIR/MANIFEST.md" "Source branch release authority: false"

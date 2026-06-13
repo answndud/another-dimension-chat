@@ -53,9 +53,64 @@ Expected result:
 another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg: OK
 ```
 
+Expected DMG SHA-256:
+
+```text
+7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a
+```
+
 Only after the checksum matches, use the normal macOS Privacy & Security manual allow path if macOS blocks the unsigned app.
 
 Do not use terminal quarantine-removal commands as an install step.
+
+## Install
+
+Read `INSTALL_UNSIGNED_MACOS.md` before opening the DMG. The short path is:
+
+1. Download the DMG and matching `.sha256` from this same GitHub Release.
+2. Run the checksum command above and continue only if it prints `OK`.
+3. Open the DMG.
+4. If macOS blocks the unsigned app, use System Settings > Privacy & Security
+   to allow it only after the checksum matches.
+5. If checksum, damaged-DMG, open-blocked, or allow-button issues appear, follow
+   the troubleshooting section in `INSTALL_UNSIGNED_MACOS.md`.
+
+## What Works
+
+- macOS Apple Silicon unsigned DMG download.
+- Manual SHA-256 verification before opening.
+- Local profile unlock and reopen rehearsal.
+- Invite room create/join/verify flow.
+- Manual encrypted envelope export/import.
+- Reply, retry/cancel, local deletion, and redacted diagnostics copy.
+- Explicit user-triggered advanced onion/Tor attempt paths that remain outside
+  the public product claim.
+
+## What Does Not Work
+
+- There is no signed or notarized macOS app.
+- There is no auto-update channel.
+- There is no public Windows, Android, or iOS artifact in this release.
+- There is no account, phone number, email, username search, cloud backup,
+  central contact discovery, central message server, or push notification.
+- There is no production security claim, audit claim, sensitive communication
+  permission, or external onion delivery success claim.
+
+## Safety Warnings
+
+This beta is for local desktop public-beta testing only. It is not audited, not
+production-ready, and sensitive communication prohibited. Do not use it for real
+communication. Do not post invite codes, endpoints, payloads, message text,
+local paths, raw logs, screenshots of private room data, passphrases, private
+keys, or key material in public.
+
+## Report Issue
+
+Public issues and release comments must use only redacted diagnostics, broad
+failure class, checksum result, platform, build identity, and recovery next
+action. Security details or sensitive material must use private vulnerability
+reporting when available, or a minimal public contact request without exploit
+details when private reporting is unavailable.
 
 ## Non-Claims
 
