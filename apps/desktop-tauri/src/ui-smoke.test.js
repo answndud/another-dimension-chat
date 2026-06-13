@@ -7,6 +7,8 @@ import {
   createMessageEnvelopeSlot,
   messageEnvelopeSlotImportReadyForEntry,
   messageEnvelopeSlotMatchesEntry,
+  messageEnvelopeSlotMismatchReason,
+  messageEnvelopeSlotRecoveryHint,
 } from "./message-envelope-slots.js";
 import {
   productionManualCurrentFocusTarget,
@@ -916,11 +918,13 @@ test("manual message envelope slots require the active pending message", () => {
   assert.match(functionBody(mainJs, "storeMessageEnvelopeSlot"), /messageEnvelopeSlotKey\(slot\.sender, slot\.roomFingerprint\)/);
   assert.match(functionBody(mainJs, "pruneStaleMessageEnvelopeSlots"), /stillImportReadyForConversation/);
   assert.match(functionBody(mainJs, "pruneStaleMessageEnvelopeSlots"), /messageEnvelopeSlotImportReadyForEntry\(slot, entry\)/);
+  assert.doesNotMatch(functionBody(mainJs, "pruneStaleMessageEnvelopeSlots"), /typeof slot === "string"[\s\S]*continue/);
 
   const loadBody = functionBody(mainJs, "loadProductionMessageEnvelope");
   assert.match(loadBody, /pendingMessageEnvelopeSlotForActiveProfile\(profile\)/);
   assert.match(loadBody, /if \(!entry\)/);
   assert.match(loadBody, /value && !messageEnvelopeSlotMatchesEntry\(slot, entry\)/);
+  assert.match(loadBody, /messageEnvelopeSlotRecoveryHint\(slot, entry\)/);
   assert.match(functionBody(mainJs, "applyProductionActionState"), /activeMessageEnvelopeSlotReady\(activeProductionProfileName\(\)\)/);
 });
 
@@ -942,6 +946,7 @@ test("manual message envelope slots are import-ready only for active lifecycle r
   };
   assert.equal(messageEnvelopeSlotMatchesEntry(slot, sentEntry), true);
   assert.equal(messageEnvelopeSlotImportReadyForEntry(slot, sentEntry), true);
+  assert.equal(messageEnvelopeSlotMismatchReason(slot, sentEntry), "matched");
   assert.equal(
     messageEnvelopeSlotImportReadyForEntry(slot, {
       ...sentEntry,
@@ -956,6 +961,9 @@ test("manual message envelope slots are import-ready only for active lifecycle r
     }),
     false,
   );
+  assert.equal(messageEnvelopeSlotImportReadyForEntry("ADENV1LEGACY", sentEntry), false);
+  assert.equal(messageEnvelopeSlotMismatchReason("ADENV1LEGACY", sentEntry), "legacy-unscoped-slot");
+  assert.match(messageEnvelopeSlotRecoveryHint("ADENV1LEGACY", sentEntry), /unscoped/);
   assert.match(functionBody(mainJs, "cancelTwoProfileOutboundEntry"), /clearMessageEnvelopeSlotForConversationEntry\(currentEntry\)/);
 });
 
@@ -986,6 +994,26 @@ test("manual message envelope slots are scoped to the room fingerprint", () => {
       message: "secret",
     }),
     false,
+  );
+  assert.equal(
+    messageEnvelopeSlotMismatchReason(slot, {
+      sender: "alice",
+      receiver: "bob",
+      roomFingerprint: "room-b",
+      messageNumber: 7,
+      message: "secret",
+    }),
+    "room-fingerprint-mismatch",
+  );
+  assert.match(
+    messageEnvelopeSlotRecoveryHint(slot, {
+      sender: "alice",
+      receiver: "bob",
+      roomFingerprint: "room-b",
+      messageNumber: 7,
+      message: "secret",
+    }),
+    /another room/,
   );
 });
 
