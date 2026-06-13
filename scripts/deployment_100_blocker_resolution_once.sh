@@ -54,7 +54,7 @@ done
 must_contain "$PLAN" "deployment_100_blocker_resolution_plan_available=true"
 must_contain "$PLAN" "deployment_100_blocker_resolution_machine_checkable=true"
 must_contain "$PLAN" "all_false_hold_flags_categorized=true"
-must_contain "$PLAN" "next_required_phase=Phase M100-7 - macOS Update And Rollback-Safe Release Channel"
+must_contain "$PLAN" "next_required_phase=Phase M100-8 - macOS Stable Release Gate And Public Copy Upgrade"
 
 for phase in \
   "M100-1" "M100-2" "M100-3" "M100-4" "M100-5" "C100-1" "C100-2" \
@@ -101,6 +101,9 @@ for flag in \
   "m100_6_usability_blocker_closed=true" \
   "representative_usability_policy_waiver_authorized=true" \
   "representative_usability_evidence_required_for_stable_claims=true" \
+  "m100_7_update_blocker_closed=true" \
+  "update_channel_policy_waiver_authorized=true" \
+  "signed_update_or_rollback_evidence_required_for_stable_claims=true" \
   "macos_release_credential_evidence_schema_available=true" \
   "macos_release_credential_evidence_validator_available=true" \
   "macos_release_credential_evidence_collector_available=true" \
@@ -169,6 +172,7 @@ scripts/deployment_readiness_gap_reconciliation_once.sh >/dev/null
 scripts/stable_macos_v1_release_gate_once.sh >/dev/null
 scripts/macos_release_credential_evidence_once.sh >/dev/null
 scripts/macos_signed_update_manifest_once.sh >/dev/null
+scripts/macos_update_rollback_safe_release_channel_once.sh >/dev/null
 scripts/macos_universal_scoped_artifact_policy_once.sh >/dev/null
 scripts/macos_signed_notarized_rc_artifact_once.sh >/dev/null
 scripts/macos_signed_notarized_execution_path_once.sh >/dev/null
@@ -206,6 +210,7 @@ all_false_hold_flags_categorized=true
 m100_1_credential_blocker_closed=true
 m100_3_artifact_blocker_closed=true
 m100_6_usability_blocker_closed=true
+m100_7_update_blocker_closed=true
 m100_1_release_credentials_ready=$m100_1_release_credentials_ready
 false_or_hold_items_hidden=false
 public_claim_ahead_of_evidence=false
@@ -217,5 +222,5 @@ sensitive_communication_allowed=false
 stable_release_allowed=false
 release_upload_authorized=false
 dmg_rebuild_authorized=false
-next_required_phase=Phase-M100-7-macOS-Update-And-Rollback-Safe-Release-Channel
+next_required_phase=Phase-M100-8-macOS-Stable-Release-Gate-And-Public-Copy-Upgrade
 STATUS

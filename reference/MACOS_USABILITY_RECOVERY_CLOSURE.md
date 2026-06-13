@@ -75,4 +75,4 @@ wording changes.
 - external_delivery_claim_allowed=false
 - sensitive_communication_allowed=false
 - security_ready_claimed=false
-- next_required_phase=Phase M100-7 - macOS Update And Rollback-Safe Release Channel
+- next_required_phase=Phase M100-8 - macOS Stable Release Gate And Public Copy Upgrade
