@@ -4,7 +4,7 @@ const dictionaries = {
     publicBetaEyebrow: "Unsigned experimental public beta",
     publicBetaWarningTitle: "Experimental beta only",
     publicBetaWarningBody:
-      "This build is an unsigned experimental public beta, not notarized, not audited, not production-ready, and sensitive communication prohibited.",
+      "This build is an unsigned experimental public beta, not notarized, not audited, not production-ready, and sensitive communication prohibited. Its High-Risk Mode uses a defined threat matrix; compromised endpoints, direct coercion, and full global traffic correlation are not protected.",
     publicBetaNetworkBody:
       "Network and onion delivery stay off on launch. They require manual permission and an explicit delivery action.",
     publicBetaGateLabel: "Public beta use boundary",
@@ -13,7 +13,7 @@ const dictionaries = {
     publicBetaInstallBody:
       "If macOS blocks the unsigned app, use Privacy & Security manual allow only after the checksum matches.",
     publicBetaNoUpdateBody:
-      "There is no auto-update, signing, notarization, completed review, external onion delivery claim, or secure messenger readiness claim.",
+      "There is no auto-update, signing, notarization, completed review, external onion delivery claim, Briar/Cwtch-equivalence claim, coercion-safe claim, or secure messenger readiness claim.",
     firstRunChecklistLabel: "First-run local desktop flow",
     firstRunProfileStep: "Unlock, create, or reopen a local profile before room actions.",
     firstRunRoomStep: "Create an invite room or paste the invite code you received.",
@@ -668,9 +668,9 @@ const dictionaries = {
     mainBlockerSummary: "Network stays off until you start it",
     mainBlockerSummaryHelp:
       "Sending or receiving over the network only starts after you explicitly allow delivery and press an action.",
-    privacyModelSummary: "Direction only; not Briar/Cwtch-equivalent",
+    privacyModelSummary: "Defined threat model; not universal safety",
     privacyModelSummaryHelp:
-      "No phone number or central account is the direction, but this beta still lacks audited E2EE, repeated external onion evidence, offline mesh, and independent review.",
+      "Ordinary use avoids phone, email, accounts, and contact discovery. High-Risk Mode mitigates remote observers, malicious peers, local-at-rest access, and update risk; compromised endpoints, coercion, and full global traffic correlation are not protected.",
     core: "Core",
     storage: "Storage",
     releaseIntegrity: "Update integrity",
@@ -719,7 +719,7 @@ const dictionaries = {
     bootstrapStatusValue: "network disabled; bridge may be required; timeout can be retried",
     transportIoValue: "Hosting, stream I/O, message envelopes, and messaging require explicit actions",
     privacyModelBoundaryValue:
-      "No phone-number or central-account direction; not Briar/Cwtch-equivalent; audited E2EE, repeated external onion evidence, offline mesh, independent review, and security-ready claim are false",
+      "Threat matrix: remote passive or active observers, malicious peers, local-at-rest access, and supply-chain/update risk are mitigated; compromised endpoints, direct coercion, and full global traffic correlation are not protected. Audited, Briar/Cwtch-equivalent, reliable onion delivery, and security-ready claims are false",
     storageValue: "Encrypted local record boundary",
     verificationValue: "Lightweight local checks",
     browserPreviewBoundaryValue: "Browser preview boundary only",
@@ -1153,7 +1153,7 @@ const dictionaries = {
     publicBetaEyebrow: "서명되지 않은 실험용 공개 베타",
     publicBetaWarningTitle: "실험용 베타 전용",
     publicBetaWarningBody:
-      "이 빌드는 unsigned experimental public beta이며, notarization을 받지 않았고, not audited, not production-ready 상태이고, sensitive communication prohibited입니다.",
+      "이 빌드는 unsigned experimental public beta이며, notarization을 받지 않았고, not audited, not production-ready 상태이고, sensitive communication prohibited입니다. High-Risk Mode는 정의된 threat matrix만 말하며, 감염된 기기, 직접 강압, 전역 트래픽 상관관계 완전 방어는 보호 범위가 아닙니다.",
     publicBetaNetworkBody:
       "네트워크와 onion 전송은 앱 실행 시 자동으로 시작되지 않습니다. 수동 허용과 명시적인 전송 동작이 필요합니다.",
     publicBetaGateLabel: "공개 베타 사용 경계",
@@ -1162,7 +1162,7 @@ const dictionaries = {
     publicBetaInstallBody:
       "macOS가 서명되지 않은 앱을 차단하면 checksum이 일치한 뒤에만 Privacy & Security에서 수동 허용하세요.",
     publicBetaNoUpdateBody:
-      "auto-update, signing, notarization, 완료된 review, external onion delivery claim, secure messenger readiness 주장은 없습니다.",
+      "auto-update, signing, notarization, 완료된 review, external onion delivery claim, Briar/Cwtch 동급 claim, 강압 안전 claim, secure messenger readiness 주장은 없습니다.",
     firstRunChecklistLabel: "첫 실행 로컬 desktop 흐름",
     firstRunProfileStep: "방 작업 전에 로컬 profile을 unlock, create, reopen 합니다.",
     firstRunRoomStep: "invite room을 만들거나 받은 invite code를 붙여넣습니다.",
@@ -1814,9 +1814,9 @@ const dictionaries = {
     runtimeMessagingSummary: "명시적 로컬/수동 메시지 경로 사용 가능",
     mainBlockerSummary: "네트워크는 직접 시작하기 전까지 꺼져 있습니다",
     mainBlockerSummaryHelp: "네트워크 전송은 전송 허용을 켜고 보내기나 받기 동작을 직접 눌렀을 때만 시작됩니다.",
-    privacyModelSummary: "방향성만 있음; Briar/Cwtch 동급 아님",
+    privacyModelSummary: "정의된 threat model; 보편 안전 아님",
     privacyModelSummaryHelp:
-      "전화번호나 중앙 계정을 쓰지 않는 방향이지만, 이 beta는 아직 감사된 E2EE, 반복 외부 onion 증거, 오프라인 mesh, 독립 리뷰가 없습니다.",
+      "일반 사용 경로는 전화번호, 이메일, 계정, contact discovery를 피합니다. High-Risk Mode는 원격 관찰자, 악성 peer, local-at-rest 접근, update 위험을 완화하지만 감염된 기기, 강압, 전역 트래픽 상관관계는 보호하지 못합니다.",
     core: "핵심 로직",
     storage: "저장소",
     releaseIntegrity: "업데이트 무결성",
@@ -1864,7 +1864,7 @@ const dictionaries = {
     bootstrapStatusValue: "네트워크 꺼짐; 연결 보조 설정이 필요할 수 있음; 시간 초과는 재시도 가능",
     transportIoValue: "주소 열기, 수신, 전송은 명시적 버튼이 필요합니다",
     privacyModelBoundaryValue:
-      "전화번호/중앙 계정 없는 방향성만 있습니다. Briar/Cwtch 동급이 아니며, 감사된 E2EE, 반복 외부 onion 증거, 오프라인 mesh, 독립 리뷰, security-ready 주장은 false입니다.",
+      "Threat matrix: 원격 수동/능동 관찰자, 악성 peer, local-at-rest 접근, supply-chain/update 위험은 mitigated입니다. 감염된 기기, 직접 강압, 전역 트래픽 상관관계 완전 방어는 not_protected입니다. audited, Briar/Cwtch 동급, reliable onion delivery, security-ready 주장은 false입니다.",
     storageValue: "암호화된 로컬 기록의 노출 여부를 확인합니다",
     verificationValue: "로컬 점검 기준입니다",
     browserPreviewBoundaryValue: "브라우저 미리보기 경계 점검만 실행 중입니다",

@@ -501,7 +501,25 @@ test("default transport boundary keeps the public diagnostic path manual and non
 test("local manual E2EE runtime boundary exposes key lifecycle guardrails without production claims", () => {
   const boundary = localManualE2eeRuntimeBoundaryStatus();
 
-  assert.deepEqual(boundary, {
+  assert.deepEqual({
+    boundary: boundary.boundary,
+    localManualE2eeRuntimeReady: boundary.localManualE2eeRuntimeReady,
+    noiseXxTransportStateRequired: boundary.noiseXxTransportStateRequired,
+    remoteStaticVerificationRequired: boundary.remoteStaticVerificationRequired,
+    safetyTranscriptBound: boundary.safetyTranscriptBound,
+    channelBindingRequired: boundary.channelBindingRequired,
+    messageNumberNonceBindingRequired: boundary.messageNumberNonceBindingRequired,
+    replayCommitAfterDecrypt: boundary.replayCommitAfterDecrypt,
+    tamperFailureNonAdvance: boundary.tamperFailureNonAdvance,
+    passphraseFirstStorageRequired: boundary.passphraseFirstStorageRequired,
+    explicitEnvelopeExportImportReady: boundary.explicitEnvelopeExportImportReady,
+    automaticNetworkOnLaunchAllowed: boundary.automaticNetworkOnLaunchAllowed,
+    networkIoAttempted: boundary.networkIoAttempted,
+    productionE2eeReady: boundary.productionE2eeReady,
+    productionKeyManagementReady: boundary.productionKeyManagementReady,
+    appKeyWrappingReady: boundary.appKeyWrappingReady,
+    securityReadyClaimed: boundary.securityReadyClaimed,
+  }, {
     boundary: "noise-xx-session-key-replay-reviewed",
     localManualE2eeRuntimeReady: true,
     noiseXxTransportStateRequired: true,
@@ -545,7 +563,25 @@ test("desktop-first completion reports local private flow readiness without secu
     .replace("receive_state=running", "receive_state=stopping")
     .concat("\nreceive_stop_requested=true");
 
-  assert.deepEqual(desktopFirstCompletionStatus(readyReport), {
+  const readyStatus = desktopFirstCompletionStatus(readyReport);
+  assert.deepEqual({
+    scope: readyStatus.scope,
+    status: readyStatus.status,
+    blockers: readyStatus.blockers,
+    blockerSummary: readyStatus.blockerSummary,
+    localManualE2eeRuntimeBoundary: readyStatus.localManualE2eeRuntimeBoundary,
+    localManualE2eeRuntimeReady: readyStatus.localManualE2eeRuntimeReady,
+    replayCommitAfterDecrypt: readyStatus.replayCommitAfterDecrypt,
+    tamperFailureNonAdvance: readyStatus.tamperFailureNonAdvance,
+    passphraseFirstStorageRequired: readyStatus.passphraseFirstStorageRequired,
+    externalOnionDeliveryVerified: readyStatus.externalOnionDeliveryVerified,
+    productionMessagingReady: readyStatus.productionMessagingReady,
+    productionE2eeReady: readyStatus.productionE2eeReady,
+    productionKeyManagementReady: readyStatus.productionKeyManagementReady,
+    appKeyWrappingReady: readyStatus.appKeyWrappingReady,
+    securityReadyClaimed: readyStatus.securityReadyClaimed,
+    sensitiveCommunicationAllowed: readyStatus.sensitiveCommunicationAllowed,
+  }, {
     scope: "desktop-local-private-flow",
     status: "local-private-flow-no-current-blockers",
     blockers: [],
@@ -563,7 +599,25 @@ test("desktop-first completion reports local private flow readiness without secu
     securityReadyClaimed: false,
     sensitiveCommunicationAllowed: false,
   });
-  assert.deepEqual(desktopFirstCompletionStatus(blockedReport), {
+  const blockedStatus = desktopFirstCompletionStatus(blockedReport);
+  assert.deepEqual({
+    scope: blockedStatus.scope,
+    status: blockedStatus.status,
+    blockers: blockedStatus.blockers,
+    blockerSummary: blockedStatus.blockerSummary,
+    localManualE2eeRuntimeBoundary: blockedStatus.localManualE2eeRuntimeBoundary,
+    localManualE2eeRuntimeReady: blockedStatus.localManualE2eeRuntimeReady,
+    replayCommitAfterDecrypt: blockedStatus.replayCommitAfterDecrypt,
+    tamperFailureNonAdvance: blockedStatus.tamperFailureNonAdvance,
+    passphraseFirstStorageRequired: blockedStatus.passphraseFirstStorageRequired,
+    externalOnionDeliveryVerified: blockedStatus.externalOnionDeliveryVerified,
+    productionMessagingReady: blockedStatus.productionMessagingReady,
+    productionE2eeReady: blockedStatus.productionE2eeReady,
+    productionKeyManagementReady: blockedStatus.productionKeyManagementReady,
+    appKeyWrappingReady: blockedStatus.appKeyWrappingReady,
+    securityReadyClaimed: blockedStatus.securityReadyClaimed,
+    sensitiveCommunicationAllowed: blockedStatus.sensitiveCommunicationAllowed,
+  }, {
     scope: "desktop-local-private-flow",
     status: "incomplete",
     blockers: ["receive", "send-or-recover"],

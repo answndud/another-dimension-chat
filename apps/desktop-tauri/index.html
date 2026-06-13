@@ -16,7 +16,7 @@
           <p class="eyebrow" data-i18n="publicBetaEyebrow">Unsigned public beta</p>
           <h2 id="public-beta-warning-title" data-i18n="publicBetaWarningTitle">Experimental beta only</h2>
           <p data-i18n="publicBetaWarningBody">
-            This build is unsigned, not notarized, not audited, not production-ready, and must not be used for sensitive communication.
+            This build is unsigned, not notarized, not audited, not production-ready, and must not be used for sensitive communication. High-Risk Mode has a defined threat matrix; compromised endpoints, direct coercion, and full global traffic correlation are not protected.
           </p>
           <p data-i18n="publicBetaNetworkBody">
             Network and onion delivery stay off on launch. They require manual permission and an explicit delivery action.
@@ -29,7 +29,7 @@
               If macOS blocks the unsigned app, use Privacy & Security manual allow only after the checksum matches.
             </li>
             <li data-i18n="publicBetaNoUpdateBody">
-              There is no auto-update, signing, notarization, completed review, or secure messenger readiness claim.
+              There is no auto-update, signing, notarization, completed review, Briar/Cwtch-equivalence claim, coercion-safe claim, or secure messenger readiness claim.
             </li>
           </ul>
           <ol
@@ -102,9 +102,9 @@
             </article>
             <article>
               <span data-i18n="privacyModel">Privacy model</span>
-              <strong id="privacy-model-summary" data-i18n="privacyModelSummary">Direction only; not Briar/Cwtch-equivalent</strong>
+              <strong id="privacy-model-summary" data-i18n="privacyModelSummary">Defined threat model; not universal safety</strong>
               <p data-i18n="privacyModelSummaryHelp">
-                No phone-number or central-account direction, but this beta still lacks audited E2EE, repeated external onion evidence, offline mesh, and independent review.
+                Ordinary use avoids phone, email, accounts, and contact discovery. High-Risk Mode mitigates remote observers, malicious peers, local-at-rest access, and update risk; compromised endpoints, coercion, and full global traffic correlation are not protected.
               </p>
             </article>
           </section>

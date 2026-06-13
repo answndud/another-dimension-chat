@@ -5,6 +5,8 @@ import {
   productionActionAvailability,
   productionLocalLifecycleBoundaryView,
   productionBridgeCensorshipBoundaryView,
+  productionHighRiskThreatModelBoundaryView,
+  productionHighRiskThreatModelClaimMatrix,
   productionInviteCodeProfiles,
   productionInviteIdentityBoundaryView,
   productionPairwiseInviteGuidanceView,
@@ -87,6 +89,37 @@ test("invite identity boundary stays accountless and redacted", () => {
   assert.match(boundary, /invite_code_in_diagnostics=false/);
   assert.match(boundary, /qr_required=false/);
   assert.doesNotMatch(boundary, /ABCD-2345|inviter-abcd|joiner-abcd/);
+});
+
+test("high-risk threat model matrix keeps public claims bounded", () => {
+  const matrix = productionHighRiskThreatModelClaimMatrix();
+  const boundary = productionHighRiskThreatModelBoundaryView();
+  const statusFor = (attackerClass) =>
+    matrix.find((entry) => entry.attackerClass === attackerClass)?.status;
+
+  assert.equal(matrix.length, 8);
+  assert.equal(statusFor("remote_passive_observer"), "mitigated");
+  assert.equal(statusFor("remote_active_attacker"), "mitigated");
+  assert.equal(statusFor("malicious_peer"), "mitigated");
+  assert.equal(statusFor("local_at_rest_attacker"), "mitigated");
+  assert.equal(statusFor("supply_chain_update_attacker"), "mitigated");
+  assert.equal(statusFor("compromised_endpoint"), "not_protected");
+  assert.equal(statusFor("direct_coercion"), "not_protected");
+  assert.equal(statusFor("global_traffic_correlation"), "not_protected");
+  assert.deepEqual(boundary.notProtected, [
+    "compromised_endpoint",
+    "direct_coercion",
+    "global_traffic_correlation",
+  ]);
+  assert.match(boundary.boundary, /ordinary_use_claim=no-phone#no-email#no-global-account/);
+  assert.match(boundary.boundary, /claimable_statuses=protected,mitigated/);
+  assert.match(boundary.boundary, /compromised_endpoint:not_protected/);
+  assert.match(boundary.boundary, /direct_coercion:not_protected/);
+  assert.match(boundary.boundary, /global_traffic_correlation:not_protected/);
+  assert.match(boundary.boundary, /audited_security_claim=false/);
+  assert.match(boundary.boundary, /briar_cwtch_equivalence_claim=false/);
+  assert.match(boundary.boundary, /coercion_safe_claim=false/);
+  assert.match(boundary.boundary, /full_global_traffic_correlation_safe_claim=false/);
 });
 
 test("pairwise invite guidance keeps discovery and messaging gates explicit", () => {

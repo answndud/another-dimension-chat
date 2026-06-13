@@ -88,6 +88,88 @@ export function productionInviteIdentityBoundaryView(input = {}) {
   ].join(" ");
 }
 
+const highRiskThreatModelMatrix = [
+  {
+    attackerClass: "remote_passive_observer",
+    status: "mitigated",
+    reason:
+      "Encrypted manual envelopes and explicit network delivery reduce content exposure, but metadata and global correlation are not fully hidden.",
+  },
+  {
+    attackerClass: "remote_active_attacker",
+    status: "mitigated",
+    reason:
+      "Pairing, envelope, replay, and transport boundaries fail closed, but this is not an audited active-attack proof.",
+  },
+  {
+    attackerClass: "malicious_peer",
+    status: "mitigated",
+    reason:
+      "Signed invites, safety checks, duplicate handling, and malformed payload rejection reduce false-safe states.",
+  },
+  {
+    attackerClass: "local_at_rest_attacker",
+    status: "mitigated",
+    reason:
+      "Passphrase-first encrypted local storage is required, but unlocked or compromised endpoints are outside the claim.",
+  },
+  {
+    attackerClass: "supply_chain_update_attacker",
+    status: "mitigated",
+    reason:
+      "Manual same-release checksum, provenance, and advisory paths reduce update risk without claiming audited supply-chain security.",
+  },
+  {
+    attackerClass: "compromised_endpoint",
+    status: "not_protected",
+    reason:
+      "Malware or full device compromise can observe plaintext, keys, UI, and user actions outside the app boundary.",
+  },
+  {
+    attackerClass: "direct_coercion",
+    status: "not_protected",
+    reason:
+      "The app cannot prevent forced disclosure or forced action; later panic controls are mitigation only.",
+  },
+  {
+    attackerClass: "global_traffic_correlation",
+    status: "not_protected",
+    reason:
+      "Metadata minimization can reduce exposure, but full global traffic-correlation defense is not claimed.",
+  },
+];
+
+export function productionHighRiskThreatModelClaimMatrix() {
+  return highRiskThreatModelMatrix.map((entry) => ({ ...entry }));
+}
+
+export function productionHighRiskThreatModelBoundaryView() {
+  const matrix = productionHighRiskThreatModelClaimMatrix();
+  const claimable = matrix
+    .filter((entry) => entry.status === "protected" || entry.status === "mitigated")
+    .map((entry) => entry.attackerClass);
+  const notProtected = matrix
+    .filter((entry) => entry.status === "not_protected")
+    .map((entry) => entry.attackerClass);
+  return {
+    matrix,
+    claimable,
+    notProtected,
+    boundary: [
+      "ordinary_use_claim=no-phone#no-email#no-global-account#no-central-contact-discovery#pairwise-invite#user-mediated-encrypted-exchange#redacted-diagnostics",
+      `high_risk_matrix=${matrix.map((entry) => `${entry.attackerClass}:${entry.status}`).join(",")}`,
+      `claimable_statuses=protected,mitigated`,
+      `not_protected=${notProtected.join(",")}`,
+      "audited_security_claim=false",
+      "briar_cwtch_equivalence_claim=false",
+      "compromised_endpoint_safe_claim=false",
+      "coercion_safe_claim=false",
+      "full_global_traffic_correlation_safe_claim=false",
+      "reliable_external_onion_delivery_claim=false",
+    ].join(" "),
+  };
+}
+
 const pairwiseInviteGuidanceSteps = {
   create: {
     step: "create-code",

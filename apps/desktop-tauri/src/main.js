@@ -8,6 +8,7 @@ import {
   productionCounterpartProfile,
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
+  productionHighRiskThreatModelBoundaryView,
   productionManualMessageCheckView,
   productionManualTransferStepLabel,
   productionManualCurrentFocusTarget,
@@ -14309,6 +14310,7 @@ function renderFlowControls(simulation) {
 }
 
 async function renderPrototypeStatus() {
+  const highRiskThreatModelBoundary = productionHighRiskThreatModelBoundaryView().boundary;
   try {
     const status = await invoke("prototype_status");
     renderAppStateSummary(status);
@@ -14336,7 +14338,10 @@ async function renderPrototypeStatus() {
     setText(fields.experimentalTransport, localizedBoundaryStatus(status.experimental_transport_status));
     setText(fields.bootstrapStatus, localizedBoundaryStatus(status.bootstrap_status_classification));
     setText(fields.transportIo, localizedBoundaryStatus(status.transport_io_status));
-    setText(fields.privacyModelBoundary, localizedBoundaryStatus(status.privacy_model_boundary));
+    setText(
+      fields.privacyModelBoundary,
+      localizedBoundaryStatus(`${status.privacy_model_boundary}; ${highRiskThreatModelBoundary}`),
+    );
     setText(fields.storage, localizedBoundaryStatus(status.storage_status));
     setText(
       fields.releaseIntegrity,
@@ -14387,7 +14392,10 @@ async function renderPrototypeStatus() {
     setText(fields.experimentalTransport, t("experimentalTransportValue"));
     setText(fields.bootstrapStatus, t("bootstrapStatusValue"));
     setText(fields.transportIo, t("transportIoValue"));
-    setText(fields.privacyModelBoundary, t("privacyModelBoundaryValue"));
+    setText(
+      fields.privacyModelBoundary,
+      localizedBoundaryStatus(`${t("privacyModelBoundaryValue")}; ${highRiskThreatModelBoundary}`),
+    );
     setText(fields.storage, t("storageValue"));
     setText(fields.releaseIntegrity, `${t("releaseIntegrityValue")}; ${t("desktopPlatformBoundaryValue")}`);
     setText(fields.supplyChainBoundary, t("supplyChainBoundaryValue"));
