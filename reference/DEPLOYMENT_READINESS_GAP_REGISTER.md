@@ -26,6 +26,7 @@ current supported scope is named precisely:
 | Message-content E2EE | D100-1 source-ready protocol/session surface is gated by `reference/PRODUCTION_E2EE_SOURCE_GATE.md` for local/manual 1:1 message content, session, replay, retry, cancel, delete, and local record boundaries. | Broad production E2EE readiness, audit, sensitive-use, automatic networking, remote ack, and external delivery remain false. |
 | Local key/deletion lifecycle | D100-2 source-ready local key/storage scope is gated by `reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md` for passphrase-first SQLCipher, forward-only schema versioning, marker-only rollback detection, and local logical delete/wipe. | Complete production key management, app key wrapping, key rotation, rollback prevention, backup recovery, and secure media deletion remain false. |
 | Default transport | Local/manual courier envelope exchange is the supported default. | Production transport and reliable external delivery remain false. |
+| Advanced onion/Tor | Explicit user-triggered onion/Tor experiments are fail-closed and non-default; C100-5 is closed only by active-queue waiver. | Reliable external onion delivery, repeated external onion evidence, production transport, censorship-resistant, secure messenger, audit, and sensitive-use claims remain false. |
 | Update/release integrity | Manual same-release GitHub Release verification, signed update manifest candidate verification, provenance, rollback warning, and emergency process are source-gated. | Product signed update readiness, rollback prevention, stable release approval, and release upload remain false. |
 | External evidence intake | D100-4 review, field, and representative usability intake is gated by `reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`, with reviewer packet freeze, finding tracker validation, field report validation, representative usability validation, consent/non-sensitive-use notice, and local-only/fabricated evidence rejection. | Completed external review/audit, real repeated field reports, representative usability completion, and all related production/audit/reliability/sensitive-use claims remain false. |
 | Windows public artifact execution | D100-5 Windows public artifact path is gated by `reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md`, with `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md`, runtime smoke requirements, installer/signing decision, checksum/provenance, public copy, support diagnostics, and no-overclaim validation. | Real Windows runtime pass, public artifact, installer, signing, upload, and Windows public claim remain false. |
@@ -90,6 +91,14 @@ These cannot be made true by editing source files alone:
 - default_transport_policy_waiver_authorized=true
 - default_transport_usability_evidence_required_for_claims=true
 - default_transport_field_evidence_required_for_claims=true
+- c100_5_onion_evidence_blocker_closed=true
+- advanced_onion_policy_waiver_authorized=true
+- advanced_onion_waiver_scope=active-queue-unblock-only
+- advanced_onion_field_evidence_required_for_claims=true
+- advanced_onion_repeated_external_evidence_required_for_claims=true
+- external_delivery_success_claim_allowed=false
+- reliable_external_delivery_claim_allowed=false
+- repeated_external_onion_evidence_claim_allowed=false
 - c100_2_identity_blocker_closed=true
 - pairwise_identity_policy_waiver_authorized=true
 - pairwise_identity_external_audit_required_for_claims=true

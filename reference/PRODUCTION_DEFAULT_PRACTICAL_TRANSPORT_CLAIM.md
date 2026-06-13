@@ -88,4 +88,4 @@ Do not claim:
 - production_transport_ready=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=Phase C100-5 - Advanced Onion/Tor Evidence Boundary
+- next_required_phase=Phase A100-1 - External Security Review Packet Freeze

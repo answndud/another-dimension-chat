@@ -85,4 +85,4 @@ release page, owner approval, external review, and stable gate.
 - production_ready_claim_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false
-- next_required_phase=C100-5 Advanced Onion/Tor Evidence Boundary
+- next_required_phase=A100-1 External Security Review Packet Freeze

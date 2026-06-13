@@ -108,9 +108,25 @@ claim blocker.
 Public wording must still say `sensitive communication prohibited`,
 `not audited`, and `not production-ready`.
 
+## C100-5 Advanced Onion/Tor Boundary
+
+C100-5 is closed for active-queue progress by explicit owner policy waiver
+only. The waiver does not count as a real two-machine run, does not accept
+local-only or synthetic evidence, and does not permit reliable external onion
+delivery wording.
+
+The advanced onion/Tor path remains explicit-user-triggered, fail-closed,
+non-default, non-production, and claim-blocked until repeated accepted
+redacted reports and external review exist.
+
 ## Current Gate Flags
 
 - field_evidence_reliability_program_reviewed=true
+- c100_5_onion_evidence_blocker_closed=true
+- advanced_onion_policy_waiver_authorized=true
+- advanced_onion_waiver_scope=active-queue-unblock-only
+- advanced_onion_field_evidence_required_for_claims=true
+- advanced_onion_repeated_external_evidence_required_for_claims=true
 - d100_4_external_evidence_intake_execution_reviewed=true
 - external_evidence_intake_operator_ready=true
 - field_report_validator_ready=true
@@ -129,6 +145,7 @@ Public wording must still say `sensitive communication prohibited`,
 - fabricated_peer_evidence_allowed=false
 - external_delivery_success_claim_allowed=false
 - reliable_external_delivery_claim_allowed=false
+- repeated_external_onion_evidence_claim_allowed=false
 - production_field_evidence_ready=false
 - sensitive_communication_allowed=false
 - stable_or_production_release_allowed_without_field_evidence=false

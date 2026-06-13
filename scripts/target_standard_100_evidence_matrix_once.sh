@@ -212,6 +212,12 @@ for flag in \
   "default_transport_policy_waiver_authorized=true" \
   "default_transport_usability_evidence_required_for_claims=true" \
   "default_transport_field_evidence_required_for_claims=true" \
+  "c100_5_onion_evidence_blocker_closed=true" \
+  "advanced_onion_policy_waiver_authorized=true" \
+  "advanced_onion_waiver_scope=active-queue-unblock-only" \
+  "advanced_onion_field_evidence_required_for_claims=true" \
+  "advanced_onion_repeated_external_evidence_required_for_claims=true" \
+  "external_delivery_success_claim_allowed=false" \
   "macos_release_credential_evidence_schema_available=true" \
   "macos_release_credential_evidence_validator_available=true" \
   "macos_release_credential_evidence_collector_available=true" \
@@ -414,5 +420,6 @@ production_ready_claim_allowed=false
 audited_claim_allowed=false
 sensitive_communication_allowed=false
 reliable_external_delivery_claim_allowed=false
-next_required_phase=Phase-C100-5-Advanced-Onion-Tor-Evidence-Boundary
+repeated_external_onion_evidence_claim_allowed=false
+next_required_phase=Phase-A100-1-External-Security-Review-Packet-Freeze
 STATUS

@@ -64,6 +64,14 @@ must_contain "$REGISTER" "macos_universal_intel_scope_still_hold=true"
 must_contain "$REGISTER" "onboarding_recovery_source_ready=true"
 must_contain "$REGISTER" "pairwise_identity_source_ready=true"
 must_contain "$REGISTER" "production_e2ee_source_gate_reviewed=true"
+must_contain "$REGISTER" "c100_5_onion_evidence_blocker_closed=true"
+must_contain "$REGISTER" "advanced_onion_policy_waiver_authorized=true"
+must_contain "$REGISTER" "advanced_onion_waiver_scope=active-queue-unblock-only"
+must_contain "$REGISTER" "advanced_onion_field_evidence_required_for_claims=true"
+must_contain "$REGISTER" "advanced_onion_repeated_external_evidence_required_for_claims=true"
+must_contain "$REGISTER" "external_delivery_success_claim_allowed=false"
+must_contain "$REGISTER" "reliable_external_delivery_claim_allowed=false"
+must_contain "$REGISTER" "repeated_external_onion_evidence_claim_allowed=false"
 must_contain "$REGISTER" "production_e2ee_source_ready=true"
 must_contain "$REGISTER" "d100_1_e2ee_source_gate_reviewed=true"
 must_contain "$REGISTER" "protocol_session_e2ee_source_ready=true"
@@ -112,6 +120,12 @@ must_contain "$MATRIX" "macos_current_scope_supported=true"
 must_contain "$MATRIX" "macos_universal_intel_scope_still_hold=true"
 must_contain "$MATRIX" "onboarding_recovery_source_ready=true"
 must_contain "$MATRIX" "production_e2ee_source_gate_reviewed=true"
+must_contain "$MATRIX" "c100_5_onion_evidence_blocker_closed=true"
+must_contain "$MATRIX" "advanced_onion_policy_waiver_authorized=true"
+must_contain "$MATRIX" "advanced_onion_waiver_scope=active-queue-unblock-only"
+must_contain "$MATRIX" "advanced_onion_field_evidence_required_for_claims=true"
+must_contain "$MATRIX" "advanced_onion_repeated_external_evidence_required_for_claims=true"
+must_contain "$MATRIX" "external_delivery_success_claim_allowed=false"
 must_contain "$MATRIX" "production_e2ee_source_ready=true"
 must_contain "$MATRIX" "d100_1_e2ee_source_gate_reviewed=true"
 must_contain "$MATRIX" "protocol_session_e2ee_source_ready=true"
@@ -145,6 +159,7 @@ must_contain "$MATRIX" "supported-scope pass; external delivery false"
 must_contain "$MATRIX" "supported-scope pass; secure media deletion false"
 must_contain "$MATRIX" "source pass for manual same-release policy and signed manifest candidate verification; signed update/rollback-prevention hold"
 must_contain "$MATRIX" "source pass; production operations claim false"
+must_contain "$MATRIX" "pass for current boundary; C100-5 active blocker closed by waiver; reliable external delivery false"
 must_contain "$MATRIX" "source pass; identity audit false"
 must_contain "$MATRIX" "D100-1 source-ready protocol/session pass; production/audit/sensitive-use/external-delivery false"
 must_contain "$MATRIX" "D100-2 source-ready local key/storage pass; app wrapping/key rotation/rollback prevention/secure deletion false"
@@ -186,6 +201,8 @@ for file in "$REGISTER" "$MATRIX" "README.md" "SECURITY.md"; do
   must_not_match "$file" "production_ready_claim_allowed=true"
   must_not_match "$file" "audited_claim_allowed=true"
   must_not_match "$file" "sensitive_communication_allowed=true"
+  must_not_match "$file" "reliable_external_delivery_claim_allowed=true"
+  must_not_match "$file" "repeated_external_onion_evidence_claim_allowed=true"
 done
 
 scripts/target_standard_100_evidence_matrix_once.sh >/dev/null
@@ -218,6 +235,10 @@ macos_current_scope_supported=true
 macos_universal_intel_scope_still_hold=true
 onboarding_recovery_source_ready=true
 production_e2ee_source_gate_reviewed=true
+c100_5_onion_evidence_blocker_closed=true
+advanced_onion_policy_waiver_authorized=true
+advanced_onion_field_evidence_required_for_claims=true
+advanced_onion_repeated_external_evidence_required_for_claims=true
 production_e2ee_source_ready=true
 d100_1_e2ee_source_gate_reviewed=true
 protocol_session_e2ee_source_ready=true
