@@ -33,11 +33,17 @@ cd "$ROOT"
 
 DOC="reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md"
 TAURI_CONFIG="apps/desktop-tauri/src-tauri/tauri.conf.json"
+ENTITLEMENTS="apps/desktop-tauri/src-tauri/Entitlements.plist"
 COLLECTOR="scripts/collect_macos_release_credential_evidence.sh"
+SIGNING_CONFIG_PREFLIGHT="scripts/macos_signing_config_preflight_once.sh"
+SIGNED_BUILD_SCRIPT="scripts/build_signed_notarized_macos_release.sh"
 
 [ -f "$DOC" ] || fail "missing M100-1 release authority record"
 [ -f "$TAURI_CONFIG" ] || fail "missing Tauri config input: $TAURI_CONFIG"
+[ -f "$ENTITLEMENTS" ] || fail "missing macOS entitlements input: $ENTITLEMENTS"
 [ -f "$COLLECTOR" ] || fail "missing M100-1 credential evidence collector"
+[ -f "$SIGNING_CONFIG_PREFLIGHT" ] || fail "missing macOS signing config preflight"
+[ -f "$SIGNED_BUILD_SCRIPT" ] || fail "missing macOS signed release build script"
 
 XCODE_PATH="$(xcode-select -p 2>/dev/null || true)"
 XCODE_AVAILABLE=false
@@ -173,6 +179,13 @@ must_contain "$DOC" "release_credential_waiver_scope=active-queue-unblock-only"
 must_contain "$DOC" "signed_notarized_release_requires_actual_credentials=true"
 must_contain "$DOC" "macos_release_credential_evidence_collector_available=true"
 must_contain "$DOC" "macos_release_credential_evidence_collector_source_ready=true"
+must_contain "$DOC" "macos_tauri_signing_config_ready=true"
+must_contain "$DOC" "macos_hardened_runtime_configured=true"
+must_contain "$DOC" "macos_entitlements_configured=true"
+must_contain "$DOC" "macos_entitlements_minimal=true"
+must_contain "$DOC" "macos_signed_notarized_release_build_script_ready=true"
+must_contain "$DOC" "signed_app_build_path_ready=true"
+must_contain "$DOC" "dmg_create_from_signed_app_path_ready=true"
 must_contain "$DOC" "macos_release_credential_evidence_current_head_bound=true"
 must_contain "$DOC" "macos_release_credential_evidence_private_docs_path_bound=true"
 must_contain "$DOC" "m100_1_release_credential_verifier_dynamic=true"
@@ -202,6 +215,16 @@ must_contain "$DOC" "signed_notarized_stable_release_path_available=$(bool "$SIG
 must_contain "$TAURI_CONFIG" '"productName": "Another Dimension Chat"'
 must_contain "$TAURI_CONFIG" '"identifier": "chat.anotherdimension.prototype"'
 must_contain "$TAURI_CONFIG" '"active": true'
+must_contain "$TAURI_CONFIG" '"macOS"'
+must_contain "$TAURI_CONFIG" '"minimumSystemVersion": "12.0"'
+must_contain "$TAURI_CONFIG" '"hardenedRuntime": true'
+must_contain "$TAURI_CONFIG" '"entitlements": "Entitlements.plist"'
+must_contain "$TAURI_CONFIG" '"signingIdentity": null'
+must_contain "$TAURI_CONFIG" '"providerShortName": null'
+must_contain "$ENTITLEMENTS" "<dict/>"
+must_contain "$SIGNED_BUILD_SCRIPT" "AD_BUILD_MACOS_SIGNED_RC"
+must_contain "$SIGNED_BUILD_SCRIPT" "hdiutil create"
+must_contain "$SIGNED_BUILD_SCRIPT" "xcrun notarytool submit"
 
 must_contain "README.md" "reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md"
 must_contain "SECURITY.md" "reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md"
@@ -236,6 +259,13 @@ release_credential_waiver_scope=active-queue-unblock-only
 signed_notarized_release_requires_actual_credentials=true
 macos_release_credential_evidence_collector_available=true
 macos_release_credential_evidence_collector_source_ready=true
+macos_tauri_signing_config_ready=true
+macos_hardened_runtime_configured=true
+macos_entitlements_configured=true
+macos_entitlements_minimal=true
+macos_signed_notarized_release_build_script_ready=true
+signed_app_build_path_ready=true
+dmg_create_from_signed_app_path_ready=true
 macos_release_credential_evidence_current_head_bound=true
 macos_release_credential_evidence_private_docs_path_bound=true
 m100_1_release_credential_verifier_dynamic=true

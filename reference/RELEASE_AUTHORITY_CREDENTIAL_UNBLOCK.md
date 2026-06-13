@@ -22,6 +22,20 @@ notary verifier. Release-gate evidence validation is current-HEAD and private
 docs path bound so stale evidence or evidence outside the ignored private
 credential evidence path cannot advance M100-1.
 
+The source-controlled Tauri macOS bundle config fixes hardened runtime and a
+minimal empty entitlements file through
+`apps/desktop-tauri/src-tauri/tauri.conf.json` and
+`apps/desktop-tauri/src-tauri/Entitlements.plist`. The focused preflight is
+`scripts/macos_signing_config_preflight_once.sh`. Signing identity and
+notarization provider short name remain release-machine inputs and are not
+stored in source.
+The release build execution path is
+`scripts/build_signed_notarized_macos_release.sh`; it requires explicit signing
+gate, build gate, and DMG rebuild authorization before it runs Tauri build,
+signs the `.app`, creates the DMG from that signed bundle,
+signs/notarizes/staples the DMG, and writes generated checksum/provenance only
+under ignored release artifact directories.
+
 ## Observed Local Authority
 
 - Repository branch: `main`
@@ -72,6 +86,13 @@ macOS public app release can proceed:
 - release_credential_policy_waiver_authorized=true
 - release_credential_waiver_scope=active-queue-unblock-only
 - signed_notarized_release_requires_actual_credentials=true
+- macos_tauri_signing_config_ready=true
+- macos_hardened_runtime_configured=true
+- macos_entitlements_configured=true
+- macos_entitlements_minimal=true
+- macos_signed_notarized_release_build_script_ready=true
+- signed_app_build_path_ready=true
+- dmg_create_from_signed_app_path_ready=true
 - release_mutation_authorization_record_available=true
 - github_admin_observed=true
 - release_upload_authorized=false
@@ -187,6 +208,13 @@ separate explicit phases. They do not inherit macOS release authority.
 - macos_release_credential_evidence_validator_available=true
 - macos_release_credential_evidence_collector_available=true
 - macos_release_credential_evidence_collector_source_ready=true
+- macos_tauri_signing_config_ready=true
+- macos_hardened_runtime_configured=true
+- macos_entitlements_configured=true
+- macos_entitlements_minimal=true
+- macos_signed_notarized_release_build_script_ready=true
+- signed_app_build_path_ready=true
+- dmg_create_from_signed_app_path_ready=true
 - macos_release_credential_evidence_intake_ready=true
 - macos_release_credential_evidence_current_head_bound=true
 - macos_release_credential_evidence_private_docs_path_bound=true
