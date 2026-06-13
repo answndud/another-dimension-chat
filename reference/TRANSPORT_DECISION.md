@@ -2,6 +2,13 @@
 
 This document records the public-safe transport boundary before a real Tor/onion messaging adapter exists.
 
+The production default transport product path gate for the desktop-first
+operating-release track is tracked in
+[PRODUCTION_DEFAULT_TRANSPORT_PATH.md](PRODUCTION_DEFAULT_TRANSPORT_PATH.md).
+It fixes local manual encrypted envelope exchange as the practical default,
+keeps onion/Tor as a separate explicit fail-closed advanced path, records the
+allowed evidence order, and keeps reliable external delivery false.
+
 ## Current Decision
 
 High-risk mode is onion-only by default.

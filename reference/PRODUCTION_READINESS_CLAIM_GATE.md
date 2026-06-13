@@ -85,4 +85,6 @@ not production readiness by themselves.
 - signed_notarized_security_boundary=false
 - ops_2_protocol_session_lifecycle_gate_reviewed=true
 - ops_3_key_storage_lifecycle_gate_reviewed=true
-- next_required_phase=OPS-4 reliable default transport product path
+- ops_4_default_transport_product_path_reviewed=true
+- production_transport_ready=false
+- next_required_phase=OPS-5 macOS production UX and onboarding

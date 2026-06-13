@@ -211,6 +211,12 @@ profile/session/message store, destructive local actions, backup/migration
 boundary, marker-only rollback detection, and why production key-management
 readiness remains false.
 
+Production default transport product path review input is tracked in
+[reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md](reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md).
+It records the local manual encrypted envelope exchange default, the separate
+explicit fail-closed onion/Tor advanced path, the no-central-server boundaries,
+the evidence order, and why reliable external delivery remains false.
+
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
 only. Allowed public fields are app version, build channel, build commit,

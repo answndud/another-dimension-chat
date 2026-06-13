@@ -51,6 +51,12 @@ passphrase-first unlock, encrypted profile/session/message store, destructive
 local actions, backup/migration boundary, marker-only rollback detection, and
 why production key-management readiness remains false.
 
+The production default transport product path review input is tracked in
+`reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md`. It documents the local manual
+encrypted envelope exchange default, the separate explicit fail-closed
+onion/Tor advanced path, the no-central-server boundaries, the evidence order,
+and why reliable external delivery remains false.
+
 The public privacy-model comparison is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`. It maps the intended Korean Briar/Cwtch-style direction to current public beta gaps and LINDDUN categories; it is not a claim that the current beta has reached that level.
 
 The public threat model is tracked in `reference/PUBLIC_THREAT_MODEL.md`, and the independent review packet is tracked in `reference/INDEPENDENT_REVIEW_PACKET.md`. These are review inputs, not evidence that a review has been completed. The public beta upload set explicitly records the current review gap, private-reporting boundary, public-safe review-command boundary, and fabricated-review/peer-evidence-forbidden boundary; it does not claim reviewer signoff or public user safety signoff.
