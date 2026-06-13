@@ -30,6 +30,7 @@ for file in "$MATRIX" "$TARGET" "README.md" "SECURITY.md" \
   "reference/PRODUCTION_READINESS_CLAIM_GATE.md" \
   "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md" \
   "reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md" \
+  "reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md" \
   "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md" \
   "reference/PRODUCTION_E2EE_SOURCE_GATE.md" \
   "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md" \
@@ -67,6 +68,8 @@ must_contain "SECURITY.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 must_contain "README.md" "reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
 must_contain "SECURITY.md" "reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
+must_contain "README.md" "reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md"
+must_contain "SECURITY.md" "reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md"
 
 must_contain "$MATRIX" "Status: P100-0 definition locked"
 must_contain "$MATRIX" "## Evidence Order"
@@ -134,6 +137,7 @@ for linked in \
   "PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md" \
   "DEPLOYMENT_READINESS_GAP_REGISTER.md" \
   "DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md" \
+  "MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md" \
   "PRODUCTION_E2EE_SOURCE_GATE.md" \
   "MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
   "EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
@@ -171,6 +175,9 @@ for flag in \
   "target_standard_100_evidence_matrix_available=true" \
   "target_standard_100_active_queue_source_closure_available=true" \
   "deployment_100_blocker_resolution_plan_available=true" \
+  "macos_release_credential_evidence_schema_available=true" \
+  "macos_release_credential_evidence_validator_available=true" \
+  "macos_release_credential_evidence_intake_ready=true" \
   "target_standard_100_deployment_gap_reconciled=true" \
   "target_standard_criteria_complete=true" \
   "macos_public_app_100_criteria_complete=true" \

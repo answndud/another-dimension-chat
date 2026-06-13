@@ -92,6 +92,8 @@ Current public wording must remain:
   `reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md`
 - Deployment gap register: `reference/DEPLOYMENT_READINESS_GAP_REGISTER.md`
 - M100-1 credential gate: `reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md`
+- M100-1 credential evidence intake:
+  `reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md`
 - M100-2 artifact scope: `reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md`
 - M100-3 signed/notarized artifact:
   `reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md`
@@ -111,6 +113,9 @@ Current public wording must remain:
 - deployment_100_blocker_resolution_plan_available=true
 - deployment_100_blocker_resolution_machine_checkable=true
 - all_false_hold_flags_categorized=true
+- macos_release_credential_evidence_schema_available=true
+- macos_release_credential_evidence_validator_available=true
+- macos_release_credential_evidence_intake_ready=true
 - m100_1_release_credentials_ready=false
 - developer_id_signing_available=false
 - apple_developer_team_id_recorded=false

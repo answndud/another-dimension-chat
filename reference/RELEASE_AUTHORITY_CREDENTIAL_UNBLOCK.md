@@ -12,6 +12,11 @@ or external participants. The focused verifier is
 `scripts/release_authority_credential_unblock_once.sh`; it reads the local
 macOS keychain, `xcode-select`, and `xcrun notarytool` state. Missing
 credentials are a release blocker and make the verifier exit non-zero.
+Public-safe credential evidence intake is defined in
+`reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md` and checked by
+`scripts/macos_release_credential_evidence_once.sh`; that intake can validate
+redacted release-machine evidence but cannot replace the live keychain and
+notary verifier.
 
 ## Observed Local Authority
 
@@ -164,6 +169,9 @@ separate explicit phases. They do not inherit macOS release authority.
 
 - release_authority_credential_unblock_reviewed=true
 - release_mutation_authorization_record_available=true
+- macos_release_credential_evidence_schema_available=true
+- macos_release_credential_evidence_validator_available=true
+- macos_release_credential_evidence_intake_ready=true
 - github_admin_observed=true
 - m100_1_release_credential_verifier_dynamic=true
 - apple_developer_program_team_confirmed=false

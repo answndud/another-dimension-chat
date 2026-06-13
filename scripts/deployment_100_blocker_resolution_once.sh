@@ -36,6 +36,7 @@ REGISTER="reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 
 for file in "$PLAN" "$MATRIX" "$ACTIVE" "$REGISTER" \
   "reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md" \
+  "reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md" \
   "reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md" \
   "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md" \
   "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
@@ -69,6 +70,7 @@ for linked in \
   "TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md" \
   "DEPLOYMENT_READINESS_GAP_REGISTER.md" \
   "RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md" \
+  "MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md" \
   "MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md" \
   "MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md" \
   "MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
@@ -87,6 +89,9 @@ must_contain "$REGISTER" "DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
 
 for flag in \
   "developer_id_signing_available=false" \
+  "macos_release_credential_evidence_schema_available=true" \
+  "macos_release_credential_evidence_validator_available=true" \
+  "macos_release_credential_evidence_intake_ready=true" \
   "apple_developer_team_id_recorded=false" \
   "notarization_credential_available=false" \
   "notarytool_credential_validated=false" \
@@ -142,6 +147,7 @@ scripts/target_standard_100_evidence_matrix_once.sh >/dev/null
 scripts/target_standard_100_active_queue_closure_once.sh >/dev/null
 scripts/deployment_readiness_gap_reconciliation_once.sh >/dev/null
 scripts/stable_macos_v1_release_gate_once.sh >/dev/null
+scripts/macos_release_credential_evidence_once.sh >/dev/null
 scripts/macos_universal_scoped_artifact_policy_once.sh >/dev/null
 scripts/macos_signed_notarized_rc_artifact_once.sh >/dev/null
 scripts/macos_signed_notarized_execution_path_once.sh >/dev/null
