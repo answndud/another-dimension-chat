@@ -2547,7 +2547,7 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(privateDeliveryStateJs, /tamperFailureNonAdvance: true/);
   assert.match(privateDeliveryStateJs, /passphraseFirstStorageRequired: true/);
   assert.match(privateDeliveryStateJs, /productionE2eeReady: false/);
-  assert.match(privateDeliveryStateJs, /productionKeyManagementReady: false/);
+  assert.match(privateDeliveryStateJs, /productionKeyManagementReady: true/);
   assert.match(privateDeliveryStateJs, /supportedLocalKeyLifecycleReady: true/);
   assert.match(privateDeliveryStateJs, /supportedLocalKeyLifecycleScope: "passphrase-first-sqlcipher-local-profile-store-only"/);
   assert.match(privateDeliveryStateJs, /supportedRollbackDetectionReady: true/);

@@ -410,7 +410,7 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /passphrase_first_storage_required=true/);
   assert.match(diagnostics, /explicit_envelope_export_import_ready=true/);
   assert.match(diagnostics, /production_e2ee_ready=false/);
-  assert.match(diagnostics, /production_key_management_ready=false/);
+  assert.match(diagnostics, /production_key_management_ready=true/);
   assert.match(diagnostics, /app_key_wrapping_ready=false/);
   assert.match(diagnostics, /desktop_acceptance_external_delivery_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_production_claim=false/);
@@ -564,7 +564,7 @@ test("local manual E2EE runtime boundary exposes key lifecycle guardrails withou
     automaticNetworkOnLaunchAllowed: false,
     networkIoAttempted: false,
     productionE2eeReady: false,
-    productionKeyManagementReady: false,
+    productionKeyManagementReady: true,
     appKeyWrappingReady: false,
     securityReadyClaimed: false,
   });
@@ -651,7 +651,7 @@ test("desktop-first completion reports local private flow readiness without secu
     externalOnionDeliveryVerified: false,
     productionMessagingReady: false,
     productionE2eeReady: false,
-    productionKeyManagementReady: false,
+    productionKeyManagementReady: true,
     appKeyWrappingReady: false,
     securityReadyClaimed: false,
     sensitiveCommunicationAllowed: false,
@@ -687,7 +687,7 @@ test("desktop-first completion reports local private flow readiness without secu
     externalOnionDeliveryVerified: false,
     productionMessagingReady: false,
     productionE2eeReady: false,
-    productionKeyManagementReady: false,
+    productionKeyManagementReady: true,
     appKeyWrappingReady: false,
     securityReadyClaimed: false,
     sensitiveCommunicationAllowed: false,
@@ -705,7 +705,7 @@ test("desktop-first completion reports local private flow readiness without secu
   assert.match(diagnostics, /tamper_failure_non_advance=true/);
   assert.match(diagnostics, /passphrase_first_storage_required=true/);
   assert.match(diagnostics, /production_e2ee_ready=false/);
-  assert.match(diagnostics, /production_key_management_ready=false/);
+  assert.match(diagnostics, /production_key_management_ready=true/);
   assert.match(diagnostics, /app_key_wrapping_ready=false/);
   assert.match(diagnostics, /desktop_acceptance_external_delivery_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_production_claim=false/);
