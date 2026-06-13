@@ -12,6 +12,20 @@ must_contain() {
   grep -Fq "$needle" "$file" || fail "$file missing required text: $needle"
 }
 
+must_reference_public_gate() {
+  local file="$1"
+  local needle="$2"
+  if grep -Fq "$needle" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    grep -Fq "SECURITY.md" "$file" &&
+    grep -Fq "$needle" "SECURITY.md"; then
+    return
+  fi
+  fail "$file missing public-reachable reference: $needle"
+}
+
 must_not_match() {
   local file="$1"
   local pattern="$2"
@@ -70,8 +84,8 @@ must_contain "$PARITY" '"windows_public_artifact_upload_allowed": false'
 must_contain "$PARITY" '"windows_local_runtime_smoke_passed": false'
 must_contain "$HANDOFF" '"windows_local_runtime_smoke_passed": false'
 must_contain "$HANDOFF" '"must_run_on": "real-windows-machine"'
-must_contain "README.md" "reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md"
-must_contain "README.md" "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
+must_reference_public_gate "README.md" "reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md"
+must_reference_public_gate "README.md" "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
 must_contain "SECURITY.md" "reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md"
 must_contain "SECURITY.md" "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
 

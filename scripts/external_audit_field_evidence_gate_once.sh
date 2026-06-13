@@ -27,6 +27,7 @@ DOC="reference/EXTERNAL_AUDIT_FIELD_EVIDENCE_GATE.md"
 
 for file in "$DOC" \
   "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md" \
+  "reference/EXTERNAL_REVIEW_SIGNOFF_SCHEMA.md" \
   "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
   "reference/AUDIT_FINDING_TRACKER.md" \
   "reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md" \
@@ -35,9 +36,11 @@ for file in "$DOC" \
   "reference/ANDROID_PUBLIC_APP_CANDIDATE.md" \
   "reference/IOS_PUBLIC_APP_CANDIDATE.md" \
   "scripts/audit_finding_tracker_validator_once.sh" \
+  "scripts/external_review_signoff_validator_once.sh" \
   "scripts/external_evidence_intake_execution_once.sh" \
   "scripts/redacted_field_report_validator_once.sh" \
   "scripts/validate_audit_finding_tracker.mjs" \
+  "scripts/validate_external_review_signoff.mjs" \
   "scripts/validate_redacted_field_reports.mjs"; do
   [ -f "$file" ] || fail "missing external audit/field evidence gate input: $file"
 done
@@ -45,6 +48,9 @@ done
 for flag in \
   "external_audit_field_evidence_gate_ready=true" \
   "audit_finding_tracker_validator_ready=true" \
+  "external_review_signoff_schema_available=true" \
+  "external_review_signoff_validator_ready=true" \
+  "external_review_signoff_candidate_requires_owner_claim_decision=true" \
   "external_evidence_intake_validator_ready=true" \
   "redacted_field_report_validator_ready=true" \
   "fabricated_or_local_only_evidence_rejected=true" \
@@ -81,6 +87,7 @@ for file in "$DOC" reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md reference/EXTERNA
 done
 
 scripts/audit_finding_tracker_validator_once.sh >/dev/null
+scripts/external_review_signoff_validator_once.sh >/dev/null
 scripts/redacted_field_report_validator_once.sh >/dev/null
 
 tmp_dir="$(mktemp -d)"
@@ -129,6 +136,9 @@ cat <<'STATUS'
 status=external-audit-field-evidence-gate-ready
 external_audit_field_evidence_gate_ready=true
 audit_finding_tracker_validator_ready=true
+external_review_signoff_schema_available=true
+external_review_signoff_validator_ready=true
+external_review_signoff_candidate_requires_owner_claim_decision=true
 external_evidence_intake_validator_ready=true
 redacted_field_report_validator_ready=true
 fabricated_or_local_only_evidence_rejected=true

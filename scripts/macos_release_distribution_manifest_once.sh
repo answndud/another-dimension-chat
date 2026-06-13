@@ -35,6 +35,8 @@ done
 for flag in \
   "macos_release_distribution_manifest_schema_available=true" \
   "macos_release_distribution_manifest_validator_available=true" \
+  "macos_release_distribution_checksum_bytes_verified=true" \
+  "macos_release_distribution_provenance_consistency_verified=true" \
   "macos_release_distribution_metadata_generator_ready=true" \
   "macos_release_upload_script_ready=true" \
   "macos_current_public_support_scope=apple-silicon-aarch64-only" \
@@ -70,11 +72,34 @@ printf '%s\n' "$empty_output" | grep -Fq "status=waiting-for-macos-release-distr
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
+artifact_name="another-dimension-chat-0.1.0-beta-onion-macos-aarch64-signed-notarized.dmg"
+printf 'macos focused validator fixture\n' >"$tmp_dir/$artifact_name"
+artifact_sha="$(shasum -a 256 "$tmp_dir/$artifact_name" | awk '{print $1}')"
+artifact_size="$(wc -c <"$tmp_dir/$artifact_name" | tr -d ' ')"
+printf '%s  %s\n' "$artifact_sha" "$artifact_name" >"$tmp_dir/$artifact_name.sha256"
+source_commit="abcdef1234567890"
+cat >"$tmp_dir/$artifact_name.provenance.json" <<JSON
+{
+  "schema_version": "macos-release-distribution-provenance-v1",
+  "repository": "answndud/another-dimension-chat",
+  "source_commit": "$source_commit",
+  "artifact_filename": "$artifact_name",
+  "artifact_sha256": "$artifact_sha",
+  "release_class": "signed-notarized-rc",
+  "architecture": "macos-aarch64",
+  "signing_status": "signed",
+  "notarization_status": "notarized",
+  "stapled": true,
+  "release_upload_authorized": false,
+  "macos_release_distribution_artifact_ready": false,
+  "generated_release_artifacts_commit_allowed": false
+}
+JSON
 cat >"$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json" <<'JSON'
 {
   "schema_version": "macos-release-distribution-manifest-v1",
   "repository": "answndud/another-dimension-chat",
-  "source_commit": "abcdef1234567890",
+  "source_commit": "__SOURCE_COMMIT__",
   "version": "0.1.0",
   "release_class": "signed-notarized-rc",
   "same_release_asset_authority_required": true,
@@ -88,24 +113,30 @@ cat >"$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json" <<'JSON'
   ],
   "artifacts": [
     {
-      "filename": "another-dimension-chat-0.1.0-beta-onion-macos-aarch64-signed-notarized.dmg",
-      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "size_bytes": 123456,
+      "filename": "__ARTIFACT_NAME__",
+      "sha256": "__ARTIFACT_SHA__",
+      "size_bytes": __ARTIFACT_SIZE__,
       "platform": "macos",
       "architecture": "macos-aarch64",
       "signing_status": "signed",
       "notarization_status": "notarized",
       "stapled": true,
-      "checksum_file": "another-dimension-chat-0.1.0-beta-onion-macos-aarch64-signed-notarized.dmg.sha256",
-      "provenance_file": "another-dimension-chat-0.1.0-beta-onion-macos-aarch64-signed-notarized.dmg.provenance.json"
+      "checksum_file": "__ARTIFACT_NAME__.sha256",
+      "provenance_file": "__ARTIFACT_NAME__.provenance.json"
     }
   ]
 }
 JSON
+perl -0pi -e "s/__SOURCE_COMMIT__/$source_commit/g; s/__ARTIFACT_NAME__/$artifact_name/g; s/__ARTIFACT_SHA__/$artifact_sha/g; s/__ARTIFACT_SIZE__/$artifact_size/g" \
+  "$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json"
 
 candidate_output="$(node "$VALIDATOR" "$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json")"
 printf '%s\n' "$candidate_output" | grep -Fq "accepted_macos_release_distribution_manifests=1" ||
   fail "valid distribution manifest was not accepted"
+printf '%s\n' "$candidate_output" | grep -Fq "macos_release_distribution_checksum_bytes_verified=true" ||
+  fail "manifest validator did not verify checksum bytes"
+printf '%s\n' "$candidate_output" | grep -Fq "macos_release_distribution_provenance_consistency_verified=true" ||
+  fail "manifest validator did not verify provenance consistency"
 printf '%s\n' "$candidate_output" | grep -Fq "macos_release_distribution_artifact_ready=false" ||
   fail "manifest validator must not claim artifact readiness"
 
@@ -129,6 +160,8 @@ cat <<'STATUS'
 status=macos-release-distribution-manifest-gate-ready
 macos_release_distribution_manifest_schema_available=true
 macos_release_distribution_manifest_validator_available=true
+macos_release_distribution_checksum_bytes_verified=true
+macos_release_distribution_provenance_consistency_verified=true
 macos_release_distribution_metadata_generator_ready=true
 macos_release_upload_script_ready=true
 macos_current_public_support_scope=apple-silicon-aarch64-only

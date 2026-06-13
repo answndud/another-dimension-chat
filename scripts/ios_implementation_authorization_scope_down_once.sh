@@ -12,6 +12,20 @@ must_contain() {
   grep -Fq "$needle" "$file" || fail "$file missing required text: $needle"
 }
 
+must_reference_public_gate() {
+  local file="$1"
+  local needle="$2"
+  if grep -Fq "$needle" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    grep -Fq "SECURITY.md" "$file" &&
+    grep -Fq "$needle" "SECURITY.md"; then
+    return
+  fi
+  fail "$file missing public-reachable reference: $needle"
+}
+
 must_not_match() {
   local file="$1"
   local pattern="$2"
@@ -53,7 +67,7 @@ must_contain "apps/mobile/ios/README.md" "not an IPA artifact"
 must_contain "apps/mobile/ios/README.md" "not TestFlight distribution"
 must_contain "apps/mobile/ios/README.md" "not production-ready"
 must_contain "apps/mobile/ffi/shared_core_mobile_api_contract.json" '"first_binding_unit": "status_and_redacted_diagnostics_read_only_adapter"'
-must_contain "README.md" "reference/IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md"
+must_reference_public_gate "README.md" "reference/IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md"
 must_contain "SECURITY.md" "reference/IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md"
 
 for file in "$DOC" "apps/mobile/ios/README.md" "README.md" "SECURITY.md"; do

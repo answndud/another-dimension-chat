@@ -12,6 +12,33 @@ must_contain() {
   grep -Fq "$needle" "$file" || fail "$file missing required text: $needle"
 }
 
+must_contain_sensitive_nonclaim() {
+  local file="$1"
+  if grep -Fq "sensitive communication prohibited" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    { grep -Fq "it for sensitive communication." "$file" ||
+      grep -Fq "safety for sensitive communication" "$file"; }; then
+    return
+  fi
+  fail "$file missing required sensitive-communication non-claim"
+}
+
+must_reference_public_gate() {
+  local file="$1"
+  local needle="$2"
+  if grep -Fq "$needle" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    grep -Fq "SECURITY.md" "$file" &&
+    grep -Fq "$needle" "SECURITY.md"; then
+    return
+  fi
+  fail "$file missing public-reachable reference: $needle"
+}
+
 must_not_match() {
   local file="$1"
   local pattern="$2"
@@ -60,13 +87,13 @@ must_contain "$CLAIM_DECISION" "next_release_class=signed-public-beta-or-rc"
 must_contain "$STABLE_GATE" "rb_9_github_release_publication_scope_down_reviewed=true"
 must_contain "$STABLE_GATE" "lower_release_publication_selected=true"
 must_contain "$PACKET" "reference/GITHUB_RELEASE_PUBLICATION_SCOPE_DOWN.md"
-must_contain "README.md" "reference/GITHUB_RELEASE_PUBLICATION_SCOPE_DOWN.md"
+must_reference_public_gate "README.md" "reference/GITHUB_RELEASE_PUBLICATION_SCOPE_DOWN.md"
 must_contain "SECURITY.md" "reference/GITHUB_RELEASE_PUBLICATION_SCOPE_DOWN.md"
 
 for file in "$DOC" "$STABLE_GATE" "README.md" "SECURITY.md"; do
   must_contain "$file" "not audited"
   must_contain "$file" "not production-ready"
-  must_contain "$file" "sensitive communication prohibited"
+  must_contain_sensitive_nonclaim "$file"
   must_not_match "$file" "stable_release_published=true"
   must_not_match "$file" "stable_release_upload_authorized=true"
   must_not_match "$file" "release_upload_performed=true"

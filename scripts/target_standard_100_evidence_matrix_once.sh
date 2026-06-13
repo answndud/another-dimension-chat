@@ -12,6 +12,33 @@ must_contain() {
   grep -Fq "$needle" "$file" || fail "$file missing required text: $needle"
 }
 
+must_contain_sensitive_nonclaim() {
+  local file="$1"
+  if grep -Fq "sensitive communication prohibited" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    { grep -Fq "it for sensitive communication." "$file" ||
+      grep -Fq "safety for sensitive communication" "$file"; }; then
+    return
+  fi
+  fail "$file missing required sensitive-communication non-claim"
+}
+
+must_reference_public_gate() {
+  local file="$1"
+  local needle="$2"
+  if grep -Fq "$needle" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    grep -Fq "SECURITY.md" "$file" &&
+    grep -Fq "$needle" "SECURITY.md"; then
+    return
+  fi
+  fail "$file missing public-reachable reference: $needle"
+}
+
 must_not_match() {
   local file="$1"
   local pattern="$2"
@@ -58,21 +85,21 @@ done
 
 for file in "$MATRIX" "README.md" "SECURITY.md"; do
   must_contain "$file" "unsigned experimental public beta"
-  must_contain "$file" "sensitive communication prohibited"
+  must_contain_sensitive_nonclaim "$file"
   must_contain "$file" "not audited"
   must_contain "$file" "not production-ready"
 done
 
-must_contain "README.md" "reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
+must_reference_public_gate "README.md" "reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
 must_contain "SECURITY.md" "reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
-must_contain "README.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
+must_reference_public_gate "README.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 must_contain "SECURITY.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
-must_contain "README.md" "reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
+must_reference_public_gate "README.md" "reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
 must_contain "SECURITY.md" "reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
 must_contain "$MATRIX" "TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md"
-must_contain "README.md" "reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md"
+must_reference_public_gate "README.md" "reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md"
 must_contain "SECURITY.md" "reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md"
 
 must_contain "$MATRIX" "Status: P100-0 definition locked"

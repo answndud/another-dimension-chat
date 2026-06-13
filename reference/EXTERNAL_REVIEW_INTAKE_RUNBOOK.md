@@ -22,8 +22,11 @@ communication.
    available.
 4. Record public-safe finding summaries in
    `reference/AUDIT_FINDING_TRACKER.md`.
-5. Resolve every finding as exactly one of `fix`, `hold`, or `waive`.
-6. Keep `not audited`, `not production-ready`, and
+5. Record future named reviewer signoff evidence with
+   `reference/EXTERNAL_REVIEW_SIGNOFF_SCHEMA.md` and
+   `scripts/validate_external_review_signoff.mjs`.
+6. Resolve every finding as exactly one of `fix`, `hold`, or `waive`.
+7. Keep `not audited`, `not production-ready`, and
    `sensitive communication prohibited` until a later release/claim task has a
    completed review result, findings closure, stable gate pass, and owner
    approval.
@@ -48,6 +51,9 @@ not alter the intake rules above.
 
 - external_review_intake_runbook_available=true
 - external_review_intake_operator_ready=true
+- external_review_signoff_schema_available=true
+- external_review_signoff_validator_available=true
+- external_review_signoff_candidate_requires_owner_claim_decision=true
 - a100_1_external_security_review_packet_frozen=true
 - a100_2_external_review_execution_blocker_closed=true
 - external_review_execution_policy_waiver_authorized=true

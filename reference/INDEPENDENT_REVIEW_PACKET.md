@@ -234,6 +234,9 @@ Review the unsigned experimental public beta boundary:
 - `reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md`: D100-4 operator runbook for
   freezing reviewer inputs, routing sensitive findings privately, updating the
   tracker, and keeping review completion claims false.
+- `reference/EXTERNAL_REVIEW_SIGNOFF_SCHEMA.md`: schema and validator contract
+  for future named external reviewer signoff evidence, without promoting any
+  audit or production claim.
 - `reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`: D100-4 focused intake gate
   connecting review, field, and representative usability evidence validators
   while preserving current public non-claims.

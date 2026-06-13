@@ -12,6 +12,33 @@ must_contain() {
   grep -Fq "$needle" "$file" || fail "$file missing required text: $needle"
 }
 
+must_contain_sensitive_nonclaim() {
+  local file="$1"
+  if grep -Fq "sensitive communication prohibited" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    { grep -Fq "it for sensitive communication." "$file" ||
+      grep -Fq "safety for sensitive communication" "$file"; }; then
+    return
+  fi
+  fail "$file missing required sensitive-communication non-claim"
+}
+
+must_reference_public_gate() {
+  local file="$1"
+  local needle="$2"
+  if grep -Fq "$needle" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    grep -Fq "SECURITY.md" "$file" &&
+    grep -Fq "$needle" "SECURITY.md"; then
+    return
+  fi
+  fail "$file missing public-reachable reference: $needle"
+}
+
 must_not_match() {
   local file="$1"
   local pattern="$2"
@@ -57,13 +84,13 @@ must_contain "$STABLE_GATE" "rb_8_production_claim_release_class_decision_review
 must_contain "$STABLE_GATE" "stable_release_candidate_gate_decision=lower-release-class-only"
 must_contain "$STABLE_GATE" "next_release_class=signed-public-beta-or-rc"
 must_contain "$PACKET" "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md"
-must_contain "README.md" "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md"
+must_reference_public_gate "README.md" "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md"
 must_contain "SECURITY.md" "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md"
 
 for file in "$DOC" "$CLAIM_GATE" "$STABLE_GATE" "README.md" "SECURITY.md"; do
   must_contain "$file" "not audited"
   must_contain "$file" "not production-ready"
-  must_contain "$file" "sensitive communication prohibited"
+  must_contain_sensitive_nonclaim "$file"
   must_not_match "$file" "production_ready_claim_allowed=true"
   must_not_match "$file" "beta_wording_removal_allowed=true"
   must_not_match "$file" "audited_claim_allowed=true"

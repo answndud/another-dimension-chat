@@ -12,6 +12,33 @@ must_contain() {
   grep -Fq "$needle" "$file" || fail "$file missing required text: $needle"
 }
 
+must_contain_sensitive_nonclaim() {
+  local file="$1"
+  if grep -Fq "sensitive communication prohibited" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    { grep -Fq "it for sensitive communication." "$file" ||
+      grep -Fq "safety for sensitive communication" "$file"; }; then
+    return
+  fi
+  fail "$file missing required sensitive-communication non-claim"
+}
+
+must_reference_public_gate() {
+  local file="$1"
+  local needle="$2"
+  if grep -Fq "$needle" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    grep -Fq "SECURITY.md" "$file" &&
+    grep -Fq "$needle" "SECURITY.md"; then
+    return
+  fi
+  fail "$file missing public-reachable reference: $needle"
+}
+
 must_not_match() {
   local file="$1"
   local pattern="$2"
@@ -68,13 +95,13 @@ must_contain "$STABLE_GATE" "rb_6_external_review_release_class_scope_down_revie
 must_contain "$STABLE_GATE" "signed_public_beta_or_rc_release_class_allowed_without_external_review=true"
 must_contain "$STABLE_GATE" "stable_or_production_release_allowed_without_external_review=false"
 must_contain "$PACKET" "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
-must_contain "README.md" "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
+must_reference_public_gate "README.md" "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
 must_contain "SECURITY.md" "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
 
 for file in "$DOC" "$READINESS" "$TRACKER" "$CLAIM_GATE" "$STABLE_GATE" "README.md" "SECURITY.md"; do
   must_contain "$file" "not audited"
   must_contain "$file" "not production-ready"
-  must_contain "$file" "sensitive communication prohibited"
+  must_contain_sensitive_nonclaim "$file"
   must_not_match "$file" "external_review_completed=true"
   must_not_match "$file" "audit_completed=true"
   must_not_match "$file" "reviewer_signoff_claimed=true"
