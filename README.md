@@ -40,6 +40,9 @@ communication prohibited. Do not use it for real communication.
 7. Screenshots: use the public-safe screenshot checklist before publishing app
    images, and do not post screenshots that show private room data. See
    [reference/PUBLIC_SCREENSHOT_CHECKLIST.md](reference/PUBLIC_SCREENSHOT_CHECKLIST.md).
+8. Maintainer rehearsal: before directing public testers, use
+   [reference/MACOS_FRESH_INSTALL_REHEARSAL.md](reference/MACOS_FRESH_INSTALL_REHEARSAL.md)
+   for a fresh-install checklist that records only public-safe results.
 
 Release authority: use the files attached to the GitHub Release, not branch
 files or source archives. The `main` branch may contain later documentation or
