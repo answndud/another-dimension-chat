@@ -325,6 +325,162 @@ pub mod production {
         UnlockFailed,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProfileStoreUnlockFailureKind {
+        WrongPassphrase,
+        MissingStore,
+        CorruptStore,
+        MigrationNeeded,
+        UnsupportedUnlockFactor,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProfileStoreUnlockRecoveryDecision {
+        kind: ProfileStoreUnlockFailureKind,
+        retry_with_passphrase_allowed: bool,
+        create_new_profile_allowed: bool,
+        migration_required: bool,
+        passphrase_required: bool,
+        os_keychain_only_supported: bool,
+        raw_path_returned: bool,
+        passphrase_returned: bool,
+        key_material_exposed: bool,
+        backup_recovery_claimed: bool,
+        rollback_protection_claimed: bool,
+        secure_media_deletion_claimed: bool,
+        generic_error: bool,
+        next_action: &'static str,
+    }
+
+    impl ProfileStoreUnlockRecoveryDecision {
+        pub fn kind(self) -> ProfileStoreUnlockFailureKind {
+            self.kind
+        }
+
+        pub fn retry_with_passphrase_allowed(self) -> bool {
+            self.retry_with_passphrase_allowed
+        }
+
+        pub fn create_new_profile_allowed(self) -> bool {
+            self.create_new_profile_allowed
+        }
+
+        pub fn migration_required(self) -> bool {
+            self.migration_required
+        }
+
+        pub fn passphrase_required(self) -> bool {
+            self.passphrase_required
+        }
+
+        pub fn os_keychain_only_supported(self) -> bool {
+            self.os_keychain_only_supported
+        }
+
+        pub fn raw_path_returned(self) -> bool {
+            self.raw_path_returned
+        }
+
+        pub fn passphrase_returned(self) -> bool {
+            self.passphrase_returned
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn backup_recovery_claimed(self) -> bool {
+            self.backup_recovery_claimed
+        }
+
+        pub fn rollback_protection_claimed(self) -> bool {
+            self.rollback_protection_claimed
+        }
+
+        pub fn secure_media_deletion_claimed(self) -> bool {
+            self.secure_media_deletion_claimed
+        }
+
+        pub fn generic_error(self) -> bool {
+            self.generic_error
+        }
+
+        pub fn next_action(self) -> &'static str {
+            self.next_action
+        }
+    }
+
+    pub fn profile_store_unlock_recovery_decision(
+        kind: ProfileStoreUnlockFailureKind,
+    ) -> ProfileStoreUnlockRecoveryDecision {
+        let (
+            retry_with_passphrase_allowed,
+            create_new_profile_allowed,
+            migration_required,
+            next_action,
+        ) = match kind {
+            ProfileStoreUnlockFailureKind::WrongPassphrase => {
+                (true, false, false, "retry-passphrase")
+            }
+            ProfileStoreUnlockFailureKind::MissingStore => {
+                (false, true, false, "create-new-local-profile")
+            }
+            ProfileStoreUnlockFailureKind::CorruptStore => {
+                (false, true, false, "inspect-local-store-or-create-new-profile")
+            }
+            ProfileStoreUnlockFailureKind::MigrationNeeded => {
+                (false, false, true, "run-supported-local-store-migration")
+            }
+            ProfileStoreUnlockFailureKind::UnsupportedUnlockFactor => {
+                (true, false, false, "unlock-with-profile-passphrase")
+            }
+        };
+
+        ProfileStoreUnlockRecoveryDecision {
+            kind,
+            retry_with_passphrase_allowed,
+            create_new_profile_allowed,
+            migration_required,
+            passphrase_required: true,
+            os_keychain_only_supported: false,
+            raw_path_returned: false,
+            passphrase_returned: false,
+            key_material_exposed: false,
+            backup_recovery_claimed: false,
+            rollback_protection_claimed: false,
+            secure_media_deletion_claimed: false,
+            generic_error: false,
+            next_action,
+        }
+    }
+
+    pub fn classify_profile_store_unlock_error(
+        error: &ProductionStorageError,
+        store_exists: bool,
+        migration_needed: bool,
+        corrupt_store_detected: bool,
+    ) -> ProfileStoreUnlockFailureKind {
+        if migration_needed {
+            return ProfileStoreUnlockFailureKind::MigrationNeeded;
+        }
+        if corrupt_store_detected {
+            return ProfileStoreUnlockFailureKind::CorruptStore;
+        }
+        if !store_exists {
+            return ProfileStoreUnlockFailureKind::MissingStore;
+        }
+        match error {
+            ProductionStorageError::UnlockFailed => ProfileStoreUnlockFailureKind::WrongPassphrase,
+            ProductionStorageError::InvalidRecord => ProfileStoreUnlockFailureKind::MigrationNeeded,
+            ProductionStorageError::Database(_) => ProfileStoreUnlockFailureKind::CorruptStore,
+            ProductionStorageError::Policy(ProductionStoragePolicyError::InvalidPassphrase)
+            | ProductionStorageError::Policy(ProductionStoragePolicyError::UnlockPolicyViolation) => {
+                ProfileStoreUnlockFailureKind::UnsupportedUnlockFactor
+            }
+            ProductionStorageError::Policy(_) => ProfileStoreUnlockFailureKind::CorruptStore,
+        }
+    }
+
     impl From<ProductionStoragePolicyError> for ProductionStorageError {
         fn from(value: ProductionStoragePolicyError) -> Self {
             Self::Policy(value)
@@ -1109,6 +1265,123 @@ pub mod production {
             assert_eq!(
                 request.require_allowed(),
                 Err(ProductionStoragePolicyError::UnlockPolicyViolation)
+            );
+        }
+
+        #[test]
+        fn profile_store_unlock_recovery_decision_separates_local_failures_without_secrets() {
+            let cases = [
+                (
+                    ProfileStoreUnlockFailureKind::WrongPassphrase,
+                    true,
+                    false,
+                    false,
+                    "retry-passphrase",
+                ),
+                (
+                    ProfileStoreUnlockFailureKind::MissingStore,
+                    false,
+                    true,
+                    false,
+                    "create-new-local-profile",
+                ),
+                (
+                    ProfileStoreUnlockFailureKind::CorruptStore,
+                    false,
+                    true,
+                    false,
+                    "inspect-local-store-or-create-new-profile",
+                ),
+                (
+                    ProfileStoreUnlockFailureKind::MigrationNeeded,
+                    false,
+                    false,
+                    true,
+                    "run-supported-local-store-migration",
+                ),
+                (
+                    ProfileStoreUnlockFailureKind::UnsupportedUnlockFactor,
+                    true,
+                    false,
+                    false,
+                    "unlock-with-profile-passphrase",
+                ),
+            ];
+
+            for (
+                kind,
+                retry_with_passphrase_allowed,
+                create_new_profile_allowed,
+                migration_required,
+                next_action,
+            ) in cases
+            {
+                let decision = profile_store_unlock_recovery_decision(kind);
+                assert_eq!(decision.kind(), kind);
+                assert_eq!(
+                    decision.retry_with_passphrase_allowed(),
+                    retry_with_passphrase_allowed
+                );
+                assert_eq!(decision.create_new_profile_allowed(), create_new_profile_allowed);
+                assert_eq!(decision.migration_required(), migration_required);
+                assert_eq!(decision.next_action(), next_action);
+                assert!(decision.passphrase_required());
+                assert!(!decision.os_keychain_only_supported());
+                assert!(!decision.raw_path_returned());
+                assert!(!decision.passphrase_returned());
+                assert!(!decision.key_material_exposed());
+                assert!(!decision.backup_recovery_claimed());
+                assert!(!decision.rollback_protection_claimed());
+                assert!(!decision.secure_media_deletion_claimed());
+                assert!(!decision.generic_error());
+            }
+
+            assert_eq!(
+                classify_profile_store_unlock_error(
+                    &ProductionStorageError::UnlockFailed,
+                    true,
+                    false,
+                    false
+                ),
+                ProfileStoreUnlockFailureKind::WrongPassphrase
+            );
+            assert_eq!(
+                classify_profile_store_unlock_error(
+                    &ProductionStorageError::UnlockFailed,
+                    false,
+                    false,
+                    false
+                ),
+                ProfileStoreUnlockFailureKind::MissingStore
+            );
+            assert_eq!(
+                classify_profile_store_unlock_error(
+                    &ProductionStorageError::Database("database malformed".to_string()),
+                    true,
+                    false,
+                    true
+                ),
+                ProfileStoreUnlockFailureKind::CorruptStore
+            );
+            assert_eq!(
+                classify_profile_store_unlock_error(
+                    &ProductionStorageError::InvalidRecord,
+                    true,
+                    true,
+                    false
+                ),
+                ProfileStoreUnlockFailureKind::MigrationNeeded
+            );
+            assert_eq!(
+                classify_profile_store_unlock_error(
+                    &ProductionStorageError::Policy(
+                        ProductionStoragePolicyError::UnlockPolicyViolation
+                    ),
+                    true,
+                    false,
+                    false
+                ),
+                ProfileStoreUnlockFailureKind::UnsupportedUnlockFactor
             );
         }
 

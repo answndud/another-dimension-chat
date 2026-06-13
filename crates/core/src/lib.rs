@@ -25,8 +25,8 @@ pub mod production {
         require_encrypted_record_allowed, require_persistence_allowed, EncryptedRecord,
         EncryptedRecordId, EncryptedRecordScope, LockedProfileStore, ProductionRecordKind,
         ProductionStorageError, ProductionStoragePolicyError, ProfilePassphrase,
-        ReplayRollbackProtection, SqlCipherRecordStore, StorageBackendKind, StorageProtection,
-        UnlockFactor, UnlockMode, UnlockRequest,
+        ProfileStoreUnlockFailureKind, ReplayRollbackProtection, SqlCipherRecordStore,
+        StorageBackendKind, StorageProtection, UnlockFactor, UnlockMode, UnlockRequest,
     };
     use another_dimension_transport::{
         BoundOutboundStreamSession, EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
@@ -11615,6 +11615,110 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionProfileUnlockRecoveryKind {
+        WrongPassphrase,
+        MissingStore,
+        CorruptStore,
+        MigrationNeeded,
+        UnsupportedUnlockFactor,
+    }
+
+    impl From<ProfileStoreUnlockFailureKind> for ProductionProfileUnlockRecoveryKind {
+        fn from(value: ProfileStoreUnlockFailureKind) -> Self {
+            match value {
+                ProfileStoreUnlockFailureKind::WrongPassphrase => Self::WrongPassphrase,
+                ProfileStoreUnlockFailureKind::MissingStore => Self::MissingStore,
+                ProfileStoreUnlockFailureKind::CorruptStore => Self::CorruptStore,
+                ProfileStoreUnlockFailureKind::MigrationNeeded => Self::MigrationNeeded,
+                ProfileStoreUnlockFailureKind::UnsupportedUnlockFactor => {
+                    Self::UnsupportedUnlockFactor
+                }
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionProfileUnlockRecoveryDecision {
+        kind: ProductionProfileUnlockRecoveryKind,
+        retry_with_passphrase_allowed: bool,
+        create_new_profile_allowed: bool,
+        migration_required: bool,
+        passphrase_required: bool,
+        os_keychain_only_supported: bool,
+        raw_store_path_returned: bool,
+        passphrase_returned: bool,
+        key_material_exposed: bool,
+        backup_recovery_claimed: bool,
+        rollback_protection_claimed: bool,
+        secure_media_deletion_claimed: bool,
+        generic_error: bool,
+        not_protected_device_compromise: bool,
+        next_action: &'static str,
+    }
+
+    impl ProductionProfileUnlockRecoveryDecision {
+        pub fn kind(self) -> ProductionProfileUnlockRecoveryKind {
+            self.kind
+        }
+
+        pub fn retry_with_passphrase_allowed(self) -> bool {
+            self.retry_with_passphrase_allowed
+        }
+
+        pub fn create_new_profile_allowed(self) -> bool {
+            self.create_new_profile_allowed
+        }
+
+        pub fn migration_required(self) -> bool {
+            self.migration_required
+        }
+
+        pub fn passphrase_required(self) -> bool {
+            self.passphrase_required
+        }
+
+        pub fn os_keychain_only_supported(self) -> bool {
+            self.os_keychain_only_supported
+        }
+
+        pub fn raw_store_path_returned(self) -> bool {
+            self.raw_store_path_returned
+        }
+
+        pub fn passphrase_returned(self) -> bool {
+            self.passphrase_returned
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn backup_recovery_claimed(self) -> bool {
+            self.backup_recovery_claimed
+        }
+
+        pub fn rollback_protection_claimed(self) -> bool {
+            self.rollback_protection_claimed
+        }
+
+        pub fn secure_media_deletion_claimed(self) -> bool {
+            self.secure_media_deletion_claimed
+        }
+
+        pub fn generic_error(self) -> bool {
+            self.generic_error
+        }
+
+        pub fn not_protected_device_compromise(self) -> bool {
+            self.not_protected_device_compromise
+        }
+
+        pub fn next_action(self) -> &'static str {
+            self.next_action
+        }
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct LocalMessageIndexEntry {
         contact_id: ContactId,
@@ -20659,6 +20763,51 @@ pub mod production {
         }
     }
 
+    pub fn production_profile_unlock_recovery_decision(
+        kind: ProductionProfileUnlockRecoveryKind,
+    ) -> ProductionProfileUnlockRecoveryDecision {
+        let (
+            retry_with_passphrase_allowed,
+            create_new_profile_allowed,
+            migration_required,
+            next_action,
+        ) = match kind {
+            ProductionProfileUnlockRecoveryKind::WrongPassphrase => {
+                (true, false, false, "retry-passphrase")
+            }
+            ProductionProfileUnlockRecoveryKind::MissingStore => {
+                (false, true, false, "create-new-local-profile")
+            }
+            ProductionProfileUnlockRecoveryKind::CorruptStore => {
+                (false, true, false, "inspect-local-store-or-create-new-profile")
+            }
+            ProductionProfileUnlockRecoveryKind::MigrationNeeded => {
+                (false, false, true, "run-supported-local-store-migration")
+            }
+            ProductionProfileUnlockRecoveryKind::UnsupportedUnlockFactor => {
+                (true, false, false, "unlock-with-profile-passphrase")
+            }
+        };
+
+        ProductionProfileUnlockRecoveryDecision {
+            kind,
+            retry_with_passphrase_allowed,
+            create_new_profile_allowed,
+            migration_required,
+            passphrase_required: true,
+            os_keychain_only_supported: false,
+            raw_store_path_returned: false,
+            passphrase_returned: false,
+            key_material_exposed: false,
+            backup_recovery_claimed: false,
+            rollback_protection_claimed: false,
+            secure_media_deletion_claimed: false,
+            generic_error: false,
+            not_protected_device_compromise: true,
+            next_action,
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -21823,7 +21972,9 @@ pub mod production {
             production_pairing_payload_for, ProductionPairingPayloadParams, DEFAULT_TTL_SECONDS,
         };
         use another_dimension_protocol::trim_padding;
-        use another_dimension_storage::production::{LockedProfileStore, ProfilePassphrase};
+        use another_dimension_storage::production::{
+            LockedProfileStore, ProfilePassphrase, ProfileStoreUnlockFailureKind,
+        };
         use another_dimension_transport::{
             EndpointUpdateChannel, OnionServiceEndpoint, PairwiseRendezvousEndpoint,
             RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
@@ -21956,6 +22107,82 @@ pub mod production {
             );
             assert!(explicit_suspicion.rollback_suspicion_detected());
             assert!(explicit_suspicion.rollback_resume_blocked());
+        }
+
+        #[test]
+        fn production_profile_unlock_recovery_decision_keeps_high_risk_local_claims_explicit() {
+            let cases = [
+                (
+                    ProfileStoreUnlockFailureKind::WrongPassphrase,
+                    ProductionProfileUnlockRecoveryKind::WrongPassphrase,
+                    true,
+                    false,
+                    false,
+                    "retry-passphrase",
+                ),
+                (
+                    ProfileStoreUnlockFailureKind::MissingStore,
+                    ProductionProfileUnlockRecoveryKind::MissingStore,
+                    false,
+                    true,
+                    false,
+                    "create-new-local-profile",
+                ),
+                (
+                    ProfileStoreUnlockFailureKind::CorruptStore,
+                    ProductionProfileUnlockRecoveryKind::CorruptStore,
+                    false,
+                    true,
+                    false,
+                    "inspect-local-store-or-create-new-profile",
+                ),
+                (
+                    ProfileStoreUnlockFailureKind::MigrationNeeded,
+                    ProductionProfileUnlockRecoveryKind::MigrationNeeded,
+                    false,
+                    false,
+                    true,
+                    "run-supported-local-store-migration",
+                ),
+                (
+                    ProfileStoreUnlockFailureKind::UnsupportedUnlockFactor,
+                    ProductionProfileUnlockRecoveryKind::UnsupportedUnlockFactor,
+                    true,
+                    false,
+                    false,
+                    "unlock-with-profile-passphrase",
+                ),
+            ];
+
+            for (
+                storage_kind,
+                expected_kind,
+                retry_with_passphrase_allowed,
+                create_new_profile_allowed,
+                migration_required,
+                next_action,
+            ) in cases
+            {
+                let decision = production_profile_unlock_recovery_decision(storage_kind.into());
+                assert_eq!(decision.kind(), expected_kind);
+                assert_eq!(
+                    decision.retry_with_passphrase_allowed(),
+                    retry_with_passphrase_allowed
+                );
+                assert_eq!(decision.create_new_profile_allowed(), create_new_profile_allowed);
+                assert_eq!(decision.migration_required(), migration_required);
+                assert_eq!(decision.next_action(), next_action);
+                assert!(decision.passphrase_required());
+                assert!(!decision.os_keychain_only_supported());
+                assert!(!decision.raw_store_path_returned());
+                assert!(!decision.passphrase_returned());
+                assert!(!decision.key_material_exposed());
+                assert!(!decision.backup_recovery_claimed());
+                assert!(!decision.rollback_protection_claimed());
+                assert!(!decision.secure_media_deletion_claimed());
+                assert!(!decision.generic_error());
+                assert!(decision.not_protected_device_compromise());
+            }
         }
 
         #[test]

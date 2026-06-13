@@ -1239,7 +1239,9 @@ test("product unlock lockout shows local-only recovery actions", () => {
   assert.match(recoveryBody, /rollback_suspicion_detected/);
   assert.match(recoveryBody, /rollback_resume_blocked/);
   assert.match(recoveryBody, /local_recovery=check-data-lifecycle/);
-  assert.match(recoveryBody, /local_recovery=retry-passphrase-or-new-local-profile/);
+  assert.match(recoveryBody, /productionProfileUnlockRecoveryView\(result\)/);
+  assert.match(recoveryBody, /local_recovery=\$\{profileRecovery\.kind\}/);
+  assert.match(recoveryBody, /profileRecovery\.boundary/);
 
   const renderBody = functionBody(mainJs, "renderProductionProductUnlockRecovery");
   assert.match(renderBody, /fields\.productionProfileNextAction/);

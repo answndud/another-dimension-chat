@@ -13,6 +13,7 @@ import {
   productionPairwiseInviteImportFailureView,
   productionPairwiseInviteGuidanceView,
   productionPairwiseSafetyVerificationFlowView,
+  productionProfileUnlockRecoveryView,
   productionInviteRoomConversationMetadata,
   productionManualCurrentFocusTarget,
   productionManualCurrentStepView,
@@ -224,6 +225,34 @@ test("pairwise safety verification flow routes mismatch and revoked to re-pair",
   assert.equal(revoked.state, "revoked_re_pair_required");
   assert.equal(revoked.rePairRequired, true);
   assert.match(revoked.boundary, /generic_error=false/);
+});
+
+test("profile unlock recovery view splits passphrase store and migration failures", () => {
+  const wrong = productionProfileUnlockRecoveryView({ redacted_reason: "wrong-passphrase" });
+  const missing = productionProfileUnlockRecoveryView({ kind: "missing_store" });
+  const corrupt = productionProfileUnlockRecoveryView({ error: "corrupt local store" });
+  const migration = productionProfileUnlockRecoveryView({ failure_kind: "migration_needed" });
+  const unsupported = productionProfileUnlockRecoveryView({ error: "os-keystore-only rejected" });
+
+  assert.equal(wrong.kind, "wrong_passphrase");
+  assert.equal(wrong.retryWithPassphraseAllowed, true);
+  assert.equal(missing.kind, "missing_store");
+  assert.equal(missing.createNewProfileAllowed, true);
+  assert.equal(corrupt.kind, "corrupt_store");
+  assert.equal(corrupt.createNewProfileAllowed, true);
+  assert.equal(migration.kind, "migration_needed");
+  assert.equal(migration.migrationRequired, true);
+  assert.equal(unsupported.kind, "unsupported_unlock_factor");
+  assert.match(unsupported.boundary, /os_keychain_only_supported=false/);
+  for (const view of [wrong, missing, corrupt, migration, unsupported]) {
+    assert.match(view.boundary, /generic_error=false/);
+    assert.match(view.boundary, /raw_path_returned=false/);
+    assert.match(view.boundary, /passphrase_returned=false/);
+    assert.match(view.boundary, /key_material=false/);
+    assert.match(view.boundary, /secure_media_deletion_claim=false/);
+    assert.match(view.boundary, /not_protected_device_compromise=true/);
+    assert.doesNotMatch(view.warning, /\/tmp|profiles\/|correct horse|private key/i);
+  }
 });
 
 test("chat action moves from setup to compose to stored send", () => {

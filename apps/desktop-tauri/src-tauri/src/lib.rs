@@ -2899,7 +2899,7 @@ fn production_product_unlock(
             now_unix_ms(),
         ))),
         Err(_) => Ok(prepared_gate.apply_to_unlock_status(product_unlock_locked_status(
-            "wrong-passphrase-or-store-unavailable",
+            "wrong-passphrase",
             now_unix_ms(),
         ))),
     }
