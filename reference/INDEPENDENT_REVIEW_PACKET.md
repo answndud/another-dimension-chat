@@ -124,6 +124,9 @@ Review the unsigned experimental public beta boundary:
 - `reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md`: current
   PLAN active queue source/hold gate map, with all stable, production, audit,
   reliability, platform-artifact, and sensitive-use claims kept false.
+- `reference/DEPLOYMENT_READINESS_GAP_REGISTER.md`: reconciled deployment
+  gap register separating source-solved supported scopes from remaining
+  external blockers.
 - `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`: 1:1 protocol/session
   state machine, replay/retry/cancel/delete semantics, and unresolved
   production E2EE review questions.
