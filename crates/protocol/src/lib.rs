@@ -396,4 +396,29 @@ mod tests {
             Err(ProtocolError::InvalidMessageNumber)
         );
     }
+
+    #[test]
+    fn malicious_envelope_and_replay_corpus_fails_closed() {
+        for sample in [
+            "",
+            "ADENV2|1|chan|1|data|00",
+            "ADENV1|x|chan|1|data|00",
+            "ADENV1|1||1|data|00",
+            "ADENV1|1|chan|0|control|00",
+            "ADENV1|1|chan|1|control|0g",
+            "ADENV1|1|chan|1|data|00|extra",
+        ] {
+            assert!(Envelope::decode(sample).is_err());
+        }
+
+        let mut window = ReplayWindow::new(4).expect("window");
+        assert_eq!(window.accept(5), Ok(()));
+        for replay in [5, 5, 5, 5] {
+            assert_eq!(window.accept(replay), Err(ProtocolError::ReplayMessage));
+        }
+        assert_eq!(
+            ReplayWindow::decode_state("ADREPLAY1|4|3|4"),
+            Err(ProtocolError::InvalidMessageNumber)
+        );
+    }
 }

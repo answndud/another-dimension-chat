@@ -434,6 +434,97 @@ fn endpoint_rotation_state_rejects_rollback_stale_and_contact_mismatch() {
 }
 
 #[test]
+fn endpoint_update_negative_corpus_rejects_swaps_stale_and_plaintext_controls() {
+    let bob_current = PairwiseRendezvousEndpoint::new(
+        ContactId::new("bob").expect("contact"),
+        OnionServiceEndpoint::new("bobold.onion").expect("endpoint"),
+        RendezvousEndpointScope::PairwiseContact,
+        RendezvousEndpointIdentityBinding::TransportScoped,
+    )
+    .expect("bob endpoint");
+    let bob_update = PairwiseEndpointUpdate::for_existing_encrypted_session(
+        &bob_current,
+        OnionServiceEndpoint::new("bobnew.onion").expect("endpoint"),
+        EndpointUpdateChannel::ExistingEncryptedSession,
+    )
+    .expect("bob update");
+    let carol_current = PairwiseRendezvousEndpoint::new(
+        ContactId::new("carol").expect("contact"),
+        OnionServiceEndpoint::new("carolold.onion").expect("endpoint"),
+        RendezvousEndpointScope::PairwiseContact,
+        RendezvousEndpointIdentityBinding::TransportScoped,
+    )
+    .expect("carol endpoint");
+    let carol_update = PairwiseEndpointUpdate::for_existing_encrypted_session(
+        &carol_current,
+        OnionServiceEndpoint::new("carolnew.onion").expect("endpoint"),
+        EndpointUpdateChannel::ExistingEncryptedSession,
+    )
+    .expect("carol update");
+    let mut state = PairwiseEndpointRotationState::new(bob_current);
+
+    assert_eq!(
+        PairwiseEndpointUpdate::for_existing_encrypted_session(
+            state.current(),
+            OnionServiceEndpoint::new("plaintext.onion").expect("endpoint"),
+            EndpointUpdateChannel::PlaintextControl,
+        ),
+        Err(EndpointLifecycleError::ExistingEncryptedSessionRequired)
+    );
+    assert_eq!(
+        state.stage_verified_update(
+            carol_update,
+            EndpointRotationSequence::new(1).expect("sequence"),
+            EndpointRotationApplyContext::ExistingEncryptedSessionVerified,
+        ),
+        Err(EndpointLifecycleError::EndpointContactMismatch)
+    );
+    state
+        .stage_verified_update(
+            bob_update.clone(),
+            EndpointRotationSequence::new(2).expect("sequence"),
+            EndpointRotationApplyContext::ExistingEncryptedSessionVerified,
+        )
+        .expect("stage bob update");
+    assert_eq!(
+        state.stage_verified_update(
+            bob_update.clone(),
+            EndpointRotationSequence::new(1).expect("sequence"),
+            EndpointRotationApplyContext::ExistingEncryptedSessionVerified,
+        ),
+        Err(EndpointLifecycleError::EndpointRotationStale)
+    );
+    assert_eq!(
+        EncryptedEndpointUpdateControlEnvelope::from_control_envelope(
+            &bob_update,
+            Envelope {
+                protocol_version: 1,
+                channel_id: "adchan1:endpoint-update".to_string(),
+                message_number: 3,
+                message_type: MessageType::Data,
+                padded_ciphertext: vec![7; 256],
+            },
+        ),
+        Err(EndpointLifecycleError::InvalidControlEnvelope)
+    );
+    for control in [
+        b"ADENDPOINTUPDATE1|not-onion.example".as_slice(),
+        b"ADENDPOINTUPDATE1|bad endpoint.onion".as_slice(),
+        b"OTHER|bobnew.onion".as_slice(),
+    ] {
+        assert_eq!(
+            EndpointUpdateControlPlaintext::decode(control),
+            Err(EndpointLifecycleError::InvalidControlEnvelope)
+        );
+    }
+
+    let rendered = format!("{state:?}");
+    assert!(!rendered.contains("bobold.onion"));
+    assert!(!rendered.contains("bobnew.onion"));
+    assert!(!rendered.contains("carolnew.onion"));
+}
+
+#[test]
 fn endpoint_rotation_reconnect_is_fail_closed_and_redacted() {
     let current = PairwiseRendezvousEndpoint::new(
         ContactId::new("bob").expect("contact"),

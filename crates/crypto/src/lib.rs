@@ -36,6 +36,53 @@ pub enum CryptoError {
     Noise(String),
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CryptoErrorRedactionBoundary {
+    raw_error_exposed: bool,
+    endpoint_exposed: bool,
+    key_material_exposed: bool,
+    passphrase_exposed: bool,
+    local_path_exposed: bool,
+    safe_recovery_action: &'static str,
+}
+
+impl CryptoErrorRedactionBoundary {
+    pub fn raw_error_exposed(self) -> bool {
+        self.raw_error_exposed
+    }
+
+    pub fn endpoint_exposed(self) -> bool {
+        self.endpoint_exposed
+    }
+
+    pub fn key_material_exposed(self) -> bool {
+        self.key_material_exposed
+    }
+
+    pub fn passphrase_exposed(self) -> bool {
+        self.passphrase_exposed
+    }
+
+    pub fn local_path_exposed(self) -> bool {
+        self.local_path_exposed
+    }
+
+    pub fn safe_recovery_action(self) -> &'static str {
+        self.safe_recovery_action
+    }
+}
+
+pub fn crypto_error_redaction_boundary(_error: &CryptoError) -> CryptoErrorRedactionBoundary {
+    CryptoErrorRedactionBoundary {
+        raw_error_exposed: false,
+        endpoint_exposed: false,
+        key_material_exposed: false,
+        passphrase_exposed: false,
+        local_path_exposed: false,
+        safe_recovery_action: "discard-input-and-retry-fresh-handshake",
+    }
+}
+
 impl From<ProtocolError> for CryptoError {
     fn from(value: ProtocolError) -> Self {
         Self::Protocol(value)
@@ -441,7 +488,11 @@ pub mod production {
         hasher.update(domain.as_str().as_bytes());
         hasher.update([0]);
         hasher.update(bytes);
-        format!("{}:{}", domain.as_str(), encode_hex(&hasher.finalize()[0..8]))
+        format!(
+            "{}:{}",
+            domain.as_str(),
+            encode_hex(&hasher.finalize()[0..8])
+        )
     }
 
     #[derive(Clone, Eq, PartialEq)]
@@ -1485,6 +1536,24 @@ mod tests {
             assert!(rendered.contains("<redacted>"));
             assert!(!rendered.contains(passphrase));
         }
+    }
+
+    #[test]
+    fn malicious_crypto_error_boundary_redacts_raw_details() {
+        let raw = CryptoError::Noise(
+            "noise failed with passphrase private-key /tmp/alice alice.onion".to_string(),
+        );
+        let boundary = crypto_error_redaction_boundary(&raw);
+
+        assert!(!boundary.raw_error_exposed());
+        assert!(!boundary.endpoint_exposed());
+        assert!(!boundary.key_material_exposed());
+        assert!(!boundary.passphrase_exposed());
+        assert!(!boundary.local_path_exposed());
+        assert_eq!(
+            boundary.safe_recovery_action(),
+            "discard-input-and-retry-fresh-handshake"
+        );
     }
 }
 
