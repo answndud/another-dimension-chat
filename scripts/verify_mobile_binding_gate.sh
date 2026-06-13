@@ -62,6 +62,7 @@ require_text "$CONTRACT" '"callable_ffi_authorization_hold_active": true'
 require_text "$CONTRACT" '"source_boundary_cleanup_verified": true'
 require_text "$CONTRACT" '"authorization_hold_regression_matrix_verified": true'
 require_text "$CONTRACT" '"owner_authorization_transition_runbook_verified": true'
+require_text "$CONTRACT" '"pre_implementation_handoff_packet_verified": true'
 require_text "$CONTRACT" '"owner_authorization_for_callable_ffi": false'
 require_text "$CONTRACT" '"callable_ffi_may_start": false'
 require_text "$CONTRACT" '"generated_binding_may_start": false'
@@ -161,6 +162,7 @@ require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Callable FFI Authorization H
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Source Boundary Cleanup Summary"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Authorization Hold Regression Matrix"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Owner Authorization Transition Runbook"
+require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Pre-Implementation Handoff Packet"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "status_and_redacted_diagnostics_read_only_adapter"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "shared_core_mobile_api_contract.json"
 require_text "$ROOT_DIR/crates/core/src/lib.rs" "production_mobile_shared_core_api_freeze_boundary_summary"

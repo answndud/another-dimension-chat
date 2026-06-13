@@ -143,6 +143,35 @@ returns to blocked state, no generated artifacts after rollback, no release
 packaging after rollback, and no mobile readiness or security-ready claim after
 rollback.
 
+## Pre-Implementation Handoff Packet
+
+`pre_implementation_handoff_packet.json` is the handoff packet for any future
+mobile implementer before owner authorization is granted. The current state is
+authorization false implementation blocked.
+
+The packet references:
+
+- binding prerequisite closure
+- callable FFI authorization hold
+- source boundary cleanup
+- authorization hold regression matrix
+- owner authorization transition runbook
+- `scripts/verify_mobile_source_handoff.sh`
+
+Required packet outputs include
+`status=mobile-binding-prerequisite-closure-verified`,
+`status=mobile-callable-ffi-authorization-hold-verified`,
+`status=mobile-source-boundary-cleanup-verified`,
+`status=mobile-authorization-hold-regression-matrix-verified`,
+`status=mobile-owner-authorization-transition-verified`, and
+`status=mobile-source-handoff-verified`.
+
+Handoff instructions: do not create generated bindings, do not create callable
+FFI, do not create native runtime messaging, do not create native network
+delivery, do not create release packaging, do not claim mobile readiness, do not
+claim security ready, and run `scripts/verify_mobile_source_handoff.sh` before
+any transition.
+
 ## Read-Only Native Status Adapter Boundary
 
 Android and iOS now carry a source-only read-only adapter path for the first
@@ -190,7 +219,8 @@ redacted diagnostics copy, local lifecycle confirmation, no-network launch
 boundary, Android shell boundary, iOS shell boundary, binding gate, and mobile
 skeleton boundary. It also includes the callable FFI authorization hold, source
 boundary cleanup, authorization hold regression matrix, and owner authorization
-transition runbook verifiers.
+transition runbook verifiers. It also includes the pre-implementation handoff
+packet verifier.
 
 This handoff verifier is not a release build, not generated binding validation,
 not APK/AAB/IPA packaging, not store distribution, not runtime messaging
