@@ -255,6 +255,38 @@ returned, panic string returned, and raw log returned.
 Android/Kotlin and iOS/Swift wrappers must receive structured results only and
 must not hold raw native pointers.
 
+## Redacted Diagnostics Payload Review Boundary
+
+The mobile diagnostics payload review is source-level only. It defines the
+allowed redacted diagnostics payload for future FFI/Kotlin/Swift parity, but it
+does not create callable FFI, generated bindings, native runtime messaging,
+native network delivery, crash upload, background diagnostics upload, telemetry
+upload, share-sheet private data prefill, or release packaging.
+
+The review file is `diagnostics_payload_review.json`.
+
+Allowed diagnostics fields are `status`, `build`, `failure_class`,
+`recovery_next_action`, `app_launch_network_boundary`,
+`diagnostics_redaction_state`, `schema_version`, `platform`, and
+`public_non_claims`.
+
+Allowed diagnostics channels are `in_app_redacted_text_view`,
+`explicit_user_initiated_copy`, and
+`minimal_private_security_contact_request`.
+
+Required boundaries are
+`diagnostics_copy_boundary=user_initiated_local_clipboard_only`,
+`diagnostics_payload=redacted_status_support_only`,
+`private_payload_prefill=false`, `native_network_upload=false`,
+`crash_upload=false`, and `background_diagnostics_upload=false`.
+
+Forbidden diagnostics payload fields include bridge lines, onion endpoints,
+invite codes, pairing payloads, envelope payloads, safety phrases, profile
+names, message text, local paths, raw logs, crash dumps, screenshots with
+private room data, passphrases, private keys, key material, support bundles,
+Android logcat, iOS sysdiagnose, telemetry uploads, and share-sheet private
+data prefill.
+
 Allowed API groups mirror the shared core wrapper boundary:
 
 - `shared_core_status_surface`

@@ -247,5 +247,16 @@
     "use_after_release_must_be_rejected",
     "zero_length_buffer_is_valid",
     "null_pointer_is_invalid"
+  ],
+  "redacted_diagnostics_payload_reviewed": true,
+  "diagnostics_payload_review_file": "apps/mobile/ffi/diagnostics_payload_review.json",
+  "diagnostics_payload_review_boundary": [
+    "status_build_failure_recovery_public_non_claims_only",
+    "diagnostics_copy_boundary=user_initiated_local_clipboard_only",
+    "diagnostics_payload=redacted_status_support_only",
+    "private_payload_prefill=false",
+    "native_network_upload=false",
+    "crash_upload=false",
+    "background_diagnostics_upload=false"
   ]
 }
