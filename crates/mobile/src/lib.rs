@@ -85,6 +85,11 @@ pub fn mobile_command_result_json(command: &str, explicit_user_action: bool) -> 
             "lifecycle_confirmation_required",
             "confirm lifecycle intent before local mutation",
         ),
+        ("profile_unlock_lock_status", true) => (
+            "blocked",
+            "locked_profile",
+            "enter passphrase",
+        ),
         (
             "invite_code_create_join"
             | "pairing_payload_export_import"
@@ -154,6 +159,11 @@ mod tests {
     fn command_result_json_keeps_non_status_surfaces_blocked() {
         let lifecycle = mobile_command_result_json("local_data_lifecycle", true);
         assert!(lifecycle.contains("\"failure_class\":\"lifecycle_confirmation_required\""));
+        let profile = mobile_command_result_json("profile_unlock_lock_status", true);
+        assert!(profile.contains("\"failure_class\":\"locked_profile\""));
+        assert!(profile.contains("\"recovery_next_action\":\"enter passphrase\""));
+        let invite = mobile_command_result_json("invite_code_create_join", true);
+        assert!(invite.contains("\"failure_class\":\"transport_unavailable\""));
         let missing_action = mobile_command_result_json("manual_envelope_export_import", false);
         assert!(missing_action.contains("\"failure_class\":\"policy_blocked\""));
         let unknown = mobile_command_result_json("unknown", true);

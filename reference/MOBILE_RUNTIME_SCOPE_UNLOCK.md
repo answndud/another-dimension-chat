@@ -15,7 +15,10 @@ The shared Rust bridge lives in `crates/mobile` and calls `another-dimension-cor
 production boundary summaries. Android and iOS source adapters call an injected
 JSON bridge and decode the same DTO/result vocabulary. Wrappers still own only
 UI, local permission presentation, redacted status display, and explicit user
-action tokens.
+action tokens. The JSON bridge also binds blocked command results to the shared
+error taxonomy; for example `profile_unlock_lock_status` returns
+`locked_profile` with `enter passphrase` while still withholding native unlock
+or messaging capability.
 
 ## Current Gate Flags
 
@@ -27,6 +30,8 @@ action tokens.
 - android_json_bridge_adapter_ready=true
 - ios_json_bridge_adapter_ready=true
 - mobile_forbidden_dependency_scan_ready=true
+- mobile_error_taxonomy_bound_to_json_bridge=true
+- profile_unlock_status_failure_class=locked_profile
 - callable_json_bridge_implemented=true
 - callable_ffi_implemented=false
 - generated_bindings_claimed=false

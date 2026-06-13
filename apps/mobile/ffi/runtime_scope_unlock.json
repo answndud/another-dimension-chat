@@ -16,6 +16,8 @@
   ],
   "android_adapter_file": "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/JsonBridgeSharedCoreAdapter.kt",
   "ios_adapter_file": "apps/mobile/ios/AnotherDimension/JsonBridgeSharedCoreAdapter.swift",
+  "mobile_error_taxonomy_bound_to_json_bridge": true,
+  "profile_unlock_status_failure_class": "locked_profile",
   "callable_json_bridge_implemented": true,
   "callable_ffi_implemented": false,
   "generated_bindings_claimed": false,
