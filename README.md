@@ -24,6 +24,9 @@ communication prohibited. Do not use it for real communication.
    `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`
 4. Open the DMG. If macOS blocks the unsigned app, use System Settings >
    Privacy & Security to allow it only after the checksum matches.
+   For troubleshooting, use `INSTALL_UNSIGNED_MACOS.md` attached to the same
+   GitHub Release; this repository keeps the source copy at
+   `reference/UNSIGNED_PUBLIC_BETA_INSTALL.md`.
 5. First run: use the app to test local profile unlock, invite room setup,
    manual encrypted envelope export/import, reply/retry/cancel, local deletion,
    and redacted diagnostics copy. This beta does not prove external onion
