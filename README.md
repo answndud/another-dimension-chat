@@ -218,6 +218,15 @@ profile/session/message store, destructive local actions, backup/migration
 boundary, marker-only rollback detection, and why production key-management
 readiness remains false.
 
+Supported key/rollback/deletion claim closure is tracked in
+[reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md](reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md).
+It allows only the local desktop scope: passphrase-first SQLCipher-backed local
+profile store access, OS-keystore-only rejection, marker-only rollback detection
+with user-visible reset/rebuild recovery, and explicit local logical delete /
+owned app-data wipe. `production_key_management_ready=false`, app key wrapping,
+rollback prevention, secure media deletion, backup recovery, security-ready, and
+sensitive-use claims remain false.
+
 Production default transport product path review input is tracked in
 [reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md](reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md).
 It records the local manual encrypted envelope exchange default, the separate
@@ -390,6 +399,8 @@ What exists today:
   OS keystore or Secure Enclave style wrapping is optional and not required,
   OS-keystore-only unlock is rejected, app key wrapping is not claimed, and
   rollback prevention is not claimed without an external monotonic-state design.
+  The supported local key lifecycle scope is passphrase-first SQLCipher-backed
+  local profile store access only.
 - A practical transport split for v0.1: the default path is local manual
   encrypted envelope exchange with no network I/O, no automatic background
   delivery claim, no central message server, no push-notification dependency,
@@ -465,7 +476,11 @@ What does not exist yet:
 - Audited production transport adapter implementation.
 - Audited bridge or censorship-circumvention support.
 - Actual onion service private key material.
-- Complete production key management. The desktop shell now has a passphrase-first product unlock/lock state, local durable session lifecycle records, local data lifecycle controls, and a v0.1 key/rollback boundary decision, but it does not claim app key wrapping, secure deletion from media, rollback prevention, audited E2EE readiness, or automatic/network runtime messaging readiness.
+- Complete production key management. The desktop shell now has a supported
+  local key/rollback/deletion scope recorded in
+  `reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md`, but it does not claim
+  app key wrapping, secure deletion from media, rollback prevention, audited
+  E2EE readiness, or automatic/network runtime messaging readiness.
 - OS keychain/DPAPI/Keystore wrapping.
 - Complete production encrypted local storage lifecycle with cloud backup/sync,
   backup recovery, rollback prevention, or secure deletion guarantees.

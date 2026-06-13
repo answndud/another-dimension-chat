@@ -419,6 +419,11 @@ When production unlock is added, prefer this sequence:
 4. Keep high-risk mode from auto-unlocking solely because the user is logged into the OS account. Initial unlock policy test is in place.
 5. Add key rotation through SQLCipher rekey only after backup, rollback, and recovery behavior are documented.
 
+RB-2 keeps that direction: public wording may describe SQLCipher passphrase
+handling for the local profile store, but must not claim a project-owned
+Argon2/scrypt KDF, app key wrapping, OS account recovery, keychain-only unlock,
+rollback prevention, backup recovery, or secure media deletion.
+
 Rationale:
 
 - SQLCipher documents `PRAGMA key` as supporting passphrase-based key derivation and states that passphrases are converted to database keys using PBKDF2.

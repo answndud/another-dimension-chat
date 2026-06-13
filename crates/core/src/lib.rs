@@ -363,6 +363,12 @@ pub mod production {
         "forward_only_schema_migration",
         "prototype_data_migration_non_claim",
     ];
+    const SUPPORTED_LOCAL_KEY_LIFECYCLE_SCOPE: &str =
+        "passphrase-first-sqlcipher-local-profile-store-only";
+    const SUPPORTED_ROLLBACK_DETECTION_SCOPE: &str =
+        "marker-only-detection-user-visible-reset-required";
+    const SUPPORTED_LOCAL_DELETION_SCOPE: &str =
+        "local-logical-delete-and-owned-app-data-wipe-only";
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionLocalDataLifecyclePolicySummary {
@@ -377,7 +383,10 @@ pub mod production {
         backup_exclusion_policy_decided: bool,
         backup_exclusion_verified: bool,
         logical_delete_available: bool,
+        supported_local_deletion_scope_ready: bool,
+        supported_local_deletion_scope: &'static str,
         secure_media_deletion_claimed: bool,
+        secure_deletion_claim_allowed: bool,
         forward_only_schema_migration: bool,
         prototype_data_migration_ready: bool,
         runtime_messaging_enabled: bool,
@@ -429,8 +438,20 @@ pub mod production {
             self.logical_delete_available
         }
 
+        pub fn supported_local_deletion_scope_ready(self) -> bool {
+            self.supported_local_deletion_scope_ready
+        }
+
+        pub fn supported_local_deletion_scope(self) -> &'static str {
+            self.supported_local_deletion_scope
+        }
+
         pub fn secure_media_deletion_claimed(self) -> bool {
             self.secure_media_deletion_claimed
+        }
+
+        pub fn secure_deletion_claim_allowed(self) -> bool {
+            self.secure_deletion_claim_allowed
         }
 
         pub fn forward_only_schema_migration(self) -> bool {
@@ -2563,13 +2584,18 @@ pub mod production {
         os_keystore_only_rejected: bool,
         app_key_wrapping_ready: bool,
         app_key_wrapping_non_claim_decided: bool,
+        supported_local_key_lifecycle_ready: bool,
+        supported_local_key_lifecycle_scope: &'static str,
         rollback_protection: ReplayRollbackProtection,
+        supported_rollback_detection_ready: bool,
+        supported_rollback_detection_scope: &'static str,
         rollback_prevention_claimed: bool,
         rollback_non_claim_decided: bool,
         external_monotonic_state_required_before_claim: bool,
         backup_exclusion_policy_decided: bool,
         backup_exclusion_verified: bool,
         secure_media_deletion_claimed: bool,
+        secure_deletion_claim_allowed: bool,
         boundary_closed: bool,
         production_key_management_ready: bool,
         security_ready_claimed: bool,
@@ -4064,8 +4090,24 @@ pub mod production {
             self.app_key_wrapping_non_claim_decided
         }
 
+        pub fn supported_local_key_lifecycle_ready(self) -> bool {
+            self.supported_local_key_lifecycle_ready
+        }
+
+        pub fn supported_local_key_lifecycle_scope(self) -> &'static str {
+            self.supported_local_key_lifecycle_scope
+        }
+
         pub fn rollback_protection(self) -> ReplayRollbackProtection {
             self.rollback_protection
+        }
+
+        pub fn supported_rollback_detection_ready(self) -> bool {
+            self.supported_rollback_detection_ready
+        }
+
+        pub fn supported_rollback_detection_scope(self) -> &'static str {
+            self.supported_rollback_detection_scope
         }
 
         pub fn rollback_prevention_claimed(self) -> bool {
@@ -4090,6 +4132,10 @@ pub mod production {
 
         pub fn secure_media_deletion_claimed(self) -> bool {
             self.secure_media_deletion_claimed
+        }
+
+        pub fn secure_deletion_claim_allowed(self) -> bool {
+            self.secure_deletion_claim_allowed
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -14818,7 +14864,10 @@ pub mod production {
             backup_exclusion_policy_decided: true,
             backup_exclusion_verified: false,
             logical_delete_available: true,
+            supported_local_deletion_scope_ready: true,
+            supported_local_deletion_scope: SUPPORTED_LOCAL_DELETION_SCOPE,
             secure_media_deletion_claimed: storage.secure_deletion_from_media(),
+            secure_deletion_claim_allowed: false,
             forward_only_schema_migration: true,
             prototype_data_migration_ready: false,
             runtime_messaging_enabled: false,
@@ -15359,6 +15408,14 @@ pub mod production {
             && external_monotonic_state_required_before_claim
             && backup_exclusion_policy_decided
             && !secure_media_deletion_claimed;
+        let supported_local_key_lifecycle_ready = boundary_closed
+            && passphrase_first_required
+            && os_keystore_only_rejected
+            && app_key_wrapping_non_claim_decided
+            && !app_key_wrapping_ready;
+        let supported_rollback_detection_ready = boundary_closed
+            && rollback_non_claim_decided
+            && external_monotonic_state_required_before_claim;
 
         ProductionKeyRollbackBoundarySummary {
             policies: PRODUCTION_KEY_ROLLBACK_BOUNDARY_POLICIES,
@@ -15368,13 +15425,18 @@ pub mod production {
             os_keystore_only_rejected,
             app_key_wrapping_ready,
             app_key_wrapping_non_claim_decided,
+            supported_local_key_lifecycle_ready,
+            supported_local_key_lifecycle_scope: SUPPORTED_LOCAL_KEY_LIFECYCLE_SCOPE,
             rollback_protection,
+            supported_rollback_detection_ready,
+            supported_rollback_detection_scope: SUPPORTED_ROLLBACK_DETECTION_SCOPE,
             rollback_prevention_claimed: false,
             rollback_non_claim_decided,
             external_monotonic_state_required_before_claim,
             backup_exclusion_policy_decided,
             backup_exclusion_verified,
             secure_media_deletion_claimed,
+            secure_deletion_claim_allowed: false,
             boundary_closed,
             production_key_management_ready: false,
             security_ready_claimed: false,
@@ -21230,7 +21292,13 @@ pub mod production {
             assert!(policy.backup_exclusion_policy_decided());
             assert!(!policy.backup_exclusion_verified());
             assert!(policy.logical_delete_available());
+            assert!(policy.supported_local_deletion_scope_ready());
+            assert_eq!(
+                policy.supported_local_deletion_scope(),
+                "local-logical-delete-and-owned-app-data-wipe-only"
+            );
             assert!(!policy.secure_media_deletion_claimed());
+            assert!(!policy.secure_deletion_claim_allowed());
             assert!(policy.forward_only_schema_migration());
             assert!(!policy.prototype_data_migration_ready());
             assert!(!policy.runtime_messaging_enabled());
@@ -23905,9 +23973,19 @@ pub mod production {
             assert!(boundary.os_keystore_only_rejected());
             assert!(!boundary.app_key_wrapping_ready());
             assert!(boundary.app_key_wrapping_non_claim_decided());
+            assert!(boundary.supported_local_key_lifecycle_ready());
+            assert_eq!(
+                boundary.supported_local_key_lifecycle_scope(),
+                "passphrase-first-sqlcipher-local-profile-store-only"
+            );
             assert_eq!(
                 boundary.rollback_protection(),
                 ReplayRollbackProtection::NotProvided
+            );
+            assert!(boundary.supported_rollback_detection_ready());
+            assert_eq!(
+                boundary.supported_rollback_detection_scope(),
+                "marker-only-detection-user-visible-reset-required"
             );
             assert!(!boundary.rollback_prevention_claimed());
             assert!(boundary.rollback_non_claim_decided());
@@ -23915,6 +23993,7 @@ pub mod production {
             assert!(boundary.backup_exclusion_policy_decided());
             assert!(!boundary.backup_exclusion_verified());
             assert!(!boundary.secure_media_deletion_claimed());
+            assert!(!boundary.secure_deletion_claim_allowed());
             assert!(!boundary.production_key_management_ready());
             assert!(!boundary.security_ready_claimed());
             assert!(boundary
