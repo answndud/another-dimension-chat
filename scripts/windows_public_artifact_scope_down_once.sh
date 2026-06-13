@@ -38,6 +38,10 @@ must_contain "$DOC" "d100_5_windows_public_artifact_execution_path_reviewed=true
 must_contain "$DOC" "windows_public_artifact_execution_path_available=true"
 must_contain "$DOC" "windows_real_runtime_result_schema_available=true"
 must_contain "$DOC" "windows_real_runtime_result_validator_available=true"
+must_contain "$DOC" "windows_artifact_manifest_checksum_schema_available=true"
+must_contain "$DOC" "windows_artifact_manifest_checksum_validator_available=true"
+must_contain "$DOC" "windows_artifact_metadata_generator_ready=true"
+must_contain "$DOC" "windows_artifact_manifest_checksum_verifier_ready=true"
 must_contain "$DOC" "real_windows_runtime_smoke_requirements_defined=true"
 must_contain "$DOC" "windows_installer_signing_decision_recorded=true"
 must_contain "$DOC" "windows_checksum_provenance_requirements_defined=true"
@@ -83,6 +87,7 @@ for file in "$DOC" "$EXECUTION" "$SCHEMA" "$PARITY" "$HANDOFF" "README.md" "SECU
 done
 
 scripts/windows_public_artifact_execution_path_once.sh >/dev/null
+scripts/windows_artifact_manifest_checksum_once.sh >/dev/null
 scripts/desktop_windows_readiness_source_audit_once.sh >/dev/null
 scripts/desktop_windows_local_runtime_smoke_boundary_once.sh >/dev/null
 
@@ -93,6 +98,10 @@ d100_5_windows_public_artifact_execution_path_reviewed=true
 windows_public_artifact_execution_path_available=true
 windows_real_runtime_result_schema_available=true
 windows_real_runtime_result_validator_available=true
+windows_artifact_manifest_checksum_schema_available=true
+windows_artifact_manifest_checksum_validator_available=true
+windows_artifact_metadata_generator_ready=true
+windows_artifact_manifest_checksum_verifier_ready=true
 windows_readiness=local-build-candidate-only
 windows_local_runtime_smoke_status=source-boundary-only
 windows_public_artifact_ready=false

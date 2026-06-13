@@ -9,6 +9,8 @@ Validate candidate results with
 `scripts/validate_windows_public_artifact_results.mjs`. Passing validation only
 marks a candidate for maintainer review. It does not open Windows public
 artifact readiness.
+Artifact bytes, same-release `.sha256`, and provenance consistency are tracked
+separately in `reference/WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md`.
 The D100-5 runbook is
 `reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md`.
 
@@ -55,6 +57,9 @@ data, or generated artifact bytes.
 
 - windows_real_runtime_result_schema_available=true
 - windows_real_runtime_result_validator_available=true
+- windows_artifact_manifest_checksum_schema_available=true
+- windows_artifact_manifest_checksum_validator_available=true
+- windows_artifact_manifest_checksum_verifier_ready=true
 - windows_result_requires_real_windows_machine=true
 - windows_result_requires_checksum_provenance=true
 - windows_result_requires_support_diagnostics_review=true

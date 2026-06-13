@@ -11,6 +11,9 @@ The focused verifier is `scripts/windows_public_artifact_execution_path_once.sh`
 It checks the source-side execution path and the real-Windows result validator
 without building, uploading, or committing generated artifacts.
 The result schema is `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md`.
+Artifact manifest/checksum consistency is tracked in
+`reference/WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md` and verified by
+`scripts/validate_windows_artifact_manifest.mjs`.
 
 ## Execution Inputs
 
@@ -35,10 +38,12 @@ Actual Windows artifact execution requires:
 3. Record installer/signing decision without treating Microsoft Store,
    SmartScreen, or code signing as a messenger security boundary.
 4. Generate checksum, provenance, and manifest evidence beside the candidate.
-5. Validate redacted support diagnostics and public non-claim copy.
-6. Validate the result with
+5. Validate artifact bytes against the Windows manifest, `.sha256` sidecar,
+   and provenance JSON.
+6. Validate redacted support diagnostics and public non-claim copy.
+7. Validate the result with
    `scripts/validate_windows_public_artifact_results.mjs`.
-7. Keep public Windows artifact, installer, upload, production-ready, audited,
+8. Keep public Windows artifact, installer, upload, production-ready, audited,
    reliable-delivery, and sensitive-use claims false until later release gates
    explicitly approve them.
 
@@ -48,6 +53,10 @@ Actual Windows artifact execution requires:
 - windows_public_artifact_execution_path_available=true
 - windows_real_runtime_result_schema_available=true
 - windows_real_runtime_result_validator_available=true
+- windows_artifact_manifest_checksum_schema_available=true
+- windows_artifact_manifest_checksum_validator_available=true
+- windows_artifact_metadata_generator_ready=true
+- windows_artifact_manifest_checksum_verifier_ready=true
 - real_windows_runtime_smoke_requirements_defined=true
 - windows_installer_signing_decision_recorded=true
 - windows_checksum_provenance_requirements_defined=true
@@ -56,6 +65,9 @@ Actual Windows artifact execution requires:
 - windows_no_overclaim_gate_ready=true
 - windows_result_requires_real_windows_machine=true
 - windows_result_requires_checksum_provenance=true
+- windows_artifact_requires_same_release_authority=true
+- windows_artifact_checksum_bytes_verified_by_validator=true
+- windows_artifact_provenance_consistency_verified_by_validator=true
 - windows_result_requires_support_diagnostics_review=true
 - windows_result_requires_public_non_claims=true
 - windows_result_rejects_local_only_or_private_data=true
@@ -64,6 +76,8 @@ Actual Windows artifact execution requires:
 - windows_public_artifact_ready=false
 - windows_installer_ready=false
 - windows_signing_ready=false
+- windows_artifact_release_upload_authorized=false
+- windows_artifact_release_body_edit_authorized=false
 - windows_public_artifact_upload_allowed=false
 - windows_release_packaging_allowed=false
 - windows_generated_artifact_commit_allowed=false
