@@ -82,6 +82,13 @@ define the evidence ladder, report data boundary, and reliability decision rule
 while keeping real macOS two-machine repeated evidence, reliable external
 delivery, production field evidence, and sensitive-use claims false.
 
+Operational support, incident, and vulnerability process readiness is tracked in
+`reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md`, with the tabletop record in
+`reference/INCIDENT_TABLETOP_RECORD.md`. These files define public/private
+intake separation, key-compromise guidance, manual emergency release/update
+handling, dependency vulnerability triage, and template review while keeping
+production operational readiness and security-ready claims false.
+
 The public privacy-model comparison is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`. It maps the intended Korean Briar/Cwtch-style direction to current public beta gaps and LINDDUN categories; it is not a claim that the current beta has reached that level.
 
 The public threat model is tracked in `reference/PUBLIC_THREAT_MODEL.md`, and the independent review packet is tracked in `reference/INDEPENDENT_REVIEW_PACKET.md`. These are review inputs, not evidence that a review has been completed. The public beta upload set explicitly records the current review gap, private-reporting boundary, public-safe review-command boundary, and fabricated-review/peer-evidence-forbidden boundary; it does not claim reviewer signoff or public user safety signoff.
