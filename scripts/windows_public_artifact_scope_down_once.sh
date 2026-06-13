@@ -24,14 +24,26 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 DOC="reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md"
+EXECUTION="reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
+SCHEMA="reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md"
 PARITY="apps/desktop-tauri/windows_desktop_parity_intake.json"
 HANDOFF="apps/desktop-tauri/windows_local_runtime_smoke_handoff.json"
 
-for file in "$DOC" "$PARITY" "$HANDOFF" "README.md" "SECURITY.md"; do
+for file in "$DOC" "$EXECUTION" "$SCHEMA" "$PARITY" "$HANDOFF" "README.md" "SECURITY.md"; do
   [ -f "$file" ] || fail "missing required Windows artifact scope-down input: $file"
 done
 
 must_contain "$DOC" "rb_10_windows_public_artifact_scope_down_reviewed=true"
+must_contain "$DOC" "d100_5_windows_public_artifact_execution_path_reviewed=true"
+must_contain "$DOC" "windows_public_artifact_execution_path_available=true"
+must_contain "$DOC" "windows_real_runtime_result_schema_available=true"
+must_contain "$DOC" "windows_real_runtime_result_validator_available=true"
+must_contain "$DOC" "real_windows_runtime_smoke_requirements_defined=true"
+must_contain "$DOC" "windows_installer_signing_decision_recorded=true"
+must_contain "$DOC" "windows_checksum_provenance_requirements_defined=true"
+must_contain "$DOC" "windows_public_copy_requirements_defined=true"
+must_contain "$DOC" "windows_support_diagnostics_requirements_defined=true"
+must_contain "$DOC" "windows_no_overclaim_gate_ready=true"
 must_contain "$DOC" "windows_readiness=local-build-candidate-only"
 must_contain "$DOC" "windows_local_usable_criteria_defined=true"
 must_contain "$DOC" "windows_local_runtime_smoke_status=source-boundary-only"
@@ -55,9 +67,11 @@ must_contain "$PARITY" '"windows_local_runtime_smoke_passed": false'
 must_contain "$HANDOFF" '"windows_local_runtime_smoke_passed": false'
 must_contain "$HANDOFF" '"must_run_on": "real-windows-machine"'
 must_contain "README.md" "reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md"
+must_contain "README.md" "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
 must_contain "SECURITY.md" "reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md"
+must_contain "SECURITY.md" "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
 
-for file in "$DOC" "$PARITY" "$HANDOFF" "README.md" "SECURITY.md"; do
+for file in "$DOC" "$EXECUTION" "$SCHEMA" "$PARITY" "$HANDOFF" "README.md" "SECURITY.md"; do
   must_contain "$file" "not production-ready"
   must_not_match "$file" "windows_public_artifact_ready[=:] ?true"
   must_not_match "$file" "windows_installer_ready[=:] ?true"
@@ -68,12 +82,17 @@ for file in "$DOC" "$PARITY" "$HANDOFF" "README.md" "SECURITY.md"; do
   must_not_match "$file" "windows_stable_claim_allowed[=:] ?true"
 done
 
+scripts/windows_public_artifact_execution_path_once.sh >/dev/null
 scripts/desktop_windows_readiness_source_audit_once.sh >/dev/null
 scripts/desktop_windows_local_runtime_smoke_boundary_once.sh >/dev/null
 
 cat <<'STATUS'
 status=windows-public-artifact-scope-down-closed
 rb_10_windows_public_artifact_scope_down_reviewed=true
+d100_5_windows_public_artifact_execution_path_reviewed=true
+windows_public_artifact_execution_path_available=true
+windows_real_runtime_result_schema_available=true
+windows_real_runtime_result_validator_available=true
 windows_readiness=local-build-candidate-only
 windows_local_runtime_smoke_status=source-boundary-only
 windows_public_artifact_ready=false

@@ -32,6 +32,8 @@ for file in "$REGISTER" "$MATRIX" \
   "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
   "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md" \
   "reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md" \
+  "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md" \
+  "reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md" \
   "reference/MACOS_PRODUCTION_UX_ONBOARDING.md" \
   "reference/MACOS_USABILITY_RECOVERY_CLOSURE.md" \
   "reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md" \
@@ -83,6 +85,20 @@ must_contain "$REGISTER" "usability_report_validator_ready=true"
 must_contain "$REGISTER" "consent_non_sensitive_use_notice_ready=true"
 must_contain "$REGISTER" "fabricated_or_local_only_evidence_rejected=true"
 must_contain "$REGISTER" "local_only_evidence_promoted_to_external=false"
+must_contain "$REGISTER" "d100_5_windows_public_artifact_execution_path_reviewed=true"
+must_contain "$REGISTER" "windows_public_artifact_execution_path_available=true"
+must_contain "$REGISTER" "windows_real_runtime_result_schema_available=true"
+must_contain "$REGISTER" "windows_real_runtime_result_validator_available=true"
+must_contain "$REGISTER" "real_windows_runtime_smoke_requirements_defined=true"
+must_contain "$REGISTER" "windows_installer_signing_decision_recorded=true"
+must_contain "$REGISTER" "windows_checksum_provenance_requirements_defined=true"
+must_contain "$REGISTER" "windows_public_copy_requirements_defined=true"
+must_contain "$REGISTER" "windows_support_diagnostics_requirements_defined=true"
+must_contain "$REGISTER" "windows_no_overclaim_gate_ready=true"
+must_contain "$REGISTER" "windows_real_runtime_smoke_passed=false"
+must_contain "$REGISTER" "windows_public_artifact_ready=false"
+must_contain "$REGISTER" "windows_installer_ready=false"
+must_contain "$REGISTER" "windows_public_artifact_upload_allowed=false"
 
 must_contain "$MATRIX" "target_standard_100_deployment_gap_reconciled=true"
 must_contain "$MATRIX" "macos_current_scope_supported=true"
@@ -107,6 +123,11 @@ must_contain "$MATRIX" "external_evidence_intake_operator_ready=true"
 must_contain "$MATRIX" "field_report_validator_ready=true"
 must_contain "$MATRIX" "usability_report_validator_ready=true"
 must_contain "$MATRIX" "fabricated_or_local_only_evidence_rejected=true"
+must_contain "$MATRIX" "d100_5_windows_public_artifact_execution_path_reviewed=true"
+must_contain "$MATRIX" "windows_public_artifact_execution_path_available=true"
+must_contain "$MATRIX" "windows_real_runtime_result_schema_available=true"
+must_contain "$MATRIX" "windows_real_runtime_smoke_passed=false"
+must_contain "$MATRIX" "windows_public_artifact_ready=false"
 
 must_contain "$MATRIX" "pass for explicit Apple Silicon current scope; universal/Intel hold"
 must_contain "$MATRIX" "source pass; representative usability hold"
@@ -135,6 +156,8 @@ must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_SIGNED_NO
 must_contain "README.md" "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md"
 must_contain "SECURITY.md" "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md"
+must_contain "README.md" "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
+must_contain "SECURITY.md" "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
 
 for file in "$REGISTER" "$MATRIX" "README.md" "SECURITY.md"; do
   must_contain "$file" "not production-ready"
@@ -159,6 +182,7 @@ scripts/production_protocol_session_lifecycle_once.sh >/dev/null
 scripts/production_key_management_source_gate_once.sh >/dev/null
 scripts/macos_signed_notarized_execution_path_once.sh >/dev/null
 scripts/external_evidence_intake_execution_once.sh >/dev/null
+scripts/windows_public_artifact_execution_path_once.sh >/dev/null
 scripts/macos_universal_scoped_artifact_policy_once.sh >/dev/null
 scripts/macos_production_ux_onboarding_once.sh >/dev/null
 scripts/pairwise_identity_safety_product_closure_once.sh >/dev/null
@@ -198,6 +222,10 @@ external_evidence_intake_operator_ready=true
 field_report_validator_ready=true
 usability_report_validator_ready=true
 fabricated_or_local_only_evidence_rejected=true
+d100_5_windows_public_artifact_execution_path_reviewed=true
+windows_public_artifact_execution_path_available=true
+windows_real_runtime_result_schema_available=true
+windows_public_artifact_ready=false
 production_ready_claim_allowed=false
 audited_claim_allowed=false
 sensitive_communication_allowed=false

@@ -36,6 +36,8 @@ for file in "$MATRIX" "$TARGET" "README.md" "SECURITY.md" \
   "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
   "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md" \
   "reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md" \
+  "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md" \
+  "reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md" \
   "reference/STABLE_MACOS_V1_RELEASE_GATE.md" \
   "reference/STABLE_RELEASE_HOLD_REPORT.md" \
   "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md" \
@@ -148,6 +150,8 @@ for linked in \
   "REDACTED_FIELD_REPORT_PACKET.md" \
   "CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md" \
   "WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md" \
+  "WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md" \
+  "WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md" \
   "ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md" \
   "IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md" \
   "MACOS_PRODUCTION_DISTRIBUTION_GATE.md" \
@@ -202,6 +206,16 @@ for flag in \
   "representative_usability_sample_threshold=3-5" \
   "field_report_sample_threshold=multiple-real-two-machine-plus-different-network" \
   "fabricated_or_local_only_evidence_rejected=true" \
+  "d100_5_windows_public_artifact_execution_path_reviewed=true" \
+  "windows_public_artifact_execution_path_available=true" \
+  "windows_real_runtime_result_schema_available=true" \
+  "windows_real_runtime_result_validator_available=true" \
+  "real_windows_runtime_smoke_requirements_defined=true" \
+  "windows_installer_signing_decision_recorded=true" \
+  "windows_checksum_provenance_requirements_defined=true" \
+  "windows_public_copy_requirements_defined=true" \
+  "windows_support_diagnostics_requirements_defined=true" \
+  "windows_no_overclaim_gate_ready=true" \
   "production_claim_gate_linked=true" \
   "audit_review_gate_linked=true" \
   "field_evidence_gate_linked=true" \
@@ -229,6 +243,15 @@ for flag in \
   "stable_signed_notarized_artifact_available=false" \
   "representative_usability_evidence_completed=false" \
   "local_only_evidence_promoted_to_external=false" \
+  "windows_real_runtime_smoke_passed=false" \
+  "windows_public_artifact_ready=false" \
+  "windows_installer_ready=false" \
+  "windows_signing_ready=false" \
+  "windows_public_artifact_upload_allowed=false" \
+  "windows_release_packaging_allowed=false" \
+  "windows_generated_artifact_commit_allowed=false" \
+  "windows_public_copy_published=false" \
+  "windows_production_claim_allowed=false" \
   "production_e2ee_ready=false" \
   "production_key_management_ready=false" \
   "app_key_wrapping_ready=false" \

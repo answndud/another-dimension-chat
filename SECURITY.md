@@ -49,8 +49,11 @@ RB-9 publication scope-down is tracked in
 publication, with no stable release upload or release edit.
 RB-10 Windows public artifact scope-down is tracked in
 `reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md`: Windows remains a local
-build candidate only, with no public Windows artifact, installer, signing,
-upload, or Windows production claim.
+build candidate only. Windows public artifact execution is tracked in
+`reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md`, with real-Windows result
+schema in `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md`; there is still no
+public Windows artifact, installer, signing, upload, or Windows production
+claim.
 RB-11 Android implementation authorization is tracked in
 `reference/ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md`: Android remains
 a source shell over the shared-core boundary only, with no APK, AAB, Play Store
