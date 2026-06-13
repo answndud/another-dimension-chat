@@ -123,6 +123,101 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum RollbackMarkerComparisonStatus {
+        Match,
+        MissingDatabaseMarker,
+        MissingAppOwnedMarker,
+        DatabaseMarkerFuture,
+        SnapshotRollbackSuspected,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct RollbackMarkerComparison {
+        status: RollbackMarkerComparisonStatus,
+        database_sequence: Option<u64>,
+        app_owned_sequence: Option<u64>,
+        rollback_suspected: bool,
+        high_risk_ready: bool,
+        verified_or_delivered_state_allowed: bool,
+        recovery_action: &'static str,
+        rollback_prevention_claimed: bool,
+    }
+
+    impl RollbackMarkerComparison {
+        pub fn status(self) -> RollbackMarkerComparisonStatus {
+            self.status
+        }
+
+        pub fn database_sequence(self) -> Option<u64> {
+            self.database_sequence
+        }
+
+        pub fn app_owned_sequence(self) -> Option<u64> {
+            self.app_owned_sequence
+        }
+
+        pub fn rollback_suspected(self) -> bool {
+            self.rollback_suspected
+        }
+
+        pub fn high_risk_ready(self) -> bool {
+            self.high_risk_ready
+        }
+
+        pub fn verified_or_delivered_state_allowed(self) -> bool {
+            self.verified_or_delivered_state_allowed
+        }
+
+        pub fn recovery_action(self) -> &'static str {
+            self.recovery_action
+        }
+
+        pub fn rollback_prevention_claimed(self) -> bool {
+            self.rollback_prevention_claimed
+        }
+    }
+
+    pub fn compare_app_owned_rollback_marker(
+        database_sequence: Option<u64>,
+        app_owned_sequence: Option<u64>,
+    ) -> RollbackMarkerComparison {
+        let status = match (database_sequence, app_owned_sequence) {
+            (Some(database), Some(app_owned)) if database == app_owned => {
+                RollbackMarkerComparisonStatus::Match
+            }
+            (None, _) => RollbackMarkerComparisonStatus::MissingDatabaseMarker,
+            (_, None) => RollbackMarkerComparisonStatus::MissingAppOwnedMarker,
+            (Some(database), Some(app_owned)) if database > app_owned => {
+                RollbackMarkerComparisonStatus::DatabaseMarkerFuture
+            }
+            (Some(_), Some(_)) => RollbackMarkerComparisonStatus::SnapshotRollbackSuspected,
+        };
+        let rollback_suspected = status != RollbackMarkerComparisonStatus::Match;
+        let recovery_action = match status {
+            RollbackMarkerComparisonStatus::Match => "none",
+            RollbackMarkerComparisonStatus::MissingDatabaseMarker
+            | RollbackMarkerComparisonStatus::MissingAppOwnedMarker => {
+                "check-data-lifecycle-marker"
+            }
+            RollbackMarkerComparisonStatus::DatabaseMarkerFuture
+            | RollbackMarkerComparisonStatus::SnapshotRollbackSuspected => {
+                "reopen-or-rebuild-local-profile"
+            }
+        };
+
+        RollbackMarkerComparison {
+            status,
+            database_sequence,
+            app_owned_sequence,
+            rollback_suspected,
+            high_risk_ready: !rollback_suspected,
+            verified_or_delivered_state_allowed: !rollback_suspected,
+            recovery_action,
+            rollback_prevention_claimed: false,
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum StorageBackendKind {
         SqlCipherAdrec1Spike,
     }
@@ -1596,6 +1691,32 @@ pub mod production {
                 assert!(!decision.rollback_prevention_claimed());
                 assert!(!decision.secure_media_deletion_claimed());
                 assert!(!decision.network_io_attempted());
+            }
+        }
+
+        #[test]
+        fn rollback_detection_marker_comparison_blocks_suspect_states() {
+            let clean = compare_app_owned_rollback_marker(Some(7), Some(7));
+            assert_eq!(clean.status(), RollbackMarkerComparisonStatus::Match);
+            assert_eq!(clean.database_sequence(), Some(7));
+            assert_eq!(clean.app_owned_sequence(), Some(7));
+            assert!(!clean.rollback_suspected());
+            assert!(clean.high_risk_ready());
+            assert!(clean.verified_or_delivered_state_allowed());
+            assert_eq!(clean.recovery_action(), "none");
+            assert!(!clean.rollback_prevention_claimed());
+
+            for suspect in [
+                compare_app_owned_rollback_marker(None, Some(7)),
+                compare_app_owned_rollback_marker(Some(7), None),
+                compare_app_owned_rollback_marker(Some(9), Some(7)),
+                compare_app_owned_rollback_marker(Some(7), Some(9)),
+            ] {
+                assert!(suspect.rollback_suspected());
+                assert!(!suspect.high_risk_ready());
+                assert!(!suspect.verified_or_delivered_state_allowed());
+                assert_ne!(suspect.recovery_action(), "none");
+                assert!(!suspect.rollback_prevention_claimed());
             }
         }
 

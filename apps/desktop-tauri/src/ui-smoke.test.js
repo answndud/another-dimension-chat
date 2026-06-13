@@ -1401,6 +1401,8 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(viewBody, /cloud_backup_sync=false/);
   assert.match(viewBody, /security_ready=false/);
   assert.match(viewBody, /rollback_prevention/);
+  assert.match(viewBody, /crypto_erasure/);
+  assert.match(viewBody, /key_record_deletion/);
   assert.match(viewBody, /rollback_prevention=false/);
   assert.match(viewBody, /secure_delete_claim/);
   assert.match(viewBody, /secure_delete_claim=false/);

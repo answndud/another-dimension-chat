@@ -2359,6 +2359,12 @@ export function productionLocalLifecycleBoundaryView(result = {}, options = {}) 
   const rollbackDetection = result.rollback_detection_ready === true;
   const rollbackPrevention = false;
   const secureDeletion = false;
+  const cryptoErasure = result.crypto_erasure_performed === true;
+  const keyRecordDeletion =
+    result.session_dek_records_deleted === true ||
+    result.session_key_records_deleted === true ||
+    result.conversation_dek_deleted === true ||
+    result.message_key_records_deleted === true;
   const pathReturned = result.store_path_returned === true;
   const passphraseRetained = result.passphrase_retained === true;
   const keyMaterial = result.key_material_exposed === true;
@@ -2377,6 +2383,8 @@ export function productionLocalLifecycleBoundaryView(result = {}, options = {}) 
     `backup_recovery=${backupRecovery}`,
     `marker_only_rollback=${markerOnlyRollback}`,
     `rollback_detection=${rollbackDetection}`,
+    `crypto_erasure=${cryptoErasure}`,
+    `key_record_deletion=${keyRecordDeletion}`,
     `rollback_prevention=${rollbackPrevention}`,
     `secure_delete_claim=${secureDeletion}`,
   ];

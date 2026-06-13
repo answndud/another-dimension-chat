@@ -8546,6 +8546,9 @@ pub mod production {
         pending_handshake_state_deleted: bool,
         session_transport_state_deleted: bool,
         session_records_deleted: bool,
+        session_dek_records_deleted: bool,
+        session_key_records_deleted: bool,
+        crypto_erasure_performed: bool,
         session_resume_closed: bool,
         message_records_preserved: bool,
         key_material_exposed: bool,
@@ -8967,6 +8970,9 @@ pub mod production {
         local_message_indexes_deleted: usize,
         message_counter_deleted: bool,
         conversation_records_deleted: usize,
+        conversation_dek_deleted: bool,
+        message_key_records_deleted: bool,
+        crypto_erasure_performed: bool,
         session_records_preserved: bool,
         plaintext_exposed: bool,
         key_material_exposed: bool,
@@ -9483,6 +9489,18 @@ pub mod production {
 
         pub fn session_records_deleted(self) -> bool {
             self.session_records_deleted
+        }
+
+        pub fn session_dek_records_deleted(self) -> bool {
+            self.session_dek_records_deleted
+        }
+
+        pub fn session_key_records_deleted(self) -> bool {
+            self.session_key_records_deleted
+        }
+
+        pub fn crypto_erasure_performed(self) -> bool {
+            self.crypto_erasure_performed
         }
 
         pub fn session_resume_closed(self) -> bool {
@@ -11265,6 +11283,18 @@ pub mod production {
 
         pub fn conversation_records_deleted(self) -> usize {
             self.conversation_records_deleted
+        }
+
+        pub fn conversation_dek_deleted(self) -> bool {
+            self.conversation_dek_deleted
+        }
+
+        pub fn message_key_records_deleted(self) -> bool {
+            self.message_key_records_deleted
+        }
+
+        pub fn crypto_erasure_performed(self) -> bool {
+            self.crypto_erasure_performed
         }
 
         pub fn session_records_preserved(self) -> bool {
@@ -13596,6 +13626,9 @@ pub mod production {
                 pending_handshake_state_deleted: pending_handshake_state_present,
                 session_transport_state_deleted: false,
                 session_records_deleted: true,
+                session_dek_records_deleted: pending_handshake_state_present,
+                session_key_records_deleted: pending_handshake_state_present,
+                crypto_erasure_performed: pending_handshake_state_present,
                 session_resume_closed: true,
                 message_records_preserved: true,
                 key_material_exposed: false,
@@ -13629,6 +13662,11 @@ pub mod production {
             &draft.channel_id,
         ))?;
         let after = load_latest_session_draft(&store, &profile)?;
+        let session_dek_records_deleted = replay_window_present || session_transport_state_present;
+        let session_key_records_deleted =
+            pending_handshake_state_present || session_transport_state_present;
+        let crypto_erasure_performed =
+            session_dek_records_deleted && session_key_records_deleted && after.is_none();
 
         Ok(ProductionPairingSessionDeleteSummary {
             storage_opened: true,
@@ -13640,6 +13678,9 @@ pub mod production {
             pending_handshake_state_deleted: pending_handshake_state_present,
             session_transport_state_deleted: session_transport_state_present,
             session_records_deleted: true,
+            session_dek_records_deleted,
+            session_key_records_deleted,
+            crypto_erasure_performed,
             session_resume_closed: after.is_none(),
             message_records_preserved: true,
             key_material_exposed: false,
@@ -15860,6 +15901,18 @@ pub mod production {
         if message_counter_deleted {
             store.delete(&counter_id)?;
         }
+        let conversation_records_deleted = sent_messages_deleted
+            + received_messages_deleted
+            + message_envelopes_deleted
+            + local_message_indexes_deleted
+            + usize::from(message_counter_deleted);
+        let conversation_dek_deleted = message_counter_deleted;
+        let message_key_records_deleted = message_envelopes_deleted > 0
+            || sent_messages_deleted > 0
+            || received_messages_deleted > 0
+            || local_message_indexes_deleted > 0;
+        let crypto_erasure_performed =
+            conversation_dek_deleted && message_key_records_deleted && conversation_records_deleted > 0;
 
         Ok(ProductionConversationDeleteSummary {
             storage_opened: true,
@@ -15869,11 +15922,10 @@ pub mod production {
             message_envelopes_deleted,
             local_message_indexes_deleted,
             message_counter_deleted,
-            conversation_records_deleted: sent_messages_deleted
-                + received_messages_deleted
-                + message_envelopes_deleted
-                + local_message_indexes_deleted
-                + usize::from(message_counter_deleted),
+            conversation_records_deleted,
+            conversation_dek_deleted,
+            message_key_records_deleted,
+            crypto_erasure_performed,
             session_records_preserved: load_latest_session_draft(&store, &profile)?.is_some(),
             plaintext_exposed: false,
             key_material_exposed: false,
@@ -28133,7 +28185,7 @@ pub mod production {
         }
 
         #[test]
-        fn production_pairing_session_save_draft_persists_session_records_without_transport() {
+        fn crypto_erasure_lifecycle_persists_session_records_without_transport() {
             let dir = std::env::temp_dir().join(format!(
                 "another-dimension-production-session-save-draft-{}-{:?}",
                 std::process::id(),
@@ -29654,6 +29706,9 @@ pub mod production {
             assert!(conversation_delete.sent_messages_deleted() >= 1);
             assert!(conversation_delete.message_counter_deleted());
             assert!(conversation_delete.conversation_records_deleted() >= 2);
+            assert!(conversation_delete.conversation_dek_deleted());
+            assert!(conversation_delete.message_key_records_deleted());
+            assert!(conversation_delete.crypto_erasure_performed());
             assert!(conversation_delete.session_records_preserved());
             assert!(!conversation_delete.plaintext_exposed());
             assert!(!conversation_delete.key_material_exposed());
@@ -29693,6 +29748,9 @@ pub mod production {
             assert!(lifecycle_delete.replay_window_deleted());
             assert!(lifecycle_delete.session_transport_state_deleted());
             assert!(lifecycle_delete.session_records_deleted());
+            assert!(lifecycle_delete.session_dek_records_deleted());
+            assert!(lifecycle_delete.session_key_records_deleted());
+            assert!(lifecycle_delete.crypto_erasure_performed());
             assert!(lifecycle_delete.session_resume_closed());
             assert!(lifecycle_delete.message_records_preserved());
             assert!(!lifecycle_delete.key_material_exposed());

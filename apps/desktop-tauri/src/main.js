@@ -18368,6 +18368,12 @@ function dataLifecycleActionView(result = {}, action = "status") {
     action === "full-local-wipe";
   const rollbackDetection = result?.rollback_detection_ready === true;
   const rollbackSuspicion = result?.rollback_suspicion_detected === true;
+  const cryptoErasure = result?.crypto_erasure_performed === true;
+  const keyRecordDeletion =
+    result?.session_dek_records_deleted === true ||
+    result?.session_key_records_deleted === true ||
+    result?.conversation_dek_deleted === true ||
+    result?.message_key_records_deleted === true;
   const summaryParts = [
     dataLifecycleSummary(result),
     `action=${action}`,
@@ -18377,6 +18383,8 @@ function dataLifecycleActionView(result = {}, action = "status") {
     `backup_recovery=false`,
     `cloud_backup_sync=false`,
     `rollback_detection=${rollbackDetection}`,
+    `crypto_erasure=${cryptoErasure}`,
+    `key_record_deletion=${keyRecordDeletion}`,
     `rollback_prevention=false`,
     `secure_delete_claim=false`,
     `security_ready=false`,
@@ -18406,6 +18414,7 @@ function dataLifecycleActionView(result = {}, action = "status") {
     boundary:
       `${dataLifecycleBoundary(result)} action=${action} destructive_action=${destructiveAction} ` +
       `redacted_result=true backup_recovery=false cloud_backup_sync=false rollback_detection=${rollbackDetection} ` +
+      `crypto_erasure=${cryptoErasure} key_record_deletion=${keyRecordDeletion} ` +
       `rollback_prevention=false secure_delete_claim=false security_ready=false`,
     next,
   };
