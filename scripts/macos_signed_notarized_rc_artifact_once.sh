@@ -27,9 +27,10 @@ DOC="reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md"
 DIST_GATE="reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
 CREDENTIAL_GATE="reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md"
 EXECUTION_PATH="reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
+DMG_CONTAINED_APP_VERIFIER="scripts/verify_macos_dmg_contained_app.sh"
 
 for file in "$DOC" "$DIST_GATE" "$CREDENTIAL_GATE" "README.md" "SECURITY.md" \
-  "$EXECUTION_PATH" "reference/INDEPENDENT_REVIEW_PACKET.md"; do
+  "$EXECUTION_PATH" "$DMG_CONTAINED_APP_VERIFIER" "reference/INDEPENDENT_REVIEW_PACKET.md"; do
   [ -f "$file" ] || fail "missing required signed RC input: $file"
 done
 
@@ -50,14 +51,20 @@ must_contain "$DOC" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 must_contain "$DOC" "d100_3_signed_notarized_execution_path_reviewed=true"
 must_contain "$DOC" "macos_signed_notarized_execution_path_available=true"
 must_contain "$DOC" "signed_notarized_rc_artifact_verifier_available=true"
+must_contain "$DOC" "macos_dmg_contained_app_verifier_available=true"
 must_contain "$DOC" "signed_notarized_rc_artifact_available=false"
 must_contain "$DOC" "ad_signed_rc_dmg_input_required_for_artifact_verification=true"
+must_contain "$DOC" "ad_signed_rc_expected_app_bundle_required_for_artifact_verification=true"
 must_contain "$DOC" "codesign_tool_available=$CODESIGN_AVAILABLE"
 must_contain "$DOC" "spctl_tool_available=$SPCTL_AVAILABLE"
 must_contain "$DOC" "stapler_tool_available=$STAPLER_AVAILABLE"
 must_contain "$DOC" "codesign_verify_passed=false"
 must_contain "$DOC" "spctl_assess_passed=false"
 must_contain "$DOC" "stapler_validate_passed=false"
+must_contain "$DOC" "dmg_mounted_app_found=false"
+must_contain "$DOC" "dmg_contained_app_codesign_verify_passed=false"
+must_contain "$DOC" "dmg_contained_app_gatekeeper_assess_passed=false"
+must_contain "$DOC" "dmg_contained_app_matches_signed_source_app=false"
 must_contain "$DOC" "rc_artifact_sha256_recorded=false"
 must_contain "$DOC" "release_upload_authorized=false"
 must_contain "$DOC" "dmg_rebuild_authorized=false"
@@ -68,8 +75,12 @@ must_contain "$DIST_GATE" "stable_signed_notarized_artifact_available=false"
 must_contain "$DIST_GATE" "production_distribution_ready=false"
 must_contain "$CREDENTIAL_GATE" "developer_id_signing_available=false"
 must_contain "$CREDENTIAL_GATE" "notarization_credential_available=false"
-must_contain "README.md" "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md"
-must_contain "README.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
+if ! grep -Fq "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md" "README.md"; then
+  must_contain "SECURITY.md" "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md"
+fi
+if ! grep -Fq "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" "README.md"; then
+  must_contain "SECURITY.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
+fi
 must_contain "SECURITY.md" "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md"
 must_contain "SECURITY.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md"
@@ -93,6 +104,7 @@ if git -C "$ROOT" diff --cached --name-only | grep -Eq '^(docs/|AGENTS.md|apps/d
 fi
 
 RC_DMG="${AD_SIGNED_RC_DMG:-}"
+EXPECTED_APP_BUNDLE="${AD_SIGNED_RC_EXPECTED_APP_BUNDLE:-}"
 if [ -z "$RC_DMG" ]; then
   cat <<'STATUS'
 status=macos-signed-notarized-rc-artifact-held
@@ -102,10 +114,15 @@ signed_notarized_rc_policy_waiver_authorized=true
 signed_notarized_rc_waiver_scope=active-queue-unblock-only
 signed_notarized_artifact_required_for_distribution_claims=true
 signed_notarized_rc_artifact_verifier_available=true
+macos_dmg_contained_app_verifier_available=true
 signed_notarized_rc_artifact_available=false
 codesign_verify_passed=false
 spctl_assess_passed=false
 stapler_validate_passed=false
+dmg_mounted_app_found=false
+dmg_contained_app_codesign_verify_passed=false
+dmg_contained_app_gatekeeper_assess_passed=false
+dmg_contained_app_matches_signed_source_app=false
 rc_artifact_sha256_recorded=false
 release_upload_authorized=false
 dmg_rebuild_authorized=false
@@ -116,12 +133,24 @@ STATUS
 fi
 
 [ -f "$RC_DMG" ] || fail "AD_SIGNED_RC_DMG does not point to a file: $RC_DMG"
+[ -n "$EXPECTED_APP_BUNDLE" ] ||
+  fail "AD_SIGNED_RC_EXPECTED_APP_BUNDLE is required to verify the app contained in the DMG"
+[ -d "$EXPECTED_APP_BUNDLE" ] ||
+  fail "AD_SIGNED_RC_EXPECTED_APP_BUNDLE does not point to an app bundle directory: $EXPECTED_APP_BUNDLE"
 
 case "$RC_DMG" in
   "$ROOT"/apps/desktop-tauri/public-release/*|"$ROOT"/apps/desktop-tauri/beta-artifacts/*)
     ;;
   "$ROOT"/*)
     fail "signed RC artifact must be in an ignored generated artifact directory, not tracked source: $RC_DMG"
+    ;;
+esac
+
+case "$EXPECTED_APP_BUNDLE" in
+  "$ROOT"/apps/desktop-tauri/public-release/*|"$ROOT"/apps/desktop-tauri/beta-artifacts/*|"$ROOT"/.build-cache/*|"$ROOT"/target/*|"$ROOT"/apps/desktop-tauri/src-tauri/target/*)
+    ;;
+  "$ROOT"/*)
+    fail "expected app bundle must be generated output, not tracked source: $EXPECTED_APP_BUNDLE"
     ;;
 esac
 
@@ -132,6 +161,15 @@ esac
 codesign --verify --deep --strict --verbose=2 "$RC_DMG" >/dev/null
 spctl --assess --type open --verbose=4 "$RC_DMG" >/dev/null
 xcrun stapler validate "$RC_DMG" >/dev/null
+contained_app_output="$(AD_VERIFY_DMG="$RC_DMG" AD_VERIFY_EXPECTED_APP_BUNDLE="$EXPECTED_APP_BUNDLE" "$DMG_CONTAINED_APP_VERIFIER")"
+printf '%s\n' "$contained_app_output" | grep -Fq "dmg_mounted_app_found=true" ||
+  fail "DMG contained app was not found"
+printf '%s\n' "$contained_app_output" | grep -Fq "dmg_contained_app_codesign_verify_passed=true" ||
+  fail "DMG contained app codesign verification failed"
+printf '%s\n' "$contained_app_output" | grep -Fq "dmg_contained_app_gatekeeper_assess_passed=true" ||
+  fail "DMG contained app Gatekeeper assessment failed"
+printf '%s\n' "$contained_app_output" | grep -Fq "dmg_contained_app_matches_signed_source_app=true" ||
+  fail "DMG contained app does not match expected signed app bundle"
 rc_sha="$(shasum -a 256 "$RC_DMG" | awk '{print $1}')"
 
 cat <<STATUS
@@ -143,6 +181,10 @@ signed_notarized_rc_artifact_available=true
 codesign_verify_passed=true
 spctl_assess_passed=true
 stapler_validate_passed=true
+dmg_mounted_app_found=true
+dmg_contained_app_codesign_verify_passed=true
+dmg_contained_app_gatekeeper_assess_passed=true
+dmg_contained_app_matches_signed_source_app=true
 rc_artifact_sha256=$rc_sha
 release_upload_authorized=false
 dmg_rebuild_authorized=false

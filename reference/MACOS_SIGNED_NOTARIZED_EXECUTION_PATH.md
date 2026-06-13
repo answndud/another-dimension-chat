@@ -18,8 +18,9 @@ The release-build path that creates a DMG from a signed `.app` bundle is
 requires both `AD_EXECUTE_MACOS_SIGN_NOTARY=1` and
 `AD_BUILD_MACOS_SIGNED_RC=1`, plus `AD_DMG_REBUILD_AUTHORIZED=1`, before it
 runs Tauri build, signs the `.app`,
-creates a DMG with `hdiutil create`, signs/notarizes/staples the DMG, and
-records checksum/provenance under ignored generated artifact directories.
+creates a DMG with `hdiutil create`, signs/notarizes/staples the DMG, mounts
+the DMG to verify the contained `.app`, and records checksum/provenance under
+ignored generated artifact directories.
 
 ## Execution Inputs
 
@@ -56,8 +57,12 @@ The script connects these operations in order:
 6. Staple and validate: `xcrun stapler staple "$AD_RC_DMG"` and
    `xcrun stapler validate "$AD_RC_DMG"`.
 7. Assess Gatekeeper open path with `spctl --assess --type open --verbose=4 "$AD_RC_DMG"`.
-8. Record SHA-256 and optional generated provenance JSON.
-9. Keep release upload, release edit, generated artifact commit, stable,
+8. Mount the DMG read-only and verify the contained `.app` with
+   `codesign --verify --deep --strict --verbose=2`,
+   `spctl --assess --type execute --verbose=4`, and a byte-level comparison
+   against the signed source app bundle.
+9. Record SHA-256 and optional generated provenance JSON.
+10. Keep release upload, release edit, generated artifact commit, stable,
    production-ready, audited, and sensitive-use claims false until later gates
    authorize them.
 
@@ -81,6 +86,11 @@ The script must not reuse a DMG that already contains an unsigned app bundle.
 - notary_submit_wait_path_ready=true
 - stapler_staple_validate_path_ready=true
 - gatekeeper_assessment_path_ready=true
+- macos_dmg_contained_app_verifier_available=true
+- dmg_mounted_app_found=false
+- dmg_contained_app_codesign_verify_passed=false
+- dmg_contained_app_gatekeeper_assess_passed=false
+- dmg_contained_app_matches_signed_source_app=false
 - checksum_provenance_update_path_ready=true
 - explicit_execution_env_required=true
 - ad_execute_macos_sign_notary_required=true

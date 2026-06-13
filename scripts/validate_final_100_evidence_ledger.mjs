@@ -22,6 +22,10 @@ const REQUIRED_TRUE_FIELDS = Object.freeze({
     "notarized",
     "stapled",
     "spctl_assess_passed",
+    "dmg_mounted_app_found",
+    "dmg_contained_app_codesign_verify_passed",
+    "dmg_contained_app_gatekeeper_assess_passed",
+    "dmg_contained_app_matches_signed_source_app",
     "gatekeeper_clean_open_observed",
     "release_distribution_manifest_verified",
     "representative_usability_completed",
@@ -76,6 +80,7 @@ const REQUIRED_EVIDENCE_FILES = Object.freeze({
     "artifact_provenance",
     "distribution_manifest",
     "gatekeeper_assessment",
+    "dmg_contained_app_assessment",
     "representative_usability_reports",
   ],
   windows: ["artifact_manifest", "runtime_result"],
@@ -290,6 +295,7 @@ console.log(`final_100_evidence_ledger_files_found=${files.length}`);
 
 if (files.length === 0) {
   console.log("accepted_final_100_evidence_ledgers=0");
+  console.log("final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true");
   console.log("macos_public_app_100_claim_allowed=false");
   console.log("whole_target_standard_100_claim_allowed=false");
   console.log("production_ready_claim_allowed=false");
@@ -317,6 +323,7 @@ if (failures > 0) {
 
 console.log(`accepted_final_100_evidence_ledgers=${files.length}`);
 console.log("final_100_evidence_ledger_child_files_sha_verified=true");
+console.log("final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true");
 console.log("final_100_evidence_candidate_requires_owner_claim_decision=true");
 console.log("macos_public_app_100_claim_allowed=false");
 console.log("whole_target_standard_100_claim_allowed=false");

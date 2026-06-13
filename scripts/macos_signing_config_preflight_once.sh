@@ -13,8 +13,9 @@ CONFIG="apps/desktop-tauri/src-tauri/tauri.conf.json"
 ENTITLEMENTS="apps/desktop-tauri/src-tauri/Entitlements.plist"
 SIGN_NOTARY_SCRIPT="scripts/macos_signed_notarized_execution_path_once.sh"
 SIGNED_BUILD_SCRIPT="scripts/build_signed_notarized_macos_release.sh"
+DMG_CONTAINED_APP_VERIFIER="scripts/verify_macos_dmg_contained_app.sh"
 
-for file in "$CONFIG" "$ENTITLEMENTS" "$SIGN_NOTARY_SCRIPT" "$SIGNED_BUILD_SCRIPT" \
+for file in "$CONFIG" "$ENTITLEMENTS" "$SIGN_NOTARY_SCRIPT" "$SIGNED_BUILD_SCRIPT" "$DMG_CONTAINED_APP_VERIFIER" \
   "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
   "reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md"; do
   [ -f "$file" ] || fail "missing macOS signing config input: $file"
@@ -68,8 +69,16 @@ grep -Fq -- "--bundles app" "$SIGNED_BUILD_SCRIPT" ||
   fail "signed release build script must build the app bundle before DMG creation"
 grep -Fq "hdiutil create" "$SIGNED_BUILD_SCRIPT" ||
   fail "signed release build script must create the DMG from the signed app bundle"
+grep -Fq "verify_macos_dmg_contained_app.sh" "$SIGNED_BUILD_SCRIPT" ||
+  fail "signed release build script must verify the app contained in the generated DMG"
 grep -Fq "xcrun notarytool submit" "$SIGNED_BUILD_SCRIPT" ||
   fail "signed release build script must submit the generated DMG for notarization"
+grep -Fq "hdiutil attach" "$DMG_CONTAINED_APP_VERIFIER" ||
+  fail "DMG contained app verifier must mount the DMG read-only"
+grep -Fq 'contained_app_matches_signed_source_app="true"' "$DMG_CONTAINED_APP_VERIFIER" ||
+  fail "DMG contained app verifier must compare mounted app to signed source app"
+grep -Fq "dmg_contained_app_matches_signed_source_app=false" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" ||
+  fail "execution path reference must keep contained-app match false until real artifact evidence exists"
 
 if git -C "$ROOT" diff --cached --name-only | grep -Eq '^(docs/|AGENTS.md|apps/desktop-tauri/(public-release|beta-artifacts)/|public-release/|beta-artifacts/)'; then
   fail "private docs, AGENTS.md, or generated artifact path is staged"
@@ -86,6 +95,11 @@ macos_notarization_provider_source_stored=false
 macos_signed_notarized_release_build_script_ready=true
 signed_app_build_path_ready=true
 dmg_create_from_signed_app_path_ready=true
+macos_dmg_contained_app_verifier_available=true
+dmg_mounted_app_found=false
+dmg_contained_app_codesign_verify_passed=false
+dmg_contained_app_gatekeeper_assess_passed=false
+dmg_contained_app_matches_signed_source_app=false
 developer_id_signing_available=false
 notarization_credential_available=false
 release_upload_authorized=false

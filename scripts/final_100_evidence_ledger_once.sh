@@ -30,6 +30,7 @@ for flag in \
   "final_100_evidence_ledger_rejects_private_material=true" \
   "final_100_evidence_ledger_requires_child_evidence_files=true" \
   "final_100_evidence_ledger_child_files_sha_verified=true" \
+  "final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true" \
   "final_100_evidence_candidate_requires_owner_claim_decision=true" \
   "macos_public_app_100_claim_allowed=false" \
   "whole_target_standard_100_claim_allowed=false" \
@@ -42,6 +43,7 @@ done
 must_contain "$VALIDATOR" "final-100-evidence-ledger-v1"
 must_contain "$VALIDATOR" "real-external-and-device-evidence"
 must_contain "$VALIDATOR" "final_100_evidence_ledger_child_files_sha_verified=true"
+must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true"
 must_contain "$VALIDATOR" "status=final-100-evidence-candidate-requires-review"
 must_contain "reference/FINAL_100_CLAIM_GATE.md" "final_100_evidence_ledger_schema_available=true"
 must_contain "scripts/final_100_claim_gate_once.sh" "final_100_evidence_ledger_once.sh"
@@ -64,6 +66,7 @@ write_evidence() {
 write_evidence "macos/artifact.provenance.json" '{"schema":"macos-provenance","result":"signed-notarized-stapled"}'
 write_evidence "macos/distribution-manifest.json" '{"schema":"macos-release-distribution-manifest-v1","result":"verified"}'
 write_evidence "macos/gatekeeper-assessment.txt" 'spctl assessment passed on clean macOS host'
+write_evidence "macos/dmg-contained-app-assessment.txt" 'mounted DMG app codesign, execute assessment, and source bundle match passed'
 for index in 1 2 3; do
   write_evidence "macos/usability-$index.md" "representative usability report $index: completed required macOS public app flow"
 done
@@ -109,6 +112,7 @@ const ledger = {
       artifact_provenance: ref("macos/artifact.provenance.json"),
       distribution_manifest: ref("macos/distribution-manifest.json"),
       gatekeeper_assessment: ref("macos/gatekeeper-assessment.txt"),
+      dmg_contained_app_assessment: ref("macos/dmg-contained-app-assessment.txt"),
       representative_usability_reports: [
         ref("macos/usability-1.md"),
         ref("macos/usability-2.md"),
@@ -147,6 +151,10 @@ const ledger = {
     notarized: true,
     stapled: true,
     spctl_assess_passed: true,
+    dmg_mounted_app_found: true,
+    dmg_contained_app_codesign_verify_passed: true,
+    dmg_contained_app_gatekeeper_assess_passed: true,
+    dmg_contained_app_matches_signed_source_app: true,
     gatekeeper_clean_open_observed: true,
     release_distribution_manifest_verified: true,
     representative_usability_completed: true,
@@ -247,6 +255,7 @@ final_100_evidence_ledger_rejects_fabricated_or_local_only=true
 final_100_evidence_ledger_rejects_private_material=true
 final_100_evidence_ledger_requires_child_evidence_files=true
 final_100_evidence_ledger_child_files_sha_verified=true
+final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true
 final_100_evidence_candidate_requires_owner_claim_decision=true
 macos_public_app_100_claim_allowed=false
 whole_target_standard_100_claim_allowed=false
