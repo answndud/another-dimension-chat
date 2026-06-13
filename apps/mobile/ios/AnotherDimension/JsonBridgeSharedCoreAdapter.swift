@@ -54,14 +54,24 @@ final class RuntimeScopeUnlockedJsonBridgeMobileApi: SharedCoreMobileApi {
         return SharedCoreStatusDto(
             schemaVersion: body["schema_version"] as? Int ?? 1,
             platform: body["platform"] as? String ?? "ios_runtime_candidate",
+            appPurpose: body["app_purpose"] as? String ?? "no-central-trusted-server-1:1-private-messenger",
             profileLockState: body["profile_lock_state"] as? String ?? "not_unlocked_by_status_bridge",
             runtimeCommandSurface: body["runtime_command_surface"] as? [String] ?? [],
             mobileCommandSurface: body["mobile_command_surface"] as? [String] ?? [],
+            unavailableActions: body["unavailable_actions"] as? [String] ?? [],
             localDataLifecycleState: body["local_data_lifecycle_state"] as? String ?? "confirmation_required_no_unreviewed_mutation",
+            localPrivacyBoundary: body["local_privacy_boundary"] as? [String] ?? [],
             backupExclusionState: body["backup_exclusion_state"] as? String ?? "platform_private_data_only_no_cloud_backup",
             installUpdateIntegrityState: body["install_update_integrity_state"] as? String ?? "manual_same_release_artifact_evidence_required",
             diagnosticsRedactionState: body["diagnostics_redaction_state"] as? String ?? "redacted_status_support_only",
-            publicNonClaims: body["public_non_claims"] as? [String] ?? []
+            publicNonClaims: body["public_non_claims"] as? [String] ?? [],
+            errorTaxonomy: body["error_taxonomy"] as? [String] ?? [],
+            fcmEnabled: body["fcm_enabled"] as? Bool ?? false,
+            apnsEnabled: body["apns_enabled"] as? Bool ?? false,
+            cloudBackupClaimed: body["cloud_backup_claimed"] as? Bool ?? false,
+            icloudBackupClaimed: body["icloud_backup_claimed"] as? Bool ?? false,
+            accountContactDiscoveryClaimed: body["account_contact_discovery_claimed"] as? Bool ?? false,
+            independentProtocolStorageTransportClaimed: body["independent_protocol_storage_transport_claimed"] as? Bool ?? false
         )
     }
 

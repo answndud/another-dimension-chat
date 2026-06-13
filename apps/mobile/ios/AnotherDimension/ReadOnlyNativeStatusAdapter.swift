@@ -30,13 +30,16 @@ final class SourceBoundaryReadOnlyNativeStatusAdapter: ReadOnlyNativeStatusAdapt
         SharedCoreStatusDto(
             schemaVersion: 1,
             platform: "ios_shell_candidate",
+            appPurpose: "no-central-trusted-server-1:1-private-messenger",
             profileLockState: profileLockState,
             runtimeCommandSurface: ["shared_core_runtime_command_surface"],
             mobileCommandSurface: [
                 "shared_core_status_surface",
                 "redacted_support_diagnostics",
             ],
+            unavailableActions: sharedCoreMobileUnavailableActions,
             localDataLifecycleState: localDataLifecycleState,
+            localPrivacyBoundary: sharedCoreMobileLocalPrivacyBoundary,
             backupExclusionState: "iCloud backup not claimed",
             installUpdateIntegrityState: "manual update verification required",
             diagnosticsRedactionState: diagnosticsRedactionState,
@@ -48,7 +51,14 @@ final class SourceBoundaryReadOnlyNativeStatusAdapter: ReadOnlyNativeStatusAdapt
                 "external onion delivery not claimed",
                 "security-ready not claimed",
                 "mobile readiness not claimed",
-            ]
+            ],
+            errorTaxonomy: sharedCoreMobileErrorTaxonomy,
+            fcmEnabled: false,
+            apnsEnabled: false,
+            cloudBackupClaimed: false,
+            icloudBackupClaimed: false,
+            accountContactDiscoveryClaimed: false,
+            independentProtocolStorageTransportClaimed: false
         )
     }
 }

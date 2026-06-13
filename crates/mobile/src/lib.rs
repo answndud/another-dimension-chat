@@ -19,17 +19,30 @@ impl MobilePlatform {
     }
 }
 
+const MOBILE_SHARED_CORE_ERROR_TAXONOMY_JSON: &str = "[\"locked_profile\",\"malformed_payload\",\"replay_rejected\",\"policy_blocked\",\"transport_unavailable\",\"unsupported_mobile_surface\",\"lifecycle_confirmation_required\",\"ffi_unavailable\"]";
+const MOBILE_UNAVAILABLE_ACTIONS_JSON: &str = "[\"native_network_delivery\",\"runtime_messaging\",\"push_notification_delivery\",\"cloud_backup\",\"account_contact_discovery\",\"mobile_public_artifact\"]";
+const MOBILE_LOCAL_PRIVACY_BOUNDARY_JSON: &str = "[\"platform_private_app_data_only\",\"encrypted_local_store_through_shared_core\",\"redacted_support_diagnostics_only\",\"no_cloud_backup\"]";
+
 pub fn shared_core_status_surface_json(platform: MobilePlatform) -> String {
     let runtime = production_mobile_runtime_command_surface_status_summary();
     let api = production_mobile_shared_core_api_freeze_boundary_summary();
     format!(
         concat!(
             "{{",
+            "\"account_contact_discovery_claimed\":false,",
+            "\"apns_enabled\":false,",
+            "\"app_purpose\":\"no-central-trusted-server-1:1-private-messenger\",",
             "\"backup_exclusion_state\":\"platform_private_data_only_no_cloud_backup\",",
             "\"binding_strategy\":\"shared_core_json_bridge\",",
             "\"callable_json_bridge_implemented\":true,",
+            "\"cloud_backup_claimed\":false,",
             "\"diagnostics_redaction_state\":\"redacted_status_support_only\",",
+            "\"error_taxonomy\":{},",
+            "\"fcm_enabled\":false,",
+            "\"icloud_backup_claimed\":false,",
+            "\"independent_protocol_storage_transport_claimed\":false,",
             "\"install_update_integrity_state\":\"manual_same_release_artifact_evidence_required\",",
+            "\"local_privacy_boundary\":{},",
             "\"local_data_lifecycle_state\":\"confirmation_required_no_unreviewed_mutation\",",
             "\"mobile_command_surface\":[\"shared_core_status_surface\",\"redacted_support_diagnostics\"],",
             "\"mobile_readiness_claimed\":false,",
@@ -41,12 +54,16 @@ pub fn shared_core_status_surface_json(platform: MobilePlatform) -> String {
             "\"schema_version\":1,",
             "\"security_ready_claimed\":false,",
             "\"shared_core_api_boundary_closed\":{},",
-            "\"shared_core_runtime_status_boundary_closed\":{}",
+            "\"shared_core_runtime_status_boundary_closed\":{},",
+            "\"unavailable_actions\":{}",
             "}}"
         ),
+        MOBILE_SHARED_CORE_ERROR_TAXONOMY_JSON,
+        MOBILE_LOCAL_PRIVACY_BOUNDARY_JSON,
         platform.as_str(),
         api.boundary_closed(),
-        runtime.boundary_closed()
+        runtime.boundary_closed(),
+        MOBILE_UNAVAILABLE_ACTIONS_JSON
     )
 }
 
@@ -55,9 +72,15 @@ pub fn redacted_support_diagnostics_json(platform: MobilePlatform) -> String {
     format!(
         concat!(
             "{{",
+            "\"account_contact_discovery_claimed\":false,",
+            "\"apns_enabled\":false,",
             "\"background_upload_enabled\":false,",
+            "\"cloud_backup_claimed\":false,",
             "\"diagnostics_redaction_state\":\"redacted_status_support_only\",",
             "\"failure_class\":\"none\",",
+            "\"fcm_enabled\":false,",
+            "\"icloud_backup_claimed\":false,",
+            "\"independent_protocol_storage_transport_claimed\":false,",
             "\"local_copy_only\":{},",
             "\"mobile_readiness_claimed\":false,",
             "\"platform\":\"{}\",",

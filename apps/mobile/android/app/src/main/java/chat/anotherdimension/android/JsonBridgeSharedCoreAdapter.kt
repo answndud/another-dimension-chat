@@ -44,14 +44,25 @@ class RuntimeScopeUnlockedJsonBridgeMobileApi(
         return SharedCoreStatusDto(
             schemaVersion = body.getInt("schema_version"),
             platform = body.getString("platform"),
+            appPurpose = body.optString("app_purpose", "no-central-trusted-server-1:1-private-messenger"),
             profileLockState = body.optString("profile_lock_state", "not_unlocked_by_status_bridge"),
             runtimeCommandSurface = body.optJSONArray("runtime_command_surface").asStringList(),
             mobileCommandSurface = body.optJSONArray("mobile_command_surface").asStringList(),
+            unavailableActions = body.optJSONArray("unavailable_actions").asStringList(),
             localDataLifecycleState = body.optString("local_data_lifecycle_state", "confirmation_required_no_unreviewed_mutation"),
+            localPrivacyBoundary = body.optJSONArray("local_privacy_boundary").asStringList(),
             backupExclusionState = body.optString("backup_exclusion_state", "platform_private_data_only_no_cloud_backup"),
             installUpdateIntegrityState = body.optString("install_update_integrity_state", "manual_same_release_artifact_evidence_required"),
             diagnosticsRedactionState = body.getString("diagnostics_redaction_state"),
             publicNonClaims = body.getJSONArray("public_non_claims").asStringList(),
+            errorTaxonomy = body.optJSONArray("error_taxonomy").asStringList(),
+            fcmEnabled = body.optBoolean("fcm_enabled", false),
+            apnsEnabled = body.optBoolean("apns_enabled", false),
+            cloudBackupClaimed = body.optBoolean("cloud_backup_claimed", false),
+            icloudBackupClaimed = body.optBoolean("icloud_backup_claimed", false),
+            accountContactDiscoveryClaimed = body.optBoolean("account_contact_discovery_claimed", false),
+            independentProtocolStorageTransportClaimed =
+                body.optBoolean("independent_protocol_storage_transport_claimed", false),
         )
     }
 
