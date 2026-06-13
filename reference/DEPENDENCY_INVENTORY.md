@@ -16,6 +16,10 @@ hashes for:
 Those hashes identify the lockfiles used when the upload set was prepared. They
 do not prove dependency safety.
 
+The source repository must not ask users to treat branch lockfile hashes as the
+release authority. Public users should use the `DEPENDENCY_LOCKFILES.sha256`
+file attached to the same GitHub Release as the DMG and checksum.
+
 ## Lockfile Evidence Summary
 
 - Lockfile evidence count: 3
@@ -64,7 +68,6 @@ Every unsigned public beta upload must ship:
 - `SUPPLY_CHAIN_BASELINE.md`
 - `DEPENDENCY_INVENTORY.md`
 - `DEPENDENCY_LOCKFILES.sha256`
-- `OPERATOR_FINAL_HANDOFF.md`
 - `PUBLIC_THREAT_MODEL.md`
 - `INDEPENDENT_REVIEW_PACKET.md`
 - `PUBLIC_INTAKE_POLICY.md`
