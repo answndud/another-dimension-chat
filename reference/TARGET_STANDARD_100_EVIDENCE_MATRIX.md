@@ -56,7 +56,7 @@ updated, and a later explicit release/claim task authorizes the wording.
 | No cloud backup | Product does not provide or require cloud backup/sync. | pass for current beta/source boundary | [PRODUCTION_KEY_STORAGE_LIFECYCLE.md](PRODUCTION_KEY_STORAGE_LIFECYCLE.md) |
 | Pairwise identity and invite/QR default | Pairwise identity persistence, re-pairing, duplicate prevention, and identity-change warnings are implemented and tested. | source pass; identity audit false | [PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md](PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md), [PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md) |
 | Message-content E2EE | Supported 1:1 local/manual message-content encryption is tested; broad production E2EE review gates are closed before production wording. | D100-1 source-ready protocol/session pass; production/audit/sensitive-use/external-delivery false | [PRODUCTION_E2EE_SOURCE_GATE.md](PRODUCTION_E2EE_SOURCE_GATE.md), [PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md](PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md), [PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md) |
-| Passphrase-first encrypted local storage | Passphrase-first SQLCipher-backed local stores, migration, backup exclusion, rollback policy, reset/rebuild, and local wipe semantics are closed. | supported-scope pass; full production key management false | [PRODUCTION_KEY_STORAGE_LIFECYCLE.md](PRODUCTION_KEY_STORAGE_LIFECYCLE.md), [PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md](PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md) |
+| Passphrase-first encrypted local storage | Passphrase-first SQLCipher-backed local stores, migration, backup exclusion, rollback policy, reset/rebuild, and local wipe semantics are closed. | D100-2 source-ready local key/storage pass; app wrapping/key rotation/rollback prevention/secure deletion false | [PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md](PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md), [PRODUCTION_KEY_STORAGE_LIFECYCLE.md](PRODUCTION_KEY_STORAGE_LIFECYCLE.md), [PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md](PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md) |
 | Redacted public diagnostics and support | Public diagnostics/support never request or export raw logs, payloads, paths, message text, passphrases, keys, or private notes. | pass for current beta/source boundary | [PUBLIC_INTAKE_POLICY.md](PUBLIC_INTAKE_POLICY.md), [PUBLIC_SUPPORT_TRIAGE.md](PUBLIC_SUPPORT_TRIAGE.md) |
 | Security trust base is not platform signing/store authority | Apple, Google, Microsoft, app stores, notarization, signing, SmartScreen, Play Store, TestFlight, or store review are distribution aids only. | pass as non-claim | [MACOS_PRODUCTION_DISTRIBUTION_GATE.md](MACOS_PRODUCTION_DISTRIBUTION_GATE.md), [UPDATE_INTEGRITY.md](UPDATE_INTEGRITY.md) |
 | Default practical transport understandable to normal users | Family/friend/client users can complete exchange, failure, retry, and recovery in app without a central trusted server. | supported-scope pass; production transport false | [PRODUCTION_DEFAULT_TRANSPORT_PATH.md](PRODUCTION_DEFAULT_TRANSPORT_PATH.md), [MACOS_PRODUCTION_UX_ONBOARDING.md](MACOS_PRODUCTION_UX_ONBOARDING.md) |
@@ -116,6 +116,10 @@ updated, and a later explicit release/claim task authorizes the wording.
 - supported_default_transport_ready=true
 - supported_local_key_lifecycle_ready=true
 - supported_local_deletion_scope_ready=true
+- production_key_management_source_gate_reviewed=true
+- production_key_management_source_ready=true
+- d100_2_key_management_source_gate_reviewed=true
+- key_management_source_scope=passphrase-first-sqlcipher-local-profile-store-marker-rollback-local-delete-only
 - production_e2ee_source_gate_reviewed=true
 - production_e2ee_source_ready=true
 - d100_1_e2ee_source_gate_reviewed=true
@@ -155,6 +159,10 @@ updated, and a later explicit release/claim task authorizes the wording.
 - rollback_policy_ready=false
 - production_e2ee_ready=false
 - production_key_management_ready=false
+- app_key_wrapping_ready=false
+- key_rotation_ready=false
+- rollback_prevention_claimed=false
+- secure_deletion_claim_allowed=false
 - production_transport_ready=false
 - production_distribution_ready=false
 - production_operational_readiness_claim_allowed=false

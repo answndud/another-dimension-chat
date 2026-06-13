@@ -281,6 +281,12 @@ with user-visible reset/rebuild recovery, and explicit local logical delete /
 owned app-data wipe. `production_key_management_ready=false`, app key wrapping,
 rollback prevention, secure media deletion, backup recovery, security-ready, and
 sensitive-use claims remain false.
+D100-2 production key-management source gate is tracked in
+[reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md](reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md):
+it marks only the supported passphrase-first SQLCipher/local deletion source
+boundary pass-capable while app key wrapping, key rotation, rollback prevention,
+backup recovery, secure deletion, production key-management, security-ready, and
+sensitive-use claims remain false.
 
 Production default transport product path review input is tracked in
 [reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md](reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md).

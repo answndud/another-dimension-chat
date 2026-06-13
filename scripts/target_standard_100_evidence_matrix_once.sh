@@ -31,6 +31,7 @@ for file in "$MATRIX" "$TARGET" "README.md" "SECURITY.md" \
   "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md" \
   "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md" \
   "reference/PRODUCTION_E2EE_SOURCE_GATE.md" \
+  "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md" \
   "reference/STABLE_MACOS_V1_RELEASE_GATE.md" \
   "reference/STABLE_RELEASE_HOLD_REPORT.md" \
   "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md" \
@@ -126,6 +127,9 @@ for linked in \
   "PRODUCTION_E2EE_SOURCE_GATE.md" \
   "PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md" \
   "PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md" \
+  "PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md" \
+  "PRODUCTION_KEY_STORAGE_LIFECYCLE.md" \
+  "PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md" \
   "STABLE_MACOS_V1_RELEASE_GATE.md" \
   "STABLE_RELEASE_HOLD_REPORT.md" \
   "EXTERNAL_REVIEW_AUDIT_READINESS.md" \
@@ -161,6 +165,10 @@ for flag in \
   "supported_default_transport_ready=true" \
   "supported_local_key_lifecycle_ready=true" \
   "supported_local_deletion_scope_ready=true" \
+  "production_key_management_source_gate_reviewed=true" \
+  "production_key_management_source_ready=true" \
+  "d100_2_key_management_source_gate_reviewed=true" \
+  "key_management_source_scope=passphrase-first-sqlcipher-local-profile-store-marker-rollback-local-delete-only" \
   "production_e2ee_source_gate_reviewed=true" \
   "production_e2ee_source_ready=true" \
   "d100_1_e2ee_source_gate_reviewed=true" \
@@ -195,6 +203,10 @@ for flag in \
   "representative_usability_evidence_completed=false" \
   "production_e2ee_ready=false" \
   "production_key_management_ready=false" \
+  "app_key_wrapping_ready=false" \
+  "key_rotation_ready=false" \
+  "rollback_prevention_claimed=false" \
+  "secure_deletion_claim_allowed=false" \
   "production_transport_ready=false" \
   "production_distribution_ready=false" \
   "production_operational_readiness_claim_allowed=false" \

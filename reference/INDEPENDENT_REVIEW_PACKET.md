@@ -150,6 +150,11 @@ Review the unsigned experimental public beta boundary:
   while complete production key management, app key wrapping, rollback
   prevention, secure media deletion, backup recovery, security-ready, and
   sensitive-use claims remain false.
+- `reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md`: D100-2 source gate
+  decomposing passphrase-first SQLCipher, KDF scope, schema versioning, key
+  wrapping, key rotation, rollback, deletion, backup, and recovery into
+  source-ready versus hold states without upgrading production key-management
+  or sensitive-use claims.
 - `reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md`: local manual encrypted
   envelope default path, separate explicit fail-closed onion/Tor advanced path,
   no-central-server boundaries, evidence order, and unresolved reliable

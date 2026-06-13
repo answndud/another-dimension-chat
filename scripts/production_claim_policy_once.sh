@@ -78,6 +78,8 @@ require_text "$GATE" "d100_1_e2ee_source_gate_reviewed=true"
 require_text "$GATE" "protocol_session_e2ee_source_ready=true"
 require_text "$GATE" "OPS-2 production E2EE protocol/session lifecycle hardening is complete"
 require_text "$GATE" "OPS-3 production key management and local storage lifecycle is complete"
+require_text "$GATE" "d100_2_key_management_source_gate_reviewed=true"
+require_text "$GATE" "production_key_management_source_ready=true"
 require_text "$GATE" "OPS-4 reliable default transport product path is complete"
 require_text "$GATE" "OPS-5 macOS production UX and onboarding is complete"
 require_text "$GATE" "OPS-6 macOS production distribution is complete"
@@ -113,4 +115,6 @@ printf 'reliable_external_delivery_claim_allowed=false\n'
 printf 'signed_notarized_security_boundary=false\n'
 printf 'd100_1_e2ee_source_gate_reviewed=true\n'
 printf 'protocol_session_e2ee_source_ready=true\n'
+printf 'd100_2_key_management_source_gate_reviewed=true\n'
+printf 'production_key_management_source_ready=true\n'
 printf 'next_required_phase=RB-9-github-stable-release-publication\n'

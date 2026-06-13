@@ -92,6 +92,7 @@ scripts/macos_production_ux_onboarding_once.sh >/dev/null
 scripts/macos_usability_recovery_closure_once.sh >/dev/null
 scripts/production_protocol_session_lifecycle_once.sh >/dev/null
 scripts/pairwise_identity_safety_product_closure_once.sh >/dev/null
+scripts/production_key_management_source_gate_once.sh >/dev/null
 scripts/production_key_storage_lifecycle_once.sh >/dev/null
 scripts/production_key_rollback_deletion_closure_once.sh >/dev/null
 scripts/production_default_transport_product_path_once.sh >/dev/null

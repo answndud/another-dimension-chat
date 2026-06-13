@@ -40,6 +40,10 @@ for file in "$DOC" "$CORE" "$STATUS" "$PRIVATE_STATE" "$MAIN_JS" "$UI_SMOKE" \
 done
 
 must_contain "$DOC" "rb_2_key_rollback_deletion_claim_closure_reviewed=true"
+must_contain "$DOC" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
+must_contain "$DOC" "production_key_management_source_gate_reviewed=true"
+must_contain "$DOC" "production_key_management_source_ready=true"
+must_contain "$DOC" "d100_2_key_management_source_gate_reviewed=true"
 must_contain "$DOC" "supported_local_key_lifecycle_ready=true"
 must_contain "$DOC" "supported_local_key_lifecycle_scope=passphrase-first-sqlcipher-local-profile-store-only"
 must_contain "$DOC" "supported_rollback_detection_ready=true"
@@ -48,7 +52,13 @@ must_contain "$DOC" "supported_local_deletion_scope_ready=true"
 must_contain "$DOC" "supported_local_deletion_scope=local-logical-delete-and-owned-app-data-wipe-only"
 must_contain "$DOC" "passphrase_first_unlock_required=true"
 must_contain "$DOC" "os_keystore_only_rejected=true"
+must_contain "$DOC" "sqlcipher_adrec1_local_store_ready=true"
+must_contain "$DOC" "sqlcipher_passphrase_kdf_scope_ready=true"
+must_contain "$DOC" "project_owned_argon2_scrypt_kdf_ready=false"
 must_contain "$DOC" "app_key_wrapping_ready=false"
+must_contain "$DOC" "key_rotation_ready=false"
+must_contain "$DOC" "forward_only_schema_version_ready=true"
+must_contain "$DOC" "prototype_data_migration_ready=false"
 must_contain "$DOC" "rollback_detection_marker_only=true"
 must_contain "$DOC" "rollback_prevention_claimed=false"
 must_contain "$DOC" "secure_deletion_claim_allowed=false"
@@ -92,12 +102,15 @@ must_contain "$UI_SMOKE" "supported_rollback_detection_ready="
 must_contain "$UI_SMOKE" "supported_local_deletion_scope_ready="
 
 must_contain "$KEY_DOC" "reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md"
+must_contain "$KEY_DOC" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
+must_contain "$KEY_DOC" "production_key_management_source_ready=true"
 must_contain "$KEY_DOC" "supported_local_key_lifecycle_ready=true"
 must_contain "$KEY_DOC" "rollback_prevention_claimed=false"
 must_contain "$KEY_DOC" "secure_deletion_claim_allowed=false"
 must_contain "$STABLE_GATE" "supported_local_key_lifecycle_ready=true"
 must_contain "$STABLE_GATE" "production_key_management_ready=false"
 must_contain "$PACKET" "reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md"
+must_contain "$PACKET" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 must_contain "$STORAGE_DECISION" "SQLCipher passphrase"
 must_contain "README.md" "reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md"
 must_contain "SECURITY.md" "reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md"
@@ -105,6 +118,8 @@ must_contain "SECURITY.md" "reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md"
 for file in "$DOC" "$KEY_DOC" "$STABLE_GATE" "README.md" "SECURITY.md"; do
   must_not_match "$file" "production_key_management_ready=true"
   must_not_match "$file" "app_key_wrapping_ready=true"
+  must_not_match "$file" "key_rotation_ready=true"
+  must_not_match "$file" "project_owned_argon2_scrypt_kdf_ready=true"
   must_not_match "$file" "rollback_prevention_claimed=true"
   must_not_match "$file" "secure_deletion_claim_allowed=true"
   must_not_match "$file" "secure_media_deletion_claimed=true"
@@ -117,6 +132,9 @@ done
 cat <<'STATUS'
 status=production-key-rollback-deletion-closure-ready
 rb_2_key_rollback_deletion_claim_closure_reviewed=true
+production_key_management_source_gate_reviewed=true
+production_key_management_source_ready=true
+d100_2_key_management_source_gate_reviewed=true
 supported_local_key_lifecycle_ready=true
 supported_local_key_lifecycle_scope=passphrase-first-sqlcipher-local-profile-store-only
 supported_rollback_detection_ready=true
@@ -126,6 +144,7 @@ supported_local_deletion_scope=local-logical-delete-and-owned-app-data-wipe-only
 passphrase_first_unlock_required=true
 os_keystore_only_rejected=true
 app_key_wrapping_ready=false
+key_rotation_ready=false
 rollback_detection_marker_only=true
 rollback_prevention_claimed=false
 secure_deletion_claim_allowed=false

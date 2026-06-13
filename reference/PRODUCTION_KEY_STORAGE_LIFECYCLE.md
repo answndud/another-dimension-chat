@@ -26,6 +26,9 @@ default transport phase.
 - Secure deletion from physical storage media is not claimed.
 - The RB-2 supported scope is recorded in
   `reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md`.
+- D100-2 pass/hold decomposition for production key-management source
+  readiness is recorded in
+  `reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md`.
 
 ## Lifecycle Matrix
 
@@ -110,6 +113,10 @@ Targeted tests that anchor this gate:
 
 - production_key_storage_lifecycle_gate_reviewed=true
 - rb_2_key_rollback_deletion_claim_closure_reviewed=true
+- production_key_management_source_gate_reviewed=true
+- production_key_management_source_ready=true
+- d100_2_key_management_source_gate_reviewed=true
+- key_management_source_scope=passphrase-first-sqlcipher-local-profile-store-marker-rollback-local-delete-only
 - passphrase_first_unlock_required=true
 - supported_local_key_lifecycle_ready=true
 - supported_local_key_lifecycle_scope=passphrase-first-sqlcipher-local-profile-store-only
@@ -118,6 +125,13 @@ Targeted tests that anchor this gate:
 - supported_local_deletion_scope_ready=true
 - supported_local_deletion_scope=local-logical-delete-and-owned-app-data-wipe-only
 - encrypted_profile_session_message_store_ready=true
+- sqlcipher_adrec1_local_store_ready=true
+- sqlcipher_passphrase_kdf_scope_ready=true
+- project_owned_argon2_scrypt_kdf_ready=false
+- forward_only_schema_version_ready=true
+- prototype_data_migration_ready=false
+- app_key_wrapping_ready=false
+- key_rotation_ready=false
 - destructive_local_actions_separated=true
 - exact_confirmation_required=true
 - backup_exclusion_best_effort_only=true
