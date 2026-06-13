@@ -163,6 +163,9 @@ Review the unsigned experimental public beta boundary:
   distribution state, signing/notarization holds, same-release
   checksum/provenance authority, update-channel blockers, and remaining stable
   signed distribution blockers.
+- `reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md`: M100-2 macOS
+  architecture support policy, current Apple Silicon `aarch64` artifact scope,
+  and universal/Intel claim blockers.
 - `reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md`: RB-7
   release-class scope-down that keeps stable signing/notarization claims false
   while allowing lower release classes to continue without production
