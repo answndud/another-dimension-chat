@@ -7,10 +7,17 @@ sensitive-use permission.
 
 This gate does not upload artifacts, edit releases, change public wording, or
 promote any claim.
+Final evidence ledger intake is defined in
+`reference/FINAL_100_EVIDENCE_LEDGER_SCHEMA.md` and validated by
+`scripts/validate_final_100_evidence_ledger.mjs`. Passing that validator only
+creates a candidate for owner/reviewer claim decision; it does not set any
+public claim flag true.
 
 ## Current Gate Flags
 
 - final_100_claim_gate_ready=true
+- final_100_evidence_ledger_schema_available=true
+- final_100_evidence_ledger_validator_available=true
 - macos_public_app_100_claim_allowed=false
 - whole_target_standard_100_claim_allowed=false
 - production_claim_gate_passed=false
