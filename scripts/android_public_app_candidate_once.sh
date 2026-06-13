@@ -17,8 +17,10 @@ must_contain() {
 
 DOC="reference/ANDROID_PUBLIC_APP_CANDIDATE.md"
 VALIDATOR="scripts/validate_android_public_artifact_manifest.mjs"
+SHELL_BOUNDARY="scripts/verify_android_shell_boundary.sh"
 
 for file in "$DOC" "$VALIDATOR" \
+  "$SHELL_BOUNDARY" \
   "apps/mobile/android/app/src/main/AndroidManifest.xml" \
   "apps/mobile/android/app/src/main/res/xml/data_extraction_rules.xml" \
   "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/JsonBridgeSharedCoreAdapter.kt" \
@@ -31,6 +33,7 @@ for flag in \
   "android_artifact_manifest_schema_available=true" \
   "android_artifact_manifest_validator_available=true" \
   "android_artifact_package_structure_verified=true" \
+  "android_artifact_kind_extension_bound=true" \
   "android_public_artifact_checksum_verifier_ready=true" \
   "android_shell_uses_shared_core_json_bridge_candidate=true" \
   "android_forbidden_dependency_scan_ready=true" \
@@ -52,11 +55,13 @@ done
 
 must_contain "$VALIDATOR" "android-public-artifact-manifest-v1"
 must_contain "$VALIDATOR" "android_artifact_package_structure_verified=true"
+must_contain "$VALIDATOR" "artifact-extension-kind-mismatch"
 must_contain "apps/mobile/android/app/src/main/AndroidManifest.xml" 'android:allowBackup="false"'
 must_contain "apps/mobile/android/app/src/main/res/xml/data_extraction_rules.xml" '<exclude domain="database" path="."'
 must_contain "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/JsonBridgeSharedCoreAdapter.kt" "RuntimeScopeUnlockedJsonBridgeMobileApi"
 
 node --check "$VALIDATOR" >/dev/null
+"$SHELL_BOUNDARY" >/dev/null
 scripts/verify_mobile_forbidden_dependency_scan_once.sh >/dev/null
 
 empty_output="$(node "$VALIDATOR" "$ROOT/apps/mobile/android/public-release")"
@@ -122,6 +127,8 @@ printf '%s\n' "$candidate_output" | grep -Fq "accepted_android_public_artifact_m
   fail "valid Android artifact manifest was not accepted"
 printf '%s\n' "$candidate_output" | grep -Fq "android_artifact_package_structure_verified=true" ||
   fail "Android validator did not verify APK/AAB package structure"
+printf '%s\n' "$candidate_output" | grep -Fq "android_artifact_kind_extension_bound=true" ||
+  fail "Android validator did not report artifact kind/extension binding"
 printf '%s\n' "$candidate_output" | grep -Fq "android_public_artifact_ready=false" ||
   fail "Android validator must not claim public artifact readiness"
 
@@ -166,12 +173,49 @@ fi
 grep -Fq "artifact-not-zip-package" "$tmp_dir/bad.out" ||
   fail "Android validator did not report placeholder package rejection"
 
+mismatch_artifact="$tmp_dir/another-dimension-0.1.0-runtime-candidate.aab"
+cp "$artifact" "$mismatch_artifact"
+mismatch_sha="$(shasum -a 256 "$mismatch_artifact" | awk '{print $1}')"
+mismatch_size="$(wc -c <"$mismatch_artifact" | tr -d ' ')"
+cp "$tmp_dir/ANDROID_PUBLIC_ARTIFACT_MANIFEST.json" "$tmp_dir/MISMATCH_ANDROID_PUBLIC_ARTIFACT_MANIFEST.json"
+node - "$tmp_dir/MISMATCH_ANDROID_PUBLIC_ARTIFACT_MANIFEST.json" "$mismatch_sha" "$mismatch_size" <<'NODE'
+const fs = require("node:fs");
+const [manifestPath, sha, size] = process.argv.slice(2);
+const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+manifest.artifact.filename = "another-dimension-0.1.0-runtime-candidate.aab";
+manifest.artifact.sha256 = sha;
+manifest.artifact.size_bytes = Number(size);
+manifest.artifact.checksum_file = "another-dimension-0.1.0-runtime-candidate.aab.sha256";
+manifest.artifact.provenance_file = "another-dimension-0.1.0-runtime-candidate.aab.provenance.json";
+fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+NODE
+printf '%s  %s\n' "$mismatch_sha" "another-dimension-0.1.0-runtime-candidate.aab" \
+  >"$tmp_dir/another-dimension-0.1.0-runtime-candidate.aab.sha256"
+cat >"$tmp_dir/another-dimension-0.1.0-runtime-candidate.aab.provenance.json" <<JSON
+{
+  "schema_version": "android-public-artifact-provenance-v1",
+  "source_commit": "abcdef1234567890",
+  "artifact_kind": "apk",
+  "distribution_path": "sideload-hold",
+  "signing_status": "unsigned-debug-hold",
+  "real_device_smoke_passed": true,
+  "artifact_sha256": "$mismatch_sha",
+  "android_public_artifact_ready": false
+}
+JSON
+if node "$VALIDATOR" "$tmp_dir/MISMATCH_ANDROID_PUBLIC_ARTIFACT_MANIFEST.json" >"$tmp_dir/mismatch.out" 2>&1; then
+  fail "Android validator accepted artifact kind/extension mismatch"
+fi
+grep -Fq "artifact-extension-kind-mismatch" "$tmp_dir/mismatch.out" ||
+  fail "Android validator did not report artifact kind/extension mismatch"
+
 cat <<'STATUS'
 status=android-public-app-candidate-source-ready
 android_public_app_candidate_path_ready=true
 android_artifact_manifest_schema_available=true
 android_artifact_manifest_validator_available=true
 android_artifact_package_structure_verified=true
+android_artifact_kind_extension_bound=true
 android_public_artifact_checksum_verifier_ready=true
 android_shell_uses_shared_core_json_bridge_candidate=true
 android_forbidden_dependency_scan_ready=true
