@@ -31,6 +31,7 @@ for file in "$MATRIX" "$TARGET" "README.md" "SECURITY.md" \
   "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md" \
   "reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md" \
   "reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md" \
+  "scripts/collect_macos_release_credential_evidence.sh" \
   "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md" \
   "reference/PRODUCTION_E2EE_SOURCE_GATE.md" \
   "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md" \
@@ -179,6 +180,8 @@ for flag in \
   "deployment_100_blocker_resolution_plan_available=true" \
   "macos_release_credential_evidence_schema_available=true" \
   "macos_release_credential_evidence_validator_available=true" \
+  "macos_release_credential_evidence_collector_available=true" \
+  "macos_release_credential_evidence_collector_source_ready=true" \
   "macos_release_credential_evidence_intake_ready=true" \
   "target_standard_100_deployment_gap_reconciled=true" \
   "target_standard_criteria_complete=true" \

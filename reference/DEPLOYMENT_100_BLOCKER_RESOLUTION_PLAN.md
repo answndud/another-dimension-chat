@@ -95,6 +95,8 @@ Current public wording must remain:
 - M100-1 credential gate: `reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md`
 - M100-1 credential evidence intake:
   `reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md`
+- M100-1 credential evidence collector:
+  `scripts/collect_macos_release_credential_evidence.sh`
 - M100-2 artifact scope: `reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md`
 - M100-3 signed/notarized artifact:
   `reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md`
@@ -118,6 +120,8 @@ Current public wording must remain:
 - all_false_hold_flags_categorized=true
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
+- macos_release_credential_evidence_collector_available=true
+- macos_release_credential_evidence_collector_source_ready=true
 - macos_release_credential_evidence_intake_ready=true
 - m100_1_release_credentials_ready=false
 - developer_id_signing_available=false

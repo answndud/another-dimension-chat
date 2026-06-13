@@ -37,6 +37,7 @@ REGISTER="reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 for file in "$PLAN" "$MATRIX" "$ACTIVE" "$REGISTER" \
   "reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md" \
   "reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md" \
+  "scripts/collect_macos_release_credential_evidence.sh" \
   "reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md" \
   "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md" \
   "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
@@ -93,6 +94,8 @@ for flag in \
   "developer_id_signing_available=false" \
   "macos_release_credential_evidence_schema_available=true" \
   "macos_release_credential_evidence_validator_available=true" \
+  "macos_release_credential_evidence_collector_available=true" \
+  "macos_release_credential_evidence_collector_source_ready=true" \
   "macos_release_credential_evidence_intake_ready=true" \
   "apple_developer_team_id_recorded=false" \
   "notarization_credential_available=false" \

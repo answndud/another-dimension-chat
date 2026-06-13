@@ -13,7 +13,8 @@ or external participants. The focused verifier is
 macOS keychain, `xcode-select`, and `xcrun notarytool` state. Missing
 credentials are a release blocker and make the verifier exit non-zero.
 Public-safe credential evidence intake is defined in
-`reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md` and checked by
+`reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md`, collected by
+`scripts/collect_macos_release_credential_evidence.sh`, and checked by
 `scripts/macos_release_credential_evidence_once.sh`; that intake can validate
 redacted release-machine evidence but cannot replace the live keychain and
 notary verifier.
@@ -171,6 +172,8 @@ separate explicit phases. They do not inherit macOS release authority.
 - release_mutation_authorization_record_available=true
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
+- macos_release_credential_evidence_collector_available=true
+- macos_release_credential_evidence_collector_source_ready=true
 - macos_release_credential_evidence_intake_ready=true
 - github_admin_observed=true
 - m100_1_release_credential_verifier_dynamic=true

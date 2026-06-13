@@ -1,9 +1,9 @@
 # macOS Release Credential Evidence Schema
 
-Status: M100-1 release credential evidence intake is source-ready. This is not
-a Developer ID credential, not a notarization credential, not a signed artifact,
-not a release upload authorization, not production-ready, not audited, and not
-permission for sensitive communication.
+Status: M100-1 release credential evidence intake and collector are
+source-ready. This is not a Developer ID credential, not a notarization
+credential, not a signed artifact, not a release upload authorization, not
+production-ready, not audited, and not permission for sensitive communication.
 
 This schema defines the public-safe evidence file a release machine or CI
 signing service can return after Apple Developer and notarization credentials
@@ -12,6 +12,10 @@ exist. Evidence files should live under the ignored private directory
 
 The validator is `scripts/validate_macos_release_credential_evidence.mjs`.
 The focused verifier is `scripts/macos_release_credential_evidence_once.sh`.
+The release-machine collector is
+`scripts/collect_macos_release_credential_evidence.sh`; it writes only
+redacted/public-safe fields and refuses to produce evidence until Developer ID
+and notary credentials validate locally.
 
 Current public wording must remain:
 
@@ -65,9 +69,10 @@ Evidence files must not contain:
 
 ## Acceptance Semantics
 
-A valid evidence file produces a credential evidence candidate only. It does
-not itself authorize signing, notarization, release upload, release body edit,
-asset deletion, or DMG rebuild. The live M100-1 gate still requires
+A valid evidence file produces a credential evidence candidate only. The
+collector can create that candidate on a credentialed release machine, but it
+does not itself authorize signing, notarization, release upload, release body
+edit, asset deletion, or DMG rebuild. The live M100-1 gate still requires
 `scripts/release_authority_credential_unblock_once.sh` to pass on the release
 machine with the actual keychain identity and validated notarization
 credential.
@@ -76,6 +81,8 @@ credential.
 
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
+- macos_release_credential_evidence_collector_available=true
+- macos_release_credential_evidence_collector_source_ready=true
 - macos_release_credential_evidence_intake_ready=true
 - macos_release_credential_evidence_private_docs_required=true
 - macos_release_credential_evidence_secret_redaction_required=true

@@ -33,9 +33,11 @@ cd "$ROOT"
 
 DOC="reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md"
 TAURI_CONFIG="apps/desktop-tauri/src-tauri/tauri.conf.json"
+COLLECTOR="scripts/collect_macos_release_credential_evidence.sh"
 
 [ -f "$DOC" ] || fail "missing M100-1 release authority record"
 [ -f "$TAURI_CONFIG" ] || fail "missing Tauri config input: $TAURI_CONFIG"
+[ -f "$COLLECTOR" ] || fail "missing M100-1 credential evidence collector"
 
 XCODE_PATH="$(xcode-select -p 2>/dev/null || true)"
 XCODE_AVAILABLE=false
@@ -158,12 +160,15 @@ fi
 
 must_contain "$DOC" "Status: M100-1 credential checklist and local verifier are available"
 must_contain "$DOC" "scripts/release_authority_credential_unblock_once.sh"
+must_contain "$DOC" "scripts/collect_macos_release_credential_evidence.sh"
 must_contain "$DOC" "credentials are a release blocker"
 must_contain "$DOC" "verifier exit non-zero"
 must_contain "$DOC" "## Credential Readiness Checklist"
 must_contain "$DOC" "## Certificate Rotation And Expiry Policy"
 must_contain "$DOC" "certificate_rotation_expiry_policy_available=true"
 must_contain "$DOC" "release_authority_credential_unblock_reviewed=true"
+must_contain "$DOC" "macos_release_credential_evidence_collector_available=true"
+must_contain "$DOC" "macos_release_credential_evidence_collector_source_ready=true"
 must_contain "$DOC" "m100_1_release_credential_verifier_dynamic=true"
 must_contain "$DOC" "release_upload_authorized=false"
 must_contain "$DOC" "release_body_edit_authorized=false"
@@ -219,6 +224,8 @@ fi
 cat <<STATUS
 status=release-authority-credential-unblock-checked
 release_authority_credential_unblock_reviewed=true
+macos_release_credential_evidence_collector_available=true
+macos_release_credential_evidence_collector_source_ready=true
 m100_1_release_credential_verifier_dynamic=true
 apple_developer_program_team_confirmed=$(bool "$APPLE_DEVELOPER_PROGRAM_TEAM_CONFIRMED")
 apple_developer_team_id_recorded=$(bool "$APPLE_TEAM_ID_RECORDED")
