@@ -44,7 +44,9 @@ communication prohibited. Do not use it for real communication.
    [reference/PUBLIC_SCREENSHOT_CHECKLIST.md](reference/PUBLIC_SCREENSHOT_CHECKLIST.md).
 8. Maintainer rehearsal: before directing public testers, use
    [reference/MACOS_FRESH_INSTALL_REHEARSAL.md](reference/MACOS_FRESH_INSTALL_REHEARSAL.md)
-   for a fresh-install checklist that records only public-safe results.
+   for a fresh-install checklist that records only public-safe results. The
+   current public-safe result record is
+   [reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md](reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md).
 9. Final source status: use
    [reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md](reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md)
    to report what is already public, what remains held, and the next work axis.
