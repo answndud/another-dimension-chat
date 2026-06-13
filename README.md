@@ -40,6 +40,16 @@ Release authority: use the files attached to the GitHub Release, not branch
 files or source archives. The `main` branch may contain later documentation or
 source changes after the published DMG.
 
+### Local Data Lifecycle
+
+The desktop beta has separate local destructive actions. Conversation delete
+removes local message records while preserving session records. Session delete
+removes local session resume records while preserving message records. Profile
+delete requires the exact local profile name and removes that local profile
+store. Full local wipe requires typing `WIPE LOCAL DATA` and removes app-owned
+local data on this device. These controls do not provide cloud backup recovery,
+cloud sync, rollback prevention, or secure deletion from storage media.
+
 ## Current Status
 
 This repository is a prototype moving toward a local desktop beta.

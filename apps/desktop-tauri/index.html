@@ -1163,6 +1163,28 @@
                     <dd id="production-data-lifecycle" data-i18n="notCheckedYet">Not checked yet</dd>
                   </div>
                 </dl>
+                <div class="lifecycle-guide" aria-labelledby="local-data-lifecycle-guide-title">
+                  <p id="local-data-lifecycle-guide-title" class="demo-state" data-i18n="localDataLifecycleGuideTitle">
+                    Local data lifecycle scope
+                  </p>
+                  <ul>
+                    <li data-i18n="localDataLifecycleGuideConversation">
+                      Conversation delete removes local message records and preserves session records.
+                    </li>
+                    <li data-i18n="localDataLifecycleGuideSession">
+                      Session delete removes local session resume records and preserves message records.
+                    </li>
+                    <li data-i18n="localDataLifecycleGuideProfile">
+                      Profile delete removes the local profile store after exact-name confirmation.
+                    </li>
+                    <li data-i18n="localDataLifecycleGuideWipe">
+                      Full local wipe removes owned app data on this device after WIPE LOCAL DATA confirmation.
+                    </li>
+                    <li data-i18n="localDataLifecycleGuideBoundary">
+                      No cloud backup recovery, rollback prevention, or secure deletion from storage media is claimed.
+                    </li>
+                  </ul>
+                </div>
                 <div class="tool-step">
                   <div class="loop-actions">
                     <button id="check-production-data-lifecycle" type="button" class="flow-control is-secondary" data-i18n="checkDataLifecycle">
@@ -1181,6 +1203,9 @@
                       Delete profile
                     </button>
                   </div>
+                  <p class="lifecycle-action-note" data-i18n="profileDeleteScopeNote">
+                    Deletes the local profile store and clears affected room runtime only; no cloud backup recovery is performed.
+                  </p>
                   <label class="loop-label" for="production-full-wipe-confirmation" data-i18n="fullWipeConfirm">
                     Type WIPE LOCAL DATA to wipe local app data
                   </label>
@@ -1190,6 +1215,9 @@
                       Wipe local data
                     </button>
                   </div>
+                  <p class="lifecycle-action-note" data-i18n="fullWipeScopeNote">
+                    Deletes owned local app data on this device only; secure deletion from storage media and rollback prevention are not claimed.
+                  </p>
                 </div>
               </section>
               <section class="loop-panel" aria-labelledby="production-pairing-title">
@@ -1313,6 +1341,9 @@
                     <button id="check-production-session-lifecycle" type="button" class="flow-control is-secondary" data-i18n="checkLifecycle">Check lifecycle</button>
                     <button id="delete-production-session-lifecycle" type="button" class="flow-control is-secondary" data-i18n="deleteSession">Delete session</button>
                   </div>
+                  <p class="lifecycle-action-note" data-i18n="sessionDeleteScopeNote">
+                    Deletes local session resume records only; conversation message records are preserved.
+                  </p>
                 </div>
                 <dl class="flow-summary">
                   <div>
@@ -1359,6 +1390,9 @@
                     <button id="export-production-message-envelope" type="button" data-i18n="exportEnvelope">Export envelope</button>
                     <button id="delete-production-conversation" type="button" class="flow-control is-secondary" data-i18n="deleteConversation">Delete conversation</button>
                   </div>
+                  <p class="lifecycle-action-note" data-i18n="conversationDeleteScopeNote">
+                    Deletes local conversation message records only; session resume records are preserved.
+                  </p>
                   <p id="production-message-state" class="demo-state" aria-live="polite" data-i18n="messageFlowIdle">
                     Message flow idle
                   </p>
