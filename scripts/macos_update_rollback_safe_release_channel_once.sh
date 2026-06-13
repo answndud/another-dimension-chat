@@ -24,8 +24,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 DOC="reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
+EMERGENCY_DOC="reference/MACOS_EMERGENCY_RELEASE_INTEGRITY.md"
+EMERGENCY_GATE="scripts/macos_emergency_release_no_mutation_once.sh"
 
 for file in "$DOC" \
+  "$EMERGENCY_DOC" \
+  "$EMERGENCY_GATE" \
   "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md" \
   "scripts/validate_macos_signed_update_manifest.mjs" \
   "reference/UPDATE_INTEGRITY.md" \
@@ -59,6 +63,13 @@ must_contain "$DOC" "update_version_monotonicity_policy_ready=true"
 must_contain "$DOC" "rollback_warning_policy_ready=true"
 must_contain "$DOC" "rollback_prevention_claimed=false"
 must_contain "$DOC" "emergency_release_path_defined=true"
+must_contain "$DOC" "macos_emergency_release_integrity_available=true"
+must_contain "$DOC" "emergency_release_advisory_packet_script_available=true"
+must_contain "$DOC" "emergency_release_no_artifact_mutation_verifier_ready=true"
+must_contain "$DOC" "emergency_release_generates_app_artifact=false"
+must_contain "$DOC" "emergency_release_advisory_publication_authorized=false"
+must_contain "$DOC" "dependency_vulnerability_decision_table_available=true"
+must_contain "$DOC" "dependency_vulnerability_decisions=hold#advisory#rebuild#revoke"
 must_contain "$DOC" "release_upload_authorized=false"
 must_contain "$DOC" "dmg_rebuild_authorized=false"
 must_contain "$DOC" "stable_release_allowed=false"
@@ -83,6 +94,9 @@ must_contain "reference/UPDATE_INTEGRITY.md" "If auto-update is introduced later
 must_contain "reference/UPDATE_INTEGRITY.md" "automatic rollback prevention"
 must_contain "reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md" "emergency_release_update_path_defined=true"
 must_contain "reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md" "release_rollback_guidance_defined=true"
+must_contain "$EMERGENCY_DOC" "emergency_release_no_artifact_mutation_verifier_ready=true"
+must_contain "$EMERGENCY_DOC" "dependency_vulnerability_decision_table_available=true"
+must_contain "$EMERGENCY_GATE" "status=macos-emergency-release-no-mutation-ready"
 must_contain "reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md" "production_distribution_ready=false"
 must_contain "reference/STABLE_MACOS_V1_RELEASE_GATE.md" "release_upload_authorized=false"
 must_contain "reference/STABLE_MACOS_V1_RELEASE_GATE.md" "dmg_rebuild_authorized=false"
@@ -97,6 +111,8 @@ for file in "$DOC" "reference/UPDATE_INTEGRITY.md" "README.md" "SECURITY.md"; do
   must_not_match "$file" "rollback_prevention_claimed=true"
   must_not_match "$file" "release_upload_authorized=true"
   must_not_match "$file" "dmg_rebuild_authorized=true"
+  must_not_match "$file" "emergency_release_generates_app_artifact=true"
+  must_not_match "$file" "emergency_release_advisory_publication_authorized=true"
   must_not_match "$file" "stable_release_allowed=true"
   must_not_match "$file" "production_distribution_ready=true"
   must_not_match "$file" "security_ready_claimed=true"
@@ -104,6 +120,7 @@ for file in "$DOC" "reference/UPDATE_INTEGRITY.md" "README.md" "SECURITY.md"; do
 done
 
 scripts/macos_signed_update_manifest_once.sh >/dev/null
+scripts/macos_emergency_release_no_mutation_once.sh >/dev/null
 
 cat <<'STATUS'
 status=macos-update-rollback-safe-release-channel-ready
@@ -123,6 +140,13 @@ update_signature_ready=false
 rollback_warning_policy_ready=true
 rollback_prevention_claimed=false
 emergency_release_path_defined=true
+macos_emergency_release_integrity_available=true
+emergency_release_advisory_packet_script_available=true
+emergency_release_no_artifact_mutation_verifier_ready=true
+emergency_release_generates_app_artifact=false
+emergency_release_advisory_publication_authorized=false
+dependency_vulnerability_decision_table_available=true
+dependency_vulnerability_decisions=hold#advisory#rebuild#revoke
 release_upload_authorized=false
 dmg_rebuild_authorized=false
 stable_release_allowed=false
