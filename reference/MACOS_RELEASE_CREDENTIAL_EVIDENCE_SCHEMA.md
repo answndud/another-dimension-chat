@@ -18,7 +18,9 @@ redacted/public-safe fields and refuses to produce evidence until Developer ID
 and notary credentials validate locally.
 For release-gate use, the validator must run with `AD_REQUIRE_CURRENT_HEAD=1`
 or `--require-current-head` so stale evidence from a different commit cannot
-advance M100-1.
+advance M100-1. It must also run with `AD_REQUIRE_PRIVATE_DOCS_PATH=1` or
+`--require-private-docs-path` so release-gate evidence is accepted only from
+the ignored private `docs/macos-release-credential-evidence/` evidence path.
 
 Current public wording must remain:
 
@@ -89,6 +91,7 @@ current repository `HEAD`.
 - macos_release_credential_evidence_collector_source_ready=true
 - macos_release_credential_evidence_intake_ready=true
 - macos_release_credential_evidence_current_head_bound=true
+- macos_release_credential_evidence_private_docs_path_bound=true
 - macos_release_credential_evidence_private_docs_required=true
 - macos_release_credential_evidence_secret_redaction_required=true
 - m100_1_release_credential_evidence_candidate=false

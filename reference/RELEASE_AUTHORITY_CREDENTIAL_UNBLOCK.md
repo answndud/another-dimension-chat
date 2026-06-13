@@ -17,8 +17,9 @@ Public-safe credential evidence intake is defined in
 `scripts/collect_macos_release_credential_evidence.sh`, and checked by
 `scripts/macos_release_credential_evidence_once.sh`; that intake can validate
 redacted release-machine evidence but cannot replace the live keychain and
-notary verifier. Release-gate evidence validation is current-HEAD bound so a
-stale credential evidence file cannot advance M100-1.
+notary verifier. Release-gate evidence validation is current-HEAD and private
+docs path bound so stale evidence or evidence outside the ignored private
+credential evidence path cannot advance M100-1.
 
 ## Observed Local Authority
 
@@ -177,6 +178,7 @@ separate explicit phases. They do not inherit macOS release authority.
 - macos_release_credential_evidence_collector_source_ready=true
 - macos_release_credential_evidence_intake_ready=true
 - macos_release_credential_evidence_current_head_bound=true
+- macos_release_credential_evidence_private_docs_path_bound=true
 - github_admin_observed=true
 - m100_1_release_credential_verifier_dynamic=true
 - apple_developer_program_team_confirmed=false
@@ -212,4 +214,4 @@ separate explicit phases. They do not inherit macOS release authority.
 - android_runtime_implementation_authorized=false
 - ios_runtime_implementation_authorized=false
 - stable_release_scope_down_until_credentials=true
-- next_required_phase=RB-1 production protocol and E2EE readiness closure
+- next_required_phase=Phase M100-3 - Signed And Notarized macOS RC Artifact

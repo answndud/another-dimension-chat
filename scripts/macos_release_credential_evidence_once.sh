@@ -42,6 +42,7 @@ for flag in \
   "macos_release_credential_evidence_collector_source_ready=true" \
   "macos_release_credential_evidence_intake_ready=true" \
   "macos_release_credential_evidence_current_head_bound=true" \
+  "macos_release_credential_evidence_private_docs_path_bound=true" \
   "macos_release_credential_evidence_private_docs_required=true" \
   "macos_release_credential_evidence_secret_redaction_required=true" \
   "m100_1_release_credential_evidence_candidate=false" \
@@ -64,7 +65,9 @@ must_contain "$SCHEMA" "scripts/collect_macos_release_credential_evidence.sh"
 must_contain "$SCHEMA" "scripts/macos_release_credential_evidence_once.sh"
 must_contain "$VALIDATOR" "status=macos-release-credential-evidence-candidate-requires-live-verifier"
 must_contain "$VALIDATOR" "AD_REQUIRE_CURRENT_HEAD"
+must_contain "$VALIDATOR" "AD_REQUIRE_PRIVATE_DOCS_PATH"
 must_contain "$VALIDATOR" "source-commit-not-current-head"
+must_contain "$VALIDATOR" "evidence-file-outside-private-docs"
 must_contain "$COLLECTOR" "AD_MACOS_CREDENTIAL_EVIDENCE_DRY_RUN"
 must_contain "$COLLECTOR" "xcrun notarytool history"
 must_contain "$COLLECTOR" "secret_material_included=false"
@@ -95,7 +98,9 @@ printf '%s\n' "$empty_output" | grep -Fq "credential_evidence_files_found=0" || 
 printf '%s\n' "$empty_output" | grep -Fq "status=waiting-for-macos-release-credential-evidence" || fail "empty credential evidence run did not wait"
 
 tmp_dir="$(mktemp -d)"
-trap 'rm -rf "$tmp_dir"' EXIT
+private_tmp_dir="$ROOT/docs/macos-release-credential-evidence/.verifier-$$"
+mkdir -p "$private_tmp_dir"
+trap 'rm -rf "$tmp_dir" "$private_tmp_dir"' EXIT
 
 cat >"$tmp_dir/valid.properties" <<'EVIDENCE'
 schema_version=macos-release-credential-evidence-v1
@@ -141,6 +146,20 @@ sed "s/^source_commit=.*/source_commit=$current_head/" "$tmp_dir/valid.propertie
 current_output="$(AD_REQUIRE_CURRENT_HEAD=1 node "$VALIDATOR" "$tmp_dir/current.properties")"
 printf '%s\n' "$current_output" | grep -Fq "credential_evidence_current_head_required=true" || fail "strict validator did not report current-head requirement"
 printf '%s\n' "$current_output" | grep -Fq "accepted_macos_release_credential_evidence=1" || fail "strict validator did not accept current HEAD evidence"
+
+if AD_REQUIRE_PRIVATE_DOCS_PATH=1 node "$VALIDATOR" "$tmp_dir/current.properties" >"$tmp_dir/path.out" 2>&1; then
+  fail "strict validator accepted credential evidence outside private docs path"
+fi
+grep -Fq "evidence-file-outside-private-docs" "$tmp_dir/path.out" || fail "strict validator did not report outside private docs path"
+
+cp "$tmp_dir/current.properties" "$private_tmp_dir/current.properties"
+private_path_output="$(
+  AD_REQUIRE_CURRENT_HEAD=1 AD_REQUIRE_PRIVATE_DOCS_PATH=1 node "$VALIDATOR" "$private_tmp_dir/current.properties"
+)"
+printf '%s\n' "$private_path_output" | grep -Fq "credential_evidence_private_docs_path_required=true" ||
+  fail "strict validator did not report private docs path requirement"
+printf '%s\n' "$private_path_output" | grep -Fq "accepted_macos_release_credential_evidence=1" ||
+  fail "strict validator did not accept current HEAD evidence under private docs path"
 
 collector_status=0
 collector_output="$(AD_MACOS_CREDENTIAL_EVIDENCE_DRY_RUN=1 "$ROOT/scripts/collect_macos_release_credential_evidence.sh" 2>&1)" || collector_status=$?
@@ -229,6 +248,7 @@ macos_release_credential_evidence_collector_available=true
 macos_release_credential_evidence_collector_source_ready=true
 macos_release_credential_evidence_intake_ready=true
 macos_release_credential_evidence_current_head_bound=true
+macos_release_credential_evidence_private_docs_path_bound=true
 m100_1_release_credential_evidence_candidate=false
 m100_1_release_credentials_ready=false
 release_upload_authorized=false

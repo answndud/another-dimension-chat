@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const DEFAULT_EVIDENCE_DIR = path.join(process.cwd(), "docs", "macos-release-credential-evidence");
+const PRIVATE_EVIDENCE_DIR = path.resolve(DEFAULT_EVIDENCE_DIR);
 
 const REQUIRED_FIELDS = Object.freeze([
   "schema_version",
@@ -135,10 +136,19 @@ function currentGitHead() {
   }
 }
 
-function validateEvidence(file, { requireCurrentHead = false, head = "" } = {}) {
+function isUnderPrivateEvidenceDir(file) {
+  const resolved = path.resolve(file);
+  const relative = path.relative(PRIVATE_EVIDENCE_DIR, resolved);
+  return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
+function validateEvidence(file, { requireCurrentHead = false, requirePrivateDocsPath = false, head = "" } = {}) {
   const text = fs.readFileSync(file, "utf8");
   const fields = parseEvidence(text);
   const issues = [];
+  if (requirePrivateDocsPath && !isUnderPrivateEvidenceDir(file)) {
+    issues.push("evidence-file-outside-private-docs");
+  }
   for (const field of REQUIRED_FIELDS) {
     const value = fields.get(field) ?? "";
     if (isUnresolved(value)) issues.push(`missing-or-template-value:${field}`);
@@ -201,11 +211,17 @@ function validateEvidence(file, { requireCurrentHead = false, head = "" } = {}) 
 const rawArgs = process.argv.slice(2);
 const requireCurrentHead =
   rawArgs.includes("--require-current-head") || process.env.AD_REQUIRE_CURRENT_HEAD === "1";
-const evidenceInputs = rawArgs.filter((arg) => arg !== "--require-current-head");
+const requirePrivateDocsPath =
+  rawArgs.includes("--require-private-docs-path") || process.env.AD_REQUIRE_PRIVATE_DOCS_PATH === "1";
+const evidenceInputs = rawArgs.filter((arg) => ![
+  "--require-current-head",
+  "--require-private-docs-path",
+].includes(arg));
 const head = requireCurrentHead ? currentGitHead() : "";
 
 const evidenceFiles = collectEvidenceFiles(evidenceInputs);
 console.log(`credential_evidence_current_head_required=${requireCurrentHead}`);
+console.log(`credential_evidence_private_docs_path_required=${requirePrivateDocsPath}`);
 console.log(`credential_evidence_files_found=${evidenceFiles.length}`);
 
 if (evidenceFiles.length === 0) {
@@ -216,7 +232,8 @@ if (evidenceFiles.length === 0) {
   process.exit(0);
 }
 
-const validated = evidenceFiles.map((file) => validateEvidence(file, { requireCurrentHead, head }));
+const validated = evidenceFiles.map((file) =>
+  validateEvidence(file, { requireCurrentHead, requirePrivateDocsPath, head }));
 let failures = 0;
 for (const result of validated) {
   const name = path.basename(result.file);
