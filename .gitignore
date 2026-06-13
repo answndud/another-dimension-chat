@@ -13,6 +13,26 @@ apps/desktop-tauri/screenshot-candidates/
 apps/desktop-tauri/src-tauri/gen/schemas/
 apps/desktop-tauri/src-tauri/target/
 
+# Generated release/package artifacts
+public-release/
+beta-artifacts/
+*.dmg
+*.zip
+*.msi
+
+# Mobile generated build/release outputs
+apps/mobile/android/.gradle/
+apps/mobile/android/build/
+apps/mobile/android/app/build/
+apps/mobile/android/public-release/
+apps/mobile/ios/build/
+apps/mobile/ios/DerivedData/
+apps/mobile/ios/public-release/
+*.apk
+*.aab
+*.ipa
+*.xcarchive
+
 # Private planning and security docs
 /docs/
 

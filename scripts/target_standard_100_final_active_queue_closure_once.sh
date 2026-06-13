@@ -65,6 +65,7 @@ for file in "$DOC" "$ACTIVE" "$MATRIX" "$PLAN" "$REGISTER" \
   "scripts/production_claim_policy_once.sh" \
   "scripts/production_claim_release_class_decision_once.sh" \
   "scripts/github_release_publication_scope_down_once.sh" \
+  "scripts/mobile_generated_artifact_guard_once.sh" \
   "README.md" "SECURITY.md"; do
   [ -f "$file" ] || fail "missing final active queue closure input: $file"
 done
@@ -164,6 +165,7 @@ scripts/verify_ios_shell_boundary.sh >/dev/null
 scripts/production_claim_policy_once.sh >/dev/null
 scripts/production_claim_release_class_decision_once.sh >/dev/null
 scripts/github_release_publication_scope_down_once.sh >/dev/null
+scripts/mobile_generated_artifact_guard_once.sh >/dev/null
 
 if git -C "$ROOT" diff --cached --name-only | grep -Eq '^(docs/|AGENTS.md|apps/desktop-tauri/(public-release|beta-artifacts)/|public-release/|beta-artifacts/)'; then
   fail "private docs, AGENTS.md, or generated artifact path is staged"
@@ -186,6 +188,7 @@ r100_1_production_claim_gate_decision_closed=true
 r100_2_stable_macos_release_decision_closed=true
 r100_3_whole_product_target_standard_gate_decision_closed=true
 plan_active_queue_complete=true
+generated_artifacts_staged=false
 production_claim_gate_passed=false
 stable_release_publication_performed=false
 macos_public_app_100_claim_allowed=false

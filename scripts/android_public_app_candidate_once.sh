@@ -18,9 +18,11 @@ must_contain() {
 DOC="reference/ANDROID_PUBLIC_APP_CANDIDATE.md"
 VALIDATOR="scripts/validate_android_public_artifact_manifest.mjs"
 SHELL_BOUNDARY="scripts/verify_android_shell_boundary.sh"
+ARTIFACT_GUARD="scripts/mobile_generated_artifact_guard_once.sh"
 
 for file in "$DOC" "$VALIDATOR" \
   "$SHELL_BOUNDARY" \
+  "$ARTIFACT_GUARD" \
   "apps/mobile/android/app/src/main/AndroidManifest.xml" \
   "apps/mobile/android/app/src/main/res/xml/data_extraction_rules.xml" \
   "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/JsonBridgeSharedCoreAdapter.kt" \
@@ -37,6 +39,7 @@ for flag in \
   "android_public_artifact_checksum_verifier_ready=true" \
   "android_shell_uses_shared_core_json_bridge_candidate=true" \
   "android_forbidden_dependency_scan_ready=true" \
+  "android_generated_artifact_guard_ready=true" \
   "android_backup_exclusion_configured=true" \
   "android_release_package_smoke_ready=false" \
   "android_real_device_smoke_passed=false" \
@@ -62,6 +65,7 @@ must_contain "apps/mobile/android/app/src/main/java/chat/anotherdimension/androi
 
 node --check "$VALIDATOR" >/dev/null
 "$SHELL_BOUNDARY" >/dev/null
+"$ARTIFACT_GUARD" >/dev/null
 scripts/verify_mobile_forbidden_dependency_scan_once.sh >/dev/null
 
 empty_output="$(node "$VALIDATOR" "$ROOT/apps/mobile/android/public-release")"
@@ -219,6 +223,7 @@ android_artifact_kind_extension_bound=true
 android_public_artifact_checksum_verifier_ready=true
 android_shell_uses_shared_core_json_bridge_candidate=true
 android_forbidden_dependency_scan_ready=true
+android_generated_artifact_guard_ready=true
 android_backup_exclusion_configured=true
 android_release_package_smoke_ready=false
 android_real_device_smoke_passed=false
