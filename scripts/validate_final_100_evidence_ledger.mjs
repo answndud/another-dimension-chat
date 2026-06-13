@@ -229,6 +229,36 @@ function validateRepresentativeUsabilityReports(ledger, file, { requireCurrentHe
   return issues;
 }
 
+function validateRedactedFieldReports(ledger, file) {
+  const refs = ledger.evidence_files?.external?.redacted_field_reports;
+  const reportFiles = collectEvidenceFilePaths(path.dirname(file), refs);
+  if (reportFiles.length === 0) return [];
+  const validator = path.join(process.cwd(), "scripts", "validate_redacted_field_reports.mjs");
+  const issues = [];
+  let output = "";
+  try {
+    output = execFileSync(process.execPath, [validator, ...reportFiles], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch {
+    return ["external.redacted_field_reports:validator-failed"];
+  }
+  if (!output.includes("accepted_production_field_reports=4")) {
+    issues.push("external.redacted_field_reports:below-threshold");
+  }
+  if (!output.includes("required_platform_pairs_covered=true")) {
+    issues.push("external.redacted_field_reports:required-platform-pairs-not-covered");
+  }
+  if (!output.includes("different_networks_covered=true")) {
+    issues.push("external.redacted_field_reports:different-networks-not-covered");
+  }
+  if (!output.includes("status=redacted-field-evidence-candidate-requires-review")) {
+    issues.push("external.redacted_field_reports:not-candidate");
+  }
+  return issues;
+}
+
 function validateGroup(ledger, groupName) {
   const group = ledger[groupName];
   const issues = [];
@@ -323,6 +353,7 @@ function validateLedger(file, { requireCurrentHead, head }) {
   }
   issues.push(...validateEvidenceFiles(ledger, file));
   issues.push(...validateRepresentativeUsabilityReports(ledger, file, { requireCurrentHead }));
+  issues.push(...validateRedactedFieldReports(ledger, file));
   const fieldReportCount = ledger.external?.accepted_field_report_count;
   if (!Number.isInteger(fieldReportCount) || fieldReportCount < 4) {
     issues.push("external.accepted_field_report_count:below-threshold");
@@ -346,6 +377,7 @@ if (files.length === 0) {
   console.log("accepted_final_100_evidence_ledgers=0");
   console.log("final_100_evidence_ledger_child_files_content_redacted=true");
   console.log("final_100_evidence_ledger_requires_valid_representative_usability_reports=true");
+  console.log("final_100_evidence_ledger_requires_valid_redacted_field_reports=true");
   console.log("final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true");
   console.log("macos_public_app_100_claim_allowed=false");
   console.log("whole_target_standard_100_claim_allowed=false");
@@ -376,6 +408,7 @@ console.log(`accepted_final_100_evidence_ledgers=${files.length}`);
 console.log("final_100_evidence_ledger_child_files_sha_verified=true");
 console.log("final_100_evidence_ledger_child_files_content_redacted=true");
 console.log("final_100_evidence_ledger_requires_valid_representative_usability_reports=true");
+console.log("final_100_evidence_ledger_requires_valid_redacted_field_reports=true");
 console.log("final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true");
 console.log("final_100_evidence_candidate_requires_owner_claim_decision=true");
 console.log("macos_public_app_100_claim_allowed=false");

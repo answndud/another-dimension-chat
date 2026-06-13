@@ -32,6 +32,7 @@ for flag in \
   "final_100_evidence_ledger_child_files_sha_verified=true" \
   "final_100_evidence_ledger_child_files_content_redacted=true" \
   "final_100_evidence_ledger_requires_valid_representative_usability_reports=true" \
+  "final_100_evidence_ledger_requires_valid_redacted_field_reports=true" \
   "final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true" \
   "final_100_evidence_candidate_requires_owner_claim_decision=true" \
   "macos_public_app_100_claim_allowed=false" \
@@ -48,6 +49,8 @@ must_contain "$VALIDATOR" "final_100_evidence_ledger_child_files_sha_verified=tr
 must_contain "$VALIDATOR" "final_100_evidence_ledger_child_files_content_redacted=true"
 must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_valid_representative_usability_reports=true"
 must_contain "$VALIDATOR" "validate_representative_usability_reports.mjs"
+must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_valid_redacted_field_reports=true"
+must_contain "$VALIDATOR" "validate_redacted_field_reports.mjs"
 must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true"
 must_contain "$VALIDATOR" "status=final-100-evidence-candidate-requires-review"
 must_contain "reference/FINAL_100_CLAIM_GATE.md" "final_100_evidence_ledger_schema_available=true"
@@ -110,6 +113,42 @@ non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-p
 REPORT
 }
 
+write_field_report() {
+  local rel="$1"
+  local platform_pair="$2"
+  local scope="$3"
+  local network="$4"
+  mkdir -p "$tmp_dir/$(dirname "$rel")"
+  cat >"$tmp_dir/$rel" <<REPORT
+app_version=0.1.0
+build_channel=beta-onion
+build_commit=abcdef1234567890
+platform_pair=$platform_pair
+checksum_result=pass
+install_path_reached=first-launch
+flow_scope=$scope
+network_condition_class=$network
+run_count=1
+clean_install_checksum_status=pass
+first_launch_warning_status=pass
+profile_create_unlock_status=pass
+invite_verify_status=pass
+manual_envelope_round_trip_status=pass
+retry_cancel_recovery_status=pass
+restart_resume_status=pass
+offline_online_transition_status=pass
+failed_delivery_recovery_status=pass
+delete_wipe_lifecycle_status=pass
+public_diagnostics_copy_status=pass
+required_flow_status=pass
+failure_class=unknown-redacted
+recovery_next_action=none-redacted
+app_launch_network_stayed_false=true
+default_transport_path=local-manual-encrypted-envelope-exchange
+non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-prohibited#not-audited#not-production-ready
+REPORT
+}
+
 write_evidence "macos/artifact.provenance.json" '{"schema":"macos-provenance","result":"signed-notarized-stapled"}'
 write_evidence "macos/distribution-manifest.json" '{"schema":"macos-release-distribution-manifest-v1","result":"verified"}'
 write_evidence "macos/gatekeeper-assessment.txt" 'spctl assessment passed on clean macOS host'
@@ -125,9 +164,10 @@ write_evidence "ios/artifact-manifest.json" '{"schema":"ios-public-artifact-mani
 write_evidence "ios/device-result.md" 'real iOS device result: shared-core flow and entitlements review passed'
 write_evidence "external/review-signoff.json" '{"schema_version":"external-review-signoff-v1","result":"candidate"}'
 write_evidence "external/audit-finding-tracker.md" 'audit finding tracker: critical and high findings closed'
-for index in 1 2 3 4; do
-  write_evidence "external/field-$index.md" "redacted field report $index: accepted real multi-platform evidence"
-done
+write_field_report "external/field-1.md" "macos-to-macos" "two-machine-same-network" "same-lan"
+write_field_report "external/field-2.md" "macos-to-windows" "two-machine-different-network" "different-networks"
+write_field_report "external/field-3.md" "windows-to-windows" "two-machine-same-network" "same-lan"
+write_field_report "external/field-4.md" "android-to-ios" "two-machine-different-network" "different-networks"
 write_evidence "claim/release-copy-review.md" 'release copy reviewed: public claims do not exceed evidence'
 write_evidence "claim/support-copy-review.md" 'support copy reviewed: public claims do not exceed evidence'
 
@@ -266,6 +306,8 @@ printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_child_fi
   fail "final 100 ledger validator did not scan child evidence content"
 printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_requires_valid_representative_usability_reports=true" ||
   fail "final 100 ledger validator did not require valid representative usability reports"
+printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_requires_valid_redacted_field_reports=true" ||
+  fail "final 100 ledger validator did not require valid redacted field reports"
 printf '%s\n' "$candidate_output" | grep -Fq "macos_public_app_100_claim_allowed=false" ||
   fail "final 100 ledger validator must not auto-open macOS claim"
 printf '%s\n' "$candidate_output" | grep -Fq "status=final-100-evidence-candidate-requires-review" ||
@@ -328,6 +370,7 @@ final_100_evidence_ledger_requires_child_evidence_files=true
 final_100_evidence_ledger_child_files_sha_verified=true
 final_100_evidence_ledger_child_files_content_redacted=true
 final_100_evidence_ledger_requires_valid_representative_usability_reports=true
+final_100_evidence_ledger_requires_valid_redacted_field_reports=true
 final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true
 final_100_evidence_candidate_requires_owner_claim_decision=true
 macos_public_app_100_claim_allowed=false
