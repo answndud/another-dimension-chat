@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   chatNoticeForSendReceiveText,
   productionActionAvailability,
+  productionEncryptedEnvelopeExchangeStepperView,
   productionLocalLifecycleBoundaryView,
   productionBridgeCensorshipBoundaryView,
   productionHighRiskThreatModelBoundaryView,
@@ -20,6 +21,7 @@ import {
   productionManualCurrentStepView,
   productionManualMessageCheckView,
   productionManualNextActions,
+  productionManualPendingOutboundStateView,
   productionManualTransferStepLabel,
   productionOnionReceiveLoopRefreshPlan,
   productionOnionReceiveRuntimeView,
@@ -593,6 +595,82 @@ test("manual lifecycle view summarizes envelope state without sensitive payloads
     .map((view) => Object.values(view).join(" "))
     .join("\n");
   assert.doesNotMatch(rendered, /secret text|alice-profile|bob-profile|room-secret|passphrase|payload|endpoint|path/);
+});
+
+test("manual envelope stepper and pending outbound states stay support-safe", () => {
+  const initial = productionEncryptedEnvelopeExchangeStepperView({
+    hasOutboundMessageInput: true,
+  });
+  const imported = productionEncryptedEnvelopeExchangeStepperView({
+    hasOutboundMessageInput: true,
+    hasLocalMessageEnvelope: true,
+    hasRemoteMessageEnvelopeSlot: true,
+    hasImportedMessage: true,
+  });
+  const replied = productionEncryptedEnvelopeExchangeStepperView({
+    hasOutboundMessageInput: true,
+    hasLocalMessageEnvelope: true,
+    hasRemoteMessageEnvelopeSlot: true,
+    hasImportedMessage: true,
+    hasReceivedMessage: true,
+    hasTwoProfileReplyDraftInput: true,
+  });
+
+  assert.deepEqual(initial.steps.map((step) => step.step), [
+    "compose",
+    "export-envelope",
+    "share-outside-app",
+    "import-envelope",
+    "decrypt-display",
+    "reply",
+  ]);
+  assert.equal(initial.currentStep, "export-envelope");
+  assert.equal(imported.currentStep, "decrypt-display");
+  assert.equal(replied.currentStep, "complete");
+  assert.match(initial.boundary, /network_io=false/);
+  assert.match(initial.boundary, /payload_returned_to_support=false/);
+
+  const base = {
+    messageNumber: 9,
+    statuses: new Set(),
+    outboundDeliveryState: "pending",
+  };
+  const ready = productionManualPendingOutboundStateView(base);
+  const exported = productionManualPendingOutboundStateView(base, { envelopeExported: true });
+  const waiting = productionManualPendingOutboundStateView({
+    ...base,
+    statuses: new Set(["sent"]),
+    outboundDeliveryState: "sent",
+  });
+  const duplicate = productionManualPendingOutboundStateView(waiting, {
+    importDecision: { kind: "duplicate" },
+  });
+  const replayed = productionManualPendingOutboundStateView(waiting, {
+    importDecision: { kind: "replay_rejected" },
+  });
+  const canceled = productionManualPendingOutboundStateView({
+    ...base,
+    outboundDeliveryState: "canceled",
+  });
+
+  assert.equal(ready.state, "ready_to_export");
+  assert.equal(ready.exportAllowed, true);
+  assert.equal(exported.state, "exported");
+  assert.equal(exported.importAllowed, true);
+  assert.equal(waiting.state, "waiting_for_reply");
+  assert.equal(duplicate.state, "duplicate_import");
+  assert.equal(duplicate.retryAllowed, true);
+  assert.equal(replayed.state, "stale_or_replayed_import");
+  assert.equal(replayed.retryAllowed, true);
+  assert.equal(canceled.state, "canceled");
+  assert.equal(canceled.nextAction, "write-new-message");
+  for (const view of [ready, exported, waiting, duplicate, replayed, canceled]) {
+    assert.match(view.boundary, /automatic_delivery=false/);
+    assert.match(view.boundary, /payload_returned_to_support=false/);
+    assert.match(view.boundary, /path_returned=false/);
+    assert.match(view.boundary, /key_material=false/);
+    assert.match(view.boundary, /plaintext_returned=false/);
+  }
 });
 
 test("send receive notices separate bootstrap retry from route setup", () => {

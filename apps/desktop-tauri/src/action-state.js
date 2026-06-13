@@ -823,14 +823,114 @@ export function productionOnionReceiveFailureMessage(backendLoop = {}) {
 export function productionManualTransferStepLabel(step) {
   const labels = {
     "export-envelope": "export envelope",
+    "share-outside-app": "share outside app",
     "load-or-paste-envelope": "load or paste envelope",
     "import-envelope": "import envelope",
+    "decrypt-display": "decrypt and display",
     "show-plaintext": "show plaintext",
     "write-reply": "write reply",
     "retry-or-cancel": "retry or cancel",
     "write-new-message": "write a new message",
   };
   return labels[step] ?? "review conversation";
+}
+
+export function productionManualPendingOutboundStateView(entry = {}, options = {}) {
+  const statuses = entry?.statuses ?? new Set();
+  const sentCopyPresent = Boolean(statuses?.has?.("sent"));
+  const receivedCopyPresent = Boolean(statuses?.has?.("received"));
+  const canceled = entry?.outboundDeliveryState === "canceled";
+  const duplicateImport = options.importDecision?.kind === "duplicate" || options.duplicateImport === true;
+  const staleOrReplayedImport =
+    options.importDecision?.kind === "replay_rejected" ||
+    options.staleOrReplayedImport === true ||
+    String(options.slotMismatchReason ?? "").includes("stale") ||
+    String(options.slotMismatchReason ?? "").includes("replay");
+  const envelopeExported = Boolean(options.envelopeExported || options.senderEnvelopeSlotPresent || sentCopyPresent);
+  const state = canceled
+    ? "canceled"
+    : duplicateImport
+      ? "duplicate_import"
+      : staleOrReplayedImport
+        ? "stale_or_replayed_import"
+        : !envelopeExported
+          ? "ready_to_export"
+          : !sentCopyPresent
+            ? "exported"
+            : "waiting_for_reply";
+  const exportAllowed = state === "ready_to_export";
+  const importAllowed = state === "exported";
+  const retryAllowed = state === "duplicate_import" || state === "stale_or_replayed_import";
+  const cancelAllowed =
+    state === "ready_to_export" ||
+    state === "exported" ||
+    state === "waiting_for_reply" ||
+    state === "duplicate_import" ||
+    state === "stale_or_replayed_import";
+  const replyAllowed = receivedCopyPresent && state !== "canceled";
+  const nextAction = {
+    ready_to_export: "export-envelope",
+    exported: "share-outside-app-then-import",
+    waiting_for_reply: "wait-for-reply-or-cancel",
+    duplicate_import: "ignore-duplicate-import",
+    stale_or_replayed_import: "ignore-stale-or-replayed-import",
+    canceled: "write-new-message",
+  }[state];
+  return {
+    state,
+    exportAllowed,
+    importAllowed,
+    retryAllowed,
+    cancelAllowed,
+    replyAllowed,
+    nextAction,
+    boundary: [
+      "manual_pending_outbound=true",
+      `state=${state}`,
+      `export_allowed=${exportAllowed}`,
+      `import_allowed=${importAllowed}`,
+      `retry_allowed=${retryAllowed}`,
+      `cancel_allowed=${cancelAllowed}`,
+      `reply_allowed=${replyAllowed}`,
+      "network_io=false",
+      "automatic_delivery=false",
+      "payload_returned_to_support=false",
+      "path_returned=false",
+      "key_material=false",
+      "plaintext_returned=false",
+    ].join(" "),
+  };
+}
+
+export function productionEncryptedEnvelopeExchangeStepperView(state = {}) {
+  const steps = [
+    ["compose", Boolean(state.hasOutboundMessageInput || state.hasLocalMessageEnvelope || state.hasInboundEnvelopeInput || state.hasImportedMessage || state.hasReceivedMessage || state.hasTwoProfileReplyDraftInput)],
+    ["export-envelope", Boolean(state.hasLocalMessageEnvelope || state.hasInboundEnvelopeInput || state.hasImportedMessage || state.hasReceivedMessage || state.hasTwoProfileReplyDraftInput)],
+    ["share-outside-app", Boolean(state.hasRemoteMessageEnvelopeSlot || state.hasInboundEnvelopeInput || state.hasImportedMessage || state.hasReceivedMessage || state.hasTwoProfileReplyDraftInput)],
+    ["import-envelope", Boolean(state.hasImportedMessage || state.hasReceivedMessage || state.hasTwoProfileReplyDraftInput)],
+    ["decrypt-display", Boolean(state.hasReceivedMessage || state.hasTwoProfileReplyDraftInput)],
+    ["reply", Boolean(state.hasTwoProfileReplyDraftInput)],
+  ];
+  const firstIncomplete = steps.find(([_, complete]) => !complete)?.[0] ?? "complete";
+  return {
+    currentStep: firstIncomplete,
+    steps: steps.map(([step, complete]) => ({
+      step,
+      label: productionManualTransferStepLabel(step),
+      complete,
+    })),
+    boundary: [
+      "encrypted_envelope_stepper=true",
+      "default_transport=local_manual_envelope_exchange",
+      "compose_export_share_import_decrypt_display_reply=true",
+      "network_io=false",
+      "automatic_delivery=false",
+      "payload_returned_to_support=false",
+      "path_returned=false",
+      "key_material=false",
+      "plaintext_returned_to_support=false",
+    ].join(" "),
+  };
 }
 
 export function productionTwoProfileConversationActionView(entry, senderEnvelopeSlotPresent = false) {
