@@ -79,6 +79,7 @@ for script in \
   verify_mobile_binding_readiness_gate.sh \
   verify_mobile_ffi_error_mapping.sh \
   verify_mobile_serialization_vectors.sh \
+  verify_mobile_memory_ownership.sh \
   verify_mobile_binding_gate.sh \
   verify_android_shell_boundary.sh \
   verify_ios_shell_boundary.sh \

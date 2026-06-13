@@ -235,5 +235,17 @@
     "blocked_command_result",
     "lifecycle_confirmation_required_result",
     "reject_unknown_fields_vector"
+  ],
+  "memory_ownership_release_contract_finalized": true,
+  "memory_ownership_contract_file": "apps/mobile/ffi/memory_ownership_contract.json",
+  "memory_ownership_model": [
+    "caller_owned_input_buffers",
+    "core_owned_returned_buffers",
+    "explicit_release_required",
+    "release_function_required_before_callable_ffi",
+    "double_release_must_be_rejected",
+    "use_after_release_must_be_rejected",
+    "zero_length_buffer_is_valid",
+    "null_pointer_is_invalid"
   ]
 }

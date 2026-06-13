@@ -218,6 +218,43 @@ Serialization contract enum names:
 `deterministic_utf8_json_object`, `explicit_schema_version`, `sorted_keys`,
 `string_enums`, `bounded_status_label_arrays`, `reject_unknown_fields`.
 
+## Memory Ownership Release Contract Boundary
+
+The mobile memory ownership release contract is source-level only. It defines
+the future FFI ownership vocabulary, but it does not create callable FFI,
+generated bindings, native runtime messaging, native network delivery, or
+release packaging.
+
+The contract file is `memory_ownership_contract.json`.
+
+Ownership model:
+
+- caller-owned input buffers
+- core-owned returned buffers
+- explicit release required
+- release function required before callable FFI
+- double release must be rejected
+- use after release must be rejected
+- zero-length buffer is valid
+- null pointer is invalid
+
+Ownership contract enum names: caller_owned_input_buffers,
+core_owned_returned_buffers, explicit_release_required,
+release_function_required_before_callable_ffi, double_release_must_be_rejected,
+use_after_release_must_be_rejected, zero_length_buffer_is_valid,
+null_pointer_is_invalid.
+
+Allowed returned payloads are `SharedCoreStatusDto`, `SharedCoreCommandResult`,
+and `redacted_diagnostics_payload`.
+
+Forbidden boundary exposure includes raw pointer exposed to Kotlin, raw pointer
+exposed to Swift, passphrase buffer returned, private key buffer returned, key
+material buffer returned, plaintext message buffer returned, local path buffer
+returned, panic string returned, and raw log returned.
+
+Android/Kotlin and iOS/Swift wrappers must receive structured results only and
+must not hold raw native pointers.
+
 Allowed API groups mirror the shared core wrapper boundary:
 
 - `shared_core_status_surface`
