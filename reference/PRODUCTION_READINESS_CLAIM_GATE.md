@@ -93,4 +93,9 @@ not production readiness by themselves.
 - ops_6_macos_production_distribution_gate_reviewed=true
 - stable_signed_notarized_artifact_available=false
 - production_distribution_ready=false
-- next_required_phase=OPS-7 external review and audit readiness
+- ops_7_external_review_audit_readiness_gate_reviewed=true
+- external_review_completed=false
+- audit_completed=false
+- reviewer_signoff_claimed=false
+- public_user_safety_signoff_claimed=false
+- next_required_phase=OPS-8 field evidence and reliability program

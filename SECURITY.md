@@ -69,6 +69,12 @@ unsigned beta distribution state, signing/notarization holds, same-release
 checksum/provenance authority, update-channel blockers, and why stable signed
 distribution readiness remains false.
 
+External review and audit readiness is tracked in
+`reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`, with the public-safe finding
+tracker in `reference/AUDIT_FINDING_TRACKER.md`. These files define reviewer
+scope and fix/hold/waive triage while keeping external review, audit
+completion, reviewer signoff, and security-ready claims false.
+
 The public privacy-model comparison is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`. It maps the intended Korean Briar/Cwtch-style direction to current public beta gaps and LINDDUN categories; it is not a claim that the current beta has reached that level.
 
 The public threat model is tracked in `reference/PUBLIC_THREAT_MODEL.md`, and the independent review packet is tracked in `reference/INDEPENDENT_REVIEW_PACKET.md`. These are review inputs, not evidence that a review has been completed. The public beta upload set explicitly records the current review gap, private-reporting boundary, public-safe review-command boundary, and fabricated-review/peer-evidence-forbidden boundary; it does not claim reviewer signoff or public user safety signoff.

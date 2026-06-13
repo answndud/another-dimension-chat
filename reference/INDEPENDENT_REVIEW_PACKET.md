@@ -99,6 +99,8 @@ Review the unsigned experimental public beta boundary:
 
 - `README.md`: project status, public release files, current non-claims.
 - `SECURITY.md`: public security policy, non-claims, unsigned beta boundary.
+- `reference/INDEPENDENT_REVIEW_PACKET.md`: this public-safe entrypoint and
+  evidence map for external reviewer orientation.
 - `reference/BETA_RELEASE_CHECKLIST.md`: release upload checklist.
 - `reference/UNSIGNED_PUBLIC_BETA_INSTALL.md`: user install and checksum steps.
 - `reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md`: release notes template.
@@ -114,6 +116,8 @@ Review the unsigned experimental public beta boundary:
 - `reference/REPOSITORY_GOVERNANCE.md`: maintainer-driven main workflow,
   release guardrails, redaction guardrails, and explicit governance non-goals.
 - `reference/COMPONENT_BOUNDARIES.md`: component replacement and readiness map.
+- `reference/PRODUCTION_READINESS_CLAIM_GATE.md`: production-readiness,
+  external-review, audit, field-evidence, and stable-release claim gate.
 - `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`: 1:1 protocol/session
   state machine, replay/retry/cancel/delete semantics, and unresolved
   production E2EE review questions.
@@ -133,6 +137,11 @@ Review the unsigned experimental public beta boundary:
   distribution state, signing/notarization holds, same-release
   checksum/provenance authority, update-channel blockers, and remaining stable
   signed distribution blockers.
+- `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`: public-safe reviewer packet
+  scope, severity definitions, fix/hold/waive triage process, and current
+  no-audit/no-signoff flags.
+- `reference/AUDIT_FINDING_TRACKER.md`: public-safe finding tracker template
+  with current zero-finding/no-audit status and required non-claims.
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and
   no-reviewer-signoff/no-public-user-safety-signoff flags.
