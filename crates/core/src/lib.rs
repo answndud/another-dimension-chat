@@ -21,9 +21,9 @@ pub mod production {
         ReplayWindow,
     };
     use another_dimension_storage::production::{
-        production_message_storage_boundary_summary, protection_for,
-        require_encrypted_record_allowed, require_persistence_allowed, EncryptedRecord,
-        EncryptedRecordId, EncryptedRecordScope, LocalProfileRecoveryFailureKind,
+        production_emergency_local_wipe_decision, production_message_storage_boundary_summary,
+        protection_for, require_encrypted_record_allowed, require_persistence_allowed,
+        EncryptedRecord, EncryptedRecordId, EncryptedRecordScope, LocalProfileRecoveryFailureKind,
         LockedProfileStore, ProductionRecordKind, ProductionStorageError,
         ProductionStoragePolicyError, ProfilePassphrase, ProfileStoreUnlockFailureKind,
         ReplayRollbackProtection, SqlCipherRecordStore, StorageBackendKind, StorageProtection,
@@ -158,6 +158,97 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct PanicLockMitigationSummary {
+        panic_lock_available: bool,
+        immediate_lock_required: bool,
+        memory_state_clear_required: bool,
+        private_view_hidden_required: bool,
+        clipboard_clear_required: bool,
+        pending_secret_action_cancel_required: bool,
+        emergency_wipe_available: bool,
+        emergency_wipe_confirmation: &'static str,
+        emergency_wipe_separate_from_standard_wipe: bool,
+        transcript_visible_when_locked: bool,
+        invite_visible_when_locked: bool,
+        endpoint_visible_when_locked: bool,
+        payload_visible_when_locked: bool,
+        copied_secret_in_diagnostics: bool,
+        coercion_safe_claimed: bool,
+        compromised_device_safe_claimed: bool,
+        mitigation_only: bool,
+    }
+
+    impl PanicLockMitigationSummary {
+        pub fn panic_lock_available(self) -> bool {
+            self.panic_lock_available
+        }
+
+        pub fn immediate_lock_required(self) -> bool {
+            self.immediate_lock_required
+        }
+
+        pub fn memory_state_clear_required(self) -> bool {
+            self.memory_state_clear_required
+        }
+
+        pub fn private_view_hidden_required(self) -> bool {
+            self.private_view_hidden_required
+        }
+
+        pub fn clipboard_clear_required(self) -> bool {
+            self.clipboard_clear_required
+        }
+
+        pub fn pending_secret_action_cancel_required(self) -> bool {
+            self.pending_secret_action_cancel_required
+        }
+
+        pub fn emergency_wipe_available(self) -> bool {
+            self.emergency_wipe_available
+        }
+
+        pub fn emergency_wipe_confirmation(self) -> &'static str {
+            self.emergency_wipe_confirmation
+        }
+
+        pub fn emergency_wipe_separate_from_standard_wipe(self) -> bool {
+            self.emergency_wipe_separate_from_standard_wipe
+        }
+
+        pub fn transcript_visible_when_locked(self) -> bool {
+            self.transcript_visible_when_locked
+        }
+
+        pub fn invite_visible_when_locked(self) -> bool {
+            self.invite_visible_when_locked
+        }
+
+        pub fn endpoint_visible_when_locked(self) -> bool {
+            self.endpoint_visible_when_locked
+        }
+
+        pub fn payload_visible_when_locked(self) -> bool {
+            self.payload_visible_when_locked
+        }
+
+        pub fn copied_secret_in_diagnostics(self) -> bool {
+            self.copied_secret_in_diagnostics
+        }
+
+        pub fn coercion_safe_claimed(self) -> bool {
+            self.coercion_safe_claimed
+        }
+
+        pub fn compromised_device_safe_claimed(self) -> bool {
+            self.compromised_device_safe_claimed
+        }
+
+        pub fn mitigation_only(self) -> bool {
+            self.mitigation_only
+        }
+    }
+
     pub fn production_message_ttl_seconds_validate(
         ttl_seconds: u64,
     ) -> Result<u64, ProductionSessionError> {
@@ -210,6 +301,29 @@ pub mod production {
             verified_state_allowed: !fail_closed,
             delivered_state_allowed: !fail_closed,
             recovery_action: "discard-input-and-repair-before-trusting-peer",
+        }
+    }
+
+    pub fn panic_lock_mitigation_summary() -> PanicLockMitigationSummary {
+        let emergency = production_emergency_local_wipe_decision();
+        PanicLockMitigationSummary {
+            panic_lock_available: true,
+            immediate_lock_required: true,
+            memory_state_clear_required: true,
+            private_view_hidden_required: true,
+            clipboard_clear_required: true,
+            pending_secret_action_cancel_required: true,
+            emergency_wipe_available: true,
+            emergency_wipe_confirmation: emergency.confirmation(),
+            emergency_wipe_separate_from_standard_wipe: emergency.separate_from_standard_wipe(),
+            transcript_visible_when_locked: false,
+            invite_visible_when_locked: false,
+            endpoint_visible_when_locked: false,
+            payload_visible_when_locked: false,
+            copied_secret_in_diagnostics: false,
+            coercion_safe_claimed: false,
+            compromised_device_safe_claimed: false,
+            mitigation_only: true,
         }
     }
 
@@ -28236,6 +28350,32 @@ pub mod production {
                 summary.recovery_action(),
                 "discard-input-and-repair-before-trusting-peer"
             );
+        }
+
+        #[test]
+        fn panic_lock_or_emergency_wipe_mitigation_boundary_is_redacted() {
+            let summary = panic_lock_mitigation_summary();
+
+            assert!(summary.panic_lock_available());
+            assert!(summary.immediate_lock_required());
+            assert!(summary.memory_state_clear_required());
+            assert!(summary.private_view_hidden_required());
+            assert!(summary.clipboard_clear_required());
+            assert!(summary.pending_secret_action_cancel_required());
+            assert!(summary.emergency_wipe_available());
+            assert_eq!(
+                summary.emergency_wipe_confirmation(),
+                "EMERGENCY WIPE LOCAL DATA"
+            );
+            assert!(summary.emergency_wipe_separate_from_standard_wipe());
+            assert!(!summary.transcript_visible_when_locked());
+            assert!(!summary.invite_visible_when_locked());
+            assert!(!summary.endpoint_visible_when_locked());
+            assert!(!summary.payload_visible_when_locked());
+            assert!(!summary.copied_secret_in_diagnostics());
+            assert!(!summary.coercion_safe_claimed());
+            assert!(!summary.compromised_device_safe_claimed());
+            assert!(summary.mitigation_only());
         }
 
         #[test]

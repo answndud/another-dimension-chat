@@ -1419,6 +1419,31 @@ body.is-room-list-mode .private-route-exchange {
   display: none;
 }
 
+body.is-panic-locked #production-two-profile-transcript,
+body.is-panic-locked .chat-transcript-toolbar,
+body.is-panic-locked #production-two-profile-transcript-export,
+body.is-panic-locked label[for="production-two-profile-transcript-export"],
+body.is-panic-locked #production-pairing-endpoint,
+body.is-panic-locked label[for="production-pairing-endpoint"],
+body.is-panic-locked #production-pairing-payload,
+body.is-panic-locked label[for="production-pairing-payload"],
+body.is-panic-locked #production-remote-pairing-payload,
+body.is-panic-locked label[for="production-remote-pairing-payload"],
+body.is-panic-locked #production-handshake-init-payload,
+body.is-panic-locked label[for="production-handshake-init-payload"],
+body.is-panic-locked #production-handshake-reply-payload,
+body.is-panic-locked label[for="production-handshake-reply-payload"],
+body.is-panic-locked #production-handshake-finish-payload,
+body.is-panic-locked label[for="production-handshake-finish-payload"],
+body.is-panic-locked #production-message-envelope,
+body.is-panic-locked label[for="production-message-envelope"],
+body.is-panic-locked #production-remote-message-envelope,
+body.is-panic-locked label[for="production-remote-message-envelope"],
+body.is-panic-locked .room-invite-token-panel,
+body.is-panic-locked .private-route-exchange {
+  display: none;
+}
+
 body.is-room-detail-mode .room-list-panel,
 body.is-room-detail-mode .chat-empty-state {
   display: none;

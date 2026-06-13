@@ -30,6 +30,7 @@ import {
   productionOnionReceiveFailureMessage,
   productionOnionReceiveLoopRefreshPlan,
   productionOnionReceiveRuntimeView,
+  productionPanicLockMitigationView,
   productionPairwiseInviteCreateView,
   productionPairwiseInviteGuidanceView,
   productionPairwiseInviteImportFailureView,
@@ -215,6 +216,7 @@ const fields = {
   productionProfilePassphrase: document.querySelector("#production-profile-passphrase"),
   unlockProductionProfile: document.querySelector("#unlock-production-profile"),
   lockProductionProfile: document.querySelector("#lock-production-profile"),
+  panicLockProductionProfile: document.querySelector("#panic-lock-production-profile"),
   checkProductionProductUnlock: document.querySelector("#check-production-product-unlock"),
   productionProfileState: document.querySelector("#production-profile-state"),
   productionProfileNextAction: document.querySelector("#production-profile-next-action"),
@@ -230,6 +232,8 @@ const fields = {
   deleteProductionProfile: document.querySelector("#delete-production-profile"),
   productionFullWipeConfirmation: document.querySelector("#production-full-wipe-confirmation"),
   wipeProductionLocalData: document.querySelector("#wipe-production-local-data"),
+  productionEmergencyWipeConfirmation: document.querySelector("#production-emergency-wipe-confirmation"),
+  emergencyWipeProductionLocalData: document.querySelector("#emergency-wipe-production-local-data"),
   productionManualRoute: document.querySelector("#production-manual-route"),
   productionManualDirection: document.querySelector("#production-manual-direction"),
   productionManualSlots: document.querySelector("#production-manual-slots"),
@@ -582,6 +586,69 @@ function clearProductionBusyAction(action) {
   if (productionBusyAction === action) {
     productionBusyAction = null;
   }
+}
+
+function clearProductionSensitiveMemoryState() {
+  latestProductionSessionState = null;
+  latestProductionSessionStateFingerprint = "";
+  latestProductionTwoProfileSessionStatus = null;
+  latestProductionTwoProfileSessionStatusesByRoom.clear();
+  latestProductionTwoProfileSafety = null;
+  latestProductionTwoProfileSuccess = null;
+  latestProductionProfileUnlocked = false;
+  latestProductionTwoProfileOnionEndpoints = null;
+  latestProductionTwoProfileRealOnionResultsByRoom.clear();
+  latestProductionTwoProfileRealOnionRecoveriesByRoom.clear();
+  latestProductionTwoProfileRealOnionWaitCanceledFingerprints.clear();
+  latestProductionMessageImport = null;
+  latestProductionPairingSafety = null;
+  latestProductionManualFocusTarget = null;
+  clearProductionBusyAction(productionBusyAction);
+  for (const slot of Object.values(productionPayloadSlots)) {
+    slot.clear();
+  }
+}
+
+function clearProductionSensitiveFields() {
+  for (const field of [
+    fields.productionPairingPayload,
+    fields.productionRemotePairingPayload,
+    fields.productionHandshakeInitPayload,
+    fields.productionHandshakeReplyPayload,
+    fields.productionHandshakeFinishPayload,
+    fields.productionRemoteHandshakeInitPayload,
+    fields.productionRemoteHandshakeReplyPayload,
+    fields.productionRemoteHandshakeFinishPayload,
+    fields.productionMessageEnvelope,
+    fields.productionRemoteMessageEnvelope,
+    fields.productionTwoProfileMessage,
+    fields.localPrivateRouteCode,
+    fields.peerPrivateRouteCode,
+    fields.productionTwoProfileTranscriptExport,
+  ]) {
+    if (field && "value" in field) {
+      field.value = "";
+    }
+  }
+  setText(fields.productionTwoProfileTranscript, "Hidden after panic lock");
+  setText(fields.productionTwoProfileLastSuccess, "Hidden after panic lock");
+  setText(fields.productionTwoProfileCurrentInput, "Hidden after panic lock");
+}
+
+async function clearClipboardBestEffort() {
+  try {
+    await navigator.clipboard?.writeText?.("");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function writeClipboardWithTtl(value, ttlMs = 15_000) {
+  await navigator.clipboard.writeText(value);
+  window.setTimeout(() => {
+    void clearClipboardBestEffort();
+  }, ttlMs);
 }
 
 function setInviteRoomOpenBusy(input) {
@@ -6226,7 +6293,7 @@ async function copyCurrentInviteCode(options = {}) {
     return false;
   }
   try {
-    await navigator.clipboard.writeText(code);
+    await writeClipboardWithTtl(code);
     copiedInviteCode = code;
     renderCurrentInviteCodeDisplay();
     applyProductionActionState();
@@ -7742,7 +7809,7 @@ async function copyPublicBetaDiagnostics() {
     return false;
   }
   try {
-    await navigator.clipboard.writeText(payload);
+    await writeClipboardWithTtl(payload);
     setProductionTwoProfileState("Public diagnostics copied");
     setText(fields.productionTwoProfileWarning, t("publicBetaDiagnosticsCopied"));
     return true;
@@ -7808,7 +7875,7 @@ async function copyRedactedSupportReport() {
     return false;
   }
   try {
-    await navigator.clipboard.writeText(payload);
+    await writeClipboardWithTtl(payload);
     setProductionTwoProfileState("Redacted support report copied");
     setText(fields.productionTwoProfileWarning, t("redactedSupportReportCopied"));
     return true;
@@ -7827,7 +7894,7 @@ async function copyFieldTestReport() {
   }
   const payload = fieldTestReportCopyPayload(report);
   try {
-    await navigator.clipboard.writeText(payload);
+    await writeClipboardWithTtl(payload);
     setProductionTwoProfileState("Field test report copied");
     setText(fields.productionTwoProfileWarning, t("fieldTestReportCopied"));
     return true;
@@ -13116,6 +13183,17 @@ function applyProductionActionState() {
       : "Type WIPE LOCAL DATA before wiping local app data.",
     false,
   );
+  setActionButtonState(fields.panicLockProductionProfile, false, "", false);
+  setActionButtonState(
+    fields.emergencyWipeProductionLocalData,
+    busy ||
+      (fields.productionEmergencyWipeConfirmation?.value ?? "").trim() !==
+        "EMERGENCY WIPE LOCAL DATA",
+    busy
+      ? "Wait for the active production action."
+      : "Type EMERGENCY WIPE LOCAL DATA before emergency local wipe.",
+    false,
+  );
   setActionButtonState(
     fields.exportProductionPairing,
     !availability.exportPairing,
@@ -15669,7 +15747,7 @@ async function copyLocalPrivateRouteCode() {
     return false;
   }
   try {
-    await navigator.clipboard.writeText(code);
+    await writeClipboardWithTtl(code);
     setProductionTwoProfileState("Delivery code copied");
     setText(fields.productionTwoProfileWarning, t("privateRouteCodeCopied"));
     setChatDeliveryNoticeByKey("privateRouteCodeCopied", "success", input);
@@ -18343,6 +18421,29 @@ async function lockProductionProfile() {
   }
 }
 
+async function panicLockProductionProfile() {
+  const boundary = productionPanicLockMitigationView();
+  clearProductionSensitiveMemoryState();
+  clearProductionSensitiveFields();
+  document.body.classList.add("is-panic-locked");
+  setProductionProfileState("Panic lock active");
+  setText(fields.productionProfileWarning, "Private views hidden and local memory state cleared.");
+  setText(fields.productionProfileStorage, "Locked locally; reopen with profile passphrase.");
+  setText(fields.productionProfileIdentity, "Hidden after panic lock");
+  setText(fields.productionProfileBoundary, boundary.boundary);
+  await clearClipboardBestEffort();
+  try {
+    const result = await invoke("production_product_lock");
+    renderProductionProductUnlockStatus(result);
+    renderProductionProductUnlockRecovery(result, { lockedByUser: true });
+    return result;
+  } catch {
+    return null;
+  } finally {
+    applyProductionActionState();
+  }
+}
+
 function dataLifecycleSummary(result) {
   return (
     `profiles=${result.profile_count ?? 0} transport=${result.transport_data_present === true} ` +
@@ -18365,7 +18466,8 @@ function dataLifecycleActionView(result = {}, action = "status") {
     action === "conversation-delete" ||
     action === "session-delete" ||
     action === "profile-delete" ||
-    action === "full-local-wipe";
+    action === "full-local-wipe" ||
+    action === "emergency-local-wipe";
   const rollbackDetection = result?.rollback_detection_ready === true;
   const rollbackSuspicion = result?.rollback_suspicion_detected === true;
   const cryptoErasure = result?.crypto_erasure_performed === true;
@@ -18397,7 +18499,7 @@ function dataLifecycleActionView(result = {}, action = "status") {
       `unlock_locked=${result?.product_unlock_locked === true}`,
     );
   }
-  if (action === "full-local-wipe") {
+  if (action === "full-local-wipe" || action === "emergency-local-wipe") {
     summaryParts.push(`full_local_data_wiped=${result?.full_local_data_wiped === true}`);
   }
   const next = rollbackSuspicion
@@ -18406,7 +18508,7 @@ function dataLifecycleActionView(result = {}, action = "status") {
       ? t("dataLifecyclePreparedNext")
       : action === "profile-delete"
         ? t("dataLifecycleProfileDeletedNext")
-        : action === "full-local-wipe"
+        : action === "full-local-wipe" || action === "emergency-local-wipe"
           ? t("dataLifecycleWipedNext")
           : t("dataLifecycleStatusNext");
   return {
@@ -18852,6 +18954,60 @@ async function wipeProductionLocalData() {
   }
 }
 
+async function emergencyWipeProductionLocalData() {
+  const roomInputBeforeWipe = productionTwoProfileInput();
+  const confirmation = (fields.productionEmergencyWipeConfirmation?.value ?? "").trim();
+  const boundary = productionPanicLockMitigationView();
+  if (confirmation !== boundary.emergencyConfirmation) {
+    setProductionProfileState("Emergency wipe needs confirmation");
+    setText(
+      fields.productionProfileWarning,
+      "Type EMERGENCY WIPE LOCAL DATA to run the separate emergency local wipe.",
+    );
+    setText(fields.productionProfileNextAction, "Next: confirm emergency local wipe.");
+    setText(fields.productionProfileBoundary, boundary.boundary);
+    return null;
+  }
+  clearProductionSensitiveMemoryState();
+  clearProductionSensitiveFields();
+  productionBusyAction = "emergency-local-data-wipe";
+  document.body.classList.add("is-panic-locked");
+  setProductionProfileState("Emergency local wipe running");
+  setText(fields.productionProfileWarning, "Emergency local wipe is deleting owned local app data.");
+  setText(fields.productionProfileNextAction, t("dataLifecycleDestructiveRunningNext"));
+  setText(fields.productionProfileBoundary, boundary.boundary);
+  await clearClipboardBestEffort();
+  applyProductionActionState();
+  try {
+    const result = await invoke("production_emergency_local_data_wipe", { confirmation });
+    resetProductionProfileView();
+    resetProductionPairingView();
+    resetProductionMessageView();
+    const view = renderProductionDataLifecycleAction(result, "emergency-local-wipe");
+    document.body.classList.add("is-panic-locked");
+    setProductionProfileState(result.full_local_data_wiped ? "Emergency local wipe complete" : "Emergency local wipe incomplete");
+    setText(fields.productionProfileWarning, `${result.warning} ${view.next}`);
+    setText(fields.productionProfileBoundary, `${view.boundary} ${boundary.boundary}`);
+    applyPostDestructiveLifecycleRebuildGuidance("full-local-wipe", { input: roomInputBeforeWipe });
+    await loadProductionProfileList();
+    return result;
+  } catch (error) {
+    setProductionProfileState("Emergency local wipe failed");
+    setText(fields.productionProfileWarning, String(error));
+    setText(fields.productionProfileNextAction, t("dataLifecycleFailedNext"));
+    rememberFailureSupportReport(
+      "emergency-local-wipe",
+      "destructive_action_failed",
+      "retry-local-lifecycle-action",
+      "destructive_action_failed",
+    );
+    return null;
+  } finally {
+    clearProductionBusyAction("emergency-local-data-wipe");
+    applyProductionActionState();
+  }
+}
+
 async function unlockProductionProfile() {
   const input = productionProfileInput();
   const { profile, passphrase } = input;
@@ -18898,6 +19054,7 @@ async function unlockProductionProfile() {
       return;
     }
     const view = productionProfileUnlockView(result);
+    document.body.classList.remove("is-panic-locked");
     setProductionProfileState("Profile unlocked");
     setText(fields.productionProfileWarning, result.warning);
     setText(fields.productionProfileStorage, view.storage);
@@ -21050,6 +21207,10 @@ if (fields.lockProductionProfile) {
   fields.lockProductionProfile.disabled = true;
 }
 
+if (fields.panicLockProductionProfile) {
+  fields.panicLockProductionProfile.addEventListener("click", panicLockProductionProfile);
+}
+
 if (fields.checkProductionProductUnlock) {
   fields.checkProductionProductUnlock.addEventListener("click", checkProductionProductUnlockStatus);
 }
@@ -21074,8 +21235,16 @@ if (fields.productionFullWipeConfirmation) {
   fields.productionFullWipeConfirmation.addEventListener("input", applyProductionActionState);
 }
 
+if (fields.productionEmergencyWipeConfirmation) {
+  fields.productionEmergencyWipeConfirmation.addEventListener("input", applyProductionActionState);
+}
+
 if (fields.wipeProductionLocalData) {
   fields.wipeProductionLocalData.addEventListener("click", wipeProductionLocalData);
+}
+
+if (fields.emergencyWipeProductionLocalData) {
+  fields.emergencyWipeProductionLocalData.addEventListener("click", emergencyWipeProductionLocalData);
 }
 
 if (fields.productionSessionDeleteConfirmation) {

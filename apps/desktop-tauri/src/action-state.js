@@ -278,6 +278,41 @@ export function productionVersionIntegrityView(input = {}) {
   };
 }
 
+export function productionPanicLockMitigationView(input = {}) {
+  const clipboardTtlMs = Number.isFinite(Number(input.clipboardTtlMs))
+    ? Math.max(0, Number(input.clipboardTtlMs))
+    : 15_000;
+  const emergencyConfirmation = "EMERGENCY WIPE LOCAL DATA";
+  const boundary = [
+    "panic_lock=true",
+    "immediate_lock=true",
+    "memory_state_clear=true",
+    "private_view_hidden=true",
+    "clipboard_clear=true",
+    `clipboard_ttl_ms=${clipboardTtlMs}`,
+    "pending_secret_action_cancel=true",
+    "emergency_wipe=true",
+    `emergency_wipe_confirmation=${emergencyConfirmation.replace(/\s+/g, "_")}`,
+    "emergency_wipe_separate_from_standard_wipe=true",
+    "transcript_visible_when_locked=false",
+    "invite_visible_when_locked=false",
+    "endpoint_visible_when_locked=false",
+    "payload_visible_when_locked=false",
+    "copied_secret_in_diagnostics=false",
+    "coercion_safe_claim=false",
+    "compromised_device_safe_claim=false",
+    "mitigation_only=true",
+  ].join(" ");
+  return {
+    boundary,
+    clipboardTtlMs,
+    emergencyConfirmation,
+    panicLockReachable: true,
+    emergencyWipeReachable: true,
+    mitigationOnly: true,
+  };
+}
+
 export function productionWindowsRuntimeParityView(input = {}) {
   const platform = releaseIntegrityToken(input.platform, "unknown-platform");
   const summary = [

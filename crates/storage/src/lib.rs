@@ -231,6 +231,67 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionEmergencyLocalWipeDecision {
+        confirmation: &'static str,
+        separate_from_standard_wipe: bool,
+        locks_unlock_state: bool,
+        removes_owned_app_data: bool,
+        redacted_result: bool,
+        backup_recovery_claimed: bool,
+        rollback_prevention_claimed: bool,
+        secure_media_deletion_claimed: bool,
+        coercion_safe_claimed: bool,
+        compromised_device_safe_claimed: bool,
+        network_io_attempted: bool,
+    }
+
+    impl ProductionEmergencyLocalWipeDecision {
+        pub fn confirmation(self) -> &'static str {
+            self.confirmation
+        }
+
+        pub fn separate_from_standard_wipe(self) -> bool {
+            self.separate_from_standard_wipe
+        }
+
+        pub fn locks_unlock_state(self) -> bool {
+            self.locks_unlock_state
+        }
+
+        pub fn removes_owned_app_data(self) -> bool {
+            self.removes_owned_app_data
+        }
+
+        pub fn redacted_result(self) -> bool {
+            self.redacted_result
+        }
+
+        pub fn backup_recovery_claimed(self) -> bool {
+            self.backup_recovery_claimed
+        }
+
+        pub fn rollback_prevention_claimed(self) -> bool {
+            self.rollback_prevention_claimed
+        }
+
+        pub fn secure_media_deletion_claimed(self) -> bool {
+            self.secure_media_deletion_claimed
+        }
+
+        pub fn coercion_safe_claimed(self) -> bool {
+            self.coercion_safe_claimed
+        }
+
+        pub fn compromised_device_safe_claimed(self) -> bool {
+            self.compromised_device_safe_claimed
+        }
+
+        pub fn network_io_attempted(self) -> bool {
+            self.network_io_attempted
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionLocalDestructiveActionDecision {
         action: ProductionLocalDestructiveAction,
         scope: &'static str,
@@ -392,6 +453,22 @@ pub mod production {
             cloud_backup_sync_claimed: false,
             rollback_prevention_claimed: false,
             secure_media_deletion_claimed: false,
+            network_io_attempted: false,
+        }
+    }
+
+    pub fn production_emergency_local_wipe_decision() -> ProductionEmergencyLocalWipeDecision {
+        ProductionEmergencyLocalWipeDecision {
+            confirmation: "EMERGENCY WIPE LOCAL DATA",
+            separate_from_standard_wipe: true,
+            locks_unlock_state: true,
+            removes_owned_app_data: true,
+            redacted_result: true,
+            backup_recovery_claimed: false,
+            rollback_prevention_claimed: false,
+            secure_media_deletion_claimed: false,
+            coercion_safe_claimed: false,
+            compromised_device_safe_claimed: false,
             network_io_attempted: false,
         }
     }
@@ -1692,6 +1769,27 @@ pub mod production {
                 assert!(!decision.secure_media_deletion_claimed());
                 assert!(!decision.network_io_attempted());
             }
+        }
+
+        #[test]
+        fn emergency_wipe_lifecycle_requires_separate_confirmation_without_safety_claims() {
+            let emergency = production_emergency_local_wipe_decision();
+            let standard = production_local_destructive_action_decision(
+                ProductionLocalDestructiveAction::FullLocalWipe,
+            );
+
+            assert_eq!(emergency.confirmation(), "EMERGENCY WIPE LOCAL DATA");
+            assert_ne!(emergency.confirmation(), standard.confirmation());
+            assert!(emergency.separate_from_standard_wipe());
+            assert!(emergency.locks_unlock_state());
+            assert!(emergency.removes_owned_app_data());
+            assert!(emergency.redacted_result());
+            assert!(!emergency.backup_recovery_claimed());
+            assert!(!emergency.rollback_prevention_claimed());
+            assert!(!emergency.secure_media_deletion_claimed());
+            assert!(!emergency.coercion_safe_claimed());
+            assert!(!emergency.compromised_device_safe_claimed());
+            assert!(!emergency.network_io_attempted());
         }
 
         #[test]

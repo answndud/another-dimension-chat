@@ -3228,6 +3228,32 @@ fn production_full_local_data_wipe(
 }
 
 #[tauri::command]
+fn production_emergency_local_data_wipe(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductUnlockRuntimeState>,
+    confirmation: String,
+) -> Result<ProductionDataLifecycleResult, String> {
+    if confirmation.trim() != "EMERGENCY WIPE LOCAL DATA" {
+        return Err("production emergency wipe confirmation is required".to_string());
+    }
+    let app_data_root = production_app_data_dir(&app)
+        .map_err(|_| "production emergency wipe failed without exposing local path details")?;
+    let app_cache_root = production_app_cache_dir(&app)
+        .map_err(|_| "production emergency wipe failed without exposing local cache path details")?;
+    let result =
+        run_production_full_local_data_wipe(
+            app_data_root,
+            app_cache_root,
+            "WIPE LOCAL DATA".to_string(),
+        )
+            .map_err(|_| {
+                "production emergency wipe failed without exposing path or key details".to_string()
+            })?;
+    let _ = state.lock("emergency-local-data-wipe", now_unix_ms());
+    Ok(result)
+}
+
+#[tauri::command]
 fn production_two_profile_session_status(
     app: tauri::AppHandle,
     profile_a: String,
@@ -13385,6 +13411,7 @@ pub fn run() {
             production_data_lifecycle_status,
             production_data_lifecycle_prepare,
             production_full_local_data_wipe,
+            production_emergency_local_data_wipe,
             production_invite_room_session_status,
             production_two_profile_session_status,
             production_two_profile_runtime_resume_status,
