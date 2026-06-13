@@ -25,6 +25,11 @@ cd "$ROOT"
 
 DOC="reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
 SCOPE_DOWN="reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md"
+DIST_METADATA="reference/MACOS_RELEASE_DISTRIBUTION_METADATA.md"
+DIST_MANIFEST_GATE="scripts/macos_release_distribution_manifest_once.sh"
+
+[ -f "$DIST_METADATA" ] || fail "missing macOS release distribution metadata reference"
+[ -f "$DIST_MANIFEST_GATE" ] || fail "missing macOS release distribution manifest gate"
 
 must_contain "$DOC" "macos_production_distribution_gate_reviewed=true"
 must_contain "$DOC" "rb_7_macos_stable_artifact_release_class_scope_down_reviewed=true"
@@ -37,6 +42,9 @@ must_contain "$DOC" "auto_update_channel_available=false"
 must_contain "$DOC" "update_signature_ready=false"
 must_contain "$DOC" "rollback_policy_ready=false"
 must_contain "$DOC" "checksum_provenance_manifest_boundary_ready=true"
+must_contain "$DOC" "macos_release_distribution_manifest_schema_available=true"
+must_contain "$DOC" "macos_release_distribution_metadata_generator_ready=true"
+must_contain "$DOC" "macos_release_upload_script_ready=true"
 must_contain "$DOC" "same_release_asset_authority_required=true"
 must_contain "$DOC" "release_upload_performed=false"
 must_contain "$DOC" "release_body_edit_performed=false"
@@ -46,6 +54,7 @@ must_contain "$DOC" "d100_3_signed_notarized_execution_path_reviewed=true"
 must_contain "$DOC" "macos_signed_notarized_execution_path_available=true"
 must_contain "$DOC" "signed_notarized_rc_execution_ready=false"
 must_contain "$DOC" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
+must_contain "$DOC" "reference/MACOS_RELEASE_DISTRIBUTION_METADATA.md"
 must_contain "$DOC" "production_distribution_ready=false"
 must_contain "$DOC" "signed_notarized_security_boundary=false"
 must_contain "$DOC" "security_ready_claimed=false"
@@ -64,6 +73,8 @@ must_contain "reference/UPDATE_INTEGRITY.md" "MACOS_PRODUCTION_DISTRIBUTION_GATE
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md"
+must_contain "$DIST_METADATA" "macos_release_distribution_manifest_schema_available=true"
+must_contain "$DIST_METADATA" "macos_release_upload_script_ready=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_6_macos_production_distribution_gate_reviewed=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "rb_7_macos_stable_artifact_release_class_scope_down_reviewed=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "stable_signed_notarized_artifact_available=false"
@@ -95,6 +106,7 @@ scripts/macos_public_beta_final_source_preflight_once.sh >/dev/null
 scripts/macos_release_page_update_gate_once.sh >/dev/null
 scripts/macos_signed_notarized_execution_path_once.sh >/dev/null
 scripts/macos_stable_artifact_release_class_scope_down_once.sh >/dev/null
+"$DIST_MANIFEST_GATE" >/dev/null
 
 if git -C "$ROOT" ls-files | grep -Eq '^apps/desktop-tauri/(public-release|beta-artifacts)/'; then
   fail "generated public-release or beta-artifacts path is tracked"
@@ -117,6 +129,9 @@ auto_update_channel_available=false
 update_signature_ready=false
 rollback_policy_ready=false
 checksum_provenance_manifest_boundary_ready=true
+macos_release_distribution_manifest_schema_available=true
+macos_release_distribution_metadata_generator_ready=true
+macos_release_upload_script_ready=true
 same_release_asset_authority_required=true
 release_upload_performed=false
 release_body_edit_performed=false
