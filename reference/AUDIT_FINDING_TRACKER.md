@@ -6,6 +6,8 @@ resolved. D100-4 intake execution is tracked in
 result, reviewer signoff, public user safety signoff, or security-ready claim.
 It is synced into the A100-1 public-safe reviewer packet freeze as the current
 zero-finding intake ledger only.
+A100-2 is closed for active-queue progress by owner waiver only; the tracker
+still has no external review findings and does not provide audit evidence.
 
 ## Tracker Rules
 
@@ -37,6 +39,13 @@ zero-finding intake ledger only.
 
 - audit_finding_tracker_ready=true
 - a100_1_external_security_review_packet_frozen=true
+- a100_2_external_review_execution_blocker_closed=true
+- external_review_execution_policy_waiver_authorized=true
+- named_external_review_required_for_claims=true
+- accepted_audit_finding_closure_required_for_claims=true
+- external_review_execution_claim_allowed=false
+- audit_findings_recorded=0
+- audit_finding_closure_claim_allowed=false
 - review_packet_finding_tracker_synced=true
 - audit_finding_tracker_schema_machine_checkable=true
 - audit_finding_counts_machine_checked=true

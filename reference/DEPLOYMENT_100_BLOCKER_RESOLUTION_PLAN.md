@@ -39,7 +39,7 @@ Current public wording must remain:
 | 12 | M100-7 macOS Update And Rollback-Safe Release Channel | closed by owner waiver | Manual same-release update policy and signed update manifest candidate verification are source-ready; active blocker is closed by explicit owner waiver while product signed update readiness and rollback prevention remain holds. |
 | 13 | M100-8 macOS Stable Release Gate And Public Copy Upgrade | closed by owner waiver | Stable gate is reviewed as hold; active blocker is closed by explicit owner waiver while stable release, public copy upgrade, and production claims remain blocked. |
 | 14 | A100-1 External Security Review Packet Freeze | closed by source packet freeze | Independent review packet is frozen, public-safe, synced to latest source gates, and linked to the finding tracker; real external review completion remains false for A100-2. |
-| 15 | A100-2 External Review Execution And Finding Closure | external review hold | Named reviewer or audit completes; findings are fixed, held, or waived with public-safe signoff. |
+| 15 | A100-2 External Review Execution And Finding Closure | closed by owner waiver | Active blocker is closed by explicit owner waiver; named review/audit execution, public-safe findings, and accepted finding closure remain required before audit/security/stable/production wording. |
 | 16 | F100-1 External Two-Machine Field Evidence Program | external field hold | Repeated real two-machine/different-network reports are accepted by validators. |
 | 17 | O100-1 Operations, Incident, And Vulnerability Readiness | source gate with operations hold | Support, vulnerability intake, incident severity, dependency advisory, emergency release, and user notification paths are rehearsed. |
 | 18 | W100-1 Windows Runtime Parity Scope Unlock | platform runtime | Real Windows runtime smoke and parity evidence exist. |
@@ -159,6 +159,14 @@ Current public wording must remain:
 - reliable_external_delivery_claim_allowed=false
 - repeated_external_onion_evidence_claim_allowed=false
 - a100_1_external_security_review_packet_frozen=true
+- a100_2_external_review_execution_blocker_closed=true
+- external_review_execution_policy_waiver_authorized=true
+- external_review_execution_waiver_scope=active-queue-unblock-only
+- named_external_review_required_for_claims=true
+- accepted_audit_finding_closure_required_for_claims=true
+- external_review_execution_claim_allowed=false
+- audit_findings_recorded=0
+- audit_finding_closure_claim_allowed=false
 - review_packet_synced_to_latest_source_gates=true
 - review_packet_includes_c100_5_onion_boundary=true
 - review_packet_includes_target_standard_matrix=true
@@ -216,4 +224,4 @@ Current public wording must remain:
 - public_claim_ahead_of_evidence=false
 - docs_private_uncommitted=true
 - agents_md_stage_allowed=false
-- next_required_phase=Phase A100-2 - External Review Execution And Finding Closure
+- next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program

@@ -133,4 +133,4 @@ Targeted tests that anchor this gate:
 - production_transport_ready=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=Phase A100-2 - External Review Execution And Finding Closure
+- next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program

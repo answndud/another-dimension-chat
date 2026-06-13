@@ -225,4 +225,4 @@ separate explicit phases. They do not inherit macOS release authority.
 - android_runtime_implementation_authorized=false
 - ios_runtime_implementation_authorized=false
 - stable_release_scope_down_until_credentials=true
-- next_required_phase=Phase A100-2 - External Review Execution And Finding Closure
+- next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program

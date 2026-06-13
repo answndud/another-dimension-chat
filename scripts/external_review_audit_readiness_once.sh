@@ -32,6 +32,14 @@ TRACKER_VALIDATOR="scripts/validate_audit_finding_tracker.mjs"
 
 must_contain "$DOC" "external_review_audit_readiness_gate_reviewed=true"
 must_contain "$DOC" "a100_1_external_security_review_packet_frozen=true"
+must_contain "$DOC" "a100_2_external_review_execution_blocker_closed=true"
+must_contain "$DOC" "external_review_execution_policy_waiver_authorized=true"
+must_contain "$DOC" "external_review_execution_waiver_scope=active-queue-unblock-only"
+must_contain "$DOC" "named_external_review_required_for_claims=true"
+must_contain "$DOC" "accepted_audit_finding_closure_required_for_claims=true"
+must_contain "$DOC" "external_review_execution_claim_allowed=false"
+must_contain "$DOC" "audit_findings_recorded=0"
+must_contain "$DOC" "audit_finding_closure_claim_allowed=false"
 must_contain "$DOC" "review_packet_synced_to_latest_source_gates=true"
 must_contain "$DOC" "review_packet_includes_c100_5_onion_boundary=true"
 must_contain "$DOC" "review_packet_includes_target_standard_matrix=true"
@@ -69,6 +77,11 @@ must_contain "$DOC" "next_required_phase=RB-7 signed notarized macOS stable arti
 must_contain "$RUNBOOK" "external_review_intake_runbook_available=true"
 must_contain "$RUNBOOK" "external_review_intake_operator_ready=true"
 must_contain "$RUNBOOK" "a100_1_external_security_review_packet_frozen=true"
+must_contain "$RUNBOOK" "a100_2_external_review_execution_blocker_closed=true"
+must_contain "$RUNBOOK" "external_review_execution_policy_waiver_authorized=true"
+must_contain "$RUNBOOK" "named_external_review_required_for_claims=true"
+must_contain "$RUNBOOK" "accepted_audit_finding_closure_required_for_claims=true"
+must_contain "$RUNBOOK" "external_review_execution_claim_allowed=false"
 must_contain "$RUNBOOK" "review_packet_synced_to_latest_source_gates=true"
 must_contain "$RUNBOOK" "review_packet_includes_c100_5_onion_boundary=true"
 must_contain "$RUNBOOK" "review_packet_includes_target_standard_matrix=true"
@@ -81,6 +94,13 @@ must_contain "$RUNBOOK" "sensitive_finding_private_route_required=true"
 must_contain "$TRACKER" "Status: tracker available; no external audit findings have been received or"
 must_contain "$TRACKER" "audit_finding_tracker_ready=true"
 must_contain "$TRACKER" "a100_1_external_security_review_packet_frozen=true"
+must_contain "$TRACKER" "a100_2_external_review_execution_blocker_closed=true"
+must_contain "$TRACKER" "external_review_execution_policy_waiver_authorized=true"
+must_contain "$TRACKER" "named_external_review_required_for_claims=true"
+must_contain "$TRACKER" "accepted_audit_finding_closure_required_for_claims=true"
+must_contain "$TRACKER" "external_review_execution_claim_allowed=false"
+must_contain "$TRACKER" "audit_findings_recorded=0"
+must_contain "$TRACKER" "audit_finding_closure_claim_allowed=false"
 must_contain "$TRACKER" "review_packet_finding_tracker_synced=true"
 must_contain "$TRACKER" "audit_finding_tracker_schema_machine_checkable=true"
 must_contain "$TRACKER" "audit_finding_counts_machine_checked=true"
@@ -126,6 +146,12 @@ must_contain "SECURITY.md" "reference/AUDIT_FINDING_TRACKER.md"
 must_contain "SECURITY.md" "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_7_external_review_audit_readiness_gate_reviewed=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "a100_1_external_security_review_packet_frozen=true"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "a100_2_external_review_execution_blocker_closed=true"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "external_review_execution_policy_waiver_authorized=true"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "named_external_review_required_for_claims=true"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "accepted_audit_finding_closure_required_for_claims=true"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "external_review_execution_claim_allowed=false"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "audit_finding_closure_claim_allowed=false"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "review_packet_synced_to_latest_source_gates=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "review_packet_finding_tracker_synced=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "rb_6_external_review_release_class_scope_down_reviewed=true"
@@ -150,6 +176,8 @@ for file in "$DOC" "$RUNBOOK" "$TRACKER" "$PACKET" "$SCOPE_DOWN" "README.md" "SE
   must_not_match "$file" "security_ready_claimed=true"
   must_not_match "$file" "sensitive_communication_allowed=true"
   must_not_match "$file" "stable_or_production_release_allowed_without_external_review=true"
+  must_not_match "$file" "external_review_execution_claim_allowed=true"
+  must_not_match "$file" "audit_finding_closure_claim_allowed=true"
 done
 
 scripts/audit_finding_tracker_validator_once.sh >/dev/null
@@ -159,6 +187,14 @@ cat <<'STATUS'
 status=external-review-audit-readiness-ready
 external_review_audit_readiness_gate_reviewed=true
 a100_1_external_security_review_packet_frozen=true
+a100_2_external_review_execution_blocker_closed=true
+external_review_execution_policy_waiver_authorized=true
+external_review_execution_waiver_scope=active-queue-unblock-only
+named_external_review_required_for_claims=true
+accepted_audit_finding_closure_required_for_claims=true
+external_review_execution_claim_allowed=false
+audit_findings_recorded=0
+audit_finding_closure_claim_allowed=false
 review_packet_synced_to_latest_source_gates=true
 review_packet_includes_c100_5_onion_boundary=true
 review_packet_includes_target_standard_matrix=true

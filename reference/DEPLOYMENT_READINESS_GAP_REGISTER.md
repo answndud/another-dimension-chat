@@ -137,6 +137,13 @@ These cannot be made true by editing source files alone:
 - external_evidence_intake_operator_ready=true
 - reviewer_packet_freeze_ready=true
 - a100_1_external_security_review_packet_frozen=true
+- a100_2_external_review_execution_blocker_closed=true
+- external_review_execution_policy_waiver_authorized=true
+- named_external_review_required_for_claims=true
+- accepted_audit_finding_closure_required_for_claims=true
+- external_review_execution_claim_allowed=false
+- audit_findings_recorded=0
+- audit_finding_closure_claim_allowed=false
 - review_packet_synced_to_latest_source_gates=true
 - review_packet_includes_c100_5_onion_boundary=true
 - review_packet_includes_target_standard_matrix=true

@@ -203,5 +203,5 @@ external_onion_delivery_verified=false
 external_review_completed=false
 audit_completed=false
 security_ready_claimed=false
-next_required_phase=Phase-A100-2-External-Review-Execution-And-Finding-Closure
+next_required_phase=Phase-F100-1-External-Two-Machine-Field-Evidence-Program
 STATUS

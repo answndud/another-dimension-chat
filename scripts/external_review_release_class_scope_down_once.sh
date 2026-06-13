@@ -36,6 +36,11 @@ for file in "$DOC" "$READINESS" "$TRACKER" "$CLAIM_GATE" "$STABLE_GATE" "$PACKET
 done
 
 must_contain "$DOC" "rb_6_external_review_release_class_scope_down_reviewed=true"
+must_contain "$DOC" "a100_2_external_review_execution_blocker_closed=true"
+must_contain "$DOC" "external_review_execution_policy_waiver_authorized=true"
+must_contain "$DOC" "named_external_review_required_for_claims=true"
+must_contain "$DOC" "accepted_audit_finding_closure_required_for_claims=true"
+must_contain "$DOC" "external_review_execution_claim_allowed=false"
 must_contain "$DOC" "review_packet_public_safe=true"
 must_contain "$DOC" "audit_finding_tracker_available=true"
 must_contain "$DOC" "external_review_completed=false"
@@ -79,11 +84,15 @@ for file in "$DOC" "$READINESS" "$TRACKER" "$CLAIM_GATE" "$STABLE_GATE" "README.
   must_not_match "$file" "sensitive_communication_allowed=true"
   must_not_match "$file" "stable_or_production_release_allowed_without_external_review=true"
   must_not_match "$file" "fabricated_review_or_peer_evidence_allowed=true"
+  must_not_match "$file" "external_review_execution_claim_allowed=true"
 done
 
 cat <<'STATUS'
 status=external-review-release-class-scope-down-closed
 rb_6_external_review_release_class_scope_down_reviewed=true
+a100_2_external_review_execution_blocker_closed=true
+external_review_execution_policy_waiver_authorized=true
+external_review_execution_claim_allowed=false
 external_review_completed=false
 audit_completed=false
 reviewer_signoff_claimed=false

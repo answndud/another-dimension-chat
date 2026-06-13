@@ -102,6 +102,17 @@ evidence boundary, `reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md`,
 This freeze is a source packet state only. A100-2 remains required for real
 review execution, finding closure, reviewer signoff, or audit wording.
 
+## A100-2 Execution Boundary
+
+A100-2 is closed for active-queue progress by explicit owner policy waiver
+only. The waiver does not fabricate a reviewer, does not count as an audit, and
+does not convert the zero-finding tracker into review evidence.
+
+Named external review or audit, public-safe finding summaries, and accepted
+fix/hold/waive closure remain required before audited, security-ready,
+production-ready, stable, sensitive-use, or reliable-delivery wording can be
+considered.
+
 ## RB-6 Scope-Down
 
 RB-6 does not fabricate an external reviewer or audit. Instead, it removes the
@@ -116,6 +127,14 @@ Public wording must still say `not audited`, `not production-ready`, and
 
 - external_review_audit_readiness_gate_reviewed=true
 - a100_1_external_security_review_packet_frozen=true
+- a100_2_external_review_execution_blocker_closed=true
+- external_review_execution_policy_waiver_authorized=true
+- external_review_execution_waiver_scope=active-queue-unblock-only
+- named_external_review_required_for_claims=true
+- accepted_audit_finding_closure_required_for_claims=true
+- external_review_execution_claim_allowed=false
+- audit_findings_recorded=0
+- audit_finding_closure_claim_allowed=false
 - review_packet_synced_to_latest_source_gates=true
 - review_packet_includes_c100_5_onion_boundary=true
 - review_packet_includes_target_standard_matrix=true
