@@ -159,6 +159,9 @@ preflight after the blockers below are resolved.
 - public_stable_release_allowed=false
 - lower_release_publication_selected=true
 - stable_signed_notarized_artifact_available=false
+- d100_3_signed_notarized_execution_path_reviewed=true
+- macos_signed_notarized_execution_path_available=true
+- signed_notarized_rc_execution_ready=false
 - rb_7_macos_stable_artifact_release_class_scope_down_reviewed=true
 - external_review_completed=false
 - audit_completed=false

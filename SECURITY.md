@@ -211,6 +211,11 @@ support claims false until matching build/provenance evidence exists.
 Signed/notarized RC artifact handling is tracked in
 `reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md`: the runbook and verifier
 exist, but no signed/notarized RC artifact is present.
+D100-3 signed/notarized execution path is tracked in
+`reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md`: it connects credential
+probe, signing, notary submit/wait, stapling, Gatekeeper assessment, checksum,
+and generated provenance while holding current production/stable/release-upload
+claims false.
 
 The public privacy-model comparison is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`. It maps the intended Korean Briar/Cwtch-style direction to current public beta gaps and LINDDUN categories; it is not a claim that the current beta has reached that level.
 

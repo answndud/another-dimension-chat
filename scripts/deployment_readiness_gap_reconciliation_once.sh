@@ -28,6 +28,7 @@ MATRIX="reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
 
 for file in "$REGISTER" "$MATRIX" \
   "reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md" \
+  "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
   "reference/MACOS_PRODUCTION_UX_ONBOARDING.md" \
   "reference/MACOS_USABILITY_RECOVERY_CLOSURE.md" \
   "reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md" \
@@ -65,6 +66,9 @@ must_contain "$REGISTER" "production_key_management_source_gate_reviewed=true"
 must_contain "$REGISTER" "production_key_management_source_ready=true"
 must_contain "$REGISTER" "d100_2_key_management_source_gate_reviewed=true"
 must_contain "$REGISTER" "manual_update_integrity_policy_available=true"
+must_contain "$REGISTER" "d100_3_signed_notarized_execution_path_reviewed=true"
+must_contain "$REGISTER" "macos_signed_notarized_execution_path_available=true"
+must_contain "$REGISTER" "signed_notarized_rc_execution_ready=false"
 
 must_contain "$MATRIX" "target_standard_100_deployment_gap_reconciled=true"
 must_contain "$MATRIX" "macos_current_scope_supported=true"
@@ -81,6 +85,9 @@ must_contain "$MATRIX" "production_key_management_source_gate_reviewed=true"
 must_contain "$MATRIX" "production_key_management_source_ready=true"
 must_contain "$MATRIX" "d100_2_key_management_source_gate_reviewed=true"
 must_contain "$MATRIX" "manual_update_integrity_policy_available=true"
+must_contain "$MATRIX" "d100_3_signed_notarized_execution_path_reviewed=true"
+must_contain "$MATRIX" "macos_signed_notarized_execution_path_available=true"
+must_contain "$MATRIX" "signed_notarized_rc_execution_ready=false"
 
 must_contain "$MATRIX" "pass for explicit Apple Silicon current scope; universal/Intel hold"
 must_contain "$MATRIX" "source pass; representative usability hold"
@@ -103,6 +110,9 @@ must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_E2EE
 must_contain "README.md" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 must_contain "SECURITY.md" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
+must_contain "README.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
+must_contain "SECURITY.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
+must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 
 for file in "$REGISTER" "$MATRIX" "README.md" "SECURITY.md"; do
   must_contain "$file" "not production-ready"
@@ -125,6 +135,7 @@ scripts/target_standard_100_evidence_matrix_once.sh >/dev/null
 scripts/production_e2ee_source_gate_once.sh >/dev/null
 scripts/production_protocol_session_lifecycle_once.sh >/dev/null
 scripts/production_key_management_source_gate_once.sh >/dev/null
+scripts/macos_signed_notarized_execution_path_once.sh >/dev/null
 scripts/macos_universal_scoped_artifact_policy_once.sh >/dev/null
 scripts/macos_production_ux_onboarding_once.sh >/dev/null
 scripts/pairwise_identity_safety_product_closure_once.sh >/dev/null
@@ -156,6 +167,9 @@ production_key_management_source_gate_reviewed=true
 production_key_management_source_ready=true
 d100_2_key_management_source_gate_reviewed=true
 manual_update_integrity_policy_available=true
+d100_3_signed_notarized_execution_path_reviewed=true
+macos_signed_notarized_execution_path_available=true
+signed_notarized_rc_execution_ready=false
 production_ready_claim_allowed=false
 audited_claim_allowed=false
 sensitive_communication_allowed=false

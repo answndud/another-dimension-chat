@@ -22,6 +22,11 @@ Without `AD_SIGNED_RC_DMG`, the verifier records a hold and exits successfully
 only as a source-side runbook check. It must not create, upload, rebuild, or
 commit any release artifact.
 
+D100-3 execution path is recorded in
+`reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md`; it connects credential
+probe, signing commands, notary submit/wait, stapling, Gatekeeper assessment,
+checksum, and optional generated provenance while holding without credentials.
+
 ## RC Artifact Runbook
 
 1. Complete M100-1 with a Developer ID Application identity and validated
@@ -40,6 +45,8 @@ commit any release artifact.
 ## Current Gate Flags
 
 - m100_3_signed_notarized_rc_runbook_reviewed=true
+- d100_3_signed_notarized_execution_path_reviewed=true
+- macos_signed_notarized_execution_path_available=true
 - signed_notarized_rc_artifact_verifier_available=true
 - signed_notarized_rc_artifact_available=false
 - ad_signed_rc_dmg_input_required_for_artifact_verification=true

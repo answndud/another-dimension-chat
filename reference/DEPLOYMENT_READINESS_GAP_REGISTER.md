@@ -30,9 +30,17 @@ current supported scope is named precisely:
 
 These cannot be made true by editing source files alone:
 
-- Developer ID Application identity available and used.
-- Notarization credential available, successful notary submission, and stapling.
-- Gatekeeper no-exception open on a normal supported macOS machine.
+- Developer ID Application identity available and used; D100-3 execution path is
+  ready via `reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md`, but
+  credential input remains false.
+- Notarization credential available, successful notary submission, and stapling;
+  D100-3 execution path is ready via
+  `reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md`, but
+  credential/artifact input remains false.
+- Gatekeeper no-exception open on a normal supported macOS machine; D100-3
+  assessment path is ready via
+  `reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md`, but signed/notarized
+  artifact remains false.
 - Signed/notarized stable macOS artifact and owner stable release approval.
 - Completed independent external review or audit with public-safe finding
   closure/signoff.
@@ -45,12 +53,10 @@ These cannot be made true by editing source files alone:
 
 ## Next Work Order
 
-1. D100-3: prepare signed/notarized macOS RC execution so it passes
-   automatically when Developer ID and notary credentials appear.
-2. D100-4: make the Windows public artifact path executable on a real Windows
-   runner/device and reject local-only results.
-3. D100-5: run external review, field evidence, and representative usability
+1. D100-4: run external review, field evidence, and representative usability
    intake with real non-sensitive reports; do not fabricate evidence.
+2. D100-5: make the Windows public artifact path executable on a real Windows
+   runner/device and reject local-only results.
 
 ## Current Flags
 
@@ -78,6 +84,9 @@ These cannot be made true by editing source files alone:
 - d100_2_key_management_source_gate_reviewed=true
 - key_management_source_scope=passphrase-first-sqlcipher-local-profile-store-marker-rollback-local-delete-only
 - manual_update_integrity_policy_available=true
+- d100_3_signed_notarized_execution_path_reviewed=true
+- macos_signed_notarized_execution_path_available=true
+- signed_notarized_rc_execution_ready=false
 - developer_id_signing_available=false
 - notarization_available=false
 - external_review_completed=false

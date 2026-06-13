@@ -382,6 +382,11 @@ evidence exists.
 Signed/notarized RC artifact handling is tracked in
 [reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md](reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md):
 the runbook and verifier exist, but no signed/notarized RC artifact is present.
+D100-3 signed/notarized execution path is tracked in
+[reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md](reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md):
+it connects credential probe, signing, notary submit/wait, stapling,
+Gatekeeper assessment, checksum, and generated provenance while holding current
+production/stable/release-upload claims false.
 
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
