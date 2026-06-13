@@ -203,5 +203,5 @@ external_onion_delivery_verified=false
 external_review_completed=false
 audit_completed=false
 security_ready_claimed=false
-next_required_phase=Phase-F100-1-External-Two-Machine-Field-Evidence-Program
+next_required_phase=Phase-O100-1-Operations-Incident-And-Vulnerability-Readiness
 STATUS

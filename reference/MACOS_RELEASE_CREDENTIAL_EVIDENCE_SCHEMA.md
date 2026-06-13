@@ -105,4 +105,4 @@ current repository `HEAD`.
 - production_ready_claim_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false
-- next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program
+- next_required_phase=Phase O100-1 - Operations, Incident, And Vulnerability Readiness

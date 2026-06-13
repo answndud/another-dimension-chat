@@ -47,7 +47,7 @@ must_contain "$DOC" "external_two_machine_delivery_verified=false"
 must_contain "$DOC" "reliable_external_delivery_claim_allowed=false"
 must_contain "$DOC" "production_transport_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
-must_contain "$DOC" "next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program"
+must_contain "$DOC" "next_required_phase=Phase O100-1 - Operations, Incident, And Vulnerability Readiness"
 
 must_contain "README.md" "reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md"
 must_contain "SECURITY.md" "reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md"
@@ -109,5 +109,5 @@ external_two_machine_delivery_verified=false
 reliable_external_delivery_claim_allowed=false
 production_transport_ready=false
 security_ready_claimed=false
-next_required_phase=Phase-F100-1-External-Two-Machine-Field-Evidence-Program
+next_required_phase=Phase-O100-1-Operations-Incident-And-Vulnerability-Readiness
 STATUS

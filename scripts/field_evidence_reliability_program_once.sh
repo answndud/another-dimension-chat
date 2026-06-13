@@ -37,6 +37,13 @@ for file in "$PROGRAM" "$PACKET" "$REVIEW_PACKET" "$GATE" "$VALIDATOR" "$SCOPE_D
 done
 
 must_contain "$PROGRAM" "field_evidence_reliability_program_reviewed=true"
+must_contain "$PROGRAM" "f100_1_field_evidence_blocker_closed=true"
+must_contain "$PROGRAM" "field_evidence_policy_waiver_authorized=true"
+must_contain "$PROGRAM" "field_evidence_waiver_scope=active-queue-unblock-only"
+must_contain "$PROGRAM" "real_external_two_machine_field_evidence_required_for_claims=true"
+must_contain "$PROGRAM" "accepted_redacted_field_reports_required_for_claims=true"
+must_contain "$PROGRAM" "field_evidence_execution_claim_allowed=false"
+must_contain "$PROGRAM" "accepted_production_field_reports=0"
 must_contain "$PROGRAM" "c100_5_onion_evidence_blocker_closed=true"
 must_contain "$PROGRAM" "advanced_onion_policy_waiver_authorized=true"
 must_contain "$PROGRAM" "advanced_onion_waiver_scope=active-queue-unblock-only"
@@ -70,6 +77,11 @@ must_contain "$PROGRAM" "field_evidence_still_blocks_stable_or_production_claims
 must_contain "$PROGRAM" "next_required_phase=RB-6 external review and audit closure"
 
 must_contain "$PACKET" "redacted_field_report_packet_available=true"
+must_contain "$PACKET" "f100_1_field_evidence_blocker_closed=true"
+must_contain "$PACKET" "field_evidence_policy_waiver_authorized=true"
+must_contain "$PACKET" "real_external_two_machine_field_evidence_required_for_claims=true"
+must_contain "$PACKET" "accepted_redacted_field_reports_required_for_claims=true"
+must_contain "$PACKET" "field_evidence_execution_claim_allowed=false"
 must_contain "$PACKET" "redacted_field_report_validator_available=true"
 must_contain "$PACKET" "d100_4_external_evidence_intake_execution_reviewed=true"
 must_contain "$PACKET" "external_evidence_intake_operator_ready=true"
@@ -131,6 +143,12 @@ must_contain "$VALIDATOR" "status=waiting-for-redacted-field-reports"
 must_contain "$VALIDATOR" "status=redacted-field-evidence-candidate-requires-review"
 must_contain "$VALIDATOR" "production_field_evidence_ready=false"
 must_contain "$GATE" "ops_8_field_evidence_reliability_program_reviewed=true"
+must_contain "$GATE" "f100_1_field_evidence_blocker_closed=true"
+must_contain "$GATE" "field_evidence_policy_waiver_authorized=true"
+must_contain "$GATE" "real_external_two_machine_field_evidence_required_for_claims=true"
+must_contain "$GATE" "accepted_redacted_field_reports_required_for_claims=true"
+must_contain "$GATE" "field_evidence_execution_claim_allowed=false"
+must_contain "$GATE" "accepted_production_field_reports=0"
 must_contain "$GATE" "d100_4_external_evidence_intake_execution_reviewed=true"
 must_contain "$GATE" "external_evidence_intake_operator_ready=true"
 must_contain "$GATE" "rb_5_field_evidence_release_class_scope_down_reviewed=true"
@@ -154,6 +172,7 @@ for file in "$PROGRAM" "$PACKET" "$REVIEW_PACKET" "$GATE" "$SCOPE_DOWN" "$RUNBOO
   must_not_match "$file" "raw_logs_or_private_payloads_allowed=true"
   must_not_match "$file" "fabricated_peer_evidence_allowed=true"
   must_not_match "$file" "external_delivery_success_claim_allowed=true"
+  must_not_match "$file" "field_evidence_execution_claim_allowed=true"
   must_not_match "$file" "reliable_external_delivery_claim_allowed=true"
   must_not_match "$file" "repeated_external_onion_evidence_claim_allowed=true"
   must_not_match "$file" "production_field_evidence_ready=true"
@@ -168,6 +187,13 @@ scripts/field_evidence_release_class_scope_down_once.sh >/dev/null
 cat <<'STATUS'
 status=field-evidence-reliability-program-ready
 field_evidence_reliability_program_reviewed=true
+f100_1_field_evidence_blocker_closed=true
+field_evidence_policy_waiver_authorized=true
+field_evidence_waiver_scope=active-queue-unblock-only
+real_external_two_machine_field_evidence_required_for_claims=true
+accepted_redacted_field_reports_required_for_claims=true
+field_evidence_execution_claim_allowed=false
+accepted_production_field_reports=0
 c100_5_onion_evidence_blocker_closed=true
 advanced_onion_policy_waiver_authorized=true
 advanced_onion_waiver_scope=active-queue-unblock-only

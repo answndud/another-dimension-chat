@@ -24,6 +24,10 @@ review the source of the reports and update the stable gate explicitly.
 D100-4 external evidence intake execution is tracked in
 `reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`.
 
+F100-1 is closed for active-queue progress by owner waiver only. This packet
+still has no accepted production field reports and remains a candidate intake
+template until real external reports are submitted and reviewed.
+
 ## Allowed Report Fields
 
 - `app_version`
@@ -101,6 +105,11 @@ non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-p
 ## Current Packet Flags
 
 - redacted_field_report_packet_available=true
+- f100_1_field_evidence_blocker_closed=true
+- field_evidence_policy_waiver_authorized=true
+- real_external_two_machine_field_evidence_required_for_claims=true
+- accepted_redacted_field_reports_required_for_claims=true
+- field_evidence_execution_claim_allowed=false
 - redacted_field_report_validator_available=true
 - d100_4_external_evidence_intake_execution_reviewed=true
 - external_evidence_intake_operator_ready=true

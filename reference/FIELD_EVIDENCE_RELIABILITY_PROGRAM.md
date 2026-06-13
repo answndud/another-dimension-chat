@@ -119,9 +119,28 @@ The advanced onion/Tor path remains explicit-user-triggered, fail-closed,
 non-default, non-production, and claim-blocked until repeated accepted
 redacted reports and external review exist.
 
+## F100-1 External Field Evidence Boundary
+
+F100-1 is closed for active-queue progress by explicit owner policy waiver
+only. The waiver does not create real two-machine reports, does not accept
+local-only or synthetic evidence, and does not allow reliable external delivery
+or production field evidence wording.
+
+Repeated real two-machine reports, different-network coverage, restart/resume,
+offline/online transition, failed-delivery recovery, accepted redacted reports,
+and external review remain required before any reliability, production-ready,
+audited, security-ready, stable, or sensitive-use wording can be considered.
+
 ## Current Gate Flags
 
 - field_evidence_reliability_program_reviewed=true
+- f100_1_field_evidence_blocker_closed=true
+- field_evidence_policy_waiver_authorized=true
+- field_evidence_waiver_scope=active-queue-unblock-only
+- real_external_two_machine_field_evidence_required_for_claims=true
+- accepted_redacted_field_reports_required_for_claims=true
+- field_evidence_execution_claim_allowed=false
+- accepted_production_field_reports=0
 - c100_5_onion_evidence_blocker_closed=true
 - advanced_onion_policy_waiver_authorized=true
 - advanced_onion_waiver_scope=active-queue-unblock-only

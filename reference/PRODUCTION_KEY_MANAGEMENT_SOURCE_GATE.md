@@ -118,4 +118,4 @@ claim-policy decision exists.
 - production_key_management_ready=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program
+- next_required_phase=Phase O100-1 - Operations, Incident, And Vulnerability Readiness

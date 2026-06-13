@@ -54,7 +54,7 @@ done
 must_contain "$PLAN" "deployment_100_blocker_resolution_plan_available=true"
 must_contain "$PLAN" "deployment_100_blocker_resolution_machine_checkable=true"
 must_contain "$PLAN" "all_false_hold_flags_categorized=true"
-must_contain "$PLAN" "next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program"
+must_contain "$PLAN" "next_required_phase=Phase O100-1 - Operations, Incident, And Vulnerability Readiness"
 
 for phase in \
   "M100-1" "M100-2" "M100-3" "M100-4" "M100-5" "C100-1" "C100-2" \
@@ -148,6 +148,13 @@ for flag in \
   "external_review_execution_claim_allowed=false" \
   "audit_findings_recorded=0" \
   "audit_finding_closure_claim_allowed=false" \
+  "f100_1_field_evidence_blocker_closed=true" \
+  "field_evidence_policy_waiver_authorized=true" \
+  "field_evidence_waiver_scope=active-queue-unblock-only" \
+  "real_external_two_machine_field_evidence_required_for_claims=true" \
+  "accepted_redacted_field_reports_required_for_claims=true" \
+  "field_evidence_execution_claim_allowed=false" \
+  "accepted_production_field_reports=0" \
   "macos_release_credential_evidence_schema_available=true" \
   "macos_release_credential_evidence_validator_available=true" \
   "macos_release_credential_evidence_collector_available=true" \
@@ -263,6 +270,7 @@ c100_4_transport_blocker_closed=true
 c100_5_onion_evidence_blocker_closed=true
 a100_1_external_security_review_packet_frozen=true
 a100_2_external_review_execution_blocker_closed=true
+f100_1_field_evidence_blocker_closed=true
 m100_1_release_credentials_ready=$m100_1_release_credentials_ready
 false_or_hold_items_hidden=false
 public_claim_ahead_of_evidence=false
@@ -274,5 +282,5 @@ sensitive_communication_allowed=false
 stable_release_allowed=false
 release_upload_authorized=false
 dmg_rebuild_authorized=false
-next_required_phase=Phase-F100-1-External-Two-Machine-Field-Evidence-Program
+next_required_phase=Phase-O100-1-Operations-Incident-And-Vulnerability-Readiness
 STATUS

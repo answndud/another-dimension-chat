@@ -37,11 +37,17 @@ must_contain "$VALIDATOR" "forbidden-content"
 must_contain "$VALIDATOR" "non-claims-mismatch"
 
 must_contain "$PACKET" "redacted_field_report_validator_available=true"
+must_contain "$PACKET" "f100_1_field_evidence_blocker_closed=true"
+must_contain "$PACKET" "field_evidence_policy_waiver_authorized=true"
+must_contain "$PACKET" "real_external_two_machine_field_evidence_required_for_claims=true"
+must_contain "$PACKET" "accepted_redacted_field_reports_required_for_claims=true"
+must_contain "$PACKET" "field_evidence_execution_claim_allowed=false"
 must_contain "$PACKET" "clean_install_checksum_status=pass|fail|partial|not-run"
 must_contain "$PACKET" "manual_envelope_round_trip_status=pass|fail|partial|not-run"
 must_contain "$PACKET" "failed_delivery_recovery_status=pass|fail|partial|not-run"
 must_contain "$PACKET" "node scripts/validate_redacted_field_reports.mjs"
 must_not_match "$PACKET" "production_field_evidence_ready=true"
+must_not_match "$PACKET" "field_evidence_execution_claim_allowed=true"
 must_not_match "$PACKET" "external_delivery_success_claim_allowed=true"
 must_not_match "$PACKET" "reliable_external_delivery_claim_allowed=true"
 
@@ -134,6 +140,9 @@ grep -Fq "forbidden-content:envelope-payload" "$invalid_output" || fail "validat
 cat <<'STATUS'
 status=redacted-field-report-validator-ready
 redacted_field_report_validator_available=true
+f100_1_field_evidence_blocker_closed=true
+field_evidence_policy_waiver_authorized=true
+field_evidence_execution_claim_allowed=false
 reports_found=0
 accepted_production_field_reports=0
 production_field_evidence_ready=false

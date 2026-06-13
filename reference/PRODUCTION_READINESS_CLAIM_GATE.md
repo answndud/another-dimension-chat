@@ -148,6 +148,12 @@ audit, field evidence, usability evidence, or any production claim.
 - consent_non_sensitive_use_notice_ready=true
 - representative_usability_sample_threshold=3-5
 - rb_5_field_evidence_release_class_scope_down_reviewed=true
+- f100_1_field_evidence_blocker_closed=true
+- field_evidence_policy_waiver_authorized=true
+- real_external_two_machine_field_evidence_required_for_claims=true
+- accepted_redacted_field_reports_required_for_claims=true
+- field_evidence_execution_claim_allowed=false
+- accepted_production_field_reports=0
 - redacted_field_report_packet_available=true
 - redacted_field_report_validator_available=true
 - macos_two_machine_real_user_flow_repeated=false

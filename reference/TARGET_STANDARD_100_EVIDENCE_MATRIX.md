@@ -197,6 +197,13 @@ updated, and a later explicit release/claim task authorizes the wording.
 - external_review_execution_claim_allowed=false
 - audit_findings_recorded=0
 - audit_finding_closure_claim_allowed=false
+- f100_1_field_evidence_blocker_closed=true
+- field_evidence_policy_waiver_authorized=true
+- field_evidence_waiver_scope=active-queue-unblock-only
+- real_external_two_machine_field_evidence_required_for_claims=true
+- accepted_redacted_field_reports_required_for_claims=true
+- field_evidence_execution_claim_allowed=false
+- accepted_production_field_reports=0
 - review_packet_synced_to_latest_source_gates=true
 - review_packet_includes_c100_5_onion_boundary=true
 - review_packet_includes_target_standard_matrix=true
@@ -284,4 +291,4 @@ updated, and a later explicit release/claim task authorizes the wording.
 - generated_release_artifacts_staged=false
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false
-- next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program
+- next_required_phase=Phase O100-1 - Operations, Incident, And Vulnerability Readiness

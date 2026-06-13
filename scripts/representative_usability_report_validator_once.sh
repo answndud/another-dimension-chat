@@ -155,5 +155,5 @@ representative_usability_sample_threshold=3-5
 accepted_representative_usability_reports=0
 usability_study_completed=false
 representative_usability_evidence_completed=false
-next_required_phase=Phase-F100-1-External-Two-Machine-Field-Evidence-Program
+next_required_phase=Phase-O100-1-Operations-Incident-And-Vulnerability-Readiness
 STATUS

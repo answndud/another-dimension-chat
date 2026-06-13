@@ -38,6 +38,13 @@ for file in "$DOC" "$PROGRAM" "$PACKET" "$GATE" "$STABLE_GATE" "$REVIEW_PACKET" 
 done
 
 must_contain "$DOC" "rb_5_field_evidence_release_class_scope_down_reviewed=true"
+must_contain "$DOC" "f100_1_field_evidence_blocker_closed=true"
+must_contain "$DOC" "field_evidence_policy_waiver_authorized=true"
+must_contain "$DOC" "field_evidence_waiver_scope=active-queue-unblock-only"
+must_contain "$DOC" "real_external_two_machine_field_evidence_required_for_claims=true"
+must_contain "$DOC" "accepted_redacted_field_reports_required_for_claims=true"
+must_contain "$DOC" "field_evidence_execution_claim_allowed=false"
+must_contain "$DOC" "accepted_production_field_reports=0"
 must_contain "$DOC" "real_external_macos_two_machine_reports_available=false"
 must_contain "$DOC" "redacted_field_report_validator_available=true"
 must_contain "$DOC" "production_field_evidence_ready=false"
@@ -52,11 +59,20 @@ must_contain "$DOC" "fabricated_peer_evidence_allowed=false"
 must_contain "$DOC" "next_required_phase=RB-6 external review and audit closure"
 
 must_contain "$PROGRAM" "rb_5_field_evidence_release_class_scope_down_reviewed=true"
+must_contain "$PROGRAM" "f100_1_field_evidence_blocker_closed=true"
+must_contain "$PROGRAM" "field_evidence_policy_waiver_authorized=true"
+must_contain "$PROGRAM" "field_evidence_execution_claim_allowed=false"
 must_contain "$PROGRAM" "field_evidence_no_longer_blocks_lower_release_class=true"
 must_contain "$PROGRAM" "field_evidence_still_blocks_stable_or_production_claims=true"
 must_contain "$PROGRAM" "next_required_phase=RB-6 external review and audit closure"
 must_contain "$PACKET" "redacted_field_report_validator_available=true"
+must_contain "$PACKET" "f100_1_field_evidence_blocker_closed=true"
+must_contain "$PACKET" "accepted_redacted_field_reports_required_for_claims=true"
+must_contain "$PACKET" "field_evidence_execution_claim_allowed=false"
 must_contain "$GATE" "rb_5_field_evidence_release_class_scope_down_reviewed=true"
+must_contain "$GATE" "f100_1_field_evidence_blocker_closed=true"
+must_contain "$GATE" "field_evidence_policy_waiver_authorized=true"
+must_contain "$GATE" "field_evidence_execution_claim_allowed=false"
 must_contain "$GATE" "signed_public_beta_or_rc_release_class_allowed_without_field_evidence=true"
 must_contain "$GATE" "stable_or_production_release_allowed_without_field_evidence=false"
 must_contain "$GATE" "production_field_evidence_ready=false"
@@ -75,6 +91,7 @@ for file in "$DOC" "$PROGRAM" "$GATE" "$STABLE_GATE" "README.md" "SECURITY.md"; 
   must_not_match "$file" "macos_two_machine_real_user_flow_repeated=true"
   must_not_match "$file" "different_networks_covered=true"
   must_not_match "$file" "production_field_evidence_ready=true"
+  must_not_match "$file" "field_evidence_execution_claim_allowed=true"
   must_not_match "$file" "reliable_external_delivery_claim_allowed=true"
   must_not_match "$file" "external_delivery_success_claim_allowed=true"
   must_not_match "$file" "sensitive_communication_allowed=true"
@@ -87,6 +104,10 @@ scripts/redacted_field_report_validator_once.sh >/dev/null
 cat <<'STATUS'
 status=field-evidence-release-class-scope-down-closed
 rb_5_field_evidence_release_class_scope_down_reviewed=true
+f100_1_field_evidence_blocker_closed=true
+field_evidence_policy_waiver_authorized=true
+field_evidence_execution_claim_allowed=false
+accepted_production_field_reports=0
 real_external_macos_two_machine_reports_available=false
 redacted_field_report_validator_available=true
 production_field_evidence_ready=false

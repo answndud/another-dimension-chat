@@ -30,7 +30,7 @@ hold states remain visible.
 | M100-8 macOS stable release gate and public copy upgrade | closed by active-queue waiver, stable/public copy claims held | `reference/STABLE_MACOS_V1_RELEASE_GATE.md`, `scripts/stable_macos_v1_release_gate_once.sh` |
 | A100-1 external security review packet freeze | closed by source packet freeze, review completion claims held | `reference/INDEPENDENT_REVIEW_PACKET.md`, `scripts/external_review_audit_readiness_once.sh` |
 | A100-2 external review execution and finding closure | closed by active-queue waiver, review/audit claims held | `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`, `reference/AUDIT_FINDING_TRACKER.md` |
-| F100-1 external two-machine field evidence program | hold gate | `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md`, `scripts/field_evidence_reliability_program_once.sh` |
+| F100-1 external two-machine field evidence program | closed by active-queue waiver, field/reliability claims held | `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md`, `scripts/field_evidence_reliability_program_once.sh` |
 | O100-1 operational support, incident, and vulnerability readiness | source gate with production operations hold | `reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md`, `scripts/operational_support_incident_process_once.sh` |
 | W100-1 Windows runtime parity scope unlock | source handoff gate | `scripts/desktop_windows_local_runtime_smoke_boundary_once.sh` |
 | W100-2 Windows public artifact and distribution | hold gate | `reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md`, `scripts/windows_public_artifact_scope_down_once.sh` |
@@ -97,6 +97,13 @@ censorship-resistant.
 - external_review_execution_claim_allowed=false
 - audit_findings_recorded=0
 - audit_finding_closure_claim_allowed=false
+- f100_1_field_evidence_blocker_closed=true
+- field_evidence_policy_waiver_authorized=true
+- field_evidence_waiver_scope=active-queue-unblock-only
+- real_external_two_machine_field_evidence_required_for_claims=true
+- accepted_redacted_field_reports_required_for_claims=true
+- field_evidence_execution_claim_allowed=false
+- accepted_production_field_reports=0
 - review_packet_synced_to_latest_source_gates=true
 - review_packet_includes_c100_5_onion_boundary=true
 - review_packet_includes_target_standard_matrix=true
