@@ -33,6 +33,8 @@ for flag in \
   "final_100_evidence_ledger_child_files_sha_verified=true" \
   "final_100_evidence_ledger_child_files_content_redacted=true" \
   "final_100_evidence_ledger_requires_valid_representative_usability_reports=true" \
+  "final_100_evidence_ledger_requires_valid_external_review_signoff=true" \
+  "final_100_evidence_ledger_requires_valid_audit_finding_tracker=true" \
   "final_100_evidence_ledger_requires_valid_redacted_field_reports=true" \
   "final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true" \
   "final_100_evidence_candidate_requires_owner_claim_decision=true" \
@@ -50,6 +52,10 @@ must_contain "$VALIDATOR" "final_100_evidence_ledger_child_files_sha_verified=tr
 must_contain "$VALIDATOR" "final_100_evidence_ledger_child_files_content_redacted=true"
 must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_valid_representative_usability_reports=true"
 must_contain "$VALIDATOR" "validate_representative_usability_reports.mjs"
+must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_valid_external_review_signoff=true"
+must_contain "$VALIDATOR" "validate_external_review_signoff.mjs"
+must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_valid_audit_finding_tracker=true"
+must_contain "$VALIDATOR" "validate_audit_finding_tracker.mjs"
 must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_valid_redacted_field_reports=true"
 must_contain "$VALIDATOR" "validate_redacted_field_reports.mjs"
 must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true"
@@ -165,8 +171,79 @@ write_evidence "android/artifact-manifest.json" '{"schema":"android-public-artif
 write_evidence "android/device-result.md" 'real Android device result: shared-core flow and backup exclusion passed'
 write_evidence "ios/artifact-manifest.json" '{"schema":"ios-public-artifact-manifest-v1","result":"verified"}'
 write_evidence "ios/device-result.md" 'real iOS device result: shared-core flow and entitlements review passed'
-write_evidence "external/review-signoff.json" '{"schema_version":"external-review-signoff-v1","result":"candidate"}'
-write_evidence "external/audit-finding-tracker.md" 'audit finding tracker: critical and high findings closed'
+mkdir -p "$tmp_dir/external"
+cat >"$tmp_dir/external/review-signoff.json" <<'JSON'
+{
+  "schema_version": "external-review-signoff-v1",
+  "review_id": "XR-2026-0001",
+  "review_type": "security-audit",
+  "reviewer": {
+    "name": "Riley Stone",
+    "affiliation": "Independent Security Review LLC",
+    "contact": "reviewer@example.org"
+  },
+  "reviewed_commit": "abcdef1234567890",
+  "completed_at": "2026-06-13",
+  "public_safe_report_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+  "reviewed_inputs": [
+    "README.md",
+    "SECURITY.md",
+    "reference/INDEPENDENT_REVIEW_PACKET.md",
+    "reference/AUDIT_FINDING_TRACKER.md",
+    "scripts/validate_audit_finding_tracker.mjs",
+    "crates/core/src/lib.rs",
+    "apps/desktop-tauri/src/App.tsx"
+  ],
+  "finding_summary": {
+    "total_findings": 1,
+    "critical_open": 0,
+    "high_open": 0,
+    "medium_open": 0,
+    "low_open": 0,
+    "informational_open": 0,
+    "fixed": 1,
+    "held": 0,
+    "waived": 0,
+    "all_findings_triaged": true
+  },
+  "signoff": {
+    "reviewer_signed_public_safe_summary": true,
+    "reviewer_claims_sensitive_use_safety": false,
+    "reviewer_claims_production_ready": false,
+    "reviewer_claims_audited_product": false
+  },
+  "evidence_boundary": {
+    "external_reviewer_submitted": true,
+    "fabricated_or_local_only": false,
+    "private_material_included": false,
+    "owner_claim_decision_required": true
+  }
+}
+JSON
+cat >"$tmp_dir/external/audit-finding-tracker.md" <<'TRACKER'
+# Audit Finding Tracker
+
+## Finding Table
+
+| ID | Severity | Area | Public-safe summary | Decision | Status | Public wording impact |
+| --- | --- | --- | --- | --- | --- | --- |
+| AR-0001 | high | storage | Redacted storage lifecycle blocker. | fix | fixed | Keep not audited, not production-ready, and sensitive communication prohibited. |
+
+## Current Counts
+
+- critical_findings_open=0
+- high_findings_open=0
+- medium_findings_open=0
+- low_findings_open=0
+- informational_findings_open=0
+- findings_fixed=1
+- findings_held=0
+- findings_waived=0
+- external_review_completed=false
+- audit_completed=false
+- audited_claim_allowed=false
+- security_ready_claimed=false
+TRACKER
 write_field_report "external/field-1.md" "macos-to-macos" "two-machine-same-network" "same-lan"
 write_field_report "external/field-2.md" "macos-to-windows" "two-machine-different-network" "different-networks"
 write_field_report "external/field-3.md" "windows-to-windows" "two-machine-same-network" "same-lan"
@@ -309,6 +386,10 @@ printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_child_fi
   fail "final 100 ledger validator did not scan child evidence content"
 printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_requires_valid_representative_usability_reports=true" ||
   fail "final 100 ledger validator did not require valid representative usability reports"
+printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_requires_valid_external_review_signoff=true" ||
+  fail "final 100 ledger validator did not require valid external review signoff"
+printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_requires_valid_audit_finding_tracker=true" ||
+  fail "final 100 ledger validator did not require valid audit finding tracker"
 printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_requires_valid_redacted_field_reports=true" ||
   fail "final 100 ledger validator did not require valid redacted field reports"
 printf '%s\n' "$candidate_output" | grep -Fq "macos_public_app_100_claim_allowed=false" ||
@@ -342,6 +423,68 @@ grep -Fq "macos.representative_usability_reports:required-tasks-not-passed" \
   "$tmp_dir/invalid-usability.out" ||
   fail "final 100 ledger validator did not report invalid representative usability reports"
 
+node - "$tmp_dir" <<'NODE'
+const { createHash } = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+const root = process.argv[2];
+const ledger = JSON.parse(fs.readFileSync(path.join(root, "valid-ledger.json"), "utf8"));
+const signoff = path.join(root, "external/review-signoff.json");
+const doc = JSON.parse(fs.readFileSync(signoff, "utf8"));
+doc.reviewer.name = "Unknown";
+fs.writeFileSync(signoff, `${JSON.stringify(doc, null, 2)}\n`);
+ledger.evidence_files.external.review_signoff.sha256 =
+  createHash("sha256").update(fs.readFileSync(signoff)).digest("hex");
+fs.writeFileSync(path.join(root, "invalid-signoff-ledger.json"), `${JSON.stringify(ledger, null, 2)}\n`);
+NODE
+if node "$VALIDATOR" "$tmp_dir/invalid-signoff-ledger.json" >"$tmp_dir/invalid-signoff.out" 2>&1; then
+  fail "final 100 evidence ledger accepted invalid external review signoff"
+fi
+grep -Fq "external.review_signoff:validator-failed" "$tmp_dir/invalid-signoff.out" ||
+  fail "final 100 ledger validator did not report invalid external review signoff"
+
+cat >"$tmp_dir/external/audit-finding-tracker.md" <<'TRACKER'
+# Audit Finding Tracker
+
+## Finding Table
+
+| ID | Severity | Area | Public-safe summary | Decision | Status | Public wording impact |
+| --- | --- | --- | --- | --- | --- | --- |
+| AR-0001 | high | storage | Redacted storage lifecycle blocker. | hold | open | Keep not audited, not production-ready, and sensitive communication prohibited. |
+
+## Current Counts
+
+- critical_findings_open=0
+- high_findings_open=1
+- medium_findings_open=0
+- low_findings_open=0
+- informational_findings_open=0
+- findings_fixed=0
+- findings_held=1
+- findings_waived=0
+- external_review_completed=false
+- audit_completed=false
+- audited_claim_allowed=false
+- security_ready_claimed=false
+TRACKER
+node - "$tmp_dir" <<'NODE'
+const { createHash } = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+const root = process.argv[2];
+const ledger = JSON.parse(fs.readFileSync(path.join(root, "valid-ledger.json"), "utf8"));
+const tracker = path.join(root, "external/audit-finding-tracker.md");
+ledger.evidence_files.external.audit_finding_tracker.sha256 =
+  createHash("sha256").update(fs.readFileSync(tracker)).digest("hex");
+fs.writeFileSync(path.join(root, "invalid-audit-tracker-ledger.json"), `${JSON.stringify(ledger, null, 2)}\n`);
+NODE
+if node "$VALIDATOR" "$tmp_dir/invalid-audit-tracker-ledger.json" >"$tmp_dir/invalid-audit-tracker.out" 2>&1; then
+  fail "final 100 evidence ledger accepted open high audit finding tracker"
+fi
+grep -Fq "external.audit_finding_tracker:critical-high-open" \
+  "$tmp_dir/invalid-audit-tracker.out" ||
+  fail "final 100 ledger validator did not report open critical/high audit finding tracker"
+
 cat >"$tmp_dir/local-only-ledger.json" <<'JSON'
 {
   "schema_version": "final-100-evidence-ledger-v1",
@@ -373,6 +516,8 @@ final_100_evidence_ledger_requires_child_evidence_files=true
 final_100_evidence_ledger_child_files_sha_verified=true
 final_100_evidence_ledger_child_files_content_redacted=true
 final_100_evidence_ledger_requires_valid_representative_usability_reports=true
+final_100_evidence_ledger_requires_valid_external_review_signoff=true
+final_100_evidence_ledger_requires_valid_audit_finding_tracker=true
 final_100_evidence_ledger_requires_valid_redacted_field_reports=true
 final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true
 final_100_evidence_candidate_requires_owner_claim_decision=true

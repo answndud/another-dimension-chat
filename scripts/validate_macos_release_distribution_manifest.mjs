@@ -92,10 +92,71 @@ function readJson(file) {
   }
 }
 
+function commandAvailable(command) {
+  try {
+    execFileSync("which", [command], { stdio: ["ignore", "ignore", "ignore"] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function relativeSibling(baseFile, siblingName) {
   if (!siblingName || typeof siblingName !== "string") return "";
   if (siblingName !== path.basename(siblingName)) return "";
   return path.join(path.dirname(baseFile), siblingName);
+}
+
+function expectedTargetArch(architecture) {
+  if (architecture === "macos-aarch64") return "aarch64-apple-darwin";
+  if (architecture === "macos-x86_64") return "x86_64-apple-darwin";
+  if (architecture === "macos-universal") return "macos-universal";
+  return "";
+}
+
+function validateSignedArtifactTools(prefix, artifactFile) {
+  const issues = [];
+  if (!commandAvailable("codesign")) {
+    issues.push(`${prefix}:codesign-unavailable-for-signed-distribution`);
+  } else {
+    try {
+      execFileSync("codesign", ["--verify", "--deep", "--strict", "--verbose=2", artifactFile], {
+        stdio: ["ignore", "ignore", "ignore"],
+      });
+    } catch {
+      issues.push(`${prefix}:codesign-verify-failed`);
+    }
+  }
+  if (!commandAvailable("spctl")) {
+    issues.push(`${prefix}:spctl-unavailable-for-signed-distribution`);
+  } else {
+    try {
+      execFileSync("spctl", ["--assess", "--type", "open", "--verbose=4", artifactFile], {
+        stdio: ["ignore", "ignore", "ignore"],
+      });
+    } catch {
+      issues.push(`${prefix}:spctl-open-assess-failed`);
+    }
+  }
+  let staplerAvailable = false;
+  try {
+    execFileSync("xcrun", ["--find", "stapler"], { stdio: ["ignore", "ignore", "ignore"] });
+    staplerAvailable = true;
+  } catch {
+    staplerAvailable = false;
+  }
+  if (!staplerAvailable) {
+    issues.push(`${prefix}:stapler-unavailable-for-signed-distribution`);
+  } else {
+    try {
+      execFileSync("xcrun", ["stapler", "validate", artifactFile], {
+        stdio: ["ignore", "ignore", "ignore"],
+      });
+    } catch {
+      issues.push(`${prefix}:stapler-validate-failed`);
+    }
+  }
+  return issues;
 }
 
 function validateChecksumFile(file, artifact, artifactFile, actualSha) {
@@ -157,6 +218,35 @@ function validateProvenanceFile(file, manifest, artifact, actualSha) {
       issues.push(`artifact:${artifact.filename}:provenance-${field}-mismatch`);
     }
   }
+  const signedOrNotarized =
+    artifact.signing_status === "signed" ||
+    artifact.notarization_status === "notarized" ||
+    manifest.release_class === "signed-notarized-rc" ||
+    manifest.release_class === "stable";
+  if (signedOrNotarized) {
+    const signedRcChecks = [
+      ["signed_rc_provenance_schema_version", "macos-signed-notarized-rc-provenance-v1"],
+      ["signed_rc_artifact", artifact.filename],
+      ["signed_rc_sha256", actualSha],
+      ["signed_rc_source_commit", manifest.source_commit],
+      ["signed_rc_target_arch", expectedTargetArch(artifact.architecture)],
+    ];
+    for (const [field, expected] of signedRcChecks) {
+      if (provenance[field] !== expected) {
+        issues.push(`artifact:${artifact.filename}:provenance-${field}-mismatch`);
+      }
+    }
+    for (const field of [
+      "signed_rc_signed",
+      "signed_rc_notarized",
+      "signed_rc_stapled",
+      "signed_rc_gatekeeper_assessed",
+    ]) {
+      if (provenance[field] !== true) {
+        issues.push(`artifact:${artifact.filename}:provenance-${field}-not-true`);
+      }
+    }
+  }
   if (provenance.release_upload_authorized !== false) {
     issues.push(`artifact:${artifact.filename}:provenance-upload-must-stay-false`);
   }
@@ -213,6 +303,9 @@ function validateArtifact(file, manifest, artifact, index) {
   if (artifact.size_bytes !== actualSize) issues.push(`${prefix}:artifact-size-mismatch`);
   issues.push(...validateChecksumFile(file, artifact, artifactFile, actualSha));
   issues.push(...validateProvenanceFile(file, manifest, artifact, actualSha));
+  if (signedOrNotarized) {
+    issues.push(...validateSignedArtifactTools(prefix, artifactFile));
+  }
   return issues;
 }
 
@@ -284,6 +377,7 @@ console.log(`accepted_macos_release_distribution_manifests=${files.length}`);
 console.log("macos_release_distribution_checksum_bytes_verified=true");
 console.log("macos_release_distribution_provenance_consistency_verified=true");
 console.log("macos_release_distribution_dmg_contained_app_evidence_verified=true");
+console.log("macos_release_distribution_signed_artifact_tools_verified=true");
 console.log("macos_release_distribution_artifact_ready=false");
 console.log("release_upload_authorized=false");
 console.log("status=macos-release-distribution-manifest-candidate-requires-artifact-gate");
