@@ -1,14 +1,18 @@
 # macOS Production UX And Onboarding Gate
 
-Status: OPS-5 source-side UX/onboarding gate closed. This is not a stable
-production release, usability-study result, audited-security claim, or
-sensitive-use permission. The app must keep unsigned experimental public beta,
-sensitive communication prohibited, not audited, and not production-ready copy
-until the later stable release gate.
+Status: OPS-5 and RB-4 source-side UX/onboarding gates closed. The
+owner-observed critical desktop task script and recovery vocabulary are ready.
+This is not a stable production release, completed 3-5-person usability-study
+result, audited-security claim, or sensitive-use permission. The app must keep
+unsigned experimental public beta, sensitive communication prohibited, not
+audited, and not production-ready copy until the later stable release gate.
 
 This document records the desktop-first macOS onboarding and recovery flow that
 must be visible in the app before distribution, external review, and field
 evidence phases continue.
+
+The RB-4 owner-observed usability/recovery scope is recorded in
+`reference/MACOS_USABILITY_RECOVERY_CLOSURE.md`.
 
 ## Required First-Run Path
 
@@ -102,11 +106,16 @@ Targeted tests that anchor this gate:
 ## Current Gate Flags
 
 - macos_production_ux_onboarding_gate_reviewed=true
+- rb_4_macos_usability_recovery_closure_reviewed=true
+- supported_owner_observed_usability_rehearsal_ready=true
+- supported_usability_recovery_scope=owner-observed-critical-desktop-task-script-only
+- critical_desktop_task_script_ready=true
 - first_run_local_desktop_flow_visible=true
 - invite_verify_message_flow_in_app=true
 - manual_envelope_default_flow_visible=true
 - friend_family_next_actions_visible=true
 - recovery_guide_visible=true
+- recovery_vocabulary_aligned=true
 - redacted_diagnostics_copy_visible=true
 - destructive_local_lifecycle_confirmations_visible=true
 - advanced_transport_explicit_fail_closed=true
@@ -117,4 +126,4 @@ Targeted tests that anchor this gate:
 - external_delivery_claim_allowed=false
 - sensitive_communication_allowed=false
 - security_ready_claimed=false
-- next_required_phase=OPS-6 macOS production distribution
+- next_required_phase=RB-5 real macOS two-machine field evidence closure

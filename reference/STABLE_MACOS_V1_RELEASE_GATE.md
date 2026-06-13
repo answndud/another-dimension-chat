@@ -36,6 +36,12 @@ supported default transport local/manual courier envelope exchange only.
 Automatic network delivery, central message server delivery, reliable external
 delivery, production transport readiness, and sensitive-use claims remain false.
 
+RB-4 macOS usability/recovery closure is recorded in
+`reference/MACOS_USABILITY_RECOVERY_CLOSURE.md`. It provides an owner-observed
+critical desktop task script and recovery vocabulary alignment. Representative
+3-5-person usability study completion and production wording readiness remain
+false.
+
 ## Gate Decision
 
 Decision: hold.
@@ -52,7 +58,7 @@ field evidence, and a separate owner release decision.
 | Protocol/session lifecycle | Supported local/manual envelope message-content scope is ready; broad `production_e2ee_ready=false`. | Hold production-ready and security-ready claims. |
 | Key/storage lifecycle | Supported local key/deletion scope exists; broad `production_key_management_ready=false`. | Hold sensitive-use and security-ready claims. |
 | Default transport | Supported local/manual courier envelope default exists; broad `production_transport_ready=false`. | Hold reliable external delivery claims. |
-| macOS UX/onboarding | Source-side UX gate exists; `usability_study_completed=false`. | Hold production wording removal. |
+| macOS UX/onboarding | Owner-observed task script exists; `usability_study_completed=false`. | Hold production wording removal. |
 | macOS distribution | Distribution gate exists; `stable_signed_notarized_artifact_available=false`. | Hold stable release publication. |
 | External review/audit | Review packet exists; `external_review_completed=false` and `audit_completed=false`. | Keep `not audited`. |
 | Field evidence | Program exists; `macos_two_machine_real_user_flow_repeated=false`. | Hold reliable delivery and sensitive-use claims. |
@@ -128,6 +134,13 @@ preflight after the blockers below are resolved.
 - rb_3_default_practical_transport_closure_reviewed=true
 - supported_default_transport_ready=true
 - supported_default_transport_scope=local-manual-courier-envelope-exchange-only
+- rb_4_macos_usability_recovery_closure_reviewed=true
+- supported_owner_observed_usability_rehearsal_ready=true
+- supported_usability_recovery_scope=owner-observed-critical-desktop-task-script-only
+- critical_desktop_task_script_ready=true
+- recovery_vocabulary_aligned=true
+- usability_study_completed=false
+- production_wording_ready=false
 - production_e2ee_ready=false
 - production_key_management_ready=false
 - app_key_wrapping_ready=false
