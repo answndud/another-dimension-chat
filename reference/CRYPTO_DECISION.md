@@ -75,6 +75,9 @@ Before replacing placeholder crypto, decide and document:
 The first identity signature dependency decision is tracked in [SIGNATURE_DECISION.md](SIGNATURE_DECISION.md).
 The first pairing nonce randomness dependency decision is tracked in [RANDOMNESS_DECISION.md](RANDOMNESS_DECISION.md).
 The first session-establishment decision boundary is tracked in [SESSION_DECISION.md](SESSION_DECISION.md).
+The production protocol/session lifecycle state machine and unresolved review
+questions are tracked in
+[PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md).
 
 ## Candidate Direction
 

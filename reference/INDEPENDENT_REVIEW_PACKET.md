@@ -114,6 +114,9 @@ Review the unsigned experimental public beta boundary:
 - `reference/REPOSITORY_GOVERNANCE.md`: maintainer-driven main workflow,
   release guardrails, redaction guardrails, and explicit governance non-goals.
 - `reference/COMPONENT_BOUNDARIES.md`: component replacement and readiness map.
+- `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`: 1:1 protocol/session
+  state machine, replay/retry/cancel/delete semantics, and unresolved
+  production E2EE review questions.
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and
   no-reviewer-signoff/no-public-user-safety-signoff flags.

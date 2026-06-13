@@ -1,0 +1,118 @@
+# Production Protocol And Session Lifecycle
+
+Status: OPS-2 source gate closed for review input, not production E2EE ready.
+This document describes the current 1:1 protocol/session state machine used for
+claim review. It does not authorize a secure messenger, audited, production-ready,
+sensitive communication, or reliable external onion delivery claim.
+
+## Shared Semantics
+
+The local manual envelope path and any future transport path must share the same
+message/session semantics:
+
+- signed pairwise identity payload before session setup
+- canonical safety transcript before user trust
+- Noise XX session setup boundary for the current synchronous 1:1 invite path
+- channel/message-number/nonce binding before envelope export/import
+- replay rejection before commit
+- tamper failure must not advance replay state
+- explicit outbound envelope export
+- explicit inbound envelope import
+- retryable local failure state
+- terminal cancel state
+- received transcript state
+- local conversation delete and session delete with separate scopes
+
+Future transport may carry the same encrypted envelope, but it must not define a
+different message number, replay, retry, cancel, or deletion model.
+
+## State Machine
+
+1. `unpaired`: no pairwise session exists.
+2. `invite-created`: local signed production pairing payload exists; invite
+   payload includes the Noise prekey bundle and capability commitments.
+3. `invite-accepted`: remote signed production pairing payload is decoded and
+   checked; mixed dev/production schemes and invalid Noise prekey bundles are
+   rejected.
+4. `safety-transcript-ready`: pairwise identity, endpoint/capability material,
+   and setup material are bound into the safety transcript.
+5. `session-draft-ready`: local Noise static private key, pairing draft,
+   endpoint state, replay window, and transport state are prepared for encrypted
+   local storage.
+6. `session-unlocked`: passphrase-first local profile unlock allows session
+   records to be used; no OS-keystore-only unlock is required or claimed.
+7. `outbound-pending`: a message is locally queued with a message number and
+   explicit user action requirement.
+8. `envelope-exported`: encrypted envelope is exported manually; no automatic
+   network delivery starts.
+9. `inbound-imported`: imported envelope decrypts and replay commits only after
+   successful decrypt.
+10. `received-transcript`: plaintext is shown locally after successful import;
+    public diagnostics must not export message text.
+11. `retryable-failure`: failed export/import/delivery attempt remains local and
+    can be retried without changing the protocol semantics.
+12. `send-canceled-terminal`: user cancel marks the selected pending send as
+    terminal and must not point composer/follow-up copy at the wrong row.
+13. `conversation-deleted`: local conversation message records are deleted while
+    session resume records are preserved.
+14. `session-deleted`: local session resume records are deleted while message
+    records are preserved.
+
+## Edge-Case Rules
+
+- Message number zero is invalid.
+- Duplicate message numbers in the replay window are rejected.
+- Old message numbers outside the replay window are rejected.
+- Tampered ciphertext must fail without advancing replay state.
+- Retry uses the selected local pending row and must not create a remote success
+  claim.
+- Cancel is terminal for the selected local pending row.
+- Remote acknowledgement protocol is not ready and must not be implied.
+- External onion delivery verification is false.
+- Runtime messaging remains false until the transport product gate is complete.
+- dev-insecure behavior remains visibly separate from default production
+  surfaces and must not be exposed as production messaging.
+
+## Existing Test Anchors
+
+The source gate relies on the following targeted tests and code boundaries:
+
+- `production_session_readiness_gate_lists_blockers_without_opening_runtime`
+- `production_async_delivery_semantics_are_reviewed_without_network_claim`
+- `production_local_manual_e2ee_runtime_gate_closes_session_failure_model_without_claims`
+- `tampered_receive_does_not_persist_replay_before_valid_same_number`
+- `cancelled_pending_pairing_cannot_be_confirmed`
+- `ReplayWindow::accept_after_decrypt`
+- `ProductionEnvelopeSession`
+- `production_local_manual_e2ee_runtime_summary`
+- `production_async_delivery_semantics_summary`
+- `production_session_readiness_gate`
+
+## External Review Questions
+
+These questions remain unresolved and must stay in the external review packet:
+
+- Is the current Noise XX synchronous 1:1 invite boundary sufficient for the
+  first stable release, or is a reviewed ratchet required before any E2EE claim?
+- What forward secrecy and post-compromise recovery properties are required
+  before public wording may change?
+- How should Noise static private keys be rotated, deleted, and migrated?
+- What exact remote static verification and safety transcript UX is sufficient
+  for non-expert users?
+- How should remote acknowledgement, retry, and cancel semantics interact with
+  future transport delivery without creating false delivery success claims?
+- What rollback/key-management evidence is required before replay/session state
+  persistence can support stronger claims?
+
+## Current Decision
+
+- protocol_session_lifecycle_gate_reviewed=true
+- local_manual_and_future_transport_semantics_shared=true
+- replay_duplicate_retry_cancel_edges_documented=true
+- dev_insecure_surface_blocked_from_production_claim=true
+- remote_ack_protocol_ready=false
+- external_onion_delivery_verified=false
+- runtime_messaging_ready=false
+- production_e2ee_ready=false
+- security_ready_claimed=false
+- next_required_phase=OPS-3 production key management and local storage lifecycle

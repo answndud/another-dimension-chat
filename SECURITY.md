@@ -40,6 +40,11 @@ remain until that gate and the later stable release phases are complete.
 Signing and notarization are distribution ergonomics, not a messenger security
 trust boundary.
 
+The production protocol/session lifecycle review input is tracked in
+`reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`. It documents the current
+1:1 state machine, replay/retry/cancel/delete semantics, unresolved review
+questions, and why production E2EE readiness remains false.
+
 The public privacy-model comparison is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`. It maps the intended Korean Briar/Cwtch-style direction to current public beta gaps and LINDDUN categories; it is not a claim that the current beta has reached that level.
 
 The public threat model is tracked in `reference/PUBLIC_THREAT_MODEL.md`, and the independent review packet is tracked in `reference/INDEPENDENT_REVIEW_PACKET.md`. These are review inputs, not evidence that a review has been completed. The public beta upload set explicitly records the current review gap, private-reporting boundary, public-safe review-command boundary, and fabricated-review/peer-evidence-forbidden boundary; it does not claim reviewer signoff or public user safety signoff.
