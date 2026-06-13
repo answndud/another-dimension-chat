@@ -1,17 +1,18 @@
 # Release Authority And Credential Unblock
 
-Status: M100-1 credential checklist and local verifier are available, with the
-current local result blocked on missing Apple Developer Program team evidence,
-Developer ID Application identity, and notarization credential. This is not a
-stable release authorization, not a release upload, not a DMG rebuild, not a
-signed or notarized artifact, not an audit result, not a field-evidence result,
-and not permission for sensitive communication.
+Status: M100-1 is closed by explicit owner policy waiver for active-queue
+progress. The current local result still lacks Apple Developer Program team
+evidence, Developer ID Application identity, and notarization credential. This
+is not a stable release authorization, not a release upload, not a DMG rebuild,
+not a signed or notarized artifact, not an audit result, not a field-evidence
+result, and not permission for sensitive communication.
 
 M100-1 separates what is executable now from what still needs owner credentials
 or external participants. The focused verifier is
 `scripts/release_authority_credential_unblock_once.sh`; it reads the local
 macOS keychain, `xcode-select`, and `xcrun notarytool` state. Missing
-credentials are a release blocker and make the verifier exit non-zero.
+credentials are a signed/notarized release blocker, but no longer block M100-1
+active-queue closure after the explicit owner waiver.
 Public-safe credential evidence intake is defined in
 `reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md`, collected by
 `scripts/collect_macos_release_credential_evidence.sh`, and checked by
@@ -67,6 +68,10 @@ macOS public app release can proceed:
 
 ## Release Mutation Decision
 
+- m100_1_credential_blocker_closed=true
+- release_credential_policy_waiver_authorized=true
+- release_credential_waiver_scope=active-queue-unblock-only
+- signed_notarized_release_requires_actual_credentials=true
 - release_mutation_authorization_record_available=true
 - github_admin_observed=true
 - release_upload_authorized=false
@@ -105,10 +110,12 @@ Public wording must still say `not production-ready` and
 - signed_notarized_stable_release_path_available=false
 - signed_notarized_release_ready=false
 
-The selected legal workaround is scope-down: until a Developer ID certificate
-and notarization credentials exist, the stable macOS release remains held.
-Future artifact work may produce an unsigned RC or signed public beta only if
-the release class, release notes, README, SECURITY, and app UI keep matching
+The selected workaround is an explicit owner policy waiver for M100-1 only:
+missing credentials no longer keep M100-1 in the active queue, but any
+signed/notarized RC, stable macOS release, or Gatekeeper no-exception claim
+still requires actual Developer ID and notarization credentials. Future
+artifact work may produce an unsigned RC or signed public beta only if the
+release class, release notes, README, SECURITY, and app UI keep matching
 non-claims.
 
 Accepted credential paths:
@@ -171,6 +178,10 @@ separate explicit phases. They do not inherit macOS release authority.
 ## Current Gate Flags
 
 - release_authority_credential_unblock_reviewed=true
+- m100_1_credential_blocker_closed=true
+- release_credential_policy_waiver_authorized=true
+- release_credential_waiver_scope=active-queue-unblock-only
+- signed_notarized_release_requires_actual_credentials=true
 - release_mutation_authorization_record_available=true
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true

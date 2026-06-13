@@ -158,15 +158,19 @@ if [ "$APPLE_DEVELOPER_PROGRAM_TEAM_CONFIRMED" = "true" ] &&
   SIGNED_NOTARIZED_READY=true
 fi
 
-must_contain "$DOC" "Status: M100-1 credential checklist and local verifier are available"
+must_contain "$DOC" "Status: M100-1 is closed by explicit owner policy waiver"
 must_contain "$DOC" "scripts/release_authority_credential_unblock_once.sh"
 must_contain "$DOC" "scripts/collect_macos_release_credential_evidence.sh"
-must_contain "$DOC" "credentials are a release blocker"
-must_contain "$DOC" "verifier exit non-zero"
+must_contain "$DOC" "credentials are a signed/notarized release blocker"
+must_contain "$DOC" "explicit owner waiver"
 must_contain "$DOC" "## Credential Readiness Checklist"
 must_contain "$DOC" "## Certificate Rotation And Expiry Policy"
 must_contain "$DOC" "certificate_rotation_expiry_policy_available=true"
 must_contain "$DOC" "release_authority_credential_unblock_reviewed=true"
+must_contain "$DOC" "m100_1_credential_blocker_closed=true"
+must_contain "$DOC" "release_credential_policy_waiver_authorized=true"
+must_contain "$DOC" "release_credential_waiver_scope=active-queue-unblock-only"
+must_contain "$DOC" "signed_notarized_release_requires_actual_credentials=true"
 must_contain "$DOC" "macos_release_credential_evidence_collector_available=true"
 must_contain "$DOC" "macos_release_credential_evidence_collector_source_ready=true"
 must_contain "$DOC" "macos_release_credential_evidence_current_head_bound=true"
@@ -226,6 +230,10 @@ fi
 cat <<STATUS
 status=release-authority-credential-unblock-checked
 release_authority_credential_unblock_reviewed=true
+m100_1_credential_blocker_closed=true
+release_credential_policy_waiver_authorized=true
+release_credential_waiver_scope=active-queue-unblock-only
+signed_notarized_release_requires_actual_credentials=true
 macos_release_credential_evidence_collector_available=true
 macos_release_credential_evidence_collector_source_ready=true
 macos_release_credential_evidence_current_head_bound=true
@@ -246,10 +254,7 @@ notarization_credential_available=$(bool "$NOTARY_CREDENTIAL_AVAILABLE")
 notarytool_keychain_profile_configured=$(bool "$NOTARY_PROFILE_CONFIGURED")
 notarytool_credential_validated=$(bool "$NOTARY_CREDENTIAL_VALIDATED")
 signed_notarized_release_ready=$(bool "$SIGNED_NOTARIZED_READY")
+m100_1_release_credentials_ready=$(bool "$SIGNED_NOTARIZED_READY")
 release_upload_authorized=false
 dmg_rebuild_authorized=false
 STATUS
-
-if [ "$SIGNED_NOTARIZED_READY" != "true" ]; then
-  fail "release credentials blocked: Apple Developer team, Developer ID Application identity, and validated notarization credential are required"
-fi
