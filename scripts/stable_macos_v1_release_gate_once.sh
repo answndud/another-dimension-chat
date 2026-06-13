@@ -36,6 +36,7 @@ for file in "$GATE_DOC" "$HOLD_REPORT" "$CLAIM_GATE" "$PACKET" \
   "reference/MACOS_PRODUCTION_UX_ONBOARDING.md" \
   "reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md" \
   "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md" \
+  "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md" \
   "reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md" \
   "reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md" \
   "reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md"; do
@@ -49,6 +50,7 @@ must_contain "$GATE_DOC" "public_stable_release_allowed=false"
 must_contain "$GATE_DOC" "stable_signed_notarized_artifact_available=false"
 must_contain "$GATE_DOC" "external_review_completed=false"
 must_contain "$GATE_DOC" "audit_completed=false"
+must_contain "$GATE_DOC" "rb_6_external_review_release_class_scope_down_reviewed=true"
 must_contain "$GATE_DOC" "macos_two_machine_real_user_flow_repeated=false"
 must_contain "$GATE_DOC" "rb_5_field_evidence_release_class_scope_down_reviewed=true"
 must_contain "$GATE_DOC" "real_external_macos_two_machine_reports_available=false"
@@ -62,6 +64,8 @@ must_contain "$GATE_DOC" "production_ready_claim_allowed=false"
 must_contain "$GATE_DOC" "beta_wording_removal_allowed=false"
 must_contain "$GATE_DOC" "audited_claim_allowed=false"
 must_contain "$GATE_DOC" "sensitive_communication_allowed=false"
+must_contain "$GATE_DOC" "stable_or_production_release_allowed_without_external_review=false"
+must_contain "$GATE_DOC" "signed_public_beta_or_rc_release_class_allowed_without_external_review=true"
 must_contain "$GATE_DOC" "reliable_external_delivery_claim_allowed=false"
 must_contain "$GATE_DOC" "stable_or_production_release_allowed_without_field_evidence=false"
 must_contain "$GATE_DOC" "signed_public_beta_or_rc_release_class_allowed_without_field_evidence=true"
@@ -92,6 +96,7 @@ must_contain "SECURITY.md" "reference/STABLE_RELEASE_HOLD_REPORT.md"
 must_contain "$PACKET" "reference/STABLE_MACOS_V1_RELEASE_GATE.md"
 must_contain "$PACKET" "reference/STABLE_RELEASE_HOLD_REPORT.md"
 must_contain "$PACKET" "reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md"
+must_contain "$PACKET" "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
 
 must_contain "$CLAIM_GATE" "ops_10_stable_macos_v1_release_gate_reviewed=true"
 must_contain "$CLAIM_GATE" "stable_release_gate_decision=hold"
@@ -102,6 +107,9 @@ must_contain "$CLAIM_GATE" "beta_wording_removal_allowed=false"
 must_contain "$CLAIM_GATE" "audited_claim_allowed=false"
 must_contain "$CLAIM_GATE" "sensitive_communication_allowed=false"
 must_contain "$CLAIM_GATE" "reliable_external_delivery_claim_allowed=false"
+must_contain "$CLAIM_GATE" "rb_6_external_review_release_class_scope_down_reviewed=true"
+must_contain "$CLAIM_GATE" "stable_or_production_release_allowed_without_external_review=false"
+must_contain "$CLAIM_GATE" "signed_public_beta_or_rc_release_class_allowed_without_external_review=true"
 must_contain "$CLAIM_GATE" "rb_5_field_evidence_release_class_scope_down_reviewed=true"
 must_contain "$CLAIM_GATE" "stable_or_production_release_allowed_without_field_evidence=false"
 must_contain "$CLAIM_GATE" "signed_public_beta_or_rc_release_class_allowed_without_field_evidence=true"
@@ -116,6 +124,7 @@ must_contain "reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md" "production_transp
 must_contain "reference/MACOS_PRODUCTION_UX_ONBOARDING.md" "usability_study_completed=false"
 must_contain "reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md" "stable_signed_notarized_artifact_available=false"
 must_contain "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md" "audit_completed=false"
+must_contain "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md" "external_review_no_longer_blocks_lower_release_class=true"
 must_contain "reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md" "macos_two_machine_real_user_flow_repeated=false"
 must_contain "reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md" "field_evidence_no_longer_blocks_lower_release_class=true"
 must_contain "reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md" "production_operational_readiness_claim_allowed=false"

@@ -157,6 +157,9 @@ Review the unsigned experimental public beta boundary:
 - `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`: public-safe reviewer packet
   scope, severity definitions, fix/hold/waive triage process, and current
   no-audit/no-signoff flags.
+- `reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md`: RB-6 release-class
+  scope-down that keeps review/audit claims false while allowing lower release
+  classes to continue without audited or security-ready claims.
 - `reference/AUDIT_FINDING_TRACKER.md`: public-safe finding tracker template
   with current zero-finding/no-audit status and required non-claims.
 - `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md`: field evidence ladder,

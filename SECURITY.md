@@ -100,9 +100,11 @@ distribution readiness remains false.
 
 External review and audit readiness is tracked in
 `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`, with the public-safe finding
-tracker in `reference/AUDIT_FINDING_TRACKER.md`. These files define reviewer
-scope and fix/hold/waive triage while keeping external review, audit
-completion, reviewer signoff, and security-ready claims false.
+tracker in `reference/AUDIT_FINDING_TRACKER.md`, and the RB-6 release-class
+scope-down in `reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md`. These
+files define reviewer scope, fix/hold/waive triage, and the
+lower-release-class workaround while keeping external review, audit completion,
+reviewer signoff, audited wording, and security-ready claims false.
 
 Field evidence and reliability readiness is tracked in
 `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md`, with the redacted field

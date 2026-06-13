@@ -1,9 +1,10 @@
 # External Review And Audit Readiness
 
-Status: OPS-7 review-readiness gate closed for public-safe reviewer input. This
-is not an external review result, audit completion, reviewer signoff,
-public-user-safety signoff, security-ready claim, or permission for sensitive
-communication.
+Status: OPS-7 review-readiness gate closed for public-safe reviewer input, with
+RB-6 release-class scope-down recorded in
+`reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md`. This is not an
+external review result, audit completion, reviewer signoff, public-user-safety
+signoff, security-ready claim, or permission for sensitive communication.
 
 This document defines how an external reviewer should inspect the current
 desktop-first source and how maintainers must triage review findings without
@@ -79,9 +80,20 @@ contact request. Public issues must not contain exploit details, payloads,
 endpoints, logs, paths, passphrases, private keys, key material, or screenshots
 of private room data.
 
+## RB-6 Scope-Down
+
+RB-6 does not fabricate an external reviewer or audit. Instead, it removes the
+missing review/audit blocker for lower release classes only. Source-side work
+may continue toward a signed public beta or RC while external review and audit
+remain stable/production claim blockers.
+
+Public wording must still say `not audited`, `not production-ready`, and
+`sensitive communication prohibited`.
+
 ## Current Gate Flags
 
 - external_review_audit_readiness_gate_reviewed=true
+- rb_6_external_review_release_class_scope_down_reviewed=true
 - review_packet_public_safe=true
 - review_packet_complete_for_current_source=true
 - audit_finding_tracker_available=true
@@ -94,4 +106,8 @@ of private room data.
 - audited_claim_allowed=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=OPS-8 field evidence and reliability program
+- stable_or_production_release_allowed_without_external_review=false
+- signed_public_beta_or_rc_release_class_allowed_without_external_review=true
+- external_review_no_longer_blocks_lower_release_class=true
+- external_review_still_blocks_stable_or_production_claims=true
+- next_required_phase=RB-7 signed notarized macOS stable artifact pipeline
