@@ -170,6 +170,83 @@ export function productionHighRiskThreatModelBoundaryView() {
   };
 }
 
+function releaseIntegrityToken(value, fallback = "unknown") {
+  const token = String(value ?? "")
+    .trim()
+    .replace(/[^A-Za-z0-9._:/#-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+  return token || fallback;
+}
+
+export function productionVersionIntegrityView(input = {}) {
+  const currentVersion = releaseIntegrityToken(input.currentVersion ?? input.appVersion, "0.1.0");
+  const buildChannel = releaseIntegrityToken(input.buildChannel, "unknown-channel");
+  const buildCommit = releaseIntegrityToken(input.buildCommit, "unknown-commit");
+  const latestVersion = releaseIntegrityToken(input.latestVersion, "manual-check-required");
+  const currentReleaseTag = releaseIntegrityToken(input.currentReleaseTag, "current-release-tag-unknown");
+  const expectedReleaseAuthority = "same-github-release-assets";
+  const checksumVerification = "matching-sha256-before-open";
+  const emergencyAdvisoryPath = "scripts/prepare_macos_emergency_release_advisory_packet.sh";
+  const versionComparison =
+    latestVersion === "manual-check-required"
+      ? "manual-update-check-required"
+      : latestVersion === currentVersion
+        ? "same-version"
+        : "manual-review-newer-or-different-version";
+  const summary = [
+    `current_version=${currentVersion}`,
+    `build_channel=${buildChannel}`,
+    `build_commit=${buildCommit}`,
+    `release_tag=${currentReleaseTag}`,
+    `latest_version=${latestVersion}`,
+    `version_comparison=${versionComparison}`,
+    `release_authority=${expectedReleaseAuthority}`,
+    `checksum_verification=${checksumVerification}`,
+    "auto_update_ready=false",
+    "signed_update_manifest_ready=false",
+    "rollback_prevention_claimed=false",
+    `emergency_advisory_path=${emergencyAdvisoryPath}`,
+  ].join(" ");
+  return {
+    currentVersion,
+    buildChannel,
+    buildCommit,
+    latestVersion,
+    currentReleaseTag,
+    versionComparison,
+    expectedReleaseAuthority,
+    checksumVerification,
+    emergencyAdvisoryPath,
+    autoUpdateReady: false,
+    signedUpdateManifestReady: false,
+    rollbackPreventionClaimed: false,
+    manualUpdateRequired: true,
+    badReleaseAdvisoryPathReady: true,
+    summary,
+    boundary: [
+      "version_integrity=true",
+      `current_version=${currentVersion}`,
+      `build_channel=${buildChannel}`,
+      `build_commit=${buildCommit}`,
+      `version_comparison=${versionComparison}`,
+      `expected_release_authority=${expectedReleaseAuthority}`,
+      `checksum_verification=${checksumVerification}`,
+      "manual_update_required=true",
+      "auto_update_ready=false",
+      "auto_update_claim=false",
+      "signed_update_manifest_ready=false",
+      "rollback_warning_policy=manual-warning-only",
+      "rollback_prevention_claimed=false",
+      "bad_release_advisory_path_ready=true",
+      `emergency_advisory_path=${emergencyAdvisoryPath}`,
+      "branch_source_release_authority_allowed=false",
+      "source_archive_release_authority_allowed=false",
+      "security_ready_claim=false",
+    ].join(" "),
+  };
+}
+
 export function productionFirstRunDesktopSummaryView(input = {}) {
   const profileInputPresent = Boolean(input.profileInputPresent);
   const profileUnlocked = Boolean(input.profileUnlocked);
