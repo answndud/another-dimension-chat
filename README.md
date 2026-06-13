@@ -215,6 +215,11 @@ RB-11 Android implementation authorization is tracked in
 Android remains a source shell over the shared-core boundary only, with no APK,
 AAB, Play Store distribution, runtime messaging, cloud backup, FCM, or Android
 public artifact claim.
+RB-12 iOS implementation authorization is tracked in
+[reference/IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md](reference/IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md):
+iOS remains a source shell over the shared-core boundary only, with no IPA,
+TestFlight/App Store distribution, runtime messaging, iCloud backup, APNs, or
+iOS public artifact claim.
 
 Production protocol/session lifecycle review input is tracked in
 [reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md).
