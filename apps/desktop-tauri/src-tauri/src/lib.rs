@@ -873,6 +873,24 @@ pub struct ProductionProfileUnlockResult {
 }
 
 #[derive(serde::Serialize)]
+pub struct ProductionProfilePassphraseRekeyResult {
+    warning: &'static str,
+    storage_opened: bool,
+    app_data_profile_store: bool,
+    profile_marker_present: bool,
+    passphrase_rekeyed: bool,
+    old_passphrase_rejected: bool,
+    new_passphrase_verified: bool,
+    product_unlock_locked: bool,
+    store_path_returned: bool,
+    passphrase_retained: bool,
+    key_material_exposed: bool,
+    network_io_attempted: bool,
+    transport_io_opened: bool,
+    runtime_messaging_enabled: bool,
+}
+
+#[derive(serde::Serialize)]
 pub struct ProductionRuntimeCommandSurfaceResult {
     warning: &'static str,
     reviewed_categories: Vec<&'static str>,
@@ -2804,6 +2822,36 @@ fn production_profile_unlock(
 }
 
 #[tauri::command]
+fn production_profile_passphrase_rekey(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProductUnlockRuntimeState>,
+    profile: String,
+    current_passphrase: String,
+    new_passphrase: String,
+    confirmation: String,
+) -> Result<ProductionProfilePassphraseRekeyResult, String> {
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production profile passphrase change failed without exposing local path details"
+    })?;
+    let result = run_production_profile_passphrase_rekey(
+        app_data_root,
+        profile,
+        current_passphrase,
+        new_passphrase,
+        confirmation,
+    )
+    .map_err(|_| {
+        "production profile passphrase change failed without exposing profile, path, or key details"
+            .to_string()
+    })?;
+    let _ = state.lock("passphrase-rekey", now_unix_ms());
+    Ok(ProductionProfilePassphraseRekeyResult {
+        product_unlock_locked: true,
+        ..result
+    })
+}
+
+#[tauri::command]
 fn production_product_unlock(
     app: tauri::AppHandle,
     state: tauri::State<'_, ProductUnlockRuntimeState>,
@@ -4171,6 +4219,52 @@ fn run_production_profile_unlock(
         transport_io_opened: profile_transport_io_opened || identity_transport_io_opened,
         runtime_messaging_enabled: profile_runtime_messaging_enabled
             || identity_runtime_messaging_enabled,
+    })
+}
+
+fn run_production_profile_passphrase_rekey(
+    app_data_root: impl AsRef<std::path::Path>,
+    profile: String,
+    current_passphrase: String,
+    new_passphrase: String,
+    confirmation: String,
+) -> Result<ProductionProfilePassphraseRekeyResult, String> {
+    use another_dimension_core::production::production_profile_passphrase_rekey;
+    use another_dimension_storage::production::ProfilePassphrase;
+
+    let profile = sanitize_production_profile(profile)?;
+    if confirmation.trim() != profile.as_str() {
+        return Err("production profile passphrase change confirmation must match the profile name"
+            .to_string());
+    }
+    let current_passphrase = ProfilePassphrase::new(current_passphrase.trim())
+        .map_err(|_| "invalid current production profile passphrase")?;
+    let new_passphrase = ProfilePassphrase::new(new_passphrase.trim())
+        .map_err(|_| "invalid new production profile passphrase")?;
+    let store_path = production_profile_store_path(app_data_root, &profile)?;
+    let summary = production_profile_passphrase_rekey(
+        &store_path,
+        profile,
+        &current_passphrase,
+        &new_passphrase,
+    )
+    .map_err(|_| "production profile passphrase change failed")?;
+
+    Ok(ProductionProfilePassphraseRekeyResult {
+        warning: "profile store passphrase changed locally; no account recovery, backup recovery, or production key-management claim",
+        storage_opened: summary.storage_opened(),
+        app_data_profile_store: true,
+        profile_marker_present: summary.profile_marker_present(),
+        passphrase_rekeyed: summary.passphrase_rekeyed(),
+        old_passphrase_rejected: summary.old_passphrase_rejected(),
+        new_passphrase_verified: summary.new_passphrase_verified(),
+        product_unlock_locked: false,
+        store_path_returned: false,
+        passphrase_retained: false,
+        key_material_exposed: summary.key_material_exposed(),
+        network_io_attempted: false,
+        transport_io_opened: summary.transport_io_opened(),
+        runtime_messaging_enabled: summary.runtime_messaging_enabled(),
     })
 }
 
@@ -13075,6 +13169,7 @@ pub fn run() {
             production_product_lock,
             production_product_unlock_status,
             production_profile_unlock,
+            production_profile_passphrase_rekey,
             production_profile_list,
             production_message_retention_preference_get,
             production_message_retention_preference_set,
@@ -13173,7 +13268,8 @@ mod tests {
         run_production_pairing_session_draft_save,
         run_production_pairing_session_remote_endpoint_mark_send_failure,
         run_production_pairing_session_remote_endpoint_update, run_production_profile_list,
-        run_production_profile_delete, run_production_profile_unlock,
+        run_production_profile_delete, run_production_profile_passphrase_rekey,
+        run_production_profile_unlock,
         run_production_runtime_command_surface_status, ProductUnlockRuntimeState,
         PRODUCT_UNLOCK_IDLE_TIMEOUT_MS,
         run_production_session_lifecycle_delete, run_production_session_lifecycle_status,
@@ -16566,6 +16662,63 @@ replay check: no replayed messages after message 2
 
         let serialized = serde_json::to_string(&result).expect("serialize result");
         assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("/tmp"));
+        assert!(!serialized.contains("profiles"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_profile_passphrase_rekey_is_redacted_and_invalidates_old_passphrase() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        run_production_profile_unlock(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .expect("profile unlock");
+
+        let result = run_production_profile_passphrase_rekey(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "new-correct-passphrase".to_string(),
+            "alice".to_string(),
+        )
+        .expect("profile passphrase rekey");
+
+        assert!(result.storage_opened);
+        assert!(result.app_data_profile_store);
+        assert!(result.profile_marker_present);
+        assert!(result.passphrase_rekeyed);
+        assert!(result.old_passphrase_rejected);
+        assert!(result.new_passphrase_verified);
+        assert!(!result.product_unlock_locked);
+        assert!(!result.store_path_returned);
+        assert!(!result.passphrase_retained);
+        assert!(!result.key_material_exposed);
+        assert!(!result.network_io_attempted);
+        assert!(!result.transport_io_opened);
+        assert!(!result.runtime_messaging_enabled);
+        assert!(run_production_profile_unlock(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+        )
+        .is_err());
+
+        let reopened = run_production_profile_unlock(
+            &root,
+            "alice".to_string(),
+            "new-correct-passphrase".to_string(),
+        )
+        .expect("profile unlock with new passphrase");
+        assert!(reopened.storage_opened);
+        assert!(reopened.profile_marker_present);
+        assert!(!reopened.profile_initialized);
+
+        let serialized = serde_json::to_string(&result).expect("serialize result");
+        assert!(!serialized.contains("correct-passphrase"));
+        assert!(!serialized.contains("new-correct-passphrase"));
         assert!(!serialized.contains("/tmp"));
         assert!(!serialized.contains("profiles"));
         let _ = std::fs::remove_dir_all(root);

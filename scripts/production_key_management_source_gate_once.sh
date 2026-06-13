@@ -60,6 +60,7 @@ for flag in \
   "encrypted_profile_session_message_store_ready=true" \
   "forward_only_schema_version_ready=true" \
   "sqlcipher_passphrase_rekey_source_ready=true" \
+  "tauri_profile_passphrase_rekey_command_ready=true" \
   "prototype_data_migration_ready=false" \
   "app_key_wrapping_ready=false" \
   "key_rotation_ready=false" \
@@ -82,19 +83,25 @@ must_contain "$KEY_DOC" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 must_contain "$KEY_DOC" "production_key_management_source_gate_reviewed=true"
 must_contain "$KEY_DOC" "production_key_management_source_ready=true"
 must_contain "$KEY_DOC" "sqlcipher_passphrase_rekey_source_ready=true"
+must_contain "$KEY_DOC" "tauri_profile_passphrase_rekey_command_ready=true"
 must_contain "$RB2_DOC" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 must_contain "$RB2_DOC" "d100_2_key_management_source_gate_reviewed=true"
 must_contain "$RB2_DOC" "sqlcipher_passphrase_rekey_source_ready=true"
+must_contain "$RB2_DOC" "tauri_profile_passphrase_rekey_command_ready=true"
 must_contain "$MATRIX" "production_key_management_source_ready=true"
 must_contain "$MATRIX" "sqlcipher_passphrase_rekey_source_ready=true"
+must_contain "$MATRIX" "tauri_profile_passphrase_rekey_command_ready=true"
 must_contain "$MATRIX" "production_key_management_ready=false"
 must_contain "$GAP_REGISTER" "production_key_management_source_ready=true"
 must_contain "$GAP_REGISTER" "sqlcipher_passphrase_rekey_source_ready=true"
+must_contain "$GAP_REGISTER" "tauri_profile_passphrase_rekey_command_ready=true"
 must_contain "$GAP_REGISTER" "production_key_management_ready=false"
 must_contain "$CLAIM_GATE" "production_key_management_source_ready=true"
 must_contain "$CLAIM_GATE" "sqlcipher_passphrase_rekey_source_ready=true"
+must_contain "$CLAIM_GATE" "tauri_profile_passphrase_rekey_command_ready=true"
 must_contain "$STABLE_GATE" "production_key_management_source_ready=true"
 must_contain "$STABLE_GATE" "sqlcipher_passphrase_rekey_source_ready=true"
+must_contain "$STABLE_GATE" "tauri_profile_passphrase_rekey_command_ready=true"
 
 must_contain "$STORAGE_DECISION" "SQLCipher passphrase"
 must_contain "$STORAGE_DECISION" "Expose user-visible key rotation through SQLCipher rekey"
@@ -110,6 +117,8 @@ must_contain "$STORAGE" "fn unlock_policy_requires_passphrase_for_all_modes"
 must_contain "$STORAGE" "fn sqlcipher_store_rekey_rotates_passphrase_without_plaintext_exposure"
 must_contain "$STORAGE" "fn sqlcipher_store_schema_migration_is_forward_only"
 must_contain "$STORAGE" "fn storage_backend_integration_summary_keeps_non_ready_boundaries_explicit"
+must_contain "$CORE" "pub fn production_profile_passphrase_rekey"
+must_contain "$CORE" "fn production_profile_passphrase_rekey_changes_unlock_secret_without_runtime"
 must_contain "$CORE" "pub fn production_key_rollback_boundary_summary()"
 must_contain "$CORE" "app_key_wrapping_ready = storage.production_key_management_ready()"
 must_contain "$CORE" "rollback_prevention_claimed: false"
@@ -117,6 +126,8 @@ must_contain "$CORE" "production_key_management_ready: false"
 must_contain "$CORE" "fn production_key_rollback_boundary_closes_policy_without_claiming_wrapping_or_rollback"
 must_contain "$CORE" "fn production_local_data_lifecycle_policy_is_passphrase_first_with_non_claims"
 must_contain "$TAURI_LIB" "fn production_profile_unlock_uses_app_data_store_without_returning_secrets"
+must_contain "$TAURI_LIB" "fn production_profile_passphrase_rekey"
+must_contain "$TAURI_LIB" "fn production_profile_passphrase_rekey_is_redacted_and_invalidates_old_passphrase"
 must_contain "$TAURI_LIB" "fn production_session_lifecycle_status_and_delete_are_redacted"
 
 for file in "$DOC" "$KEY_DOC" "$RB2_DOC" "$MATRIX" "$GAP_REGISTER" \
@@ -151,6 +162,7 @@ os_keystore_only_rejected=true
 encrypted_profile_session_message_store_ready=true
 forward_only_schema_version_ready=true
 sqlcipher_passphrase_rekey_source_ready=true
+tauri_profile_passphrase_rekey_command_ready=true
 prototype_data_migration_ready=false
 app_key_wrapping_ready=false
 key_rotation_ready=false

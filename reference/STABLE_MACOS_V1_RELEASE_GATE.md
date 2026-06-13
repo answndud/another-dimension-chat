@@ -196,6 +196,7 @@ preflight after the blockers below are resolved.
 - d100_2_key_management_source_gate_reviewed=true
 - production_key_management_source_ready=true
 - sqlcipher_passphrase_rekey_source_ready=true
+- tauri_profile_passphrase_rekey_command_ready=true
 - supported_local_key_lifecycle_ready=true
 - supported_local_key_lifecycle_scope=passphrase-first-sqlcipher-local-profile-store-only
 - supported_rollback_detection_ready=true
