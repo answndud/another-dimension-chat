@@ -12,6 +12,12 @@ Another Dimension Chat does not provide auto-update, signed update channels,
 notarized releases, transparency logs, reproducible builds, or audited release
 promotion for this beta.
 
+Future signed update manifest candidates are defined in
+[MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md](MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md).
+That schema can verify Ed25519-signed manifest candidates, but it does not make
+auto-update, signed update manifest readiness, release upload, rollback
+prevention, or production readiness true for the current release class.
+
 ## User Verification Model
 
 Every public beta update is a manual GitHub Release download.

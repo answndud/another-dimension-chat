@@ -26,6 +26,8 @@ cd "$ROOT"
 DOC="reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
 
 for file in "$DOC" \
+  "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md" \
+  "scripts/validate_macos_signed_update_manifest.mjs" \
   "reference/UPDATE_INTEGRITY.md" \
   "reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md" \
   "reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md" \
@@ -44,6 +46,9 @@ must_contain "$DOC" "branch_source_release_authority_allowed=false"
 must_contain "$DOC" "source_archive_release_authority_allowed=false"
 must_contain "$DOC" "platform_store_security_boundary_allowed=false"
 must_contain "$DOC" "auto_update_channel_ready=false"
+must_contain "$DOC" "macos_signed_update_manifest_schema_available=true"
+must_contain "$DOC" "macos_signed_update_manifest_validator_available=true"
+must_contain "$DOC" "signed_update_manifest_candidate_verifier_ready=true"
 must_contain "$DOC" "signed_update_manifest_ready=false"
 must_contain "$DOC" "update_signature_ready=false"
 must_contain "$DOC" "update_version_monotonicity_policy_ready=true"
@@ -60,10 +65,14 @@ must_contain "$DOC" "next_required_phase=M100-8 macOS stable release gate and pu
 
 must_contain "README.md" "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
 must_contain "SECURITY.md" "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
+must_contain "README.md" "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md"
+must_contain "SECURITY.md" "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
 must_contain "reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md" "MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
+must_contain "reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md" "MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md"
 
 must_contain "reference/UPDATE_INTEGRITY.md" "manual GitHub Release download"
+must_contain "reference/UPDATE_INTEGRITY.md" "MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md"
 must_contain "reference/UPDATE_INTEGRITY.md" "same GitHub Release"
 must_contain "reference/UPDATE_INTEGRITY.md" "Branch files can move after a release"
 must_contain "reference/UPDATE_INTEGRITY.md" "If auto-update is introduced later"
@@ -90,12 +99,17 @@ for file in "$DOC" "reference/UPDATE_INTEGRITY.md" "README.md" "SECURITY.md"; do
   must_not_match "$file" "sensitive_communication_allowed=true"
 done
 
+scripts/macos_signed_update_manifest_once.sh >/dev/null
+
 cat <<'STATUS'
 status=macos-update-rollback-safe-release-channel-ready
 macos_update_rollback_safe_release_channel_reviewed=true
 manual_update_integrity_policy_available=true
 same_release_asset_authority_required=true
 auto_update_channel_ready=false
+macos_signed_update_manifest_schema_available=true
+macos_signed_update_manifest_validator_available=true
+signed_update_manifest_candidate_verifier_ready=true
 signed_update_manifest_ready=false
 update_signature_ready=false
 rollback_warning_policy_ready=true

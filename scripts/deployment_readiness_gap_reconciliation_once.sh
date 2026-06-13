@@ -45,6 +45,7 @@ for file in "$REGISTER" "$MATRIX" "$BLOCKER_PLAN" \
   "reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md" \
   "reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md" \
   "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md" \
+  "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md" \
   "reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md" \
   "README.md" "SECURITY.md"; do
   [ -f "$file" ] || fail "missing deployment readiness reconciliation input: $file"
@@ -73,6 +74,9 @@ must_contain "$REGISTER" "production_key_management_source_gate_reviewed=true"
 must_contain "$REGISTER" "production_key_management_source_ready=true"
 must_contain "$REGISTER" "d100_2_key_management_source_gate_reviewed=true"
 must_contain "$REGISTER" "manual_update_integrity_policy_available=true"
+must_contain "$REGISTER" "macos_signed_update_manifest_schema_available=true"
+must_contain "$REGISTER" "macos_signed_update_manifest_validator_available=true"
+must_contain "$REGISTER" "signed_update_manifest_candidate_verifier_ready=true"
 must_contain "$REGISTER" "d100_3_signed_notarized_execution_path_reviewed=true"
 must_contain "$REGISTER" "macos_signed_notarized_execution_path_available=true"
 must_contain "$REGISTER" "signed_notarized_rc_execution_ready=false"
@@ -118,6 +122,9 @@ must_contain "$MATRIX" "production_key_management_source_gate_reviewed=true"
 must_contain "$MATRIX" "production_key_management_source_ready=true"
 must_contain "$MATRIX" "d100_2_key_management_source_gate_reviewed=true"
 must_contain "$MATRIX" "manual_update_integrity_policy_available=true"
+must_contain "$MATRIX" "macos_signed_update_manifest_schema_available=true"
+must_contain "$MATRIX" "macos_signed_update_manifest_validator_available=true"
+must_contain "$MATRIX" "signed_update_manifest_candidate_verifier_ready=true"
 must_contain "$MATRIX" "d100_3_signed_notarized_execution_path_reviewed=true"
 must_contain "$MATRIX" "macos_signed_notarized_execution_path_available=true"
 must_contain "$MATRIX" "signed_notarized_rc_execution_ready=false"
@@ -136,13 +143,13 @@ must_contain "$MATRIX" "pass for explicit Apple Silicon current scope; universal
 must_contain "$MATRIX" "source pass; representative usability hold"
 must_contain "$MATRIX" "supported-scope pass; external delivery false"
 must_contain "$MATRIX" "supported-scope pass; secure media deletion false"
-must_contain "$MATRIX" "source pass for manual same-release policy; signed update/rollback-prevention hold"
+must_contain "$MATRIX" "source pass for manual same-release policy and signed manifest candidate verification; signed update/rollback-prevention hold"
 must_contain "$MATRIX" "source pass; production operations claim false"
 must_contain "$MATRIX" "source pass; identity audit false"
 must_contain "$MATRIX" "D100-1 source-ready protocol/session pass; production/audit/sensitive-use/external-delivery false"
 must_contain "$MATRIX" "D100-2 source-ready local key/storage pass; app wrapping/key rotation/rollback prevention/secure deletion false"
 must_contain "$MATRIX" "supported-scope pass; production transport false"
-must_contain "$MATRIX" "source pass for current manual release class; signed update hold"
+must_contain "$MATRIX" "source pass for current manual release class; signed manifest candidate verifier ready; signed update hold"
 
 must_contain "README.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 must_contain "SECURITY.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
@@ -194,6 +201,7 @@ scripts/pairwise_identity_safety_product_closure_once.sh >/dev/null
 scripts/production_key_rollback_deletion_closure_once.sh >/dev/null
 scripts/production_default_practical_transport_closure_once.sh >/dev/null
 scripts/macos_update_rollback_safe_release_channel_once.sh >/dev/null
+scripts/macos_signed_update_manifest_once.sh >/dev/null
 scripts/operational_support_incident_process_once.sh >/dev/null
 
 cat <<'STATUS'
@@ -220,6 +228,9 @@ production_key_management_source_gate_reviewed=true
 production_key_management_source_ready=true
 d100_2_key_management_source_gate_reviewed=true
 manual_update_integrity_policy_available=true
+macos_signed_update_manifest_schema_available=true
+macos_signed_update_manifest_validator_available=true
+signed_update_manifest_candidate_verifier_ready=true
 d100_3_signed_notarized_execution_path_reviewed=true
 macos_signed_notarized_execution_path_available=true
 signed_notarized_rc_execution_ready=false

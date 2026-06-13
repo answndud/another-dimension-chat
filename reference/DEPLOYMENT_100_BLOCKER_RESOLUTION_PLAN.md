@@ -36,7 +36,7 @@ Current public wording must remain:
 | 9 | C100-4 Default Practical Transport Product Path | source gate with transport hold | Local/manual courier envelope exchange stays the supported default; production transport and reliable external delivery remain false. |
 | 10 | C100-5 Advanced Onion/Tor Evidence Boundary | source gate with field hold | Onion/Tor remains explicit, advanced, fail-closed, and non-claim until repeated external two-machine evidence exists. |
 | 11 | M100-6 Representative macOS Usability Evidence | external evidence | Required representative user sample completes install, first run, invite, manual envelope, recovery, diagnostics, and deletion with accepted redacted reports. |
-| 12 | M100-7 macOS Update And Rollback-Safe Release Channel | source gate with update hold | Manual same-release update policy is source-ready; signed update manifest and rollback prevention remain holds. |
+| 12 | M100-7 macOS Update And Rollback-Safe Release Channel | source gate with update hold | Manual same-release update policy and signed update manifest candidate verification are source-ready; product signed update readiness and rollback prevention remain holds. |
 | 13 | M100-8 macOS Stable Release Gate And Public Copy Upgrade | final macOS hold gate | Signed/notarized artifact, external review, field evidence, operations, production gates, and owner stable approval all pass. |
 | 14 | A100-1 External Security Review Packet Freeze | source packet gate | Independent review packet remains frozen and public-safe. |
 | 15 | A100-2 External Review Execution And Finding Closure | external review hold | Named reviewer or audit completes; findings are fixed, held, or waived with public-safe signoff. |
@@ -83,6 +83,7 @@ Current public wording must remain:
 - `secure_deletion_claim_allowed=false`.
 - `production_transport_ready=false`.
 - `production_operational_readiness_claim_allowed=false`.
+- `signed_update_manifest_ready=false`.
 - `update_signature_ready=false`.
 
 ## Evidence Links
@@ -99,6 +100,8 @@ Current public wording must remain:
   `reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md`
 - D100-3 execution path:
   `reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md`
+- M100-7 signed update manifest schema:
+  `reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md`
 - Stable gate: `reference/STABLE_MACOS_V1_RELEASE_GATE.md`
 - External evidence intake:
   `reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`
@@ -142,6 +145,10 @@ Current public wording must remain:
 - secure_deletion_claim_allowed=false
 - production_transport_ready=false
 - production_operational_readiness_claim_allowed=false
+- macos_signed_update_manifest_schema_available=true
+- macos_signed_update_manifest_validator_available=true
+- signed_update_manifest_candidate_verifier_ready=true
+- signed_update_manifest_ready=false
 - update_signature_ready=false
 - production_ready_claim_allowed=false
 - audited_claim_allowed=false

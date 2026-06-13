@@ -4,6 +4,8 @@ Status: M100-7 source gate closed as manual update integrity policy, not an
 auto-update channel. This record connects same-release checksum/provenance
 authority, version monotonicity policy, rollback warning, emergency release
 procedure, and non-claim wording to a focused verifier.
+Signed update manifest schema and candidate verification are tracked in
+`reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md`.
 
 The current public release class remains an unsigned experimental public beta.
 No auto-update, signed update manifest, transparency log, stable release,
@@ -45,6 +47,9 @@ and owner release authorization before public wording changes.
 - source_archive_release_authority_allowed=false
 - platform_store_security_boundary_allowed=false
 - auto_update_channel_ready=false
+- macos_signed_update_manifest_schema_available=true
+- macos_signed_update_manifest_validator_available=true
+- signed_update_manifest_candidate_verifier_ready=true
 - signed_update_manifest_ready=false
 - update_signature_ready=false
 - update_version_monotonicity_policy_ready=true
