@@ -485,6 +485,52 @@ export function localManualE2eeRuntimeBoundaryStatus() {
   };
 }
 
+export function noSilentNetworkBoundaryStatus(input = {}) {
+  const explicitUserPermission = input.manualNetworkPermission === true;
+  const roomReady = input.roomReady === true;
+  const profileReady = input.profileReady === true;
+  const networkAttemptAllowed = explicitUserPermission && roomReady && profileReady;
+  return {
+    defaultTransportPath: "local-manual-encrypted-envelope-exchange",
+    defaultTransportNetworkIo: false,
+    defaultTransportAutomaticDelivery: false,
+    defaultTransportCentralMessageServer: false,
+    defaultTransportPushDependency: false,
+    defaultTransportCentralContactDiscovery: false,
+    advancedTransportMode: "explicit-user-triggered-onion-only",
+    advancedControlsSeparated: true,
+    automaticNetworkOnLaunchAllowed: false,
+    explicitUserPermissionRequired: true,
+    roomProfileReadinessRequired: true,
+    explicitUserPermission,
+    roomReady,
+    profileReady,
+    networkAttemptAllowed,
+    reliableOnionDeliveryClaimAllowed: false,
+    censorshipResistanceClaimAllowed: false,
+    boundary: [
+      "no_silent_network=true",
+      "default_transport_path=local-manual-encrypted-envelope-exchange",
+      "default_transport_network_io=false",
+      "default_transport_automatic_delivery=false",
+      "default_transport_central_message_server=false",
+      "default_transport_push_dependency=false",
+      "default_transport_central_contact_discovery=false",
+      "advanced_transport_mode=explicit-user-triggered-onion-only",
+      "advanced_controls_separated=true",
+      "automatic_network_on_launch=false",
+      "explicit_user_permission_required=true",
+      "room_profile_readiness_required=true",
+      `explicit_user_permission=${explicitUserPermission}`,
+      `room_ready=${roomReady}`,
+      `profile_ready=${profileReady}`,
+      `network_attempt_allowed=${networkAttemptAllowed}`,
+      "reliable_onion_delivery_claim=false",
+      "censorship_resistance_claim=false",
+    ].join(" "),
+  };
+}
+
 export function desktopFirstCompletionStatus(report) {
   const parsed = parseFieldTestReport(report);
   const blockers = [];

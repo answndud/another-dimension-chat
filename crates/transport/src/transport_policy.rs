@@ -74,6 +74,78 @@ impl TransportPolicy {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct NoSilentNetworkTransportBoundarySummary {
+    default_policy_mode: TransportMode,
+    default_route_kind: TransportKind,
+    default_user_mediated_encrypted_exchange: bool,
+    automatic_network_on_launch_allowed: bool,
+    advanced_onion_controls_required: bool,
+    explicit_user_permission_required_before_network: bool,
+    room_profile_readiness_required_before_network: bool,
+    reliable_onion_delivery_claim_allowed: bool,
+    censorship_resistance_claim_allowed: bool,
+    central_message_server_allowed: bool,
+}
+
+impl NoSilentNetworkTransportBoundarySummary {
+    pub fn default_policy_mode(self) -> TransportMode {
+        self.default_policy_mode
+    }
+
+    pub fn default_route_kind(self) -> TransportKind {
+        self.default_route_kind
+    }
+
+    pub fn default_user_mediated_encrypted_exchange(self) -> bool {
+        self.default_user_mediated_encrypted_exchange
+    }
+
+    pub fn automatic_network_on_launch_allowed(self) -> bool {
+        self.automatic_network_on_launch_allowed
+    }
+
+    pub fn advanced_onion_controls_required(self) -> bool {
+        self.advanced_onion_controls_required
+    }
+
+    pub fn explicit_user_permission_required_before_network(self) -> bool {
+        self.explicit_user_permission_required_before_network
+    }
+
+    pub fn room_profile_readiness_required_before_network(self) -> bool {
+        self.room_profile_readiness_required_before_network
+    }
+
+    pub fn reliable_onion_delivery_claim_allowed(self) -> bool {
+        self.reliable_onion_delivery_claim_allowed
+    }
+
+    pub fn censorship_resistance_claim_allowed(self) -> bool {
+        self.censorship_resistance_claim_allowed
+    }
+
+    pub fn central_message_server_allowed(self) -> bool {
+        self.central_message_server_allowed
+    }
+}
+
+pub fn no_silent_network_transport_boundary_summary(
+) -> NoSilentNetworkTransportBoundarySummary {
+    NoSilentNetworkTransportBoundarySummary {
+        default_policy_mode: TransportPolicy::practical_default().mode(),
+        default_route_kind: TransportKind::LocalOnly,
+        default_user_mediated_encrypted_exchange: true,
+        automatic_network_on_launch_allowed: false,
+        advanced_onion_controls_required: true,
+        explicit_user_permission_required_before_network: true,
+        room_profile_readiness_required_before_network: true,
+        reliable_onion_delivery_claim_allowed: false,
+        censorship_resistance_claim_allowed: false,
+        central_message_server_allowed: false,
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TransportRoute {
     OnionService(OnionServiceEndpoint),

@@ -61,6 +61,22 @@ fn practical_default_is_local_manual_not_network_route() {
 }
 
 #[test]
+fn no_silent_network_transport_boundary_keeps_default_manual_and_advanced_explicit() {
+    let summary = no_silent_network_transport_boundary_summary();
+
+    assert_eq!(summary.default_policy_mode(), TransportMode::LocalOnly);
+    assert_eq!(summary.default_route_kind(), TransportKind::LocalOnly);
+    assert!(summary.default_user_mediated_encrypted_exchange());
+    assert!(!summary.automatic_network_on_launch_allowed());
+    assert!(summary.advanced_onion_controls_required());
+    assert!(summary.explicit_user_permission_required_before_network());
+    assert!(summary.room_profile_readiness_required_before_network());
+    assert!(!summary.reliable_onion_delivery_claim_allowed());
+    assert!(!summary.censorship_resistance_claim_allowed());
+    assert!(!summary.central_message_server_allowed());
+}
+
+#[test]
 fn advanced_high_risk_onion_policy_keeps_direct_fallback_rejected() {
     let policy = TransportPolicy::advanced_high_risk_onion();
     let onion = TransportRoute::onion("example.onion").expect("onion route");

@@ -12,6 +12,7 @@ import {
   fieldTestReportSummary,
   fieldTestReportTriageState,
   localManualE2eeRuntimeBoundaryStatus,
+  noSilentNetworkBoundaryStatus,
   parseFieldTestReport,
   publicBetaDiagnosticsReport,
   publicDiagnosticsFailureClass,
@@ -538,6 +539,33 @@ test("local manual E2EE runtime boundary exposes key lifecycle guardrails withou
     appKeyWrappingReady: false,
     securityReadyClaimed: false,
   });
+});
+
+test("no silent network boundary keeps default manual and advanced onion explicit", () => {
+  const launch = noSilentNetworkBoundaryStatus();
+  const readyWithoutPermission = noSilentNetworkBoundaryStatus({
+    roomReady: true,
+    profileReady: true,
+  });
+  const allowed = noSilentNetworkBoundaryStatus({
+    manualNetworkPermission: true,
+    roomReady: true,
+    profileReady: true,
+  });
+
+  assert.equal(launch.defaultTransportPath, "local-manual-encrypted-envelope-exchange");
+  assert.equal(launch.defaultTransportNetworkIo, false);
+  assert.equal(launch.defaultTransportAutomaticDelivery, false);
+  assert.equal(launch.automaticNetworkOnLaunchAllowed, false);
+  assert.equal(launch.advancedControlsSeparated, true);
+  assert.equal(launch.networkAttemptAllowed, false);
+  assert.equal(readyWithoutPermission.networkAttemptAllowed, false);
+  assert.equal(allowed.networkAttemptAllowed, true);
+  assert.match(allowed.boundary, /explicit_user_permission_required=true/);
+  assert.match(allowed.boundary, /room_profile_readiness_required=true/);
+  assert.match(allowed.boundary, /reliable_onion_delivery_claim=false/);
+  assert.match(allowed.boundary, /censorship_resistance_claim=false/);
+  assert.doesNotMatch(allowed.boundary, /central_message_server=true|automatic_network_on_launch=true/);
 });
 
 test("desktop-first completion reports local private flow readiness without security claims", () => {
