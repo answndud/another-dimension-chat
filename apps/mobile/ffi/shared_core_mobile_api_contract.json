@@ -271,6 +271,26 @@
   ],
   "binding_prerequisite_closure_verified": true,
   "binding_prerequisite_closure_file": "apps/mobile/ffi/binding_prerequisite_closure.json",
+  "callable_ffi_authorization_hold_active": true,
+  "callable_ffi_authorization_hold_file": "apps/mobile/ffi/callable_ffi_authorization_hold.json",
+  "callable_ffi_authorization_hold_blocks": [
+    "udl_file_creation",
+    "uniffi_scaffolding",
+    "extern_c_symbols",
+    "jni_bridge",
+    "swift_ffi_bridge",
+    "kotlin_native_binding",
+    "callable_shared_core_status_ffi",
+    "callable_profile_unlock_ffi",
+    "callable_invite_ffi",
+    "callable_pairing_ffi",
+    "callable_envelope_ffi",
+    "callable_transcript_ffi",
+    "callable_lifecycle_ffi",
+    "native_runtime_messaging",
+    "native_network_delivery",
+    "release_packaging"
+  ],
   "owner_authorization_for_callable_ffi": false,
   "explicit_callable_ffi_implementation_request": false
 }

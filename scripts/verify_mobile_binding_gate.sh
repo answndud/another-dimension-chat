@@ -58,6 +58,7 @@ require_text "$CONTRACT" '"memory_ownership_release_contract_finalized": true'
 require_text "$CONTRACT" '"redacted_diagnostics_payload_reviewed": true'
 require_text "$CONTRACT" '"android_ios_adapter_parity_verified": true'
 require_text "$CONTRACT" '"binding_prerequisite_closure_verified": true'
+require_text "$CONTRACT" '"callable_ffi_authorization_hold_active": true'
 require_text "$CONTRACT" '"owner_authorization_for_callable_ffi": false'
 require_text "$CONTRACT" '"callable_ffi_may_start": false'
 require_text "$CONTRACT" '"generated_binding_may_start": false'
@@ -153,6 +154,7 @@ require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Memory Ownership Release Con
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Redacted Diagnostics Payload Review Boundary"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Android/iOS Adapter Parity Gate"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Binding Prerequisite Closure Handoff"
+require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Callable FFI Authorization Hold"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "status_and_redacted_diagnostics_read_only_adapter"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "shared_core_mobile_api_contract.json"
 require_text "$ROOT_DIR/crates/core/src/lib.rs" "production_mobile_shared_core_api_freeze_boundary_summary"
