@@ -233,6 +233,13 @@ It records the local manual encrypted envelope exchange default, the separate
 explicit fail-closed onion/Tor advanced path, the no-central-server boundaries,
 the evidence order, and why reliable external delivery remains false.
 
+Supported default practical transport closure is tracked in
+[reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md](reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md).
+It makes the desktop default transport local/manual courier envelope exchange
+only. The app still claims no automatic network delivery, no central message
+server, no reliable external onion delivery, no production transport readiness,
+and no sensitive-use safety.
+
 macOS production UX and onboarding review input is tracked in
 [reference/MACOS_PRODUCTION_UX_ONBOARDING.md](reference/MACOS_PRODUCTION_UX_ONBOARDING.md).
 It records the first-run checklist, invite/verify/message flow, manual envelope
@@ -413,6 +420,9 @@ What exists today:
   source boundary for v0.1 and has `network_io=false`,
   `automatic_delivery=false`, `central_message_server=false`,
   `push_notification_dependency=false`, and `central_contact_discovery=false`.
+  The supported default transport scope is local manual courier envelope
+  exchange only, as recorded in
+  `reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md`.
   The high-risk onion/Tor path is separate, explicit-user-triggered,
   fail-closed, onion-only, and has `direct_fallback=false`. This boundary is a
   product decision and first implementation slice, not a claim of reliable

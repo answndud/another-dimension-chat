@@ -2262,8 +2262,12 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(privateDeliveryStateJs, /supportedRollbackDetectionScope: "marker-only-detection-user-visible-reset-required"/);
   assert.match(privateDeliveryStateJs, /supportedLocalDeletionScopeReady: true/);
   assert.match(privateDeliveryStateJs, /supportedLocalDeletionScope: "local-logical-delete-and-owned-app-data-wipe-only"/);
+  assert.match(privateDeliveryStateJs, /supportedDefaultTransportReady: true/);
+  assert.match(privateDeliveryStateJs, /supportedDefaultTransportScope: "local-manual-courier-envelope-exchange-only"/);
   assert.match(privateDeliveryStateJs, /appKeyWrappingReady: false/);
   assert.match(privateDeliveryStateJs, /secureDeletionClaimAllowed: false/);
+  assert.match(privateDeliveryStateJs, /productionTransportReady: false/);
+  assert.match(privateDeliveryStateJs, /reliableExternalDeliveryClaimAllowed: false/);
   assert.match(privateDeliveryStateJs, /local_manual_e2ee_runtime_boundary=\$\{fieldTestReportValue\(desktopCompletion\.localManualE2eeRuntimeBoundary/);
   assert.match(privateDeliveryStateJs, /local_manual_e2ee_runtime_ready=\$\{desktopCompletion\.localManualE2eeRuntimeReady === true\}/);
   assert.match(privateDeliveryStateJs, /supported_local_manual_e2ee_ready=\$\{desktopCompletion\.supportedLocalManualE2eeReady === true\}/);
@@ -2280,6 +2284,10 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(privateDeliveryStateJs, /supported_local_deletion_scope=\$\{fieldTestReportValue\(desktopCompletion\.supportedLocalDeletionScope/);
   assert.match(privateDeliveryStateJs, /rollback_prevention_claimed=false/);
   assert.match(privateDeliveryStateJs, /secure_deletion_claim_allowed=\$\{desktopCompletion\.secureDeletionClaimAllowed === true\}/);
+  assert.match(privateDeliveryStateJs, /supported_default_transport_ready=\$\{desktopCompletion\.supportedDefaultTransportReady === true\}/);
+  assert.match(privateDeliveryStateJs, /supported_default_transport_scope=\$\{fieldTestReportValue\(desktopCompletion\.supportedDefaultTransportScope/);
+  assert.match(privateDeliveryStateJs, /production_transport_ready=\$\{desktopCompletion\.productionTransportReady === true\}/);
+  assert.match(privateDeliveryStateJs, /reliable_external_delivery_claim_allowed=\$\{desktopCompletion\.reliableExternalDeliveryClaimAllowed === true\}/);
   assert.match(privateDeliveryStateJs, /diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only/);
   assert.match(privateDeliveryStateJs, /PUBLIC_SUPPORT_DIAGNOSTICS_ALLOWED_FIELDS/);
   assert.match(privateDeliveryStateJs, /PUBLIC_SUPPORT_DIAGNOSTICS_FORBIDDEN_FIELDS/);
@@ -2332,7 +2340,11 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /rollback_prevention_claimed=\$\{rollbackPreventionClaimed\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /secure_deletion_claim_allowed=\$\{secureDeletionClaimAllowed\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /default_transport_path=\$\{defaultTransportPath\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_default_transport_ready=\$\{supportedDefaultTransportReady\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_default_transport_scope=\$\{supportedDefaultTransportScope\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /default_transport_network_io=\$\{defaultTransportNetworkIo\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /production_transport_ready=\$\{productionTransportReady\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /reliable_external_delivery_claim_allowed=\$\{reliableExternalDeliveryClaimAllowed\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_onion_path=explicit-user-triggered-fail-closed/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /production_e2ee_ready=\$\{productionE2eeReady\}/);
   assert.doesNotMatch(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public diagnostics ready failure_class=/);

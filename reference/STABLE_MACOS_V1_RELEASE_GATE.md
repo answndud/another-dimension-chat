@@ -30,6 +30,12 @@ wording. Complete `production_key_management_ready`, app key wrapping, rollback
 prevention, secure media deletion, backup recovery, security-ready, and
 sensitive-use claims remain false.
 
+RB-3 supported default practical transport closure is recorded in
+`reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md`. It makes the
+supported default transport local/manual courier envelope exchange only.
+Automatic network delivery, central message server delivery, reliable external
+delivery, production transport readiness, and sensitive-use claims remain false.
+
 ## Gate Decision
 
 Decision: hold.
@@ -45,7 +51,7 @@ field evidence, and a separate owner release decision.
 | --- | --- | --- |
 | Protocol/session lifecycle | Supported local/manual envelope message-content scope is ready; broad `production_e2ee_ready=false`. | Hold production-ready and security-ready claims. |
 | Key/storage lifecycle | Supported local key/deletion scope exists; broad `production_key_management_ready=false`. | Hold sensitive-use and security-ready claims. |
-| Default transport | Local manual envelope default exists; `production_transport_ready=false`. | Hold reliable external delivery claims. |
+| Default transport | Supported local/manual courier envelope default exists; broad `production_transport_ready=false`. | Hold reliable external delivery claims. |
 | macOS UX/onboarding | Source-side UX gate exists; `usability_study_completed=false`. | Hold production wording removal. |
 | macOS distribution | Distribution gate exists; `stable_signed_notarized_artifact_available=false`. | Hold stable release publication. |
 | External review/audit | Review packet exists; `external_review_completed=false` and `audit_completed=false`. | Keep `not audited`. |
@@ -92,7 +98,8 @@ preflight after the blockers below are resolved.
 - Broad production key-management readiness remains false; only supported local
   key lifecycle, marker-only rollback detection, and local deletion/wipe scopes
   are ready.
-- Production transport readiness remains false.
+- Broad production transport readiness remains false; only supported
+  local/manual courier envelope exchange is ready.
 - Production distribution readiness remains false.
 - Production field evidence readiness remains false.
 - Sensitive communication remains prohibited.
@@ -118,12 +125,16 @@ preflight after the blockers below are resolved.
 - supported_rollback_detection_scope=marker-only-detection-user-visible-reset-required
 - supported_local_deletion_scope_ready=true
 - supported_local_deletion_scope=local-logical-delete-and-owned-app-data-wipe-only
+- rb_3_default_practical_transport_closure_reviewed=true
+- supported_default_transport_ready=true
+- supported_default_transport_scope=local-manual-courier-envelope-exchange-only
 - production_e2ee_ready=false
 - production_key_management_ready=false
 - app_key_wrapping_ready=false
 - rollback_prevention_claimed=false
 - secure_deletion_claim_allowed=false
 - production_transport_ready=false
+- reliable_external_delivery_claim_allowed=false
 - production_distribution_ready=false
 - production_field_evidence_ready=false
 - production_operational_readiness_claim_allowed=false

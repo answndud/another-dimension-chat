@@ -1,9 +1,10 @@
 # Production Default Transport Product Path
 
-Status: OPS-4 source-side product path gate closed. This is a default product
-flow decision and review input, not a claim of reliable external onion delivery,
-automatic network messaging, production readiness, audited security, or
-sensitive-use safety.
+Status: OPS-4 and RB-3 source-side product path gates closed. The supported
+default practical transport scope is local/manual courier envelope exchange
+only. This is a default product flow decision and review input, not a claim of
+reliable external onion delivery, automatic network messaging, production
+readiness, audited security, or sensitive-use safety.
 
 The practical default path for the desktop-first 1:1 flow is local manual
 encrypted envelope exchange. The advanced high-risk onion/Tor path remains
@@ -13,6 +14,8 @@ fail-closed until later implementation and field evidence phases.
 ## Product Decision
 
 - Default path: local manual encrypted envelope exchange.
+- Supported default scope:
+  `reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md`.
 - Advanced path: high-risk onion/Tor, explicit user action only.
 - No central trusted server is introduced.
 - No phone number, email, global account, searchable username, central contact
@@ -96,6 +99,9 @@ Targeted tests that anchor this gate:
 ## Current Gate Flags
 
 - production_default_transport_path_reviewed=true
+- rb_3_default_practical_transport_closure_reviewed=true
+- supported_default_transport_ready=true
+- supported_default_transport_scope=local-manual-courier-envelope-exchange-only
 - default_transport_product_path=local-manual-encrypted-envelope-exchange
 - default_transport_network_io=false
 - default_transport_automatic_delivery=false
@@ -104,6 +110,7 @@ Targeted tests that anchor this gate:
 - default_transport_central_contact_discovery=false
 - default_direct_peer_fallback_allowed=false
 - untrusted_relay_store_and_forward_decided=false
+- untrusted_relay_store_and_forward_allowed=false
 - advanced_onion_path=explicit-user-triggered-fail-closed-onion-only
 - advanced_onion_direct_fallback=false
 - advanced_onion_send_receive_available=false
@@ -112,4 +119,5 @@ Targeted tests that anchor this gate:
 - reliable_external_delivery_claim_allowed=false
 - production_transport_ready=false
 - security_ready_claimed=false
-- next_required_phase=OPS-5 macOS production UX and onboarding
+- sensitive_communication_allowed=false
+- next_required_phase=RB-4 macOS UX usability and recovery closure
