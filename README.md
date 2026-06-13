@@ -204,6 +204,13 @@ Production protocol/session lifecycle review input is tracked in
 It records the current 1:1 state machine, replay/retry/cancel/delete semantics,
 unresolved review questions, and why production E2EE readiness remains false.
 
+Production key and local storage lifecycle review input is tracked in
+[reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md](reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md).
+It records the current passphrase-first unlock, encrypted local
+profile/session/message store, destructive local actions, backup/migration
+boundary, marker-only rollback detection, and why production key-management
+readiness remains false.
+
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
 only. Allowed public fields are app version, build channel, build commit,

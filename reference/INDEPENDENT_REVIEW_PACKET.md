@@ -117,6 +117,10 @@ Review the unsigned experimental public beta boundary:
 - `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`: 1:1 protocol/session
   state machine, replay/retry/cancel/delete semantics, and unresolved
   production E2EE review questions.
+- `reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md`: passphrase-first unlock,
+  encrypted local profile/session/message store lifecycle, destructive local
+  actions, backup/migration boundaries, marker-only rollback detection, and
+  unresolved production key-management review questions.
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and
   no-reviewer-signoff/no-public-user-safety-signoff flags.

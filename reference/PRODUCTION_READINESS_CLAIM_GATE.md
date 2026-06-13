@@ -83,4 +83,6 @@ not production readiness by themselves.
 - sensitive_communication_allowed=false
 - reliable_external_delivery_claim_allowed=false
 - signed_notarized_security_boundary=false
-- next_required_phase=OPS-2 production E2EE protocol and session lifecycle hardening
+- ops_2_protocol_session_lifecycle_gate_reviewed=true
+- ops_3_key_storage_lifecycle_gate_reviewed=true
+- next_required_phase=OPS-4 reliable default transport product path
