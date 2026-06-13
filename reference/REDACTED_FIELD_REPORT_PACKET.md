@@ -8,9 +8,9 @@ sensitive communication.
 Required public labels: unsigned experimental public beta, sensitive
 communication prohibited, not audited, and not production-ready.
 
-Use this packet for real macOS field reports only after removing private data.
-Public reports should use the app's public support diagnostics and the broad
-failure classes from `reference/PUBLIC_INTAKE_POLICY.md`.
+Use this packet for real multi-platform field reports only after removing
+private data. Public reports should use the app's public support diagnostics
+and the broad failure classes from `reference/PUBLIC_INTAKE_POLICY.md`.
 
 Validate redacted reports with:
 
@@ -71,7 +71,7 @@ local app data, or private planning notes.
 app_version=
 build_channel=
 build_commit=
-platform_pair=macos-to-macos
+platform_pair=macos-to-macos|macos-to-windows|windows-to-windows|android-to-ios
 checksum_result=pass|fail|not-run
 install_path_reached=download|checksum|mount|copy|manual-allow|first-launch
 flow_scope=same-machine|local-two-instance|two-machine-same-network|two-machine-different-network
@@ -108,6 +108,7 @@ non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-p
 - f100_1_field_evidence_blocker_closed=true
 - field_evidence_policy_waiver_authorized=true
 - real_external_two_machine_field_evidence_required_for_claims=true
+- required_platform_pair_coverage_required_for_claims=true
 - accepted_redacted_field_reports_required_for_claims=true
 - field_evidence_execution_claim_allowed=false
 - redacted_field_report_validator_available=true
@@ -115,6 +116,7 @@ non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-p
 - external_evidence_intake_operator_ready=true
 - field_report_validator_ready=true
 - accepted_production_field_reports=0
+- required_platform_pairs_covered=false
 - local_two_instance_rehearsal_completed=false
 - macos_two_machine_real_user_flow_repeated=false
 - different_networks_covered=false
