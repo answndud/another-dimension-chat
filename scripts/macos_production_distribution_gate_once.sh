@@ -24,8 +24,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 DOC="reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
+SCOPE_DOWN="reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md"
 
 must_contain "$DOC" "macos_production_distribution_gate_reviewed=true"
+must_contain "$DOC" "rb_7_macos_stable_artifact_release_class_scope_down_reviewed=true"
 must_contain "$DOC" "current_public_artifact_unsigned_beta=true"
 must_contain "$DOC" "developer_id_signing_available=false"
 must_contain "$DOC" "notarization_available=false"
@@ -43,24 +45,33 @@ must_contain "$DOC" "generated_release_artifacts_staged=false"
 must_contain "$DOC" "production_distribution_ready=false"
 must_contain "$DOC" "signed_notarized_security_boundary=false"
 must_contain "$DOC" "security_ready_claimed=false"
-must_contain "$DOC" "next_required_phase=OPS-7 external review and audit readiness"
+must_contain "$DOC" "stable_or_production_release_allowed_without_signed_artifact=false"
+must_contain "$DOC" "unsigned_or_signed_public_beta_or_rc_release_class_allowed_without_stable_artifact=true"
+must_contain "$DOC" "signed_artifact_no_longer_blocks_lower_release_class=true"
+must_contain "$DOC" "signed_artifact_still_blocks_stable_or_production_claims=true"
+must_contain "$DOC" "next_required_phase=RB-8 production claim and stable release candidate gate"
 
 must_contain "README.md" "reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
+must_contain "README.md" "reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md"
 must_contain "SECURITY.md" "reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
+must_contain "SECURITY.md" "reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md"
 must_contain "apps/desktop-tauri/README.md" "../../reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
 must_contain "reference/UPDATE_INTEGRITY.md" "MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
+must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_6_macos_production_distribution_gate_reviewed=true"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "rb_7_macos_stable_artifact_release_class_scope_down_reviewed=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "stable_signed_notarized_artifact_available=false"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "production_distribution_ready=false"
-must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "next_required_phase=OPS-7 external review and audit readiness"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "stable_or_production_release_allowed_without_signed_artifact=false"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "unsigned_or_signed_public_beta_or_rc_release_class_allowed_without_stable_artifact=true"
 must_contain "reference/UPDATE_INTEGRITY.md" "Another Dimension Chat does not provide auto-update"
 must_contain "reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "No live release upload"
 must_contain "reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "No signed or notarized macOS artifact exists."
 must_contain "scripts/macos_public_beta_final_source_preflight_once.sh" "release_upload_performed=false"
 must_contain "scripts/macos_release_page_update_gate_once.sh" "release_upload_performed=false"
 
-for file in "$DOC" "README.md" "SECURITY.md" "apps/desktop-tauri/README.md" "reference/UPDATE_INTEGRITY.md"; do
+for file in "$DOC" "$SCOPE_DOWN" "README.md" "SECURITY.md" "apps/desktop-tauri/README.md" "reference/UPDATE_INTEGRITY.md"; do
   must_not_match "$file" "developer_id_signing_available=true"
   must_not_match "$file" "notarization_available=true"
   must_not_match "$file" "stable_signed_notarized_artifact_available=true"
@@ -72,10 +83,12 @@ for file in "$DOC" "README.md" "SECURITY.md" "apps/desktop-tauri/README.md" "ref
   must_not_match "$file" "production_distribution_ready=true"
   must_not_match "$file" "signed_notarized_security_boundary=true"
   must_not_match "$file" "security_ready_claimed=true"
+  must_not_match "$file" "stable_or_production_release_allowed_without_signed_artifact=true"
 done
 
 scripts/macos_public_beta_final_source_preflight_once.sh >/dev/null
 scripts/macos_release_page_update_gate_once.sh >/dev/null
+scripts/macos_stable_artifact_release_class_scope_down_once.sh >/dev/null
 
 if git -C "$ROOT" ls-files | grep -Eq '^apps/desktop-tauri/(public-release|beta-artifacts)/'; then
   fail "generated public-release or beta-artifacts path is tracked"
@@ -88,6 +101,7 @@ fi
 cat <<'STATUS'
 status=macos-production-distribution-gate-ready
 macos_production_distribution_gate_reviewed=true
+rb_7_macos_stable_artifact_release_class_scope_down_reviewed=true
 current_public_artifact_unsigned_beta=true
 developer_id_signing_available=false
 notarization_available=false
@@ -105,5 +119,9 @@ generated_release_artifacts_staged=false
 production_distribution_ready=false
 signed_notarized_security_boundary=false
 security_ready_claimed=false
-next_required_phase=OPS-7-external-review-and-audit-readiness
+stable_or_production_release_allowed_without_signed_artifact=false
+unsigned_or_signed_public_beta_or_rc_release_class_allowed_without_stable_artifact=true
+signed_artifact_no_longer_blocks_lower_release_class=true
+signed_artifact_still_blocks_stable_or_production_claims=true
+next_required_phase=RB-8-production-claim-and-stable-release-candidate-gate
 STATUS

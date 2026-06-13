@@ -154,6 +154,10 @@ Review the unsigned experimental public beta boundary:
   distribution state, signing/notarization holds, same-release
   checksum/provenance authority, update-channel blockers, and remaining stable
   signed distribution blockers.
+- `reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md`: RB-7
+  release-class scope-down that keeps stable signing/notarization claims false
+  while allowing lower release classes to continue without production
+  distribution claims.
 - `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`: public-safe reviewer packet
   scope, severity definitions, fix/hold/waive triage process, and current
   no-audit/no-signoff flags.

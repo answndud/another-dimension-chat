@@ -35,6 +35,9 @@ No release upload, release body edit, release asset deletion, DMG rebuild, or
 generated artifact commit is authorized by RB-0. Those actions remain explicit
 release tasks.
 
+Public wording must still say `not production-ready` and
+`sensitive communication prohibited`.
+
 ## Signing And Notarization Decision
 
 - xcode_available=true

@@ -257,7 +257,12 @@ macOS production distribution gate status is tracked in
 [reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md](reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md).
 It records the current unsigned beta distribution state, signing/notarization
 holds, same-release checksum/provenance authority, update-channel blockers, and
-why stable signed distribution readiness remains false.
+why stable signed distribution readiness remains false. RB-7 release-class
+scope-down is tracked in
+[reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md](reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md),
+which allows lower release classes to continue while keeping stable
+signed/notarized artifact, production distribution, and security-ready claims
+false.
 
 External review and audit readiness is tracked in
 [reference/EXTERNAL_REVIEW_AUDIT_READINESS.md](reference/EXTERNAL_REVIEW_AUDIT_READINESS.md),

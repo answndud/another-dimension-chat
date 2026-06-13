@@ -1,8 +1,10 @@
 # macOS Production Distribution Gate
 
-Status: OPS-6 source-side distribution gate closed as a hold record. This does
-not create a stable macOS release, signed artifact, notarized artifact,
-auto-update channel, release upload, DMG rebuild, or production-ready claim.
+Status: OPS-6 source-side distribution gate closed as a hold record, with RB-7
+release-class scope-down recorded in
+`reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md`. This does not
+create a stable macOS release, signed artifact, notarized artifact, auto-update
+channel, release upload, DMG rebuild, or production-ready claim.
 
 The current public artifact remains the Apple Silicon unsigned experimental
 public beta DMG. Production distribution remains blocked until Developer ID
@@ -55,6 +57,16 @@ Before opening a non-beta macOS release, all of these must be true:
 - The public non-claim copy must stay in place until OPS-10 and external review
   gates close.
 
+## RB-7 Scope-Down
+
+RB-7 does not fabricate signing credentials or notarization. Instead, it removes
+missing signed/stable artifact work as a blocker for lower release classes only.
+Source-side work may continue toward an unsigned or signed public beta / RC
+while stable macOS distribution remains held.
+
+Public wording must still say `not production-ready` and
+`sensitive communication prohibited`.
+
 ## Evidence Anchors
 
 - Manual update integrity boundary: `reference/UPDATE_INTEGRITY.md`
@@ -71,6 +83,7 @@ Before opening a non-beta macOS release, all of these must be true:
 ## Current Gate Flags
 
 - macos_production_distribution_gate_reviewed=true
+- rb_7_macos_stable_artifact_release_class_scope_down_reviewed=true
 - current_public_artifact_unsigned_beta=true
 - developer_id_signing_available=false
 - notarization_available=false
@@ -88,4 +101,8 @@ Before opening a non-beta macOS release, all of these must be true:
 - production_distribution_ready=false
 - signed_notarized_security_boundary=false
 - security_ready_claimed=false
-- next_required_phase=OPS-7 external review and audit readiness
+- stable_or_production_release_allowed_without_signed_artifact=false
+- unsigned_or_signed_public_beta_or_rc_release_class_allowed_without_stable_artifact=true
+- signed_artifact_no_longer_blocks_lower_release_class=true
+- signed_artifact_still_blocks_stable_or_production_claims=true
+- next_required_phase=RB-8 production claim and stable release candidate gate
