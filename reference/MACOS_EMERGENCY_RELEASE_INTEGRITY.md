@@ -12,8 +12,10 @@ inventing evidence or mutating a live release from a source-side gate.
 ## Emergency Response Scope
 
 - Use a public-safe advisory packet with incident class, affected release tag,
-  affected artifact, same-release authority status, replacement release pointer
-  when one exists, user stop/verify/install guidance, and public non-claims.
+  affected artifact, affected artifact SHA-256, affected provenance SHA-256,
+  affected distribution manifest SHA-256, same-release authority status,
+  replacement release pointer when one exists, user stop/verify/install
+  guidance, and public non-claims.
 - Generate only advisory/checklist/manifest material until a separate explicit
   release task authorizes artifact creation, release edit, upload, asset
   deletion, or advisory publication.
@@ -36,6 +38,9 @@ inventing evidence or mutating a live release from a source-side gate.
 - macos_emergency_release_integrity_available=true
 - emergency_release_advisory_packet_script_available=true
 - emergency_release_no_artifact_mutation_verifier_ready=true
+- emergency_advisory_requires_affected_release_artifact_binding=true
+- emergency_advisory_requires_distribution_manifest_sha256=true
+- emergency_advisory_requires_signed_false_hold_flags=true
 - emergency_release_generates_app_artifact=false
 - emergency_release_upload_authorized=false
 - emergency_release_dmg_rebuild_authorized=false

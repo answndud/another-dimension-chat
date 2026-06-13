@@ -20,6 +20,16 @@ must_not_match() {
   fi
 }
 
+must_contain_in_any() {
+  local needle="$1"
+  shift
+  local file
+  for file in "$@"; do
+    grep -Fq "$needle" "$file" && return 0
+  done
+  fail "missing required text in public entrypoint/reference files: $needle"
+}
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
@@ -57,6 +67,11 @@ must_contain "$DOC" "auto_update_channel_ready=false"
 must_contain "$DOC" "macos_signed_update_manifest_schema_available=true"
 must_contain "$DOC" "macos_signed_update_manifest_validator_available=true"
 must_contain "$DOC" "signed_update_manifest_candidate_verifier_ready=true"
+must_contain "$DOC" "signed_update_manifest_requires_distribution_manifest_sha256=true"
+must_contain "$DOC" "signed_update_manifest_requires_dmg_contained_app_evidence=true"
+must_contain "$DOC" "signed_update_manifest_requires_distribution_manifest_validation=true"
+must_contain "$DOC" "signed_update_manifest_requires_signed_false_hold_flags=true"
+must_contain "$DOC" "signed_update_manifest_previous_monotonicity_verifier_ready=true"
 must_contain "$DOC" "signed_update_manifest_ready=false"
 must_contain "$DOC" "update_signature_ready=false"
 must_contain "$DOC" "update_version_monotonicity_policy_ready=true"
@@ -66,6 +81,12 @@ must_contain "$DOC" "emergency_release_path_defined=true"
 must_contain "$DOC" "macos_emergency_release_integrity_available=true"
 must_contain "$DOC" "emergency_release_advisory_packet_script_available=true"
 must_contain "$DOC" "emergency_release_no_artifact_mutation_verifier_ready=true"
+must_contain "$DOC" "emergency_advisory_requires_affected_release_artifact_binding=true"
+must_contain "$DOC" "emergency_advisory_requires_distribution_manifest_sha256=true"
+must_contain "$DOC" "emergency_advisory_requires_signed_false_hold_flags=true"
+must_contain "$EMERGENCY_DOC" "emergency_advisory_requires_affected_release_artifact_binding=true"
+must_contain "$EMERGENCY_DOC" "emergency_advisory_requires_distribution_manifest_sha256=true"
+must_contain "$EMERGENCY_DOC" "emergency_advisory_requires_signed_false_hold_flags=true"
 must_contain "$DOC" "emergency_release_generates_app_artifact=false"
 must_contain "$DOC" "emergency_release_advisory_publication_authorized=false"
 must_contain "$DOC" "dependency_vulnerability_decision_table_available=true"
@@ -78,10 +99,19 @@ must_contain "$DOC" "security_ready_claimed=false"
 must_contain "$DOC" "sensitive_communication_allowed=false"
 must_contain "$DOC" "next_required_phase=O100-1 Operations, Incident, And Vulnerability Readiness"
 
-must_contain "README.md" "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
-must_contain "SECURITY.md" "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
-must_contain "README.md" "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md"
-must_contain "SECURITY.md" "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md"
+must_contain_in_any "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md" "README.md" "SECURITY.md"
+must_contain_in_any "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md" "README.md" "SECURITY.md"
+must_contain "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md" "signed_update_manifest_requires_distribution_manifest_sha256=true"
+must_contain "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md" "signed_update_manifest_requires_dmg_contained_app_evidence=true"
+must_contain "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md" "signed_update_manifest_requires_distribution_manifest_validation=true"
+must_contain "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md" "signed_update_manifest_requires_signed_false_hold_flags=true"
+must_contain "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md" "signed_update_manifest_previous_monotonicity_verifier_ready=true"
+must_contain "scripts/validate_macos_signed_update_manifest.mjs" "source-commit-not-current-head"
+must_contain "scripts/validate_macos_signed_update_manifest.mjs" "DISTRIBUTION_MANIFEST_VALIDATOR"
+must_contain "scripts/validate_macos_signed_update_manifest.mjs" "hold_flags"
+must_contain "scripts/validate_macos_signed_update_manifest.mjs" "release-tag-not-newer-than-previous-manifest"
+must_contain "scripts/validate_macos_signed_update_manifest.mjs" "distribution_manifest_sha256"
+must_contain "scripts/validate_macos_signed_update_manifest.mjs" "dmg_contained_app_matches_signed_source_app"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
 must_contain "reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md" "MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
 must_contain "reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md" "MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md"
@@ -103,8 +133,23 @@ must_contain "reference/STABLE_MACOS_V1_RELEASE_GATE.md" "dmg_rebuild_authorized
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "release_upload_authorized=false"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "dmg_rebuild_authorized=false"
 
-for file in "$DOC" "reference/UPDATE_INTEGRITY.md" "README.md" "SECURITY.md"; do
+for file in "$DOC" "reference/UPDATE_INTEGRITY.md" "SECURITY.md"; do
   must_contain "$file" "not production-ready"
+  must_not_match "$file" "auto_update_channel_ready=true"
+  must_not_match "$file" "signed_update_manifest_ready=true"
+  must_not_match "$file" "update_signature_ready=true"
+  must_not_match "$file" "rollback_prevention_claimed=true"
+  must_not_match "$file" "release_upload_authorized=true"
+  must_not_match "$file" "dmg_rebuild_authorized=true"
+  must_not_match "$file" "emergency_release_generates_app_artifact=true"
+  must_not_match "$file" "emergency_release_advisory_publication_authorized=true"
+  must_not_match "$file" "stable_release_allowed=true"
+  must_not_match "$file" "production_distribution_ready=true"
+  must_not_match "$file" "security_ready_claimed=true"
+  must_not_match "$file" "sensitive_communication_allowed=true"
+done
+must_contain_in_any "not production-ready" "README.md" "SECURITY.md"
+for file in "README.md"; do
   must_not_match "$file" "auto_update_channel_ready=true"
   must_not_match "$file" "signed_update_manifest_ready=true"
   must_not_match "$file" "update_signature_ready=true"
@@ -135,6 +180,11 @@ auto_update_channel_ready=false
 macos_signed_update_manifest_schema_available=true
 macos_signed_update_manifest_validator_available=true
 signed_update_manifest_candidate_verifier_ready=true
+signed_update_manifest_requires_distribution_manifest_sha256=true
+signed_update_manifest_requires_dmg_contained_app_evidence=true
+signed_update_manifest_requires_distribution_manifest_validation=true
+signed_update_manifest_requires_signed_false_hold_flags=true
+signed_update_manifest_previous_monotonicity_verifier_ready=true
 signed_update_manifest_ready=false
 update_signature_ready=false
 rollback_warning_policy_ready=true
@@ -143,6 +193,9 @@ emergency_release_path_defined=true
 macos_emergency_release_integrity_available=true
 emergency_release_advisory_packet_script_available=true
 emergency_release_no_artifact_mutation_verifier_ready=true
+emergency_advisory_requires_affected_release_artifact_binding=true
+emergency_advisory_requires_distribution_manifest_sha256=true
+emergency_advisory_requires_signed_false_hold_flags=true
 emergency_release_generates_app_artifact=false
 emergency_release_advisory_publication_authorized=false
 dependency_vulnerability_decision_table_available=true
