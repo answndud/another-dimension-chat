@@ -2384,17 +2384,44 @@ test("manual encrypted envelope guide keeps local default flow visible", () => {
 
 test("public diagnostics recovery guide keeps support-safe next actions visible", () => {
   assert.match(indexHtml, /class="public-recovery-guide"/);
+  assert.match(indexHtml, /class="redacted-support-report-panel"/);
+  assert.match(indexHtml, /id="redacted-support-report"/);
+  assert.match(indexHtml, /id="redacted-support-report-summary"/);
+  assert.match(indexHtml, /id="copy-redacted-support-report"/);
   assert.match(indexHtml, /data-i18n="publicRecoveryInstall"/);
   assert.match(indexHtml, /data-i18n="publicRecoveryProfileLocked"/);
   assert.match(indexHtml, /data-i18n="publicRecoveryPayloadReplay"/);
   assert.match(indexHtml, /data-i18n="publicRecoveryTransportPolicy"/);
   assert.match(indexHtml, /data-i18n="publicRecoveryLifecycle"/);
+  assert.match(indexHtml, /data-i18n="redactedSupportReport"/);
+  assert.match(indexHtml, /data-i18n="copyRedactedSupportReport"/);
   assert.match(i18nJs, /Install\/checksum failure: stop, verify the same-release \.sha256/);
   assert.match(i18nJs, /Profile locked: retry the passphrase or create a new local profile/);
   assert.match(i18nJs, /Malformed payload or replay rejected: ask for a fresh envelope/);
   assert.match(i18nJs, /Transport unavailable or policy blocked: stay on manual envelope exchange/);
   assert.match(i18nJs, /Lifecycle confirmation required: confirm the local-only delete or wipe scope/);
+  assert.match(i18nJs, /Redacted support report/);
+  assert.match(i18nJs, /민감정보 제거 지원 리포트/);
   assert.match(stylesCss, /\.public-recovery-guide/);
+  assert.match(stylesCss, /\.redacted-support-report-panel/);
+  assert.match(actionStateJs, /export function productionRedactedSupportReportView/);
+  assert.match(actionStateJs, /passphrase=<redacted>/);
+  assert.match(actionStateJs, /private_key=<redacted>/);
+  assert.match(actionStateJs, /envelope_payload=<redacted>/);
+  assert.match(actionStateJs, /raw_local_path=<redacted>/);
+  assert.match(actionStateJs, /credential=<redacted>/);
+  assert.match(mainJs, /productionRedactedSupportReportView/);
+  assert.match(mainJs, /function renderRedactedSupportReport/);
+  assert.match(mainJs, /function rememberFailureSupportReport/);
+  assert.match(mainJs, /function copyRedactedSupportReport/);
+  assert.match(mainJs, /fields\.copyRedactedSupportReport\.addEventListener\("click", copyRedactedSupportReport\)/);
+  assert.match(functionBody(mainJs, "unlockProductionProfile"), /rememberFailureSupportReport\(/);
+  assert.match(functionBody(mainJs, "exportProductionMessageEnvelope"), /rememberFailureSupportReport\(/);
+  assert.match(functionBody(mainJs, "importProductionMessageEnvelope"), /rememberFailureSupportReport\(/);
+  assert.match(functionBody(mainJs, "deleteProductionProfile"), /rememberFailureSupportReport\(/);
+  assert.match(functionBody(mainJs, "wipeProductionLocalData"), /rememberFailureSupportReport\(/);
+  assert.match(functionBody(mainJs, "deleteProductionSessionLifecycle"), /rememberFailureSupportReport\(/);
+  assert.match(functionBody(mainJs, "deleteProductionConversation"), /rememberFailureSupportReport\(/);
 });
 
 test("safety mismatch revokes the saved room verification", () => {

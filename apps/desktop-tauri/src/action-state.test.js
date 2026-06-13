@@ -18,6 +18,7 @@ import {
   productionPairwiseSafetyVerificationFlowView,
   productionProfileUnlockRecoveryView,
   productionProfileRecoveryActionsView,
+  productionRedactedSupportReportView,
   productionInviteRoomConversationMetadata,
   productionManualCurrentFocusTarget,
   productionManualCurrentStepView,
@@ -332,6 +333,53 @@ test("profile recovery actions stay structured and redacted", () => {
     assert.match(view.boundary, /key_material=false/);
     assert.match(view.boundary, /message_body_returned=false/);
     assert.match(view.boundary, /envelope_payload_returned=false/);
+  }
+});
+
+test("redacted support report excludes sensitive inputs", () => {
+  const view = productionRedactedSupportReportView({
+    appVersion: "1.2.3",
+    buildChannel: "public-beta",
+    buildCommit: "abc1234",
+    platform: "MacIntel",
+    releaseClass: "unsigned-public-beta",
+    activeFlow: "profile-unlock",
+    redactedErrorCode: "wrong_passphrase",
+    nonSensitiveStatus: "profile_unlock_failed",
+    recoveryNextAction: "retry-passphrase",
+    passphrase: "correct horse battery staple",
+    privateKey: "PRIVATEKEYSECRET",
+    inviteBody: "ADPAIR2SECRET",
+    messageBody: "hello plaintext",
+    envelopePayload: "ADENV1SECRET",
+    rawLocalPath: "/Users/alex/secret/profile.db",
+    credential: "token-secret",
+  });
+
+  assert.equal(view.copyEnabled, true);
+  assert.match(view.payload, /app_version=1\.2\.3/);
+  assert.match(view.payload, /build_channel=public-beta/);
+  assert.match(view.payload, /build_commit=abc1234/);
+  assert.match(view.payload, /platform=MacIntel/);
+  assert.match(view.payload, /release_class=unsigned-public-beta/);
+  assert.match(view.payload, /active_flow=profile-unlock/);
+  assert.match(view.payload, /redacted_error_code=wrong_passphrase/);
+  assert.match(view.payload, /non_sensitive_status=profile_unlock_failed/);
+  assert.match(view.payload, /recovery_next_action=retry-passphrase/);
+  assert.match(view.payload, /passphrase=<redacted>/);
+  assert.match(view.payload, /private_key=<redacted>/);
+  assert.match(view.boundary, /support_bundle_export=false/);
+  assert.match(view.boundary, /security_ready_proof_claim=false/);
+  for (const forbidden of [
+    "correct horse battery staple",
+    "PRIVATEKEYSECRET",
+    "ADPAIR2SECRET",
+    "hello plaintext",
+    "ADENV1SECRET",
+    "/Users/alex/secret/profile.db",
+    "token-secret",
+  ]) {
+    assert.doesNotMatch(view.payload, new RegExp(forbidden.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
 });
 
