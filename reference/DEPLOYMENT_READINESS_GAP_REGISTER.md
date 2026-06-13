@@ -9,6 +9,8 @@ production-ready, not audited, and sensitive communication prohibited.
 
 The ordered 100% blocker resolution plan is tracked in
 `reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md`.
+Final W100-1 through R100-3 active queue closure is tracked in
+`reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`.
 
 Required public labels: `not production-ready`, `not audited`, `sensitive
 communication prohibited`.
@@ -30,6 +32,7 @@ current supported scope is named precisely:
 | Update/release integrity | Manual same-release GitHub Release verification, signed update manifest candidate verification, provenance, rollback warning, and emergency process are source-gated. | Product signed update readiness, rollback prevention, stable release approval, and release upload remain false. |
 | External evidence intake | D100-4 review, field, and representative usability intake is gated by `reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`, with reviewer packet freeze, finding tracker validation, field report validation, representative usability validation, consent/non-sensitive-use notice, and local-only/fabricated evidence rejection. | Completed external review/audit, real repeated field reports, representative usability completion, and all related production/audit/reliability/sensitive-use claims remain false. |
 | Windows public artifact execution | D100-5 Windows public artifact path is gated by `reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md`, with `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md`, runtime smoke requirements, installer/signing decision, checksum/provenance, public copy, support diagnostics, and no-overclaim validation. | Real Windows runtime pass, public artifact, installer, signing, upload, and Windows public claim remain false. |
+| Final active queue closure | W100-1 through R100-3 have source/hold closure in `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`. | macOS public app 100%, whole TARGET_STANDARD 100%, production, audited, stable release, Windows public artifact, and mobile public artifact claims remain false. |
 | Operations | Public/private intake, tabletop, emergency release, rollback, dependency triage, key-compromise, user notification, and support-template boundaries are source-gated. | Production operational readiness claim remains false until real operations output and owner claim approval exist. |
 
 ## Remaining External Or Evidence Blockers
@@ -184,6 +187,23 @@ These cannot be made true by editing source files alone:
 - windows_generated_artifact_commit_allowed=false
 - windows_public_copy_published=false
 - windows_production_claim_allowed=false
+- target_standard_100_final_active_queue_closure_available=true
+- final_active_queue_closure_reviewed=true
+- all_remaining_active_phases_closed_by_source_or_hold_gate=true
+- w100_1_windows_runtime_parity_scope_blocker_closed=true
+- w100_2_windows_public_artifact_blocker_closed=true
+- x100_1_cross_desktop_product_parity_blocker_closed=true
+- mob100_0_mobile_scope_unlock_decision_closed=true
+- mob100_1_mobile_api_stabilization_blocker_closed=true
+- mob100_2_android_public_app_candidate_blocker_closed=true
+- mob100_3_ios_public_app_candidate_blocker_closed=true
+- x100_2_cross_platform_field_support_blocker_closed=true
+- r100_1_production_claim_gate_decision_closed=true
+- r100_2_stable_macos_release_decision_closed=true
+- r100_3_whole_product_target_standard_gate_decision_closed=true
+- plan_active_queue_complete=true
+- production_claim_gate_passed=false
+- stable_release_publication_performed=false
 - o100_1_operations_blocker_closed=true
 - operations_source_gate_closed=true
 - production_operations_evidence_required_for_claims=true

@@ -67,6 +67,9 @@ require_text "$GATE" "Beta Wording Removal Checklist"
 require_text "$GATE" "Explicit Non-Gates"
 require_text "$GATE" "signed_notarized_security_boundary=false"
 require_text "$GATE" "production_ready_claim_allowed=false"
+require_text "$GATE" "r100_1_production_claim_gate_decision_closed=true"
+require_text "$GATE" "production_claim_gate_passed=false"
+require_text "$GATE" "production_claim_gate_passed_by_evidence=false"
 require_text "$GATE" "beta_wording_removal_allowed=false"
 require_text "$GATE" "audited_claim_allowed=false"
 require_text "$GATE" "sensitive_communication_allowed=false"
@@ -108,6 +111,8 @@ printf 'rb_8_production_claim_release_class_decision_reviewed=true\n'
 printf 'stable_release_candidate_gate_decision=lower-release-class-only\n'
 printf 'next_release_class=signed-public-beta-or-rc\n'
 printf 'production_ready_claim_allowed=false\n'
+printf 'r100_1_production_claim_gate_decision_closed=true\n'
+printf 'production_claim_gate_passed=false\n'
 printf 'beta_wording_removal_allowed=false\n'
 printf 'audited_claim_allowed=false\n'
 printf 'sensitive_communication_allowed=false\n'

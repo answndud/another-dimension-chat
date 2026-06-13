@@ -247,6 +247,11 @@ preflight after the blockers below are resolved.
 - signed_artifact_still_blocks_stable_or_production_claims=true
 - production_field_evidence_ready=false
 - production_operational_readiness_claim_allowed=false
+- r100_1_production_claim_gate_decision_closed=true
+- production_claim_gate_passed=false
+- r100_2_stable_macos_release_decision_closed=true
+- stable_release_publication_performed=false
+- r100_3_whole_product_target_standard_gate_decision_closed=true
 - production_ready_claim_allowed=false
 - beta_wording_removal_allowed=false
 - lower_release_class_claim_boundary_ready=true

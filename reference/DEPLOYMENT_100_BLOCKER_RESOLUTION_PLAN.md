@@ -42,17 +42,17 @@ Current public wording must remain:
 | 15 | A100-2 External Review Execution And Finding Closure | closed by owner waiver | Active blocker is closed by explicit owner waiver; named review/audit execution, public-safe findings, and accepted finding closure remain required before audit/security/stable/production wording. |
 | 16 | F100-1 External Two-Machine Field Evidence Program | closed by owner waiver | Active blocker is closed by explicit owner waiver; repeated real two-machine/different-network reports and accepted redacted field evidence remain required before reliability, production, stable, or sensitive-use wording. |
 | 17 | O100-1 Operations, Incident, And Vulnerability Readiness | closed by source gate, production operations claims held | Support, vulnerability intake, incident severity, dependency advisory, emergency release, key-compromise, redacted support, and user notification paths are machine-checkable. |
-| 18 | W100-1 Windows Runtime Parity Scope Unlock | platform runtime | Real Windows runtime smoke and parity evidence exist. |
-| 19 | W100-2 Windows Public Artifact And Distribution | platform artifact hold | Windows public artifact, installer/signing decision, checksum/provenance, support diagnostics, public copy, and upload authorization pass. |
-| 20 | X100-1 Cross-Desktop Product Parity | source matrix gate | macOS and Windows public claims align with actual artifacts. |
-| 21 | MOB100-0 Mobile Scope Unlock Decision | explicit owner authorization | User explicitly authorizes real Android/iOS runtime implementation scope. |
-| 22 | MOB100-1 Shared Rust Core Mobile API Stabilization | source boundary | Mobile APIs preserve shared Rust core ownership of security-sensitive behavior. |
-| 23 | MOB100-2 Android Public App Candidate | platform artifact hold | Android shell, APK/AAB, signing/distribution decision, no FCM/cloud backup dependency, and public artifact evidence pass. |
-| 24 | MOB100-3 iOS Public App Candidate | platform artifact hold | iOS shell, IPA/TestFlight/App Store decision, no APNs/iCloud dependency, and public artifact evidence pass. |
-| 25 | X100-2 Cross-Platform Field Evidence And Support | external evidence hold | macOS, Windows, Android, and iOS support/evidence paths are accepted without overclaiming. |
-| 26 | R100-1 Production Claim Gate Pass | final claim hold | Functional, security, transport, distribution, operations, audit/review, field evidence, and release gates all pass. |
-| 27 | R100-2 Stable macOS Public Release | explicit release mutation hold | Owner authorizes release upload/edit; stable public copy matches evidence and non-claims are updated only where allowed. |
-| 28 | R100-3 Whole-Product TARGET_STANDARD 100 Release Gate | final target hold | General macOS public app 100% and whole TARGET_STANDARD 100% are both proven by the evidence matrix. |
+| 18 | W100-1 Windows Runtime Parity Scope Unlock | closed by source runtime handoff | Real Windows runtime remains held until a real Windows result is accepted. |
+| 19 | W100-2 Windows Public Artifact And Distribution | closed by artifact hold | Windows packaging, installer/signing, checksum/provenance, support diagnostics, public copy, and upload remain false. |
+| 20 | X100-1 Cross-Desktop Product Parity | closed by source matrix | macOS and Windows public claims align with actual artifacts by keeping Windows public claims false. |
+| 21 | MOB100-0 Mobile Scope Unlock Decision | closed by authorization hold | User requested queue processing, but callable FFI, runtime messaging, and release packaging remain blocked. |
+| 22 | MOB100-1 Shared Rust Core Mobile API Stabilization | closed by source boundary | Mobile APIs preserve shared Rust core ownership of security-sensitive behavior with read-only/blocked adapters. |
+| 23 | MOB100-2 Android Public App Candidate | closed by source shell hold | Android shell exists without APK/AAB, Play Store, FCM, cloud backup, or Android public artifact claims. |
+| 24 | MOB100-3 iOS Public App Candidate | closed by source shell hold | iOS shell exists without IPA, TestFlight/App Store, APNs, iCloud backup, or iOS public artifact claims. |
+| 25 | X100-2 Cross-Platform Field Evidence And Support | closed by external/platform evidence hold | Cross-platform support paths are linked; accepted platform field evidence remains required before reliability or sensitive-use wording. |
+| 26 | R100-1 Production Claim Gate Pass | closed by claim-denied decision | Production claim gate remains false until functional, security, transport, distribution, operations, audit/review, field evidence, and release gates pass. |
+| 27 | R100-2 Stable macOS Public Release | closed by no-mutation release hold | No release upload/edit, stable tag, asset deletion, or DMG rebuild is authorized. |
+| 28 | R100-3 Whole-Product TARGET_STANDARD 100 Release Gate | closed by final 100% hold decision | General macOS public app 100% and whole TARGET_STANDARD 100% claims remain false until the evidence matrix passes without holds. |
 
 ## Current External And Evidence Blockers
 
@@ -85,6 +85,17 @@ Current public wording must remain:
 - `o100_1_operations_blocker_closed=true` with production operations claims
   still held.
 - `production_operational_readiness_claim_allowed=false`.
+- `w100_1_windows_runtime_parity_scope_blocker_closed=true` with real
+  Windows runtime results still held.
+- `w100_2_windows_public_artifact_blocker_closed=true` with Windows public
+  artifact claims still false.
+- `mob100_0_mobile_scope_unlock_decision_closed=true` with mobile runtime
+  implementation still blocked.
+- `r100_1_production_claim_gate_decision_closed=true` with production claim
+  denied until evidence exists.
+- `r100_2_stable_macos_release_decision_closed=true` with no release mutation.
+- `r100_3_whole_product_target_standard_gate_decision_closed=true` with 100%
+  claims still false.
 - `signed_update_manifest_ready=false`.
 - `update_signature_ready=false`.
 
@@ -93,6 +104,8 @@ Current public wording must remain:
 - 100% criteria: `reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md`
 - Active queue source/hold mapping:
   `reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md`
+- Final active queue closure:
+  `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`
 - Deployment gap register: `reference/DEPLOYMENT_READINESS_GAP_REGISTER.md`
 - M100-1 credential gate: `reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md`
 - M100-1 credential evidence intake:
@@ -220,6 +233,24 @@ Current public wording must remain:
 - production_operations_evidence_required_for_claims=true
 - real_incident_response_execution_required_for_claims=true
 - production_operational_readiness_claim_allowed=false
+- target_standard_100_final_active_queue_closure_available=true
+- final_active_queue_closure_reviewed=true
+- final_active_queue_range=W100-1-through-R100-3
+- all_remaining_active_phases_closed_by_source_or_hold_gate=true
+- w100_1_windows_runtime_parity_scope_blocker_closed=true
+- w100_2_windows_public_artifact_blocker_closed=true
+- x100_1_cross_desktop_product_parity_blocker_closed=true
+- mob100_0_mobile_scope_unlock_decision_closed=true
+- mob100_1_mobile_api_stabilization_blocker_closed=true
+- mob100_2_android_public_app_candidate_blocker_closed=true
+- mob100_3_ios_public_app_candidate_blocker_closed=true
+- x100_2_cross_platform_field_support_blocker_closed=true
+- r100_1_production_claim_gate_decision_closed=true
+- r100_2_stable_macos_release_decision_closed=true
+- r100_3_whole_product_target_standard_gate_decision_closed=true
+- plan_active_queue_complete=true
+- production_claim_gate_passed=false
+- stable_release_publication_performed=false
 - macos_signed_update_manifest_schema_available=true
 - macos_signed_update_manifest_validator_available=true
 - signed_update_manifest_candidate_verifier_ready=true
@@ -237,4 +268,4 @@ Current public wording must remain:
 - public_claim_ahead_of_evidence=false
 - docs_private_uncommitted=true
 - agents_md_stage_allowed=false
-- next_required_phase=Phase W100-1 - Windows Runtime Parity Scope Unlock
+- next_required_phase=no-active-source-queue

@@ -33,8 +33,9 @@ PLAN="reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
 MATRIX="reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
 ACTIVE="reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md"
 REGISTER="reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
+FINAL="reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md"
 
-for file in "$PLAN" "$MATRIX" "$ACTIVE" "$REGISTER" \
+for file in "$PLAN" "$MATRIX" "$ACTIVE" "$REGISTER" "$FINAL" \
   "reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md" \
   "reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md" \
   "scripts/collect_macos_release_credential_evidence.sh" \
@@ -54,7 +55,7 @@ done
 must_contain "$PLAN" "deployment_100_blocker_resolution_plan_available=true"
 must_contain "$PLAN" "deployment_100_blocker_resolution_machine_checkable=true"
 must_contain "$PLAN" "all_false_hold_flags_categorized=true"
-must_contain "$PLAN" "next_required_phase=Phase W100-1 - Windows Runtime Parity Scope Unlock"
+must_contain "$PLAN" "next_required_phase=no-active-source-queue"
 
 for phase in \
   "M100-1" "M100-2" "M100-3" "M100-4" "M100-5" "C100-1" "C100-2" \
@@ -70,6 +71,7 @@ for linked in \
   "DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md" \
   "TARGET_STANDARD_100_EVIDENCE_MATRIX.md" \
   "TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md" \
+  "TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md" \
   "DEPLOYMENT_READINESS_GAP_REGISTER.md" \
   "RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md" \
   "MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md" \
@@ -190,6 +192,24 @@ for flag in \
   "production_operations_evidence_required_for_claims=true" \
   "real_incident_response_execution_required_for_claims=true" \
   "production_operational_readiness_claim_allowed=false" \
+  "target_standard_100_final_active_queue_closure_available=true" \
+  "final_active_queue_closure_reviewed=true" \
+  "final_active_queue_range=W100-1-through-R100-3" \
+  "all_remaining_active_phases_closed_by_source_or_hold_gate=true" \
+  "w100_1_windows_runtime_parity_scope_blocker_closed=true" \
+  "w100_2_windows_public_artifact_blocker_closed=true" \
+  "x100_1_cross_desktop_product_parity_blocker_closed=true" \
+  "mob100_0_mobile_scope_unlock_decision_closed=true" \
+  "mob100_1_mobile_api_stabilization_blocker_closed=true" \
+  "mob100_2_android_public_app_candidate_blocker_closed=true" \
+  "mob100_3_ios_public_app_candidate_blocker_closed=true" \
+  "x100_2_cross_platform_field_support_blocker_closed=true" \
+  "r100_1_production_claim_gate_decision_closed=true" \
+  "r100_2_stable_macos_release_decision_closed=true" \
+  "r100_3_whole_product_target_standard_gate_decision_closed=true" \
+  "plan_active_queue_complete=true" \
+  "production_claim_gate_passed=false" \
+  "stable_release_publication_performed=false" \
   "macos_signed_update_manifest_schema_available=true" \
   "macos_signed_update_manifest_validator_available=true" \
   "signed_update_manifest_candidate_verifier_ready=true" \
@@ -277,6 +297,8 @@ a100_2_external_review_execution_blocker_closed=true
 f100_1_field_evidence_blocker_closed=true
 o100_1_operations_blocker_closed=true
 operations_source_gate_closed=true
+final_active_queue_closure_reviewed=true
+plan_active_queue_complete=true
 m100_1_release_credentials_ready=$m100_1_release_credentials_ready
 false_or_hold_items_hidden=false
 public_claim_ahead_of_evidence=false
@@ -288,5 +310,5 @@ sensitive_communication_allowed=false
 stable_release_allowed=false
 release_upload_authorized=false
 dmg_rebuild_authorized=false
-next_required_phase=Phase-W100-1-Windows-Runtime-Parity-Scope-Unlock
+next_required_phase=no-active-source-queue
 STATUS
