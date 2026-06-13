@@ -59,6 +59,14 @@ status, blockers, recovery next action, and explicit non-claims. This is not
 external onion delivery evidence, not a production-ready claim, not audited
 status, and not permission for sensitive communication.
 
+Maintainers should triage public beta reports with
+`reference/PUBLIC_SUPPORT_TRIAGE.md`. Public responses may ask for checksum
+retry, Gatekeeper recovery, profile recovery, payload retry/cancel, lifecycle
+confirmation, redacted diagnostics, or a private security contact path. They
+must not request raw logs, local paths, onion endpoints, invite codes, payloads,
+message text, passphrases, private keys, key material, private screenshots, or
+external delivery proof in public.
+
 ## Non-Claims
 
 This project does not currently claim:

@@ -34,6 +34,7 @@ PUBLIC_FILES=(
   "$ROOT_DIR/apps/desktop-tauri/README.md"
   "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md"
 )
+TRIAGE="$ROOT_DIR/reference/PUBLIC_SUPPORT_TRIAGE.md"
 
 ISSUE_FILES=(
   "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml"
@@ -42,6 +43,7 @@ ISSUE_FILES=(
 
 for file in \
   "${PUBLIC_FILES[@]}" \
+  "$TRIAGE" \
   "${ISSUE_FILES[@]}" \
   "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" \
   "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.test.js" \
@@ -74,6 +76,7 @@ for file in "${PUBLIC_FILES[@]}"; do
   reject_text "$file" "real-user test proves production readiness"
   reject_text "$file" "real-user test proves security readiness"
   reject_text "$file" "real-user test allows sensitive communication"
+  require_text "$file" "PUBLIC_SUPPORT_TRIAGE.md"
 done
 
 for file in "${ISSUE_FILES[@]}"; do
@@ -89,6 +92,14 @@ done
 
 require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "Public diagnostics only"
 require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "Redacted description"
+require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "PUBLIC_SUPPORT_TRIAGE.md"
+require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "macos-manual-allow"
+require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "malformed-payload"
+require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "replay-rejected"
+require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "lifecycle-confirmation-required"
+require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "desktop-state-drift"
+require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "private security contact request"
+require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/security_contact_request.yml" "private contact path"
 require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "Allowed Public Intake"
 require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "Forbidden Public Intake"
 require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "app version"
@@ -100,6 +111,34 @@ require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "failure class"
 require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "redacted next action"
 require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "desktop local-private-flow acceptance status"
 require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "desktop local-private-flow blocker summary"
+require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "Public Recovery Vocabulary"
+require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "macos-manual-allow"
+require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "desktop-state-drift"
+require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "macos-gui-human-rehearsal-not-run"
+require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "Maintainer Triage"
+
+require_text "$TRIAGE" "Triage Routing Matrix"
+require_text "$TRIAGE" "checksum-install-failure"
+require_text "$TRIAGE" "macos-manual-allow"
+require_text "$TRIAGE" "profile-locked"
+require_text "$TRIAGE" "malformed-payload"
+require_text "$TRIAGE" "replay-rejected"
+require_text "$TRIAGE" "transport-unavailable"
+require_text "$TRIAGE" "policy-blocked"
+require_text "$TRIAGE" "lifecycle-confirmation-required"
+require_text "$TRIAGE" "desktop-state-drift"
+require_text "$TRIAGE" "macos-gui-human-rehearsal-not-run"
+require_text "$TRIAGE" "unknown-redacted"
+require_text "$TRIAGE" "needs-checksum-retry"
+require_text "$TRIAGE" "needs-gatekeeper-recovery"
+require_text "$TRIAGE" "needs-profile-recovery"
+require_text "$TRIAGE" "needs-payload-retry-cancel"
+require_text "$TRIAGE" "needs-lifecycle-confirmation"
+require_text "$TRIAGE" "needs-private-security-contact"
+require_text "$TRIAGE" "Do not ask for raw logs"
+require_text "$TRIAGE" "Do not ask for external two-machine success evidence"
+require_text "$TRIAGE" "Do not claim that manual envelope exchange"
+require_text "$TRIAGE" "Do not tell users this beta is safe for sensitive communication"
 
 require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only"
