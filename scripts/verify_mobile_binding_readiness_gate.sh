@@ -66,6 +66,8 @@ require_text "$CONTRACT" '"owner_authorization_transition_runbook_verified": tru
 require_text "$CONTRACT" '"owner_authorization_transition_runbook_file": "apps/mobile/ffi/owner_authorization_transition_runbook.json"'
 require_text "$CONTRACT" '"pre_implementation_handoff_packet_verified": true'
 require_text "$CONTRACT" '"pre_implementation_handoff_packet_file": "apps/mobile/ffi/pre_implementation_handoff_packet.json"'
+require_text "$CONTRACT" '"authorization_boundary_closure_verified": true'
+require_text "$CONTRACT" '"authorization_boundary_closure_file": "apps/mobile/ffi/authorization_boundary_closure.json"'
 require_text "$CONTRACT" '"owner_authorization_for_callable_ffi": false'
 require_text "$CONTRACT" '"explicit_callable_ffi_implementation_request": false'
 
@@ -121,6 +123,7 @@ require_text "$FFI_README" "Source Boundary Cleanup Summary"
 require_text "$FFI_README" "Authorization Hold Regression Matrix"
 require_text "$FFI_README" "Owner Authorization Transition Runbook"
 require_text "$FFI_README" "Pre-Implementation Handoff Packet"
+require_text "$FFI_README" "Authorization Boundary Closure"
 
 require_text "$HANDOFF" "status=mobile-source-handoff-verified"
 require_text "$HANDOFF" "generated_bindings=false"

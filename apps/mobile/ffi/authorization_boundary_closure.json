@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "status": "source-boundary-mobile-authorization-boundary-closure",
+  "authorization_boundary_closure_verified": true,
+  "current_state": "authorization_false_implementation_blocked",
+  "implementation_remains_blocked": true,
+  "owner_authorization_for_callable_ffi": false,
+  "explicit_callable_ffi_implementation_request": false,
+  "verified_boundary_files": [
+    "apps/mobile/ffi/binding_prerequisite_closure.json",
+    "apps/mobile/ffi/callable_ffi_authorization_hold.json",
+    "apps/mobile/ffi/source_boundary_cleanup.json",
+    "apps/mobile/ffi/authorization_hold_regression_matrix.json",
+    "apps/mobile/ffi/owner_authorization_transition_runbook.json",
+    "apps/mobile/ffi/pre_implementation_handoff_packet.json"
+  ],
+  "verified_boundary_outputs": [
+    "status=mobile-binding-prerequisite-closure-verified",
+    "status=mobile-callable-ffi-authorization-hold-verified",
+    "status=mobile-source-boundary-cleanup-verified",
+    "status=mobile-authorization-hold-regression-matrix-verified",
+    "status=mobile-owner-authorization-transition-verified",
+    "status=mobile-pre-implementation-handoff-verified",
+    "status=mobile-source-handoff-verified"
+  ],
+  "source_handoff_blocked_outputs": [
+    "source_boundary_only=true",
+    "release_packaging=false",
+    "generated_bindings=false",
+    "runtime_messaging=false",
+    "mobile_readiness_claim=false",
+    "security_ready_claim=false"
+  ],
+  "blocked_without_owner_authorization": [
+    "generated_bindings",
+    "callable_ffi",
+    "native_runtime_messaging",
+    "native_network_delivery",
+    "release_packaging",
+    "store_distribution",
+    "mobile_readiness_claim",
+    "security_ready_claim"
+  ],
+  "next_phase_policy": "source_boundary_maintenance_only_until_explicit_owner_authorization"
+}
