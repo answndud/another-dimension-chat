@@ -1,5 +1,95 @@
 const MANUAL_COURIER_TRANSPORT_MODE = "local-manual-courier-envelope-exchange";
 const MANUAL_ENVELOPE_EXPORT_ACTION = "export-envelope";
+export const MAX_MANUAL_MESSAGE_ENVELOPE_PAYLOAD_SIZE = 17_000;
+export const MAX_MANUAL_MESSAGE_ENVELOPE_CIPHERTEXT_HEX_SIZE = 16_384;
+
+function messageEnvelopeImportFailure(kind, nextAction) {
+  return {
+    accepted: false,
+    kind,
+    nextAction,
+    imported: false,
+    delivered: false,
+    plaintextReturned: false,
+    pathReturned: false,
+    keyMaterialExposed: false,
+    genericError: false,
+    boundary: [
+      "message_envelope_import=true",
+      `failure=${kind}`,
+      "accepted=false",
+      "imported=false",
+      "delivered=false",
+      "plaintext_returned=false",
+      "path_returned=false",
+      "key_material=false",
+      "generic_error=false",
+    ].join(" "),
+  };
+}
+
+export function messageEnvelopePayloadImportDecision(payload, input = {}) {
+  const value = String(payload ?? "").trim();
+  if (!value) {
+    return messageEnvelopeImportFailure("malformed", "Paste a fresh message envelope.");
+  }
+  if (value.length > MAX_MANUAL_MESSAGE_ENVELOPE_PAYLOAD_SIZE) {
+    return messageEnvelopeImportFailure("oversized", "Reject this envelope and ask for a smaller fresh one.");
+  }
+  if (/\s/.test(value)) {
+    return messageEnvelopeImportFailure("malformed", "Paste one complete envelope value without extra text.");
+  }
+  const parts = value.split("|");
+  if (parts.length !== 6 || parts[0] !== "ADENV1") {
+    return messageEnvelopeImportFailure("malformed", "Paste a fresh ADENV1 message envelope.");
+  }
+  if (parts[5].length > MAX_MANUAL_MESSAGE_ENVELOPE_CIPHERTEXT_HEX_SIZE) {
+    return messageEnvelopeImportFailure("oversized", "Reject this envelope and ask for a smaller fresh one.");
+  }
+  if (!/^[0-9a-fA-F]*$/.test(parts[5]) || parts[5].length % 2 !== 0) {
+    return messageEnvelopeImportFailure("corrupted", "Discard this envelope and ask for a fresh one.");
+  }
+  const protocolVersion = Number.parseInt(parts[1], 10);
+  const messageNumber = Number.parseInt(parts[3], 10);
+  if (protocolVersion !== 1 || !Number.isInteger(messageNumber) || messageNumber <= 0) {
+    return messageEnvelopeImportFailure("wrong_type", "Load a supported message envelope.");
+  }
+  if (parts[4] !== "data") {
+    return messageEnvelopeImportFailure("wrong_type", "Load a data message envelope, not a control envelope.");
+  }
+  if (input.expectedMessageNumber && Number.parseInt(input.expectedMessageNumber, 10) !== messageNumber) {
+    return messageEnvelopeImportFailure("wrong_type", "Load the envelope for the selected message number.");
+  }
+  if (input.duplicatePayloads?.has?.(value)) {
+    return messageEnvelopeImportFailure("duplicate", "Ignore the duplicate envelope.");
+  }
+  if (input.replayedMessageNumbers?.has?.(messageNumber)) {
+    return messageEnvelopeImportFailure("replay_rejected", "Ignore the replayed envelope.");
+  }
+  return {
+    accepted: true,
+    kind: "accepted",
+    nextAction: "Import this message envelope.",
+    imported: true,
+    delivered: true,
+    plaintextReturned: false,
+    pathReturned: false,
+    keyMaterialExposed: false,
+    genericError: false,
+    messageNumber,
+    boundary: [
+      "message_envelope_import=true",
+      "failure=none",
+      "accepted=true",
+      "imported=true",
+      "delivered=true",
+      "plaintext_returned=false",
+      "path_returned=false",
+      "key_material=false",
+      "generic_error=false",
+    ].join(" "),
+  };
+}
 
 export function messageEnvelopeSlotPayload(slot) {
   return typeof slot === "string" ? slot : String(slot?.payload ?? "").trim();
@@ -30,6 +120,12 @@ export function messageEnvelopeSlotMismatchReason(slot, entry) {
   }
   if (!messageEnvelopeSlotCreatedByExplicitUserAction(slot)) {
     return "missing-explicit-user-action";
+  }
+  const payloadDecision = messageEnvelopePayloadImportDecision(messageEnvelopeSlotPayload(slot), {
+    expectedMessageNumber: entry.messageNumber,
+  });
+  if (!payloadDecision.accepted) {
+    return `payload-${payloadDecision.kind}`;
   }
   if (entry?.outboundDeliveryState === "canceled") {
     return "canceled-entry";
@@ -67,6 +163,18 @@ export function messageEnvelopeSlotRecoveryHint(slot, entry) {
       return "Selected pending message was canceled. Write and export a new message before importing.";
     case "already-received-entry":
       return "Selected pending message was already received. Choose a different pending row before importing.";
+    case "payload-malformed":
+      return "Stored envelope is malformed. Export the selected pending message again.";
+    case "payload-oversized":
+      return "Stored envelope is oversized. Reject it and export a fresh smaller envelope.";
+    case "payload-corrupted":
+      return "Stored envelope is corrupted. Discard it and export a fresh envelope.";
+    case "payload-wrong_type":
+      return "Stored envelope is not a valid data envelope for this pending row.";
+    case "payload-replay_rejected":
+      return "Stored envelope is replayed. Ignore it and wait for a fresh message.";
+    case "payload-duplicate":
+      return "Stored envelope is a duplicate. Ignore it and continue with the current row.";
     case "room-fingerprint-mismatch":
       return "Stored envelope belongs to another room. Reopen the matching room or export this pending message again.";
     case "message-number-mismatch":

@@ -9,6 +9,7 @@ import {
   messageEnvelopeSlotImportReadyForEntry,
   messageEnvelopeSlotMatchesEntry,
   messageEnvelopeSlotMismatchReason,
+  messageEnvelopePayloadImportDecision,
   messageEnvelopeSlotRecoveryHint,
 } from "./message-envelope-slots.js";
 import {
@@ -960,7 +961,7 @@ test("manual message envelope slots require the active pending message", () => {
 });
 
 test("manual message envelope slots are import-ready only for active lifecycle rows", () => {
-  const slot = createMessageEnvelopeSlot("alice", "ADENV1PAYLOAD", {
+  const slot = createMessageEnvelopeSlot("alice", "ADENV1|1|chan|9|data|00", {
     explicitUserAction: true,
     manualAction: "export-envelope",
     receiver: "bob",
@@ -1066,8 +1067,43 @@ test("manual message envelope slots are import-ready only for active lifecycle r
   assert.match(functionBody(mainJs, "cancelTwoProfileOutboundEntry"), /clearMessageEnvelopeSlotForConversationEntry\(currentEntry\)/);
 });
 
+test("manual message envelope import decision fails closed for malformed and replayed payloads", () => {
+  const accepted = messageEnvelopePayloadImportDecision("ADENV1|1|chan|9|data|00", {
+    expectedMessageNumber: 9,
+  });
+  const malformed = messageEnvelopePayloadImportDecision("not-json");
+  const oversized = messageEnvelopePayloadImportDecision(`ADENV1|1|chan|9|data|${"00".repeat(8193)}`);
+  const corrupted = messageEnvelopePayloadImportDecision("ADENV1|1|chan|9|data|0z");
+  const wrongType = messageEnvelopePayloadImportDecision("ADENV1|1|chan|9|control|00");
+  const duplicate = messageEnvelopePayloadImportDecision("ADENV1|1|chan|9|data|00", {
+    duplicatePayloads: new Set(["ADENV1|1|chan|9|data|00"]),
+  });
+  const replayed = messageEnvelopePayloadImportDecision("ADENV1|1|chan|9|data|00", {
+    replayedMessageNumbers: new Set([9]),
+  });
+
+  assert.equal(accepted.accepted, true);
+  assert.match(accepted.boundary, /plaintext_returned=false/);
+  for (const decision of [malformed, oversized, corrupted, wrongType, duplicate, replayed]) {
+    assert.equal(decision.accepted, false);
+    assert.equal(decision.imported, false);
+    assert.equal(decision.delivered, false);
+    assert.equal(decision.plaintextReturned, false);
+    assert.equal(decision.pathReturned, false);
+    assert.equal(decision.keyMaterialExposed, false);
+    assert.equal(decision.genericError, false);
+    assert.doesNotMatch(decision.boundary, /secret|passphrase|\/tmp|private/i);
+  }
+  assert.equal(malformed.kind, "malformed");
+  assert.equal(oversized.kind, "oversized");
+  assert.equal(corrupted.kind, "corrupted");
+  assert.equal(wrongType.kind, "wrong_type");
+  assert.equal(duplicate.kind, "duplicate");
+  assert.equal(replayed.kind, "replay_rejected");
+});
+
 test("manual message envelope slots are scoped to the room fingerprint", () => {
-  const slot = createMessageEnvelopeSlot("Alice", "payload", {
+  const slot = createMessageEnvelopeSlot("Alice", "ADENV1|1|chan|7|data|00", {
     explicitUserAction: true,
     manualAction: "export-envelope",
     receiver: "Bob",
