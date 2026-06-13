@@ -27,6 +27,10 @@ const actionStateJs = readFileSync(join(here, "action-state.js"), "utf8");
 const privateDeliveryStateJs = readFileSync(join(here, "private-delivery-state.js"), "utf8");
 const stylesCss = readFileSync(join(here, "styles.css"), "utf8");
 const securityMd = readFileSync(join(appRoot, "..", "..", "SECURITY.md"), "utf8");
+const finalAcceptanceScript = readFileSync(
+  join(appRoot, "..", "..", "scripts", "final_acceptance_once.sh"),
+  "utf8",
+);
 const functionBodyCache = new Map();
 
 function functionBody(source, name) {
@@ -169,14 +173,31 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(mainJs, /productionFirstRunDesktopSummaryView/);
   assert.match(functionBody(mainJs, "renderFirstRunDesktopSummary"), /fields\.firstRunPrimaryNextAction/);
   assert.match(actionStateJs, /export function productionHighRiskReadinessGateView/);
+  assert.match(actionStateJs, /export function productionFinalReleaseAcceptanceView/);
   assert.match(actionStateJs, /status_values=ready#limited#not_ready/);
   assert.match(actionStateJs, /public_support_high_risk_claim_allowed=\$\{highRiskReadyClaimAllowed\}/);
   assert.match(actionStateJs, /release_high_risk_claim_allowed=\$\{highRiskReadyClaimAllowed\}/);
+  assert.match(actionStateJs, /acceptance_bar_items=\$\{acceptanceBarItems\}/);
+  assert.match(actionStateJs, /stable_public_app_ready=\$\{stablePublicAppReady\}/);
+  assert.match(actionStateJs, /high_risk_mode_ready=\$\{highRiskModeReady\}/);
+  assert.match(actionStateJs, /payload_recorded=false/);
+  assert.match(actionStateJs, /passphrase_recorded=false/);
+  assert.match(actionStateJs, /local_path_recorded=false/);
+  assert.match(actionStateJs, /key_material_recorded=false/);
+  assert.match(finalAcceptanceScript, /acceptance_bar_items=27/);
+  assert.match(finalAcceptanceScript, /stable_public_app_ready=false/);
+  assert.match(finalAcceptanceScript, /high_risk_mode_ready=false/);
+  assert.match(finalAcceptanceScript, /external_delivery_claim=false/);
+  assert.match(finalAcceptanceScript, /payload_recorded=false/);
+  assert.match(finalAcceptanceScript, /passphrase_recorded=false/);
+  assert.match(finalAcceptanceScript, /local_path_recorded=false/);
+  assert.match(finalAcceptanceScript, /key_material_recorded=false/);
   assert.match(mainJs, /productionHighRiskReadinessGateView/);
   assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /twoProfileSafetyConfirmedForInput/);
   assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /data-readiness/);
   assert.match(stylesCss, /\.high-risk-readiness-status\[data-readiness="limited"\]/);
   assert.match(securityMd, /The app readiness output uses `ready`, `limited`, and `not_ready`/);
+  assert.match(securityMd, /stable public app readiness and High-Risk Mode\s+readiness as separate decisions/);
   assert.match(i18nJs, /nothing starts on app launch/);
   assert.match(i18nJs, /앱 실행 시 자동 시작되지 않습니다/);
   assert.match(i18nJs, /Receive attempts start after this explicit action; external delivery is not claimed\./);
