@@ -686,6 +686,26 @@
                   <p data-i18n="publicBetaDiagnosticsHint">
                     Status, build, and failure class only. No crash upload, telemetry, or raw log export. It excludes codes, endpoints, messages, profiles, paths, logs, passphrases, and key material.
                   </p>
+                  <section class="public-recovery-guide" aria-labelledby="public-recovery-guide-title">
+                    <h6 id="public-recovery-guide-title" data-i18n="publicRecoveryGuide">Recovery guide</h6>
+                    <ul>
+                      <li data-i18n="publicRecoveryInstall">
+                        Install/checksum failure: stop, verify the same-release .sha256, then follow README or INSTALL_UNSIGNED_MACOS.md.
+                      </li>
+                      <li data-i18n="publicRecoveryProfileLocked">
+                        Profile locked: retry the passphrase or create a new local profile; no cloud or OS-keychain-only recovery.
+                      </li>
+                      <li data-i18n="publicRecoveryPayloadReplay">
+                        Malformed payload or replay rejected: ask for a fresh envelope and import only the active pending row.
+                      </li>
+                      <li data-i18n="publicRecoveryTransportPolicy">
+                        Transport unavailable or policy blocked: stay on manual envelope exchange, or enable delivery and press an explicit action.
+                      </li>
+                      <li data-i18n="publicRecoveryLifecycle">
+                        Lifecycle confirmation required: confirm the local-only delete or wipe scope before continuing.
+                      </li>
+                    </ul>
+                  </section>
                   <textarea id="public-beta-diagnostics" rows="6" readonly></textarea>
                   <p id="public-beta-diagnostics-summary" class="field-test-report-summary" aria-live="polite"></p>
                   <div class="loop-actions">

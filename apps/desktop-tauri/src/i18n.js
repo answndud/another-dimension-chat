@@ -163,6 +163,17 @@ const dictionaries = {
     publicBetaDiagnostics: "Public support diagnostics",
     publicBetaDiagnosticsHint:
       "Support-safe status, build, broad failure class, next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary only. No crash upload, telemetry, raw log export, workflow state, codes, endpoints, messages, profiles, paths, passphrases, or key material.",
+    publicRecoveryGuide: "Recovery guide",
+    publicRecoveryInstall:
+      "Install/checksum failure: stop, verify the same-release .sha256, then follow README or INSTALL_UNSIGNED_MACOS.md.",
+    publicRecoveryProfileLocked:
+      "Profile locked: retry the passphrase or create a new local profile; no cloud or OS-keychain-only recovery.",
+    publicRecoveryPayloadReplay:
+      "Malformed payload or replay rejected: ask for a fresh envelope and import only the active pending row.",
+    publicRecoveryTransportPolicy:
+      "Transport unavailable or policy blocked: stay on manual envelope exchange, or enable delivery and press an explicit action.",
+    publicRecoveryLifecycle:
+      "Lifecycle confirmation required: confirm the local-only delete or wipe scope before continuing.",
     refreshPublicBetaDiagnostics: "Refresh diagnostics",
     copyPublicBetaDiagnostics: "Copy diagnostics",
     publicBetaDiagnosticsCopied: "Public support diagnostics copied.",
@@ -1281,6 +1292,17 @@ const dictionaries = {
     publicBetaDiagnostics: "공개 지원용 진단 정보",
     publicBetaDiagnosticsHint:
       "지원에 필요한 상태, 빌드, 넓은 실패 분류, 다음 액션, desktop local-private-flow acceptance status/blockers/non-claims, app-launch network boundary만 포함합니다. crash upload, telemetry, raw log export, 작업 흐름 상태, 코드, endpoint, 메시지, 프로필명, 경로, passphrase, key material은 제외합니다.",
+    publicRecoveryGuide: "복구 안내",
+    publicRecoveryInstall:
+      "Install/checksum failure: 중단하고 같은 release의 .sha256을 확인한 뒤 README 또는 INSTALL_UNSIGNED_MACOS.md를 따르세요.",
+    publicRecoveryProfileLocked:
+      "Profile locked: passphrase를 다시 입력하거나 새 로컬 profile을 만드세요. cloud 또는 OS-keychain-only recovery는 없습니다.",
+    publicRecoveryPayloadReplay:
+      "Malformed payload 또는 replay rejected: 새 envelope를 요청하고 active pending row에만 import하세요.",
+    publicRecoveryTransportPolicy:
+      "Transport unavailable 또는 policy blocked: manual envelope exchange를 유지하거나 delivery를 켠 뒤 명시적 action을 누르세요.",
+    publicRecoveryLifecycle:
+      "Lifecycle confirmation required: 계속하기 전에 local-only delete 또는 wipe 범위를 확인하세요.",
     refreshPublicBetaDiagnostics: "진단 정보 새로고침",
     copyPublicBetaDiagnostics: "진단 정보 복사",
     publicBetaDiagnosticsCopied: "공개 지원용 진단 정보를 복사했습니다.",
