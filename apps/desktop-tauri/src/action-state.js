@@ -247,6 +247,64 @@ export function productionVersionIntegrityView(input = {}) {
   };
 }
 
+export function productionWindowsRuntimeParityView(input = {}) {
+  const platform = releaseIntegrityToken(input.platform, "unknown-platform");
+  const summary = [
+    "platform_scope=desktop-shared-core",
+    "windows_distribution=local-build-candidate-only",
+    "app_data_resolver=tauri-app-data",
+    "path_separator=platform-native-redacted",
+    "raw_local_path_returned=false",
+    "support_report_raw_path_allowed=false",
+    "profile_semantics=shared-core",
+    "message_exchange_semantics=shared-core",
+    "delete_wipe_semantics=shared-core",
+    "macos_only_wording_allowed=false",
+    "windows_public_artifact_ready=false",
+    "windows_installer_ready=false",
+    "windows_signing_security_boundary=false",
+    "shared_core_bypass_allowed=false",
+    "auto_update_channel=false",
+    `observed_platform=${platform}`,
+  ].join(" ");
+  return {
+    platform,
+    platformScope: "desktop-shared-core",
+    windowsDistribution: "local-build-candidate-only",
+    appDataResolver: "tauri-app-data",
+    pathSeparator: "platform-native-redacted",
+    profileSemantics: "shared-core",
+    messageExchangeSemantics: "shared-core",
+    deleteWipeSemantics: "shared-core",
+    rawLocalPathReturned: false,
+    supportReportRawPathAllowed: false,
+    macosOnlyWordingAllowed: false,
+    windowsPublicArtifactReady: false,
+    windowsInstallerReady: false,
+    windowsSigningSecurityBoundary: false,
+    sharedCoreBypassAllowed: false,
+    autoUpdateChannel: false,
+    summary,
+    boundary: [
+      "windows_runtime_parity=true",
+      "platform_scope=desktop-shared-core",
+      "windows_distribution=local-build-candidate-only",
+      "tauri_app_data_resolver_required=true",
+      "local_storage_paths_redacted=true",
+      "support_report_raw_path_allowed=false",
+      "profile_semantics=shared-core",
+      "message_exchange_semantics=shared-core",
+      "delete_wipe_semantics=shared-core",
+      "macos_only_wording_allowed=false",
+      "windows_public_artifact_ready=false",
+      "windows_installer_ready=false",
+      "windows_signing_security_boundary=false",
+      "shared_core_bypass_allowed=false",
+      "auto_update_channel=false",
+    ].join(" "),
+  };
+}
+
 export function productionFirstRunDesktopSummaryView(input = {}) {
   const profileInputPresent = Boolean(input.profileInputPresent);
   const profileUnlocked = Boolean(input.profileUnlocked);

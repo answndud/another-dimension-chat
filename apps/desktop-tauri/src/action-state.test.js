@@ -10,6 +10,7 @@ import {
   productionHighRiskThreatModelBoundaryView,
   productionHighRiskThreatModelClaimMatrix,
   productionVersionIntegrityView,
+  productionWindowsRuntimeParityView,
   productionInviteCodeProfiles,
   productionInviteIdentityBoundaryView,
   productionLocalDataRecoveryView,
@@ -159,6 +160,35 @@ test("version integrity view keeps manual update and rollback claims bounded", (
   assert.match(view.boundary, /rollback_prevention_claimed=false/);
   assert.match(view.boundary, /branch_source_release_authority_allowed=false/);
   assert.doesNotMatch(view.boundary, /auto_update_ready=true|rollback_prevention_claimed=true|security_ready_claim=true/);
+});
+
+test("windows runtime parity view keeps shared core and redacted local path boundaries", () => {
+  const view = productionWindowsRuntimeParityView({ platform: "Win32" });
+
+  assert.equal(view.platformScope, "desktop-shared-core");
+  assert.equal(view.windowsDistribution, "local-build-candidate-only");
+  assert.equal(view.appDataResolver, "tauri-app-data");
+  assert.equal(view.pathSeparator, "platform-native-redacted");
+  assert.equal(view.profileSemantics, "shared-core");
+  assert.equal(view.messageExchangeSemantics, "shared-core");
+  assert.equal(view.deleteWipeSemantics, "shared-core");
+  assert.equal(view.rawLocalPathReturned, false);
+  assert.equal(view.supportReportRawPathAllowed, false);
+  assert.equal(view.macosOnlyWordingAllowed, false);
+  assert.equal(view.windowsPublicArtifactReady, false);
+  assert.equal(view.windowsInstallerReady, false);
+  assert.equal(view.windowsSigningSecurityBoundary, false);
+  assert.equal(view.sharedCoreBypassAllowed, false);
+  assert.match(view.summary, /platform_scope=desktop-shared-core/);
+  assert.match(view.summary, /raw_local_path_returned=false/);
+  assert.match(view.summary, /windows_public_artifact_ready=false/);
+  assert.match(view.boundary, /tauri_app_data_resolver_required=true/);
+  assert.match(view.boundary, /local_storage_paths_redacted=true/);
+  assert.match(view.boundary, /support_report_raw_path_allowed=false/);
+  assert.doesNotMatch(
+    view.boundary,
+    /raw_local_path_returned=true|windows_public_artifact_ready=true|shared_core_bypass_allowed=true/,
+  );
 });
 
 test("first-run desktop summary keeps purpose release status and next action visible", () => {
