@@ -49,6 +49,16 @@ local runtime smoke passed result, not a public Windows artifact, not a Windows
 installer, not a public artifact upload, not production-ready, and sensitive
 communication prohibited.
 
+Windows desktop cross-platform parity intake is tracked in
+`apps/desktop-tauri/windows_desktop_parity_intake.json`. It is a source-boundary
+gap inventory only: WebView2 runtime smoke, Tauri app-data storage roots, path
+separator behavior, encrypted-store parity, local deletion behavior, redacted
+diagnostics, explicit user action review, no-auto-update parity, and the
+local-manual envelope default path must be reviewed before any Windows public
+artifact. The intake keeps Windows local build candidate only, no public Windows
+artifact, no Windows installer, no public artifact upload, not audited,
+not production-ready, and sensitive communication prohibited.
+
 The shared core boundary means Rust owns profile identity, pairing payload and
 safety transcript logic, message orchestration, protocol envelopes and replay,
 encrypted local storage policy, and fail-closed transport policy. UI shells may
