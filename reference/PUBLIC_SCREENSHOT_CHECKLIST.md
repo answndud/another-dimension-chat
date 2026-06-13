@@ -26,6 +26,11 @@ Generated screenshot candidates are local artifacts only. Store them under
 `apps/desktop-tauri/screenshot-candidates/` if needed, and do not commit that
 folder.
 
+The reviewed source-side public screenshot set lives under
+`reference/screenshots/`. These committed files are repository visual aids only.
+They are not GitHub Release assets and must not be uploaded to the existing
+release without a separate release-asset review.
+
 ## Required Candidate Frames
 
 - First-run warning and checklist.
