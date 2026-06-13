@@ -24,11 +24,21 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 DOC="reference/EXTERNAL_REVIEW_AUDIT_READINESS.md"
+RUNBOOK="reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md"
 TRACKER="reference/AUDIT_FINDING_TRACKER.md"
 PACKET="reference/INDEPENDENT_REVIEW_PACKET.md"
 SCOPE_DOWN="reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
+TRACKER_VALIDATOR="scripts/validate_audit_finding_tracker.mjs"
 
 must_contain "$DOC" "external_review_audit_readiness_gate_reviewed=true"
+must_contain "$DOC" "d100_4_external_evidence_intake_execution_reviewed=true"
+must_contain "$DOC" "external_review_intake_runbook_available=true"
+must_contain "$DOC" "external_review_intake_operator_ready=true"
+must_contain "$DOC" "reviewer_packet_freeze_ready=true"
+must_contain "$DOC" "audit_finding_tracker_ready=true"
+must_contain "$DOC" "audit_finding_tracker_schema_machine_checkable=true"
+must_contain "$DOC" "audit_finding_counts_machine_checked=true"
+must_contain "$DOC" "sensitive_finding_private_route_required=true"
 must_contain "$DOC" "rb_6_external_review_release_class_scope_down_reviewed=true"
 must_contain "$DOC" "review_packet_public_safe=true"
 must_contain "$DOC" "review_packet_complete_for_current_source=true"
@@ -48,16 +58,27 @@ must_contain "$DOC" "external_review_no_longer_blocks_lower_release_class=true"
 must_contain "$DOC" "external_review_still_blocks_stable_or_production_claims=true"
 must_contain "$DOC" "next_required_phase=RB-7 signed notarized macOS stable artifact pipeline"
 
+must_contain "$RUNBOOK" "external_review_intake_runbook_available=true"
+must_contain "$RUNBOOK" "external_review_intake_operator_ready=true"
+must_contain "$RUNBOOK" "audit_finding_tracker_schema_machine_checkable=true"
+must_contain "$RUNBOOK" "sensitive_finding_private_route_required=true"
 must_contain "$TRACKER" "Status: tracker available; no external audit findings have been received or"
+must_contain "$TRACKER" "audit_finding_tracker_ready=true"
+must_contain "$TRACKER" "audit_finding_tracker_schema_machine_checkable=true"
+must_contain "$TRACKER" "audit_finding_counts_machine_checked=true"
+must_contain "$TRACKER" "sensitive_finding_private_route_required=true"
 must_contain "$TRACKER" "Each finding must have exactly one decision: fix, hold, or waive."
 must_contain "$TRACKER" "external_review_completed=false"
 must_contain "$TRACKER" "audit_completed=false"
 must_contain "$TRACKER" "audited_claim_allowed=false"
 must_contain "$TRACKER" "security_ready_claimed=false"
+must_contain "$TRACKER_VALIDATOR" "status=audit-finding-tracker-valid"
 
 for required in \
   "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md" \
+  "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md" \
   "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md" \
+  "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
   "reference/AUDIT_FINDING_TRACKER.md" \
   "reference/INDEPENDENT_REVIEW_PACKET.md" \
   "reference/PUBLIC_THREAT_MODEL.md" \
@@ -72,9 +93,11 @@ for required in \
 done
 
 must_contain "README.md" "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md"
+must_contain "README.md" "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md"
 must_contain "README.md" "reference/AUDIT_FINDING_TRACKER.md"
 must_contain "README.md" "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
 must_contain "SECURITY.md" "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md"
+must_contain "SECURITY.md" "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md"
 must_contain "SECURITY.md" "reference/AUDIT_FINDING_TRACKER.md"
 must_contain "SECURITY.md" "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_7_external_review_audit_readiness_gate_reviewed=true"
@@ -91,7 +114,7 @@ must_contain ".github/ISSUE_TEMPLATE/config.yml" "private vulnerability reportin
 must_contain "reference/PUBLIC_INTAKE_POLICY.md" "Use GitHub private vulnerability reporting when available."
 must_contain "SECURITY.md" "private vulnerability reporting"
 
-for file in "$DOC" "$TRACKER" "$PACKET" "$SCOPE_DOWN" "README.md" "SECURITY.md"; do
+for file in "$DOC" "$RUNBOOK" "$TRACKER" "$PACKET" "$SCOPE_DOWN" "README.md" "SECURITY.md"; do
   must_not_match "$file" "external_review_completed=true"
   must_not_match "$file" "audit_completed=true"
   must_not_match "$file" "reviewer_signoff_claimed=true"
@@ -102,11 +125,20 @@ for file in "$DOC" "$TRACKER" "$PACKET" "$SCOPE_DOWN" "README.md" "SECURITY.md";
   must_not_match "$file" "stable_or_production_release_allowed_without_external_review=true"
 done
 
+scripts/audit_finding_tracker_validator_once.sh >/dev/null
 scripts/external_review_release_class_scope_down_once.sh >/dev/null
 
 cat <<'STATUS'
 status=external-review-audit-readiness-ready
 external_review_audit_readiness_gate_reviewed=true
+d100_4_external_evidence_intake_execution_reviewed=true
+external_review_intake_runbook_available=true
+external_review_intake_operator_ready=true
+reviewer_packet_freeze_ready=true
+audit_finding_tracker_ready=true
+audit_finding_tracker_schema_machine_checkable=true
+audit_finding_counts_machine_checked=true
+sensitive_finding_private_route_required=true
 rb_6_external_review_release_class_scope_down_reviewed=true
 review_packet_public_safe=true
 review_packet_complete_for_current_source=true

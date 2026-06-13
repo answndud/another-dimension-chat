@@ -29,6 +29,9 @@ MATRIX="reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
 for file in "$REGISTER" "$MATRIX" \
   "reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md" \
   "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
+  "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
+  "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md" \
+  "reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md" \
   "reference/MACOS_PRODUCTION_UX_ONBOARDING.md" \
   "reference/MACOS_USABILITY_RECOVERY_CLOSURE.md" \
   "reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md" \
@@ -69,6 +72,17 @@ must_contain "$REGISTER" "manual_update_integrity_policy_available=true"
 must_contain "$REGISTER" "d100_3_signed_notarized_execution_path_reviewed=true"
 must_contain "$REGISTER" "macos_signed_notarized_execution_path_available=true"
 must_contain "$REGISTER" "signed_notarized_rc_execution_ready=false"
+must_contain "$REGISTER" "d100_4_external_evidence_intake_execution_reviewed=true"
+must_contain "$REGISTER" "external_evidence_intake_operator_ready=true"
+must_contain "$REGISTER" "reviewer_packet_freeze_ready=true"
+must_contain "$REGISTER" "audit_finding_tracker_ready=true"
+must_contain "$REGISTER" "audit_finding_tracker_schema_machine_checkable=true"
+must_contain "$REGISTER" "audit_finding_counts_machine_checked=true"
+must_contain "$REGISTER" "field_report_validator_ready=true"
+must_contain "$REGISTER" "usability_report_validator_ready=true"
+must_contain "$REGISTER" "consent_non_sensitive_use_notice_ready=true"
+must_contain "$REGISTER" "fabricated_or_local_only_evidence_rejected=true"
+must_contain "$REGISTER" "local_only_evidence_promoted_to_external=false"
 
 must_contain "$MATRIX" "target_standard_100_deployment_gap_reconciled=true"
 must_contain "$MATRIX" "macos_current_scope_supported=true"
@@ -88,6 +102,11 @@ must_contain "$MATRIX" "manual_update_integrity_policy_available=true"
 must_contain "$MATRIX" "d100_3_signed_notarized_execution_path_reviewed=true"
 must_contain "$MATRIX" "macos_signed_notarized_execution_path_available=true"
 must_contain "$MATRIX" "signed_notarized_rc_execution_ready=false"
+must_contain "$MATRIX" "d100_4_external_evidence_intake_execution_reviewed=true"
+must_contain "$MATRIX" "external_evidence_intake_operator_ready=true"
+must_contain "$MATRIX" "field_report_validator_ready=true"
+must_contain "$MATRIX" "usability_report_validator_ready=true"
+must_contain "$MATRIX" "fabricated_or_local_only_evidence_rejected=true"
 
 must_contain "$MATRIX" "pass for explicit Apple Silicon current scope; universal/Intel hold"
 must_contain "$MATRIX" "source pass; representative usability hold"
@@ -113,6 +132,9 @@ must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_KEY_
 must_contain "README.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 must_contain "SECURITY.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
+must_contain "README.md" "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md"
+must_contain "SECURITY.md" "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md"
+must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md"
 
 for file in "$REGISTER" "$MATRIX" "README.md" "SECURITY.md"; do
   must_contain "$file" "not production-ready"
@@ -136,6 +158,7 @@ scripts/production_e2ee_source_gate_once.sh >/dev/null
 scripts/production_protocol_session_lifecycle_once.sh >/dev/null
 scripts/production_key_management_source_gate_once.sh >/dev/null
 scripts/macos_signed_notarized_execution_path_once.sh >/dev/null
+scripts/external_evidence_intake_execution_once.sh >/dev/null
 scripts/macos_universal_scoped_artifact_policy_once.sh >/dev/null
 scripts/macos_production_ux_onboarding_once.sh >/dev/null
 scripts/pairwise_identity_safety_product_closure_once.sh >/dev/null
@@ -170,6 +193,11 @@ manual_update_integrity_policy_available=true
 d100_3_signed_notarized_execution_path_reviewed=true
 macos_signed_notarized_execution_path_available=true
 signed_notarized_rc_execution_ready=false
+d100_4_external_evidence_intake_execution_reviewed=true
+external_evidence_intake_operator_ready=true
+field_report_validator_ready=true
+usability_report_validator_ready=true
+fabricated_or_local_only_evidence_rejected=true
 production_ready_claim_allowed=false
 audited_claim_allowed=false
 sensitive_communication_allowed=false

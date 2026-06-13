@@ -24,6 +24,7 @@ current supported scope is named precisely:
 | Local key/deletion lifecycle | D100-2 source-ready local key/storage scope is gated by `reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md` for passphrase-first SQLCipher, forward-only schema versioning, marker-only rollback detection, and local logical delete/wipe. | Complete production key management, app key wrapping, key rotation, rollback prevention, backup recovery, and secure media deletion remain false. |
 | Default transport | Local/manual courier envelope exchange is the supported default. | Production transport and reliable external delivery remain false. |
 | Update/release integrity | Manual same-release GitHub Release verification, provenance, rollback warning, and emergency process are source-gated. | Signed update manifest, rollback prevention, stable release approval, and release upload remain false. |
+| External evidence intake | D100-4 review, field, and representative usability intake is gated by `reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`, with reviewer packet freeze, finding tracker validation, field report validation, representative usability validation, consent/non-sensitive-use notice, and local-only/fabricated evidence rejection. | Completed external review/audit, real repeated field reports, representative usability completion, and all related production/audit/reliability/sensitive-use claims remain false. |
 | Operations | Public/private intake, tabletop, emergency release, dependency triage, and support-template boundaries are source-gated. | Production operational readiness claim remains false. |
 
 ## Remaining External Or Evidence Blockers
@@ -43,9 +44,15 @@ These cannot be made true by editing source files alone:
   artifact remains false.
 - Signed/notarized stable macOS artifact and owner stable release approval.
 - Completed independent external review or audit with public-safe finding
-  closure/signoff.
-- Repeated real two-machine field evidence with accepted redacted reports.
-- Real representative usability evidence from the required user sample.
+  closure/signoff; D100-4 intake is ready via
+  `reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`, but completion remains
+  false.
+- Repeated real two-machine field evidence with accepted redacted reports;
+  D100-4 report validation is ready, but accepted external evidence remains
+  false.
+- Real representative usability evidence from the required user sample; D100-4
+  report validation and consent notice are ready, but study completion remains
+  false.
 - Real Windows runtime smoke on Windows hardware plus a public Windows artifact.
 - Explicit Android/iOS runtime implementation authorization and public mobile
   artifacts if full TARGET_STANDARD 100 remains the goal.
@@ -53,9 +60,7 @@ These cannot be made true by editing source files alone:
 
 ## Next Work Order
 
-1. D100-4: run external review, field evidence, and representative usability
-   intake with real non-sensitive reports; do not fabricate evidence.
-2. D100-5: make the Windows public artifact path executable on a real Windows
+1. D100-5: make the Windows public artifact path executable on a real Windows
    runner/device and reject local-only results.
 
 ## Current Flags
@@ -87,6 +92,17 @@ These cannot be made true by editing source files alone:
 - d100_3_signed_notarized_execution_path_reviewed=true
 - macos_signed_notarized_execution_path_available=true
 - signed_notarized_rc_execution_ready=false
+- d100_4_external_evidence_intake_execution_reviewed=true
+- external_evidence_intake_operator_ready=true
+- reviewer_packet_freeze_ready=true
+- audit_finding_tracker_ready=true
+- audit_finding_tracker_schema_machine_checkable=true
+- audit_finding_counts_machine_checked=true
+- field_report_validator_ready=true
+- usability_report_validator_ready=true
+- consent_non_sensitive_use_notice_ready=true
+- fabricated_or_local_only_evidence_rejected=true
+- local_only_evidence_promoted_to_external=false
 - developer_id_signing_available=false
 - notarization_available=false
 - external_review_completed=false

@@ -78,6 +78,11 @@ GitHub Release asset publication, screenshots, source preflight success, local
 single-machine rehearsal, public support diagnostics, or a review packet are
 not production readiness by themselves.
 
+D100-4 external evidence intake execution makes review, field, and
+representative usability report intake operator-ready through
+`reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`. It does not complete review,
+audit, field evidence, usability evidence, or any production claim.
+
 ## Current Decision
 
 - rb_8_production_claim_release_class_decision_reviewed=true
@@ -112,6 +117,11 @@ not production readiness by themselves.
 - signed_artifact_no_longer_blocks_lower_release_class=true
 - signed_artifact_still_blocks_stable_or_production_claims=true
 - ops_7_external_review_audit_readiness_gate_reviewed=true
+- d100_4_external_evidence_intake_execution_reviewed=true
+- external_evidence_intake_operator_ready=true
+- external_review_intake_runbook_available=true
+- audit_finding_tracker_schema_machine_checkable=true
+- audit_finding_counts_machine_checked=true
 - rb_6_external_review_release_class_scope_down_reviewed=true
 - external_review_completed=false
 - audit_completed=false
@@ -122,6 +132,10 @@ not production readiness by themselves.
 - external_review_no_longer_blocks_lower_release_class=true
 - external_review_still_blocks_stable_or_production_claims=true
 - ops_8_field_evidence_reliability_program_reviewed=true
+- field_report_validator_ready=true
+- usability_report_validator_ready=true
+- consent_non_sensitive_use_notice_ready=true
+- representative_usability_sample_threshold=3-5
 - rb_5_field_evidence_release_class_scope_down_reviewed=true
 - redacted_field_report_packet_available=true
 - redacted_field_report_validator_available=true

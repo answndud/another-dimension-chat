@@ -5,6 +5,9 @@ accepted. This packet is not a peer success result, not reliable delivery
 evidence, not an audit result, not production readiness, and not permission for
 sensitive communication.
 
+Required public labels: unsigned experimental public beta, sensitive
+communication prohibited, not audited, and not production-ready.
+
 Use this packet for real macOS field reports only after removing private data.
 Public reports should use the app's public support diagnostics and the broad
 failure classes from `reference/PUBLIC_INTAKE_POLICY.md`.
@@ -18,6 +21,8 @@ node scripts/validate_redacted_field_reports.mjs docs/redacted-field-reports
 The validator can mark a report set as an evidence candidate, but it never
 opens production field evidence readiness by itself. A maintainer must still
 review the source of the reports and update the stable gate explicitly.
+D100-4 external evidence intake execution is tracked in
+`reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`.
 
 ## Allowed Report Fields
 
@@ -97,6 +102,9 @@ non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-p
 
 - redacted_field_report_packet_available=true
 - redacted_field_report_validator_available=true
+- d100_4_external_evidence_intake_execution_reviewed=true
+- external_evidence_intake_operator_ready=true
+- field_report_validator_ready=true
 - accepted_production_field_reports=0
 - local_two_instance_rehearsal_completed=false
 - macos_two_machine_real_user_flow_repeated=false

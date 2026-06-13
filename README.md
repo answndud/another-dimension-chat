@@ -332,6 +332,8 @@ stable distribution claim.
 
 External review and audit readiness is tracked in
 [reference/EXTERNAL_REVIEW_AUDIT_READINESS.md](reference/EXTERNAL_REVIEW_AUDIT_READINESS.md),
+with the D100-4 operator runbook in
+[reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md](reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md),
 with the public-safe finding tracker in
 [reference/AUDIT_FINDING_TRACKER.md](reference/AUDIT_FINDING_TRACKER.md),
 and the RB-6 release-class scope-down in
@@ -342,14 +344,20 @@ reviewer signoff, audited wording, and security-ready claims false.
 
 Field evidence and reliability readiness is tracked in
 [reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md](reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md),
+with the D100-4 integrated intake gate in
+[reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md](reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md),
 with the redacted report template in
 [reference/REDACTED_FIELD_REPORT_PACKET.md](reference/REDACTED_FIELD_REPORT_PACKET.md),
+the representative usability packet in
+[reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md](reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md),
 and the RB-5 release-class scope-down in
 [reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md](reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md).
 These files define the evidence ladder, report data boundary, reliability
-decision rule, and lower-release-class workaround while keeping real macOS
-two-machine repeated evidence, reliable external delivery, production field
-evidence, and sensitive-use claims false.
+decision rule, consent/non-sensitive-use notice, representative sample
+threshold, local-only/fabricated evidence rejection, and lower-release-class
+workaround while keeping real macOS two-machine repeated evidence,
+representative usability completion, reliable external delivery, production
+field evidence, and sensitive-use claims false.
 
 Operational support, incident, and vulnerability process readiness is tracked in
 [reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md](reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md),

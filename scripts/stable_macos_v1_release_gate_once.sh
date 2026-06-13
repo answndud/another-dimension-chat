@@ -38,6 +38,8 @@ for file in "$GATE_DOC" "$HOLD_REPORT" "$CLAIM_GATE" "$PACKET" "$CLAIM_DECISION"
   "reference/MACOS_PRODUCTION_UX_ONBOARDING.md" \
   "reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md" \
   "reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md" \
+  "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
+  "reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md" \
   "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md" \
   "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md" \
   "reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md" \
@@ -62,6 +64,16 @@ must_contain "$GATE_DOC" "signed_notarized_rc_execution_ready=false"
 must_contain "$GATE_DOC" "rb_7_macos_stable_artifact_release_class_scope_down_reviewed=true"
 must_contain "$GATE_DOC" "external_review_completed=false"
 must_contain "$GATE_DOC" "audit_completed=false"
+must_contain "$GATE_DOC" "d100_4_external_evidence_intake_execution_reviewed=true"
+must_contain "$GATE_DOC" "external_evidence_intake_operator_ready=true"
+must_contain "$GATE_DOC" "reviewer_packet_freeze_ready=true"
+must_contain "$GATE_DOC" "audit_finding_tracker_ready=true"
+must_contain "$GATE_DOC" "audit_finding_tracker_schema_machine_checkable=true"
+must_contain "$GATE_DOC" "audit_finding_counts_machine_checked=true"
+must_contain "$GATE_DOC" "field_report_validator_ready=true"
+must_contain "$GATE_DOC" "usability_report_validator_ready=true"
+must_contain "$GATE_DOC" "consent_non_sensitive_use_notice_ready=true"
+must_contain "$GATE_DOC" "fabricated_or_local_only_evidence_rejected=true"
 must_contain "$GATE_DOC" "rb_6_external_review_release_class_scope_down_reviewed=true"
 must_contain "$GATE_DOC" "macos_two_machine_real_user_flow_repeated=false"
 must_contain "$GATE_DOC" "rb_5_field_evidence_release_class_scope_down_reviewed=true"
@@ -77,6 +89,7 @@ must_contain "$GATE_DOC" "production_distribution_ready=false"
 must_contain "$GATE_DOC" "stable_or_production_release_allowed_without_signed_artifact=false"
 must_contain "$GATE_DOC" "unsigned_or_signed_public_beta_or_rc_release_class_allowed_without_stable_artifact=true"
 must_contain "$GATE_DOC" "production_field_evidence_ready=false"
+must_contain "$GATE_DOC" "representative_usability_evidence_completed=false"
 must_contain "$GATE_DOC" "production_operational_readiness_claim_allowed=false"
 must_contain "$GATE_DOC" "production_ready_claim_allowed=false"
 must_contain "$GATE_DOC" "beta_wording_removal_allowed=false"
@@ -123,6 +136,8 @@ must_contain "$PACKET" "reference/STABLE_RELEASE_HOLD_REPORT.md"
 must_contain "$PACKET" "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md"
 must_contain "$PACKET" "reference/GITHUB_RELEASE_PUBLICATION_SCOPE_DOWN.md"
 must_contain "$PACKET" "reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md"
+must_contain "$PACKET" "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md"
+must_contain "$PACKET" "reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md"
 must_contain "$PACKET" "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
 must_contain "$PACKET" "reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md"
 
@@ -142,6 +157,10 @@ must_contain "$CLAIM_GATE" "audited_claim_allowed=false"
 must_contain "$CLAIM_GATE" "sensitive_communication_allowed=false"
 must_contain "$CLAIM_GATE" "reliable_external_delivery_claim_allowed=false"
 must_contain "$CLAIM_GATE" "rb_6_external_review_release_class_scope_down_reviewed=true"
+must_contain "$CLAIM_GATE" "d100_4_external_evidence_intake_execution_reviewed=true"
+must_contain "$CLAIM_GATE" "external_evidence_intake_operator_ready=true"
+must_contain "$CLAIM_GATE" "field_report_validator_ready=true"
+must_contain "$CLAIM_GATE" "usability_report_validator_ready=true"
 must_contain "$CLAIM_GATE" "stable_or_production_release_allowed_without_external_review=false"
 must_contain "$CLAIM_GATE" "signed_public_beta_or_rc_release_class_allowed_without_external_review=true"
 must_contain "$CLAIM_GATE" "stable_or_production_release_allowed_without_signed_artifact=false"
@@ -164,6 +183,8 @@ must_contain "reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md" "stable_signed_no
 must_contain "reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md" "macos_signed_notarized_execution_path_available=true"
 must_contain "reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md" "signed_artifact_no_longer_blocks_lower_release_class=true"
 must_contain "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md" "audit_completed=false"
+must_contain "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" "external_evidence_intake_operator_ready=true"
+must_contain "reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md" "representative_usability_evidence_completed=false"
 must_contain "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md" "external_review_no_longer_blocks_lower_release_class=true"
 must_contain "reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md" "macos_two_machine_real_user_flow_repeated=false"
 must_contain "reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md" "field_evidence_no_longer_blocks_lower_release_class=true"
@@ -206,7 +227,12 @@ public_stable_release_allowed=false
 stable_signed_notarized_artifact_available=false
 external_review_completed=false
 audit_completed=false
+d100_4_external_evidence_intake_execution_reviewed=true
+external_evidence_intake_operator_ready=true
+field_report_validator_ready=true
+usability_report_validator_ready=true
 macos_two_machine_real_user_flow_repeated=false
+representative_usability_evidence_completed=false
 production_e2ee_ready=false
 production_key_management_ready=false
 production_transport_ready=false
