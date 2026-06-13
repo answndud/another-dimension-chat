@@ -29,12 +29,29 @@ struct ContentView: View {
                     sharedCore.inviteCodeCreateJoin(action: ExplicitUserActionToken(reason: "tap_invite"))
                 )
             }
+            Button("Pairing") {
+                statusText = renderResult(
+                    sharedCore.pairingPayloadExportImport(
+                        action: ExplicitUserActionToken(reason: "tap_pairing_payload")
+                    )
+                )
+            }
+            Button("Safety") {
+                statusText = renderResult(
+                    sharedCore.safetyTranscriptConfirm(
+                        action: ExplicitUserActionToken(reason: "tap_safety_transcript")
+                    )
+                )
+            }
             Button("Envelope") {
                 statusText = renderResult(
                     sharedCore.manualEnvelopeExportImport(
                         action: ExplicitUserActionToken(reason: "tap_manual_envelope")
                     )
                 )
+            }
+            Button("Transcript") {
+                statusText = renderResult(sharedCore.messageTranscriptView())
             }
             Button("Diagnostics") {
                 statusText = ContentView.renderStatus(sharedCore.redactedSupportDiagnostics())

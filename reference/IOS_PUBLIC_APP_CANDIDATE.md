@@ -18,6 +18,9 @@ backup dependencies.
 - ios_artifact_manifest_schema_available=true
 - ios_artifact_manifest_validator_available=true
 - ios_artifact_package_structure_verified=true
+- ios_xcode_project_scaffold_valid=true
+- ios_project_signing_provisioning_hold=true
+- ios_shell_blocked_surface_ui_complete=true
 - ios_public_artifact_checksum_verifier_ready=true
 - ios_shell_uses_shared_core_json_bridge_candidate=true
 - ios_forbidden_dependency_scan_ready=true

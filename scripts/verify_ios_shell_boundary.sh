@@ -69,6 +69,14 @@ require_text "apps/mobile/ios/README.md" "external onion delivery success"
 require_text "apps/mobile/ios/README.md" "security-ready behavior"
 
 require_text "apps/mobile/ios/AnotherDimension.xcodeproj/project.pbxproj" "objectVersion"
+require_text "apps/mobile/ios/AnotherDimension.xcodeproj/project.pbxproj" "PBXNativeTarget"
+require_text "apps/mobile/ios/AnotherDimension.xcodeproj/project.pbxproj" "AnotherDimensionApp.swift in Sources"
+require_text "apps/mobile/ios/AnotherDimension.xcodeproj/project.pbxproj" "ContentView.swift in Sources"
+require_text "apps/mobile/ios/AnotherDimension.xcodeproj/project.pbxproj" "JsonBridgeSharedCoreAdapter.swift in Sources"
+require_text "apps/mobile/ios/AnotherDimension.xcodeproj/project.pbxproj" "CODE_SIGNING_ALLOWED = NO;"
+require_text "apps/mobile/ios/AnotherDimension.xcodeproj/project.pbxproj" "DEVELOPMENT_TEAM = \"\";"
+require_text "apps/mobile/ios/AnotherDimension.xcodeproj/project.pbxproj" "PROVISIONING_PROFILE_SPECIFIER = \"\";"
+require_text "apps/mobile/ios/AnotherDimension.xcodeproj/project.pbxproj" "SUPPORTED_PLATFORMS = \"iphoneos iphonesimulator\";"
 require_text "apps/mobile/ios/AnotherDimension/Info.plist" "chat.anotherdimension.ios"
 require_text "apps/mobile/ios/AnotherDimension/AnotherDimension.entitlements" "icloud-container-identifiers"
 require_text "apps/mobile/ios/AnotherDimension/AnotherDimension.entitlements" "<array/>"
@@ -107,7 +115,10 @@ require_text "apps/mobile/ios/AnotherDimension/BlockedMobileCommandAdapter.swift
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "SecureField"
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "sharedCore.profileUnlockLockStatus"
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "sharedCore.inviteCodeCreateJoin"
+require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "sharedCore.pairingPayloadExportImport"
+require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "sharedCore.safetyTranscriptConfirm"
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "sharedCore.manualEnvelopeExportImport"
+require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "sharedCore.messageTranscriptView"
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "sharedCore.redactedSupportDiagnostics"
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "failure_class="
 require_text "apps/mobile/ios/AnotherDimension/ContentView.swift" "recovery_next_action="
@@ -142,6 +153,7 @@ reject_find "iOS build outputs or app artifacts" \
 printf 'status=ios-shell-boundary-verified\n'
 printf 'ios_source_scaffold_created=true\n'
 printf 'ios_xcode_scaffold_created=true\n'
+printf 'ios_xcode_project_signing_hold=true\n'
 printf 'ios_runtime_messaging_created=false\n'
 printf 'wrapper_specific_protocol_storage_transport=false\n'
 printf 'external_delivery_claim=false\n'
