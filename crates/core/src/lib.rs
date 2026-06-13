@@ -3839,6 +3839,55 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionHighRiskReadinessStatus {
+        Ready,
+        Limited,
+        NotReady,
+    }
+
+    impl ProductionHighRiskReadinessStatus {
+        pub fn as_str(self) -> &'static str {
+            match self {
+                Self::Ready => "ready",
+                Self::Limited => "limited",
+                Self::NotReady => "not_ready",
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionHighRiskReadinessInput {
+        pub threat_matrix_accepted: bool,
+        pub pairwise_safety_verified: bool,
+        pub high_risk_transport_ready: bool,
+        pub high_risk_transport_explicitly_disabled: bool,
+        pub production_key_management_ready: bool,
+        pub rollback_marker_healthy: bool,
+        pub diagnostics_redacted: bool,
+        pub release_integrity_available: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionHighRiskReadinessGateSummary {
+        status: ProductionHighRiskReadinessStatus,
+        primary_reason_code: &'static str,
+        next_action: &'static str,
+        threat_matrix_accepted: bool,
+        pairwise_safety_verified: bool,
+        high_risk_transport_ready: bool,
+        high_risk_transport_explicitly_disabled: bool,
+        production_key_management_ready: bool,
+        rollback_marker_healthy: bool,
+        diagnostics_redacted: bool,
+        release_integrity_available: bool,
+        high_risk_ready_claim_allowed: bool,
+        public_support_high_risk_claim_allowed: bool,
+        release_high_risk_claim_allowed: bool,
+        unmet_conditions_hidden: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum ProductionSessionLifecycleState {
         Created,
         Paired,
@@ -7541,6 +7590,72 @@ pub mod production {
 
         pub fn briar_cwtch_equivalence_claim_allowed(self) -> bool {
             self.briar_cwtch_equivalence_claim_allowed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionHighRiskReadinessGateSummary {
+        pub fn status(self) -> ProductionHighRiskReadinessStatus {
+            self.status
+        }
+
+        pub fn primary_reason_code(self) -> &'static str {
+            self.primary_reason_code
+        }
+
+        pub fn next_action(self) -> &'static str {
+            self.next_action
+        }
+
+        pub fn threat_matrix_accepted(self) -> bool {
+            self.threat_matrix_accepted
+        }
+
+        pub fn pairwise_safety_verified(self) -> bool {
+            self.pairwise_safety_verified
+        }
+
+        pub fn high_risk_transport_ready(self) -> bool {
+            self.high_risk_transport_ready
+        }
+
+        pub fn high_risk_transport_explicitly_disabled(self) -> bool {
+            self.high_risk_transport_explicitly_disabled
+        }
+
+        pub fn production_key_management_ready(self) -> bool {
+            self.production_key_management_ready
+        }
+
+        pub fn rollback_marker_healthy(self) -> bool {
+            self.rollback_marker_healthy
+        }
+
+        pub fn diagnostics_redacted(self) -> bool {
+            self.diagnostics_redacted
+        }
+
+        pub fn release_integrity_available(self) -> bool {
+            self.release_integrity_available
+        }
+
+        pub fn high_risk_ready_claim_allowed(self) -> bool {
+            self.high_risk_ready_claim_allowed
+        }
+
+        pub fn public_support_high_risk_claim_allowed(self) -> bool {
+            self.public_support_high_risk_claim_allowed
+        }
+
+        pub fn release_high_risk_claim_allowed(self) -> bool {
+            self.release_high_risk_claim_allowed
+        }
+
+        pub fn unmet_conditions_hidden(self) -> bool {
+            self.unmet_conditions_hidden
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -20165,6 +20280,91 @@ pub mod production {
         }
     }
 
+    pub fn production_high_risk_readiness_gate(
+        input: ProductionHighRiskReadinessInput,
+    ) -> ProductionHighRiskReadinessGateSummary {
+        let threat = production_high_risk_threat_model_claim_boundary_summary();
+        let transport = production_high_risk_transport_metadata_boundary_summary();
+        let key_rollback = production_key_rollback_boundary_summary();
+        let supply_chain = production_supply_chain_integrity_boundary_summary();
+        let threat_matrix_accepted = input.threat_matrix_accepted && threat.boundary_closed();
+        let high_risk_transport_explicitly_disabled = input.high_risk_transport_explicitly_disabled
+            && !transport.app_launch_bootstrap_allowed()
+            && !transport.direct_fallback_allowed();
+        let production_key_management_ready =
+            input.production_key_management_ready && key_rollback.production_key_management_ready();
+        let release_integrity_available =
+            input.release_integrity_available && supply_chain.boundary_closed();
+        let base_ready = threat_matrix_accepted
+            && input.pairwise_safety_verified
+            && production_key_management_ready
+            && input.rollback_marker_healthy
+            && input.diagnostics_redacted
+            && release_integrity_available;
+        let status = if base_ready && input.high_risk_transport_ready {
+            ProductionHighRiskReadinessStatus::Ready
+        } else if base_ready && high_risk_transport_explicitly_disabled {
+            ProductionHighRiskReadinessStatus::Limited
+        } else {
+            ProductionHighRiskReadinessStatus::NotReady
+        };
+        let (primary_reason_code, next_action) = if !threat_matrix_accepted {
+            ("threat-matrix-not-accepted", "accept-threat-model")
+        } else if !input.pairwise_safety_verified {
+            ("safety-not-verified", "verify-safety-number")
+        } else if !production_key_management_ready {
+            (
+                "key-management-not-ready",
+                "unlock-profile-with-production-key-management",
+            )
+        } else if !input.rollback_marker_healthy {
+            ("rollback-marker-not-healthy", "check-local-data-lifecycle")
+        } else if !input.diagnostics_redacted {
+            ("diagnostics-not-redacted", "use-redacted-support-report")
+        } else if !release_integrity_available {
+            ("release-integrity-missing", "run-release-integrity-gate")
+        } else if !input.high_risk_transport_ready && !high_risk_transport_explicitly_disabled {
+            (
+                "transport-neither-ready-nor-disabled",
+                "enable-high-risk-transport-or-mark-disabled",
+            )
+        } else if status == ProductionHighRiskReadinessStatus::Limited {
+            (
+                "transport-explicitly-disabled",
+                "enable-high-risk-transport-for-ready",
+            )
+        } else {
+            ("none", "ready")
+        };
+        let high_risk_ready_claim_allowed = status == ProductionHighRiskReadinessStatus::Ready;
+        let boundary_closed = threat.boundary_closed()
+            && transport.boundary_closed()
+            && key_rollback.boundary_closed()
+            && supply_chain.boundary_closed()
+            && !key_rollback.rollback_prevention_claimed()
+            && !transport.security_ready_claimed()
+            && !supply_chain.security_ready_claimed();
+
+        ProductionHighRiskReadinessGateSummary {
+            status,
+            primary_reason_code,
+            next_action,
+            threat_matrix_accepted,
+            pairwise_safety_verified: input.pairwise_safety_verified,
+            high_risk_transport_ready: input.high_risk_transport_ready,
+            high_risk_transport_explicitly_disabled,
+            production_key_management_ready,
+            rollback_marker_healthy: input.rollback_marker_healthy,
+            diagnostics_redacted: input.diagnostics_redacted,
+            release_integrity_available,
+            high_risk_ready_claim_allowed,
+            public_support_high_risk_claim_allowed: high_risk_ready_claim_allowed,
+            release_high_risk_claim_allowed: high_risk_ready_claim_allowed,
+            unmet_conditions_hidden: false,
+            boundary_closed,
+        }
+    }
+
     pub fn production_mobile_install_update_integrity_boundary_summary(
     ) -> ProductionMobileInstallUpdateIntegrityBoundarySummary {
         let supply_chain = production_supply_chain_integrity_boundary_summary();
@@ -26697,6 +26897,76 @@ pub mod production {
             assert!(boundary
                 .forbidden_claims()
                 .contains(&"full_global_traffic_correlation_safe"));
+        }
+
+        #[test]
+        fn high_risk_readiness_gate_keeps_claims_false_until_all_conditions_are_met() {
+            let base = ProductionHighRiskReadinessInput {
+                threat_matrix_accepted: true,
+                pairwise_safety_verified: true,
+                high_risk_transport_ready: false,
+                high_risk_transport_explicitly_disabled: true,
+                production_key_management_ready: true,
+                rollback_marker_healthy: true,
+                diagnostics_redacted: true,
+                release_integrity_available: true,
+            };
+            let missing_safety =
+                production_high_risk_readiness_gate(ProductionHighRiskReadinessInput {
+                    pairwise_safety_verified: false,
+                    ..base
+                });
+
+            assert_eq!(
+                missing_safety.status(),
+                ProductionHighRiskReadinessStatus::NotReady
+            );
+            assert_eq!(missing_safety.status().as_str(), "not_ready");
+            assert_eq!(missing_safety.primary_reason_code(), "safety-not-verified");
+            assert_eq!(missing_safety.next_action(), "verify-safety-number");
+            assert!(!missing_safety.high_risk_ready_claim_allowed());
+            assert!(!missing_safety.public_support_high_risk_claim_allowed());
+            assert!(!missing_safety.release_high_risk_claim_allowed());
+            assert!(!missing_safety.unmet_conditions_hidden());
+            assert!(missing_safety.boundary_closed());
+
+            let limited = production_high_risk_readiness_gate(base);
+            assert_eq!(limited.status(), ProductionHighRiskReadinessStatus::Limited);
+            assert_eq!(limited.status().as_str(), "limited");
+            assert_eq!(
+                limited.primary_reason_code(),
+                "transport-explicitly-disabled"
+            );
+            assert_eq!(
+                limited.next_action(),
+                "enable-high-risk-transport-for-ready"
+            );
+            assert!(limited.high_risk_transport_explicitly_disabled());
+            assert!(!limited.high_risk_ready_claim_allowed());
+            assert!(!limited.public_support_high_risk_claim_allowed());
+            assert!(!limited.release_high_risk_claim_allowed());
+            assert!(!limited.unmet_conditions_hidden());
+
+            let ready = production_high_risk_readiness_gate(ProductionHighRiskReadinessInput {
+                high_risk_transport_ready: true,
+                high_risk_transport_explicitly_disabled: false,
+                ..base
+            });
+            assert_eq!(ready.status(), ProductionHighRiskReadinessStatus::Ready);
+            assert_eq!(ready.status().as_str(), "ready");
+            assert_eq!(ready.primary_reason_code(), "none");
+            assert_eq!(ready.next_action(), "ready");
+            assert!(ready.threat_matrix_accepted());
+            assert!(ready.pairwise_safety_verified());
+            assert!(ready.high_risk_transport_ready());
+            assert!(ready.production_key_management_ready());
+            assert!(ready.rollback_marker_healthy());
+            assert!(ready.diagnostics_redacted());
+            assert!(ready.release_integrity_available());
+            assert!(ready.high_risk_ready_claim_allowed());
+            assert!(ready.public_support_high_risk_claim_allowed());
+            assert!(ready.release_high_risk_claim_allowed());
+            assert!(ready.boundary_closed());
         }
 
         #[test]

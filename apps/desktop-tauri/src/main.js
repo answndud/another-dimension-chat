@@ -10,6 +10,7 @@ import {
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
   productionHighRiskThreatModelBoundaryView,
+  productionHighRiskReadinessGateView,
   productionHighRiskTransportMetadataBoundaryView,
   productionManualMessageCheckView,
   productionManualTransferStepLabel,
@@ -104,6 +105,7 @@ const fields = {
   windowsRuntimeParityStatus: document.querySelector("#windows-runtime-parity-status"),
   highRiskThreatModelStatus: document.querySelector("#high-risk-threat-model-status"),
   highRiskTransportMetadataStatus: document.querySelector("#high-risk-transport-metadata-status"),
+  highRiskReadinessStatus: document.querySelector("#high-risk-readiness-status"),
   messaging: document.querySelector("#messaging"),
   localDevPeerLabel: document.querySelector("#local-dev-peer-label"),
   localPeerTestHint: document.querySelector("#local-peer-test-hint"),
@@ -518,6 +520,7 @@ const latestProductionTwoProfileSessionStatusesByRoom = new Map();
 let latestProductionTwoProfileSafety = null;
 let latestProductionTwoProfileSuccess = null;
 let latestProductionProfileUnlocked = false;
+let latestProductionProductUnlockStatus = null;
 let latestProductionTwoProfileOnionEndpoints = null;
 const latestProductionTwoProfileRealOnionResultsByRoom = new Map();
 const latestProductionTwoProfileRealOnionRecoveriesByRoom = new Map();
@@ -603,6 +606,7 @@ function clearProductionSensitiveMemoryState() {
   latestProductionMessageImport = null;
   latestProductionPairingSafety = null;
   latestProductionManualFocusTarget = null;
+  latestProductionProductUnlockStatus = null;
   clearProductionBusyAction(productionBusyAction);
   for (const slot of Object.values(productionPayloadSlots)) {
     slot.clear();
@@ -1588,6 +1592,7 @@ function applyLanguage(language) {
   renderWindowsRuntimeParityStatus();
   renderHighRiskThreatModelStatus();
   renderHighRiskTransportMetadataStatus();
+  renderHighRiskReadinessStatus();
   renderMessageTtlControlOptions();
   renderProductionTwoProfileFlow(productionTwoProfileInput());
   renderProductionTwoProfileDirection(productionTwoProfileInput());
@@ -3320,6 +3325,27 @@ function renderHighRiskThreatModelStatus() {
 function renderHighRiskTransportMetadataStatus() {
   const view = productionHighRiskTransportMetadataBoundaryView();
   setText(fields.highRiskTransportMetadataStatus, view.boundary);
+  return view;
+}
+
+function renderHighRiskReadinessStatus() {
+  const input = productionTwoProfileInput();
+  const unlock = latestProductionProductUnlockStatus;
+  const view = productionHighRiskReadinessGateView({
+    threatMatrixAccepted: true,
+    pairwiseSafetyVerified: twoProfileSafetyConfirmedForInput(input),
+    highRiskTransportReady: false,
+    highRiskTransportExplicitlyDisabled: true,
+    productionKeyManagementReady: unlock?.production_key_management_ready === true,
+    rollbackMarkerHealthy:
+      unlock?.rollback_detection_ready === true &&
+      unlock?.rollback_suspicion_detected !== true &&
+      unlock?.rollback_resume_blocked !== true,
+    diagnosticsRedacted: true,
+    releaseIntegrityAvailable: true,
+  });
+  setText(fields.highRiskReadinessStatus, view.summary);
+  fields.highRiskReadinessStatus?.setAttribute("data-readiness", view.status);
   return view;
 }
 
@@ -13074,9 +13100,10 @@ function applyProductionActionState() {
         hasInboundEnvelopeInput ||
         hasImportedMessage ||
         hasReceivedMessage ||
-        twoProfileReplyDraftReady,
+      twoProfileReplyDraftReady,
     ),
   });
+  renderHighRiskReadinessStatus();
   const manualPrimaryActions = productionManualPrimaryActions(state);
   const plaintextReviewPending = Boolean(hasImportedMessage && !hasReceivedMessage);
   const replyComposerCurrent = Boolean(
@@ -14093,6 +14120,7 @@ function resetProductionTwoProfileView() {
 
 function resetProductionProfileView() {
   latestProductionProfileUnlocked = false;
+  latestProductionProductUnlockStatus = null;
   setProductionProfileState("Profile locked");
   setText(fields.productionProfileWarning, "Production profile has not been unlocked yet.");
   setText(fields.productionProductUnlockState, "Not checked yet");
@@ -18304,6 +18332,7 @@ async function runProductionRoundtrip() {
 }
 
 function renderProductionProductUnlockStatus(result) {
+  latestProductionProductUnlockStatus = result ?? null;
   const unlocked = result?.unlocked === true;
   latestProductionProfileUnlocked = unlocked;
   const reason = result?.redacted_reason || "unknown";
@@ -18320,6 +18349,7 @@ function renderProductionProductUnlockStatus(result) {
   if (fields.lockProductionProfile) {
     fields.lockProductionProfile.disabled = !unlocked || productionBusyAction !== null;
   }
+  renderHighRiskReadinessStatus();
   return unlocked;
 }
 

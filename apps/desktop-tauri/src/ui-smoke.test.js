@@ -26,6 +26,7 @@ const i18nJs = readFileSync(join(here, "i18n.js"), "utf8");
 const actionStateJs = readFileSync(join(here, "action-state.js"), "utf8");
 const privateDeliveryStateJs = readFileSync(join(here, "private-delivery-state.js"), "utf8");
 const stylesCss = readFileSync(join(here, "styles.css"), "utf8");
+const securityMd = readFileSync(join(appRoot, "..", "..", "SECURITY.md"), "utf8");
 const functionBodyCache = new Map();
 
 function functionBody(source, name) {
@@ -112,6 +113,7 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(indexHtml, /id="windows-runtime-parity-status"/);
   assert.match(indexHtml, /id="high-risk-threat-model-status"/);
   assert.match(indexHtml, /id="high-risk-transport-metadata-status"/);
+  assert.match(indexHtml, /id="high-risk-readiness-status"/);
   assert.match(indexHtml, /class="version-integrity-status"/);
   assert.match(indexHtml, /data-i18n="publicBetaChecksumBody"/);
   assert.match(indexHtml, /data-i18n="publicBetaInstallBody"/);
@@ -120,10 +122,12 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(indexHtml, /data-i18n="windowsRuntimeParityStatusInitial"/);
   assert.match(indexHtml, /data-i18n="highRiskThreatModelStatusInitial"/);
   assert.match(indexHtml, /data-i18n="highRiskTransportMetadataStatusInitial"/);
+  assert.match(indexHtml, /data-i18n="highRiskReadinessStatusInitial"/);
   assert.match(indexHtml, /windows_public_artifact_ready=false/);
   assert.match(indexHtml, /shared_core_bypass_allowed=false/);
   assert.match(indexHtml, /high_risk_transport_direct_fallback=false/);
   assert.match(indexHtml, /high_risk_transport_app_launch_bootstrap=false/);
+  assert.match(indexHtml, /high_risk_ready_claim_allowed=false/);
   assert.match(indexHtml, /compromised_endpoint:not_protected/);
   assert.match(indexHtml, /direct_coercion:not_protected/);
   assert.match(indexHtml, /global_traffic_correlation:not_protected/);
@@ -164,6 +168,15 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(i18nJs, /다음: 로컬 profile을 만들거나 unlock 하세요\./);
   assert.match(mainJs, /productionFirstRunDesktopSummaryView/);
   assert.match(functionBody(mainJs, "renderFirstRunDesktopSummary"), /fields\.firstRunPrimaryNextAction/);
+  assert.match(actionStateJs, /export function productionHighRiskReadinessGateView/);
+  assert.match(actionStateJs, /status_values=ready#limited#not_ready/);
+  assert.match(actionStateJs, /public_support_high_risk_claim_allowed=\$\{highRiskReadyClaimAllowed\}/);
+  assert.match(actionStateJs, /release_high_risk_claim_allowed=\$\{highRiskReadyClaimAllowed\}/);
+  assert.match(mainJs, /productionHighRiskReadinessGateView/);
+  assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /twoProfileSafetyConfirmedForInput/);
+  assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /data-readiness/);
+  assert.match(stylesCss, /\.high-risk-readiness-status\[data-readiness="limited"\]/);
+  assert.match(securityMd, /The app readiness output uses `ready`, `limited`, and `not_ready`/);
   assert.match(i18nJs, /nothing starts on app launch/);
   assert.match(i18nJs, /앱 실행 시 자동 시작되지 않습니다/);
   assert.match(i18nJs, /Receive attempts start after this explicit action; external delivery is not claimed\./);
