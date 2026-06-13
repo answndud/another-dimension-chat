@@ -31,6 +31,12 @@ const ALLOWED_ARCHITECTURES = new Set(["windows-x64", "windows-arm64"]);
 const ALLOWED_BUNDLE_TARGETS = new Set(["msi", "nsis", "portable-archive", "msix"]);
 const ALLOWED_SIGNING_STATUS = new Set(["unsigned-hold", "signtool-signed", "store-signed"]);
 const ALLOWED_EXTENSIONS = new Set([".msi", ".exe", ".zip", ".msix"]);
+const BUNDLE_TARGET_EXTENSIONS = Object.freeze({
+  msi: ".msi",
+  nsis: ".exe",
+  "portable-archive": ".zip",
+  msix: ".msix",
+});
 
 const FORBIDDEN_PATTERNS = Object.freeze([
   [/windows_public_artifact_ready"\s*:\s*true/i, "windows-public-artifact-ready"],
@@ -138,6 +144,18 @@ function validateProvenanceFile(file, manifest, artifact, actualSha) {
   if (provenance.artifact_filename !== artifact.filename) {
     issues.push(`artifact:${artifact.filename}:provenance-filename-mismatch`);
   }
+  if (provenance.repository !== manifest.repository) {
+    issues.push(`artifact:${artifact.filename}:provenance-repository-mismatch`);
+  }
+  if (provenance.release_class !== manifest.release_class) {
+    issues.push(`artifact:${artifact.filename}:provenance-release-class-mismatch`);
+  }
+  if (provenance.bundle_target !== artifact.bundle_target) {
+    issues.push(`artifact:${artifact.filename}:provenance-bundle-target-mismatch`);
+  }
+  if (provenance.signing_status !== artifact.signing_status) {
+    issues.push(`artifact:${artifact.filename}:provenance-signing-status-mismatch`);
+  }
   if (provenance.source_commit !== manifest.source_commit) {
     issues.push(`artifact:${artifact.filename}:provenance-source-commit-mismatch`);
   }
@@ -166,6 +184,10 @@ function validateArtifact(file, manifest, artifact, index) {
   if (artifact.platform !== "windows") issues.push(`${prefix}:invalid-platform`);
   if (!ALLOWED_ARCHITECTURES.has(artifact.architecture)) issues.push(`${prefix}:invalid-architecture`);
   if (!ALLOWED_BUNDLE_TARGETS.has(artifact.bundle_target)) issues.push(`${prefix}:invalid-bundle-target`);
+  const expectedExtension = BUNDLE_TARGET_EXTENSIONS[artifact.bundle_target];
+  if (expectedExtension && path.extname(artifact.filename).toLowerCase() !== expectedExtension) {
+    issues.push(`${prefix}:bundle-target-extension-mismatch`);
+  }
   if (!ALLOWED_SIGNING_STATUS.has(artifact.signing_status)) issues.push(`${prefix}:invalid-signing-status`);
   if (artifact.webview2_runtime_required !== true) issues.push(`${prefix}:webview2-required`);
   if (artifact.smartscreen_reputation_claim !== false) issues.push(`${prefix}:smartscreen-must-stay-false`);

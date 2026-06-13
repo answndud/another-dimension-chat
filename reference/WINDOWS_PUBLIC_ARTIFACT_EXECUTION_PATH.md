@@ -43,6 +43,9 @@ Actual Windows artifact execution requires:
 6. Validate redacted support diagnostics and public non-claim copy.
 7. Validate the result with
    `scripts/validate_windows_public_artifact_results.mjs`.
+   Use `--require-current-head` or `AD_REQUIRE_CURRENT_HEAD=1` before any
+   public claim review so stale Windows runtime results cannot bind to an old
+   source commit.
 8. Keep public Windows artifact, installer, upload, production-ready, audited,
    reliable-delivery, and sensitive-use claims false until later release gates
    explicitly approve them.
@@ -64,13 +67,18 @@ Actual Windows artifact execution requires:
 - windows_support_diagnostics_requirements_defined=true
 - windows_no_overclaim_gate_ready=true
 - windows_result_requires_real_windows_machine=true
+- windows_result_requires_current_source_commit=true
+- windows_result_current_head_strict_mode_ready=true
 - windows_result_requires_checksum_provenance=true
 - windows_artifact_requires_same_release_authority=true
 - windows_artifact_checksum_bytes_verified_by_validator=true
 - windows_artifact_provenance_consistency_verified_by_validator=true
+- windows_artifact_provenance_field_consistency_verified_by_validator=true
+- windows_artifact_bundle_target_extension_bound=true
 - windows_result_requires_support_diagnostics_review=true
 - windows_result_requires_public_non_claims=true
 - windows_result_rejects_local_only_or_private_data=true
+- windows_result_rejects_private_docs_local_app_data_and_screenshots=true
 - windows_public_artifact_candidate_requires_manual_review=true
 - windows_real_runtime_smoke_passed=false
 - windows_public_artifact_ready=false

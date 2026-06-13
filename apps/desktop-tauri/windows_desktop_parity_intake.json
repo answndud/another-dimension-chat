@@ -7,6 +7,8 @@
   "windows_installer_ready": false,
   "windows_public_artifact_upload_allowed": false,
   "windows_local_runtime_smoke_passed": false,
+  "windows_result_requires_current_source_commit": true,
+  "windows_result_current_head_strict_mode_ready": true,
   "release_packaging_allowed": false,
   "generated_artifact_commit_allowed": false,
   "parity_gap_items": [

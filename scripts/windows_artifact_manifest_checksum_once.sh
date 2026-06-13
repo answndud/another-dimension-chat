@@ -41,6 +41,8 @@ for flag in \
   "windows_artifact_requires_same_release_authority=true" \
   "windows_artifact_checksum_bytes_verified_by_validator=true" \
   "windows_artifact_provenance_consistency_verified_by_validator=true" \
+  "windows_artifact_provenance_field_consistency_verified_by_validator=true" \
+  "windows_artifact_bundle_target_extension_bound=true" \
   "windows_artifact_release_upload_authorized=false" \
   "windows_artifact_release_body_edit_authorized=false" \
   "windows_public_artifact_ready=false" \
@@ -58,6 +60,8 @@ done
 must_contain "$VALIDATOR" "windows-public-artifact-manifest-v1"
 must_contain "$VALIDATOR" "windows-public-artifact-provenance-v1"
 must_contain "$VALIDATOR" "windows_artifact_checksum_bytes_verified=true"
+must_contain "$VALIDATOR" "provenance-signing-status-mismatch"
+must_contain "$VALIDATOR" "bundle-target-extension-mismatch"
 must_contain "$GENERATOR" "AD_PREPARE_WINDOWS_PUBLIC_ARTIFACT_METADATA"
 must_contain "$GENERATOR" "AD_WINDOWS_ARTIFACT"
 must_contain "$EXECUTION" "WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"
@@ -177,6 +181,24 @@ fi
 grep -Fq "artifact-sha-mismatch" "$tmp_dir/bad-sha.out" ||
   fail "bad SHA rejection was not reported"
 
+sed 's/"bundle_target": "nsis"/"bundle_target": "msi"/' \
+  "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_BAD_TARGET_EXTENSION.json"
+if node "$VALIDATOR" "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_BAD_TARGET_EXTENSION.json" >"$tmp_dir/bad-target-extension.out" 2>&1; then
+  fail "validator accepted bundle target/extension mismatch"
+fi
+grep -Fq "bundle-target-extension-mismatch" "$tmp_dir/bad-target-extension.out" ||
+  fail "bundle target/extension mismatch rejection was not reported"
+
+sed 's/"signing_status": "unsigned-hold"/"signing_status": "signtool-signed"/' \
+  "$tmp_dir/Another Dimension Chat_0.1.0_x64-setup.exe.provenance.json" >"$tmp_dir/bad-signing.provenance.json"
+sed 's/"provenance_file": "Another Dimension Chat_0.1.0_x64-setup.exe.provenance.json"/"provenance_file": "bad-signing.provenance.json"/' \
+  "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_BAD_SIGNING_PROVENANCE.json"
+if node "$VALIDATOR" "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_BAD_SIGNING_PROVENANCE.json" >"$tmp_dir/bad-signing.out" 2>&1; then
+  fail "validator accepted provenance signing mismatch"
+fi
+grep -Fq "provenance-signing-status-mismatch" "$tmp_dir/bad-signing.out" ||
+  fail "provenance signing mismatch rejection was not reported"
+
 if git -C "$ROOT" ls-files | grep -Eq '^(apps/desktop-tauri/(public-release|beta-artifacts)/|public-release/|beta-artifacts/)'; then
   fail "generated Windows artifact path is tracked"
 fi
@@ -193,6 +215,8 @@ windows_artifact_manifest_checksum_verifier_ready=true
 windows_artifact_requires_same_release_authority=true
 windows_artifact_checksum_bytes_verified_by_validator=true
 windows_artifact_provenance_consistency_verified_by_validator=true
+windows_artifact_provenance_field_consistency_verified_by_validator=true
+windows_artifact_bundle_target_extension_bound=true
 windows_public_artifact_ready=false
 windows_installer_ready=false
 windows_signing_ready=false

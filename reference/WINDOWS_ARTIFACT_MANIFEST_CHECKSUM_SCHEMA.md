@@ -28,6 +28,10 @@ set and `AD_WINDOWS_ARTIFACT` points to an existing artifact under an ignored
 generated artifact directory. The validator checks the artifact bytes against
 the manifest SHA-256, the `.sha256` sidecar, and the provenance JSON without
 opening any upload, release edit, or generated artifact commit gate.
+It also binds bundle target to artifact extension (`msi` -> `.msi`,
+`nsis` -> `.exe`, `portable-archive` -> `.zip`, `msix` -> `.msix`) and compares
+provenance repository, release class, bundle target, and signing status against
+the manifest/artifact entry.
 
 ## Manifest Fields
 
@@ -53,6 +57,8 @@ Each Windows artifact manifest uses
 - windows_artifact_requires_same_release_authority=true
 - windows_artifact_checksum_bytes_verified_by_validator=true
 - windows_artifact_provenance_consistency_verified_by_validator=true
+- windows_artifact_provenance_field_consistency_verified_by_validator=true
+- windows_artifact_bundle_target_extension_bound=true
 - windows_artifact_release_upload_authorized=false
 - windows_artifact_release_body_edit_authorized=false
 - windows_public_artifact_ready=false

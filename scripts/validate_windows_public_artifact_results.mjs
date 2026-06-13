@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -78,7 +79,12 @@ const REQUIRED_NON_CLAIMS = Object.freeze([
 
 const FORBIDDEN_PATTERNS = Object.freeze([
   [/[A-Z]:\\Users\\/i, "windows-local-path"],
+  [/%LOCALAPPDATA%/i, "windows-local-app-data"],
+  [/AppData\\Local\\/i, "windows-local-app-data"],
   [/\/Users\/[^/\s]+\/(?:Library|project|Downloads|Desktop)\//, "local-path"],
+  [/\bdocs\/(?:PLAN|DONE|product|security|research)\b/i, "private-docs"],
+  [/\b(?:public-release|beta-artifacts|target)\/[^\s]*/i, "generated-artifact-path"],
+  [/!\[[^\]]*(?:room|message|profile|invite|private)[^\]]*\]\([^)]+\)/i, "private-screenshot"],
   [/\bADPAIR[0-9A-Z]*\b/i, "pairing-payload"],
   [/\bADENV[0-9A-Z]*\b/i, "envelope-payload"],
   [/\bADENDPOINT[A-Z0-9]*\b/i, "endpoint-payload"],
@@ -127,11 +133,22 @@ function isSha256(value) {
   return /^[a-f0-9]{64}$/i.test(value);
 }
 
+function currentHead() {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "";
+  }
+}
+
 function sameSet(actual, expected) {
   return actual.size === expected.length && expected.every((item) => actual.has(item));
 }
 
-function validateResult(file) {
+function validateResult(file, { requireCurrentHead = false, head = "" } = {}) {
   const text = fs.readFileSync(file, "utf8");
   const fields = parseResult(text);
   const issues = [];
@@ -161,6 +178,9 @@ function validateResult(file) {
   if (!/^[0-9a-f]{7,40}$/i.test(fields.get("source_commit") ?? "")) {
     issues.push("invalid-source-commit");
   }
+  if (requireCurrentHead && fields.get("source_commit") !== head) {
+    issues.push("source-commit-not-current-head");
+  }
   const nonClaims = new Set((fields.get("non_claims_confirmed") ?? "").split("#").filter(Boolean));
   if (!sameSet(nonClaims, REQUIRED_NON_CLAIMS)) {
     issues.push("non-claims-mismatch");
@@ -177,7 +197,12 @@ function fieldEquals(result, field, value) {
   return result.fields.get(field) === value;
 }
 
-const results = collectResultFiles(process.argv.slice(2));
+const rawArgs = process.argv.slice(2);
+const requireCurrentHead =
+  rawArgs.includes("--require-current-head") || process.env.AD_REQUIRE_CURRENT_HEAD === "1";
+const inputs = rawArgs.filter((arg) => arg !== "--require-current-head");
+const results = collectResultFiles(inputs);
+console.log(`windows_public_artifact_result_current_head_required=${requireCurrentHead}`);
 console.log(`results_found=${results.length}`);
 
 if (results.length === 0) {
@@ -188,7 +213,8 @@ if (results.length === 0) {
   process.exit(0);
 }
 
-const validated = results.map(validateResult);
+const head = requireCurrentHead ? currentHead() : "";
+const validated = results.map((file) => validateResult(file, { requireCurrentHead, head }));
 let failures = 0;
 for (const result of validated) {
   const name = path.basename(result.file);

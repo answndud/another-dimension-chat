@@ -80,6 +80,8 @@ Public wording must keep:
 - windows_public_artifact_execution_path_available=true
 - windows_real_runtime_result_schema_available=true
 - windows_real_runtime_result_validator_available=true
+- windows_result_requires_current_source_commit=true
+- windows_result_current_head_strict_mode_ready=true
 - windows_real_runtime_smoke_passed=false
 - windows_public_artifact_ready=false
 - windows_installer_ready=false

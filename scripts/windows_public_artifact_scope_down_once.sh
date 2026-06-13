@@ -52,6 +52,8 @@ must_contain "$DOC" "d100_5_windows_public_artifact_execution_path_reviewed=true
 must_contain "$DOC" "windows_public_artifact_execution_path_available=true"
 must_contain "$DOC" "windows_real_runtime_result_schema_available=true"
 must_contain "$DOC" "windows_real_runtime_result_validator_available=true"
+must_contain "$DOC" "windows_result_requires_current_source_commit=true"
+must_contain "$DOC" "windows_result_current_head_strict_mode_ready=true"
 must_contain "$DOC" "windows_artifact_manifest_checksum_schema_available=true"
 must_contain "$DOC" "windows_artifact_manifest_checksum_validator_available=true"
 must_contain "$DOC" "windows_artifact_metadata_generator_ready=true"
@@ -82,7 +84,11 @@ must_contain "$PARITY" '"windows_public_artifact_ready": false'
 must_contain "$PARITY" '"windows_installer_ready": false'
 must_contain "$PARITY" '"windows_public_artifact_upload_allowed": false'
 must_contain "$PARITY" '"windows_local_runtime_smoke_passed": false'
+must_contain "$PARITY" '"windows_result_requires_current_source_commit": true'
+must_contain "$PARITY" '"windows_result_current_head_strict_mode_ready": true'
 must_contain "$HANDOFF" '"windows_local_runtime_smoke_passed": false'
+must_contain "$HANDOFF" '"windows_result_requires_current_source_commit": true'
+must_contain "$HANDOFF" '"windows_result_current_head_strict_mode_ready": true'
 must_contain "$HANDOFF" '"must_run_on": "real-windows-machine"'
 must_reference_public_gate "README.md" "reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md"
 must_reference_public_gate "README.md" "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
@@ -112,6 +118,8 @@ d100_5_windows_public_artifact_execution_path_reviewed=true
 windows_public_artifact_execution_path_available=true
 windows_real_runtime_result_schema_available=true
 windows_real_runtime_result_validator_available=true
+windows_result_requires_current_source_commit=true
+windows_result_current_head_strict_mode_ready=true
 windows_artifact_manifest_checksum_schema_available=true
 windows_artifact_manifest_checksum_validator_available=true
 windows_artifact_metadata_generator_ready=true

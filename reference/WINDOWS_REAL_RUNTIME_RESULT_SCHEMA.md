@@ -28,6 +28,8 @@ The D100-5 runbook is
 - `artifact_provenance_sha256`
 - `artifact_manifest_sha256`
 - `source_commit`
+  - Must be the current audited source commit when
+    `AD_REQUIRE_CURRENT_HEAD=1` or `--require-current-head` is used.
 - `webview2_rendered=pass|fail`
 - `app_data_root_redacted=pass|fail`
 - `path_separator_behavior=pass|fail`
@@ -52,6 +54,9 @@ invite codes, pairing payloads, envelope payloads, endpoint payloads, onion
 endpoints, bridge lines, passphrases, private keys, key material, raw logs,
 crash dumps, screenshots of private room data, files from `docs/`, local app
 data, or generated artifact bytes.
+The validator rejects Windows user paths, `%LOCALAPPDATA%`/`AppData\\Local`,
+private `docs/` paths, generated artifact paths, and markdown screenshot links
+that describe private room/message/profile/invite content.
 
 ## Current Schema Flags
 
@@ -61,10 +66,13 @@ data, or generated artifact bytes.
 - windows_artifact_manifest_checksum_validator_available=true
 - windows_artifact_manifest_checksum_verifier_ready=true
 - windows_result_requires_real_windows_machine=true
+- windows_result_requires_current_source_commit=true
+- windows_result_current_head_strict_mode_ready=true
 - windows_result_requires_checksum_provenance=true
 - windows_result_requires_support_diagnostics_review=true
 - windows_result_requires_public_non_claims=true
 - windows_result_rejects_local_only_or_private_data=true
+- windows_result_rejects_private_docs_local_app_data_and_screenshots=true
 - windows_public_artifact_candidate_requires_manual_review=true
 - windows_real_runtime_smoke_passed=false
 - windows_public_artifact_ready=false
