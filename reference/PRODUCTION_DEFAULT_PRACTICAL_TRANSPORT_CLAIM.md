@@ -1,10 +1,11 @@
 # Production Default Practical Transport Claim Closure
 
 Status: RB-3 source-side default practical transport closure is complete for
-the supported local/manual courier envelope exchange scope. This is not reliable
-external delivery, not automatic network messaging, not production transport
-readiness, not a secure messenger claim, and not permission for sensitive
-communication.
+the supported local/manual courier envelope exchange scope. C100-4 is closed
+for active-queue progress by explicit owner policy waiver only. This is not
+reliable external delivery, not automatic network messaging, not production
+transport readiness, not a secure messenger claim, and not permission for
+sensitive communication.
 
 RB-3 resolves the default transport blocker by choosing the stable desktop
 default path that is implemented and recoverable today: explicit local/manual
@@ -12,6 +13,12 @@ encrypted envelope export/import carried by a user-chosen external channel. The
 advanced onion/Tor path remains separate, explicit-user-triggered, onion-only,
 fail-closed, and non-default until real field evidence and review close later
 phases.
+
+The selected workaround is an explicit owner policy waiver for C100-4 only:
+missing representative usability and real field evidence no longer keep C100-4
+in the active queue, but production transport, reliable external delivery,
+automatic delivery, remote acknowledgement, security-ready, and sensitive-use
+claims remain false.
 
 ## Allowed Claim Scope
 
@@ -56,6 +63,11 @@ Do not claim:
 ## Current Gate Flags
 
 - rb_3_default_practical_transport_closure_reviewed=true
+- c100_4_transport_blocker_closed=true
+- default_transport_policy_waiver_authorized=true
+- default_transport_waiver_scope=active-queue-unblock-only
+- default_transport_usability_evidence_required_for_claims=true
+- default_transport_field_evidence_required_for_claims=true
 - supported_default_transport_ready=true
 - supported_default_transport_scope=local-manual-courier-envelope-exchange-only
 - default_transport_product_path=local-manual-encrypted-envelope-exchange
@@ -76,4 +88,4 @@ Do not claim:
 - production_transport_ready=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=RB-4 macOS UX usability and recovery closure
+- next_required_phase=Phase C100-5 - Advanced Onion/Tor Evidence Boundary

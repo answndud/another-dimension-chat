@@ -203,5 +203,5 @@ external_onion_delivery_verified=false
 external_review_completed=false
 audit_completed=false
 security_ready_claimed=false
-next_required_phase=Phase-C100-4-Default-Practical-Transport-Product-Path
+next_required_phase=Phase-C100-5-Advanced-Onion-Tor-Evidence-Boundary
 STATUS

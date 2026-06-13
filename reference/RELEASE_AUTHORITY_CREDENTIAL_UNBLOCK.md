@@ -225,4 +225,4 @@ separate explicit phases. They do not inherit macOS release authority.
 - android_runtime_implementation_authorized=false
 - ios_runtime_implementation_authorized=false
 - stable_release_scope_down_until_credentials=true
-- next_required_phase=Phase C100-4 - Default Practical Transport Product Path
+- next_required_phase=Phase C100-5 - Advanced Onion/Tor Evidence Boundary

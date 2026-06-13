@@ -159,4 +159,4 @@ These questions remain unresolved and must stay in the external review packet:
 - runtime_messaging_ready=false
 - production_e2ee_ready=false
 - security_ready_claimed=false
-- next_required_phase=Phase C100-4 - Default Practical Transport Product Path
+- next_required_phase=Phase C100-5 - Advanced Onion/Tor Evidence Boundary

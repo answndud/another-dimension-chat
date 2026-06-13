@@ -39,6 +39,11 @@ for file in "$DOC" "$TRANSPORT_DOC" "$CORE" "$STATUS" "$PRIVATE_STATE" \
 done
 
 must_contain "$DOC" "rb_3_default_practical_transport_closure_reviewed=true"
+must_contain "$DOC" "c100_4_transport_blocker_closed=true"
+must_contain "$DOC" "default_transport_policy_waiver_authorized=true"
+must_contain "$DOC" "default_transport_waiver_scope=active-queue-unblock-only"
+must_contain "$DOC" "default_transport_usability_evidence_required_for_claims=true"
+must_contain "$DOC" "default_transport_field_evidence_required_for_claims=true"
 must_contain "$DOC" "supported_default_transport_ready=true"
 must_contain "$DOC" "supported_default_transport_scope=local-manual-courier-envelope-exchange-only"
 must_contain "$DOC" "default_transport_product_path=local-manual-encrypted-envelope-exchange"
@@ -59,7 +64,7 @@ must_contain "$DOC" "reliable_external_delivery_claim_allowed=false"
 must_contain "$DOC" "production_transport_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
 must_contain "$DOC" "sensitive_communication_allowed=false"
-must_contain "$DOC" "next_required_phase=RB-4 macOS UX usability and recovery closure"
+must_contain "$DOC" "next_required_phase=Phase C100-5 - Advanced Onion/Tor Evidence Boundary"
 
 must_contain "$CORE" "SUPPORTED_DEFAULT_TRANSPORT_SCOPE"
 must_contain "$CORE" "pub fn supported_default_transport_ready"
@@ -114,6 +119,11 @@ scripts/desktop_default_transport_boundary_once.sh >/dev/null
 cat <<'STATUS'
 status=production-default-practical-transport-closure-ready
 rb_3_default_practical_transport_closure_reviewed=true
+c100_4_transport_blocker_closed=true
+default_transport_policy_waiver_authorized=true
+default_transport_waiver_scope=active-queue-unblock-only
+default_transport_usability_evidence_required_for_claims=true
+default_transport_field_evidence_required_for_claims=true
 supported_default_transport_ready=true
 supported_default_transport_scope=local-manual-courier-envelope-exchange-only
 default_transport_product_path=local-manual-encrypted-envelope-exchange
@@ -134,5 +144,5 @@ reliable_external_delivery_claim_allowed=false
 production_transport_ready=false
 security_ready_claimed=false
 sensitive_communication_allowed=false
-next_required_phase=RB-4-macos-ux-usability-recovery-closure
+next_required_phase=Phase-C100-5-Advanced-Onion-Tor-Evidence-Boundary
 STATUS
