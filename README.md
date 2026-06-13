@@ -198,6 +198,10 @@ Production readiness claim gate: beta and non-claim wording may not be removed
 until [reference/PRODUCTION_READINESS_CLAIM_GATE.md](reference/PRODUCTION_READINESS_CLAIM_GATE.md)
 is satisfied by the later stable release phases. Signing and notarization are
 macOS distribution ergonomics, not a messenger security trust boundary.
+RB-8 selected the lower release class path in
+[reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md](reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md):
+signed public beta or RC only, with stable/production, audited,
+security-ready, reliable-delivery, and sensitive-use claims still false.
 
 Production protocol/session lifecycle review input is tracked in
 [reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md).

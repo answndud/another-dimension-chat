@@ -63,6 +63,12 @@ stable artifact work as a blocker for lower release classes such as unsigned or
 signed public beta / RC. Signed/notarized artifacts still block stable,
 production, distribution, and install-friction claims.
 
+RB-8 production claim decision is recorded in
+`reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md`. The stable release
+candidate decision is lower release class only: signed public beta or RC.
+Production-ready, audited, security-ready, reliable external delivery, beta
+wording removal, and sensitive-use claims remain false.
+
 ## Gate Decision
 
 Decision: hold.
@@ -135,7 +141,10 @@ preflight after the blockers below are resolved.
 ## Current Gate Flags
 
 - stable_macos_v1_release_gate_reviewed=true
+- rb_8_production_claim_release_class_decision_reviewed=true
 - stable_release_gate_decision=hold
+- stable_release_candidate_gate_decision=lower-release-class-only
+- next_release_class=signed-public-beta-or-rc
 - stable_macos_v1_release_allowed=false
 - public_stable_release_allowed=false
 - stable_signed_notarized_artifact_available=false
@@ -186,6 +195,9 @@ preflight after the blockers below are resolved.
 - production_operational_readiness_claim_allowed=false
 - production_ready_claim_allowed=false
 - beta_wording_removal_allowed=false
+- lower_release_class_claim_boundary_ready=true
+- public_wording_matches_lower_release_class=true
+- owner_stable_release_approval_recorded=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false
 - stable_or_production_release_allowed_without_external_review=false
