@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -69,6 +71,20 @@ const SHA_FIELDS = Object.freeze({
   ios: ["artifact_sha256", "artifact_manifest_sha256"],
 });
 
+const REQUIRED_EVIDENCE_FILES = Object.freeze({
+  macos: [
+    "artifact_provenance",
+    "distribution_manifest",
+    "gatekeeper_assessment",
+    "representative_usability_reports",
+  ],
+  windows: ["artifact_manifest", "runtime_result"],
+  android: ["artifact_manifest", "real_device_result"],
+  ios: ["artifact_manifest", "real_device_result"],
+  external: ["review_signoff", "audit_finding_tracker", "redacted_field_reports"],
+  claim_discipline: ["release_copy_review", "support_copy_review"],
+});
+
 const FORBIDDEN_PATTERNS = Object.freeze([
   [/[A-Z]:\\Users\\/i, "windows-local-path"],
   [/\/Users\/[^/\s]+\/(?:Library|project|Downloads|Desktop)\//, "local-path"],
@@ -105,8 +121,59 @@ function collectFiles(inputs) {
   return files.sort();
 }
 
+function currentHead() {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "";
+  }
+}
+
+function sha256File(file) {
+  return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+}
+
 function isSha(value) {
   return typeof value === "string" && /^[a-f0-9]{64}$/i.test(value);
+}
+
+function evidencePath(baseDir, relativePath) {
+  if (!relativePath || typeof relativePath !== "string") return "";
+  if (path.isAbsolute(relativePath)) return "";
+  const normalized = path.normalize(relativePath);
+  if (normalized === "." || normalized.startsWith("..") || path.isAbsolute(normalized)) return "";
+  return path.join(baseDir, normalized);
+}
+
+function validateEvidenceFileRef(baseDir, groupName, fieldName, value) {
+  const prefix = `${groupName}.evidence_files.${fieldName}`;
+  const issues = [];
+  if (Array.isArray(value)) {
+    if (value.length === 0) return [`${prefix}:empty-array`];
+    for (const [index, item] of value.entries()) {
+      issues.push(...validateEvidenceFileRef(baseDir, groupName, `${fieldName}[${index}]`, item));
+    }
+    return issues;
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return [`${prefix}:missing-ref`];
+  }
+  const file = evidencePath(baseDir, value.path);
+  if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+    issues.push(`${prefix}:missing-file`);
+  }
+  if (!isSha(value.sha256)) {
+    issues.push(`${prefix}:invalid-sha256`);
+  } else if (file && fs.existsSync(file) && fs.statSync(file).isFile()) {
+    const actualSha = sha256File(file);
+    if (actualSha !== value.sha256) {
+      issues.push(`${prefix}:sha-mismatch`);
+    }
+  }
+  return issues;
 }
 
 function validateGroup(ledger, groupName) {
@@ -128,7 +195,35 @@ function validateGroup(ledger, groupName) {
   return issues;
 }
 
-function validateLedger(file) {
+function validateEvidenceFiles(ledger, file) {
+  const issues = [];
+  const baseDir = path.dirname(file);
+  const evidenceFiles = ledger.evidence_files;
+  if (!evidenceFiles || typeof evidenceFiles !== "object" || Array.isArray(evidenceFiles)) {
+    return ["missing-evidence-files"];
+  }
+  for (const [groupName, fields] of Object.entries(REQUIRED_EVIDENCE_FILES)) {
+    const groupRefs = evidenceFiles[groupName];
+    if (!groupRefs || typeof groupRefs !== "object" || Array.isArray(groupRefs)) {
+      issues.push(`missing-evidence-file-group:${groupName}`);
+      continue;
+    }
+    for (const field of fields) {
+      issues.push(...validateEvidenceFileRef(baseDir, groupName, field, groupRefs[field]));
+    }
+  }
+  const usabilityRefs = evidenceFiles.macos?.representative_usability_reports;
+  if (!Array.isArray(usabilityRefs) || usabilityRefs.length < 3) {
+    issues.push("macos.representative_usability_reports:below-threshold");
+  }
+  const fieldRefs = evidenceFiles.external?.redacted_field_reports;
+  if (!Array.isArray(fieldRefs) || fieldRefs.length < 4) {
+    issues.push("external.redacted_field_reports:below-threshold");
+  }
+  return issues;
+}
+
+function validateLedger(file, { requireCurrentHead, head }) {
   const text = fs.readFileSync(file, "utf8");
   const issues = [];
   for (const [pattern, label] of FORBIDDEN_PATTERNS) {
@@ -145,6 +240,9 @@ function validateLedger(file) {
   }
   if (!/^[0-9a-f]{7,40}$/i.test(ledger.source_commit ?? "")) {
     issues.push("invalid-source-commit");
+  }
+  if (requireCurrentHead && ledger.source_commit !== head) {
+    issues.push("source-commit-not-current-head");
   }
   if (ledger.evidence_origin !== "real-external-and-device-evidence") {
     issues.push("invalid-evidence-origin");
@@ -170,6 +268,7 @@ function validateLedger(file) {
   for (const groupName of REQUIRED_GROUPS) {
     issues.push(...validateGroup(ledger, groupName));
   }
+  issues.push(...validateEvidenceFiles(ledger, file));
   const fieldReportCount = ledger.external?.accepted_field_report_count;
   if (!Number.isInteger(fieldReportCount) || fieldReportCount < 4) {
     issues.push("external.accepted_field_report_count:below-threshold");
@@ -181,7 +280,12 @@ function validateLedger(file) {
   return { file, valid: issues.length === 0, issues };
 }
 
-const files = collectFiles(process.argv.slice(2));
+const rawArgs = process.argv.slice(2);
+const requireCurrentHead =
+  rawArgs.includes("--require-current-head") || process.env.AD_REQUIRE_CURRENT_HEAD === "1";
+const inputs = rawArgs.filter((arg) => arg !== "--require-current-head");
+const files = collectFiles(inputs);
+console.log(`final_100_evidence_ledger_current_head_required=${requireCurrentHead}`);
 console.log(`final_100_evidence_ledger_files_found=${files.length}`);
 
 if (files.length === 0) {
@@ -196,7 +300,8 @@ if (files.length === 0) {
 }
 
 let failures = 0;
-for (const result of files.map(validateLedger)) {
+const head = requireCurrentHead ? currentHead() : "";
+for (const result of files.map((file) => validateLedger(file, { requireCurrentHead, head }))) {
   if (result.valid) {
     console.log(`ok ${path.basename(result.file)}`);
   } else {
@@ -211,6 +316,7 @@ if (failures > 0) {
 }
 
 console.log(`accepted_final_100_evidence_ledgers=${files.length}`);
+console.log("final_100_evidence_ledger_child_files_sha_verified=true");
 console.log("final_100_evidence_candidate_requires_owner_claim_decision=true");
 console.log("macos_public_app_100_claim_allowed=false");
 console.log("whole_target_standard_100_claim_allowed=false");

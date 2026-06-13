@@ -25,6 +25,12 @@ Each ledger uses `schema_version=final-100-evidence-ledger-v1` and must include:
 - Claim discipline proving public wording has not been promoted ahead of
   evidence.
 
+The ledger must also bind each claim group to child evidence files by relative
+path and SHA-256. Absolute paths, parent-directory traversal, missing files,
+and SHA mismatches are rejected. The validator can be run with
+`--require-current-head` or `AD_REQUIRE_CURRENT_HEAD=1` when the evidence bundle
+must match the checked-out commit.
+
 Passing this validator only produces a candidate-for-review status. It never
 sets public claims true by itself.
 
@@ -35,6 +41,8 @@ sets public claims true by itself.
 - final_100_evidence_ledger_waiting_for_real_inputs=true
 - final_100_evidence_ledger_rejects_fabricated_or_local_only=true
 - final_100_evidence_ledger_rejects_private_material=true
+- final_100_evidence_ledger_requires_child_evidence_files=true
+- final_100_evidence_ledger_child_files_sha_verified=true
 - final_100_evidence_candidate_requires_owner_claim_decision=true
 - macos_public_app_100_claim_allowed=false
 - whole_target_standard_100_claim_allowed=false

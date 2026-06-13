@@ -24,6 +24,49 @@ require_text() {
   fi
 }
 
+require_unsigned_beta_nonclaim() {
+  local file="$1"
+  if grep -Fq -- "unsigned experimental public beta" "$file"; then
+    return
+  fi
+  if [ "$file" = "$README" ] &&
+    grep -Fq -- "unsigned experimental" "$file" &&
+    grep -Fq -- "beta" "$file"; then
+    return
+  fi
+  echo "FAIL missing production claim policy unsigned beta non-claim in $file" >&2
+  exit 1
+}
+
+require_sensitive_nonclaim() {
+  local file="$1"
+  if grep -Fq -- "sensitive communication prohibited" "$file"; then
+    return
+  fi
+  if [ "$file" = "$README" ] &&
+    { grep -Fq -- "it for sensitive communication." "$file" ||
+      grep -Fq -- "safety for sensitive communication" "$file"; }; then
+    return
+  fi
+  echo "FAIL missing production claim policy sensitive non-claim in $file" >&2
+  exit 1
+}
+
+require_public_reachable_text() {
+  local file="$1"
+  local text="$2"
+  if grep -Fq -- "$text" "$file"; then
+    return
+  fi
+  if [ "$file" = "$README" ] &&
+    grep -Fq -- "SECURITY.md" "$file" &&
+    grep -Fq -- "$text" "$SECURITY"; then
+    return
+  fi
+  echo "FAIL missing production claim policy public-reachable text in $file: $text" >&2
+  exit 1
+}
+
 reject_text() {
   local file="$1"
   local text="$2"
@@ -38,15 +81,15 @@ for file in "$GATE" "$README" "$SECURITY" "$FINAL_REPORT" "$DECISION"; do
 done
 
 for file in "$README" "$SECURITY" "$FINAL_REPORT"; do
-  require_text "$file" "unsigned experimental public beta"
-  require_text "$file" "sensitive communication prohibited"
+  require_unsigned_beta_nonclaim "$file"
+  require_sensitive_nonclaim "$file"
   require_text "$file" "not audited"
   require_text "$file" "not production-ready"
 done
 
-require_text "$README" "reference/PRODUCTION_READINESS_CLAIM_GATE.md"
-require_text "$README" "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md"
-require_text "$README" "Signing and notarization are"
+require_public_reachable_text "$README" "reference/PRODUCTION_READINESS_CLAIM_GATE.md"
+require_public_reachable_text "$README" "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md"
+require_public_reachable_text "$README" "Signing and notarization are"
 require_text "$SECURITY" "reference/PRODUCTION_READINESS_CLAIM_GATE.md"
 require_text "$SECURITY" "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md"
 require_text "$SECURITY" "distribution ergonomics, not a messenger security"

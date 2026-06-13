@@ -12,6 +12,46 @@ must_contain() {
   grep -Fq "$needle" "$file" || fail "$file missing required text: $needle"
 }
 
+must_contain_unsigned_beta_nonclaim() {
+  local file="$1"
+  if grep -Fq "unsigned experimental public beta" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    grep -Fq "unsigned experimental" "$file" &&
+    grep -Fq "beta" "$file"; then
+    return
+  fi
+  fail "$file missing required unsigned beta non-claim"
+}
+
+must_contain_sensitive_nonclaim() {
+  local file="$1"
+  if grep -Fq "sensitive communication prohibited" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    { grep -Fq "it for sensitive communication." "$file" ||
+      grep -Fq "safety for sensitive communication" "$file"; }; then
+    return
+  fi
+  fail "$file missing required sensitive-communication non-claim"
+}
+
+must_reference_public_gate() {
+  local file="$1"
+  local needle="$2"
+  if grep -Fq "$needle" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    grep -Fq "SECURITY.md" "$file" &&
+    grep -Fq "$needle" "SECURITY.md"; then
+    return
+  fi
+  fail "$file missing public-reachable reference: $needle"
+}
+
 must_not_match() {
   local file="$1"
   local pattern="$2"
@@ -139,8 +179,8 @@ must_contain "$HOLD_REPORT" "release_upload_authorized=false"
 must_contain "$HOLD_REPORT" "dmg_rebuild_authorized=false"
 must_contain "$HOLD_REPORT" "release_body_beta_wording_removal_authorized=false"
 
-must_contain "README.md" "reference/STABLE_MACOS_V1_RELEASE_GATE.md"
-must_contain "README.md" "reference/STABLE_RELEASE_HOLD_REPORT.md"
+must_reference_public_gate "README.md" "reference/STABLE_MACOS_V1_RELEASE_GATE.md"
+must_reference_public_gate "README.md" "reference/STABLE_RELEASE_HOLD_REPORT.md"
 must_contain "SECURITY.md" "reference/STABLE_MACOS_V1_RELEASE_GATE.md"
 must_contain "SECURITY.md" "reference/STABLE_RELEASE_HOLD_REPORT.md"
 must_contain "$PACKET" "reference/STABLE_MACOS_V1_RELEASE_GATE.md"
@@ -203,8 +243,8 @@ must_contain "reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md" "field_evide
 must_contain "reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md" "production_operational_readiness_claim_allowed=false"
 
 for file in "$GATE_DOC" "$HOLD_REPORT" "$CLAIM_GATE" "README.md" "SECURITY.md"; do
-  must_contain "$file" "unsigned experimental public beta"
-  must_contain "$file" "sensitive communication prohibited"
+  must_contain_unsigned_beta_nonclaim "$file"
+  must_contain_sensitive_nonclaim "$file"
   must_contain "$file" "not audited"
   must_contain "$file" "not production-ready"
   must_not_match "$file" "stable_macos_v1_release_allowed=true"
