@@ -184,6 +184,9 @@ for flag in \
   "m100_3_artifact_blocker_closed=true" \
   "signed_notarized_rc_policy_waiver_authorized=true" \
   "signed_notarized_artifact_required_for_distribution_claims=true" \
+  "m100_6_usability_blocker_closed=true" \
+  "representative_usability_policy_waiver_authorized=true" \
+  "representative_usability_evidence_required_for_stable_claims=true" \
   "macos_release_credential_evidence_schema_available=true" \
   "macos_release_credential_evidence_validator_available=true" \
   "macos_release_credential_evidence_collector_available=true" \
@@ -386,5 +389,5 @@ production_ready_claim_allowed=false
 audited_claim_allowed=false
 sensitive_communication_allowed=false
 reliable_external_delivery_claim_allowed=false
-next_required_phase=Phase-M100-6-macOS-Representative-Usability-Evidence
+next_required_phase=Phase-M100-7-macOS-Update-And-Rollback-Safe-Release-Channel
 STATUS

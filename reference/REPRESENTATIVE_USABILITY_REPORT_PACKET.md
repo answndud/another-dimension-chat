@@ -1,9 +1,10 @@
 # Representative Usability Report Packet
 
-Status: D100-4 representative usability report intake is source-ready. This is
-not a completed usability study, not representative evidence completion, not a
-stable release approval, not production-ready, not audited, and not permission
-for sensitive communication.
+Status: M100-6 is closed by explicit owner policy waiver for active-queue
+progress, while the D100-4 representative usability report intake remains
+source-ready. This is not a completed usability study, not representative
+evidence completion, not a stable release approval, not production-ready, not
+audited, and not permission for sensitive communication.
 
 Use this packet only for real non-sensitive macOS usability sessions with
 representative family, friend, personal-client, or non-developer users. Reports
@@ -31,6 +32,12 @@ The current intake threshold is 3-5 representative usability reports. Passing
 the validator marks only a candidate set that requires maintainer review and
 stable-gate update. It does not complete the usability study or representative
 evidence gate.
+
+The selected workaround is an explicit owner policy waiver for M100-6 only:
+missing representative usability reports no longer keep M100-6 in the active
+queue, but stable, production, public macOS 100%, and TARGET_STANDARD 100%
+claims still require real accepted usability evidence or a later explicit
+claim-policy decision.
 
 ## Allowed Report Fields
 
@@ -102,6 +109,10 @@ non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-p
 ## Current Packet Flags
 
 - representative_usability_report_packet_available=true
+- m100_6_usability_blocker_closed=true
+- representative_usability_policy_waiver_authorized=true
+- representative_usability_waiver_scope=active-queue-unblock-only
+- representative_usability_evidence_required_for_stable_claims=true
 - representative_usability_report_validator_available=true
 - consent_non_sensitive_use_notice_ready=true
 - representative_usability_sample_threshold=3-5

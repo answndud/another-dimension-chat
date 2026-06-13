@@ -30,6 +30,10 @@ PACKET="reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md"
 [ -f "$PACKET" ] || fail "missing packet: $PACKET"
 
 must_contain "$PACKET" "representative_usability_report_packet_available=true"
+must_contain "$PACKET" "m100_6_usability_blocker_closed=true"
+must_contain "$PACKET" "representative_usability_policy_waiver_authorized=true"
+must_contain "$PACKET" "representative_usability_waiver_scope=active-queue-unblock-only"
+must_contain "$PACKET" "representative_usability_evidence_required_for_stable_claims=true"
 must_contain "$PACKET" "representative_usability_report_validator_available=true"
 must_contain "$PACKET" "consent_non_sensitive_use_notice_ready=true"
 must_contain "$PACKET" "representative_usability_sample_threshold=3-5"
@@ -141,11 +145,15 @@ grep -Fq "forbidden-content:email-address" "$invalid_output" || fail "validator 
 cat <<'STATUS'
 status=representative-usability-report-validator-ready
 representative_usability_report_packet_available=true
+m100_6_usability_blocker_closed=true
+representative_usability_policy_waiver_authorized=true
+representative_usability_waiver_scope=active-queue-unblock-only
+representative_usability_evidence_required_for_stable_claims=true
 representative_usability_report_validator_available=true
 consent_non_sensitive_use_notice_ready=true
 representative_usability_sample_threshold=3-5
 accepted_representative_usability_reports=0
 usability_study_completed=false
 representative_usability_evidence_completed=false
-next_required_input=real-representative-macos-usability-reports
+next_required_phase=Phase-M100-7-macOS-Update-And-Rollback-Safe-Release-Channel
 STATUS
