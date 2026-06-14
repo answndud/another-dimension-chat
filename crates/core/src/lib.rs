@@ -25204,6 +25204,11 @@ pub mod production {
             ContactId, PairwisePublicKey, PairwiseSignature, ProductionPairwisePrivateKey,
             ProfileName,
         };
+        use std::{
+            fs,
+            path::{Path, PathBuf},
+            time::{SystemTime, UNIX_EPOCH},
+        };
         use another_dimension_pairing::{
             production_pairing_payload_for, ProductionPairingPayloadParams, DEFAULT_TTL_SECONDS,
         };
@@ -34010,6 +34015,545 @@ pub mod production {
             );
         }
 
+        struct CoreConversationFixture {
+            root: PathBuf,
+            alice_store: PathBuf,
+            bob_store: PathBuf,
+            alice: ProfileName,
+            bob: ProfileName,
+            passphrase: ProfilePassphrase,
+        }
+
+        impl CoreConversationFixture {
+            fn sender_receiver(
+                &self,
+                sender_name: &str,
+            ) -> ((&PathBuf, &ProfileName), (&PathBuf, &ProfileName)) {
+                let is_sender_alice = sender_name == self.alice.as_str();
+                if is_sender_alice {
+                    ((&self.alice_store, &self.alice), (&self.bob_store, &self.bob))
+                } else {
+                    ((&self.bob_store, &self.bob), (&self.alice_store, &self.alice))
+                }
+            }
+
+            fn setup_invite_room(
+                root: &Path,
+                alice_name: &str,
+                bob_name: &str,
+                alice_endpoint: &str,
+                bob_endpoint: &str,
+                passphrase: &str,
+            ) -> Self {
+                let alice = ProfileName::new(alice_name).expect("valid alice profile");
+                let bob = ProfileName::new(bob_name).expect("valid bob profile");
+                let passphrase = ProfilePassphrase::new(passphrase).expect("valid passphrase");
+                let alice_store = root.join(format!("{alice_name}.db"));
+                let bob_store = root.join(format!("{bob_name}.db"));
+                production_profile_init(&alice_store, alice.clone(), &passphrase)
+                    .expect("alice profile init");
+                production_profile_identity_init(&alice_store, alice.clone(), &passphrase)
+                    .expect("alice identity init");
+                production_profile_init(&bob_store, bob.clone(), &passphrase)
+                    .expect("bob profile init");
+                production_profile_identity_init(&bob_store, bob.clone(), &passphrase)
+                    .expect("bob identity init");
+
+                let alice_payload = production_pairing_payload_create(
+                    &alice_store,
+                    alice.clone(),
+                    &passphrase,
+                    alice_endpoint,
+                )
+                .expect("alice pairing payload")
+                .payload()
+                .clone();
+                let bob_payload = production_pairing_payload_create(
+                    &bob_store,
+                    bob.clone(),
+                    &passphrase,
+                    bob_endpoint,
+                )
+                .expect("bob pairing payload")
+                .payload()
+                .clone();
+
+                production_pairing_session_save_draft(
+                    &alice_store,
+                    alice.clone(),
+                    &passphrase,
+                    &alice_payload,
+                    &bob_payload,
+                )
+                .expect("save alice draft");
+                production_pairing_session_save_draft(
+                    &bob_store,
+                    bob.clone(),
+                    &passphrase,
+                    &bob_payload,
+                    &alice_payload,
+                )
+                .expect("save bob draft");
+
+                let alice_init = production_pairing_session_handshake_init_export(
+                    &alice_store,
+                    alice.clone(),
+                    &passphrase,
+                )
+                .expect("alice init export");
+                let (initiator, responder, initiator_store, responder_store, init_payload) =
+                    if alice_init.handshake_message_created() {
+                        (
+                            alice.clone(),
+                            bob.clone(),
+                            alice_store.clone(),
+                            bob_store.clone(),
+                            alice_init.export_payload().to_string(),
+                        )
+                    } else {
+                        let bob_init = production_pairing_session_handshake_init_export(
+                            &bob_store,
+                            bob.clone(),
+                            &passphrase,
+                        )
+                        .expect("bob init export fallback");
+                        assert!(bob_init.handshake_message_created(), "one side must initiate");
+                        let bob_init_payload = bob_init.export_payload().to_string();
+                        (
+                            bob.clone(),
+                            alice.clone(),
+                            bob_store.clone(),
+                            alice_store.clone(),
+                            bob_init_payload,
+                        )
+                    };
+
+                let responder_reply = production_pairing_session_handshake_reply_export(
+                    &responder_store,
+                    responder.clone(),
+                    &passphrase,
+                    &init_payload,
+                )
+                .expect("responder reply export");
+                let initiator_finish = production_pairing_session_handshake_finish_export(
+                    &initiator_store,
+                    initiator.clone(),
+                    &passphrase,
+                    &responder_reply.export_payload(),
+                )
+                .expect("initiator finish export");
+                production_pairing_session_handshake_finish_import(
+                    &responder_store,
+                    responder,
+                    &passphrase,
+                    &initiator_finish.export_payload(),
+                )
+                .expect("responder finish import");
+
+                Self {
+                    root: root.to_path_buf(),
+                    alice_store,
+                    bob_store,
+                    alice,
+                    bob,
+                    passphrase,
+                }
+            }
+
+            fn send_and_import(
+                &self,
+                sender_profile: &ProfileName,
+                sender_store: &Path,
+                receiver_profile: &ProfileName,
+                receiver_store: &Path,
+                message: &str,
+            ) -> u64 {
+                let sender_profile = sender_profile.clone();
+                let receiver_profile = receiver_profile.clone();
+                let send_profile = sender_profile.clone();
+                let reservation = production_message_next_number_reserve(
+                    sender_store,
+                    send_profile.clone(),
+                    &self.passphrase,
+                )
+                .expect("message number reserve");
+                let number = reservation.reserved_message_number();
+                let send_prepare = production_message_send_prepare(
+                    sender_store,
+                    send_profile.clone(),
+                    &self.passphrase,
+                    number,
+                    message.as_bytes(),
+                    PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+                )
+                .expect("message send prepare");
+                assert!(send_prepare.message_number_reserved());
+                let _ = production_message_outbound_encrypt_prepare(
+                    sender_store,
+                    send_profile.clone(),
+                    &self.passphrase,
+                    number,
+                )
+                .expect("outbound encrypt prepare");
+                let outbound = production_message_outbound_envelope_export(
+                    sender_store,
+                    send_profile,
+                    &self.passphrase,
+                    number,
+                )
+                .expect("outbound envelope export");
+                let inbound = production_message_inbound_decrypt_import(
+                    receiver_store,
+                    receiver_profile,
+                    &self.passphrase,
+                    &outbound.export_payload(),
+                    PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+                )
+                .expect("inbound import");
+                assert!(inbound.received_message_written());
+                number
+            }
+        }
+
+        #[test]
+        fn production_two_profile_resume_reloads_status_and_transcripts_after_new_command_invocations() {
+            let root = temp_root("core_resume_reload");
+            let fixture = CoreConversationFixture::setup_invite_room(
+                &root,
+                "alice",
+                "bob",
+                "alice.onion",
+                "bob.onion",
+                "correct-passphrase",
+            );
+
+            let sender_name = fixture.alice.as_str();
+            let ((sender_store, sender), (receiver_store, receiver)) = fixture.sender_receiver(sender_name);
+
+            let sent = fixture.send_and_import(
+                sender,
+                sender_store,
+                receiver,
+                receiver_store,
+                "resume after restart",
+            );
+
+            let sender_status = production_pairing_session_lifecycle_status(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+            )
+            .expect("sender lifecycle status");
+            assert!(sender_status.ready_for_message_envelope());
+            assert!(sender_status.session_resume_ready());
+
+            let receiver_status = production_pairing_session_lifecycle_status(
+                receiver_store,
+                receiver.clone(),
+                &fixture.passphrase,
+            )
+            .expect("receiver lifecycle status");
+            assert!(receiver_status.ready_for_message_envelope());
+            assert!(receiver_status.session_resume_ready());
+
+            let sender_transcript = production_message_transcript_export(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+            )
+            .expect("sender transcript");
+            assert_eq!(sender_transcript.expired_messages_purged(), 0);
+            let sender_entry = sender_transcript
+                .entries()
+                .iter()
+                .find(|entry| entry.message_number() == sent)
+                .expect("sender sent entry");
+            assert_eq!(sender_entry.direction(), "sent");
+            assert_eq!(sender_entry.ttl_seconds(), PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS);
+            assert_eq!(sender_entry.plaintext(), b"resume after restart");
+
+            let receiver_transcript = production_message_transcript_export(
+                receiver_store,
+                receiver.clone(),
+                &fixture.passphrase,
+            )
+            .expect("receiver transcript");
+            let receiver_entry = receiver_transcript
+                .entries()
+                .iter()
+                .find(|entry| entry.message_number() == sent)
+                .expect("receiver received entry");
+            assert_eq!(receiver_entry.direction(), "received");
+            assert_eq!(receiver_entry.plaintext(), b"resume after restart");
+
+            let replay_sender_status = production_pairing_session_lifecycle_status(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+            )
+            .expect("sender replay status");
+            assert!(replay_sender_status.ready_for_message_envelope());
+            let replay_receiver_transcript = production_message_transcript_export(
+                receiver_store,
+                receiver.clone(),
+                &fixture.passphrase,
+            )
+            .expect("receiver transcript replay");
+            let replay_receiver_entry = replay_receiver_transcript
+                .entries()
+                .iter()
+                .find(|entry| entry.message_number() == sent)
+                .expect("receiver replay entry");
+            assert_eq!(replay_receiver_entry.direction(), "received");
+
+            let replay_sender_transcript = production_message_transcript_export(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+            )
+            .expect("sender transcript replay");
+            let replay_sender_entry = replay_sender_transcript
+                .entries()
+                .iter()
+                .find(|entry| entry.message_number() == sent)
+                .expect("sender replay entry");
+            assert_eq!(replay_sender_entry.direction(), "sent");
+
+            assert!(!replay_sender_status.key_material_exposed());
+            assert!(!replay_receiver_transcript.network_io_attempted());
+
+            let _ = fs::remove_dir_all(fixture.root);
+        }
+
+        #[test]
+        fn production_onion_send_attempt_result_persists_failed_and_sent_resume_state() {
+            let root = temp_root("core_onion_send_attempt_resume");
+            let fixture = CoreConversationFixture::setup_invite_room(
+                &root,
+                "alice",
+                "bob",
+                "alice.onion",
+                "bob.onion",
+                "correct-passphrase",
+            );
+
+            let sender_name = fixture.alice.as_str();
+            let ((sender_store, sender), (receiver_store, receiver)) = fixture.sender_receiver(sender_name);
+            let sent = fixture.send_and_import(
+                sender,
+                sender_store,
+                receiver,
+                receiver_store,
+                "retry attempt resume",
+            );
+
+            production_message_outbound_mark_send_failed(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+                sent,
+                "peer-endpoint-missing",
+            )
+            .expect("mark send failed");
+
+            let failed_transcript = production_message_transcript_export(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+            )
+            .expect("failed transcript");
+            let failed_entry = failed_transcript
+                .entries()
+                .iter()
+                .find(|entry| entry.message_number() == sent)
+                .expect("failed entry");
+            assert_eq!(failed_entry.outbound_delivery_state(), Some("failed"));
+            assert_eq!(failed_entry.outbound_failure_kind(), Some("peer-endpoint-missing"));
+            assert!(failed_entry.outbound_retryable());
+
+            let _endpoint = production_pairing_session_remote_endpoint_status(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+            )
+            .expect("endpoint status");
+            let stale_endpoint = production_pairing_session_remote_endpoint_mark_send_failure(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+                sent,
+            )
+            .expect("mark stale endpoint");
+            assert!(stale_endpoint.failure_record_written());
+            let stale_after_failure = production_pairing_session_remote_endpoint_status(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+            )
+            .expect("endpoint stale status");
+            assert_eq!(stale_after_failure.last_failed_message_number(), Some(sent));
+
+            production_message_outbound_mark_send_succeeded(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+                sent,
+            )
+            .expect("mark send succeeded");
+
+            let sent_transcript = production_message_transcript_export(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+            )
+            .expect("sent transcript");
+            let sent_entry = sent_transcript
+                .entries()
+                .iter()
+                .find(|entry| entry.message_number() == sent)
+                .expect("sent entry");
+            assert_eq!(sent_entry.outbound_delivery_state(), Some("sent"));
+            assert_eq!(sent_entry.outbound_failure_kind(), None);
+            assert!(!sent_entry.outbound_retryable());
+
+            let stale_after_send = production_pairing_session_remote_endpoint_status(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+            )
+            .expect("endpoint stale status");
+            assert!(stale_after_send.remote_endpoint_marked_stale());
+
+            let _ = fs::remove_dir_all(fixture.root);
+        }
+
+        #[test]
+        fn production_two_profile_room_setup_accepts_invite_derived_profiles() {
+            let root = temp_root("core_invite_derived_room");
+            let fixture = CoreConversationFixture::setup_invite_room(
+                &root,
+                "inviter-abcd-2345",
+                "joiner-abcd-2345",
+                "inviter.onion",
+                "joiner.onion",
+                "shared-invite-passphrase",
+            );
+
+            let ((sender_store, sender), (receiver_store, receiver)) =
+                fixture.sender_receiver("inviter-abcd-2345");
+            let sent = fixture.send_and_import(
+                sender,
+                sender_store,
+                receiver,
+                receiver_store,
+                "invite derived payload",
+            );
+
+            let sender_transcript = production_message_transcript_export(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+            )
+            .expect("inviter transcript");
+            let sender_entry = sender_transcript
+                .entries()
+                .iter()
+                .find(|entry| entry.message_number() == sent)
+                .expect("inviter sent entry");
+            assert_eq!(sender_entry.direction(), "sent");
+
+            let receiver_entry = production_message_transcript_export(
+                receiver_store,
+                receiver.clone(),
+                &fixture.passphrase,
+            )
+            .expect("joiner transcript");
+            let receiver_entry = receiver_entry
+                .entries()
+                .iter()
+                .find(|entry| entry.message_number() == sent)
+                .expect("joiner received entry");
+            assert_eq!(receiver_entry.direction(), "received");
+
+            production_message_outbound_mark_send_failed(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+                sent,
+                "peer-endpoint-missing",
+            )
+            .expect("mark invite-derived failed");
+
+            let failed_entry = production_message_transcript_export(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+            )
+            .expect("invite-derived failed transcript");
+            let failed_entry = failed_entry
+                .entries()
+                .into_iter()
+                .find(|entry| entry.message_number() == sent)
+                .expect("invite-derived failed entry");
+            assert_eq!(failed_entry.outbound_delivery_state(), Some("failed"));
+            assert!(failed_entry.outbound_retryable());
+
+            let route_update = production_pairing_session_remote_endpoint_update(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+                "joiner-route.onion",
+            )
+            .expect("invite-derived route update");
+            assert!(route_update.remote_endpoint_state_written());
+
+            let status = production_pairing_session_remote_endpoint_status(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+            )
+            .expect("invite-derived endpoint status");
+            assert_eq!(status.last_failed_message_number(), None);
+
+            production_message_outbound_cancel_pending(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+                sent,
+            )
+            .expect("cancel invite-derived message");
+
+            let canceled_entry = production_message_transcript_export(
+                sender_store,
+                sender.clone(),
+                &fixture.passphrase,
+            )
+            .expect("invite-derived canceled transcript");
+            let canceled_entry = canceled_entry
+                .entries()
+                .into_iter()
+                .find(|entry| entry.message_number() == sent)
+                .expect("invite-derived canceled entry");
+            assert_eq!(canceled_entry.outbound_delivery_state(), Some("canceled"));
+            assert_eq!(canceled_entry.outbound_failure_kind(), None);
+            assert!(!canceled_entry.outbound_retryable());
+
+            let _ = fs::remove_dir_all(fixture.root);
+        }
+
+        fn temp_root(label: &str) -> PathBuf {
+            let root = std::env::temp_dir().join(format!(
+                "another-dimension-{label}-{}",
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .map(|duration| duration.as_nanos())
+                    .unwrap_or_default()
+            ));
+            let _ = fs::remove_dir_all(&root);
+            let _ = fs::create_dir_all(&root);
+            root
+        }
+
         fn noise_prekey_bundle() -> String {
             generate_noise_static_keypair()
                 .expect("noise static key")
@@ -34325,7 +34869,7 @@ pub mod dev_insecure {
     mod tests {
         use super::*;
         use std::fs;
-        use std::path::Path;
+        use std::path::{Path, PathBuf};
 
         #[test]
         fn same_machine_pairing_requires_confirmation_before_send() {
