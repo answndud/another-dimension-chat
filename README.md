@@ -175,6 +175,40 @@ UI shells may request redacted status and explicit user-triggered actions. They
 must not invent separate protocol, storage, transport, pairing, contact
 discovery, account, push-notification, or cloud-backup behavior.
 
+## Architecture Reading Map
+
+The product is intentionally local-first and pairwise. The design avoids a
+central account/contact/message/backup authority in the v0.1 default path, then
+accepts the cost: users must create pairwise rooms, compare safety material,
+and move encrypted envelopes manually unless they choose an explicit advanced
+network attempt.
+
+The manual envelope path changes the tradeoff. It is worse for convenience and
+automatic delivery, but it keeps the public beta from implying a central
+mailbox, push provider, automatic network route, or reliable onion delivery.
+Advanced onion/Tor work stays explicit and fail-closed.
+
+Read these in order when reviewing the architecture:
+
+- [blog/00-public-beta-launch.md](blog/00-public-beta-launch.md) for the public
+  product story and non-claims.
+- [reference/COMPONENT_BOUNDARIES.md](reference/COMPONENT_BOUNDARIES.md) for
+  which layer owns identity, pairing, protocol, storage, transport, UI, support,
+  and release boundaries.
+- [reference/PRIVACY_MODEL_COMPARISON.md](reference/PRIVACY_MODEL_COMPARISON.md)
+  for the metadata/trust tradeoff and current gap map.
+- [reference/learning/README.md](reference/learning/README.md) for a
+  beginner-friendly Korean guide. The learning guide is explanatory material,
+  not a release claim source.
+
+Current high-risk threat-model status is deliberately narrow:
+
+- `mitigated`: remote passive observer, remote active attacker, malicious peer,
+  local-at-rest attacker, and supply-chain/update attacker targets, within the
+  current source boundaries and non-claims.
+- `not_protected`: compromised endpoint, direct coercion, and full global
+  traffic correlation.
+
 ## Current Platform Status
 
 | Platform | Status |

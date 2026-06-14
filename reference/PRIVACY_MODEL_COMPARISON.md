@@ -39,8 +39,41 @@ experimental local beta candidate.
 | Non-repudiation | Avoid central logs and avoid product claims that create false evidentiary confidence. | Partially aligned. Local logs and diagnostics are redacted, but production deniability properties are not claimed. |
 | Detectability | Default practical transport avoids automatic network work; advanced onion/Tor remains opt-in, user-triggered, and fail-closed until verified. | Early boundary only. App has explicit onion/Tor attempt paths and launch-time network suppression, but reliable external onion delivery and bridge behavior are not proven. |
 | Disclosure of Information | Production E2EE, local encrypted stores, redacted reports, data lifecycle controls. | Partially implemented as local guardrails. Not audited, not production E2EE-ready, no secure deletion guarantee, no rollback-prevention claim. |
-| Unawareness | Korean UI and release docs must clearly warn that beta is unsigned, unaudited, not production-ready, and not safe for sensitive communication. | Public docs and beta warnings contain non-claims. Must be preserved until security-ready criteria are met. |
+| Unawareness | Korean UI and release docs must clearly warn that beta is unsigned, unaudited, not production-ready, and sensitive communication prohibited. | Public docs and beta warnings contain non-claims. Must be preserved until security-ready criteria are met. |
 | Non-compliance | Public release must avoid overclaiming, publish security boundaries, and keep private planning data out of artifacts. | Partially aligned through README, SECURITY, public threat model, release checklist, and ignored docs. No independent review result yet. |
+
+## Manual Envelope Tradeoff
+
+Manual encrypted envelope exchange is not presented as better usability. It is
+a deliberate v0.1 boundary:
+
+- It removes the default need for a central mailbox, push dependency, delivery
+  authority, or cloud sync.
+- It avoids making automatic delivery, reliable onion delivery, or offline
+  mailbox claims.
+- It keeps delivery failure visible to users through export/import, retry,
+  cancel, and recovery states.
+- It pushes convenience work into later phases instead of hiding the trust
+  model behind a server.
+
+The cost is also explicit: users must coordinate out of band, copy envelopes,
+handle import/export mistakes, and accept that external delivery is outside the
+current public product claim.
+
+## Current Threat-Model Status Words
+
+This repository should use three public-safe status words consistently:
+
+| Status | Meaning in this repository |
+| --- | --- |
+| `protected` | Reserved for a completed, evidenced protection claim within the stated scope. The current public beta should rarely use this word. |
+| `mitigated` | A source-level boundary reduces a risk but still has named gaps or non-claims. |
+| `not_protected` | The app alone does not defend this class of risk and must not imply otherwise. |
+
+For the current high-risk target, remote passive observation, remote active
+attack, malicious peer behavior, local-at-rest exposure, and supply-chain/update
+tampering are mitigation targets. Compromised endpoints, direct coercion, and
+full global traffic correlation are `not_protected`.
 
 ## Comparison Against Briar/Cwtch-Level Goals
 
