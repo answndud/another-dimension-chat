@@ -940,6 +940,7 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(functionBody(mainJs, "confirmCurrentTwoProfileSafety"), /confirmTwoProfileSafetyForInput\(input\)/);
   assert.match(actionStateJs, /export function productionVersionIntegrityView/);
   assert.match(actionStateJs, /export function productionWindowsRuntimeParityView/);
+  assert.match(actionStateJs, /export function productionWindowsPublicArtifactCandidateView/);
   assert.match(actionStateJs, /const emergencyAdvisoryPath = "scripts\/prepare_macos_emergency_release_advisory_packet\.sh"/);
   assert.match(actionStateJs, /const highRiskReleaseIntegrityGatePath = "scripts\/high_risk_release_integrity_gate_once\.sh"/);
   assert.match(actionStateJs, /emergency_advisory_path=\$\{emergencyAdvisoryPath\}/);
@@ -953,13 +954,17 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(actionStateJs, /support_report_raw_path_allowed=false/);
   assert.match(actionStateJs, /macos_only_wording_allowed=false/);
   assert.match(actionStateJs, /shared_core_bypass_allowed=false/);
+  assert.match(actionStateJs, /windows_public_artifact_candidate=true/);
+  assert.match(actionStateJs, /webview2_runtime_required=true/);
+  assert.match(actionStateJs, /runtime_result_external_peer_evidence_separated=true/);
+  assert.match(actionStateJs, /smartscreen_security_boundary_claimed=false/);
   assert.match(actionStateJs, /full_censorship_resistance_claim=false/);
   assert.match(actionStateJs, /high_risk_transport_mode=onion-only/);
   assert.match(actionStateJs, /high_risk_transport_runtime_evidence_required_for_ready=true/);
   assert.match(actionStateJs, /high_risk_transport_runtime_evidence_present=false/);
   assert.match(actionStateJs, /transport-runtime-evidence-missing/);
   assert.match(actionStateJs, /high_risk_transport_not_ready_reason=runtime-network-disabled-until-explicit-user-action/);
-  assert.doesNotMatch(actionStateJs, /windows_public_artifact_ready=true|shared_core_bypass_allowed=true/);
+  assert.doesNotMatch(actionStateJs, /windows_public_artifact_ready=true|windows_installer_ready=true|windows_signing_ready=true|smartscreen_security_boundary_claimed=true|shared_core_bypass_allowed=true/);
   assert.match(mainJs, /productionVersionIntegrityView/);
   assert.match(mainJs, /productionWindowsRuntimeParityView/);
   assert.match(functionBody(mainJs, "renderVersionIntegrityStatus"), /FIELD_TEST_APP_VERSION/);

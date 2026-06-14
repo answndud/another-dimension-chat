@@ -15,6 +15,7 @@ import {
   productionHighRiskTransportMetadataBoundaryView,
   productionPanicLockMitigationView,
   productionVersionIntegrityView,
+  productionWindowsPublicArtifactCandidateView,
   productionWindowsRuntimeParityView,
   productionInviteCodeProfiles,
   productionInviteIdentityBoundaryView,
@@ -438,6 +439,44 @@ test("windows runtime parity view keeps shared core and redacted local path boun
   assert.doesNotMatch(
     view.boundary,
     /raw_local_path_returned=true|windows_public_artifact_ready=true|shared_core_bypass_allowed=true/,
+  );
+});
+
+test("windows public artifact candidate keeps installer and security claims false", () => {
+  const view = productionWindowsPublicArtifactCandidateView({ platform: "Win32" });
+
+  assert.equal(view.artifactType, "windows-nsis-exe-installer-candidate");
+  assert.equal(view.bundleTarget, "nsis");
+  assert.equal(view.defaultExtension, ".exe");
+  assert.equal(view.portableDefaultAllowed, false);
+  assert.equal(view.msiAlternativeAllowed, true);
+  assert.equal(view.webview2RuntimeRequired, true);
+  assert.equal(view.webview2FailureClassRedacted, true);
+  assert.equal(view.appDataResolver, "tauri-app-data");
+  assert.equal(view.appDataResolverSharedStorageSemantics, true);
+  assert.equal(view.rawLocalPathReturned, false);
+  assert.equal(view.supportReportRawPathAllowed, false);
+  assert.equal(view.sharedCoreBypassAllowed, false);
+  assert.equal(view.profileSessionMessageStorageBypassAllowed, false);
+  assert.equal(view.manifestChecksumProvenanceRequired, true);
+  assert.equal(view.manifestValidatesVersionCommitInstallerWebview2NoAutoUpdate, true);
+  assert.equal(view.runtimeResultExternalPeerEvidenceSeparated, true);
+  assert.equal(view.localRuntimePromotedToDeliveryProof, false);
+  assert.equal(view.smartscreenSecurityBoundaryClaimed, false);
+  assert.equal(view.codeSigningSecurityBoundaryClaimed, false);
+  assert.equal(view.storeReputationSecurityBoundaryClaimed, false);
+  assert.equal(view.autoUpdateClaimed, false);
+  assert.equal(view.windowsPublicArtifactReady, false);
+  assert.equal(view.windowsInstallerReady, false);
+  assert.equal(view.windowsSigningReady, false);
+  assert.equal(view.windowsPublicArtifactUploadAllowed, false);
+  assert.equal(view.windowsProductionClaimAllowed, false);
+  assert.match(view.summary, /windows_public_artifact_candidate=true/);
+  assert.match(view.summary, /webview2_runtime_required=true/);
+  assert.match(view.summary, /runtime_result_external_peer_evidence_separated=true/);
+  assert.doesNotMatch(
+    view.boundary,
+    /windows_public_artifact_ready=true|windows_installer_ready=true|windows_signing_ready=true|smartscreen_security_boundary_claimed=true|shared_core_bypass_allowed=true/,
   );
 });
 
