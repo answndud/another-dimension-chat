@@ -14,6 +14,8 @@ MACOS_MINIMUM_VERSION_CLAIMED=false
 RELEASE_TAG="v0.1.0-beta-onion-unsigned"
 RELEASE_URL="https://github.com/answndud/another-dimension-chat/releases/tag/$RELEASE_TAG"
 EXPECTED_DMG_SHA="7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a"
+PUBLIC_ARTIFACT_STALE_ACTION="rebuild-or-republish-unsigned-public-beta-packet"
+PUBLIC_ARTIFACT_CURRENT_ACTION="upload-current-unsigned-public-beta-packet"
 
 SOURCE_DIR="$ROOT_DIR/apps/desktop-tauri/beta-artifacts"
 SOURCE_DMG="$SOURCE_DIR/Another Dimension Chat_0.1.0_aarch64.dmg"
@@ -141,6 +143,9 @@ check_artifact_boundary() {
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "release output must stay under ignored apps/desktop-tauri/public-release/"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" 'manifest=$RELEASE_DIR/MANIFEST.md'
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_request_gate=explicit-user-request-required-before-packaging-upload"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "current_head_artifact_transition_gate_ready=true"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "$PUBLIC_ARTIFACT_STALE_ACTION"
+  require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "$PUBLIC_ARTIFACT_CURRENT_ACTION"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "next=hold unless explicit release upload was requested; upload all and only generated files listed in MANIFEST.md from release_dir"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_release_body=use GITHUB_RELEASE_BODY.md exactly"
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
@@ -645,6 +650,12 @@ for sensitive communication.
 - Upload decision: proceed only after the source preflight prints
   \`source_acceptance=desktop-release-source-accepted-for-operator-staging\`
   and the generated upload set prints \`status=unsigned-public-beta-release-ready\`.
+- Artifact transition gate: stale existing packets require
+  \`next_owner_action=$PUBLIC_ARTIFACT_STALE_ACTION\`; a rebuilt current-head
+  packet that has not been uploaded requires
+  \`next_owner_action=$PUBLIC_ARTIFACT_CURRENT_ACTION\`.
+- Current-head artifact marker: \`current_head_artifact_transition_gate_ready=true\`.
+- Current-head non-mutation marker: \`release_upload_performed=false\`.
 - Explicit operator request gate: do not package, upload, or announce unless the
   user explicitly requested release packaging/upload in the current task.
 - Hold decision: do not upload, do not announce, and return to desktop hardening
@@ -1023,6 +1034,9 @@ echo "operator_final_handoff=$RELEASE_DIR/OPERATOR_FINAL_HANDOFF.md"
 echo "dmg_sha256=$EXPECTED_DMG_SHA"
 echo "source_provenance_sha256=$source_provenance_sha"
 echo "operator_request_gate=explicit-user-request-required-before-packaging-upload"
+echo "current_head_artifact_transition_gate_ready=true"
+echo "stale_artifact_next_owner_action=$PUBLIC_ARTIFACT_STALE_ACTION"
+echo "current_artifact_next_owner_action=$PUBLIC_ARTIFACT_CURRENT_ACTION"
 echo "next=hold unless explicit release upload was requested; upload all and only generated files listed in MANIFEST.md from release_dir; use GITHUB_RELEASE_BODY.md as the release body"
 echo "operator_upload_allowlist=MANIFEST.md"
 echo "operator_release_body=use GITHUB_RELEASE_BODY.md exactly"

@@ -68,6 +68,17 @@ Artifact identity gate:
 - A stale public artifact is a held release packet, not current app evidence.
   It must not be promoted to latest source evidence without rebuilding or
   republishing the unsigned public beta packet.
+- For a current-head unsigned public beta transition, the provenance
+  `build_commit` must match the current repository HEAD and the source gates
+  must emit `artifact_current_head_aligned=true`,
+  `public_artifact_stale=false`, `public_artifact_state=current`,
+  `stale_public_artifact_promoted_to_current=false`,
+  `current_head_artifact_transition_gate_ready=true`,
+  `release_upload_performed=false`, and
+  `next_owner_action=upload-current-unsigned-public-beta-packet`.
+- `release_upload_performed=false` means the generated current-head packet is
+  source-ready only. The GitHub Release asset mutation remains an explicit
+  owner action and must use the generated `MANIFEST.md` allowlist.
 
 Forbidden public claims:
 
