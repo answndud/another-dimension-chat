@@ -68,6 +68,12 @@ require_text "$REFERENCE" "source-ready for cross-platform public beta/RC copy"
 require_text "$REFERENCE" "macOS Apple Silicon: unsigned OSS public beta DMG"
 require_text "$REFERENCE" "Windows: public artifact candidate path is source-defined"
 require_text "$REFERENCE" "no public artifact, installer, signing, upload, or production claim"
+require_text "$REFERENCE" "real_windows_runtime_result_present=false"
+require_text "$REFERENCE" "windows_runtime_result_packet_required_for_public_artifact=true"
+require_text "$REFERENCE" "windows_manifest_checksum_provenance_separate_from_runtime_result=true"
+require_text "$REFERENCE" "windows_public_artifact_claim_allowed=false"
+require_text "$REFERENCE" "windows_installer_claim_allowed=false"
+require_text "$REFERENCE" "windows_upload_claim_allowed=false"
 require_text "$REFERENCE" "Use only assets attached to the same GitHub Release"
 require_text "$REFERENCE" "explicit owner actions only"
 require_text "$REFERENCE" "Not audited, not production-ready, not for sensitive communication"
@@ -88,6 +94,12 @@ require_text "$MACOS_REFERENCE" "unsigned OSS public beta"
 require_text "$MACOS_REFERENCE" "not signed, not notarized, not audited"
 require_text "$MACOS_REFERENCE" "Do not disable Gatekeeper globally"
 require_text "$WINDOWS_EXECUTION" "windows_public_artifact_ready=false"
+require_text "$WINDOWS_EXECUTION" "real_windows_runtime_result_present=false"
+require_text "$WINDOWS_EXECUTION" "windows_runtime_result_packet_required_for_public_artifact=true"
+require_text "$WINDOWS_EXECUTION" "windows_manifest_checksum_provenance_separate_from_runtime_result=true"
+require_text "$WINDOWS_EXECUTION" "windows_public_artifact_claim_allowed=false"
+require_text "$WINDOWS_EXECUTION" "windows_installer_claim_allowed=false"
+require_text "$WINDOWS_EXECUTION" "windows_upload_claim_allowed=false"
 require_text "$WINDOWS_EXECUTION" "windows_result_runtime_boundary_verified=true"
 require_text "$WINDOWS_MANIFEST" "windows_artifact_manifest_sha_sidecar_verified_by_validator=true"
 require_text "$WINDOWS_RESULT" "windows_result_requires_real_windows_machine=true"
@@ -125,15 +137,31 @@ require_output "$windows_manifest_output" "windows_public_artifact_upload_allowe
 
 windows_runtime_output="$(run_and_capture "$ROOT_DIR/scripts/windows_artifact_runtime_evidence_contract_once.sh")"
 require_output "$windows_runtime_output" "status=windows-artifact-runtime-evidence-contract-ready"
+require_output "$windows_runtime_output" "real_windows_runtime_result_present=false"
+require_output "$windows_runtime_output" "windows_runtime_result_packet_required_for_public_artifact=true"
+require_output "$windows_runtime_output" "windows_manifest_checksum_provenance_separate_from_runtime_result=true"
+require_output "$windows_runtime_output" "windows_non_windows_runtime_result_promoted=false"
+require_output "$windows_runtime_output" "windows_local_or_fabricated_runtime_result_promoted=false"
 require_output "$windows_runtime_output" "windows_result_requires_real_windows_machine=true"
 require_output "$windows_runtime_output" "windows_public_artifact_ready=false"
+require_output "$windows_runtime_output" "windows_public_artifact_claim_allowed=false"
+require_output "$windows_runtime_output" "windows_installer_claim_allowed=false"
+require_output "$windows_runtime_output" "windows_upload_claim_allowed=false"
 
 windows_execution_output="$(run_and_capture "$ROOT_DIR/scripts/windows_public_artifact_execution_path_once.sh")"
+require_output "$windows_execution_output" "real_windows_runtime_result_present=false"
+require_output "$windows_execution_output" "windows_runtime_result_packet_required_for_public_artifact=true"
+require_output "$windows_execution_output" "windows_manifest_checksum_provenance_separate_from_runtime_result=true"
 require_output "$windows_execution_output" "windows_result_artifact_identity_verified=true"
 require_output "$windows_execution_output" "windows_result_runtime_boundary_verified=true"
+require_output "$windows_execution_output" "windows_non_windows_runtime_result_promoted=false"
+require_output "$windows_execution_output" "windows_local_or_fabricated_runtime_result_promoted=false"
 require_output "$windows_execution_output" "windows_real_runtime_smoke_passed=false"
 require_output "$windows_execution_output" "windows_public_artifact_ready=false"
 require_output "$windows_execution_output" "windows_public_artifact_upload_allowed=false"
+require_output "$windows_execution_output" "windows_public_artifact_claim_allowed=false"
+require_output "$windows_execution_output" "windows_installer_claim_allowed=false"
+require_output "$windows_execution_output" "windows_upload_claim_allowed=false"
 
 public_claim_output="$(run_and_capture "$ROOT_DIR/scripts/public_forbidden_claim_scanner_once.sh")"
 require_output "$public_claim_output" "forbidden_positive_claims_found=false"
@@ -149,8 +177,16 @@ release_class=unsigned-oss-public-beta
 macos_unsigned_public_beta_ready=true
 macos_release_upload_authorized=false
 windows_public_artifact_candidate_source_ready=true
+real_windows_runtime_result_present=false
+windows_runtime_result_packet_required_for_public_artifact=true
+windows_manifest_checksum_provenance_separate_from_runtime_result=true
+windows_non_windows_runtime_result_promoted=false
+windows_local_or_fabricated_runtime_result_promoted=false
 windows_public_artifact_ready=false
 windows_public_artifact_upload_allowed=false
+windows_public_artifact_claim_allowed=false
+windows_installer_claim_allowed=false
+windows_upload_claim_allowed=false
 same_github_release_asset_authority_required=true
 generated_release_artifacts_commit_allowed=false
 production_ready_claim_allowed=false
