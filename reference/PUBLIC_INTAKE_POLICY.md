@@ -122,7 +122,7 @@ not raw errors or local paths:
 - `macos-gui-human-rehearsal-not-run`: source install authority is checked, but
   disposable GUI first-run/profile/invite/manual-flow/delete/diagnostics still
   needs a human follow-through.
-- `unknown-redacted`: paste only public diagnostics and choose the closest broad
+- `unknown-redacted`: copy only public diagnostics and choose the closest broad
   area without logs, paths, codes, payloads, or screenshots of private data.
 
 ## Maintainer Triage
