@@ -292,19 +292,26 @@ Run the frontend preview:
 npm run dev
 ```
 
-Run the local Tauri beta shell with the manual onion attempt feature compiled in:
+Run the lightweight local Tauri public shell:
+
+```bash
+npm run tauri:dev
+```
+
+Run the full-runtime local Tauri beta shell with the manual onion attempt feature compiled in:
 
 ```bash
 npm run tauri:dev:beta-onion
 ```
 
-Build a local-only Tauri desktop artifact:
+Build a local-only lightweight Tauri desktop artifact:
 
 ```bash
 npm run tauri:build
 ```
 
-That generic local build output is not a public release upload artifact.
+That generic local build output is a public-shell artifact, not a public release
+upload artifact. Full-runtime desktop builds are explicit opt-in commands.
 
 ## CLI Boundary Checks
 

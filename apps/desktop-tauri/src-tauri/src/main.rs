@@ -1,20 +1,20 @@
-#[cfg(all(feature = "windows-public-shell", feature = "full-runtime"))]
-compile_error!("windows-public-shell must be built with --no-default-features");
+#[cfg(all(feature = "public-shell", feature = "full-runtime"))]
+compile_error!("public-shell must not be built with full-runtime");
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 use tauri::Manager;
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 fn main() {
     run_windows_public_shell();
 }
 
-#[cfg(all(not(feature = "windows-public-shell"), feature = "full-runtime"))]
+#[cfg(all(not(feature = "public-shell"), feature = "full-runtime"))]
 fn main() {
     another_dimension_desktop_tauri::run();
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 #[derive(serde::Serialize)]
 struct WindowsPublicShellStatus {
     warning: &'static str,
@@ -64,7 +64,7 @@ struct WindowsPublicShellStatus {
     sensitive_communication_allowed: bool,
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 #[derive(serde::Deserialize)]
 struct EngineSidecarStatusPayload {
     schema_version: String,
@@ -88,7 +88,7 @@ struct EngineSidecarStatusPayload {
     sensitive_communication_allowed: bool,
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 #[derive(serde::Serialize)]
 struct EngineSidecarStatusProbe {
     command: &'static str,
@@ -120,7 +120,7 @@ struct EngineSidecarStatusProbe {
     sidecar_path_returned: bool,
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 #[derive(serde::Deserialize)]
 struct EngineManualSelfTestPayload {
     schema_version: String,
@@ -148,7 +148,7 @@ struct EngineManualSelfTestPayload {
     sensitive_communication_allowed: bool,
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 #[derive(serde::Serialize)]
 struct EngineManualSelfTestProbe {
     command: &'static str,
@@ -184,14 +184,15 @@ struct EngineManualSelfTestProbe {
     sidecar_path_returned: bool,
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 #[tauri::command]
 fn prototype_status(app: tauri::AppHandle) -> WindowsPublicShellStatus {
     let engine_sidecar_basename = engine_sidecar_basename();
     let engine_sidecar_present = engine_sidecar_present(&app, &engine_sidecar_basename);
     WindowsPublicShellStatus {
-        warning: "windows public shell; engine sidecar packaging does not open messaging or high-risk claims",
-        artifact_type: "windows-shell-nsis-exe-installer-candidate",
+        warning:
+            "desktop public shell; engine sidecar packaging does not open messaging or high-risk claims",
+        artifact_type: public_shell_artifact_type(),
         runtime_mode: "shell-sidecar-pending",
         engine_runtime_mode: "manual-e2ee-engine-sidecar",
         engine_sidecar_required: true,
@@ -239,7 +240,17 @@ fn prototype_status(app: tauri::AppHandle) -> WindowsPublicShellStatus {
     }
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(all(feature = "public-shell", target_os = "windows"))]
+fn public_shell_artifact_type() -> &'static str {
+    "windows-shell-nsis-exe-installer-candidate"
+}
+
+#[cfg(all(feature = "public-shell", not(target_os = "windows")))]
+fn public_shell_artifact_type() -> &'static str {
+    "desktop-public-shell-local-artifact-candidate"
+}
+
+#[cfg(feature = "public-shell")]
 #[tauri::command]
 fn engine_sidecar_status(app: tauri::AppHandle) -> EngineSidecarStatusProbe {
     let command = "status";
@@ -298,7 +309,7 @@ fn engine_sidecar_status(app: tauri::AppHandle) -> EngineSidecarStatusProbe {
     }
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 #[tauri::command]
 fn engine_sidecar_manual_self_test(app: tauri::AppHandle) -> EngineManualSelfTestProbe {
     let command = "manual-self-test";
@@ -370,7 +381,7 @@ fn engine_sidecar_manual_self_test(app: tauri::AppHandle) -> EngineManualSelfTes
     }
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 fn empty_engine_sidecar_status_probe(
     command: &'static str,
     failure_class: &'static str,
@@ -408,7 +419,7 @@ fn empty_engine_sidecar_status_probe(
     }
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 fn empty_engine_manual_self_test_probe(
     command: &'static str,
     failure_class: &'static str,
@@ -450,7 +461,7 @@ fn empty_engine_manual_self_test_probe(
     }
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 fn engine_sidecar_basename() -> String {
     format!(
         "another-dimension-engine-{}{}",
@@ -460,7 +471,7 @@ fn engine_sidecar_basename() -> String {
 }
 
 #[cfg(all(
-    feature = "windows-public-shell",
+    feature = "public-shell",
     target_os = "windows",
     target_arch = "x86_64"
 ))]
@@ -469,7 +480,7 @@ fn engine_sidecar_target_triple() -> &'static str {
 }
 
 #[cfg(all(
-    feature = "windows-public-shell",
+    feature = "public-shell",
     target_os = "windows",
     target_arch = "aarch64"
 ))]
@@ -477,44 +488,28 @@ fn engine_sidecar_target_triple() -> &'static str {
     "aarch64-pc-windows-msvc"
 }
 
-#[cfg(all(
-    feature = "windows-public-shell",
-    target_os = "macos",
-    target_arch = "x86_64"
-))]
+#[cfg(all(feature = "public-shell", target_os = "macos", target_arch = "x86_64"))]
 fn engine_sidecar_target_triple() -> &'static str {
     "x86_64-apple-darwin"
 }
 
-#[cfg(all(
-    feature = "windows-public-shell",
-    target_os = "macos",
-    target_arch = "aarch64"
-))]
+#[cfg(all(feature = "public-shell", target_os = "macos", target_arch = "aarch64"))]
 fn engine_sidecar_target_triple() -> &'static str {
     "aarch64-apple-darwin"
 }
 
-#[cfg(all(
-    feature = "windows-public-shell",
-    target_os = "linux",
-    target_arch = "x86_64"
-))]
+#[cfg(all(feature = "public-shell", target_os = "linux", target_arch = "x86_64"))]
 fn engine_sidecar_target_triple() -> &'static str {
     "x86_64-unknown-linux-gnu"
 }
 
-#[cfg(all(
-    feature = "windows-public-shell",
-    target_os = "linux",
-    target_arch = "aarch64"
-))]
+#[cfg(all(feature = "public-shell", target_os = "linux", target_arch = "aarch64"))]
 fn engine_sidecar_target_triple() -> &'static str {
     "aarch64-unknown-linux-gnu"
 }
 
 #[cfg(all(
-    feature = "windows-public-shell",
+    feature = "public-shell",
     not(any(
         all(target_os = "windows", target_arch = "x86_64"),
         all(target_os = "windows", target_arch = "aarch64"),
@@ -528,7 +523,7 @@ fn engine_sidecar_target_triple() -> &'static str {
     "unsupported-target"
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 fn engine_sidecar_path(app: &tauri::AppHandle, basename: &str) -> Option<std::path::PathBuf> {
     let resource_dir = app.path().resource_dir().ok()?;
     [
@@ -539,12 +534,12 @@ fn engine_sidecar_path(app: &tauri::AppHandle, basename: &str) -> Option<std::pa
     .find(|path| path.is_file())
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 fn engine_sidecar_present(app: &tauri::AppHandle, basename: &str) -> bool {
     engine_sidecar_path(app, basename).is_some()
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 fn run_engine_sidecar_command(
     app: &tauri::AppHandle,
     command: &str,
@@ -554,7 +549,7 @@ fn run_engine_sidecar_command(
     Some(std::process::Command::new(path).arg(command).output())
 }
 
-#[cfg(feature = "windows-public-shell")]
+#[cfg(feature = "public-shell")]
 fn run_windows_public_shell() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -563,8 +558,8 @@ fn run_windows_public_shell() {
             engine_sidecar_manual_self_test
         ])
         .run(tauri::generate_context!())
-        .expect("failed to run Windows public shell");
+        .expect("failed to run desktop public shell");
 }
 
-#[cfg(all(not(feature = "windows-public-shell"), not(feature = "full-runtime")))]
-compile_error!("desktop-tauri requires either full-runtime or windows-public-shell");
+#[cfg(all(not(feature = "public-shell"), not(feature = "full-runtime")))]
+compile_error!("desktop-tauri requires either full-runtime or public-shell");

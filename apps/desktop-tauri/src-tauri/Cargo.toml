@@ -12,7 +12,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [features]
-default = ["full-runtime"]
+default = ["public-shell"]
+public-shell = []
 full-runtime = [
     "dep:another-dimension-core",
     "dep:another-dimension-crypto",
@@ -24,7 +25,7 @@ full-runtime = [
     "dep:rustls",
     "dep:tokio",
 ]
-windows-public-shell = []
+windows-public-shell = ["public-shell"]
 manual-onion-client-attempt = [
     "full-runtime",
     "another-dimension-transport/arti-manual-bootstrap",

@@ -35,10 +35,12 @@ Current boundary:
 - The production-self-test status points to the CLI `production self-test` boundary only; it does not execute from the Tauri shell or mark messaging usable.
 - The production-session limits copy keeps audited production E2EE readiness, automatic transport, and async messaging out of scope.
 - The production-preflight status mirrors the CLI `production preflight` blockers as static read-only copy; it does not execute the CLI command, bootstrap transport, or mark messaging usable.
-- The session lifecycle controls can check and delete local encrypted session draft, endpoint, replay, and Noise transport records without returning paths, passphrases, channel ids, endpoints, payloads, or key material. Deleting the session closes resume/message readiness but does not wipe message records.
+- The session lifecycle controls can check and delete local encrypted session draft, endpoint, replay, and Noise transport records without returning paths, passphrases, channel ids, endpoints, payloads, or key material. Deleting the session closes resume/message readiness but does not wipe message records, and this is no audited readiness claim.
 - The data lifecycle controls can delete current conversation records, delete an encrypted profile store, wipe owned local app data, prepare backup-exclusion/migration/rollback markers, and report the boundary without returning local paths, plaintext, passphrases, or key material.
 - The session unlock-policy status uses passphrase-first high-risk unlock and rejects OS-keystore-only unlock. Apple keychain, Secure Enclave, DPAPI, Keystore, and cloud key wrapping are not v0.1 requirements.
+- Session unlock non-readiness remains rollback prevention secure deletion from media runtime messaging disabled.
 - Product unlock/lock commands open the local encrypted profile store only after explicit user passphrase input, record only redacted unlocked/locked metadata, provide explicit lock, and apply a 60-second idle auto-lock.
+- The session unlock-rejection status keeps CLI production unlock fail-closed while the desktop product unlock remains explicit and redacted.
 - The CLI `production unlock` command remains fail-closed. The desktop product unlock command does not expose profile paths, passphrases, raw storage errors, key material, write session records, or enable runtime messaging.
 - The transport status is conservative pre-network copy; it does not by itself bootstrap Tor, host onion services, publish descriptors, open streams, or transfer envelopes.
 - The network-execution status is disabled-by-default copy; socket, Tor bootstrap, onion hosting, stream, and envelope transfer attempts require in-app manual network permission and an explicit user action.
@@ -60,14 +62,18 @@ npm run dev
 npm run build
 ```
 
-Build a local-only installable desktop beta:
+Build a local-only lightweight desktop public shell:
 
 ```bash
 cd apps/desktop-tauri
 npm run tauri:build
 ```
 
-This generic Tauri build output is not a public release upload artifact. Public staging accepts only the pinned frozen DMG and provenance checked by `scripts/prepare_unsigned_public_beta_release.sh`; update that script's commit and SHA constants deliberately before changing the public release input.
+This generic Tauri build output is a public-shell artifact, not a public release
+upload artifact. Public staging accepts only the pinned frozen DMG and
+provenance checked by `scripts/prepare_unsigned_public_beta_release.sh`; update
+that script's commit and SHA constants deliberately before changing the public
+release input.
 
 Windows desktop cross-platform parity intake is source-only and tracked in
 `windows_desktop_parity_intake.json`.
@@ -108,28 +114,35 @@ The handoff checklist covers:
 It keeps no public Windows artifact, no Windows installer, no public artifact
 upload, not production-ready, and sensitive communication prohibited.
 
-Build the beta with the manual onion networking attempt feature compiled in:
+Build the full-runtime beta with the manual onion networking attempt feature compiled in:
 
 ```bash
 cd apps/desktop-tauri
 npm run tauri:build:beta-onion
 ```
 
-Build the beta with the manual onion networking attempt and bridge-client feature compiled in:
+Build the full-runtime beta with the manual onion networking attempt and bridge-client feature compiled in:
 
 ```bash
 cd apps/desktop-tauri
 npm run tauri:build:beta-onion-bridge
 ```
 
-Run the local development shell with the manual onion networking attempt feature compiled in:
+Run the lightweight local development shell:
+
+```bash
+cd apps/desktop-tauri
+npm run tauri:dev
+```
+
+Run the full-runtime local development shell with the manual onion networking attempt feature compiled in:
 
 ```bash
 cd apps/desktop-tauri
 npm run tauri:dev:beta-onion
 ```
 
-Run the local development shell with the manual onion networking attempt and bridge-client feature compiled in:
+Run the full-runtime local development shell with the manual onion networking attempt and bridge-client feature compiled in:
 
 ```bash
 cd apps/desktop-tauri
@@ -256,11 +269,11 @@ This matrix is not external onion delivery evidence, an audit result, a
 production-ready claim, a security-ready claim, or permission for sensitive
 communication.
 
-Run the local desktop shell during development:
+Run the lightweight local desktop shell during development:
 
 ```bash
 cd apps/desktop-tauri
-npm run tauri -- dev
+npm run tauri:dev
 ```
 
 Expected local-only behavior:
@@ -269,7 +282,8 @@ Expected local-only behavior:
 - Onion setup controls are behind the `Onion setup` disclosure.
 - Manual payload tools are behind the `Manual production payload tools` disclosure.
 - Dev-insecure diagnostics are behind developer diagnostics disclosures.
-- The first run may take longer while Cargo builds the `dev-insecure` CLI demo.
+- The public-shell first run avoids compiling the full Rust core/runtime stack.
+  Full-runtime commands still take longer from a cold Cargo target.
 - The shell shows a dev-insecure warning separately from the transcript.
 - The shell shows structured local flow steps for profile creation, pairing, safety verification material, pairing confirmation, message send/receive, replay check, and demo completion.
 - The shell maps the local demo result into Alice/Bob peer panels and local flow controls for profile creation, pairing, safety display, contact confirmation, message send/receive, replay check, and completion.
@@ -287,7 +301,7 @@ Failure checks:
 
 App data and migration expectations:
 
-- Tauri resolves the profile store root from `app.path().app_data_dir()` for identifier `chat.anotherdimension.prototype`.
+- Tauri resolves the profile store root from `app.path().app_data_dir()` for identifier `chat.anotherdimension.app`.
 - Encrypted profile stores live under `<app-data>/profiles/<profile>/`.
 - Transport state/cache preparation uses `<app-data>/transport/arti-state` and `<app-cache>/transport/arti-cache`.
 - v0.1 beta has no destructive migration step. SQLCipher profile stores use a forward-only schema version boundary and reject future schema versions instead of silently downgrading or rewriting user data.
@@ -306,7 +320,7 @@ npm run dev
 For a local desktop shell run after the frontend dependencies are installed:
 
 ```bash
-npm run tauri -- dev
+npm run tauri:dev
 ```
 
 Dependency/build gate:
