@@ -195,6 +195,13 @@ fi
 grep -Fq "invalid-value:run_host" "$tmp_dir/not-windows.out" ||
   fail "non-Windows host rejection was not reported"
 
+sed 's/run_host=real-windows-machine/run_host=linux-local/' "$tmp_dir/win-valid.md" >"$tmp_dir/linux-local.md"
+if node "$RESULT_VALIDATOR" "$tmp_dir/linux-local.md" >"$tmp_dir/linux-local.out" 2>&1; then
+  fail "result validator accepted Linux/local host"
+fi
+grep -Fq "invalid-value:run_host" "$tmp_dir/linux-local.out" ||
+  fail "Linux/local host rejection was not reported"
+
 sed 's/app_data_root_redacted=pass/app_data_root_redacted=pass %LOCALAPPDATA%/' "$tmp_dir/win-valid.md" >"$tmp_dir/private-path.md"
 if node "$RESULT_VALIDATOR" "$tmp_dir/private-path.md" >"$tmp_dir/private-path.out" 2>&1; then
   fail "result validator accepted private local app-data path"
@@ -202,10 +209,37 @@ fi
 grep -Fq "windows-local-app-data" "$tmp_dir/private-path.out" ||
   fail "private local app-data path rejection was not reported"
 
+cp "$tmp_dir/win-valid.md" "$tmp_dir/local-only-field.md"
+printf '\nlocal_only_evidence=true\n' >>"$tmp_dir/local-only-field.md"
+if node "$RESULT_VALIDATOR" "$tmp_dir/local-only-field.md" >"$tmp_dir/local-only-field.out" 2>&1; then
+  fail "result validator accepted local-only promotion field"
+fi
+grep -Fq "unknown-field:local_only_evidence" "$tmp_dir/local-only-field.out" ||
+  fail "local-only promotion field rejection was not reported"
+
+cp "$tmp_dir/win-valid.md" "$tmp_dir/fabricated-field.md"
+printf '\nfabricated_evidence=true\n' >>"$tmp_dir/fabricated-field.md"
+if node "$RESULT_VALIDATOR" "$tmp_dir/fabricated-field.md" >"$tmp_dir/fabricated-field.out" 2>&1; then
+  fail "result validator accepted fabricated evidence promotion field"
+fi
+grep -Fq "unknown-field:fabricated_evidence" "$tmp_dir/fabricated-field.out" ||
+  fail "fabricated evidence promotion field rejection was not reported"
+
 echo "status=windows-artifact-runtime-evidence-contract-ready"
 echo "windows_artifact_manifest_fixture_accepted=true"
 echo "windows_runtime_result_fixture_accepted=true"
+echo "real_windows_runtime_result_present=false"
+echo "windows_runtime_result_packet_required_for_public_artifact=true"
+echo "windows_manifest_checksum_provenance_separate_from_runtime_result=true"
+echo "windows_runtime_result_fixture_promoted_to_public_artifact=false"
 echo "windows_result_requires_real_windows_machine=true"
+echo "windows_non_windows_runtime_result_promoted=false"
+echo "windows_macos_runtime_result_promoted=false"
+echo "windows_linux_runtime_result_promoted=false"
+echo "windows_local_or_fabricated_runtime_result_promoted=false"
 echo "windows_result_rejects_private_local_app_data=true"
 echo "windows_strict_current_head_rejects_stale_evidence=true"
 echo "windows_public_artifact_ready=false"
+echo "windows_public_artifact_claim_allowed=false"
+echo "windows_installer_claim_allowed=false"
+echo "windows_upload_claim_allowed=false"

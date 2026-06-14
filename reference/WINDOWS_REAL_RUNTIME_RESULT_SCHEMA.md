@@ -14,6 +14,11 @@ separately in `reference/WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md`.
 The D100-5 runbook is
 `reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md`.
 
+Manifest/checksum/provenance validation and runtime-result validation are
+separate gates. A source fixture may prove validator behavior, but it is not a
+real Windows runtime result and must not open public artifact, installer, or
+upload claims.
+
 ## Required Result Fields
 
 - `schema_version=windows-public-artifact-result-v1`
@@ -68,6 +73,9 @@ data, or generated artifact bytes.
 The validator rejects Windows user paths, `%LOCALAPPDATA%`/`AppData\\Local`,
 private `docs/` paths, generated artifact paths, and markdown screenshot links
 that describe private room/message/profile/invite content.
+It also rejects unknown promotion fields such as `local_only_evidence` and
+`fabricated_evidence`, so local, macOS, Linux, or fabricated reports cannot be
+promoted into Windows public runtime evidence.
 
 ## Current Schema Flags
 
@@ -76,6 +84,9 @@ that describe private room/message/profile/invite content.
 - windows_artifact_manifest_checksum_schema_available=true
 - windows_artifact_manifest_checksum_validator_available=true
 - windows_artifact_manifest_checksum_verifier_ready=true
+- real_windows_runtime_result_present=false
+- windows_runtime_result_packet_required_for_public_artifact=true
+- windows_manifest_checksum_provenance_separate_from_runtime_result=true
 - windows_result_requires_real_windows_machine=true
 - windows_result_requires_current_source_commit=true
 - windows_result_current_head_strict_mode_ready=true
@@ -89,6 +100,11 @@ that describe private room/message/profile/invite content.
 - windows_result_requires_support_diagnostics_review=true
 - windows_result_requires_public_non_claims=true
 - windows_result_rejects_local_only_or_private_data=true
+- windows_non_windows_runtime_result_promoted=false
+- windows_macos_runtime_result_promoted=false
+- windows_linux_runtime_result_promoted=false
+- windows_local_or_fabricated_runtime_result_promoted=false
+- windows_runtime_result_fixture_promoted_to_public_artifact=false
 - windows_result_rejects_private_docs_local_app_data_and_screenshots=true
 - windows_public_artifact_candidate_requires_manual_review=true
 - windows_real_runtime_smoke_passed=false
@@ -96,5 +112,8 @@ that describe private room/message/profile/invite content.
 - windows_installer_ready=false
 - windows_signing_ready=false
 - windows_public_artifact_upload_allowed=false
+- windows_public_artifact_claim_allowed=false
+- windows_installer_claim_allowed=false
+- windows_upload_claim_allowed=false
 - windows_release_packaging_allowed=false
 - windows_generated_artifact_commit_allowed=false
