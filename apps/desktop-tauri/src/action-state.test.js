@@ -542,11 +542,23 @@ test("first-run desktop summary keeps purpose release status and next action vis
   assert.equal(noRoom.primaryNextAction, "Create an invite room or paste the invite code you received.");
   assert.equal(unverified.primaryNextAction, "Compare the safety phrase before messaging.");
   assert.equal(readyToWrite.primaryNextAction, "Write a message and export the encrypted envelope.");
-  assert.equal(active.primaryNextAction, "Import, decrypt/display, reply, retry, or cancel from the room.");
+  assert.equal(active.primaryNextAction, "Copy the redacted support report only if you need help.");
+  assert.equal(initial.stepDetails.profile.nextAction, "enter-local-profile-and-passphrase");
+  assert.equal(initial.stepDetails.profile.blockedReason, "profile-input-missing");
+  assert.equal(noRoom.stepDetails.room.nextAction, "create-or-join-pairwise-invite-room");
+  assert.equal(noRoom.stepDetails.room.blockedReason, "room-missing");
+  assert.equal(unverified.stepDetails.safety.blockedReason, "safety-not-verified");
+  assert.equal(readyToWrite.stepDetails.message.nextAction, "export-manual-encrypted-envelope");
+  assert.equal(active.stepDetails.diagnostics.nextAction, "copy-redacted-support-report-if-needed");
+  assert.equal(active.stepDetails.diagnostics.blockedReason, "diagnostics-not-copied");
   assert.match(initial.boundary, /first_run_summary=true/);
   assert.match(initial.boundary, /first_run_current_step=profile/);
   assert.match(initial.boundary, /first_run_progress_visible=true/);
   assert.match(initial.boundary, /primary_next_action_visible=true/);
+  assert.match(active.boundary, /first_run_step_next_actions=/);
+  assert.match(active.boundary, /diagnostics:copy-redacted-support-report-if-needed/);
+  assert.match(active.boundary, /first_run_blocked_reasons=/);
+  assert.match(active.boundary, /diagnostics:diagnostics-not-copied/);
   assert.match(initial.boundary, /sensitive_communication_claim=false/);
   assert.match(initial.boundary, /security_ready_claim=false/);
   assert.match(initial.boundary, /network_on_launch=false/);
@@ -1175,8 +1187,18 @@ test("manual envelope stepper and pending outbound states stay support-safe", ()
     "reply",
   ]);
   assert.equal(initial.currentStep, "export-envelope");
+  assert.equal(initial.nextAction, "export-envelope");
+  assert.equal(initial.blockedReason, "encrypted-envelope-not-exported");
+  assert.equal(initial.steps.find((step) => step.step === "export-envelope").nextAction, "export-envelope");
   assert.equal(imported.currentStep, "decrypt-display");
+  assert.equal(imported.nextAction, "import-envelope-to-decrypt-display");
+  assert.equal(imported.blockedReason, "message-not-decrypted");
   assert.equal(replied.currentStep, "complete");
+  assert.equal(replied.nextAction, "reply-retry-cancel-delete-or-repeat");
+  assert.equal(replied.blockedReason, "none");
+  assert.match(initial.boundary, /current_step=export-envelope/);
+  assert.match(initial.boundary, /next_action=export-envelope/);
+  assert.match(initial.boundary, /blocked_reason=encrypted-envelope-not-exported/);
   assert.match(initial.boundary, /network_io=false/);
   assert.match(initial.boundary, /payload_returned_to_support=false/);
 

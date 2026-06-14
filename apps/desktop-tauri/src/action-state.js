@@ -780,6 +780,7 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
   const roomPresent = Boolean(input.roomPresent);
   const safetyVerified = Boolean(input.safetyVerified);
   const messageFlowReady = Boolean(input.messageFlowReady);
+  const diagnosticsCopied = Boolean(input.diagnosticsCopied);
   const purpose = "No-central-trusted-server 1:1 private messenger";
   const releaseStatus = "Unsigned public beta; no production security claim";
   const stepStatuses = {
@@ -787,7 +788,7 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
     room: !profileUnlocked ? "pending" : roomPresent ? "complete" : "current",
     safety: !roomPresent ? "pending" : safetyVerified ? "complete" : "current",
     message: !safetyVerified ? "pending" : messageFlowReady ? "complete" : "current",
-    diagnostics: messageFlowReady ? "current" : "pending",
+    diagnostics: !messageFlowReady ? "pending" : diagnosticsCopied ? "complete" : "current",
   };
   const stepOrder = ["profile", "room", "safety", "message", "diagnostics"];
   const currentStep = stepOrder.find((step) => stepStatuses[step] === "current") ?? "diagnostics";
@@ -803,7 +804,36 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
           ? "Compare the safety phrase before messaging."
           : !messageFlowReady
             ? "Write a message and export the encrypted envelope."
-            : "Import, decrypt/display, reply, retry, or cancel from the room.";
+            : !diagnosticsCopied
+              ? "Copy the redacted support report only if you need help."
+              : "Repeat the manual envelope flow or delete local data when finished.";
+  const stepDetails = {
+    profile: {
+      status: stepStatuses.profile,
+      nextAction: profileInputPresent ? "unlock-or-create-profile" : "enter-local-profile-and-passphrase",
+      blockedReason: profileUnlocked ? "none" : profileInputPresent ? "profile-locked" : "profile-input-missing",
+    },
+    room: {
+      status: stepStatuses.room,
+      nextAction: roomPresent ? "compare-safety" : "create-or-join-pairwise-invite-room",
+      blockedReason: profileUnlocked ? (roomPresent ? "none" : "room-missing") : "profile-locked",
+    },
+    safety: {
+      status: stepStatuses.safety,
+      nextAction: safetyVerified ? "write-message" : "compare-mandatory-safety-material",
+      blockedReason: roomPresent ? (safetyVerified ? "none" : "safety-not-verified") : "room-missing",
+    },
+    message: {
+      status: stepStatuses.message,
+      nextAction: messageFlowReady ? "import-reply-retry-cancel-or-delete" : "export-manual-encrypted-envelope",
+      blockedReason: safetyVerified ? (messageFlowReady ? "none" : "manual-envelope-not-exported") : "safety-not-verified",
+    },
+    diagnostics: {
+      status: stepStatuses.diagnostics,
+      nextAction: diagnosticsCopied ? "done" : "copy-redacted-support-report-if-needed",
+      blockedReason: messageFlowReady ? (diagnosticsCopied ? "none" : "diagnostics-not-copied") : "message-flow-not-ready",
+    },
+  };
   return {
     purpose,
     releaseStatus,
@@ -811,6 +841,7 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
     currentStepIndex,
     stepCount: stepOrder.length,
     stepStatuses,
+    stepDetails,
     progressLabel,
     primaryNextAction,
     boundary: [
@@ -827,6 +858,9 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
       `room_present=${roomPresent}`,
       `safety_verified=${safetyVerified}`,
       `message_flow_ready=${messageFlowReady}`,
+      `diagnostics_copied=${diagnosticsCopied}`,
+      `first_run_step_next_actions=${stepOrder.map((step) => `${step}:${stepDetails[step].nextAction}`).join("#")}`,
+      `first_run_blocked_reasons=${stepOrder.map((step) => `${step}:${stepDetails[step].blockedReason}`).join("#")}`,
       "sensitive_communication_claim=false",
       "security_ready_claim=false",
       "network_on_launch=false",
@@ -1926,15 +1960,42 @@ export function productionEncryptedEnvelopeExchangeStepperView(state = {}) {
     ["reply", Boolean(state.hasTwoProfileReplyDraftInput)],
   ];
   const firstIncomplete = steps.find(([_, complete]) => !complete)?.[0] ?? "complete";
+  const stepBlockedReasons = {
+    compose: "message-draft-missing",
+    "export-envelope": "encrypted-envelope-not-exported",
+    "share-outside-app": "envelope-not-shared-outside-app",
+    "import-envelope": "remote-envelope-not-imported",
+    "decrypt-display": "message-not-decrypted",
+    reply: "reply-draft-missing",
+    complete: "none",
+  };
+  const stepNextActions = {
+    compose: "write-message",
+    "export-envelope": "export-envelope",
+    "share-outside-app": "share-envelope-outside-app",
+    "import-envelope": "load-or-paste-envelope",
+    "decrypt-display": "import-envelope-to-decrypt-display",
+    reply: "write-reply",
+    complete: "reply-retry-cancel-delete-or-repeat",
+  };
+  const blockedReason = stepBlockedReasons[firstIncomplete] ?? "review-conversation";
+  const nextAction = stepNextActions[firstIncomplete] ?? "review-conversation";
   return {
     currentStep: firstIncomplete,
+    nextAction,
+    blockedReason,
     steps: steps.map(([step, complete]) => ({
       step,
       label: productionManualTransferStepLabel(step),
       complete,
+      nextAction: complete ? "complete" : (stepNextActions[step] ?? "review-conversation"),
+      blockedReason: complete ? "none" : (stepBlockedReasons[step] ?? "review-conversation"),
     })),
     boundary: [
       "encrypted_envelope_stepper=true",
+      `current_step=${firstIncomplete}`,
+      `next_action=${nextAction}`,
+      `blocked_reason=${blockedReason}`,
       "default_transport=local_manual_envelope_exchange",
       "compose_export_share_import_decrypt_display_reply=true",
       "network_io=false",

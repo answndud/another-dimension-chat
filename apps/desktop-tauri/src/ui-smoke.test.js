@@ -191,6 +191,9 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(mainJs, /productionFirstRunDesktopSummaryView/);
   assert.match(functionBody(mainJs, "renderFirstRunDesktopSummary"), /fields\.firstRunPrimaryNextAction/);
   assert.match(functionBody(mainJs, "renderFirstRunDesktopSummary"), /data-current-step/);
+  assert.match(functionBody(mainJs, "renderFirstRunDesktopSummary"), /data-next-action/);
+  assert.match(functionBody(mainJs, "renderFirstRunDesktopSummary"), /data-blocked-reason/);
+  assert.match(functionBody(mainJs, "renderFirstRunDesktopSummary"), /Blocked reason:/);
   assert.match(functionBody(mainJs, "renderFirstRunDesktopSummary"), /aria-current/);
   assert.match(stylesCss, /data-step-status="current"/);
   assert.match(stylesCss, /data-step-status="complete"/);
