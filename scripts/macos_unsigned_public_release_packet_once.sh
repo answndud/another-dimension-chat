@@ -6,6 +6,7 @@ RELEASE_DIR="$ROOT_DIR/apps/desktop-tauri/public-release/unsigned-public-beta"
 RELEASE_DMG="another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg"
 RELEASE_PROVENANCE="$RELEASE_DMG.provenance.json"
 EXPECTED_DMG_SHA="ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13"
+EXPECTED_BUILD_COMMIT="e724bd39"
 RELEASE_TAG="v0.1.0-beta-onion-unsigned"
 ARTIFACT_IDENTITY_FIELDS="artifact#artifact_sha256#build_channel#build_commit#release_tag#platform"
 PUBLIC_ARTIFACT_STALE_ACTION="rebuild-or-republish-unsigned-public-beta-packet"
@@ -82,7 +83,7 @@ STATUS
 
   local artifact_identity aligned stale state next_action
   artifact_identity="$artifact#$artifact_sha#$build_channel#$build_commit#$release_tag#$platform"
-  if [ "$build_commit" = "$current_head" ]; then
+  if [ "$build_commit" = "$EXPECTED_BUILD_COMMIT" ]; then
     aligned=true
     stale=false
     state=current
@@ -105,6 +106,7 @@ artifact_build_commit=$build_commit
 artifact_release_tag=$release_tag
 artifact_platform=$platform
 current_head_short=$current_head
+current_public_packet_build_commit=$EXPECTED_BUILD_COMMIT
 artifact_current_head_aligned=$aligned
 public_artifact_stale=$stale
 public_artifact_state=$state

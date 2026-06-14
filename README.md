@@ -29,11 +29,13 @@ Public-safe screenshots are listed in
 
 ## Download
 
-The current public artifact is attached to this GitHub Release:
+The current source-prepared unsigned packet is staged for this GitHub Release
+tag, but replacing the live GitHub Release assets remains an explicit owner
+action:
 
 <https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned>
 
-Download both files from the same release:
+After that upload, download both files from the same release:
 
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
@@ -47,23 +49,22 @@ shasum -a 256 -c another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.
 Expected SHA-256:
 
 ```text
-7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a
+ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13
 ```
 
 Artifact identity:
 
 ```text
-artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#v0.1.0-beta-onion-unsigned#macos-aarch64
-artifact_current_head_aligned=false
-public_artifact_stale=true
-public_artifact_state=stale
-next_owner_action=rebuild-or-republish-unsigned-public-beta-packet
+artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13#beta-onion#e724bd39#v0.1.0-beta-onion-unsigned#macos-aarch64
+artifact_current_head_aligned=true
+public_artifact_stale=false
+public_artifact_state=current
+next_owner_action=upload-current-unsigned-public-beta-packet
 ```
 
-This means the published DMG is a held/stale public packet relative to current
-source HEAD. Verify that downloaded packet with the same-release checksum and
-provenance, but do not treat it as evidence for newer source changes until the
-unsigned public beta packet is rebuilt or republished.
+This means the generated packet is aligned to current source HEAD. Do not treat
+the GitHub Release as current until the explicit owner action uploads the
+matching DMG, checksum, provenance, manifest, and release body.
 
 Because this build is unsigned, macOS may block it. Open the DMG, try to open
 the app once, then allow the blocked app from System Settings > Privacy &
@@ -158,12 +159,15 @@ Read the full public security boundary in [SECURITY.md](SECURITY.md).
 - Windows desktop cross-platform parity intake uses `apps/desktop-tauri/windows_desktop_parity_intake.json`; Windows local build candidate only, no public Windows artifact, no Windows installer, no public artifact upload; Windows local runtime smoke boundary remains source-only and still requires WebView2 runtime smoke, Tauri app-data storage, path separator, local deletion behavior, redacted diagnostics, explicit user action, and local-manual envelope default path checks.
 - Windows local runtime smoke handoff uses `apps/desktop-tauri/windows_local_runtime_smoke_handoff.json` and `npm --prefix apps/desktop-tauri run test:windows-boundary`; this is not a Windows local runtime smoke passed claim and still requires WebView2 runtime smoke, Tauri app-data path review, path separator review, local deletion behavior review, redacted diagnostics behavior review, explicit user action, local-manual envelope default path review, no auto-update, and public non-claim checks on a real Windows machine.
 - macOS unsigned public beta source closure references [reference/RELEASE_PAGE_UPDATE_POLICY.json](reference/RELEASE_PAGE_UPDATE_POLICY.json), [reference/MACOS_FRESH_INSTALL_REHEARSAL.md](reference/MACOS_FRESH_INSTALL_REHEARSAL.md), [reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md](reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md), [reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md](reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md), [reference/screenshots/README.md](reference/screenshots/README.md), and [reference/PUBLIC_SUPPORT_TRIAGE.md](reference/PUBLIC_SUPPORT_TRIAGE.md); readiness target is 100% for source closure only, while the production readiness definition and claim gate still blocks production/security claims.
-- The current unsigned packet is a source-only preflight around the pinned public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`, build channel `beta-onion`,
-  commit `e8954df9`, release tag `v0.1.0-beta-onion-unsigned`, and SHA-256 `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`.
-- Artifact status is machine-checkable: `artifact_current_head_aligned=false`,
-  `public_artifact_stale=true`, `public_artifact_state=stale`, and
-  `next_owner_action=rebuild-or-republish-unsigned-public-beta-packet`.
-  The stale packet is not latest-source app evidence.
+- The current unsigned packet is a source-prepared packet accepted by
+  `scripts/prepare_unsigned_public_beta_release.sh`, build channel
+  `beta-onion`, commit `e724bd39`, release tag
+  `v0.1.0-beta-onion-unsigned`, and SHA-256
+  `ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13`.
+- Artifact status is machine-checkable: `artifact_current_head_aligned=true`,
+  `public_artifact_stale=false`, `public_artifact_state=current`, and
+  `next_owner_action=upload-current-unsigned-public-beta-packet`.
+  The GitHub Release is not current until that upload owner action is complete.
 - This is not a packaging readiness, audit readiness, or release go signal.
 - Production claim removal is blocked by
   [reference/PRODUCTION_READINESS_CLAIM_GATE.md](reference/PRODUCTION_READINESS_CLAIM_GATE.md)

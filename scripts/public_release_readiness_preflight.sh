@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RELEASE_DMG="another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg"
-EXPECTED_DMG_SHA="7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a"
+EXPECTED_DMG_SHA="ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13"
 EXPECTED_RELEASE_FILES=(
   "$RELEASE_DMG"
   "$RELEASE_DMG.sha256"
@@ -174,6 +174,7 @@ check_existing_release_output() {
   echo "existing_release_output_lockfiles=current"
   if [ "$reference_copies_status" = "current" ]; then
     echo "existing_release_output_status=current"
+    echo "existing_release_output_next_owner_action=upload-current-unsigned-public-beta-packet"
   else
     echo "existing_release_output_status=stale"
     echo "existing_release_output_stale_reason=source-reference-copy-differs-from-held-packet"
@@ -191,7 +192,7 @@ check_macos_public_beta_final_sources() {
   require_text "$ROOT_DIR/README.md" "macOS unsigned public beta source closure"
   require_text "$ROOT_DIR/README.md" "readiness target is 100%"
   require_text "$ROOT_DIR/README.md" "production readiness definition and claim gate"
-  require_text "$ROOT_DIR/reference/RELEASE_PAGE_UPDATE_POLICY.json" "no live release update needed while source upload-set extras remain held"
+  require_text "$ROOT_DIR/reference/RELEASE_PAGE_UPDATE_POLICY.json" "current source packet upload is held without explicit upload approval"
   require_text "$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL.md" "Redacted Diagnostics Copy"
   require_text "$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md" "Status: hold for manual GUI follow-through; source install authority passed."
   require_text "$ROOT_DIR/reference/screenshots/README.md" "Reviewed files"
