@@ -28,7 +28,7 @@ EXPECTED_BUILD_COMMIT="e724bd39"
 RELEASE_TAG="v0.1.0-beta-onion-unsigned"
 ARTIFACT_IDENTITY_FIELDS="artifact#artifact_sha256#build_channel#build_commit#release_tag#platform"
 PUBLIC_ARTIFACT_STALE_ACTION="rebuild-or-republish-unsigned-public-beta-packet"
-PUBLIC_ARTIFACT_CURRENT_ACTION="upload-current-unsigned-public-beta-packet"
+PUBLIC_ARTIFACT_CURRENT_ACTION="run-clean-macos-fresh-install-with-disposable-profile"
 
 require_file() {
   if [ ! -f "$1" ]; then

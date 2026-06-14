@@ -79,14 +79,14 @@ GitHub Release body, and beta checklist:
 - `artifact_current_head_aligned=true`
 - `public_artifact_stale=false`
 - `public_artifact_state=current`
-- `next_owner_action=upload-current-unsigned-public-beta-packet`
+- `next_owner_action=run-clean-macos-fresh-install-with-disposable-profile`
 - `trust_model=same-github-release-assets#same-release-sha256#manual-privacy-security-allow-after-checksum#no-auto-update`
 - `support_intake=redacted-diagnostics-only#no-raw-logs#no-crash-dumps#no-private-room-data#no-payloads#no-key-material`
 - `generated_artifact_boundary=do-not-commit-public-release-or-beta-artifacts#no-dmg-rebuild#no-release-upload-or-edit`
 
-This generated DMG packet is aligned to current source HEAD. Verify it with the
-same-release checksum and provenance, and keep the GitHub Release upload/edit
-as an explicit owner action.
+This generated DMG packet is aligned to the current public packet source.
+Verify it with the same-release checksum and provenance; the matching GitHub
+Release asset set is current.
 
 ## Install
 

@@ -174,7 +174,7 @@ check_existing_release_output() {
   echo "existing_release_output_lockfiles=current"
   if [ "$reference_copies_status" = "current" ]; then
     echo "existing_release_output_status=current"
-    echo "existing_release_output_next_owner_action=upload-current-unsigned-public-beta-packet"
+    echo "existing_release_output_next_owner_action=run-clean-macos-fresh-install-with-disposable-profile"
   else
     echo "existing_release_output_status=stale"
     echo "existing_release_output_stale_reason=source-reference-copy-differs-from-held-packet"

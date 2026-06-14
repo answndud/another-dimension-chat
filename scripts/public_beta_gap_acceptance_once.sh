@@ -78,7 +78,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_reference_copies=current"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_public_intake=baseline-present-source-may-be-newer"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_lockfiles=current"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_next_owner_action=upload-current-unsigned-public-beta-packet"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_next_owner_action=run-clean-macos-fresh-install-with-disposable-profile"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output file list differs from MANIFEST allowlist"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output dependency lockfile evidence is stale"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "If any after-upload confirmation fails"

@@ -9,7 +9,7 @@ PREPARE_SCRIPT="$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh"
 TAG="v0.1.0-beta-onion-unsigned"
 REPO="answndud/another-dimension-chat"
 DMG="another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg"
-DMG_SHA="7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a"
+DMG_SHA="ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13"
 
 require_file() {
   if [ ! -f "$1" ]; then

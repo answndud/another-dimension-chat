@@ -108,21 +108,21 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_reference_copies=current"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_public_intake=baseline-present-source-may-be-newer"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_lockfiles=current"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_next_owner_action=upload-current-unsigned-public-beta-packet"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_next_owner_action=run-clean-macos-fresh-install-with-disposable-profile"
 require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "current_head_artifact_transition_gate_ready=true"
 require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "artifact_current_head_aligned=true"
 require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "public_artifact_stale=false"
 require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "public_artifact_state=current"
-require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "PUBLIC_ARTIFACT_CURRENT_ACTION=\"upload-current-unsigned-public-beta-packet\""
+require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "PUBLIC_ARTIFACT_CURRENT_ACTION=\"run-clean-macos-fresh-install-with-disposable-profile\""
 require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" 'next_owner_action=$next_action'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "current_head_artifact_transition_gate_ready=true"
-require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "PUBLIC_ARTIFACT_CURRENT_ACTION=\"upload-current-unsigned-public-beta-packet\""
+require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "PUBLIC_ARTIFACT_CURRENT_ACTION=\"run-clean-macos-fresh-install-with-disposable-profile\""
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" 'current_artifact_next_owner_action=$PUBLIC_ARTIFACT_CURRENT_ACTION'
 require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "current-head unsigned public beta transition"
 require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "artifact_current_head_aligned=true"
 require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "public_artifact_stale=false"
 require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "public_artifact_state=current"
-require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "next_owner_action=upload-current-unsigned-public-beta-packet"
+require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "next_owner_action=run-clean-macos-fresh-install-with-disposable-profile"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output file list differs from MANIFEST allowlist"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output dependency lockfile evidence is stale"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "If any after-upload confirmation fails"
@@ -240,11 +240,13 @@ require_text "$ROOT_DIR/README.md" 'artifact_identity=another-dimension-chat-0.1
 require_text "$ROOT_DIR/README.md" "artifact_current_head_aligned=true"
 require_text "$ROOT_DIR/README.md" "public_artifact_stale=false"
 require_text "$ROOT_DIR/README.md" "public_artifact_state=current"
-require_text "$ROOT_DIR/README.md" "next_owner_action=upload-current-unsigned-public-beta-packet"
-require_text "$ROOT_DIR/README.md" "The GitHub Release is not current until that upload owner action is complete."
+require_text "$ROOT_DIR/README.md" "next_owner_action=run-clean-macos-fresh-install-with-disposable-profile"
+require_text "$ROOT_DIR/README.md" "The GitHub Release asset set is current; next owner evidence is a clean macOS"
+require_text "$ROOT_DIR/README.md" "fresh-install run."
 require_text "$ROOT_DIR/README.ko.md" 'artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13#beta-onion#e724bd39#v0.1.0-beta-onion-unsigned#macos-aarch64'
 require_text "$ROOT_DIR/README.ko.md" "public_artifact_stale=false"
-require_text "$ROOT_DIR/README.ko.md" "이 upload owner action이 끝나기 전까지 GitHub Release는 current 상태가 아닙니다."
+require_text "$ROOT_DIR/README.ko.md" "GitHub Release asset set은 current 상태이며, 다음 owner evidence는 clean macOS"
+require_text "$ROOT_DIR/README.ko.md" "fresh-install run입니다."
 require_text "$ROOT_DIR/README.md" "This is not a packaging readiness, audit readiness, or release go signal."
 require_file "$ROOT_DIR/scripts/desktop_beta_acceptance_matrix_once.sh"
 require_file "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh"
@@ -410,7 +412,7 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
       echo "FAIL release readiness preflight missing current packet status" >&2
       exit 1
     }
-    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_next_owner_action=upload-current-unsigned-public-beta-packet" || {
+    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_next_owner_action=run-clean-macos-fresh-install-with-disposable-profile" || {
       echo "FAIL release readiness preflight missing current packet owner action" >&2
       exit 1
     }

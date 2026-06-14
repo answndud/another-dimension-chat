@@ -87,7 +87,7 @@ STATUS
     aligned=true
     stale=false
     state=current
-    next_action=upload-current-unsigned-public-beta-packet
+    next_action=run-clean-macos-fresh-install-with-disposable-profile
   else
     aligned=false
     stale=true
@@ -162,7 +162,7 @@ require_release_policy_sources() {
   require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "artifact_identity_fields=$ARTIFACT_IDENTITY_FIELDS"
   require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "artifact_current_head_aligned=true"
   require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "public_artifact_stale=false"
-  require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "next_owner_action=upload-current-unsigned-public-beta-packet"
+  require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "next_owner_action=run-clean-macos-fresh-install-with-disposable-profile"
 
   for file in \
     "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" \

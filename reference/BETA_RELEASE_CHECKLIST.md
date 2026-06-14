@@ -156,14 +156,14 @@ GitHub Release body, and beta checklist:
 - `artifact_current_head_aligned=true`
 - `public_artifact_stale=false`
 - `public_artifact_state=current`
-- `next_owner_action=upload-current-unsigned-public-beta-packet`
+- `next_owner_action=run-clean-macos-fresh-install-with-disposable-profile`
 - `trust_model=same-github-release-assets#same-release-sha256#manual-privacy-security-allow-after-checksum#no-auto-update`
 - `support_intake=redacted-diagnostics-only#no-raw-logs#no-crash-dumps#no-private-room-data#no-payloads#no-key-material`
 - `generated_artifact_boundary=do-not-commit-public-release-or-beta-artifacts#no-dmg-rebuild#no-release-upload-or-edit`
 
-If `public_artifact_stale=false`, the generated packet matches the current
-source HEAD. Do not announce it from GitHub until the explicit owner action
-`upload-current-unsigned-public-beta-packet` replaces the release assets.
+If `public_artifact_stale=false`, the GitHub Release asset set matches the
+current generated packet. The next owner action is
+`run-clean-macos-fresh-install-with-disposable-profile`.
 
 ## Clean macOS Fresh-Install Result Contract
 
