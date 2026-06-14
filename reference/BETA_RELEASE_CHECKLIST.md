@@ -172,6 +172,8 @@ checksum handling, but it is not a clean-machine pass. A clean install result
 must use these public-safe fields:
 
 - `clean_machine_execution=false`
+- `clean_macos_fresh_install_result=hold`
+- `clean_install_artifact_current=true`
 - `clean_machine_result_accepted=false`
 - `local_fixture_promoted_to_clean_install_pass=false`
 - `artifact_filename=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`

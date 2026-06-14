@@ -12,7 +12,7 @@ communication.
 - GitHub Release tag: `v0.1.0-beta-onion-unsigned`
 - Public app artifact: macOS Apple Silicon unsigned DMG
 - Expected DMG SHA-256:
-  `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`
+  `ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13`
 - Release authority: files attached to the GitHub Release, not branch source
   files or GitHub source archives
 - Practical desktop path: local profile unlock/create, invite room,
@@ -83,6 +83,22 @@ The fresh-install result has a documented GUI follow-through hold for manual
 first-run/profile/invite/manual-flow/delete/diagnostics rehearsal. That hold is
 now routed through public support triage rather than a release asset change. It
 does not authorize production claims or sensitive communication.
+
+## Clean Install Evidence Binding
+
+```text
+clean_macos_fresh_install_result=hold
+clean_install_artifact_current=true
+clean_machine_result_accepted=false
+local_fixture_promoted_to_clean_install_pass=false
+release_download_source=github-release
+same_release_checksum_result=pass
+next_owner_action=run-clean-macos-fresh-install-with-disposable-profile
+```
+
+The current clean-install record is bound to the rebuilt GitHub Release asset
+identity and same-release checksum result, but it is not a clean-machine pass.
+Only a disposable clean macOS GUI run can change the result out of `hold`.
 
 No live release upload, DMG rebuild, checksum change, release asset deletion, or
 release body edit is performed by this closure.
