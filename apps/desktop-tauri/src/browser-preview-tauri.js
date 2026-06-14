@@ -438,6 +438,53 @@ if (previewHost && (forcedBrowserPreviewPeer || !hasUsableTauriInvoke)) {
           return { ttl_seconds: 86400 };
         case "production_profile_list":
           return { profiles: [], profile_count: 0 };
+        case "production_product_unlock":
+          return {
+            profile: args.profile,
+            unlocked: true,
+            redacted_reason: "browser_preview_unlock",
+            warning: "Browser preview unlock only; no product storage security claim",
+            key_policy_status: "browser-preview-passphrase-first",
+            idle_auto_lock_seconds: 60,
+            passphrase_first: true,
+            os_keystore_only_rejected: true,
+            production_key_management_ready: false,
+            rollback_marker_present: false,
+            rollback_detection_ready: false,
+            rollback_suspicion_detected: false,
+            rollback_resume_blocked: false,
+            store_path_returned: false,
+            passphrase_retained: false,
+            key_material_exposed: false,
+            raw_storage_error_exposed: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+          };
+        case "production_product_unlock_status":
+        case "production_product_lock":
+          return {
+            profile: args.profile ?? null,
+            unlocked: false,
+            redacted_reason: "browser_preview_locked",
+            warning: "Browser preview locked; enter passphrase to continue",
+            key_policy_status: "browser-preview-passphrase-first",
+            idle_auto_lock_seconds: 60,
+            passphrase_first: true,
+            os_keystore_only_rejected: true,
+            production_key_management_ready: false,
+            rollback_marker_present: false,
+            rollback_detection_ready: false,
+            rollback_suspicion_detected: false,
+            rollback_resume_blocked: false,
+            store_path_returned: false,
+            passphrase_retained: false,
+            key_material_exposed: false,
+            raw_storage_error_exposed: false,
+            network_io_attempted: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+          };
         case "production_profile_unlock":
           return { profile: args.profile, unlocked: true };
         case "production_onion_backup_exclusion_prepare":
