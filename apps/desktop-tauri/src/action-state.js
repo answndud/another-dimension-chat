@@ -1339,11 +1339,15 @@ function redactedSupportReportToken(value, fallback = "unknown") {
 }
 
 export function productionRedactedSupportReportView(input = {}) {
+  const appStatus = redactedSupportReportToken(input.appStatus, "public-beta-local");
   const appVersion = redactedSupportReportToken(input.appVersion);
   const buildChannel = redactedSupportReportToken(input.buildChannel);
   const buildCommit = redactedSupportReportToken(input.buildCommit);
   const platform = redactedSupportReportToken(input.platform);
+  const checksumResult = redactedSupportReportToken(input.checksumResult, "not-provided");
   const releaseClass = redactedSupportReportToken(input.releaseClass, "unsigned-public-beta");
+  const releaseClassReadiness = redactedSupportReportToken(input.releaseClassReadiness, "not-production-ready");
+  const appLaunchNetworkBoundary = redactedSupportReportToken(input.appLaunchNetworkBoundary, "false");
   const activeFlow = redactedSupportReportToken(input.activeFlow, "unknown-flow");
   const redactedErrorCode = redactedSupportReportToken(
     input.redactedErrorCode ?? input.failureClass,
@@ -1355,11 +1359,15 @@ export function productionRedactedSupportReportView(input = {}) {
   const payload = [
     "Another Dimension Chat redacted support report",
     "report_version=1",
+    `app_status=${appStatus}`,
     `app_version=${appVersion}`,
     `build_channel=${buildChannel}`,
     `build_commit=${buildCommit}`,
     `platform=${platform}`,
+    `checksum_result=${checksumResult}`,
     `release_class=${releaseClass}`,
+    `release_class_readiness=${releaseClassReadiness}`,
+    `app_launch_network_boundary=${appLaunchNetworkBoundary}`,
     `active_flow=${activeFlow}`,
     `redacted_error_code=${redactedErrorCode}`,
     `non_sensitive_status=${nonSensitiveStatus}`,
@@ -1371,14 +1379,18 @@ export function productionRedactedSupportReportView(input = {}) {
     "envelope_payload=<redacted>",
     "raw_local_path=<redacted>",
     "credential=<redacted>",
+    "crash_dump=<redacted>",
+    "screenshot=<redacted>",
     "support_bundle_export=false",
     "raw_logs_included=false",
+    "crash_dumps_included=false",
+    "screenshots_included=false",
     "telemetry_upload=false",
   ].join("\n");
   const boundary = [
     "redacted_support_report=true",
     `copy_enabled=${copyEnabled}`,
-    "allowed_fields=app-version#build-channel#build-commit#platform#release-class#active-flow#redacted-error-code#non-sensitive-status#recovery-next-action",
+    "allowed_fields=app-status#app-version#build-channel#build-commit#platform#checksum-result#release-class#release-class-readiness#app-launch-network-boundary#active-flow#redacted-error-code#non-sensitive-status#recovery-next-action",
     "passphrase_included=false",
     "private_key_included=false",
     "invite_body_included=false",
@@ -1386,17 +1398,24 @@ export function productionRedactedSupportReportView(input = {}) {
     "envelope_payload_included=false",
     "raw_local_path_included=false",
     "credential_included=false",
+    "raw_logs_requested=false",
+    "crash_dumps_requested=false",
+    "screenshots_requested=false",
     "support_bundle_export=false",
     "audit_evidence_claim=false",
     "external_delivery_evidence_claim=false",
     "security_ready_proof_claim=false",
   ].join(" ");
   return {
+    appStatus,
     appVersion,
     buildChannel,
     buildCommit,
     platform,
+    checksumResult,
     releaseClass,
+    releaseClassReadiness,
+    appLaunchNetworkBoundary,
     activeFlow,
     redactedErrorCode,
     nonSensitiveStatus,

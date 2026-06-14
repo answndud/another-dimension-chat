@@ -10,6 +10,7 @@ export function fieldTestReportValue(value, fallback = "unknown") {
 }
 
 export const PUBLIC_SUPPORT_DIAGNOSTICS_ALLOWED_FIELDS = Object.freeze([
+  "app-status",
   "app-version",
   "build-channel",
   "build-commit",
@@ -21,20 +22,29 @@ export const PUBLIC_SUPPORT_DIAGNOSTICS_ALLOWED_FIELDS = Object.freeze([
   "desktop-acceptance-status",
   "desktop-acceptance-blockers",
   "app-launch-network",
+  "release-class-readiness",
 ]);
 
 export const PUBLIC_SUPPORT_DIAGNOSTICS_FORBIDDEN_FIELDS = Object.freeze([
   "raw-logs",
+  "crash-dumps",
+  "screenshots",
+  "onion-endpoints",
   "endpoints",
   "invite-codes",
+  "pairing-payloads",
+  "envelope-payloads",
+  "endpoint-payloads",
   "message-text",
   "local-paths",
   "payloads",
   "safety-phrases",
   "profile-names",
   "passphrases",
+  "private-keys",
   "key-material",
   "private-planning-notes",
+  "support-bundles",
 ]);
 
 export function publicSupportDiagnosticsAllowedFieldsValue() {
@@ -56,8 +66,10 @@ export function publicSupportDiagnosticsExcludedFieldsValue() {
     "crash_dumps",
     "screenshots",
     "passphrases",
+    "private_keys",
     "key_material",
     "private_planning_notes",
+    "support_bundles",
   ].join(",");
 }
 

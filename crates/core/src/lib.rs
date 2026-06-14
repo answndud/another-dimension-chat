@@ -2935,6 +2935,49 @@ pub mod production {
         "app_launch_network_boundary_visible",
     ];
 
+    const PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS: &[&str] = &[
+        "app_status",
+        "app_version",
+        "build_channel",
+        "build_commit",
+        "platform",
+        "checksum_result",
+        "broad_failure_class",
+        "recovery_next_action",
+        "app_launch_network_boundary",
+        "release_class_readiness",
+    ];
+
+    const PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS: &[&str] = &[
+        "raw_logs",
+        "crash_dumps",
+        "screenshots",
+        "onion_endpoints",
+        "invite_codes",
+        "pairing_payloads",
+        "envelope_payloads",
+        "endpoint_payloads",
+        "safety_phrases",
+        "profile_names",
+        "message_text",
+        "local_paths",
+        "passphrases",
+        "private_keys",
+        "key_material",
+        "private_planning_notes",
+        "support_bundles",
+    ];
+
+    const PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_POLICIES: &[&str] = &[
+        "public_issue_redacted_diagnostics_only",
+        "private_vulnerability_reporting_required_for_sensitive_details",
+        "bad_release_advisory_bound_to_release_artifact_identity",
+        "emergency_notice_manual_verification_only",
+        "auto_update_claim_forbidden",
+        "raw_logs_crash_dumps_screenshots_forbidden",
+        "no_external_delivery_or_sensitive_use_claim",
+    ];
+
     const PRODUCTION_MOBILE_DIAGNOSTICS_PLATFORMS: &[&str] =
         &["android_shell_candidate", "ios_shell_candidate"];
 
@@ -4799,6 +4842,30 @@ pub mod production {
         app_launch_network_boundary_required: bool,
         boundary_closed: bool,
         security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPublicSupportIncidentOperationsSummary {
+        policies: &'static [&'static str],
+        allowed_fields: &'static [&'static str],
+        forbidden_fields: &'static [&'static str],
+        diagnostics_schema_ready: bool,
+        public_issue_intake_allowed: bool,
+        private_vulnerability_reporting_required: bool,
+        minimal_public_security_contact_request_allowed: bool,
+        bad_release_advisory_path: &'static str,
+        bad_release_advisory_bound_to_artifact_identity: bool,
+        emergency_notice_manual_verification_only: bool,
+        auto_update_notice_claimed: bool,
+        raw_logs_requested: bool,
+        crash_dumps_requested: bool,
+        screenshots_requested: bool,
+        public_support_ready: bool,
+        stable_candidate_blocked_when_support_not_ready: bool,
+        production_ready_claim_allowed: bool,
+        audited_claim_allowed: bool,
+        sensitive_use_claim_allowed: bool,
+        boundary_closed: bool,
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -9525,6 +9592,88 @@ pub mod production {
 
         pub fn security_ready_claimed(self) -> bool {
             self.security_ready_claimed
+        }
+    }
+
+    impl ProductionPublicSupportIncidentOperationsSummary {
+        pub fn policies(self) -> &'static [&'static str] {
+            self.policies
+        }
+
+        pub fn allowed_fields(self) -> &'static [&'static str] {
+            self.allowed_fields
+        }
+
+        pub fn forbidden_fields(self) -> &'static [&'static str] {
+            self.forbidden_fields
+        }
+
+        pub fn diagnostics_schema_ready(self) -> bool {
+            self.diagnostics_schema_ready
+        }
+
+        pub fn public_issue_intake_allowed(self) -> bool {
+            self.public_issue_intake_allowed
+        }
+
+        pub fn private_vulnerability_reporting_required(self) -> bool {
+            self.private_vulnerability_reporting_required
+        }
+
+        pub fn minimal_public_security_contact_request_allowed(self) -> bool {
+            self.minimal_public_security_contact_request_allowed
+        }
+
+        pub fn bad_release_advisory_path(self) -> &'static str {
+            self.bad_release_advisory_path
+        }
+
+        pub fn bad_release_advisory_bound_to_artifact_identity(self) -> bool {
+            self.bad_release_advisory_bound_to_artifact_identity
+        }
+
+        pub fn emergency_notice_manual_verification_only(self) -> bool {
+            self.emergency_notice_manual_verification_only
+        }
+
+        pub fn auto_update_notice_claimed(self) -> bool {
+            self.auto_update_notice_claimed
+        }
+
+        pub fn raw_logs_requested(self) -> bool {
+            self.raw_logs_requested
+        }
+
+        pub fn crash_dumps_requested(self) -> bool {
+            self.crash_dumps_requested
+        }
+
+        pub fn screenshots_requested(self) -> bool {
+            self.screenshots_requested
+        }
+
+        pub fn public_support_ready(self) -> bool {
+            self.public_support_ready
+        }
+
+        pub fn stable_candidate_blocked_when_support_not_ready(self) -> bool {
+            self.stable_candidate_blocked_when_support_not_ready
+        }
+
+        pub fn production_ready_claim_allowed(self) -> bool {
+            self.production_ready_claim_allowed
+        }
+
+        pub fn audited_claim_allowed(self) -> bool {
+            self.audited_claim_allowed
+        }
+
+        pub fn sensitive_use_claim_allowed(self) -> bool {
+            self.sensitive_use_claim_allowed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
         }
     }
 
@@ -22607,6 +22756,93 @@ pub mod production {
         }
     }
 
+    pub fn production_public_support_incident_operations_summary(
+    ) -> ProductionPublicSupportIncidentOperationsSummary {
+        let diagnostics = production_diagnostics_redaction_boundary_summary();
+        let diagnostics_schema_ready = diagnostics.boundary_closed()
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS.contains(&"app_status")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS.contains(&"build_commit")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS
+                .contains(&"broad_failure_class")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS
+                .contains(&"recovery_next_action")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS
+                .contains(&"app_launch_network_boundary")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS
+                .contains(&"release_class_readiness");
+        let public_issue_intake_allowed = true;
+        let private_vulnerability_reporting_required = true;
+        let minimal_public_security_contact_request_allowed = true;
+        let bad_release_advisory_path = "scripts/prepare_macos_emergency_release_advisory_packet.sh";
+        let bad_release_advisory_bound_to_artifact_identity = true;
+        let emergency_notice_manual_verification_only = true;
+        let auto_update_notice_claimed = false;
+        let raw_logs_requested = false;
+        let crash_dumps_requested = false;
+        let screenshots_requested = false;
+        let production_ready_claim_allowed = false;
+        let audited_claim_allowed = false;
+        let sensitive_use_claim_allowed = false;
+        let stable_candidate_blocked_when_support_not_ready = true;
+        let public_support_ready = diagnostics_schema_ready
+            && public_issue_intake_allowed
+            && private_vulnerability_reporting_required
+            && minimal_public_security_contact_request_allowed
+            && bad_release_advisory_bound_to_artifact_identity
+            && emergency_notice_manual_verification_only
+            && !auto_update_notice_claimed
+            && !raw_logs_requested
+            && !crash_dumps_requested
+            && !screenshots_requested;
+        let boundary_closed = public_support_ready
+            && stable_candidate_blocked_when_support_not_ready
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"raw_logs")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"crash_dumps")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"screenshots")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS
+                .contains(&"onion_endpoints")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"invite_codes")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS
+                .contains(&"pairing_payloads")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS
+                .contains(&"envelope_payloads")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS
+                .contains(&"endpoint_payloads")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"safety_phrases")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"profile_names")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"message_text")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"local_paths")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"passphrases")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"private_keys")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"key_material")
+            && !production_ready_claim_allowed
+            && !audited_claim_allowed
+            && !sensitive_use_claim_allowed;
+
+        ProductionPublicSupportIncidentOperationsSummary {
+            policies: PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_POLICIES,
+            allowed_fields: PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS,
+            forbidden_fields: PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS,
+            diagnostics_schema_ready,
+            public_issue_intake_allowed,
+            private_vulnerability_reporting_required,
+            minimal_public_security_contact_request_allowed,
+            bad_release_advisory_path,
+            bad_release_advisory_bound_to_artifact_identity,
+            emergency_notice_manual_verification_only,
+            auto_update_notice_claimed,
+            raw_logs_requested,
+            crash_dumps_requested,
+            screenshots_requested,
+            public_support_ready,
+            stable_candidate_blocked_when_support_not_ready,
+            production_ready_claim_allowed,
+            audited_claim_allowed,
+            sensitive_use_claim_allowed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_mobile_diagnostics_redaction_boundary_summary(
     ) -> ProductionMobileDiagnosticsRedactionBoundarySummary {
         let public_boundary = production_diagnostics_redaction_boundary_summary();
@@ -29939,6 +30175,70 @@ pub mod production {
             assert!(boundary
                 .policies()
                 .contains(&"support_bundle_export_disabled"));
+        }
+
+        #[test]
+        fn production_public_support_incident_operations_keep_public_intake_redacted() {
+            let support = production_public_support_incident_operations_summary();
+
+            assert!(support.boundary_closed());
+            assert!(support.diagnostics_schema_ready());
+            assert!(support.public_issue_intake_allowed());
+            assert!(support.private_vulnerability_reporting_required());
+            assert!(support.minimal_public_security_contact_request_allowed());
+            assert_eq!(
+                support.bad_release_advisory_path(),
+                "scripts/prepare_macos_emergency_release_advisory_packet.sh"
+            );
+            assert!(support.bad_release_advisory_bound_to_artifact_identity());
+            assert!(support.emergency_notice_manual_verification_only());
+            assert!(!support.auto_update_notice_claimed());
+            assert!(!support.raw_logs_requested());
+            assert!(!support.crash_dumps_requested());
+            assert!(!support.screenshots_requested());
+            assert!(support.public_support_ready());
+            assert!(support.stable_candidate_blocked_when_support_not_ready());
+            assert!(!support.production_ready_claim_allowed());
+            assert!(!support.audited_claim_allowed());
+            assert!(!support.sensitive_use_claim_allowed());
+            assert!(support.allowed_fields().contains(&"app_status"));
+            assert!(support.allowed_fields().contains(&"build_commit"));
+            assert!(support.allowed_fields().contains(&"broad_failure_class"));
+            assert!(support.allowed_fields().contains(&"recovery_next_action"));
+            assert!(support
+                .allowed_fields()
+                .contains(&"app_launch_network_boundary"));
+            assert!(support
+                .allowed_fields()
+                .contains(&"release_class_readiness"));
+            assert!(support.forbidden_fields().contains(&"raw_logs"));
+            assert!(support.forbidden_fields().contains(&"crash_dumps"));
+            assert!(support.forbidden_fields().contains(&"screenshots"));
+            assert!(support.forbidden_fields().contains(&"onion_endpoints"));
+            assert!(support.forbidden_fields().contains(&"invite_codes"));
+            assert!(support.forbidden_fields().contains(&"pairing_payloads"));
+            assert!(support.forbidden_fields().contains(&"envelope_payloads"));
+            assert!(support.forbidden_fields().contains(&"endpoint_payloads"));
+            assert!(support.forbidden_fields().contains(&"safety_phrases"));
+            assert!(support.forbidden_fields().contains(&"profile_names"));
+            assert!(support.forbidden_fields().contains(&"message_text"));
+            assert!(support.forbidden_fields().contains(&"local_paths"));
+            assert!(support.forbidden_fields().contains(&"passphrases"));
+            assert!(support.forbidden_fields().contains(&"private_keys"));
+            assert!(support.forbidden_fields().contains(&"key_material"));
+            assert!(support
+                .policies()
+                .contains(&"public_issue_redacted_diagnostics_only"));
+            assert!(support
+                .policies()
+                .contains(&"private_vulnerability_reporting_required_for_sensitive_details"));
+            assert!(support
+                .policies()
+                .contains(&"bad_release_advisory_bound_to_release_artifact_identity"));
+            assert!(support
+                .policies()
+                .contains(&"emergency_notice_manual_verification_only"));
+            assert!(support.policies().contains(&"auto_update_claim_forbidden"));
         }
 
         #[test]
