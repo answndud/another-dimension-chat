@@ -2,7 +2,13 @@
 
 This is an unsigned experimental public beta.
 
-It is not notarized, not audited, not production-ready, and sensitive communication prohibited.
+It is not signed, not notarized, not audited, not production-ready, and sensitive communication prohibited.
+
+Apple Developer Program, Developer ID, notarization, App Store, and TestFlight
+credentials are not used or required for this OSS public beta. Gatekeeper may
+warn because the app is unsigned. Verify the checksum first, then use the normal
+macOS Privacy & Security manual allow path. Do not disable Gatekeeper globally
+and do not use terminal quarantine-removal commands as an install step.
 
 ## Download
 

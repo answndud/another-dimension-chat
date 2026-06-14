@@ -437,9 +437,18 @@ Beta artifacts must not include local app data, private planning notes, bridge l
 
 Completed field-test reports must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, passphrases, profile names, message text, local app data paths, raw logs, or key material.
 
-## Unsigned Public Beta Boundary
+## Unsigned OSS Public Beta Boundary
 
-The public GitHub DMG path is an unsigned experimental public beta distribution path only. It is not signed, not notarized, not audited, not production-ready, and sensitive communication prohibited.
+The public GitHub DMG path is an unsigned experimental OSS public beta
+distribution path. It is not signed, not notarized, not audited,
+not production-ready, and sensitive communication prohibited.
+
+Apple Developer Program, Developer ID, notarization, App Store, and TestFlight
+credentials are not used or required for this v0.1 public beta. Gatekeeper
+warnings are expected for some users. The supported user path is checksum and
+same-release provenance verification followed by the normal macOS Privacy &
+Security manual allow path. This project does not ask users to disable
+Gatekeeper globally or use terminal quarantine-removal commands.
 
 There is no public Windows beta artifact yet. A local Windows build must preserve
 the same local app-data, encrypted-store, local deletion, diagnostics redaction,
