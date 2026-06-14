@@ -136,6 +136,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_r
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "run_step final-claim-acceptance check_final_claim_acceptance_hold"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_acceptance=hold-expected"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_stable_candidate_blocked_by_p0_p1_audit=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_high_risk_blocked_by_missing_required_conditions=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "generated_artifacts_created=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze=desktop-public-beta-source-candidate"
@@ -596,6 +597,14 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_high_risk_mode_ready=false" || {
     echo "FAIL release readiness preflight missing final High-Risk hold" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_high_risk_required_conditions_missing=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-encryption-evidence#release-integrity" || {
+    echo "FAIL release readiness preflight missing High-Risk required condition list" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_high_risk_blocked_by_missing_required_conditions=true" || {
+    echo "FAIL release readiness preflight missing High-Risk condition blocker" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_forbidden_positive_public_claims_found=false" || {
