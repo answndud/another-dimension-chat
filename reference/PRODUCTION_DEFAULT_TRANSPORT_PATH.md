@@ -116,6 +116,8 @@ Targeted tests that anchor this gate:
 - `default public surface hides advanced onion controls outside developer mode`
 - `startup invokes only redacted local onion status`
 - `default transport boundary keeps the public diagnostic path manual and non-centralized`
+- `runtime_event_negative_corpus_redacts_sensitive_failure_context`
+- `stream_fail_closed_negative_corpus_records_only_redacted_runtime_events`
 
 ## Current Gate Flags
 
@@ -153,6 +155,10 @@ Targeted tests that anchor this gate:
 - startup_onion_status_only=true
 - advanced_onion_direct_fallback=false
 - advanced_onion_send_receive_available=false
+- transport_runtime_event_negative_corpus_ready=true
+- transport_stream_fail_closed_negative_corpus_ready=true
+- transport_runtime_event_identifiers_redacted=true
+- transport_stream_failure_events_redacted=true
 - automatic_network_on_launch_allowed=false
 - external_two_machine_delivery_verified=false
 - reliable_external_delivery_claim_allowed=false

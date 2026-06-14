@@ -182,6 +182,80 @@ fn high_risk_onion_runtime_evidence_gate_requires_explicit_redacted_runtime_evid
 }
 
 #[test]
+fn runtime_event_negative_corpus_redacts_sensitive_failure_context() {
+    let profile = ProfileName::new("alice").expect("profile");
+    let onion = TransportRoute::onion("secretpeer.onion").expect("onion route");
+    let local_path =
+        Path::new("/Users/alex/Library/Application Support/AnotherDimension/arti-state");
+    let cases = [
+        (
+            RedactedTransportRuntimeEvent::bootstrap_failed(
+                TransportRuntimeError::BootstrapConfigurationFailed,
+            ),
+            &[
+                "bridge obfs4 192.0.2.1:9001",
+                "secretpeer.onion",
+                "/Users/alex",
+            ][..],
+        ),
+        (
+            RedactedTransportRuntimeEvent::bootstrap_failed(
+                TransportRuntimeError::BootstrapTimeout,
+            ),
+            &[
+                "bootstrap timeout at secretpeer.onion",
+                "192.0.2.44",
+                "/Users/alex",
+            ][..],
+        ),
+        (
+            RedactedTransportRuntimeEvent::route_rejected(&onion, TransportError::DeliveryFailed),
+            &[
+                "secretpeer.onion",
+                "alice",
+                "bob",
+                "ADENV1|1|chan|1|data|00",
+            ][..],
+        ),
+        (
+            RedactedTransportRuntimeEvent::directory_probe_failed(
+                local_path,
+                TransportRuntimeProbeError::DirectoryProbeFailed,
+            ),
+            &["/Users/alex", "Application Support", "arti-state"][..],
+        ),
+        (
+            RedactedTransportRuntimeEvent::sensitive_context_rejected(
+                &profile,
+                "bob",
+                "secretpeer.onion",
+                "plaintext message",
+                b"private-key-material",
+                TransportRuntimeError::ReceiveFailed,
+            ),
+            &[
+                "alice",
+                "bob",
+                "secretpeer.onion",
+                "plaintext message",
+                "private-key-material",
+            ][..],
+        ),
+        (
+            RedactedTransportRuntimeEvent::transfer_failed(
+                TransportTransferDirection::Receive,
+                TransportRuntimeError::ReceiveFailed,
+            ),
+            &["stream-1", "secretpeer.onion", "alice", "bob"][..],
+        ),
+    ];
+
+    for (event, forbidden_fragments) in cases {
+        assert_redacted_event_hides(&event, forbidden_fragments);
+    }
+}
+
+#[test]
 fn direct_peer_requires_explicit_low_risk_policy() {
     let policy = TransportPolicy::low_risk_direct_allowed();
     let onion = TransportRoute::onion("example.onion").expect("onion route");
@@ -2373,6 +2447,110 @@ fn outbound_stream_attempt_intents_preserve_fail_closed_boundary() {
             Some(TransportRuntimeError::SendFailed)
         );
         assert_redacted_event_hides(event, &["example.onion", "alice", "bob"]);
+    }
+}
+
+#[test]
+fn stream_fail_closed_negative_corpus_records_only_redacted_runtime_events() {
+    let inbound_adapter = InboundStreamFailClosedAdapter::from_gate_ready(
+        ready_inbound_stream_gate(),
+        OnionServiceDescriptorPublicationReady,
+    );
+    let outbound_adapter = OutboundStreamFailClosedAdapter::from_gate_ready(
+        ready_outbound_stream_gate(),
+        sample_pairwise_endpoint(),
+        TransportPolicy::high_risk_default(),
+    )
+    .expect("outbound adapter");
+    let envelope = sample_envelope();
+    let mut sink = InMemoryTransportRuntimeEventSink::default();
+
+    let inbound_accept = inbound_adapter.prepare_accept_intent();
+    let inbound_read_write = inbound_adapter.prepare_read_write_intent();
+    let outbound_dial = outbound_adapter.prepare_dial_intent();
+    let outbound_send = outbound_adapter.prepare_send_intent(&envelope);
+
+    for rendered in [
+        format!("{inbound_accept:?}"),
+        format!("{inbound_read_write:?}"),
+        format!("{outbound_dial:?}"),
+        format!("{outbound_send:?}"),
+    ] {
+        assert!(rendered.contains("<redacted>"));
+        for forbidden in [
+            "example.onion",
+            "alice",
+            "bob",
+            "stream-1",
+            "adchan1:test",
+            "ciphertext",
+        ] {
+            assert!(
+                !rendered.contains(forbidden),
+                "stream debug leaked {forbidden}"
+            );
+        }
+    }
+
+    assert_eq!(
+        inbound_accept.accept_fail_closed(&mut sink),
+        Err(InboundStreamAdapterError::InboundAcceptNotImplemented)
+    );
+    assert_eq!(
+        inbound_read_write.read_write_fail_closed(&mut sink),
+        Err(InboundStreamAdapterError::InboundReadWriteNotImplemented)
+    );
+    assert_eq!(
+        outbound_dial.dial_fail_closed(&mut sink),
+        Err(OutboundStreamAdapterError::OutboundDialNotImplemented)
+    );
+    assert_eq!(
+        outbound_send.send_fail_closed(&mut sink),
+        Err(OutboundStreamAdapterError::OutboundSendNotImplemented)
+    );
+
+    assert_eq!(sink.events().len(), 4);
+    for event in &sink.events()[0..2] {
+        assert_eq!(
+            event.runtime_error(),
+            Some(TransportRuntimeError::ReceiveFailed)
+        );
+        assert_eq!(
+            event.kind(),
+            TransportRuntimeEventKind::RuntimePreflightFailed
+        );
+        assert_redacted_event_hides(
+            event,
+            &[
+                "example.onion",
+                "alice",
+                "bob",
+                "stream-1",
+                "adchan1:test",
+                "ciphertext",
+            ],
+        );
+    }
+    for event in &sink.events()[2..4] {
+        assert_eq!(
+            event.runtime_error(),
+            Some(TransportRuntimeError::SendFailed)
+        );
+        assert_eq!(
+            event.kind(),
+            TransportRuntimeEventKind::RuntimePreflightFailed
+        );
+        assert_redacted_event_hides(
+            event,
+            &[
+                "example.onion",
+                "alice",
+                "bob",
+                "stream-1",
+                "adchan1:test",
+                "ciphertext",
+            ],
+        );
     }
 }
 
