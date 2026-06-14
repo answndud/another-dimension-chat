@@ -99,6 +99,14 @@ set -e
 [ "$final_acceptance_status" -ne 0 ] || fail "final acceptance unexpectedly opens public release claim"
 printf '%s\n' "$final_acceptance_output" | grep -Fq -- "stable_candidate_ready=false" ||
   fail "final acceptance missing stable candidate hold"
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "ordinary_use_public_copy_scope=no-phone#no-email#no-global-account#pairwise-invite#mandatory-safety-comparison#user-mediated-encrypted-exchange#local-data-ownership" ||
+  fail "final acceptance missing ordinary-use public copy scope"
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "defined_high_risk_mode_copy_scope=defined-threat-model#onion-only-explicit-action#local-at-rest-hardening#redacted-support#not-protected-boundary" ||
+  fail "final acceptance missing defined High-Risk copy scope"
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "high_risk_not_protected_boundary=compromised-endpoint#direct-coercion#global-traffic-correlation" ||
+  fail "final acceptance missing High-Risk not_protected boundary"
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "forbidden_positive_public_claims_found=false" ||
+  fail "final acceptance missing forbidden positive claim scanner result"
 printf '%s\n' "$final_acceptance_output" | grep -Fq -- "high_risk_mode_ready=false" ||
   fail "final acceptance missing high-risk readiness hold"
 printf '%s\n' "$final_acceptance_output" | grep -Fq -- "high_risk_public_claim_allowed=false" ||
