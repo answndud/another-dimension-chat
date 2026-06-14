@@ -93,6 +93,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_public_beta_source_freeze_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_windows_readiness_source_audit_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_windows_local_runtime_smoke_boundary_once.sh"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_candidate_gate_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_real_user_test_prep_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_default_transport_boundary_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_beta_gap_acceptance_once.sh"
@@ -112,7 +113,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Upload d
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Explicit operator request gate: do not package, upload, or announce unless the user explicitly requested release packaging/upload in the current task"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Hold decision: do not upload, do not announce, and return to desktop hardening"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "Operation boundary: this handoff does not perform a GitHub Release upload"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "next_development_axis=windows-packaging-hold-gate#release-packaging-upload-after-explicit-user-request#real-user-test-prep#default-transport-boundary"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "next_development_axis=windows-artifact-runtime-manifest-evidence#release-packaging-upload-after-explicit-user-request#real-user-test-prep#default-transport-boundary"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "stale existing release output"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "preflight=public-release-readiness"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "status=public-release-readiness-source-preflight-ready"
@@ -126,16 +127,21 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "scope=so
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "dmg_required=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "network_or_onion_work=false"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "generated_artifacts_created=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze=desktop-public-beta-source-candidate"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze_scope=desktop-source-only-no-dmg-rebuild-no-upload"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze_next_axes=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep#default-transport-boundary"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze_next_axes=windows-artifact-runtime-manifest-evidence#release-packaging-upload-after-explicit-user-request#real-user-test-prep#default-transport-boundary"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_upload_performed=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "dmg_rebuild_performed=false"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_readiness=local-build-candidate-only"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_readiness=public-artifact-candidate-source-gate"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_candidate=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_candidate_gate=source-ready"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_candidate_gate_script=scripts/windows_public_artifact_candidate_gate_once.sh"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_artifact_type=windows-nsis-exe-installer-candidate"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_bundle_target=nsis"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_ready=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_installer_ready=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_signing_ready=false"
@@ -145,11 +151,17 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_installer_signing_store_claim_allowed=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_generated_artifact_commit_allowed=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_runtime_smoke_required=true"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_app_data_path_review_required=true"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_path_separator_review_required=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_app_data_path_review_required=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_path_separator_review_required=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_app_data_resolver=tauri-app-data"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_app_data_resolver_shared_storage_semantics=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_app_data_resolver_public_support_safe=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_raw_local_path_returned=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_support_report_raw_path_allowed=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_runtime_smoke_source_command=npm --prefix apps/desktop-tauri run test:windows-boundary"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_local_deletion_behavior_review_required=true"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_redacted_diagnostics_behavior_review_required=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_local_deletion_behavior_review_required=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_redacted_diagnostics_behavior_review_required=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_runtime_result_external_peer_evidence_separated=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_explicit_user_action_review_required=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_upload_allowed=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_prep=redacted-intake-ready"
@@ -366,7 +378,7 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing hardening fallback" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance" || {
     echo "FAIL release readiness preflight missing check list" >&2
     exit 1
   }
@@ -394,7 +406,7 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing desktop source freeze scope" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "source_freeze_next_axes=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep#default-transport-boundary" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "source_freeze_next_axes=windows-artifact-runtime-manifest-evidence#release-packaging-upload-after-explicit-user-request#real-user-test-prep#default-transport-boundary" || {
     echo "FAIL release readiness preflight missing desktop source freeze next axes" >&2
     exit 1
   }
@@ -406,8 +418,12 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing DMG rebuild non-action" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_readiness=local-build-candidate-only" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_readiness=public-artifact-candidate-source-gate" || {
     echo "FAIL release readiness preflight missing Windows readiness boundary" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_public_artifact_candidate_gate=source-ready" || {
+    echo "FAIL release readiness preflight missing Windows candidate source gate" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "windows_public_artifact_ready=false" || {
@@ -438,24 +454,36 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing Windows runtime smoke blocker" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_app_data_path_review_required=true" || {
-    echo "FAIL release readiness preflight missing Windows app-data review blocker" >&2
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_app_data_path_review_required=false" || {
+    echo "FAIL release readiness preflight missing Windows app-data source closure" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_path_separator_review_required=true" || {
-    echo "FAIL release readiness preflight missing Windows path separator blocker" >&2
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_path_separator_review_required=false" || {
+    echo "FAIL release readiness preflight missing Windows path separator source closure" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_app_data_resolver=tauri-app-data" || {
+    echo "FAIL release readiness preflight missing Windows app-data resolver" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_raw_local_path_returned=false" || {
+    echo "FAIL release readiness preflight missing Windows raw path non-return" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "windows_runtime_smoke_source_command=npm --prefix apps/desktop-tauri run test:windows-boundary" || {
     echo "FAIL release readiness preflight missing Windows runtime smoke source command" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_local_deletion_behavior_review_required=true" || {
-    echo "FAIL release readiness preflight missing Windows local deletion review blocker" >&2
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_local_deletion_behavior_review_required=false" || {
+    echo "FAIL release readiness preflight missing Windows local deletion source closure" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_redacted_diagnostics_behavior_review_required=true" || {
-    echo "FAIL release readiness preflight missing Windows redacted diagnostics review blocker" >&2
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_redacted_diagnostics_behavior_review_required=false" || {
+    echo "FAIL release readiness preflight missing Windows redacted diagnostics source closure" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_runtime_result_external_peer_evidence_separated=true" || {
+    echo "FAIL release readiness preflight missing Windows runtime evidence separation" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "windows_explicit_user_action_review_required=true" || {
@@ -558,11 +586,11 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing operator handoff wrap-up" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "next_development_axis=windows-packaging-hold-gate#release-packaging-upload-after-explicit-user-request#real-user-test-prep#default-transport-boundary" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "next_development_axis=windows-artifact-runtime-manifest-evidence#release-packaging-upload-after-explicit-user-request#real-user-test-prep#default-transport-boundary" || {
     echo "FAIL release readiness preflight missing next development axis" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "next=choose Windows packaging hold review, release packaging/upload only after explicit user request, real-user test preparation, or default transport boundary" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "next=choose Windows artifact runtime/manifest evidence, release packaging/upload only after explicit user request, real-user test preparation, or default transport boundary" || {
     echo "FAIL release readiness preflight missing operator next step" >&2
     exit 1
   }
