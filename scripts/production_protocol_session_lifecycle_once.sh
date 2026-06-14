@@ -7,6 +7,7 @@ README="$ROOT_DIR/README.md"
 SECURITY="$ROOT_DIR/SECURITY.md"
 CRYPTO="$ROOT_DIR/reference/CRYPTO_DECISION.md"
 REVIEW="$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md"
+CLAIM_GATE="$ROOT_DIR/reference/PRODUCTION_READINESS_CLAIM_GATE.md"
 CORE="$ROOT_DIR/crates/core/src/lib.rs"
 PROTOCOL="$ROOT_DIR/crates/protocol/src/lib.rs"
 STATUS="$ROOT_DIR/apps/desktop-tauri/src-tauri/src/status.rs"
@@ -36,14 +37,18 @@ reject_text() {
   fi
 }
 
-for file in "$DOC" "$README" "$SECURITY" "$CRYPTO" "$REVIEW" "$CORE" "$PROTOCOL" "$STATUS"; do
+for file in "$DOC" "$README" "$SECURITY" "$CRYPTO" "$REVIEW" "$CLAIM_GATE" "$CORE" "$PROTOCOL" "$STATUS"; do
   require_file "$file"
 done
 
-require_text "$README" "reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md"
 require_text "$SECURITY" "reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md"
 require_text "$CRYPTO" "PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md"
 require_text "$REVIEW" "PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md"
+require_text "$CLAIM_GATE" "protocol_negative_corpus_source_gate_ready=true"
+require_text "$CLAIM_GATE" "production_ready_claim_allowed=false"
+require_text "$CLAIM_GATE" "security_ready_claimed=false"
+require_text "$CLAIM_GATE" "high_risk_public_claim_allowed=false"
+require_text "$CLAIM_GATE" "high_risk_ready_claim_allowed=false"
 
 require_text "$DOC" "Status: OPS-2 and RB-1 source gates closed for review input."
 require_text "$DOC" "Shared Semantics"
@@ -68,6 +73,8 @@ require_text "$DOC" "production_local_manual_e2ee_runtime_gate_closes_session_fa
 require_text "$DOC" "tampered_receive_does_not_persist_replay_before_valid_same_number"
 require_text "$DOC" "cancelled_pending_pairing_cannot_be_confirmed"
 require_text "$DOC" "ReplayWindow::accept_after_decrypt"
+require_text "$DOC" "envelope_decode_rejects_malformed_wrong_type_and_oversized_inputs"
+require_text "$DOC" "replay_window_rejects_replay_stale_and_tamper_corpus_without_state_advance"
 require_text "$DOC" "ProductionEnvelopeSession"
 require_text "$DOC" "protocol_session_lifecycle_gate_reviewed=true"
 require_text "$DOC" "c100_1_e2ee_blocker_closed=true"
@@ -76,6 +83,9 @@ require_text "$DOC" "production_e2ee_external_review_required_for_claims=true"
 require_text "$DOC" "production_e2ee_field_evidence_required_for_claims=true"
 require_text "$DOC" "local_manual_and_future_transport_semantics_shared=true"
 require_text "$DOC" "replay_duplicate_retry_cancel_edges_documented=true"
+require_text "$DOC" "protocol_malformed_envelope_negative_corpus_ready=true"
+require_text "$DOC" "protocol_replay_stale_message_negative_corpus_ready=true"
+require_text "$DOC" "protocol_tamper_after_decrypt_no_commit_corpus_ready=true"
 require_text "$DOC" "dev_insecure_surface_blocked_from_production_claim=true"
 require_text "$DOC" "d100_1_e2ee_source_gate_reviewed=true"
 require_text "$DOC" "protocol_session_e2ee_source_ready=true"
@@ -102,6 +112,9 @@ require_text "$CORE" "production_e2ee_ready: false"
 require_text "$CORE" "security_ready_claimed: false"
 
 require_text "$PROTOCOL" "pub fn accept_after_decrypt"
+require_text "$PROTOCOL" "fn envelope_decode_rejects_malformed_wrong_type_and_oversized_inputs"
+require_text "$PROTOCOL" "fn replay_window_rejects_replay_stale_and_tamper_corpus_without_state_advance"
+require_text "$PROTOCOL" "fn malicious_envelope_and_replay_corpus_fails_closed"
 require_text "$PROTOCOL" "next.accept(message_number)?"
 require_text "$PROTOCOL" "let plaintext = decrypt()?"
 require_text "$PROTOCOL" "*self = next"
@@ -118,11 +131,10 @@ for file in "$README" "$SECURITY" "$DOC"; do
   reject_text "$file" "production E2EE ready=true"
   reject_text "$file" "runtime messaging ready=true"
   reject_text "$file" "external onion delivery verified=true"
+  reject_text "$file" "security_ready_claimed=true"
   reject_text "$file" "is a secure messenger release"
   reject_text "$file" "safe for sensitive communication"
 done
-
-scripts/production_local_manual_e2ee_claim_closure_once.sh >/dev/null
 
 printf 'status=production-protocol-session-lifecycle-ready\n'
 printf 'protocol_session_lifecycle_gate_reviewed=true\n'
@@ -136,9 +148,15 @@ printf 'protocol_session_e2ee_source_ready=true\n'
 printf 'protocol_session_e2ee_source_scope=1:1-local-manual-envelope-message-content-session-replay-retry-cancel-delete\n'
 printf 'local_manual_and_future_transport_semantics_shared=true\n'
 printf 'replay_duplicate_retry_cancel_edges_documented=true\n'
+printf 'protocol_negative_corpus_source_gate_ready=true\n'
+printf 'protocol_malformed_envelope_negative_corpus_ready=true\n'
+printf 'protocol_replay_stale_message_negative_corpus_ready=true\n'
+printf 'protocol_tamper_after_decrypt_no_commit_corpus_ready=true\n'
 printf 'remote_ack_protocol_ready=false\n'
 printf 'external_onion_delivery_verified=false\n'
 printf 'runtime_messaging_ready=false\n'
 printf 'production_e2ee_ready=false\n'
 printf 'security_ready_claimed=false\n'
+printf 'high_risk_public_claim_allowed=false\n'
+printf 'high_risk_ready_claim_allowed=false\n'
 printf 'next_required_phase=Phase-O100-1-Operations-Incident-And-Vulnerability-Readiness\n'
