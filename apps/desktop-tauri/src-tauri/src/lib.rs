@@ -1,4 +1,4 @@
-#![cfg(feature = "full-runtime")]
+#![cfg(feature = "legacy-embedded-runtime")]
 
 mod status;
 

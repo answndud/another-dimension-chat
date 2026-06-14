@@ -14,7 +14,7 @@ tauri-build = { version = "2", features = [] }
 [features]
 default = ["public-shell"]
 public-shell = []
-full-runtime = [
+legacy-embedded-runtime = [
     "dep:another-dimension-core",
     "dep:another-dimension-crypto",
     "dep:another-dimension-identity",
@@ -25,9 +25,10 @@ full-runtime = [
     "dep:rustls",
     "dep:tokio",
 ]
+full-runtime = ["legacy-embedded-runtime"]
 windows-public-shell = ["public-shell"]
 manual-onion-client-attempt = [
-    "full-runtime",
+    "legacy-embedded-runtime",
     "another-dimension-transport/arti-manual-bootstrap",
 ]
 manual-onion-bridge-client = [

@@ -198,6 +198,8 @@ const child = spawn(
     "--no-watch",
     "--config",
     localPeerConfig,
+    "--",
+    "--no-default-features",
   ],
   {
     cwd: appRoot,
