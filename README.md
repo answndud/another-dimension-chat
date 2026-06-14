@@ -286,25 +286,29 @@ cd apps/desktop-tauri
 npm ci --workspaces=false
 ```
 
-Run the frontend preview:
+Use the Vite-first UI loop for normal desktop work:
 
 ```bash
 npm run dev
+npm run test:ui-fast
+npm run build
 ```
 
-Run the lightweight local Tauri public shell:
+Use the native shell only for packaging or platform integration checks:
 
 ```bash
+npm run test:native-shell
 npm run tauri:dev
 ```
 
-Run the local Tauri beta shell with the manual E2EE engine sidecar bundled:
+Run the local Tauri beta shell with the manual E2EE engine sidecar bundled only
+when checking the runtime adapter path:
 
 ```bash
 npm run tauri:dev:beta-onion
 ```
 
-Build a local-only lightweight Tauri desktop artifact:
+Build a local-only lightweight Tauri desktop artifact for packaging checks:
 
 ```bash
 npm run tauri:build
@@ -312,7 +316,7 @@ npm run tauri:build
 
 That generic local build output is a public-shell artifact, not a public release
 upload artifact. Legacy embedded-runtime desktop builds are explicit opt-in
-compatibility commands.
+compatibility commands and are not part of the normal UI loop.
 
 ## CLI Boundary Checks
 
