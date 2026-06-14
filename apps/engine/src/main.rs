@@ -1,9 +1,22 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 const SCHEMA_VERSION: &str = "ad-engine-sidecar-status-v1";
 const SIDECAR_PROTOCOL: &str = "ad-engine-json-stdio-v1";
 const CONTRACT_VERSION: u16 = 1;
 const BINARY_NAME: &str = "another-dimension-engine";
+const CONTRACT_COMMANDS: &[&str] = &[
+    "status",
+    "manual-self-test",
+    "profile-status",
+    "profile-unlock",
+    "pairing-export",
+    "pairing-import",
+    "safety-preview",
+    "envelope-export",
+    "envelope-import",
+    "redacted-support-diagnostics",
+];
 
 #[derive(Debug, Serialize)]
 struct EngineSidecarStatus {
@@ -53,6 +66,53 @@ struct ManualE2eeRuntimeSelfTest {
     endpoint_returned: bool,
     key_material_exposed: bool,
     passphrase_exposed: bool,
+    production_ready_claim: bool,
+    high_risk_claim: bool,
+    sensitive_communication_allowed: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EngineContractInput {
+    profile_ref: Option<String>,
+    passphrase: Option<String>,
+    local_payload_ref: Option<String>,
+    remote_payload_ref: Option<String>,
+    rendezvous_endpoint_ref: Option<String>,
+    message_ref: Option<String>,
+    envelope_ref: Option<String>,
+    diagnostics_ref: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct EngineCommandContractResult {
+    schema_version: &'static str,
+    sidecar_protocol: &'static str,
+    contract_version: u16,
+    command: &'static str,
+    runtime_mode: &'static str,
+    status: &'static str,
+    failure_class: &'static str,
+    recovery_action: &'static str,
+    input_schema: &'static str,
+    output_schema: &'static str,
+    required_fields: &'static [&'static str],
+    missing_required_fields: Vec<&'static str>,
+    manual_e2ee_runtime_available: bool,
+    storage_runtime_available: bool,
+    runtime_action_performed: bool,
+    state_mutated: bool,
+    artifact_written: bool,
+    raw_local_path_returned: bool,
+    raw_payload_returned: bool,
+    plaintext_returned: bool,
+    ciphertext_returned: bool,
+    invite_code_returned: bool,
+    endpoint_returned: bool,
+    key_material_exposed: bool,
+    passphrase_exposed: bool,
+    app_launch_network_allowed: bool,
+    room_open_network_allowed: bool,
     production_ready_claim: bool,
     high_risk_claim: bool,
     sensitive_communication_allowed: bool,
@@ -110,11 +170,7 @@ fn runtime_mode() -> &'static str {
 }
 
 fn supported_commands() -> &'static [&'static str] {
-    if manual_e2ee_runtime_compiled() {
-        &["status", "manual-self-test"]
-    } else {
-        &["status"]
-    }
+    CONTRACT_COMMANDS
 }
 
 fn full_runtime_compiled() -> bool {
@@ -292,8 +348,159 @@ fn print_manual_e2ee_runtime_self_test() -> Result<(), String> {
     Ok(())
 }
 
+fn required_fields_for_contract_command(command: &str) -> Option<&'static [&'static str]> {
+    match command {
+        "profile-status" => Some(&["profile_ref"]),
+        "profile-unlock" => Some(&["profile_ref", "passphrase"]),
+        "pairing-export" => Some(&["profile_ref", "passphrase", "rendezvous_endpoint_ref"]),
+        "pairing-import" => Some(&[
+            "profile_ref",
+            "passphrase",
+            "local_payload_ref",
+            "remote_payload_ref",
+        ]),
+        "safety-preview" => Some(&["local_payload_ref", "remote_payload_ref"]),
+        "envelope-export" => Some(&["profile_ref", "passphrase", "message_ref"]),
+        "envelope-import" => Some(&["profile_ref", "passphrase", "envelope_ref"]),
+        "redacted-support-diagnostics" => Some(&[]),
+        _ => None,
+    }
+}
+
+fn contract_field_present(input: &EngineContractInput, field: &str) -> bool {
+    let value = match field {
+        "profile_ref" => input.profile_ref.as_deref(),
+        "passphrase" => input.passphrase.as_deref(),
+        "local_payload_ref" => input.local_payload_ref.as_deref(),
+        "remote_payload_ref" => input.remote_payload_ref.as_deref(),
+        "rendezvous_endpoint_ref" => input.rendezvous_endpoint_ref.as_deref(),
+        "message_ref" => input.message_ref.as_deref(),
+        "envelope_ref" => input.envelope_ref.as_deref(),
+        "diagnostics_ref" => input.diagnostics_ref.as_deref(),
+        _ => None,
+    };
+    value.is_some_and(|value| !value.trim().is_empty())
+}
+
+fn contract_input_from_json(value: Value) -> Result<EngineContractInput, &'static str> {
+    serde_json::from_value(value).map_err(|_| "invalid-input-schema")
+}
+
+fn read_contract_json_arg(args: &[String]) -> Result<Value, &'static str> {
+    match args {
+        [] => Ok(Value::Object(Default::default())),
+        [flag, payload] if flag == "--json" => {
+            let value: Value = serde_json::from_str(payload).map_err(|_| "invalid-json")?;
+            if value.get("passphrase").is_some() {
+                return Err("passphrase-requires-json-stdin");
+            }
+            Ok(value)
+        }
+        [flag] if flag == "--json-stdin" => {
+            let mut payload = String::new();
+            std::io::Read::read_to_string(&mut std::io::stdin(), &mut payload)
+                .map_err(|_| "stdin-read-failed")?;
+            serde_json::from_str(&payload).map_err(|_| "invalid-json")
+        }
+        _ => Err("invalid-argument-shape"),
+    }
+}
+
+fn engine_command_contract_result(
+    command: &'static str,
+    input_result: Result<EngineContractInput, &'static str>,
+) -> EngineCommandContractResult {
+    let required_fields = required_fields_for_contract_command(command).unwrap_or(&[]);
+    let missing_required_fields = input_result
+        .as_ref()
+        .map(|input| {
+            required_fields
+                .iter()
+                .copied()
+                .filter(|field| !contract_field_present(input, field))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_else(|_| required_fields.to_vec());
+    let input_failure_class = input_result.err();
+    let storage_required = !matches!(
+        command,
+        "safety-preview" | "redacted-support-diagnostics" | "profile-status"
+    );
+    let storage_runtime_available = full_runtime_compiled();
+    let status = if input_failure_class.is_none()
+        && missing_required_fields.is_empty()
+        && (!storage_required || storage_runtime_available)
+    {
+        "contract-ready"
+    } else {
+        "rejected"
+    };
+    let failure_class = if let Some(failure_class) = input_failure_class {
+        failure_class
+    } else if !missing_required_fields.is_empty() {
+        "missing-required-field"
+    } else if storage_required && !storage_runtime_available {
+        "storage-runtime-not-compiled"
+    } else {
+        "none"
+    };
+    let recovery_action = match failure_class {
+        "none" => "continue",
+        "missing-required-field" | "invalid-input-schema" | "invalid-json" => {
+            "resubmit-redacted-json-contract-input"
+        }
+        "storage-runtime-not-compiled" => "prepare-full-engine-sidecar",
+        "passphrase-requires-json-stdin" => "use-json-stdin",
+        "invalid-argument-shape" => "use-json-stdin",
+        "stdin-read-failed" => "retry-json-stdin",
+        _ => "retry-with-redacted-contract-input",
+    };
+
+    EngineCommandContractResult {
+        schema_version: "ad-engine-command-contract-result-v1",
+        sidecar_protocol: SIDECAR_PROTOCOL,
+        contract_version: CONTRACT_VERSION,
+        command,
+        runtime_mode: runtime_mode(),
+        status,
+        failure_class,
+        recovery_action,
+        input_schema: "ad-engine-command-input-v1",
+        output_schema: "ad-engine-command-redacted-result-v1",
+        required_fields,
+        missing_required_fields,
+        manual_e2ee_runtime_available: manual_e2ee_runtime_compiled(),
+        storage_runtime_available,
+        runtime_action_performed: false,
+        state_mutated: false,
+        artifact_written: false,
+        raw_local_path_returned: false,
+        raw_payload_returned: false,
+        plaintext_returned: false,
+        ciphertext_returned: false,
+        invite_code_returned: false,
+        endpoint_returned: false,
+        key_material_exposed: false,
+        passphrase_exposed: false,
+        app_launch_network_allowed: false,
+        room_open_network_allowed: false,
+        production_ready_claim: false,
+        high_risk_claim: false,
+        sensitive_communication_allowed: false,
+    }
+}
+
+fn print_engine_command_contract(command: &'static str, args: &[String]) -> Result<(), String> {
+    let input_result = read_contract_json_arg(args).and_then(contract_input_from_json);
+    let result = engine_command_contract_result(command, input_result);
+    let json = serde_json::to_string_pretty(&result)
+        .map_err(|_| "failed to serialize engine command contract result".to_string())?;
+    println!("{json}");
+    Ok(())
+}
+
 fn help() -> &'static str {
-    "another-dimension-engine status\n\nCommands:\n  status              print redacted sidecar status JSON\n  manual-self-test    run local manual E2EE primitive self-test when compiled"
+    "another-dimension-engine status\n\nCommands:\n  status                         print redacted sidecar status JSON\n  manual-self-test               run local manual E2EE primitive self-test when compiled\n  profile-status                 validate redacted profile status command input\n  profile-unlock                 validate redacted profile unlock command input\n  pairing-export                 validate redacted pairing export command input\n  pairing-import                 validate redacted pairing import command input\n  safety-preview                 validate redacted safety preview command input\n  envelope-export                validate redacted envelope export command input\n  envelope-import                validate redacted envelope import command input\n  redacted-support-diagnostics   validate redacted support diagnostics command input\n\nContract commands accept no input, --json '<object>', or --json-stdin. Passphrase-bearing input must use --json-stdin. They never echo payloads, passphrases, local paths, keys, plaintext, ciphertext, invite codes, or endpoints."
 }
 
 fn main() {
@@ -305,6 +512,30 @@ fn main() {
         [cmd] if cmd == "manual-self-test" => print_manual_e2ee_runtime_self_test(),
         [cmd, flag] if cmd == "manual-self-test" && flag == "--json" => {
             print_manual_e2ee_runtime_self_test()
+        }
+        [cmd, rest @ ..] if cmd == "profile-status" => {
+            print_engine_command_contract("profile-status", rest)
+        }
+        [cmd, rest @ ..] if cmd == "profile-unlock" => {
+            print_engine_command_contract("profile-unlock", rest)
+        }
+        [cmd, rest @ ..] if cmd == "pairing-export" => {
+            print_engine_command_contract("pairing-export", rest)
+        }
+        [cmd, rest @ ..] if cmd == "pairing-import" => {
+            print_engine_command_contract("pairing-import", rest)
+        }
+        [cmd, rest @ ..] if cmd == "safety-preview" => {
+            print_engine_command_contract("safety-preview", rest)
+        }
+        [cmd, rest @ ..] if cmd == "envelope-export" => {
+            print_engine_command_contract("envelope-export", rest)
+        }
+        [cmd, rest @ ..] if cmd == "envelope-import" => {
+            print_engine_command_contract("envelope-import", rest)
+        }
+        [cmd, rest @ ..] if cmd == "redacted-support-diagnostics" => {
+            print_engine_command_contract("redacted-support-diagnostics", rest)
         }
         [cmd] if cmd == "--help" || cmd == "-h" || cmd == "help" => {
             println!("{}", help());
@@ -325,7 +556,11 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::engine_sidecar_status;
+    use super::{
+        contract_input_from_json, engine_command_contract_result, engine_sidecar_status,
+        read_contract_json_arg,
+    };
+    use serde_json::json;
 
     #[test]
     fn status_keeps_public_claims_closed_and_private_fields_absent() {
@@ -360,8 +595,136 @@ mod tests {
         assert!(!status.high_risk_claim);
         assert!(!status.sensitive_communication_allowed);
         assert!(status.supported_commands.contains(&"status"));
+        assert!(status.supported_commands.contains(&"profile-status"));
+        assert!(status.supported_commands.contains(&"profile-unlock"));
+        assert!(status.supported_commands.contains(&"pairing-export"));
+        assert!(status.supported_commands.contains(&"pairing-import"));
+        assert!(status.supported_commands.contains(&"safety-preview"));
+        assert!(status.supported_commands.contains(&"envelope-export"));
+        assert!(status.supported_commands.contains(&"envelope-import"));
+        assert!(status
+            .supported_commands
+            .contains(&"redacted-support-diagnostics"));
         assert!(status.forbidden_public_fields.contains(&"passphrases"));
         assert!(status.forbidden_public_fields.contains(&"key_material"));
+    }
+
+    #[test]
+    fn contract_commands_reject_missing_inputs_without_exposing_private_fields() {
+        let result = engine_command_contract_result(
+            "profile-unlock",
+            contract_input_from_json(json!({"profile_ref": "local-profile"})),
+        );
+        assert_eq!(
+            result.schema_version,
+            "ad-engine-command-contract-result-v1"
+        );
+        assert_eq!(result.sidecar_protocol, "ad-engine-json-stdio-v1");
+        assert_eq!(result.contract_version, 1);
+        assert_eq!(result.command, "profile-unlock");
+        assert_eq!(result.status, "rejected");
+        assert_eq!(result.failure_class, "missing-required-field");
+        assert!(result.missing_required_fields.contains(&"passphrase"));
+        assert!(!result.runtime_action_performed);
+        assert!(!result.state_mutated);
+        assert!(!result.artifact_written);
+        assert!(!result.raw_local_path_returned);
+        assert!(!result.raw_payload_returned);
+        assert!(!result.plaintext_returned);
+        assert!(!result.ciphertext_returned);
+        assert!(!result.invite_code_returned);
+        assert!(!result.endpoint_returned);
+        assert!(!result.key_material_exposed);
+        assert!(!result.passphrase_exposed);
+        assert!(!result.app_launch_network_allowed);
+        assert!(!result.room_open_network_allowed);
+        assert!(!result.production_ready_claim);
+        assert!(!result.high_risk_claim);
+        assert!(!result.sensitive_communication_allowed);
+    }
+
+    #[test]
+    fn contract_commands_deny_unknown_fields_and_fail_closed() {
+        let result = engine_command_contract_result(
+            "pairing-export",
+            contract_input_from_json(json!({
+                "profile_ref": "local-profile",
+                "passphrase": "secret",
+                "rendezvous_endpoint_ref": "endpoint-handle",
+                "raw_local_path": "/tmp/secret"
+            })),
+        );
+        assert_eq!(result.status, "rejected");
+        assert_eq!(result.failure_class, "invalid-input-schema");
+        assert_eq!(
+            result.recovery_action,
+            "resubmit-redacted-json-contract-input"
+        );
+        assert!(!result.raw_local_path_returned);
+        assert!(!result.passphrase_exposed);
+        assert!(!result.endpoint_returned);
+    }
+
+    #[test]
+    fn json_arg_rejects_passphrase_bearing_payloads() {
+        let args = vec![
+            "--json".to_string(),
+            r#"{"profile_ref":"local-profile","passphrase":"do-not-use-argv"}"#.to_string(),
+        ];
+        assert_eq!(
+            read_contract_json_arg(&args),
+            Err("passphrase-requires-json-stdin")
+        );
+    }
+
+    #[test]
+    fn stateless_contract_commands_can_validate_without_storage_runtime() {
+        let result = engine_command_contract_result(
+            "safety-preview",
+            contract_input_from_json(json!({
+                "local_payload_ref": "local-payload-handle",
+                "remote_payload_ref": "remote-payload-handle"
+            })),
+        );
+        assert_eq!(result.status, "contract-ready");
+        assert_eq!(result.failure_class, "none");
+        assert!(!result.runtime_action_performed);
+        assert!(!result.raw_payload_returned);
+        assert!(!result.production_ready_claim);
+        assert!(!result.high_risk_claim);
+    }
+
+    #[test]
+    fn storage_backed_contract_commands_require_full_engine_runtime() {
+        let result = engine_command_contract_result(
+            "envelope-export",
+            contract_input_from_json(json!({
+                "profile_ref": "local-profile",
+                "passphrase": "secret",
+                "message_ref": "pending-message-handle"
+            })),
+        );
+        let expected_status = if cfg!(feature = "full-runtime") {
+            "contract-ready"
+        } else {
+            "rejected"
+        };
+        let expected_failure = if cfg!(feature = "full-runtime") {
+            "none"
+        } else {
+            "storage-runtime-not-compiled"
+        };
+        assert_eq!(result.status, expected_status);
+        assert_eq!(result.failure_class, expected_failure);
+        assert_eq!(
+            result.storage_runtime_available,
+            cfg!(feature = "full-runtime")
+        );
+        assert!(!result.runtime_action_performed);
+        assert!(!result.state_mutated);
+        assert!(!result.plaintext_returned);
+        assert!(!result.ciphertext_returned);
+        assert!(!result.passphrase_exposed);
     }
 
     #[cfg(feature = "manual-e2ee-runtime")]
