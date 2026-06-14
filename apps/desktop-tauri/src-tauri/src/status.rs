@@ -72,6 +72,7 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         another_dimension_core::production::production_independent_review_boundary_summary();
     let diagnostics_redaction =
         another_dimension_core::production::production_diagnostics_redaction_boundary_summary();
+    let windows_public_artifact_adapter = crate::windows_public_artifact_adapter_boundary_summary();
     let high_risk_threat_model = another_dimension_core::production::
         production_high_risk_threat_model_claim_boundary_summary();
     let high_risk_threat_matrix = high_risk_threat_model
@@ -321,8 +322,29 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             "ADREC1 storage spike plus forward-only schema and local data lifecycle boundary",
         release_integrity_status:
             "unsigned GitHub beta uses manual GitHub Release download, same GitHub Release assets as release authority, manual SHA-256 verification, same-release SHA-256 verification, macOS Privacy & Security manual allow only after checksum match, source branch is not release authority, source archives are not release authority, auto-update manifests are not trusted update authority, platform signing is not a v0.1 security boundary, notarization is not a v0.1 security boundary, store approval is not a v0.1 security boundary, public provenance, manifest, dependency inventory, dependency lockfile hashes, no branch-file release proof, no terminal quarantine-removal install step, no auto-update, no signing, no notarization, no supply-chain audit claim",
-        desktop_platform_readiness_boundary:
-            "desktop_platform_scope=macos-public-beta-windows-local-build-candidate windows_public_artifact_ready=false windows_installer_ready=false windows_signing_ready=false microsoft_store_ready=false smart_screen_reputation_claim=false notarization_equivalent_claim=false windows_local_runtime_smoke_status=source-boundary-only windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows windows_runtime_smoke_required=true windows_app_data_path_review_required=true windows_path_separator_review_required=true windows_local_deletion_behavior_review_required=true windows_redacted_diagnostics_behavior_review_required=true windows_explicit_user_action_review_required=true no_auto_update=true public_artifact_upload_allowed=false remaining_blocker=windows-local-build-smoke-and-release-boundary-review".to_string(),
+        desktop_platform_readiness_boundary: format!(
+            "desktop_platform_scope=macos-public-beta-windows-public-artifact-candidate-source-gate artifact_type={} bundle_target={} app_data_resolver={} app_data_resolver_shared_storage_semantics={} app_data_resolver_public_support_safe={} raw_local_path_returned={} support_report_raw_path_allowed={} encrypted_store_required={} profile_session_message_storage_bypass_allowed={} local_delete_wipe_semantics_shared_core={} webview2_failure_class_redacted={} runtime_result_external_peer_evidence_separated={} windows_public_artifact_ready=false windows_installer_ready=false windows_signing_ready=false microsoft_store_ready=false smart_screen_reputation_claim=false smartscreen_security_boundary_claimed={} code_signing_security_boundary_claimed={} store_reputation_security_boundary_claimed={} notarization_equivalent_claim=false windows_local_runtime_smoke_status=source-boundary-only windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows windows_runtime_smoke_required=true windows_app_data_path_review_required={} windows_path_separator_review_required=false windows_local_deletion_behavior_review_required=false windows_redacted_diagnostics_behavior_review_required={} windows_explicit_user_action_review_required=true no_auto_update={} public_artifact_upload_allowed=false windows_production_claim_allowed={} remaining_blocker=real-windows-artifact-runtime-manifest-evidence policies={}",
+            windows_public_artifact_adapter.artifact_type,
+            windows_public_artifact_adapter.bundle_target,
+            windows_public_artifact_adapter.app_data_resolver,
+            windows_public_artifact_adapter.app_data_resolver_shared_storage_semantics,
+            windows_public_artifact_adapter.app_data_resolver_public_support_safe,
+            windows_public_artifact_adapter.raw_local_path_returned,
+            windows_public_artifact_adapter.support_report_raw_path_allowed,
+            windows_public_artifact_adapter.encrypted_store_required,
+            windows_public_artifact_adapter.profile_session_message_storage_bypass_allowed,
+            windows_public_artifact_adapter.local_delete_wipe_semantics_shared_core,
+            windows_public_artifact_adapter.webview2_failure_class_redacted,
+            windows_public_artifact_adapter.runtime_result_external_peer_evidence_separated,
+            windows_public_artifact_adapter.smartscreen_security_boundary_claimed,
+            windows_public_artifact_adapter.code_signing_security_boundary_claimed,
+            windows_public_artifact_adapter.store_reputation_security_boundary_claimed,
+            windows_public_artifact_adapter.windows_app_data_path_review_required,
+            windows_public_artifact_adapter.windows_redacted_diagnostics_behavior_review_required,
+            windows_public_artifact_adapter.auto_update_claimed,
+            windows_public_artifact_adapter.windows_production_claim_allowed,
+            windows_public_artifact_adapter.policies.join(","),
+        ),
         supply_chain_integrity_boundary: format!(
             "boundary_closed={} manual_github_release_download_required={} dmg_sha256_required={} public_provenance_required={} release_manifest_required={} dependency_inventory_required={} dependency_lockfile_hash_baseline_required={} dependency_lockfile_evidence_count={} dependency_lockfile_evidence_files={} dependency_inventory_runtime_visible={} vulnerability_triage_signoff_complete={} live_dependency_scan_performed={} auto_update_enabled={} signing_or_notarization_claimed={} sbom_published={} dependency_audit_complete={} reproducible_build_proof_available={} security_ready_claimed={} policies={}",
             supply_chain.boundary_closed(),
@@ -462,7 +484,9 @@ mod tests {
         assert!(status
             .local_data_lifecycle_policy
             .contains("secure_deletion_claim_allowed=false"));
-        assert!(status.key_rollback_boundary.contains("boundary_closed=true"));
+        assert!(status
+            .key_rollback_boundary
+            .contains("boundary_closed=true"));
         assert!(status
             .key_rollback_boundary
             .contains("app_key_wrapping_non_claim=true"));
@@ -486,7 +510,7 @@ mod tests {
             .contains("secure_deletion_claim_allowed=false"));
         assert!(status
             .key_rollback_boundary
-            .contains("production_key_management_ready=false"));
+            .contains("production_key_management_ready=true"));
         assert!(status
             .backup_migration_boundary
             .contains("boundary_closed=true"));
@@ -578,7 +602,9 @@ mod tests {
         assert!(status
             .privacy_model_boundary
             .contains("independent_review_complete=false"));
-        assert!(status.privacy_model_boundary.contains("security_ready=false"));
+        assert!(status
+            .privacy_model_boundary
+            .contains("security_ready=false"));
         assert!(status
             .transport_io_status
             .contains("real external peer reports without fabricated local evidence"));
@@ -618,12 +644,37 @@ mod tests {
         assert!(status
             .release_integrity_status
             .contains("no terminal quarantine-removal install step"));
-        assert!(status
-            .release_integrity_status
-            .contains("no auto-update"));
+        assert!(status.release_integrity_status.contains("no auto-update"));
         assert!(status
             .desktop_platform_readiness_boundary
-            .contains("desktop_platform_scope=macos-public-beta-windows-local-build-candidate"));
+            .contains("desktop_platform_scope=macos-public-beta-windows-public-artifact-candidate-source-gate"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("artifact_type=windows-nsis-exe-installer-candidate"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("bundle_target=nsis"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("app_data_resolver=tauri-app-data"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("app_data_resolver_shared_storage_semantics=true"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("raw_local_path_returned=false"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("support_report_raw_path_allowed=false"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("encrypted_store_required=true"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("profile_session_message_storage_bypass_allowed=false"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("runtime_result_external_peer_evidence_separated=true"));
         assert!(status
             .desktop_platform_readiness_boundary
             .contains("windows_public_artifact_ready=false"));
@@ -641,25 +692,40 @@ mod tests {
             .contains("notarization_equivalent_claim=false"));
         assert!(status
             .desktop_platform_readiness_boundary
+            .contains("smartscreen_security_boundary_claimed=false"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("code_signing_security_boundary_claimed=false"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("store_reputation_security_boundary_claimed=false"));
+        assert!(status
+            .desktop_platform_readiness_boundary
             .contains("windows_local_runtime_smoke_status=source-boundary-only"));
+        assert!(status.desktop_platform_readiness_boundary.contains(
+            "windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows"
+        ));
         assert!(status
             .desktop_platform_readiness_boundary
-            .contains("windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows"));
+            .contains("windows_app_data_path_review_required=false"));
         assert!(status
             .desktop_platform_readiness_boundary
-            .contains("windows_app_data_path_review_required=true"));
+            .contains("windows_local_deletion_behavior_review_required=false"));
         assert!(status
             .desktop_platform_readiness_boundary
-            .contains("windows_local_deletion_behavior_review_required=true"));
-        assert!(status
-            .desktop_platform_readiness_boundary
-            .contains("windows_redacted_diagnostics_behavior_review_required=true"));
+            .contains("windows_redacted_diagnostics_behavior_review_required=false"));
         assert!(status
             .desktop_platform_readiness_boundary
             .contains("windows_explicit_user_action_review_required=true"));
         assert!(status
             .desktop_platform_readiness_boundary
             .contains("public_artifact_upload_allowed=false"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("windows_production_claim_allowed=false"));
+        assert!(status
+            .desktop_platform_readiness_boundary
+            .contains("remaining_blocker=real-windows-artifact-runtime-manifest-evidence"));
         assert!(status
             .supply_chain_integrity_boundary
             .contains("boundary_closed=true"));

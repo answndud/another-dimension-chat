@@ -20,10 +20,13 @@ and does not allow sensitive communication claims.
 - webview2_failure_class_redacted=true
 - app_data_resolver=tauri-app-data
 - app_data_resolver_shared_storage_semantics=true
+- app_data_resolver_public_support_safe=true
 - raw_local_path_returned=false
 - support_report_raw_path_allowed=false
+- encrypted_store_required=true
 - shared_core_bypass_allowed=false
 - profile_session_message_storage_bypass_allowed=false
+- local_delete_wipe_semantics_shared_core=true
 - manifest_checksum_provenance_required=true
 - manifest_validates_version_commit_installer_webview2_no_auto_update=true
 - runtime_result_external_peer_evidence_separated=true
@@ -42,6 +45,8 @@ and does not allow sensitive communication claims.
 
 - `crates/core/src/lib.rs` owns the shared core candidate summary.
 - `apps/desktop-tauri/src/action-state.js` owns the desktop state view.
+- `apps/desktop-tauri/src-tauri/src/lib.rs` owns the Tauri app-data adapter
+  boundary and keeps raw local paths out of support-safe outputs.
 - `reference/WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md` owns artifact byte,
   checksum, provenance, and manifest consistency.
 - `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md` owns real Windows runtime
