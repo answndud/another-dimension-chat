@@ -200,4 +200,6 @@ audit, field evidence, usability evidence, or any production claim.
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false
 - release_body_beta_wording_removal_authorized=false
-- next_required_action=external-audit-field-evidence-signed-notarized-artifact-owner-release-decision
+- macos_unsigned_public_beta_next_owner_action=run-clean-macos-fresh-install-with-disposable-profile
+- after_clean_install_pass_next_evidence=representative-redacted-usability-reports
+- next_required_action=external-audit-field-evidence-owner-release-decision-for-production-claims

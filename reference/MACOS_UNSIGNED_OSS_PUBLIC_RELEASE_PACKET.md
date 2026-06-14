@@ -51,8 +51,9 @@ Release authority:
 - Branch files, source archives, copied checksums, signing results,
   notarization results, app-store approval, and auto-update manifests are not
   release or update authority for this v0.1 class.
-- Upload is an explicit owner action only; source gates must not upload or edit
-  the GitHub Release by default.
+- Future upload or release-body edit is an explicit owner action only; source
+  gates must not upload or edit the GitHub Release by default. The current
+  GitHub Release asset set matches this packet.
 
 Artifact identity gate:
 
@@ -71,7 +72,9 @@ Artifact identity gate:
   `release_upload_performed=false`, and
   `next_owner_action=run-clean-macos-fresh-install-with-disposable-profile`.
 - The current GitHub Release asset set matches this packet. The next owner
-  action is `run-clean-macos-fresh-install-with-disposable-profile`.
+  action is `run-clean-macos-fresh-install-with-disposable-profile`; after an
+  accepted clean-machine pass, the next useful evidence is representative
+  redacted usability reports, not a production or High-Risk-ready claim.
 
 Forbidden public claims:
 

@@ -29,9 +29,7 @@ Public-safe screenshots are listed in
 
 ## Download
 
-The current source-prepared unsigned packet is staged for this GitHub Release
-tag, but replacing the live GitHub Release assets remains an explicit owner
-action:
+The current public unsigned packet is attached to this GitHub Release tag:
 
 <https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned>
 
@@ -63,9 +61,11 @@ next_owner_action=run-clean-macos-fresh-install-with-disposable-profile
 ```
 
 This means the generated packet is aligned to the current public packet source.
-The matching DMG, checksum, provenance, manifest, and release body are uploaded
-to the GitHub Release. The next owner evidence is a clean macOS fresh-install
-run with a disposable profile.
+The matching DMG, checksum, provenance, manifest, and release body are attached
+to the GitHub Release. The next owner action is a clean macOS fresh-install run
+with a disposable profile. After that, the useful next evidence is
+representative redacted usability reports; neither step opens production,
+security, sensitive-use, or High-Risk-ready claims.
 
 Because this build is unsigned, macOS may block it. Open the DMG, try to open
 the app once, then allow the blocked app from System Settings > Privacy &
@@ -160,7 +160,7 @@ Read the full public security boundary in [SECURITY.md](SECURITY.md).
 - Windows desktop cross-platform parity intake uses `apps/desktop-tauri/windows_desktop_parity_intake.json`; Windows local build candidate only, no public Windows artifact, no Windows installer, no public artifact upload; Windows local runtime smoke boundary remains source-only and still requires WebView2 runtime smoke, Tauri app-data storage, path separator, local deletion behavior, redacted diagnostics, explicit user action, and local-manual envelope default path checks.
 - Windows local runtime smoke handoff uses `apps/desktop-tauri/windows_local_runtime_smoke_handoff.json` and `npm --prefix apps/desktop-tauri run test:windows-boundary`; this is not a Windows local runtime smoke passed claim and still requires WebView2 runtime smoke, Tauri app-data path review, path separator review, local deletion behavior review, redacted diagnostics behavior review, explicit user action, local-manual envelope default path review, no auto-update, and public non-claim checks on a real Windows machine.
 - macOS unsigned public beta source closure references [reference/RELEASE_PAGE_UPDATE_POLICY.json](reference/RELEASE_PAGE_UPDATE_POLICY.json), [reference/MACOS_FRESH_INSTALL_REHEARSAL.md](reference/MACOS_FRESH_INSTALL_REHEARSAL.md), [reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md](reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md), [reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md](reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md), [reference/screenshots/README.md](reference/screenshots/README.md), and [reference/PUBLIC_SUPPORT_TRIAGE.md](reference/PUBLIC_SUPPORT_TRIAGE.md); readiness target is 100% for source closure only, while the production readiness definition and claim gate still blocks production/security claims.
-- The current unsigned packet is a source-prepared packet accepted by
+- The current public unsigned packet is a source-prepared packet accepted by
   `scripts/prepare_unsigned_public_beta_release.sh`, build channel
   `beta-onion`, commit `e724bd39`, release tag
   `v0.1.0-beta-onion-unsigned`, and SHA-256
@@ -168,8 +168,9 @@ Read the full public security boundary in [SECURITY.md](SECURITY.md).
 - Artifact status is machine-checkable: `artifact_current_head_aligned=true`,
   `public_artifact_stale=false`, `public_artifact_state=current`, and
   `next_owner_action=run-clean-macos-fresh-install-with-disposable-profile`.
-  The GitHub Release asset set is current; next owner evidence is a clean macOS
-  fresh-install run.
+  The GitHub Release asset set is current; next owner action is a clean macOS
+  fresh-install run with a disposable profile, followed by representative
+  redacted usability evidence if that pass is accepted.
 - This is not a packaging readiness, audit readiness, or release go signal.
 - Production claim removal is blocked by
   [reference/PRODUCTION_READINESS_CLAIM_GATE.md](reference/PRODUCTION_READINESS_CLAIM_GATE.md)

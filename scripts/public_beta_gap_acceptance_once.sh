@@ -158,7 +158,8 @@ require_text "$ROOT_DIR/README.md" "scripts/public_release_readiness_preflight.s
 require_text "$ROOT_DIR/README.md" 'source-prepared packet accepted by'
 require_text "$ROOT_DIR/SECURITY.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/SECURITY.md" "source-only preflight before staging artifacts"
-require_text "$ROOT_DIR/SECURITY.md" 'ignored public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`'
+require_text "$ROOT_DIR/SECURITY.md" "The current GitHub Release asset set matches the ignored public-release source"
+require_text "$ROOT_DIR/SECURITY.md" 'DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`'
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "source-only preflight"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" 'upload only the files listed in the generated `MANIFEST.md`'
