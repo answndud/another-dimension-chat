@@ -10,6 +10,10 @@ FRESH_INSTALL="$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL.md"
 FRESH_RESULT="$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md"
 SCREENSHOT_GALLERY="$ROOT_DIR/reference/screenshots/README.md"
 SUPPORT_TRIAGE="$ROOT_DIR/reference/PUBLIC_SUPPORT_TRIAGE.md"
+INSTALL_GUIDE="$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md"
+RELEASE_NOTES="$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md"
+RELEASE_BODY="$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md"
+BETA_CHECKLIST="$ROOT_DIR/reference/BETA_RELEASE_CHECKLIST.md"
 PUBLIC_PREFLIGHT="$ROOT_DIR/scripts/public_release_readiness_preflight.sh"
 RELEASE_GATE="$ROOT_DIR/scripts/macos_release_page_update_gate_once.sh"
 FRESH_GATE="$ROOT_DIR/scripts/macos_fresh_install_rehearsal_once.sh"
@@ -39,7 +43,7 @@ require_text() {
   fi
 }
 
-for file in "$README" "$SECURITY" "$FINAL_REPORT" "$RELEASE_POLICY" "$FRESH_INSTALL" "$FRESH_RESULT" "$SCREENSHOT_GALLERY" "$SUPPORT_TRIAGE" "$PUBLIC_PREFLIGHT"; do
+for file in "$README" "$SECURITY" "$FINAL_REPORT" "$RELEASE_POLICY" "$FRESH_INSTALL" "$FRESH_RESULT" "$SCREENSHOT_GALLERY" "$SUPPORT_TRIAGE" "$INSTALL_GUIDE" "$RELEASE_NOTES" "$RELEASE_BODY" "$BETA_CHECKLIST" "$PUBLIC_PREFLIGHT"; do
   require_file "$file"
 done
 
@@ -89,6 +93,14 @@ require_text "$PUBLIC_PREFLIGHT" "macos_release_page_update_gate=source-linked"
 require_text "$PUBLIC_PREFLIGHT" "macos_fresh_install_rehearsal=source-linked"
 require_text "$PUBLIC_PREFLIGHT" "macos_public_screenshots=source-linked"
 require_text "$PUBLIC_PREFLIGHT" "macos_public_support_triage=source-linked"
+
+for file in "$INSTALL_GUIDE" "$RELEASE_NOTES" "$RELEASE_BODY" "$BETA_CHECKLIST"; do
+  require_text "$file" "Shared Packet Boundary"
+  require_text "$file" "artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#macos-aarch64"
+  require_text "$file" "trust_model=same-github-release-assets#same-release-sha256#manual-privacy-security-allow-after-checksum#no-auto-update"
+  require_text "$file" "support_intake=redacted-diagnostics-only#no-raw-logs#no-crash-dumps#no-private-room-data#no-payloads#no-key-material"
+  require_text "$file" "generated_artifact_boundary=do-not-commit-public-release-or-beta-artifacts#no-dmg-rebuild#no-release-upload-or-edit"
+done
 
 bash -n "$PUBLIC_PREFLIGHT"
 
