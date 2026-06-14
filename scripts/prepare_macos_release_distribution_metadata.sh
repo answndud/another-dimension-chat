@@ -187,6 +187,9 @@ mkdir -p "$OUT_DIR"
 checksum_file="$artifact_name.sha256"
 manifest_file="$OUT_DIR/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json"
 release_body_file="$OUT_DIR/GITHUB_RELEASE_BODY.md"
+install_guide_file="$OUT_DIR/INSTALL_UNSIGNED_MACOS.md"
+release_notes_file="$OUT_DIR/RELEASE_NOTES.md"
+update_integrity_file="$OUT_DIR/UPDATE_INTEGRITY.md"
 provenance_file="$artifact_name.provenance.json"
 
 cp "$ARTIFACT" "$OUT_DIR/$artifact_name"
@@ -231,6 +234,12 @@ cat >"$manifest_file" <<JSON
     "not audited",
     "not production-ready"
   ],
+  "support_files": {
+    "install_guide_file": "INSTALL_UNSIGNED_MACOS.md",
+    "release_notes_file": "RELEASE_NOTES.md",
+    "update_integrity_file": "UPDATE_INTEGRITY.md",
+    "github_release_body_file": "GITHUB_RELEASE_BODY.md"
+  },
   "artifacts": [
     {
       "filename": "$artifact_name",
@@ -263,6 +272,8 @@ Use only the files attached to the same GitHub Release as release authority:
 the app artifact, checksum, provenance, and manifest must agree before opening
 the app.
 
+- Version: \`$version\`
+- Source commit: \`$source_commit\`
 - Artifact: \`$artifact_name\`
 - SHA-256: \`$sha256\`
 - Architecture: \`$ARCHITECTURE\`
@@ -272,6 +283,67 @@ the app.
 - Release upload authorized by this metadata script: false
 BODY
 
+cat >"$install_guide_file" <<INSTALL
+# Install Unsigned macOS Build
+
+Version: \`$version\`
+Source commit: \`$source_commit\`
+Artifact: \`$artifact_name\`
+SHA-256: \`$sha256\`
+Signing status: \`$SIGNING_STATUS\`
+Notarization status: \`$NOTARIZATION_STATUS\`
+
+Use only the app artifact, checksum, provenance, manifest, release notes, and
+update integrity guide attached to the same GitHub Release. Verify the checksum
+before opening the DMG.
+
+For unsigned or not-notarized builds, use the macOS Privacy & Security manual
+allow flow if Gatekeeper blocks first launch. Do not use terminal quarantine
+removal commands.
+
+security_boundary=false
+auto_update_enabled=false
+release_upload_authorized=false
+INSTALL
+
+cat >"$release_notes_file" <<NOTES
+# Release Notes
+
+Version: \`$version\`
+Source commit: \`$source_commit\`
+Artifact: \`$artifact_name\`
+SHA-256: \`$sha256\`
+Signing status: \`$SIGNING_STATUS\`
+Notarization status: \`$NOTARIZATION_STATUS\`
+
+This macOS release metadata is source-prepared only. The app is not audited,
+not production-ready, and sensitive communication prohibited.
+
+security_boundary=false
+auto_update_enabled=false
+release_upload_authorized=false
+NOTES
+
+cat >"$update_integrity_file" <<UPDATE
+# Update Integrity
+
+Version: \`$version\`
+Source commit: \`$source_commit\`
+Artifact: \`$artifact_name\`
+SHA-256: \`$sha256\`
+Signing status: \`$SIGNING_STATUS\`
+Notarization status: \`$NOTARIZATION_STATUS\`
+
+Another Dimension Chat does not provide auto-update in this release path. Treat
+only same GitHub Release assets as update authority: artifact, checksum,
+provenance, manifest, release notes, install guide, and this update integrity
+guide must agree.
+
+security_boundary=false
+auto_update_enabled=false
+release_upload_authorized=false
+UPDATE
+
 node "$VALIDATOR" "$manifest_file" >/dev/null
 
 cat <<STATUS
@@ -280,7 +352,11 @@ macos_release_distribution_metadata_generator_ready=true
 manifest=$manifest_file
 checksum=$OUT_DIR/$checksum_file
 provenance=$OUT_DIR/$provenance_file
+install_guide=$install_guide_file
+release_notes=$release_notes_file
+update_integrity=$update_integrity_file
 release_body=$release_body_file
+macos_release_distribution_support_files_consistent=true
 macos_release_distribution_dmg_contained_app_evidence_verified=true
 release_upload_authorized=false
 release_body_edit_authorized=false

@@ -31,6 +31,12 @@ const DMG_CONTAINED_APP_FIELDS = Object.freeze([
   "dmg_contained_app_gatekeeper_assess_passed",
   "dmg_contained_app_matches_signed_source_app",
 ]);
+const REQUIRED_SUPPORT_FILES = Object.freeze([
+  ["install_guide_file", "INSTALL_UNSIGNED_MACOS.md"],
+  ["release_notes_file", "RELEASE_NOTES.md"],
+  ["update_integrity_file", "UPDATE_INTEGRITY.md"],
+  ["github_release_body_file", "GITHUB_RELEASE_BODY.md"],
+]);
 const FORBIDDEN_PATTERNS = Object.freeze([
   [/release_upload_authorized"\s*:\s*true/i, "release-upload-authorized"],
   [/release_body_edit_authorized"\s*:\s*true/i, "release-body-edit-authorized"],
@@ -309,6 +315,49 @@ function validateArtifact(file, manifest, artifact, index) {
   return issues;
 }
 
+function validateSupportFiles(file, manifest) {
+  const issues = [];
+  const supportFiles = manifest.support_files;
+  if (!supportFiles || typeof supportFiles !== "object") {
+    return ["missing-support-files"];
+  }
+  for (const [field, expectedName] of REQUIRED_SUPPORT_FILES) {
+    if (supportFiles[field] !== expectedName) {
+      issues.push(`support-files:${field}-mismatch`);
+      continue;
+    }
+    const supportFile = relativeSibling(file, supportFiles[field]);
+    if (!supportFile || !fs.existsSync(supportFile)) {
+      issues.push(`support-files:${field}-missing`);
+      continue;
+    }
+    const text = fs.readFileSync(supportFile, "utf8");
+    if (!text.includes(manifest.version)) issues.push(`support-files:${field}-version-missing`);
+    if (!text.includes(manifest.source_commit)) issues.push(`support-files:${field}-commit-missing`);
+    if (/xattr\s+-d|spctl\s+--master-disable/i.test(text)) {
+      issues.push(`support-files:${field}-terminal-quarantine-bypass`);
+    }
+    if (/\bsecurity_boundary=true\b|auto_update_enabled=true|release_upload_authorized=true/i.test(text)) {
+      issues.push(`support-files:${field}-overclaim`);
+    }
+    for (const artifact of manifest.artifacts ?? []) {
+      if (!text.includes(artifact.filename)) {
+        issues.push(`support-files:${field}-artifact-name-missing`);
+      }
+      if (!text.includes(artifact.sha256)) {
+        issues.push(`support-files:${field}-artifact-sha-missing`);
+      }
+      if (!text.includes(artifact.signing_status)) {
+        issues.push(`support-files:${field}-signing-status-missing`);
+      }
+      if (!text.includes(artifact.notarization_status)) {
+        issues.push(`support-files:${field}-notarization-status-missing`);
+      }
+    }
+  }
+  return issues;
+}
+
 function validateManifest(file, { requireCurrentHead, head }) {
   const text = fs.readFileSync(file, "utf8");
   const issues = [];
@@ -339,6 +388,7 @@ function validateManifest(file, { requireCurrentHead, head }) {
       issues.push(...validateArtifact(file, manifest, artifact, index));
     });
   }
+  issues.push(...validateSupportFiles(file, manifest));
   return { file, valid: issues.length === 0, issues };
 }
 
@@ -376,6 +426,7 @@ if (failures > 0) {
 console.log(`accepted_macos_release_distribution_manifests=${files.length}`);
 console.log("macos_release_distribution_checksum_bytes_verified=true");
 console.log("macos_release_distribution_provenance_consistency_verified=true");
+console.log("macos_release_distribution_support_files_consistent=true");
 console.log("macos_release_distribution_dmg_contained_app_evidence_verified=true");
 console.log("macos_release_distribution_signed_artifact_tools_verified=true");
 console.log("macos_release_distribution_artifact_ready=false");

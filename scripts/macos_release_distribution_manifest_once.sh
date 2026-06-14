@@ -38,6 +38,7 @@ for flag in \
   "macos_release_distribution_manifest_validator_available=true" \
   "macos_release_distribution_checksum_bytes_verified=true" \
   "macos_release_distribution_provenance_consistency_verified=true" \
+  "macos_release_distribution_support_files_consistent=true" \
   "macos_release_distribution_dmg_contained_app_evidence_required=true" \
   "macos_release_distribution_signed_artifact_tools_verified=true" \
   "macos_dmg_contained_app_verifier_available=false" \
@@ -59,6 +60,8 @@ for flag in \
 done
 
 must_contain "$VALIDATOR" "macos-release-distribution-manifest-v1"
+must_contain "$VALIDATOR" "macos_release_distribution_support_files_consistent=true"
+must_contain "$VALIDATOR" "support_files"
 must_contain "$VALIDATOR" "macos_release_distribution_dmg_contained_app_evidence_verified=true"
 must_contain "$VALIDATOR" "macos_release_distribution_signed_artifact_tools_verified=true"
 must_contain "$VALIDATOR" "codesign"
@@ -67,6 +70,9 @@ must_contain "$VALIDATOR" "stapler"
 must_contain "$VALIDATOR" "macos_dmg_contained_app_verifier_available"
 must_contain "$VALIDATOR" "dmg_contained_app_matches_signed_source_app"
 must_contain "$GENERATOR" "AD_PREPARE_MACOS_RELEASE_DISTRIBUTION_METADATA"
+must_contain "$GENERATOR" "INSTALL_UNSIGNED_MACOS.md"
+must_contain "$GENERATOR" "RELEASE_NOTES.md"
+must_contain "$GENERATOR" "UPDATE_INTEGRITY.md"
 must_contain "$GENERATOR" "AD_MACOS_SIGNED_RC_PROVENANCE_IN"
 must_contain "$GENERATOR" "AD_MACOS_DMG_CONTAINED_APP_MATCHES_SIGNED_SOURCE_APP"
 must_contain "$UPLOAD" "AD_RELEASE_UPLOAD_AUTHORIZED"
@@ -137,6 +143,12 @@ cat >"$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json" <<'JSON'
     "not audited",
     "not production-ready"
   ],
+  "support_files": {
+    "install_guide_file": "INSTALL_UNSIGNED_MACOS.md",
+    "release_notes_file": "RELEASE_NOTES.md",
+    "update_integrity_file": "UPDATE_INTEGRITY.md",
+    "github_release_body_file": "GITHUB_RELEASE_BODY.md"
+  },
   "artifacts": [
     {
       "filename": "__ARTIFACT_NAME__",
@@ -160,6 +172,19 @@ cat >"$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json" <<'JSON'
 JSON
 perl -0pi -e "s/__SOURCE_COMMIT__/$source_commit/g; s/__ARTIFACT_NAME__/$artifact_name/g; s/__ARTIFACT_SHA__/$artifact_sha/g; s/__ARTIFACT_SIZE__/$artifact_size/g" \
   "$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json"
+for support_file in INSTALL_UNSIGNED_MACOS.md RELEASE_NOTES.md UPDATE_INTEGRITY.md GITHUB_RELEASE_BODY.md; do
+  cat >"$tmp_dir/$support_file" <<TXT
+Version: 0.1.0
+Source commit: $source_commit
+Artifact: $artifact_name
+SHA-256: $artifact_sha
+Signing status: unsigned
+Notarization status: not-notarized
+security_boundary=false
+auto_update_enabled=false
+release_upload_authorized=false
+TXT
+done
 
 candidate_output="$(node "$VALIDATOR" "$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json")"
 printf '%s\n' "$candidate_output" | grep -Fq "accepted_macos_release_distribution_manifests=1" ||
@@ -168,6 +193,8 @@ printf '%s\n' "$candidate_output" | grep -Fq "macos_release_distribution_checksu
   fail "manifest validator did not verify checksum bytes"
 printf '%s\n' "$candidate_output" | grep -Fq "macos_release_distribution_provenance_consistency_verified=true" ||
   fail "manifest validator did not verify provenance consistency"
+printf '%s\n' "$candidate_output" | grep -Fq "macos_release_distribution_support_files_consistent=true" ||
+  fail "manifest validator did not verify support file consistency"
 printf '%s\n' "$candidate_output" | grep -Fq "macos_release_distribution_dmg_contained_app_evidence_verified=true" ||
   fail "manifest validator did not verify DMG contained app evidence"
 printf '%s\n' "$candidate_output" | grep -Fq "macos_release_distribution_artifact_ready=false" ||
@@ -226,6 +253,12 @@ cat >"$tmp_dir/forged-signed-manifest.json" <<JSON
     "not audited",
     "not production-ready"
   ],
+  "support_files": {
+    "install_guide_file": "INSTALL_UNSIGNED_MACOS.md",
+    "release_notes_file": "RELEASE_NOTES.md",
+    "update_integrity_file": "UPDATE_INTEGRITY.md",
+    "github_release_body_file": "GITHUB_RELEASE_BODY.md"
+  },
   "artifacts": [
     {
       "filename": "$signed_artifact_name",
@@ -300,6 +333,9 @@ AD_PREPARE_MACOS_RELEASE_DISTRIBUTION_METADATA=1 \
 grep -Fq "macos_release_distribution_dmg_contained_app_evidence_verified=true" \
   "$tmp_dir/generator-prepared.out" ||
   fail "metadata generator did not prepare contained-app distribution evidence"
+grep -Fq "macos_release_distribution_support_files_consistent=true" \
+  "$tmp_dir/generator-prepared.out" ||
+  fail "metadata generator did not prepare support file consistency evidence"
 
 if AD_REQUIRE_CURRENT_HEAD=1 node "$VALIDATOR" "$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json" >"$tmp_dir/stale.out" 2>&1; then
   fail "strict distribution manifest validator accepted stale source commit"
@@ -324,6 +360,7 @@ macos_release_distribution_manifest_schema_available=true
 macos_release_distribution_manifest_validator_available=true
 macos_release_distribution_checksum_bytes_verified=true
 macos_release_distribution_provenance_consistency_verified=true
+macos_release_distribution_support_files_consistent=true
 macos_release_distribution_dmg_contained_app_evidence_required=true
 macos_release_distribution_signed_artifact_tools_verified=true
 macos_dmg_contained_app_verifier_available=false
