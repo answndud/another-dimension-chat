@@ -605,7 +605,7 @@ test("windows public artifact candidate keeps installer and security claims fals
   assert.equal(view.engineSidecarProtocol, "ad-engine-json-stdio-v1");
   assert.equal(view.engineSidecarStatusCommand, "status");
   assert.equal(view.engineSidecarRawPathReturned, false);
-  assert.equal(view.engineRuntimeMode, "manual-e2ee-engine-sidecar");
+  assert.equal(view.engineRuntimeMode, "contract-only-engine-sidecar");
   assert.equal(view.localRuntimePromotedToDeliveryProof, false);
   assert.equal(view.smartscreenSecurityBoundaryClaimed, false);
   assert.equal(view.codeSigningSecurityBoundaryClaimed, false);
