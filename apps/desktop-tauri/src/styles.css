@@ -215,6 +215,24 @@ h1 {
   color: var(--text-muted);
 }
 
+.first-run-checklist li[data-step-status="blocked"] {
+  color: var(--text-muted);
+}
+
+.first-run-step-detail {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 520;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.first-run-step-detail[data-step-detail-status="blocked"] {
+  color: var(--warning);
+}
+
 .first-run-primary-next-action {
   max-width: 82ch;
   margin: 8px 0 0;

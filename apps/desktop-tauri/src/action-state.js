@@ -1013,10 +1013,15 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
   const releaseStatus = "Unsigned public beta; no production security claim";
   const stepStatuses = {
     profile: profileUnlocked ? "complete" : "current",
-    room: !profileUnlocked ? "pending" : roomPresent ? "complete" : "current",
-    safety: !roomPresent ? "pending" : safetyVerified ? "complete" : "current",
-    message: !safetyVerified ? "pending" : messageFlowReady ? "complete" : "current",
-    diagnostics: !messageFlowReady ? "pending" : diagnosticsCopied ? "complete" : "current",
+    room: !profileUnlocked ? "blocked" : roomPresent ? "complete" : "current",
+    safety: !profileUnlocked || !roomPresent ? "blocked" : safetyVerified ? "complete" : "current",
+    message: !profileUnlocked || !roomPresent || !safetyVerified ? "blocked" : messageFlowReady ? "complete" : "current",
+    diagnostics:
+      !profileUnlocked || !roomPresent || !safetyVerified || !messageFlowReady
+        ? "blocked"
+        : diagnosticsCopied
+          ? "complete"
+          : "current",
   };
   const stepOrder = ["profile", "room", "safety", "message", "diagnostics"];
   const currentStep = stepOrder.find((step) => stepStatuses[step] === "current") ?? "diagnostics";
@@ -1081,6 +1086,7 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
       "purpose=no-central-trusted-server-1:1-private-messenger",
       "release_status=unsigned-public-beta",
       "primary_next_action_visible=true",
+      "first_run_status_values=complete#current#blocked",
       `profile_input_present=${profileInputPresent}`,
       `profile_unlocked=${profileUnlocked}`,
       `room_present=${roomPresent}`,
