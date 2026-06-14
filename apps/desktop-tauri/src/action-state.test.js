@@ -582,8 +582,10 @@ test("windows runtime parity view keeps shared core and redacted local path boun
 test("windows public artifact candidate keeps installer and security claims false", () => {
   const view = productionWindowsPublicArtifactCandidateView({ platform: "Win32" });
 
-  assert.equal(view.artifactType, "windows-nsis-exe-installer-candidate");
+  assert.equal(view.artifactType, "windows-manual-e2ee-nsis-exe-installer-candidate");
   assert.equal(view.bundleTarget, "nsis");
+  assert.equal(view.runtimeMode, "manual-e2ee");
+  assert.equal(view.onionRuntimeCompiled, false);
   assert.equal(view.defaultExtension, ".exe");
   assert.equal(view.portableDefaultAllowed, false);
   assert.equal(view.msiAlternativeAllowed, true);
@@ -610,6 +612,8 @@ test("windows public artifact candidate keeps installer and security claims fals
   assert.equal(view.windowsProductionClaimAllowed, false);
   assert.match(view.summary, /windows_public_artifact_candidate=true/);
   assert.match(view.summary, /webview2_runtime_required=true/);
+  assert.match(view.summary, /runtime_mode=manual-e2ee/);
+  assert.match(view.summary, /onion_runtime_compiled=false/);
   assert.match(view.summary, /runtime_result_external_peer_evidence_separated=true/);
   assert.doesNotMatch(
     view.boundary,
