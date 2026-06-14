@@ -91,12 +91,12 @@ run_step "engine manual-self-test output" \
   "cargo run -p another-dimension-engine --features manual-e2ee-runtime -- manual-self-test > \"$MANUAL_SELF_TEST_FILE\""
 verify_json_output "$MANUAL_SELF_TEST_FILE" manual_self_test
 
-if [[ "${AD_VERIFY_LEGACY_EMBEDDED_RUNTIME:-}" == "1" ]]; then
-  run_step "legacy embedded runtime contract tests (opt-in)" \
-    cargo test -p another-dimension-desktop-tauri --features legacy-embedded-runtime --no-default-features \
-      production_two_profile_resume_reloads_status_and_transcripts_after_new_command_invocations \
-      production_onion_send_attempt_result_persists_failed_and_sent_resume_state \
-      production_two_profile_room_setup_accepts_invite_derived_profiles
-fi
+run_step "production core focused runtime contract tests" \
+  cargo test -p another-dimension-core \
+    production::tests::production_two_profile_resume_reloads_status_and_transcripts_after_new_command_invocations -- --exact && \
+  cargo test -p another-dimension-core \
+    production::tests::production_onion_send_attempt_result_persists_failed_and_sent_resume_state -- --exact && \
+  cargo test -p another-dimension-core \
+    production::tests::production_two_profile_room_setup_accepts_invite_derived_profiles -- --exact
 
 printf '\nengine runtime-focused verification passed\n'
