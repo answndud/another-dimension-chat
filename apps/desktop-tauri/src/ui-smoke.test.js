@@ -1447,11 +1447,20 @@ test("product unlock lockout shows local-only recovery actions", () => {
 test("desktop accessibility polish keeps disabled reasons focus and overflow explicit", () => {
   const setDisabledBody = functionBody(mainJs, "setDisabled");
   const buttonStateBody = functionBody(mainJs, "setActionButtonState");
+  const singlePrimaryBody = functionBody(mainJs, "enforceSingleCurrentPrimaryAction");
+  const focusCurrentBody = functionBody(mainJs, "focusProductionCurrentAction");
 
   assert.match(setDisabledBody, /aria-disabled/);
   assert.match(buttonStateBody, /aria-disabled/);
   assert.match(buttonStateBody, /dataset\.disabledReason/);
   assert.match(buttonStateBody, /aria-description/);
+  assert.match(singlePrimaryBody, /querySelectorAll\("button\.is-current-action:not\(:disabled\)"\)/);
+  assert.match(singlePrimaryBody, /currentPrimaryActionCount/);
+  assert.match(singlePrimaryBody, /currentPrimaryActionTarget/);
+  assert.match(singlePrimaryBody, /currentPrimaryActionUnique/);
+  assert.match(singlePrimaryBody, /dataset\.currentPrimaryAction/);
+  assert.match(focusCurrentBody, /latestProductionCurrentPrimaryActionNode/);
+  assert.match(functionBody(mainJs, "applyProductionActionState"), /enforceSingleCurrentPrimaryAction/);
   assert.match(stylesCss, /button:focus-visible/);
   assert.match(stylesCss, /summary:focus-visible/);
   assert.match(stylesCss, /input:focus-visible/);

@@ -568,6 +568,7 @@ let activeTwoProfilePeerEndpointRefreshFingerprint = "";
 let activeTwoProfileOutboundCancelFingerprint = "";
 let activeTwoProfileSessionStatusFingerprint = "";
 let latestProductionManualFocusTarget = null;
+let latestProductionCurrentPrimaryActionNode = null;
 let latestChatDeliveryNoticeKey = "";
 let latestChatDeliveryNoticeTone = "neutral";
 let latestChatDeliveryNoticeRoomFingerprint = "";
@@ -2653,6 +2654,27 @@ function setFlowActionPriority(primaryNode, nodes = []) {
       node.classList.add("is-secondary-flow-action");
     }
   }
+}
+
+function enforceSingleCurrentPrimaryAction(preferredNode = null) {
+  for (const node of document.querySelectorAll("button[data-current-primary-action]")) {
+    node.dataset.currentPrimaryAction = "false";
+  }
+  const currentActions = Array.from(document.querySelectorAll("button.is-current-action:not(:disabled)"));
+  const activePrimary =
+    preferredNode && currentActions.includes(preferredNode) && !preferredNode.disabled
+      ? preferredNode
+      : currentActions.find((node) => !node.disabled) ?? null;
+  for (const node of currentActions) {
+    const active = node === activePrimary;
+    node.classList.toggle("is-current-action", active);
+    node.dataset.currentPrimaryAction = active ? "true" : "false";
+  }
+  latestProductionCurrentPrimaryActionNode = activePrimary;
+  document.body.dataset.currentPrimaryActionCount = activePrimary ? "1" : "0";
+  document.body.dataset.currentPrimaryActionTarget = activePrimary?.id || "none";
+  document.body.dataset.currentPrimaryActionUnique = "true";
+  return activePrimary;
 }
 
 function currentInviteCodeForRoom() {
@@ -12439,7 +12461,7 @@ function focusProductionCurrentAction() {
   if (focusTargetNeedsManualTools(latestProductionManualFocusTarget)) {
     openManualProductionTools();
   }
-  const node = productionManualFocusNode(latestProductionManualFocusTarget);
+  const node = latestProductionCurrentPrimaryActionNode ?? productionManualFocusNode(latestProductionManualFocusTarget);
   if (!node) {
     return;
   }
@@ -14087,6 +14109,7 @@ function applyProductionActionState() {
     "Complete a local roundtrip before editing the next message.",
     twoProfileCanReply && latestTwoProfileSuccessMatchesOppositeDirection(twoProfile),
   );
+  enforceSingleCurrentPrimaryAction(productionManualFocusNode(latestProductionManualFocusTarget));
   updateProductionOnionBridgeConfigControls();
 }
 
