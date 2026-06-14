@@ -13,8 +13,9 @@ pub mod production {
         ProductionKeyAlgorithm, ProductionPairwisePrivateKey, ProfileName,
     };
     use another_dimension_pairing::{
-        production_pairing_draft_with_defaults, production_pairing_payload_with_defaults,
-        transcript, PairingError, PairingPayload, ProductionPairingDraft,
+        pairwise_safety_action_gate, production_pairing_draft_with_defaults,
+        production_pairing_payload_with_defaults, transcript, PairingError, PairingPayload,
+        PairwiseSafetyFailureKind, ProductionPairingDraft,
     };
     use another_dimension_protocol::{
         decode_hex, encode_hex, pad_to_bucket, trim_padding, Envelope, MessageType, ProtocolError,
@@ -181,6 +182,66 @@ pub mod production {
         mitigation_only: bool,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct PairwiseSafetyActionGateSummary {
+        failure_kind: PairwiseSafetyFailureKind,
+        send_allowed: bool,
+        export_allowed: bool,
+        import_allowed: bool,
+        verified_state_allowed: bool,
+        delivered_state_allowed: bool,
+        recovery_action: &'static str,
+        safety_number_exposed: bool,
+        safety_phrase_exposed: bool,
+        invite_payload_exposed: bool,
+    }
+
+    impl PairwiseSafetyActionGateSummary {
+        pub fn failure_kind(self) -> PairwiseSafetyFailureKind {
+            self.failure_kind
+        }
+
+        pub fn failure_kind_str(self) -> &'static str {
+            self.failure_kind.as_str()
+        }
+
+        pub fn send_allowed(self) -> bool {
+            self.send_allowed
+        }
+
+        pub fn export_allowed(self) -> bool {
+            self.export_allowed
+        }
+
+        pub fn import_allowed(self) -> bool {
+            self.import_allowed
+        }
+
+        pub fn verified_state_allowed(self) -> bool {
+            self.verified_state_allowed
+        }
+
+        pub fn delivered_state_allowed(self) -> bool {
+            self.delivered_state_allowed
+        }
+
+        pub fn recovery_action(self) -> &'static str {
+            self.recovery_action
+        }
+
+        pub fn safety_number_exposed(self) -> bool {
+            self.safety_number_exposed
+        }
+
+        pub fn safety_phrase_exposed(self) -> bool {
+            self.safety_phrase_exposed
+        }
+
+        pub fn invite_payload_exposed(self) -> bool {
+            self.invite_payload_exposed
+        }
+    }
+
     impl PanicLockMitigationSummary {
         pub fn panic_lock_available(self) -> bool {
             self.panic_lock_available
@@ -249,6 +310,30 @@ pub mod production {
         pub fn mitigation_only(self) -> bool {
             self.mitigation_only
         }
+    }
+
+    pub fn pairwise_safety_action_gate_summary(
+        failure_kind: PairwiseSafetyFailureKind,
+    ) -> PairwiseSafetyActionGateSummary {
+        let gate = pairwise_safety_action_gate(failure_kind);
+        PairwiseSafetyActionGateSummary {
+            failure_kind: gate.failure_kind,
+            send_allowed: gate.send_allowed,
+            export_allowed: gate.export_allowed,
+            import_allowed: gate.import_allowed,
+            verified_state_allowed: gate.verified_state_allowed,
+            delivered_state_allowed: gate.verified_state_allowed,
+            recovery_action: gate.next_action,
+            safety_number_exposed: false,
+            safety_phrase_exposed: false,
+            invite_payload_exposed: false,
+        }
+    }
+
+    pub fn pairwise_safety_action_gate_summary_for_error(
+        error: &ProductionSessionError,
+    ) -> PairwiseSafetyActionGateSummary {
+        pairwise_safety_action_gate_summary(pairwise_safety_failure_kind_for_error(error))
     }
 
     pub fn production_message_ttl_seconds_validate(
@@ -14579,6 +14664,43 @@ pub mod production {
     impl From<EndpointLifecycleError> for ProductionSessionError {
         fn from(value: EndpointLifecycleError) -> Self {
             Self::EndpointLifecycle(value)
+        }
+    }
+
+    pub fn pairwise_safety_failure_kind_for_error(
+        error: &ProductionSessionError,
+    ) -> PairwiseSafetyFailureKind {
+        match error {
+            ProductionSessionError::Pairing(pairing_error) => {
+                PairwiseSafetyFailureKind::from_pairing_error(pairing_error)
+            }
+            ProductionSessionError::NonProductionPairingPayload
+            | ProductionSessionError::LocalPairingPayloadMismatch
+            | ProductionSessionError::SamePairwiseIdentity
+            | ProductionSessionError::SameRendezvousEndpoint
+            | ProductionSessionError::InvalidRendezvousEndpoint
+            | ProductionSessionError::NoiseStaticKeyMismatch
+            | ProductionSessionError::EndpointScopeMismatch => {
+                PairwiseSafetyFailureKind::SafetyMismatch
+            }
+            ProductionSessionError::SessionDraftMissing => PairwiseSafetyFailureKind::RevokedRoom,
+            ProductionSessionError::UnexpectedEnvelope => {
+                PairwiseSafetyFailureKind::MalformedInvite
+            }
+            ProductionSessionError::Protocol(ProtocolError::ReplayMessage)
+            | ProductionSessionError::Protocol(ProtocolError::OldMessage) => {
+                PairwiseSafetyFailureKind::DuplicateInvite
+            }
+            ProductionSessionError::Protocol(_) => PairwiseSafetyFailureKind::MalformedInvite,
+            ProductionSessionError::Crypto(_)
+            | ProductionSessionError::Identity(_)
+            | ProductionSessionError::Storage(_)
+            | ProductionSessionError::EndpointLifecycle(_)
+            | ProductionSessionError::ProfileMarkerMissing
+            | ProductionSessionError::IdentityPrivateKeyMissing
+            | ProductionSessionError::NoiseStaticPrivateKeyMissing => {
+                PairwiseSafetyFailureKind::SafetyNotVerified
+            }
         }
     }
 
@@ -33489,6 +33611,55 @@ pub mod production {
                 ),
                 DuplicateConnectionAction::CloseDuplicateConnection
             );
+        }
+
+        #[test]
+        fn production_pairwise_safety_action_gate_blocks_untrusted_session_states() {
+            let cases = [
+                (
+                    ProductionSessionError::SamePairwiseIdentity,
+                    PairwiseSafetyFailureKind::SafetyMismatch,
+                    "stop-and-rebuild-with-fresh-invite",
+                ),
+                (
+                    ProductionSessionError::Pairing(PairingError::ExpiredPayload),
+                    PairwiseSafetyFailureKind::StaleInvite,
+                    "ask-for-fresh-invite",
+                ),
+                (
+                    ProductionSessionError::Protocol(ProtocolError::ReplayMessage),
+                    PairwiseSafetyFailureKind::DuplicateInvite,
+                    "open-existing-pending-pairing",
+                ),
+                (
+                    ProductionSessionError::SessionDraftMissing,
+                    PairwiseSafetyFailureKind::RevokedRoom,
+                    "re-pair-with-fresh-invite",
+                ),
+            ];
+
+            for (error, expected_kind, expected_action) in cases {
+                let summary = pairwise_safety_action_gate_summary_for_error(&error);
+
+                assert_eq!(summary.failure_kind(), expected_kind);
+                assert_eq!(summary.failure_kind_str(), expected_kind.as_str());
+                assert_eq!(summary.recovery_action(), expected_action);
+                assert!(!summary.send_allowed());
+                assert!(!summary.export_allowed());
+                assert!(!summary.import_allowed());
+                assert!(!summary.verified_state_allowed());
+                assert!(!summary.delivered_state_allowed());
+                assert!(!summary.safety_number_exposed());
+                assert!(!summary.safety_phrase_exposed());
+                assert!(!summary.invite_payload_exposed());
+            }
+
+            let ready = pairwise_safety_action_gate_summary(PairwiseSafetyFailureKind::None);
+            assert!(ready.send_allowed());
+            assert!(ready.export_allowed());
+            assert!(ready.import_allowed());
+            assert!(ready.verified_state_allowed());
+            assert_eq!(ready.recovery_action(), "write-message");
         }
 
         #[test]

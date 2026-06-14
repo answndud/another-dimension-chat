@@ -252,6 +252,81 @@ impl PendingContact {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PairwiseSafetyFailureKind {
+    None,
+    SafetyNotVerified,
+    MalformedInvite,
+    DuplicateInvite,
+    StaleInvite,
+    SafetyMismatch,
+    RevokedRoom,
+}
+
+impl PairwiseSafetyFailureKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::SafetyNotVerified => "safety_not_verified",
+            Self::MalformedInvite => "malformed_invite",
+            Self::DuplicateInvite => "duplicate_invite",
+            Self::StaleInvite => "stale_invite",
+            Self::SafetyMismatch => "safety_mismatch",
+            Self::RevokedRoom => "revoked_room",
+        }
+    }
+
+    pub fn blocks_message_actions(self) -> bool {
+        self != Self::None
+    }
+
+    pub fn next_action(self) -> &'static str {
+        match self {
+            Self::None => "write-message",
+            Self::SafetyNotVerified => "compare-safety-before-messaging",
+            Self::MalformedInvite => "ask-for-fresh-invite",
+            Self::DuplicateInvite => "open-existing-pending-pairing",
+            Self::StaleInvite => "ask-for-fresh-invite",
+            Self::SafetyMismatch => "stop-and-rebuild-with-fresh-invite",
+            Self::RevokedRoom => "re-pair-with-fresh-invite",
+        }
+    }
+
+    pub fn from_pairing_error(error: &PairingError) -> Self {
+        match error {
+            PairingError::ExpiredPayload => Self::StaleInvite,
+            PairingError::InvalidPayload | PairingError::PayloadTooLarge => Self::MalformedInvite,
+            PairingError::RandomnessUnavailable | PairingError::ClockUnavailable => {
+                Self::MalformedInvite
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PairwiseSafetyActionGate {
+    pub failure_kind: PairwiseSafetyFailureKind,
+    pub send_allowed: bool,
+    pub export_allowed: bool,
+    pub import_allowed: bool,
+    pub verified_state_allowed: bool,
+    pub next_action: &'static str,
+}
+
+pub fn pairwise_safety_action_gate(
+    failure_kind: PairwiseSafetyFailureKind,
+) -> PairwiseSafetyActionGate {
+    let allowed = !failure_kind.blocks_message_actions();
+    PairwiseSafetyActionGate {
+        failure_kind,
+        send_allowed: allowed,
+        export_allowed: allowed,
+        import_allowed: allowed,
+        verified_state_allowed: allowed,
+        next_action: failure_kind.next_action(),
+    }
+}
+
 pub fn transcript(local: &PairingPayload, remote: &PairingPayload) -> Result<String, PairingError> {
     let mut fragments = [
         payload_transcript_fragment(local)?,
@@ -930,6 +1005,37 @@ mod tests {
         assert_ne!(
             transcript(&alice, &swapped).expect("transcript"),
             transcript(&alice, &alice).expect("original transcript")
+        );
+    }
+
+    #[test]
+    fn safety_action_gate_blocks_untrusted_pairing_states() {
+        for failure_kind in [
+            PairwiseSafetyFailureKind::SafetyNotVerified,
+            PairwiseSafetyFailureKind::MalformedInvite,
+            PairwiseSafetyFailureKind::DuplicateInvite,
+            PairwiseSafetyFailureKind::StaleInvite,
+            PairwiseSafetyFailureKind::SafetyMismatch,
+            PairwiseSafetyFailureKind::RevokedRoom,
+        ] {
+            let gate = pairwise_safety_action_gate(failure_kind);
+
+            assert!(!gate.send_allowed);
+            assert!(!gate.export_allowed);
+            assert!(!gate.import_allowed);
+            assert!(!gate.verified_state_allowed);
+            assert_ne!(gate.next_action, "write-message");
+        }
+
+        let ready = pairwise_safety_action_gate(PairwiseSafetyFailureKind::None);
+        assert!(ready.send_allowed);
+        assert!(ready.export_allowed);
+        assert!(ready.import_allowed);
+        assert!(ready.verified_state_allowed);
+        assert_eq!(ready.next_action, "write-message");
+        assert_eq!(
+            PairwiseSafetyFailureKind::from_pairing_error(&PairingError::ExpiredPayload),
+            PairwiseSafetyFailureKind::StaleInvite
         );
     }
 
