@@ -9,6 +9,7 @@ const repoRoot = resolve(appRoot, "../..");
 const tauriRoot = resolve(appRoot, "src-tauri");
 
 const release = process.argv.includes("--release");
+const manualE2eeRuntime = process.argv.includes("--manual-e2ee-runtime");
 const fullRuntime = process.argv.includes("--full-runtime");
 
 function fail(message) {
@@ -48,7 +49,10 @@ const sidecarBinary = resolve(sidecarDir, sidecarName);
 
 const cargoArgs = ["build", "-p", "another-dimension-engine"];
 if (release) cargoArgs.push("--release");
-if (fullRuntime) cargoArgs.push("--features", "full-runtime");
+const features = [];
+if (manualE2eeRuntime) features.push("manual-e2ee-runtime");
+if (fullRuntime) features.push("full-runtime");
+if (features.length > 0) cargoArgs.push("--features", features.join(","));
 
 const cargo = spawnSync("cargo", cargoArgs, {
   cwd: repoRoot,
@@ -67,5 +71,6 @@ console.log("engine_sidecar_prepared=true");
 console.log(`engine_sidecar_profile=${profile}`);
 console.log(`engine_sidecar_protocol=ad-engine-json-stdio-v1`);
 console.log(`engine_sidecar_contract_version=1`);
+console.log(`engine_sidecar_manual_e2ee_runtime=${manualE2eeRuntime || fullRuntime}`);
 console.log(`engine_sidecar_full_runtime=${fullRuntime}`);
 console.log(`engine_sidecar_filename=${sidecarName}`);

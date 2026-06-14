@@ -6,12 +6,25 @@ publish.workspace = true
 
 [dependencies]
 another-dimension-core = { path = "../../crates/core", optional = true }
+another-dimension-crypto = { path = "../../crates/crypto", optional = true }
+another-dimension-identity = { path = "../../crates/identity", optional = true }
+another-dimension-pairing = { path = "../../crates/pairing", optional = true }
+another-dimension-protocol = { path = "../../crates/protocol", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [features]
 default = []
-full-runtime = ["dep:another-dimension-core"]
+manual-e2ee-runtime = [
+    "dep:another-dimension-crypto",
+    "dep:another-dimension-identity",
+    "dep:another-dimension-pairing",
+    "dep:another-dimension-protocol",
+]
+full-runtime = [
+    "dep:another-dimension-core",
+    "manual-e2ee-runtime",
+]
 
 [lints]
 workspace = true
