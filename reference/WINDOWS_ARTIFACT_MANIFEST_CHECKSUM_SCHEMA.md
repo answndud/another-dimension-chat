@@ -23,11 +23,15 @@ directories.
 - Runtime result schema:
   `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md`
 
-The generator holds unless `AD_PREPARE_WINDOWS_PUBLIC_ARTIFACT_METADATA=1` is
-set and `AD_WINDOWS_ARTIFACT` points to an existing artifact under an ignored
-generated artifact directory. The validator checks the artifact bytes against
-the manifest SHA-256, the `.sha256` sidecar, and the provenance JSON without
-opening any upload, release edit, or generated artifact commit gate.
+The default Windows package command is
+`npm --prefix apps/desktop-tauri run tauri:build:windows-nsis:beta-onion`; it
+selects the NSIS `.exe` bundle class and does not make the generated installer
+tracked source. The generator holds unless
+`AD_PREPARE_WINDOWS_PUBLIC_ARTIFACT_METADATA=1` is set and
+`AD_WINDOWS_ARTIFACT` points to an existing artifact under an ignored generated
+artifact directory. The validator checks the artifact bytes against the
+manifest SHA-256 sidecar, artifact `.sha256` sidecar, and provenance JSON
+without opening any upload, release edit, or generated artifact commit gate.
 It also binds bundle target to artifact extension (`msi` -> `.msi`,
 `nsis` -> `.exe`, `portable-archive` -> `.zip`, `msix` -> `.msix`) and compares
 provenance repository, release class, bundle target, and signing status against
@@ -42,14 +46,23 @@ Each Windows artifact manifest uses
 `schema_version=windows-public-artifact-manifest-v1` and records:
 
 - repository and source commit,
-- version and release class,
-- artifact filename, SHA-256, size, platform, architecture, bundle target,
-  signing status, checksum file, provenance file, WebView2 requirement,
-  SmartScreen boundary, and signing trust boundary,
+- version, release class, manifest file, manifest SHA-256 sidecar, default
+  bundle target, default artifact extension, WebView2 requirement, app-data
+  resolver, redacted diagnostics requirement, and no-auto-update flag,
+- artifact basename, SHA-256, size, platform, architecture, bundle target,
+  signing status, checksum sidecar, provenance path, generated-relative path
+  class, WebView2 requirement, app-data resolver, encrypted-store requirement,
+  redacted diagnostics requirement, SmartScreen boundary, and signing trust
+  boundary,
 - same-release asset authority requirement,
 - public non-claims,
 - release upload, release body edit, public artifact readiness, installer
   readiness, and generated artifact commit flags.
+
+The validator rejects absolute paths, `..`, nested paths, or local username path
+material in manifest, checksum, provenance, and artifact filename fields. The
+allowed form is a basename beside the manifest in an ignored generated artifact
+directory.
 
 ## Current Gate Flags
 
@@ -63,6 +76,8 @@ Each Windows artifact manifest uses
 - windows_artifact_provenance_consistency_verified_by_validator=true
 - windows_artifact_provenance_field_consistency_verified_by_validator=true
 - windows_artifact_bundle_target_extension_bound=true
+- windows_artifact_manifest_sha_sidecar_verified_by_validator=true
+- windows_artifact_basename_path_boundary_verified_by_validator=true
 - windows_artifact_release_upload_authorized=false
 - windows_artifact_release_body_edit_authorized=false
 - windows_public_artifact_ready=false

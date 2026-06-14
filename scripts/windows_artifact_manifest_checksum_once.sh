@@ -45,6 +45,8 @@ for flag in \
   "windows_artifact_provenance_consistency_verified_by_validator=true" \
   "windows_artifact_provenance_field_consistency_verified_by_validator=true" \
   "windows_artifact_bundle_target_extension_bound=true" \
+  "windows_artifact_manifest_sha_sidecar_verified_by_validator=true" \
+  "windows_artifact_basename_path_boundary_verified_by_validator=true" \
   "windows_artifact_release_upload_authorized=false" \
   "windows_artifact_release_body_edit_authorized=false" \
   "windows_public_artifact_ready=false" \
@@ -63,6 +65,8 @@ must_contain "$VALIDATOR" "windows-public-artifact-manifest-v1"
 must_contain "$VALIDATOR" "windows-public-artifact-provenance-v1"
 must_contain "$VALIDATOR" "windows_artifact_checksum_bytes_verified=true"
 must_contain "$VALIDATOR" "windows_artifact_package_structure_verified=true"
+must_contain "$VALIDATOR" "windows_artifact_manifest_sha_sidecar_verified=true"
+must_contain "$VALIDATOR" "windows_artifact_basename_path_boundary_verified=true"
 must_contain "$VALIDATOR" "invalid-pe-mz-header"
 must_contain "$VALIDATOR" "invalid-msi-compound-file-header"
 must_contain "$VALIDATOR" "invalid-zip-header"
@@ -70,6 +74,8 @@ must_contain "$VALIDATOR" "provenance-signing-status-mismatch"
 must_contain "$VALIDATOR" "bundle-target-extension-mismatch"
 must_contain "$GENERATOR" "AD_PREPARE_WINDOWS_PUBLIC_ARTIFACT_METADATA"
 must_contain "$GENERATOR" "AD_WINDOWS_ARTIFACT"
+must_contain "$GENERATOR" "WINDOWS_ARTIFACT_MANIFEST.json.sha256"
+must_contain "apps/desktop-tauri/package.json" '"tauri:build:windows-nsis:beta-onion"'
 must_contain "$EXECUTION" "WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"
 must_contain "$EXECUTION" "validate_windows_artifact_manifest.mjs"
 must_contain "$SCHEMA" "WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"
@@ -88,7 +94,11 @@ done
 node --check "$VALIDATOR" >/dev/null
 bash -n "$GENERATOR"
 
-empty_output="$(node "$VALIDATOR" "$ROOT/apps/desktop-tauri/public-release/windows-artifact-metadata")"
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+empty_manifest_dir="$tmp_dir/empty-manifest-dir"
+mkdir -p "$empty_manifest_dir"
+empty_output="$(node "$VALIDATOR" "$empty_manifest_dir")"
 printf '%s\n' "$empty_output" | grep -Fq "status=waiting-for-windows-artifact-manifest" ||
   fail "empty Windows artifact manifest validator did not wait"
 
@@ -96,8 +106,6 @@ held_output="$("$GENERATOR")"
 printf '%s\n' "$held_output" | grep -Fq "status=windows-public-artifact-metadata-held" ||
   fail "Windows metadata generator did not hold without explicit execute flag"
 
-tmp_dir="$(mktemp -d)"
-trap 'rm -rf "$tmp_dir"' EXIT
 artifact="$tmp_dir/Another Dimension Chat_0.1.0_x64-setup.exe"
 node - "$artifact" <<'NODE'
 const fs = require("node:fs");
@@ -133,6 +141,14 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
   "source_commit": "abcdef1234567890",
   "version": "0.1.0",
   "release_class": "unsigned-windows-beta",
+  "manifest_file": "WINDOWS_ARTIFACT_MANIFEST.json",
+  "manifest_sha256_file": "WINDOWS_ARTIFACT_MANIFEST.json.sha256",
+  "default_bundle_target": "nsis",
+  "default_artifact_extension": ".exe",
+  "webview2_runtime_required": true,
+  "app_data_resolver": "tauri-app-data",
+  "redacted_diagnostics_required": true,
+  "auto_update": false,
   "same_release_asset_authority_required": true,
   "release_upload_authorized": false,
   "release_body_edit_authorized": false,
@@ -151,6 +167,7 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
   "artifacts": [
     {
       "filename": "Another Dimension Chat_0.1.0_x64-setup.exe",
+      "artifact_basename": "Another Dimension Chat_0.1.0_x64-setup.exe",
       "sha256": "$artifact_sha",
       "size_bytes": $artifact_size,
       "platform": "windows",
@@ -158,14 +175,22 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
       "bundle_target": "nsis",
       "signing_status": "unsigned-hold",
       "checksum_file": "Another Dimension Chat_0.1.0_x64-setup.exe.sha256",
+      "checksum_sidecar": "Another Dimension Chat_0.1.0_x64-setup.exe.sha256",
       "provenance_file": "Another Dimension Chat_0.1.0_x64-setup.exe.provenance.json",
+      "provenance_path": "Another Dimension Chat_0.1.0_x64-setup.exe.provenance.json",
+      "artifact_path_class": "generated-release-directory-relative-basename",
       "webview2_runtime_required": true,
+      "app_data_resolver": "tauri-app-data",
+      "encrypted_store_required": true,
+      "redacted_diagnostics_required": true,
+      "auto_update": false,
       "smartscreen_reputation_claim": false,
       "signing_trust_boundary": false
     }
   ]
 }
 JSON
+shasum -a 256 "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" | sed 's#'"$tmp_dir"'/##' >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json.sha256"
 
 candidate_output="$(node "$VALIDATOR" "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json")"
 printf '%s\n' "$candidate_output" | grep -Fq "accepted_windows_artifact_manifests=1" ||
@@ -212,6 +237,14 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_TEXT_EXE.json" <<JSON
   "source_commit": "abcdef1234567890",
   "version": "0.1.0",
   "release_class": "unsigned-windows-beta",
+  "manifest_file": "WINDOWS_ARTIFACT_MANIFEST_TEXT_EXE.json",
+  "manifest_sha256_file": "WINDOWS_ARTIFACT_MANIFEST_TEXT_EXE.json.sha256",
+  "default_bundle_target": "nsis",
+  "default_artifact_extension": ".exe",
+  "webview2_runtime_required": true,
+  "app_data_resolver": "tauri-app-data",
+  "redacted_diagnostics_required": true,
+  "auto_update": false,
   "same_release_asset_authority_required": true,
   "release_upload_authorized": false,
   "release_body_edit_authorized": false,
@@ -230,6 +263,7 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_TEXT_EXE.json" <<JSON
   "artifacts": [
     {
       "filename": "text-not-pe.exe",
+      "artifact_basename": "text-not-pe.exe",
       "sha256": "$text_artifact_sha",
       "size_bytes": $text_artifact_size,
       "platform": "windows",
@@ -237,14 +271,22 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_TEXT_EXE.json" <<JSON
       "bundle_target": "nsis",
       "signing_status": "unsigned-hold",
       "checksum_file": "text-not-pe.exe.sha256",
+      "checksum_sidecar": "text-not-pe.exe.sha256",
       "provenance_file": "text-not-pe.exe.provenance.json",
+      "provenance_path": "text-not-pe.exe.provenance.json",
+      "artifact_path_class": "generated-release-directory-relative-basename",
       "webview2_runtime_required": true,
+      "app_data_resolver": "tauri-app-data",
+      "encrypted_store_required": true,
+      "redacted_diagnostics_required": true,
+      "auto_update": false,
       "smartscreen_reputation_claim": false,
       "signing_trust_boundary": false
     }
   ]
 }
 JSON
+shasum -a 256 "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_TEXT_EXE.json" | sed 's#'"$tmp_dir"'/##' >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_TEXT_EXE.json.sha256"
 if node "$VALIDATOR" "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_TEXT_EXE.json" >"$tmp_dir/text-exe.out" 2>&1; then
   fail "validator accepted a text file as a Windows executable artifact"
 fi
@@ -281,6 +323,20 @@ fi
 grep -Fq "provenance-signing-status-mismatch" "$tmp_dir/bad-signing.out" ||
   fail "provenance signing mismatch rejection was not reported"
 
+node - "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_PATH_ESCAPE.json" <<'NODE'
+const fs = require("node:fs");
+const input = process.argv[2];
+const output = process.argv[3];
+const manifest = JSON.parse(fs.readFileSync(input, "utf8"));
+manifest.artifacts[0].filename = `../${manifest.artifacts[0].filename}`;
+fs.writeFileSync(output, `${JSON.stringify(manifest, null, 2)}\n`);
+NODE
+if node "$VALIDATOR" "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_PATH_ESCAPE.json" >"$tmp_dir/path-escape.out" 2>&1; then
+  fail "validator accepted path traversal in Windows artifact filename"
+fi
+grep -Fq "filename-must-be-basename" "$tmp_dir/path-escape.out" ||
+  fail "path traversal rejection was not reported"
+
 "$ARTIFACT_GUARD" >/dev/null
 
 if git -C "$ROOT" ls-files | grep -Eq '^(apps/desktop-tauri/(public-release|beta-artifacts)/|public-release/|beta-artifacts/)'; then
@@ -302,6 +358,8 @@ windows_artifact_package_structure_verified_by_validator=true
 windows_artifact_provenance_consistency_verified_by_validator=true
 windows_artifact_provenance_field_consistency_verified_by_validator=true
 windows_artifact_bundle_target_extension_bound=true
+windows_artifact_manifest_sha_sidecar_verified_by_validator=true
+windows_artifact_basename_path_boundary_verified_by_validator=true
 windows_public_artifact_ready=false
 windows_installer_ready=false
 windows_signing_ready=false

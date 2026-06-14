@@ -37,6 +37,7 @@ const BUNDLE_TARGET_EXTENSIONS = Object.freeze({
   "portable-archive": ".zip",
   msix: ".msix",
 });
+const DEFAULT_ARTIFACT_EXTENSION_BY_TARGET = BUNDLE_TARGET_EXTENSIONS;
 
 const FORBIDDEN_PATTERNS = Object.freeze([
   [/windows_public_artifact_ready"\s*:\s*true/i, "windows-public-artifact-ready"],
@@ -81,7 +82,7 @@ function collectFiles(inputs) {
     }
     if (!stat.isDirectory()) continue;
     for (const entry of fs.readdirSync(target, { withFileTypes: true })) {
-      if (entry.isFile() && /\.json$/i.test(entry.name)) {
+      if (entry.isFile() && /^WINDOWS_ARTIFACT_MANIFEST.*\.json$/i.test(entry.name)) {
         files.push(path.join(target, entry.name));
       }
     }
@@ -109,6 +110,15 @@ function relativeSibling(baseFile, siblingName) {
   if (!siblingName || typeof siblingName !== "string") return "";
   if (siblingName !== path.basename(siblingName)) return "";
   return path.join(path.dirname(baseFile), siblingName);
+}
+
+function basenameOnlyIssues(prefix, field, value) {
+  if (!value || typeof value !== "string") return [`${prefix}:missing-${field}`];
+  if (path.isAbsolute(value)) return [`${prefix}:${field}-absolute-path`];
+  if (value !== path.basename(value) || value.includes("..") || /[\\/]/.test(value)) {
+    return [`${prefix}:${field}-must-be-basename`];
+  }
+  return [];
 }
 
 function validateArtifactStructure(prefix, artifactFile, extension) {
@@ -218,7 +228,19 @@ function validateArtifact(file, manifest, artifact, index) {
   const prefix = `artifact[${index}]`;
   const issues = [];
   if (!artifact || typeof artifact !== "object") return [`${prefix}:not-object`];
-  if (!artifact.filename || typeof artifact.filename !== "string") issues.push(`${prefix}:missing-filename`);
+  issues.push(...basenameOnlyIssues(prefix, "filename", artifact.filename));
+  issues.push(...basenameOnlyIssues(prefix, "checksum-file", artifact.checksum_file));
+  issues.push(...basenameOnlyIssues(prefix, "provenance-file", artifact.provenance_file));
+  if (artifact.artifact_basename !== artifact.filename) issues.push(`${prefix}:artifact-basename-mismatch`);
+  if (artifact.checksum_sidecar !== undefined && artifact.checksum_sidecar !== artifact.checksum_file) {
+    issues.push(`${prefix}:checksum-sidecar-mismatch`);
+  }
+  if (artifact.provenance_path !== undefined && artifact.provenance_path !== artifact.provenance_file) {
+    issues.push(`${prefix}:provenance-path-mismatch`);
+  }
+  if (artifact.artifact_path_class !== "generated-release-directory-relative-basename") {
+    issues.push(`${prefix}:artifact-path-class-mismatch`);
+  }
   if (!ALLOWED_EXTENSIONS.has(path.extname(artifact.filename).toLowerCase())) {
     issues.push(`${prefix}:unsupported-artifact-extension`);
   }
@@ -233,10 +255,12 @@ function validateArtifact(file, manifest, artifact, index) {
   }
   if (!ALLOWED_SIGNING_STATUS.has(artifact.signing_status)) issues.push(`${prefix}:invalid-signing-status`);
   if (artifact.webview2_runtime_required !== true) issues.push(`${prefix}:webview2-required`);
+  if (artifact.app_data_resolver !== "tauri-app-data") issues.push(`${prefix}:app-data-resolver-mismatch`);
+  if (artifact.encrypted_store_required !== true) issues.push(`${prefix}:encrypted-store-required`);
+  if (artifact.redacted_diagnostics_required !== true) issues.push(`${prefix}:redacted-diagnostics-required`);
+  if (artifact.auto_update !== false) issues.push(`${prefix}:auto-update-must-stay-false`);
   if (artifact.smartscreen_reputation_claim !== false) issues.push(`${prefix}:smartscreen-must-stay-false`);
   if (artifact.signing_trust_boundary !== false) issues.push(`${prefix}:signing-boundary-must-stay-false`);
-  if (!artifact.checksum_file || typeof artifact.checksum_file !== "string") issues.push(`${prefix}:missing-checksum-file`);
-  if (!artifact.provenance_file || typeof artifact.provenance_file !== "string") issues.push(`${prefix}:missing-provenance-file`);
   if (manifest.release_class === "stable" && artifact.signing_status === "unsigned-hold") {
     issues.push(`${prefix}:stable-must-not-be-unsigned-hold`);
   }
@@ -272,6 +296,28 @@ function validateManifest(file, { requireCurrentHead, head }) {
   if (requireCurrentHead && manifest.source_commit !== head) issues.push("source-commit-not-current-head");
   if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(manifest.version ?? "")) issues.push("invalid-version");
   if (!ALLOWED_RELEASE_CLASSES.has(manifest.release_class)) issues.push("invalid-release-class");
+  issues.push(...basenameOnlyIssues("manifest", "manifest-file", manifest.manifest_file));
+  issues.push(...basenameOnlyIssues("manifest", "manifest-sha256-file", manifest.manifest_sha256_file));
+  if (manifest.manifest_file !== path.basename(file)) issues.push("manifest-file-name-mismatch");
+  const manifestShaFile = relativeSibling(file, manifest.manifest_sha256_file);
+  if (!manifestShaFile || !fs.existsSync(manifestShaFile)) {
+    issues.push("manifest-sha256-file-missing");
+  } else {
+    const expectedLine = `${sha256File(file)}  ${path.basename(file)}`;
+    if (fs.readFileSync(manifestShaFile, "utf8").trim() !== expectedLine) {
+      issues.push("manifest-sha256-file-mismatch");
+    }
+  }
+  if (!ALLOWED_BUNDLE_TARGETS.has(manifest.default_bundle_target)) {
+    issues.push("invalid-default-bundle-target");
+  }
+  if (manifest.default_artifact_extension !== DEFAULT_ARTIFACT_EXTENSION_BY_TARGET[manifest.default_bundle_target]) {
+    issues.push("default-artifact-extension-mismatch");
+  }
+  if (manifest.webview2_runtime_required !== true) issues.push("webview2-required");
+  if (manifest.app_data_resolver !== "tauri-app-data") issues.push("app-data-resolver-mismatch");
+  if (manifest.redacted_diagnostics_required !== true) issues.push("redacted-diagnostics-required");
+  if (manifest.auto_update !== false) issues.push("auto-update-must-stay-false");
   if (manifest.same_release_asset_authority_required !== true) issues.push("same-release-authority-required");
   if (manifest.release_upload_authorized !== false) issues.push("release-upload-must-stay-false");
   if (manifest.release_body_edit_authorized !== false) issues.push("release-body-edit-must-stay-false");
@@ -328,6 +374,8 @@ console.log(`accepted_windows_artifact_manifests=${files.length}`);
 console.log("windows_artifact_checksum_bytes_verified=true");
 console.log("windows_artifact_package_structure_verified=true");
 console.log("windows_artifact_provenance_consistency_verified=true");
+console.log("windows_artifact_manifest_sha_sidecar_verified=true");
+console.log("windows_artifact_basename_path_boundary_verified=true");
 console.log("windows_public_artifact_ready=false");
 console.log("windows_installer_ready=false");
 console.log("windows_public_artifact_upload_allowed=false");
