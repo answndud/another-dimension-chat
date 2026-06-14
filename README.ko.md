@@ -47,6 +47,21 @@ shasum -a 256 -c another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.
 7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a
 ```
 
+Artifact identity:
+
+```text
+artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#v0.1.0-beta-onion-unsigned#macos-aarch64
+artifact_current_head_aligned=false
+public_artifact_stale=true
+public_artifact_state=stale
+next_owner_action=rebuild-or-republish-unsigned-public-beta-packet
+```
+
+즉, 현재 공개 DMG는 최신 source HEAD 기준으로 held/stale public packet입니다.
+같은 release의 checksum과 provenance로 이 packet 자체를 검증할 수는 있지만,
+unsigned public beta packet을 다시 빌드하거나 재게시하기 전까지 최신 source 변경의
+앱 증거로 설명하면 안 됩니다.
+
 이 빌드는 서명되지 않았기 때문에 macOS가 실행을 막을 수 있습니다. DMG를 열고
 앱 실행을 한 번 시도한 뒤, checksum이 일치할 때만 시스템 설정 > 개인정보 보호
 및 보안에서 차단된 앱을 허용하세요. 설치 단계로 터미널에서 quarantine을 제거하는
@@ -116,7 +131,12 @@ desktop beta는 로컬 destructive action을 분리합니다.
   `scripts/public_release_readiness_preflight.sh`에서 확인합니다.
 - 현재 unsigned packet은 `scripts/prepare_unsigned_public_beta_release.sh`가 허용한
   pinned public-release source DMG 기준입니다. build channel `beta-onion`, commit
-  `e8954df9`, SHA-256 `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`.
+  `e8954df9`, release tag `v0.1.0-beta-onion-unsigned`, SHA-256
+  `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`.
+- Artifact status는 machine-checkable합니다: `artifact_current_head_aligned=false`,
+  `public_artifact_stale=true`, `public_artifact_state=stale`,
+  `next_owner_action=rebuild-or-republish-unsigned-public-beta-packet`.
+  이 stale packet은 최신 source app evidence가 아닙니다.
 - 이 상태는 packaging readiness, audit readiness, release go signal이 아닙니다.
 - production claim 제거는
   [reference/PRODUCTION_READINESS_CLAIM_GATE.md](reference/PRODUCTION_READINESS_CLAIM_GATE.md)와

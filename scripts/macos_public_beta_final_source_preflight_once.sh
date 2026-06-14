@@ -216,7 +216,12 @@ require_text "$PUBLIC_PREFLIGHT" "macos_public_support_triage=source-linked"
 
 for file in "$INSTALL_GUIDE" "$RELEASE_NOTES" "$RELEASE_BODY" "$BETA_CHECKLIST"; do
   require_text "$file" "Shared Packet Boundary"
-  require_text "$file" "artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#macos-aarch64"
+  require_text "$file" "artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#v0.1.0-beta-onion-unsigned#macos-aarch64"
+  require_text "$file" "artifact_identity_fields=$ARTIFACT_IDENTITY_FIELDS"
+  require_text "$file" "artifact_current_head_aligned=false"
+  require_text "$file" "public_artifact_stale=true"
+  require_text "$file" "public_artifact_state=stale"
+  require_text "$file" "next_owner_action=$PUBLIC_ARTIFACT_STALE_ACTION"
   require_text "$file" "trust_model=same-github-release-assets#same-release-sha256#manual-privacy-security-allow-after-checksum#no-auto-update"
   require_text "$file" "support_intake=redacted-diagnostics-only#no-raw-logs#no-crash-dumps#no-private-room-data#no-payloads#no-key-material"
   require_text "$file" "generated_artifact_boundary=do-not-commit-public-release-or-beta-artifacts#no-dmg-rebuild#no-release-upload-or-edit"

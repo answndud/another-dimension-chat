@@ -48,10 +48,20 @@ browser, GitHub source archives, or files from a different release.
 These values must stay identical across the install guide, release notes,
 GitHub Release body, and beta checklist:
 
-- `artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#macos-aarch64`
+- `artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#v0.1.0-beta-onion-unsigned#macos-aarch64`
+- `artifact_identity_fields=artifact#artifact_sha256#build_channel#build_commit#release_tag#platform`
+- `artifact_current_head_aligned=false`
+- `public_artifact_stale=true`
+- `public_artifact_state=stale`
+- `next_owner_action=rebuild-or-republish-unsigned-public-beta-packet`
 - `trust_model=same-github-release-assets#same-release-sha256#manual-privacy-security-allow-after-checksum#no-auto-update`
 - `support_intake=redacted-diagnostics-only#no-raw-logs#no-crash-dumps#no-private-room-data#no-payloads#no-key-material`
 - `generated_artifact_boundary=do-not-commit-public-release-or-beta-artifacts#no-dmg-rebuild#no-release-upload-or-edit`
+
+The published DMG remains valid only as the same-release upload-set artifact
+named above. Its provenance build commit differs from the current source HEAD,
+so it is a held/stale public packet and must not be described as latest-source
+app evidence until the unsigned public beta packet is rebuilt or republished.
 
 ## Verify The Download
 
