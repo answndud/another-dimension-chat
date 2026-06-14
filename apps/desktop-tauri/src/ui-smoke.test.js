@@ -1477,6 +1477,11 @@ test("desktop accessibility polish keeps disabled reasons focus and overflow exp
   assert.match(stylesCss, /input:focus-visible/);
   assert.match(stylesCss, /\.saved-room-list-item:focus-visible/);
   assert.match(stylesCss, /\.message-transcript li\[data-transcript-row-selectable="false"\]:focus-visible/);
+  assert.match(stylesCss, /\.saved-room-list-item\s*\{[\s\S]*max-width: 100%;[\s\S]*min-width: 0;/);
+  assert.match(stylesCss, /\.saved-room-primary-action\s*\{[\s\S]*max-width: 18ch;[\s\S]*text-overflow: ellipsis;/);
+  assert.match(stylesCss, /\.message-transcript \.transcript-row-actions button\s*\{[\s\S]*max-width: min\(100%, 22ch\);[\s\S]*text-overflow: ellipsis;/);
+  assert.match(stylesCss, /\.public-recovery-guide li\s*\{[\s\S]*overflow-wrap: anywhere;/);
+  assert.match(stylesCss, /\.public-diagnostics-panel textarea\s*\{[\s\S]*max-width: 100%;[\s\S]*overflow-wrap: anywhere;/);
   assert.match(stylesCss, /prefers-reduced-motion: reduce/);
   assert.match(stylesCss, /scroll-behavior: auto !important/);
   assert.match(stylesCss, /\.demo-state,[\s\S]*\.demo-hint,[\s\S]*\.demo-warning/);

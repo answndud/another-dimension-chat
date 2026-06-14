@@ -1290,6 +1290,8 @@ body.is-room-list-mode .room-list-panel {
   grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 8px;
   align-items: center;
+  max-width: 100%;
+  min-width: 0;
   min-height: 52px;
   border: 1px solid color-mix(in srgb, var(--panel-border) 54%, transparent);
   border-radius: 8px;
@@ -1348,12 +1350,16 @@ body.is-room-list-mode .room-list-panel {
 }
 
 .saved-room-state {
+  max-width: 18ch;
+  min-width: 0;
   border: 1px solid color-mix(in srgb, var(--panel-border) 58%, transparent);
   border-radius: 999px;
   padding: 3px 7px;
   color: var(--text-secondary);
   font-size: 11px;
   font-weight: 720;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -1418,11 +1424,15 @@ body.is-room-list-mode .room-list-panel {
 }
 
 .saved-room-remove {
+  min-width: 0;
   color: var(--text-muted);
 }
 
 .saved-room-primary-action {
   min-width: 112px;
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .saved-room-next-action {
@@ -1918,6 +1928,7 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
   display: grid;
   gap: 8px;
   margin-top: 8px;
+  min-width: 0;
   border-top: 1px solid var(--panel-border);
   padding-top: 10px;
 }
@@ -1925,6 +1936,7 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
 .public-recovery-guide {
   display: grid;
   gap: 6px;
+  min-width: 0;
   border: 1px solid var(--panel-border);
   border-radius: 6px;
   padding: 9px 10px;
@@ -1946,14 +1958,17 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
 }
 
 .public-recovery-guide li {
+  min-width: 0;
   color: var(--text-secondary);
   font-size: 11px;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .redacted-support-report-panel {
   display: grid;
   gap: 8px;
+  min-width: 0;
   border: 1px solid var(--panel-border);
   border-radius: 6px;
   padding: 9px 10px;
@@ -1991,7 +2006,9 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
 }
 
 .public-diagnostics-panel textarea {
+  max-width: 100%;
   min-height: 120px;
+  overflow-wrap: anywhere;
 }
 
 .field-test-report-summary {
@@ -2767,17 +2784,22 @@ body.is-chat-active .message-transcript li.is-send-recovery .transcript-footer {
 }
 
 body.is-chat-active .message-transcript .transcript-body {
+  min-width: 0;
   font-size: 14px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 body.is-chat-active .message-transcript .transcript-delivery-note {
   justify-self: end;
+  max-width: 100%;
+  min-width: 0;
   margin-top: -2px;
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 680;
   line-height: 1.25;
+  overflow-wrap: anywhere;
   text-transform: lowercase;
 }
 
@@ -2807,12 +2829,14 @@ body.is-chat-active .message-transcript .transcript-delivery-note.is-canceled {
 body.is-chat-active .message-transcript .transcript-recovery-note {
   justify-self: end;
   max-width: min(100%, 520px);
+  min-width: 0;
   border-left: 0;
   padding: 1px 0 0;
   color: var(--text-secondary);
   font-size: 10.5px;
   font-weight: 650;
   line-height: 1.25;
+  overflow-wrap: anywhere;
   text-align: right;
   text-transform: lowercase;
 }
@@ -2828,6 +2852,8 @@ body.is-chat-active .message-transcript .transcript-recovery-summary {
   gap: 5px 8px;
   align-items: center;
   justify-self: stretch;
+  max-width: 100%;
+  min-width: 0;
   margin-top: 4px;
   border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
   border-radius: 4px;
@@ -3521,7 +3547,9 @@ body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft) {
 .message-transcript .transcript-review,
 .message-transcript .transcript-lifecycle,
 .message-transcript .transcript-details {
+  min-width: 0;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  overflow-wrap: anywhere;
 }
 
 .message-transcript .transcript-meta {
@@ -3659,12 +3687,18 @@ body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft) {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .message-transcript .transcript-row-actions button {
+  max-width: min(100%, 22ch);
+  min-width: 0;
   min-height: 30px;
+  overflow: hidden;
   padding: 5px 9px;
   font-size: 11px;
+  text-overflow: ellipsis;
 }
 
 .peer-grid {
