@@ -21,6 +21,8 @@ INCIDENT_CLASS="${AD_EMERGENCY_INCIDENT_CLASS:-checksum-mismatch}"
 DECISION="${AD_EMERGENCY_DECISION:-advisory}"
 AFFECTED_RELEASE_TAG="${AD_AFFECTED_RELEASE_TAG:-unknown-release}"
 AFFECTED_ARTIFACT="${AD_AFFECTED_ARTIFACT:-unknown-artifact}"
+AFFECTED_PLATFORM="${AD_AFFECTED_PLATFORM:-macos}"
+AFFECTED_RELEASE_CLASS="${AD_AFFECTED_RELEASE_CLASS:-unsigned-public-beta}"
 AFFECTED_ARTIFACT_SHA256="${AD_AFFECTED_ARTIFACT_SHA256:-}"
 AFFECTED_PROVENANCE_SHA256="${AD_AFFECTED_PROVENANCE_SHA256:-}"
 AFFECTED_DISTRIBUTION_MANIFEST_SHA256="${AD_AFFECTED_DISTRIBUTION_MANIFEST_SHA256:-}"
@@ -30,13 +32,18 @@ EXECUTE="${AD_EXECUTE_MACOS_EMERGENCY_ADVISORY:-0}"
 OWNER_APPROVED="${AD_OWNER_APPROVED_EMERGENCY_ADVISORY:-0}"
 
 case "$INCIDENT_CLASS" in
-  bad-artifact|checksum-mismatch|dependency-vulnerability|key-compromise|claim-drift) ;;
+  bad-release|bad-artifact|checksum-mismatch|install-failure|runtime-regression|suspected-secret-leak|private-vulnerability|dependency-vulnerability|key-compromise|claim-drift) ;;
   *) fail "unsupported emergency incident class: $INCIDENT_CLASS" ;;
 esac
 
 case "$DECISION" in
   hold|advisory|rebuild|revoke) ;;
   *) fail "unsupported emergency decision: $DECISION" ;;
+esac
+
+case "$AFFECTED_PLATFORM" in
+  macos|windows|android|ios) ;;
+  *) fail "unsupported affected platform: $AFFECTED_PLATFORM" ;;
 esac
 
 require_sha256() {
@@ -58,7 +65,11 @@ incident_class=$INCIDENT_CLASS
 decision=$DECISION
 affected_release_tag=$AFFECTED_RELEASE_TAG
 affected_artifact=$AFFECTED_ARTIFACT
+affected_platform=$AFFECTED_PLATFORM
+affected_release_class=$AFFECTED_RELEASE_CLASS
 replacement_release_tag=$REPLACEMENT_RELEASE_TAG
+release_artifact_identity_binding_required=true
+manual_verification_required=true
 emergency_release_generates_app_artifact=false
 emergency_release_upload_authorized=false
 emergency_release_dmg_rebuild_authorized=false
@@ -79,6 +90,7 @@ fi
 [ "$AFFECTED_ARTIFACT" != "unknown-artifact" ] || fail "AD_AFFECTED_ARTIFACT is required before writing an emergency advisory packet"
 [ "$AFFECTED_ARTIFACT" = "$(basename "$AFFECTED_ARTIFACT")" ] ||
   fail "AD_AFFECTED_ARTIFACT must be an artifact filename, not a path"
+[ -n "$AFFECTED_RELEASE_CLASS" ] || fail "AD_AFFECTED_RELEASE_CLASS is required before writing an emergency advisory packet"
 require_sha256 "AD_AFFECTED_ARTIFACT_SHA256" "$AFFECTED_ARTIFACT_SHA256"
 require_sha256 "AD_AFFECTED_PROVENANCE_SHA256" "$AFFECTED_PROVENANCE_SHA256"
 require_sha256 "AD_AFFECTED_DISTRIBUTION_MANIFEST_SHA256" "$AFFECTED_DISTRIBUTION_MANIFEST_SHA256"
@@ -94,10 +106,23 @@ cat >"$manifest" <<JSON
   "decision": "$(json_escape "$DECISION")",
   "affected_release_tag": "$(json_escape "$AFFECTED_RELEASE_TAG")",
   "affected_artifact": "$(json_escape "$AFFECTED_ARTIFACT")",
+  "affected_platform": "$(json_escape "$AFFECTED_PLATFORM")",
+  "affected_release_class": "$(json_escape "$AFFECTED_RELEASE_CLASS")",
   "affected_artifact_sha256": "$(json_escape "$AFFECTED_ARTIFACT_SHA256")",
   "affected_provenance_sha256": "$(json_escape "$AFFECTED_PROVENANCE_SHA256")",
   "affected_distribution_manifest_sha256": "$(json_escape "$AFFECTED_DISTRIBUTION_MANIFEST_SHA256")",
   "replacement_release_tag": "$(json_escape "$REPLACEMENT_RELEASE_TAG")",
+  "release_artifact_identity": {
+    "release_tag": "$(json_escape "$AFFECTED_RELEASE_TAG")",
+    "artifact_filename": "$(json_escape "$AFFECTED_ARTIFACT")",
+    "platform": "$(json_escape "$AFFECTED_PLATFORM")",
+    "release_class": "$(json_escape "$AFFECTED_RELEASE_CLASS")",
+    "artifact_sha256": "$(json_escape "$AFFECTED_ARTIFACT_SHA256")",
+    "provenance_sha256": "$(json_escape "$AFFECTED_PROVENANCE_SHA256")",
+    "distribution_manifest_sha256": "$(json_escape "$AFFECTED_DISTRIBUTION_MANIFEST_SHA256")"
+  },
+  "release_artifact_identity_binding_required": true,
+  "manual_verification_required": true,
   "same_release_asset_authority_required": true,
   "branch_source_release_authority_allowed": false,
   "emergency_release_generates_app_artifact": false,
@@ -137,6 +162,8 @@ cat >"$advisory" <<MD
 - Decision: \`$DECISION\`
 - Affected release tag: \`$AFFECTED_RELEASE_TAG\`
 - Affected artifact: \`$AFFECTED_ARTIFACT\`
+- Affected platform: \`$AFFECTED_PLATFORM\`
+- Affected release class: \`$AFFECTED_RELEASE_CLASS\`
 - Affected artifact SHA-256: \`$AFFECTED_ARTIFACT_SHA256\`
 - Affected provenance SHA-256: \`$AFFECTED_PROVENANCE_SHA256\`
 - Affected distribution manifest SHA-256: \`$AFFECTED_DISTRIBUTION_MANIFEST_SHA256\`
@@ -144,7 +171,10 @@ cat >"$advisory" <<MD
 
 Stop before opening a suspect artifact. Use only same-GitHub-Release assets
 for checksum, provenance, manifest, release notes, and update integrity
-evidence. Branch files and source archives are not release authority.
+evidence. Treat the affected release tag, artifact filename, platform, release
+class, artifact SHA-256, provenance SHA-256, and manifest SHA-256 as one bound
+release artifact identity. Branch files and source archives are not release
+authority.
 
 This draft does not upload a release, rebuild a DMG, delete release assets,
 publish an advisory, enable auto-update, prove rollback prevention, claim
