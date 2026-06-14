@@ -28,16 +28,18 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Rust registry, git, and target output
-        uses: actions/cache@v4
+      - name: Restore Rust registry, git, and target output
+        id: rust-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             .build-cache/cargo-target/
-          key: windows-tauri-cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'apps/desktop-tauri/src-tauri/Cargo.toml', 'crates/**/Cargo.toml') }}
+          key: windows-tauri-cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'apps/desktop-tauri/src-tauri/Cargo.toml', 'crates/**/Cargo.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
+            windows-tauri-cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'apps/desktop-tauri/src-tauri/Cargo.toml', 'crates/**/Cargo.toml') }}-
             windows-tauri-cargo-${{ runner.os }}-
 
       - name: Install Node.js
@@ -109,3 +111,15 @@ jobs:
           path: apps/desktop-tauri/public-release/windows-unsigned-public-beta/
           if-no-files-found: error
           retention-days: 14
+
+      - name: Save Rust registry, git, and target output
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            .build-cache/cargo-target/
+          key: ${{ steps.rust-cache.outputs.cache-primary-key }}
