@@ -43,6 +43,9 @@ evidence or a later explicit claim-policy decision.
 - Emergency release source tooling may generate advisory/checklist/manifest
   material only; release upload, release edit, asset deletion, DMG rebuild, and
   advisory publication require a separate explicit release task.
+- Emergency notice is manual release identity verification only. It is not an
+  update availability signal, background update check, push notice, auto-update
+  prompt, or forced upgrade path.
 
 ## Future Pass Conditions
 
@@ -88,6 +91,12 @@ and owner release authorization before public wording changes.
 - emergency_release_advisory_packet_script_available=true
 - emergency_release_no_artifact_mutation_verifier_ready=true
 - emergency_advisory_requires_affected_release_artifact_binding=true
+- emergency_notice_manual_verification_only=true
+- emergency_notice_update_availability_claim=false
+- emergency_notice_auto_update_claim=false
+- background_update_check=false
+- push_update_notice=false
+- forced_upgrade=false
 - emergency_advisory_requires_distribution_manifest_sha256=true
 - emergency_advisory_requires_signed_false_hold_flags=true
 - emergency_release_generates_app_artifact=false

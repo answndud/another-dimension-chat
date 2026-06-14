@@ -118,6 +118,29 @@ process may be a distribution aid, but it is not a trusted security boundary for
 v0.1. If auto-update is introduced later, it requires a separate integrity
 design before it can be described as supported.
 
+## Emergency Notice Boundary
+
+Emergency notices are manual release identity verification instructions only.
+They tell users to stop before opening a suspect artifact and verify the
+affected release tag, artifact filename, platform, release class, artifact
+SHA-256, provenance SHA-256, and distribution manifest SHA-256 from the same
+GitHub Release authority.
+
+An emergency notice is not update availability, not a background update check,
+not a push notice, not an auto-update prompt, and not a forced upgrade path.
+It must not include local paths, private room state, payload samples, screenshots
+of private data, crash dumps, raw logs, support bundles, passphrases, private
+keys, or key material.
+
+Current emergency notice flags:
+
+- emergency_notice_manual_verification_only=true
+- emergency_notice_update_availability_claim=false
+- emergency_notice_auto_update_claim=false
+- background_update_check=false
+- push_update_notice=false
+- forced_upgrade=false
+
 ## Non-Claims
 
 This policy does not claim:

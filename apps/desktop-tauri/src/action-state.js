@@ -521,6 +521,7 @@ export function productionVersionIntegrityView(input = {}) {
   const checksumVerification = "matching-sha256-before-open";
   const emergencyAdvisoryPath = "scripts/prepare_macos_emergency_release_advisory_packet.sh";
   const highRiskReleaseIntegrityGatePath = "scripts/high_risk_release_integrity_gate_once.sh";
+  const emergencyNoticeMode = "manual-release-identity-verification";
   const versionComparison =
     latestVersion === "manual-check-required"
       ? "manual-update-check-required"
@@ -540,6 +541,12 @@ export function productionVersionIntegrityView(input = {}) {
     "signed_update_manifest_ready=false",
     "rollback_prevention_claimed=false",
     `emergency_advisory_path=${emergencyAdvisoryPath}`,
+    `emergency_notice_mode=${emergencyNoticeMode}`,
+    "emergency_notice_manual_verification_only=true",
+    "emergency_notice_update_availability_claim=false",
+    "background_update_check=false",
+    "push_update_notice=false",
+    "forced_upgrade=false",
     `high_risk_release_integrity_gate_path=${highRiskReleaseIntegrityGatePath}`,
     "dependency_lockfile_hash_inputs=3",
     "tauri_csp_permissions_remote_code_boundary=true",
@@ -555,11 +562,17 @@ export function productionVersionIntegrityView(input = {}) {
     expectedReleaseAuthority,
     checksumVerification,
     emergencyAdvisoryPath,
+    emergencyNoticeMode,
     highRiskReleaseIntegrityGatePath,
     autoUpdateReady: false,
     signedUpdateManifestReady: false,
     rollbackPreventionClaimed: false,
     manualUpdateRequired: true,
+    emergencyNoticeManualVerificationOnly: true,
+    emergencyNoticeUpdateAvailabilityClaimed: false,
+    backgroundUpdateCheck: false,
+    pushUpdateNotice: false,
+    forcedUpgrade: false,
     badReleaseAdvisoryPathReady: true,
     summary,
     boundary: [
@@ -578,6 +591,13 @@ export function productionVersionIntegrityView(input = {}) {
       "rollback_prevention_claimed=false",
       "bad_release_advisory_path_ready=true",
       `emergency_advisory_path=${emergencyAdvisoryPath}`,
+      `emergency_notice_mode=${emergencyNoticeMode}`,
+      "emergency_notice_manual_verification_only=true",
+      "emergency_notice_update_availability_claim=false",
+      "emergency_notice_auto_update_claim=false",
+      "background_update_check=false",
+      "push_update_notice=false",
+      "forced_upgrade=false",
       `high_risk_release_integrity_gate_path=${highRiskReleaseIntegrityGatePath}`,
       "release_artifact_checksum_policy=same-release-sha256-required",
       "signed_manifest_source_gate=true",
