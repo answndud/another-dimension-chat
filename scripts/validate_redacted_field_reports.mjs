@@ -8,6 +8,8 @@ const REQUIRED_FIELDS = Object.freeze([
   "app_version",
   "build_channel",
   "build_commit",
+  "high_risk_readiness_condition_set",
+  "high_risk_readiness_condition_coverage",
   "platform_pair",
   "checksum_result",
   "install_path_reached",
@@ -91,6 +93,19 @@ const REQUIRED_PLATFORM_PAIRS = Object.freeze([
   "windows-to-windows",
   "android-to-ios",
 ]);
+const HIGH_RISK_READINESS_CONDITIONS = Object.freeze([
+  "safety-verification",
+  "high-risk-transport-runtime",
+  "emergency-controls",
+  "clipboard-expiry",
+  "local-storage-evidence",
+  "release-integrity",
+]);
+const FIELD_REPORT_HIGH_RISK_COVERAGE = Object.freeze([
+  "safety-verification",
+  "high-risk-transport-runtime",
+]);
+const highRiskReadinessConditionSet = HIGH_RISK_READINESS_CONDITIONS.join("#");
 
 const FORBIDDEN_PATTERNS = Object.freeze([
   [/\.onion\b/i, "onion-endpoint"],
@@ -149,6 +164,11 @@ function sameSet(actual, expected) {
   return actual.size === expected.length && expected.every((item) => actual.has(item));
 }
 
+function parseConditionList(value) {
+  if (value === "none") return [];
+  return String(value ?? "").split("#").filter(Boolean);
+}
+
 function validateReport(file) {
   const text = fs.readFileSync(file, "utf8");
   const fields = parseReport(text);
@@ -176,6 +196,18 @@ function validateReport(file) {
   if (!sameSet(nonClaims, REQUIRED_NON_CLAIMS)) {
     issues.push("non-claims-mismatch");
   }
+  if (fields.get("high_risk_readiness_condition_set") !== highRiskReadinessConditionSet) {
+    issues.push("invalid-value:high_risk_readiness_condition_set");
+  }
+  const highRiskCoverage = parseConditionList(fields.get("high_risk_readiness_condition_coverage"));
+  if (highRiskCoverage.length === 0) {
+    issues.push("missing-or-template-value:high_risk_readiness_condition_coverage");
+  }
+  for (const condition of highRiskCoverage) {
+    if (!FIELD_REPORT_HIGH_RISK_COVERAGE.includes(condition)) {
+      issues.push(`invalid-value:high_risk_readiness_condition_coverage:${condition}`);
+    }
+  }
   for (const [pattern, label] of FORBIDDEN_PATTERNS) {
     if (pattern.test(text)) {
       issues.push(`forbidden-content:${label}`);
@@ -198,6 +230,10 @@ console.log(`reports_found=${reports.length}`);
 
 if (reports.length === 0) {
   console.log("accepted_production_field_reports=0");
+  console.log(`high_risk_readiness_condition_set=${highRiskReadinessConditionSet}`);
+  console.log("field_report_high_risk_condition_coverage=none");
+  console.log(`field_report_high_risk_missing_conditions=${highRiskReadinessConditionSet}`);
+  console.log("real_external_two_machine_field_evidence_present=false");
   console.log("macos_two_machine_real_user_flow_repeated=false");
   console.log("required_platform_pairs_covered=false");
   console.log("different_networks_covered=false");
@@ -208,6 +244,7 @@ if (reports.length === 0) {
   console.log("evidence_intake_decision=waiting");
   console.log("next_owner_action=collect-real-redacted-two-machine-field-reports");
   console.log("missing_evidence_is_next_owner_action=true");
+  console.log("high_risk_ready_claim_allowed=false");
   console.log("status=waiting-for-redacted-field-reports");
   process.exit(0);
 }
@@ -226,8 +263,13 @@ for (const report of validated) {
 
 if (failures > 0) {
   console.log("evidence_intake_decision=rejected");
+  console.log(`high_risk_readiness_condition_set=${highRiskReadinessConditionSet}`);
+  console.log("field_report_high_risk_condition_coverage=none");
+  console.log(`field_report_high_risk_missing_conditions=${highRiskReadinessConditionSet}`);
+  console.log("real_external_two_machine_field_evidence_present=false");
   console.log("next_owner_action=fix-redaction-or-required-fields");
   console.log("missing_evidence_is_next_owner_action=true");
+  console.log("high_risk_ready_claim_allowed=false");
   console.log("status=invalid-redacted-field-reports");
   process.exit(1);
 }
@@ -249,8 +291,19 @@ const launchNetworkStayedFalse = productionReports.every((report) =>
   fieldEquals(report, "app_launch_network_stayed_false", "true"),
 );
 const repeated = productionReports.length >= REQUIRED_PLATFORM_PAIRS.length;
+const highRiskCoverage = new Set();
+for (const report of productionReports) {
+  for (const condition of parseConditionList(report.fields.get("high_risk_readiness_condition_coverage"))) {
+    highRiskCoverage.add(condition);
+  }
+}
+const highRiskMissing = HIGH_RISK_READINESS_CONDITIONS.filter((condition) => !highRiskCoverage.has(condition));
 
 console.log(`accepted_production_field_reports=${productionReports.length}`);
+console.log(`high_risk_readiness_condition_set=${highRiskReadinessConditionSet}`);
+console.log(`field_report_high_risk_condition_coverage=${[...highRiskCoverage].join("#") || "none"}`);
+console.log(`field_report_high_risk_missing_conditions=${highRiskMissing.join("#") || "none"}`);
+console.log(`real_external_two_machine_field_evidence_present=${productionReports.length > 0}`);
 console.log(`macos_two_machine_real_user_flow_repeated=${repeated}`);
 console.log(`required_platform_pairs_covered=${requiredPlatformPairsCovered}`);
 console.log(`different_networks_covered=${differentNetworksCovered}`);
@@ -259,6 +312,7 @@ console.log(`offline_online_transition_covered=${productionReports.some((report)
 console.log(`failed_delivery_recovery_documented=${productionReports.some((report) => fieldEquals(report, "failed_delivery_recovery_status", "pass"))}`);
 console.log("production_field_evidence_ready=false");
 console.log("production_field_evidence_ready_reason=manual-review-and-stable-gate-update-required");
+console.log("high_risk_ready_claim_allowed=false");
 
 if (!repeated) {
   console.log("evidence_intake_decision=waiting");

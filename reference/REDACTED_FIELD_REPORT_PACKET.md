@@ -35,6 +35,11 @@ them as a next owner action:
 evidence_intake_decision=waiting
 next_owner_action=collect-real-redacted-two-machine-field-reports
 missing_evidence_is_next_owner_action=true
+high_risk_readiness_condition_set=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity
+field_report_high_risk_condition_coverage=none
+field_report_high_risk_missing_conditions=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity
+real_external_two_machine_field_evidence_present=false
+high_risk_ready_claim_allowed=false
 ```
 
 ## Allowed Report Fields
@@ -42,6 +47,8 @@ missing_evidence_is_next_owner_action=true
 - `app_version`
 - `build_channel`
 - `build_commit`
+- `high_risk_readiness_condition_set`
+- `high_risk_readiness_condition_coverage`
 - `platform_pair`
 - `checksum_result`
 - `install_path_reached`
@@ -94,8 +101,10 @@ validator must keep:
 
 ```text
 production_field_evidence_ready=false
+field_report_high_risk_missing_conditions=emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity
 external_delivery_success_claim_allowed=false
 reliable_external_delivery_claim_allowed=false
+high_risk_ready_claim_allowed=false
 sensitive_communication_allowed=false
 ```
 
@@ -105,6 +114,8 @@ sensitive_communication_allowed=false
 app_version=
 build_channel=
 build_commit=
+high_risk_readiness_condition_set=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity
+high_risk_readiness_condition_coverage=safety-verification#high-risk-transport-runtime
 platform_pair=macos-to-macos|macos-to-windows|windows-to-windows|android-to-ios
 checksum_result=pass|fail|not-run
 install_path_reached=download|checksum|mount|copy|manual-allow|first-launch
@@ -146,6 +157,11 @@ non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-p
 - accepted_redacted_field_reports_required_for_claims=true
 - field_evidence_execution_claim_allowed=false
 - redacted_field_report_validator_available=true
+- high_risk_readiness_condition_set=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity
+- field_report_high_risk_condition_coverage=none
+- field_report_high_risk_missing_conditions=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity
+- real_external_two_machine_field_evidence_present=false
+- high_risk_ready_claim_allowed=false
 - d100_4_external_evidence_intake_execution_reviewed=true
 - external_evidence_intake_operator_ready=true
 - field_report_validator_ready=true
