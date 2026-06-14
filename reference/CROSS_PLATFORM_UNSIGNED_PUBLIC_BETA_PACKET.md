@@ -60,6 +60,13 @@ Platform claim matrix:
 
 High-Risk Mode remains a defined target. Public copy may describe the target
 and the not-protected boundary, but public High-Risk readiness remains false.
+High-Risk runtime evidence validator is a redacted evidence-format gate; it does
+not open a public High-Risk or reliable delivery claim:
+
+```text
+high_risk_public_claim_allowed=false
+high_risk_ready_claim_allowed=false
+```
 
 Not protected:
 

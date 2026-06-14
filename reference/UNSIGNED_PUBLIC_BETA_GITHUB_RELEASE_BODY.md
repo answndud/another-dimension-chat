@@ -91,6 +91,8 @@ Read `INSTALL_UNSIGNED_MACOS.md` before opening the DMG. The short path is:
 - Reply, retry/cancel, local deletion, and redacted diagnostics copy.
 - Explicit user-triggered advanced onion/Tor attempt paths that remain outside
   the public product claim.
+- High-Risk runtime evidence validator is a redacted evidence-format gate; it
+  does not open public High-Risk or reliable delivery claims.
 
 ## What Does Not Work
 
@@ -124,6 +126,8 @@ This beta does not claim:
 
 - external_delivery_claim=false
 - security_ready_claim=false
+- high_risk_public_claim_allowed=false
+- high_risk_ready_claim_allowed=false
 - secure production messaging
 - audited security
 - production-ready E2EE
