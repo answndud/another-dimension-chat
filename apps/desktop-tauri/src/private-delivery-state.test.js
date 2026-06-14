@@ -357,7 +357,7 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
     "engine_sidecar_status_failure_class=none",
     "engine_sidecar_status_contract_valid=true",
     "engine_sidecar_status_redacted_diagnostics_only=true",
-    "engine_sidecar_status_runtime_mode=contract-only-engine-sidecar",
+    "engine_sidecar_status_runtime_mode=manual-e2ee-engine-sidecar",
     "engine_sidecar_manual_self_test_runtime_checked=true",
     "engine_sidecar_manual_self_test_failure_class=none",
     "engine_sidecar_manual_self_test_contract_valid=true",

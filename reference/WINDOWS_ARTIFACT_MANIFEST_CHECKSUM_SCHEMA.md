@@ -25,8 +25,8 @@ directories.
 
 The default Windows public candidate package command is
 `npm --prefix apps/desktop-tauri run tauri:build:windows-nsis:shell`; it
-selects the NSIS `.exe` bundle class and does not compile the engine sidecar
-or Arti/Tor onion runtime. The generator holds unless
+selects the NSIS `.exe` bundle class and packages the manual-E2EE engine
+sidecar while keeping the Arti/Tor onion runtime disabled. The generator holds unless
 `AD_PREPARE_WINDOWS_PUBLIC_ARTIFACT_METADATA=1` is set and
 `AD_WINDOWS_ARTIFACT` points to an existing artifact under an ignored generated
 artifact directory. The validator checks the artifact bytes against the
@@ -51,9 +51,9 @@ Each Windows artifact manifest uses
   resolver, redacted diagnostics requirement, and no-auto-update flag,
 - artifact basename, SHA-256, size, platform, architecture, bundle target,
   signing status, checksum sidecar, provenance path, generated-relative path
-  class, WebView2 requirement, app-data resolver, encrypted-store requirement,
-  redacted diagnostics requirement, SmartScreen boundary, and signing trust
-  boundary,
+  class, engine sidecar package/runtime/manual-self-test contract, WebView2
+  requirement, app-data resolver, encrypted-store requirement, redacted
+  diagnostics requirement, SmartScreen boundary, and signing trust boundary,
 - same-release asset authority requirement,
 - public non-claims,
 - release upload, release body edit, public artifact readiness, installer
@@ -73,6 +73,8 @@ directory.
 - windows_artifact_requires_same_release_authority=true
 - windows_artifact_checksum_bytes_verified_by_validator=true
 - windows_artifact_package_structure_verified_by_validator=true
+- windows_artifact_engine_sidecar_packaged_verified=true
+- windows_artifact_engine_sidecar_manual_self_test_required=true
 - windows_artifact_provenance_consistency_verified_by_validator=true
 - windows_artifact_provenance_field_consistency_verified_by_validator=true
 - windows_artifact_bundle_target_extension_bound=true

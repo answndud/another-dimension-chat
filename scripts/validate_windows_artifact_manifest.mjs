@@ -46,6 +46,10 @@ const FORBIDDEN_PATTERNS = Object.freeze([
   [/generated_release_artifacts_commit_allowed"\s*:\s*true/i, "generated-artifact-commit-allowed"],
   [/smartscreen_reputation_claim"\s*:\s*true/i, "smartscreen-reputation-claim"],
   [/signing_trust_boundary"\s*:\s*true/i, "signing-trust-boundary"],
+  [/engine_sidecar_raw_path_returned"\s*:\s*true/i, "engine-sidecar-raw-path-returned"],
+  [/engine_sidecar_stdout_returned"\s*:\s*true/i, "engine-sidecar-stdout-returned"],
+  [/engine_sidecar_stderr_returned"\s*:\s*true/i, "engine-sidecar-stderr-returned"],
+  [/engine_sidecar_local_runtime_promoted_to_delivery_proof"\s*:\s*true/i, "engine-sidecar-delivery-proof-claim"],
   [/sensitive communication allowed/i, "sensitive-communication-allowed"],
   [/secure messenger/i, "secure-messenger-claim"],
   [/Briar\/Cwtch-equivalent/i, "briar-cwtch-equivalent-claim"],
@@ -221,6 +225,51 @@ function validateProvenanceFile(file, manifest, artifact, actualSha) {
   if (provenance.generated_release_artifacts_commit_allowed !== false) {
     issues.push(`artifact:${artifact.filename}:provenance-commit-must-stay-false`);
   }
+  issues.push(...validateEngineSidecarContract(`artifact:${artifact.filename}:provenance`, provenance));
+  return issues;
+}
+
+function validateEngineSidecarContract(prefix, value) {
+  const issues = [];
+  if (!value || typeof value !== "object") return [`${prefix}:engine-sidecar-contract-missing`];
+  if (value.engine_sidecar_required !== true) issues.push(`${prefix}:engine-sidecar-required`);
+  if (value.engine_sidecar_packaged !== true) issues.push(`${prefix}:engine-sidecar-packaged`);
+  if (value.engine_sidecar_runtime_mode !== "manual-e2ee-engine-sidecar") {
+    issues.push(`${prefix}:engine-sidecar-runtime-mode-mismatch`);
+  }
+  if (value.engine_sidecar_protocol !== "ad-engine-json-stdio-v1") {
+    issues.push(`${prefix}:engine-sidecar-protocol-mismatch`);
+  }
+  if (value.engine_sidecar_contract_version !== 1) {
+    issues.push(`${prefix}:engine-sidecar-contract-version-mismatch`);
+  }
+  if (value.engine_sidecar_status_command !== "status") {
+    issues.push(`${prefix}:engine-sidecar-status-command-mismatch`);
+  }
+  if (value.engine_sidecar_manual_self_test_command !== "manual-self-test") {
+    issues.push(`${prefix}:engine-sidecar-manual-self-test-command-mismatch`);
+  }
+  if (value.engine_sidecar_manual_self_test_required !== true) {
+    issues.push(`${prefix}:engine-sidecar-manual-self-test-required`);
+  }
+  if (value.engine_sidecar_raw_path_returned !== false) {
+    issues.push(`${prefix}:engine-sidecar-raw-path-must-stay-false`);
+  }
+  if (value.engine_sidecar_stdout_returned !== false) {
+    issues.push(`${prefix}:engine-sidecar-stdout-must-stay-false`);
+  }
+  if (value.engine_sidecar_stderr_returned !== false) {
+    issues.push(`${prefix}:engine-sidecar-stderr-must-stay-false`);
+  }
+  if (value.engine_sidecar_app_launch_network_allowed !== false) {
+    issues.push(`${prefix}:engine-sidecar-app-launch-network-must-stay-false`);
+  }
+  if (value.engine_sidecar_room_open_network_allowed !== false) {
+    issues.push(`${prefix}:engine-sidecar-room-open-network-must-stay-false`);
+  }
+  if (value.engine_sidecar_local_runtime_promoted_to_delivery_proof !== false) {
+    issues.push(`${prefix}:engine-sidecar-delivery-proof-must-stay-false`);
+  }
   return issues;
 }
 
@@ -261,6 +310,7 @@ function validateArtifact(file, manifest, artifact, index) {
   if (artifact.auto_update !== false) issues.push(`${prefix}:auto-update-must-stay-false`);
   if (artifact.smartscreen_reputation_claim !== false) issues.push(`${prefix}:smartscreen-must-stay-false`);
   if (artifact.signing_trust_boundary !== false) issues.push(`${prefix}:signing-boundary-must-stay-false`);
+  issues.push(...validateEngineSidecarContract(prefix, artifact));
   if (manifest.release_class === "stable" && artifact.signing_status === "unsigned-hold") {
     issues.push(`${prefix}:stable-must-not-be-unsigned-hold`);
   }
@@ -318,6 +368,7 @@ function validateManifest(file, { requireCurrentHead, head }) {
   if (manifest.app_data_resolver !== "tauri-app-data") issues.push("app-data-resolver-mismatch");
   if (manifest.redacted_diagnostics_required !== true) issues.push("redacted-diagnostics-required");
   if (manifest.auto_update !== false) issues.push("auto-update-must-stay-false");
+  issues.push(...validateEngineSidecarContract("manifest", manifest));
   if (manifest.same_release_asset_authority_required !== true) issues.push("same-release-authority-required");
   if (manifest.release_upload_authorized !== false) issues.push("release-upload-must-stay-false");
   if (manifest.release_body_edit_authorized !== false) issues.push("release-body-edit-must-stay-false");
@@ -373,6 +424,8 @@ if (failures > 0) {
 console.log(`accepted_windows_artifact_manifests=${files.length}`);
 console.log("windows_artifact_checksum_bytes_verified=true");
 console.log("windows_artifact_package_structure_verified=true");
+console.log("windows_artifact_engine_sidecar_packaged_verified=true");
+console.log("windows_artifact_engine_sidecar_manual_self_test_required=true");
 console.log("windows_artifact_provenance_consistency_verified=true");
 console.log("windows_artifact_manifest_sha_sidecar_verified=true");
 console.log("windows_artifact_basename_path_boundary_verified=true");

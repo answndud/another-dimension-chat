@@ -92,6 +92,7 @@ rejectText("README.md", "Windows production-ready");
 requireText("apps/desktop-tauri/package.json", '"test:windows-boundary"');
 requireText("apps/desktop-tauri/package.json", "verify-windows-local-runtime-boundary.mjs");
 requireText("apps/desktop-tauri/package.json", '"tauri:build:windows-nsis:shell"');
+requireText("apps/desktop-tauri/package.json", "engine:prepare-sidecar:release:manual && node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json --features windows-public-shell");
 requireText("apps/desktop-tauri/package.json", "windows-public-shell");
 requireText("apps/desktop-tauri/package.json", '"engine:prepare-sidecar:release"');
 requireText("apps/desktop-tauri/package.json", '"engine:prepare-sidecar:release:manual"');
@@ -165,7 +166,7 @@ requireText("apps/desktop-tauri/src-tauri/src/main.rs", "engine_sidecar_protocol
 requireText("apps/desktop-tauri/src-tauri/src/main.rs", "engine_sidecar_raw_path_returned: false");
 requireText("apps/desktop-tauri/src-tauri/src/main.rs", "engine_sidecar_stdout_returned: false");
 requireText("apps/desktop-tauri/src-tauri/src/main.rs", "engine_sidecar_stderr_returned: false");
-requireText("apps/desktop-tauri/src-tauri/src/main.rs", "contract-only-engine-sidecar");
+requireText("apps/desktop-tauri/src-tauri/src/main.rs", "manual-e2ee-engine-sidecar");
 
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_app_data_path_review_required=true");
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_path_separator_review_required=true");

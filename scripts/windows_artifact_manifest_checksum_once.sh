@@ -42,6 +42,8 @@ for flag in \
   "windows_artifact_requires_same_release_authority=true" \
   "windows_artifact_checksum_bytes_verified_by_validator=true" \
   "windows_artifact_package_structure_verified_by_validator=true" \
+  "windows_artifact_engine_sidecar_packaged_verified=true" \
+  "windows_artifact_engine_sidecar_manual_self_test_required=true" \
   "windows_artifact_provenance_consistency_verified_by_validator=true" \
   "windows_artifact_provenance_field_consistency_verified_by_validator=true" \
   "windows_artifact_bundle_target_extension_bound=true" \
@@ -65,6 +67,8 @@ must_contain "$VALIDATOR" "windows-public-artifact-manifest-v1"
 must_contain "$VALIDATOR" "windows-public-artifact-provenance-v1"
 must_contain "$VALIDATOR" "windows_artifact_checksum_bytes_verified=true"
 must_contain "$VALIDATOR" "windows_artifact_package_structure_verified=true"
+must_contain "$VALIDATOR" "windows_artifact_engine_sidecar_packaged_verified=true"
+must_contain "$VALIDATOR" "engine-sidecar-manual-self-test-required"
 must_contain "$VALIDATOR" "windows_artifact_manifest_sha_sidecar_verified=true"
 must_contain "$VALIDATOR" "windows_artifact_basename_path_boundary_verified=true"
 must_contain "$VALIDATOR" "invalid-pe-mz-header"
@@ -75,6 +79,7 @@ must_contain "$VALIDATOR" "bundle-target-extension-mismatch"
 must_contain "$GENERATOR" "AD_PREPARE_WINDOWS_PUBLIC_ARTIFACT_METADATA"
 must_contain "$GENERATOR" "AD_WINDOWS_ARTIFACT"
 must_contain "$GENERATOR" "WINDOWS_ARTIFACT_MANIFEST.json.sha256"
+must_contain "$GENERATOR" "engine_sidecar_runtime_mode"
 must_contain "apps/desktop-tauri/package.json" '"tauri:build:windows-nsis:shell"'
 must_contain "apps/desktop-tauri/package.json" 'windows-public-shell'
 must_contain "$EXECUTION" "WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"
@@ -129,6 +134,20 @@ cat >"$tmp_dir/Another Dimension Chat_0.1.0_x64-setup.exe.provenance.json" <<JSO
   "artifact_sha256": "$artifact_sha",
   "release_class": "unsigned-windows-beta",
   "bundle_target": "nsis",
+  "engine_sidecar_required": true,
+  "engine_sidecar_packaged": true,
+  "engine_sidecar_runtime_mode": "manual-e2ee-engine-sidecar",
+  "engine_sidecar_protocol": "ad-engine-json-stdio-v1",
+  "engine_sidecar_contract_version": 1,
+  "engine_sidecar_status_command": "status",
+  "engine_sidecar_manual_self_test_command": "manual-self-test",
+  "engine_sidecar_manual_self_test_required": true,
+  "engine_sidecar_raw_path_returned": false,
+  "engine_sidecar_stdout_returned": false,
+  "engine_sidecar_stderr_returned": false,
+  "engine_sidecar_app_launch_network_allowed": false,
+  "engine_sidecar_room_open_network_allowed": false,
+  "engine_sidecar_local_runtime_promoted_to_delivery_proof": false,
   "signing_status": "unsigned-hold",
   "release_upload_authorized": false,
   "windows_public_artifact_ready": false,
@@ -146,6 +165,20 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
   "manifest_sha256_file": "WINDOWS_ARTIFACT_MANIFEST.json.sha256",
   "default_bundle_target": "nsis",
   "default_artifact_extension": ".exe",
+  "engine_sidecar_required": true,
+  "engine_sidecar_packaged": true,
+  "engine_sidecar_runtime_mode": "manual-e2ee-engine-sidecar",
+  "engine_sidecar_protocol": "ad-engine-json-stdio-v1",
+  "engine_sidecar_contract_version": 1,
+  "engine_sidecar_status_command": "status",
+  "engine_sidecar_manual_self_test_command": "manual-self-test",
+  "engine_sidecar_manual_self_test_required": true,
+  "engine_sidecar_raw_path_returned": false,
+  "engine_sidecar_stdout_returned": false,
+  "engine_sidecar_stderr_returned": false,
+  "engine_sidecar_app_launch_network_allowed": false,
+  "engine_sidecar_room_open_network_allowed": false,
+  "engine_sidecar_local_runtime_promoted_to_delivery_proof": false,
   "webview2_runtime_required": true,
   "app_data_resolver": "tauri-app-data",
   "redacted_diagnostics_required": true,
@@ -174,6 +207,20 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
       "platform": "windows",
       "architecture": "windows-x64",
       "bundle_target": "nsis",
+      "engine_sidecar_required": true,
+      "engine_sidecar_packaged": true,
+      "engine_sidecar_runtime_mode": "manual-e2ee-engine-sidecar",
+      "engine_sidecar_protocol": "ad-engine-json-stdio-v1",
+      "engine_sidecar_contract_version": 1,
+      "engine_sidecar_status_command": "status",
+      "engine_sidecar_manual_self_test_command": "manual-self-test",
+      "engine_sidecar_manual_self_test_required": true,
+      "engine_sidecar_raw_path_returned": false,
+      "engine_sidecar_stdout_returned": false,
+      "engine_sidecar_stderr_returned": false,
+      "engine_sidecar_app_launch_network_allowed": false,
+      "engine_sidecar_room_open_network_allowed": false,
+      "engine_sidecar_local_runtime_promoted_to_delivery_proof": false,
       "signing_status": "unsigned-hold",
       "checksum_file": "Another Dimension Chat_0.1.0_x64-setup.exe.sha256",
       "checksum_sidecar": "Another Dimension Chat_0.1.0_x64-setup.exe.sha256",
@@ -200,6 +247,8 @@ printf '%s\n' "$candidate_output" | grep -Fq "windows_artifact_checksum_bytes_ve
   fail "validator did not report checksum-byte verification"
 printf '%s\n' "$candidate_output" | grep -Fq "windows_artifact_package_structure_verified=true" ||
   fail "validator did not report package structure verification"
+printf '%s\n' "$candidate_output" | grep -Fq "windows_artifact_engine_sidecar_packaged_verified=true" ||
+  fail "validator did not report sidecar package verification"
 printf '%s\n' "$candidate_output" | grep -Fq "windows_public_artifact_ready=false" ||
   fail "validator must not claim Windows artifact readiness"
 printf '%s\n' "$candidate_output" | grep -Fq "status=windows-artifact-manifest-candidate-requires-release-gate" ||
@@ -225,6 +274,20 @@ cat >"$tmp_dir/text-not-pe.exe.provenance.json" <<JSON
   "artifact_sha256": "$text_artifact_sha",
   "release_class": "unsigned-windows-beta",
   "bundle_target": "nsis",
+  "engine_sidecar_required": true,
+  "engine_sidecar_packaged": true,
+  "engine_sidecar_runtime_mode": "manual-e2ee-engine-sidecar",
+  "engine_sidecar_protocol": "ad-engine-json-stdio-v1",
+  "engine_sidecar_contract_version": 1,
+  "engine_sidecar_status_command": "status",
+  "engine_sidecar_manual_self_test_command": "manual-self-test",
+  "engine_sidecar_manual_self_test_required": true,
+  "engine_sidecar_raw_path_returned": false,
+  "engine_sidecar_stdout_returned": false,
+  "engine_sidecar_stderr_returned": false,
+  "engine_sidecar_app_launch_network_allowed": false,
+  "engine_sidecar_room_open_network_allowed": false,
+  "engine_sidecar_local_runtime_promoted_to_delivery_proof": false,
   "signing_status": "unsigned-hold",
   "release_upload_authorized": false,
   "windows_public_artifact_ready": false,
@@ -242,6 +305,20 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_TEXT_EXE.json" <<JSON
   "manifest_sha256_file": "WINDOWS_ARTIFACT_MANIFEST_TEXT_EXE.json.sha256",
   "default_bundle_target": "nsis",
   "default_artifact_extension": ".exe",
+  "engine_sidecar_required": true,
+  "engine_sidecar_packaged": true,
+  "engine_sidecar_runtime_mode": "manual-e2ee-engine-sidecar",
+  "engine_sidecar_protocol": "ad-engine-json-stdio-v1",
+  "engine_sidecar_contract_version": 1,
+  "engine_sidecar_status_command": "status",
+  "engine_sidecar_manual_self_test_command": "manual-self-test",
+  "engine_sidecar_manual_self_test_required": true,
+  "engine_sidecar_raw_path_returned": false,
+  "engine_sidecar_stdout_returned": false,
+  "engine_sidecar_stderr_returned": false,
+  "engine_sidecar_app_launch_network_allowed": false,
+  "engine_sidecar_room_open_network_allowed": false,
+  "engine_sidecar_local_runtime_promoted_to_delivery_proof": false,
   "webview2_runtime_required": true,
   "app_data_resolver": "tauri-app-data",
   "redacted_diagnostics_required": true,
@@ -270,6 +347,20 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_TEXT_EXE.json" <<JSON
       "platform": "windows",
       "architecture": "windows-x64",
       "bundle_target": "nsis",
+      "engine_sidecar_required": true,
+      "engine_sidecar_packaged": true,
+      "engine_sidecar_runtime_mode": "manual-e2ee-engine-sidecar",
+      "engine_sidecar_protocol": "ad-engine-json-stdio-v1",
+      "engine_sidecar_contract_version": 1,
+      "engine_sidecar_status_command": "status",
+      "engine_sidecar_manual_self_test_command": "manual-self-test",
+      "engine_sidecar_manual_self_test_required": true,
+      "engine_sidecar_raw_path_returned": false,
+      "engine_sidecar_stdout_returned": false,
+      "engine_sidecar_stderr_returned": false,
+      "engine_sidecar_app_launch_network_allowed": false,
+      "engine_sidecar_room_open_network_allowed": false,
+      "engine_sidecar_local_runtime_promoted_to_delivery_proof": false,
       "signing_status": "unsigned-hold",
       "checksum_file": "text-not-pe.exe.sha256",
       "checksum_sidecar": "text-not-pe.exe.sha256",
@@ -356,6 +447,8 @@ windows_artifact_manifest_checksum_verifier_ready=true
 windows_artifact_requires_same_release_authority=true
 windows_artifact_checksum_bytes_verified_by_validator=true
 windows_artifact_package_structure_verified_by_validator=true
+windows_artifact_engine_sidecar_packaged_verified=true
+windows_artifact_engine_sidecar_manual_self_test_required=true
 windows_artifact_provenance_consistency_verified_by_validator=true
 windows_artifact_provenance_field_consistency_verified_by_validator=true
 windows_artifact_bundle_target_extension_bound=true

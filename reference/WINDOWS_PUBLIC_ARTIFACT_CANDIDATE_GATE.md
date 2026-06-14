@@ -37,6 +37,18 @@ and does not allow sensitive communication claims.
 - windows_runtime_result_packet_required_for_public_artifact=true
 - windows_manifest_checksum_provenance_separate_from_runtime_result=true
 - runtime_result_external_peer_evidence_separated=true
+- engine_sidecar_required=true
+- engine_sidecar_packaged_required=true
+- engine_sidecar_runtime_mode=manual-e2ee-engine-sidecar
+- engine_sidecar_protocol=ad-engine-json-stdio-v1
+- engine_sidecar_contract_version=1
+- engine_sidecar_status_command=status
+- engine_sidecar_manual_self_test_command=manual-self-test
+- engine_sidecar_manual_self_test_required=true
+- engine_sidecar_raw_path_returned=false
+- engine_sidecar_stdout_returned=false
+- engine_sidecar_stderr_returned=false
+- engine_sidecar_local_runtime_promoted_to_delivery_proof=false
 - real_windows_runtime_result_present=false
 - windows_runtime_result_fixture_promoted_to_public_artifact=false
 - windows_non_windows_runtime_result_promoted=false
@@ -72,5 +84,6 @@ SmartScreen, Microsoft Store reputation, installer success, WebView2 presence,
 and code signing are distribution or integrity aids only. They are not protocol
 security, message confidentiality, peer authentication, high-risk transport,
 or production readiness boundaries. The default Windows public candidate is
-the thin shell slice; the engine sidecar and onion-runtime High-Risk Mode
-remain separate build/runtime evidence paths.
+the thin shell slice packaged with a manual-E2EE engine sidecar. The sidecar
+may satisfy only the redacted local runtime self-test gate; onion-runtime
+High-Risk Mode remains a separate build/runtime evidence path.
