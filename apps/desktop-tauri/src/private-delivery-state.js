@@ -184,6 +184,10 @@ export const PUBLIC_SUPPORT_DIAGNOSTICS_FORBIDDEN_FIELDS = Object.freeze([
   "support-bundles",
 ]);
 
+export const PUBLIC_SUPPORT_DIAGNOSTICS_POLICY_VERSION = "public-intake-v1";
+export const PUBLIC_SUPPORT_DIAGNOSTICS_POLICY_ALIGNMENT =
+  "app-diagnostics#github-issue-template#reference-policy";
+
 export function publicSupportDiagnosticsAllowedFieldsValue() {
   return PUBLIC_SUPPORT_DIAGNOSTICS_ALLOWED_FIELDS.join("#");
 }
@@ -966,6 +970,9 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     "Another Dimension Chat public support diagnostics",
     "diagnostic_version=2",
     "diagnostic_scope=public-support",
+    `public_intake_policy_version=${PUBLIC_SUPPORT_DIAGNOSTICS_POLICY_VERSION}`,
+    `public_intake_policy_alignment=${PUBLIC_SUPPORT_DIAGNOSTICS_POLICY_ALIGNMENT}`,
+    "public_intake_policy_fields_aligned=true",
     "payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only",
     "diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only",
     `allowed_public_intake_fields=${publicSupportDiagnosticsAllowedFieldsValue()}`,

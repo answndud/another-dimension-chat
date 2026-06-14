@@ -25,6 +25,14 @@ Public reports may include only:
 - desktop local-private-flow blocker summary
 - whether app-launch network remained false
 
+Canonical app field names:
+
+```text
+allowed_public_intake_fields=app-status#app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network#release-class-readiness#high-risk-runtime-evidence-source#high-risk-runtime-evidence-accepted#high-risk-runtime-primary-blocker#high-risk-runtime-failure-class#engine-sidecar-status-failure-class#engine-sidecar-manual-self-test-failure-class#engine-sidecar-redacted-runtime-status
+forbidden_public_intake_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles
+public_intake_policy_alignment=app-diagnostics#github-issue-template#reference-policy
+```
+
 ## Desktop Real-User Test Preparation Boundary
 
 Tester-facing reports must use redacted public support diagnostics, failure
@@ -33,8 +41,9 @@ class, and recovery next action only.
 Allowed public fields are app status, app version, build channel, build commit,
 platform, checksum result, public diagnostics, failure class, recovery next
 action, desktop local-private-flow acceptance status, desktop local-private-flow
-blocker summary, whether app-launch network stayed false, and release class
-readiness.
+blocker summary, whether app-launch network stayed false, release class
+readiness, redacted High-Risk runtime evidence source/accepted/blocker/failure
+class, and redacted engine sidecar status/self-test failure classes.
 
 Forbidden fields include raw logs, crash dumps, screenshots, onion endpoints,
 invite codes, pairing/envelope/endpoint payloads, safety phrases, profile names,
