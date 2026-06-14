@@ -1,7 +1,7 @@
 # macOS Fresh Install Rehearsal Result
 
-Status: hold for manual GUI follow-through; source install authority passed.
-Date: 2026-06-13.
+Status: hold for manual GUI follow-through; same-release download and checksum passed.
+Date: 2026-06-14.
 
 Non-claims retained: unsigned experimental public beta, sensitive communication prohibited, not audited, not production-ready.
 
@@ -19,6 +19,9 @@ keys, key material, screenshots of private room data, or local app data.
 - release_tag=v0.1.0-beta-onion-unsigned
 - build_commit=e724bd39
 - platform=macos-aarch64
+- release_download_source=github-release
+- same_release_download_result=pass
+- same_release_checksum_result=pass
 - checksum_result: OK
 - dmg_mount_result=pass
 - manual_privacy_security_allow_result=hold
@@ -55,6 +58,9 @@ provenance_sha256=6a872d104b47144d3e15b60c79be71e82d2a5973898c9b7198aba270dd9cde
 release_tag=v0.1.0-beta-onion-unsigned
 build_commit=e724bd39
 platform=macos-aarch64
+release_download_source=github-release
+same_release_download_result=pass
+same_release_checksum_result=pass
 checksum_result=OK
 dmg_mount_result=pass
 manual_privacy_security_allow_result=hold

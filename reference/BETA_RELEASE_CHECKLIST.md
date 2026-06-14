@@ -180,6 +180,9 @@ must use these public-safe fields:
 - `release_tag=v0.1.0-beta-onion-unsigned`
 - `build_commit=e724bd39`
 - `platform=macos-aarch64`
+- `release_download_source=github-release`
+- `same_release_download_result=pass`
+- `same_release_checksum_result=pass`
 - `checksum_result=OK`
 - `dmg_mount_result=pass`
 - `manual_privacy_security_allow_result=hold`

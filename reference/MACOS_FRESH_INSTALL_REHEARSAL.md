@@ -22,6 +22,9 @@ Record only:
 - artifact SHA-256
 - provenance SHA-256
 - build commit
+- release_download_source: github-release
+- same_release_download_result: pass, fail, or not_run
+- same_release_checksum_result: pass, fail, or not_run
 - checksum_result: OK, mismatch, or not_run
 - dmg_mount_result: pass, hold, fail, or not_run
 - manual_privacy_security_allow_result: pass, hold, fail, or not_run
@@ -57,6 +60,9 @@ provenance_sha256=6a872d104b47144d3e15b60c79be71e82d2a5973898c9b7198aba270dd9cde
 release_tag=v0.1.0-beta-onion-unsigned
 build_commit=e724bd39
 platform=macos-aarch64
+release_download_source=github-release
+same_release_download_result=pass
+same_release_checksum_result=pass
 checksum_result=OK
 dmg_mount_result=pass
 manual_privacy_security_allow_result=hold
