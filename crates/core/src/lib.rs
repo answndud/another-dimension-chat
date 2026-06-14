@@ -3316,6 +3316,36 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionLocalStorageRuntimeEvidenceSummary {
+        passphrase_first_unlock_required: bool,
+        os_keystore_only_unlock_rejected: bool,
+        locked_state_no_plaintext_access: bool,
+        locked_state_no_key_material_access: bool,
+        locked_state_no_runtime_messaging: bool,
+        rollback_marker_status: &'static str,
+        rollback_marker_present: bool,
+        rollback_detection_ready: bool,
+        rollback_suspicion_detected: bool,
+        rollback_resume_blocked: bool,
+        rollback_prevention_claimed: bool,
+        local_delete_confirmation_required: bool,
+        local_delete_confirmation: &'static str,
+        local_delete_scope: &'static str,
+        local_delete_redacted_result: bool,
+        backup_exclusion_policy_decided: bool,
+        backup_exclusion_verified: bool,
+        backup_exclusion_status: &'static str,
+        cloud_backup_or_sync_enabled: bool,
+        backup_recovery_claimed: bool,
+        app_key_wrapping_ready: bool,
+        secure_deletion_claim_allowed: bool,
+        production_key_management_ready: bool,
+        local_at_rest_mitigation_ready: bool,
+        compromised_endpoint_protected: bool,
+        boundary: &'static str,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionMobileBackupExclusionVerificationBoundarySummary {
         platforms: &'static [&'static str],
         required_checks: &'static [&'static str],
@@ -5753,6 +5783,112 @@ pub mod production {
 
         pub fn security_ready_claimed(self) -> bool {
             self.security_ready_claimed
+        }
+    }
+
+    impl ProductionLocalStorageRuntimeEvidenceSummary {
+        pub fn passphrase_first_unlock_required(self) -> bool {
+            self.passphrase_first_unlock_required
+        }
+
+        pub fn os_keystore_only_unlock_rejected(self) -> bool {
+            self.os_keystore_only_unlock_rejected
+        }
+
+        pub fn locked_state_no_plaintext_access(self) -> bool {
+            self.locked_state_no_plaintext_access
+        }
+
+        pub fn locked_state_no_key_material_access(self) -> bool {
+            self.locked_state_no_key_material_access
+        }
+
+        pub fn locked_state_no_runtime_messaging(self) -> bool {
+            self.locked_state_no_runtime_messaging
+        }
+
+        pub fn rollback_marker_status(self) -> &'static str {
+            self.rollback_marker_status
+        }
+
+        pub fn rollback_marker_present(self) -> bool {
+            self.rollback_marker_present
+        }
+
+        pub fn rollback_detection_ready(self) -> bool {
+            self.rollback_detection_ready
+        }
+
+        pub fn rollback_suspicion_detected(self) -> bool {
+            self.rollback_suspicion_detected
+        }
+
+        pub fn rollback_resume_blocked(self) -> bool {
+            self.rollback_resume_blocked
+        }
+
+        pub fn rollback_prevention_claimed(self) -> bool {
+            self.rollback_prevention_claimed
+        }
+
+        pub fn local_delete_confirmation_required(self) -> bool {
+            self.local_delete_confirmation_required
+        }
+
+        pub fn local_delete_confirmation(self) -> &'static str {
+            self.local_delete_confirmation
+        }
+
+        pub fn local_delete_scope(self) -> &'static str {
+            self.local_delete_scope
+        }
+
+        pub fn local_delete_redacted_result(self) -> bool {
+            self.local_delete_redacted_result
+        }
+
+        pub fn backup_exclusion_policy_decided(self) -> bool {
+            self.backup_exclusion_policy_decided
+        }
+
+        pub fn backup_exclusion_verified(self) -> bool {
+            self.backup_exclusion_verified
+        }
+
+        pub fn backup_exclusion_status(self) -> &'static str {
+            self.backup_exclusion_status
+        }
+
+        pub fn cloud_backup_or_sync_enabled(self) -> bool {
+            self.cloud_backup_or_sync_enabled
+        }
+
+        pub fn backup_recovery_claimed(self) -> bool {
+            self.backup_recovery_claimed
+        }
+
+        pub fn app_key_wrapping_ready(self) -> bool {
+            self.app_key_wrapping_ready
+        }
+
+        pub fn secure_deletion_claim_allowed(self) -> bool {
+            self.secure_deletion_claim_allowed
+        }
+
+        pub fn production_key_management_ready(self) -> bool {
+            self.production_key_management_ready
+        }
+
+        pub fn local_at_rest_mitigation_ready(self) -> bool {
+            self.local_at_rest_mitigation_ready
+        }
+
+        pub fn compromised_endpoint_protected(self) -> bool {
+            self.compromised_endpoint_protected
+        }
+
+        pub fn boundary(self) -> &'static str {
+            self.boundary
         }
     }
 
@@ -18454,6 +18590,96 @@ pub mod production {
         }
     }
 
+    pub fn production_local_storage_runtime_evidence_summary(
+    ) -> ProductionLocalStorageRuntimeEvidenceSummary {
+        let key_rollback = production_key_rollback_boundary_summary();
+        let hardening = production_storage_key_management_hardening_summary();
+        let backup = production_backup_migration_boundary_summary();
+        let locked = production_product_unlock_locked_status_snapshot("locked", 60, 0);
+        let marker = production_product_unlock_key_policy_snapshot_from_markers(
+            true, true, true, true, true, false,
+        );
+        let delete = production_local_destructive_action_decision(
+            ProductionLocalDestructiveAction::FullLocalWipe,
+        );
+        let locked_state_no_plaintext_access = !locked.storage_opened()
+            && !locked.store_path_returned()
+            && !locked.passphrase_retained()
+            && !locked.raw_storage_error_exposed()
+            && !locked.path_or_identifier_exposed();
+        let locked_state_no_key_material_access =
+            !locked.key_material_exposed() && !hardening.key_material_exposed();
+        let locked_state_no_runtime_messaging = !locked.runtime_messaging_enabled()
+            && !session_lock_lifecycle_status_mirror().runtime_messaging_enabled();
+        let local_delete_confirmation_required = delete.confirmation() == "WIPE LOCAL DATA"
+            && delete.removes_owned_app_data()
+            && delete.locks_unlock_state()
+            && delete.redacted_result()
+            && !delete.network_io_attempted();
+        let backup_exclusion_status = if backup.backup_exclusion_policy_decided()
+            && backup.backup_exclusion_verification_required()
+            && !backup.backup_exclusion_verified_by_core_status()
+        {
+            "policy-decided-verification-required"
+        } else if backup.backup_exclusion_verified_by_core_status() {
+            "verified"
+        } else {
+            "missing"
+        };
+        let local_at_rest_mitigation_ready = key_rollback.boundary_closed()
+            && hardening.boundary_closed()
+            && backup.boundary_closed()
+            && key_rollback.passphrase_first_required()
+            && marker.passphrase_first_unlock_required()
+            && marker.os_keystore_only_unlock_rejected()
+            && locked_state_no_plaintext_access
+            && locked_state_no_key_material_access
+            && locked_state_no_runtime_messaging
+            && marker.rollback_detection_ready()
+            && !marker.rollback_suspicion_detected()
+            && !marker.rollback_resume_blocked()
+            && local_delete_confirmation_required
+            && backup_exclusion_status == "policy-decided-verification-required"
+            && !backup.cloud_backup_or_sync_enabled()
+            && !backup.backup_recovery_claimed()
+            && !key_rollback.rollback_prevention_claimed()
+            && !key_rollback.secure_deletion_claim_allowed()
+            && !key_rollback.app_key_wrapping_ready();
+
+        ProductionLocalStorageRuntimeEvidenceSummary {
+            passphrase_first_unlock_required: key_rollback.passphrase_first_required()
+                && marker.passphrase_first_unlock_required(),
+            os_keystore_only_unlock_rejected: key_rollback.os_keystore_only_rejected()
+                && marker.os_keystore_only_unlock_rejected(),
+            locked_state_no_plaintext_access,
+            locked_state_no_key_material_access,
+            locked_state_no_runtime_messaging,
+            rollback_marker_status: marker.key_policy_status(),
+            rollback_marker_present: marker.rollback_marker_present(),
+            rollback_detection_ready: marker.rollback_detection_ready(),
+            rollback_suspicion_detected: marker.rollback_suspicion_detected(),
+            rollback_resume_blocked: marker.rollback_resume_blocked(),
+            rollback_prevention_claimed: marker.rollback_prevention_claimed()
+                || key_rollback.rollback_prevention_claimed(),
+            local_delete_confirmation_required,
+            local_delete_confirmation: delete.confirmation(),
+            local_delete_scope: delete.scope(),
+            local_delete_redacted_result: delete.redacted_result(),
+            backup_exclusion_policy_decided: backup.backup_exclusion_policy_decided(),
+            backup_exclusion_verified: backup.backup_exclusion_verified_by_core_status(),
+            backup_exclusion_status,
+            cloud_backup_or_sync_enabled: backup.cloud_backup_or_sync_enabled(),
+            backup_recovery_claimed: backup.backup_recovery_claimed(),
+            app_key_wrapping_ready: key_rollback.app_key_wrapping_ready(),
+            secure_deletion_claim_allowed: key_rollback.secure_deletion_claim_allowed(),
+            production_key_management_ready: hardening.production_key_management_ready(),
+            local_at_rest_mitigation_ready,
+            compromised_endpoint_protected: false,
+            boundary:
+                "passphrase-first-locked-state-rollback-marker-local-delete-backup-exclusion-v1",
+        }
+    }
+
     pub fn production_mobile_backup_exclusion_verification_boundary_summary(
     ) -> ProductionMobileBackupExclusionVerificationBoundarySummary {
         let android = production_android_shell_candidate_summary();
@@ -28415,6 +28641,51 @@ pub mod production {
             assert!(!summary.backup_recovery_claimed());
             assert!(!summary.rollback_prevention_claimed());
             assert!(!summary.secure_media_deletion_claimed());
+        }
+
+        #[test]
+        fn production_local_storage_key_runtime_evidence_summary_links_unlock_delete_rollback_and_backup(
+        ) {
+            let summary = production_local_storage_runtime_evidence_summary();
+
+            assert!(summary.passphrase_first_unlock_required());
+            assert!(summary.os_keystore_only_unlock_rejected());
+            assert!(summary.locked_state_no_plaintext_access());
+            assert!(summary.locked_state_no_key_material_access());
+            assert!(summary.locked_state_no_runtime_messaging());
+            assert_eq!(
+                summary.rollback_marker_status(),
+                "passphrase-first-runtime-unlock-with-marker-based-rollback-detection"
+            );
+            assert!(summary.rollback_marker_present());
+            assert!(summary.rollback_detection_ready());
+            assert!(!summary.rollback_suspicion_detected());
+            assert!(!summary.rollback_resume_blocked());
+            assert!(!summary.rollback_prevention_claimed());
+            assert!(summary.local_delete_confirmation_required());
+            assert_eq!(summary.local_delete_confirmation(), "WIPE LOCAL DATA");
+            assert_eq!(
+                summary.local_delete_scope(),
+                "owned-app-data-on-this-device"
+            );
+            assert!(summary.local_delete_redacted_result());
+            assert!(summary.backup_exclusion_policy_decided());
+            assert!(!summary.backup_exclusion_verified());
+            assert_eq!(
+                summary.backup_exclusion_status(),
+                "policy-decided-verification-required"
+            );
+            assert!(!summary.cloud_backup_or_sync_enabled());
+            assert!(!summary.backup_recovery_claimed());
+            assert!(!summary.app_key_wrapping_ready());
+            assert!(!summary.secure_deletion_claim_allowed());
+            assert!(summary.production_key_management_ready());
+            assert!(summary.local_at_rest_mitigation_ready());
+            assert!(!summary.compromised_endpoint_protected());
+            assert_eq!(
+                summary.boundary(),
+                "passphrase-first-locked-state-rollback-marker-local-delete-backup-exclusion-v1"
+            );
         }
 
         #[test]

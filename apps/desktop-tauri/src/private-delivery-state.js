@@ -688,6 +688,7 @@ export function highRiskTransportMetadataBoundaryStatus() {
 
 export function localManualE2eeRuntimeBoundaryStatus() {
   const transportMetadata = highRiskTransportMetadataBoundaryStatus();
+  const localStorage = localStorageRuntimeEvidenceView();
   return {
     boundary: "noise-xx-session-key-replay-reviewed",
     localManualE2eeRuntimeReady: true,
@@ -706,12 +707,27 @@ export function localManualE2eeRuntimeBoundaryStatus() {
     networkIoAttempted: false,
     productionE2eeReady: false,
     productionKeyManagementReady: true,
+    localStorageRuntimeEvidenceReady: localStorage.localAtRestMitigationReady,
+    localAtRestMitigationReady: localStorage.localAtRestMitigationReady,
+    localStorageRuntimeEvidenceBoundary: localStorage.boundary,
+    lockedStateNoPlaintextAccess: localStorage.lockedStateNoPlaintextAccess,
+    lockedStateNoKeyMaterialAccess: localStorage.lockedStateNoKeyMaterialAccess,
+    lockedStateNoRuntimeMessaging: localStorage.lockedStateNoRuntimeMessaging,
     supportedLocalKeyLifecycleReady: true,
     supportedLocalKeyLifecycleScope: "passphrase-first-sqlcipher-local-profile-store-only",
     supportedRollbackDetectionReady: true,
     supportedRollbackDetectionScope: "marker-only-detection-user-visible-reset-required",
+    rollbackMarkerStatus: localStorage.rollbackMarkerStatus,
+    rollbackMarkerPresent: localStorage.rollbackMarkerPresent,
+    rollbackSuspicionDetected: localStorage.rollbackSuspicionDetected,
+    rollbackResumeBlocked: localStorage.rollbackResumeBlocked,
     supportedLocalDeletionScopeReady: true,
     supportedLocalDeletionScope: "local-logical-delete-and-owned-app-data-wipe-only",
+    localDeleteConfirmationRequired: localStorage.localDeleteConfirmationRequired,
+    localDeleteConfirmation: localStorage.localDeleteConfirmation,
+    backupExclusionPolicyDecided: localStorage.backupExclusionPolicyDecided,
+    backupExclusionVerified: localStorage.backupExclusionVerified,
+    backupExclusionStatus: localStorage.backupExclusionStatus,
     supportedDefaultTransportReady: true,
     supportedDefaultTransportScope: "local-manual-courier-envelope-exchange-only",
     supportedOwnerObservedUsabilityRehearsalReady: true,
@@ -728,6 +744,118 @@ export function localManualE2eeRuntimeBoundaryStatus() {
     highRiskTransportMetadataBoundary: transportMetadata.boundary,
     reliableExternalDeliveryClaimAllowed: false,
     securityReadyClaimed: false,
+  };
+}
+
+export function localStorageRuntimeEvidenceView(input = {}) {
+  const passphraseFirstUnlockRequired = input.passphraseFirstUnlockRequired !== false;
+  const osKeystoreOnlyUnlockRejected = input.osKeystoreOnlyUnlockRejected !== false;
+  const lockedStateNoPlaintextAccess = input.lockedStateNoPlaintextAccess !== false;
+  const lockedStateNoKeyMaterialAccess = input.lockedStateNoKeyMaterialAccess !== false;
+  const lockedStateNoRuntimeMessaging = input.lockedStateNoRuntimeMessaging !== false;
+  const rollbackMarkerStatus = fieldTestReportValue(
+    input.rollbackMarkerStatus,
+    "passphrase-first-runtime-unlock-with-marker-based-rollback-detection",
+  );
+  const rollbackMarkerPresent = input.rollbackMarkerPresent !== false;
+  const rollbackDetectionReady = input.rollbackDetectionReady !== false;
+  const rollbackSuspicionDetected = input.rollbackSuspicionDetected === true;
+  const rollbackResumeBlocked = input.rollbackResumeBlocked === true || rollbackSuspicionDetected;
+  const rollbackPreventionClaimed = input.rollbackPreventionClaimed === true;
+  const localDeleteConfirmationRequired = input.localDeleteConfirmationRequired !== false;
+  const localDeleteConfirmation = fieldTestReportValue(input.localDeleteConfirmation, "WIPE_LOCAL_DATA")
+    .replace(/\s+/g, "_");
+  const localDeleteScope = fieldTestReportValue(input.localDeleteScope, "owned-app-data-on-this-device");
+  const localDeleteRedactedResult = input.localDeleteRedactedResult !== false;
+  const backupExclusionPolicyDecided = input.backupExclusionPolicyDecided !== false;
+  const backupExclusionVerified = input.backupExclusionVerified === true;
+  const backupExclusionStatus = backupExclusionVerified
+    ? "verified"
+    : backupExclusionPolicyDecided
+      ? "policy-decided-verification-required"
+      : "missing";
+  const cloudBackupOrSyncEnabled = input.cloudBackupOrSyncEnabled === true;
+  const backupRecoveryClaimed = input.backupRecoveryClaimed === true;
+  const appKeyWrappingReady = input.appKeyWrappingReady === true;
+  const secureDeletionClaimAllowed = input.secureDeletionClaimAllowed === true;
+  const productionKeyManagementReady = input.productionKeyManagementReady !== false;
+  const compromisedEndpointProtected = false;
+  const localAtRestMitigationReady =
+    passphraseFirstUnlockRequired &&
+    osKeystoreOnlyUnlockRejected &&
+    lockedStateNoPlaintextAccess &&
+    lockedStateNoKeyMaterialAccess &&
+    lockedStateNoRuntimeMessaging &&
+    rollbackMarkerPresent &&
+    rollbackDetectionReady &&
+    !rollbackSuspicionDetected &&
+    !rollbackResumeBlocked &&
+    localDeleteConfirmationRequired &&
+    backupExclusionPolicyDecided &&
+    backupExclusionStatus === "policy-decided-verification-required" &&
+    !cloudBackupOrSyncEnabled &&
+    !backupRecoveryClaimed &&
+    !rollbackPreventionClaimed &&
+    !appKeyWrappingReady &&
+    !secureDeletionClaimAllowed &&
+    productionKeyManagementReady;
+  const boundary = "passphrase-first-locked-state-rollback-marker-local-delete-backup-exclusion-v1";
+  const summary = [
+    `local_storage_runtime_evidence_boundary=${boundary}`,
+    `local_at_rest_mitigation_ready=${localAtRestMitigationReady}`,
+    `passphrase_first_unlock_required=${passphraseFirstUnlockRequired}`,
+    `os_keystore_only_unlock_rejected=${osKeystoreOnlyUnlockRejected}`,
+    `locked_state_no_plaintext_access=${lockedStateNoPlaintextAccess}`,
+    `locked_state_no_key_material_access=${lockedStateNoKeyMaterialAccess}`,
+    `locked_state_no_runtime_messaging=${lockedStateNoRuntimeMessaging}`,
+    `rollback_marker_status=${rollbackMarkerStatus}`,
+    `rollback_marker_present=${rollbackMarkerPresent}`,
+    `rollback_detection_ready=${rollbackDetectionReady}`,
+    `rollback_suspicion_detected=${rollbackSuspicionDetected}`,
+    `rollback_resume_blocked=${rollbackResumeBlocked}`,
+    `rollback_prevention_claimed=${rollbackPreventionClaimed}`,
+    `local_delete_confirmation_required=${localDeleteConfirmationRequired}`,
+    `local_delete_confirmation=${localDeleteConfirmation}`,
+    `local_delete_scope=${localDeleteScope}`,
+    `local_delete_redacted_result=${localDeleteRedactedResult}`,
+    `backup_exclusion_policy_decided=${backupExclusionPolicyDecided}`,
+    `backup_exclusion_verified=${backupExclusionVerified}`,
+    `backup_exclusion_status=${backupExclusionStatus}`,
+    `cloud_backup_or_sync_enabled=${cloudBackupOrSyncEnabled}`,
+    `backup_recovery_claimed=${backupRecoveryClaimed}`,
+    `app_key_wrapping_ready=${appKeyWrappingReady}`,
+    `secure_deletion_claim_allowed=${secureDeletionClaimAllowed}`,
+    `production_key_management_ready=${productionKeyManagementReady}`,
+    `compromised_endpoint_protected=${compromisedEndpointProtected}`,
+  ].join(" ");
+  return {
+    boundary,
+    summary,
+    localAtRestMitigationReady,
+    passphraseFirstUnlockRequired,
+    osKeystoreOnlyUnlockRejected,
+    lockedStateNoPlaintextAccess,
+    lockedStateNoKeyMaterialAccess,
+    lockedStateNoRuntimeMessaging,
+    rollbackMarkerStatus,
+    rollbackMarkerPresent,
+    rollbackDetectionReady,
+    rollbackSuspicionDetected,
+    rollbackResumeBlocked,
+    rollbackPreventionClaimed,
+    localDeleteConfirmationRequired,
+    localDeleteConfirmation,
+    localDeleteScope,
+    localDeleteRedactedResult,
+    backupExclusionPolicyDecided,
+    backupExclusionVerified,
+    backupExclusionStatus,
+    cloudBackupOrSyncEnabled,
+    backupRecoveryClaimed,
+    appKeyWrappingReady,
+    secureDeletionClaimAllowed,
+    productionKeyManagementReady,
+    compromisedEndpointProtected,
   };
 }
 
@@ -815,12 +943,27 @@ export function desktopFirstCompletionStatus(report) {
     productionMessagingReady: false,
     productionE2eeReady: localE2eeBoundary.productionE2eeReady,
     productionKeyManagementReady: localE2eeBoundary.productionKeyManagementReady,
+    localStorageRuntimeEvidenceReady: localE2eeBoundary.localStorageRuntimeEvidenceReady,
+    localAtRestMitigationReady: localE2eeBoundary.localAtRestMitigationReady,
+    localStorageRuntimeEvidenceBoundary: localE2eeBoundary.localStorageRuntimeEvidenceBoundary,
+    lockedStateNoPlaintextAccess: localE2eeBoundary.lockedStateNoPlaintextAccess,
+    lockedStateNoKeyMaterialAccess: localE2eeBoundary.lockedStateNoKeyMaterialAccess,
+    lockedStateNoRuntimeMessaging: localE2eeBoundary.lockedStateNoRuntimeMessaging,
     supportedLocalKeyLifecycleReady: localE2eeBoundary.supportedLocalKeyLifecycleReady,
     supportedLocalKeyLifecycleScope: localE2eeBoundary.supportedLocalKeyLifecycleScope,
     supportedRollbackDetectionReady: localE2eeBoundary.supportedRollbackDetectionReady,
     supportedRollbackDetectionScope: localE2eeBoundary.supportedRollbackDetectionScope,
+    rollbackMarkerStatus: localE2eeBoundary.rollbackMarkerStatus,
+    rollbackMarkerPresent: localE2eeBoundary.rollbackMarkerPresent,
+    rollbackSuspicionDetected: localE2eeBoundary.rollbackSuspicionDetected,
+    rollbackResumeBlocked: localE2eeBoundary.rollbackResumeBlocked,
     supportedLocalDeletionScopeReady: localE2eeBoundary.supportedLocalDeletionScopeReady,
     supportedLocalDeletionScope: localE2eeBoundary.supportedLocalDeletionScope,
+    localDeleteConfirmationRequired: localE2eeBoundary.localDeleteConfirmationRequired,
+    localDeleteConfirmation: localE2eeBoundary.localDeleteConfirmation,
+    backupExclusionPolicyDecided: localE2eeBoundary.backupExclusionPolicyDecided,
+    backupExclusionVerified: localE2eeBoundary.backupExclusionVerified,
+    backupExclusionStatus: localE2eeBoundary.backupExclusionStatus,
     supportedDefaultTransportReady: localE2eeBoundary.supportedDefaultTransportReady,
     supportedDefaultTransportScope: localE2eeBoundary.supportedDefaultTransportScope,
     supportedOwnerObservedUsabilityRehearsalReady:
@@ -1006,15 +1149,33 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     `explicit_envelope_export_import_ready=true`,
     `production_e2ee_ready=${desktopCompletion.productionE2eeReady === true}`,
     `production_key_management_ready=${desktopCompletion.productionKeyManagementReady === true}`,
+    `local_storage_runtime_evidence_ready=${desktopCompletion.localStorageRuntimeEvidenceReady === true}`,
+    `local_storage_runtime_evidence_boundary=${fieldTestReportValue(desktopCompletion.localStorageRuntimeEvidenceBoundary, "unknown")}`,
+    `local_at_rest_mitigation_ready=${desktopCompletion.localAtRestMitigationReady === true}`,
+    `locked_state_no_plaintext_access=${desktopCompletion.lockedStateNoPlaintextAccess === true}`,
+    `locked_state_no_key_material_access=${desktopCompletion.lockedStateNoKeyMaterialAccess === true}`,
+    `locked_state_no_runtime_messaging=${desktopCompletion.lockedStateNoRuntimeMessaging === true}`,
     `supported_local_key_lifecycle_ready=${desktopCompletion.supportedLocalKeyLifecycleReady === true}`,
     `supported_local_key_lifecycle_scope=${fieldTestReportValue(desktopCompletion.supportedLocalKeyLifecycleScope, "unknown")}`,
     `supported_rollback_detection_ready=${desktopCompletion.supportedRollbackDetectionReady === true}`,
     `supported_rollback_detection_scope=${fieldTestReportValue(desktopCompletion.supportedRollbackDetectionScope, "unknown")}`,
+    `rollback_marker_status=${fieldTestReportValue(desktopCompletion.rollbackMarkerStatus, "unknown")}`,
+    `rollback_marker_present=${desktopCompletion.rollbackMarkerPresent === true}`,
+    `rollback_suspicion_detected=${desktopCompletion.rollbackSuspicionDetected === true}`,
+    `rollback_resume_blocked=${desktopCompletion.rollbackResumeBlocked === true}`,
     `supported_local_deletion_scope_ready=${desktopCompletion.supportedLocalDeletionScopeReady === true}`,
     `supported_local_deletion_scope=${fieldTestReportValue(desktopCompletion.supportedLocalDeletionScope, "unknown")}`,
+    `local_delete_confirmation_required=${desktopCompletion.localDeleteConfirmationRequired === true}`,
+    `local_delete_confirmation=${fieldTestReportValue(desktopCompletion.localDeleteConfirmation, "unknown")}`,
+    `backup_exclusion_policy_decided=${desktopCompletion.backupExclusionPolicyDecided === true}`,
+    `backup_exclusion_verified=${desktopCompletion.backupExclusionVerified === true}`,
+    `backup_exclusion_status=${fieldTestReportValue(desktopCompletion.backupExclusionStatus, "unknown")}`,
     `app_key_wrapping_ready=${desktopCompletion.appKeyWrappingReady === true}`,
+    `cloud_backup_or_sync_enabled=false`,
+    `backup_recovery_claimed=false`,
     `rollback_prevention_claimed=false`,
     `secure_deletion_claim_allowed=${desktopCompletion.secureDeletionClaimAllowed === true}`,
+    `compromised_endpoint_protected=false`,
     `desktop_acceptance_external_delivery_claim=false`,
     `desktop_acceptance_production_claim=false`,
     `desktop_acceptance_sensitive_use_claim=false`,
