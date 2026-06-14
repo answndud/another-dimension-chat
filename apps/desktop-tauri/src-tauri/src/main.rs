@@ -5,6 +5,18 @@ compile_error!("public-shell must not be built with legacy-embedded-runtime");
 use tauri::Manager;
 
 #[cfg(feature = "public-shell")]
+const ENGINE_SIDECAR_CONTRACT_COMMANDS: [&str; 8] = [
+    "profile-status",
+    "profile-unlock",
+    "pairing-export",
+    "pairing-import",
+    "safety-preview",
+    "envelope-export",
+    "envelope-import",
+    "redacted-support-diagnostics",
+];
+
+#[cfg(feature = "public-shell")]
 fn main() {
     run_windows_public_shell();
 }
@@ -176,6 +188,83 @@ struct EngineManualSelfTestProbe {
     endpoint_returned: bool,
     key_material_exposed: bool,
     passphrase_exposed: bool,
+    production_ready_claim: bool,
+    high_risk_claim: bool,
+    sensitive_communication_allowed: bool,
+    stdout_returned: bool,
+    stderr_returned: bool,
+    sidecar_path_returned: bool,
+}
+
+#[cfg(feature = "public-shell")]
+#[derive(serde::Deserialize)]
+struct EngineCommandContractPayload {
+    schema_version: String,
+    sidecar_protocol: String,
+    contract_version: u16,
+    command: String,
+    runtime_mode: String,
+    status: String,
+    failure_class: String,
+    recovery_action: String,
+    input_schema: String,
+    output_schema: String,
+    required_fields: Vec<String>,
+    missing_required_fields: Vec<String>,
+    manual_e2ee_runtime_available: bool,
+    storage_runtime_available: bool,
+    runtime_action_performed: bool,
+    state_mutated: bool,
+    artifact_written: bool,
+    raw_local_path_returned: bool,
+    raw_payload_returned: bool,
+    plaintext_returned: bool,
+    ciphertext_returned: bool,
+    invite_code_returned: bool,
+    endpoint_returned: bool,
+    key_material_exposed: bool,
+    passphrase_exposed: bool,
+    app_launch_network_allowed: bool,
+    room_open_network_allowed: bool,
+    production_ready_claim: bool,
+    high_risk_claim: bool,
+    sensitive_communication_allowed: bool,
+}
+
+#[cfg(feature = "public-shell")]
+#[derive(serde::Serialize)]
+struct EngineCommandContractProbe {
+    command: String,
+    attempted: bool,
+    engine_sidecar_present: bool,
+    exit_success: bool,
+    failure_class: String,
+    recovery_action: String,
+    schema_valid: bool,
+    protocol_valid: bool,
+    contract_version_valid: bool,
+    command_valid: bool,
+    input_schema_valid: bool,
+    output_schema_valid: bool,
+    runtime_mode: String,
+    status: String,
+    required_fields: Vec<String>,
+    missing_required_fields: Vec<String>,
+    manual_e2ee_runtime_available: bool,
+    storage_runtime_available: bool,
+    runtime_action_performed: bool,
+    state_mutated: bool,
+    artifact_written: bool,
+    raw_local_path_returned: bool,
+    raw_payload_returned: bool,
+    plaintext_returned: bool,
+    ciphertext_returned: bool,
+    invite_code_returned: bool,
+    endpoint_returned: bool,
+    key_material_exposed: bool,
+    passphrase_exposed: bool,
+    app_launch_network_allowed: bool,
+    room_open_network_allowed: bool,
     production_ready_claim: bool,
     high_risk_claim: bool,
     sensitive_communication_allowed: bool,
@@ -382,6 +471,103 @@ fn engine_sidecar_manual_self_test(app: tauri::AppHandle) -> EngineManualSelfTes
 }
 
 #[cfg(feature = "public-shell")]
+#[tauri::command]
+fn engine_sidecar_contract_command(
+    app: tauri::AppHandle,
+    command: String,
+    input: Option<serde_json::Value>,
+) -> EngineCommandContractProbe {
+    let command = command.trim().to_string();
+    if !ENGINE_SIDECAR_CONTRACT_COMMANDS.contains(&command.as_str()) {
+        return empty_engine_contract_probe(command, "unsupported-contract-command", false, false);
+    }
+    let input = input.unwrap_or_else(|| serde_json::json!({}));
+    let Ok(input_json) = serde_json::to_vec(&input) else {
+        return empty_engine_contract_probe(
+            command,
+            "contract-input-serialize-failed",
+            false,
+            false,
+        );
+    };
+    if input_json.len() > 16 * 1024 {
+        return empty_engine_contract_probe(command, "contract-input-too-large", false, false);
+    }
+    let Some(output) = run_engine_sidecar_command_with_json_stdin(&app, &command, &input_json)
+    else {
+        return empty_engine_contract_probe(command, "sidecar-not-present", false, false);
+    };
+    let Ok(output) = output else {
+        return empty_engine_contract_probe(command, "sidecar-spawn-failed", true, false);
+    };
+    if !output.status.success() {
+        return empty_engine_contract_probe(command, "sidecar-command-failed", true, true);
+    }
+    if output.stdout.len() > 16 * 1024 {
+        return empty_engine_contract_probe(command, "sidecar-output-too-large", true, true);
+    }
+    let Ok(payload) = serde_json::from_slice::<EngineCommandContractPayload>(&output.stdout) else {
+        return empty_engine_contract_probe(command, "sidecar-invalid-json", true, true);
+    };
+    let schema_valid = payload.schema_version == "ad-engine-command-contract-result-v1";
+    let protocol_valid = payload.sidecar_protocol == "ad-engine-json-stdio-v1";
+    let contract_version_valid = payload.contract_version == 1;
+    let command_valid = payload.command == command;
+    let input_schema_valid = payload.input_schema == "ad-engine-command-input-v1";
+    let output_schema_valid = payload.output_schema == "ad-engine-command-redacted-result-v1";
+    let failure_class = if schema_valid
+        && protocol_valid
+        && contract_version_valid
+        && command_valid
+        && input_schema_valid
+        && output_schema_valid
+    {
+        payload.failure_class
+    } else {
+        "sidecar-contract-mismatch".to_string()
+    };
+    EngineCommandContractProbe {
+        command,
+        attempted: true,
+        engine_sidecar_present: true,
+        exit_success: true,
+        failure_class,
+        recovery_action: payload.recovery_action,
+        schema_valid,
+        protocol_valid,
+        contract_version_valid,
+        command_valid,
+        input_schema_valid,
+        output_schema_valid,
+        runtime_mode: payload.runtime_mode,
+        status: payload.status,
+        required_fields: payload.required_fields,
+        missing_required_fields: payload.missing_required_fields,
+        manual_e2ee_runtime_available: payload.manual_e2ee_runtime_available,
+        storage_runtime_available: payload.storage_runtime_available,
+        runtime_action_performed: payload.runtime_action_performed,
+        state_mutated: payload.state_mutated,
+        artifact_written: payload.artifact_written,
+        raw_local_path_returned: payload.raw_local_path_returned,
+        raw_payload_returned: payload.raw_payload_returned,
+        plaintext_returned: payload.plaintext_returned,
+        ciphertext_returned: payload.ciphertext_returned,
+        invite_code_returned: payload.invite_code_returned,
+        endpoint_returned: payload.endpoint_returned,
+        key_material_exposed: payload.key_material_exposed,
+        passphrase_exposed: payload.passphrase_exposed,
+        app_launch_network_allowed: payload.app_launch_network_allowed,
+        room_open_network_allowed: payload.room_open_network_allowed,
+        production_ready_claim: payload.production_ready_claim,
+        high_risk_claim: payload.high_risk_claim,
+        sensitive_communication_allowed: payload.sensitive_communication_allowed,
+        stdout_returned: false,
+        stderr_returned: false,
+        sidecar_path_returned: false,
+    }
+}
+
+#[cfg(feature = "public-shell")]
 fn empty_engine_sidecar_status_probe(
     command: &'static str,
     failure_class: &'static str,
@@ -452,6 +638,54 @@ fn empty_engine_manual_self_test_probe(
         endpoint_returned: false,
         key_material_exposed: false,
         passphrase_exposed: false,
+        production_ready_claim: false,
+        high_risk_claim: false,
+        sensitive_communication_allowed: false,
+        stdout_returned: false,
+        stderr_returned: false,
+        sidecar_path_returned: false,
+    }
+}
+
+#[cfg(feature = "public-shell")]
+fn empty_engine_contract_probe(
+    command: String,
+    failure_class: &'static str,
+    engine_sidecar_present: bool,
+    attempted: bool,
+) -> EngineCommandContractProbe {
+    EngineCommandContractProbe {
+        command,
+        attempted,
+        engine_sidecar_present,
+        exit_success: false,
+        failure_class: failure_class.to_string(),
+        recovery_action: "retry-with-redacted-contract-input".to_string(),
+        schema_valid: false,
+        protocol_valid: false,
+        contract_version_valid: false,
+        command_valid: false,
+        input_schema_valid: false,
+        output_schema_valid: false,
+        runtime_mode: "unknown".to_string(),
+        status: "rejected".to_string(),
+        required_fields: Vec::new(),
+        missing_required_fields: Vec::new(),
+        manual_e2ee_runtime_available: false,
+        storage_runtime_available: false,
+        runtime_action_performed: false,
+        state_mutated: false,
+        artifact_written: false,
+        raw_local_path_returned: false,
+        raw_payload_returned: false,
+        plaintext_returned: false,
+        ciphertext_returned: false,
+        invite_code_returned: false,
+        endpoint_returned: false,
+        key_material_exposed: false,
+        passphrase_exposed: false,
+        app_launch_network_allowed: false,
+        room_open_network_allowed: false,
         production_ready_claim: false,
         high_risk_claim: false,
         sensitive_communication_allowed: false,
@@ -550,16 +784,48 @@ fn run_engine_sidecar_command(
 }
 
 #[cfg(feature = "public-shell")]
+fn run_engine_sidecar_command_with_json_stdin(
+    app: &tauri::AppHandle,
+    command: &str,
+    input_json: &[u8],
+) -> Option<std::io::Result<std::process::Output>> {
+    use std::io::Write;
+    let basename = engine_sidecar_basename();
+    let path = engine_sidecar_path(app, &basename)?;
+    let mut child = match std::process::Command::new(path)
+        .arg(command)
+        .arg("--json-stdin")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(error) => return Some(Err(error)),
+    };
+    if let Some(stdin) = child.stdin.as_mut() {
+        if let Err(error) = stdin.write_all(input_json) {
+            return Some(Err(error));
+        }
+    }
+    Some(child.wait_with_output())
+}
+
+#[cfg(feature = "public-shell")]
 fn run_windows_public_shell() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             prototype_status,
             engine_sidecar_status,
-            engine_sidecar_manual_self_test
+            engine_sidecar_manual_self_test,
+            engine_sidecar_contract_command
         ])
         .run(tauri::generate_context!())
         .expect("failed to run desktop public shell");
 }
 
-#[cfg(all(not(feature = "public-shell"), not(feature = "legacy-embedded-runtime")))]
+#[cfg(all(
+    not(feature = "public-shell"),
+    not(feature = "legacy-embedded-runtime")
+))]
 compile_error!("desktop-tauri requires either legacy-embedded-runtime or public-shell");
