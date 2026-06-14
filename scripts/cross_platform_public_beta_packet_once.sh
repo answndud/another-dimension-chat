@@ -57,10 +57,11 @@ WINDOWS_MANIFEST="$ROOT_DIR/reference/WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.
 WINDOWS_RESULT="$ROOT_DIR/reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md"
 HIGH_RISK_RUNTIME_SCHEMA="$ROOT_DIR/reference/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md"
 HIGH_RISK_RUNTIME_VALIDATOR="$ROOT_DIR/scripts/high_risk_runtime_evidence_validate_once.sh"
+COMMUNITY_COPY="$ROOT_DIR/reference/PUBLIC_COMMUNITY_LAUNCH_COPY.md"
 README="$ROOT_DIR/README.md"
 SECURITY="$ROOT_DIR/SECURITY.md"
 
-for file in "$REFERENCE" "$MACOS_REFERENCE" "$WINDOWS_EXECUTION" "$WINDOWS_MANIFEST" "$WINDOWS_RESULT" "$HIGH_RISK_RUNTIME_SCHEMA" "$HIGH_RISK_RUNTIME_VALIDATOR" "$README" "$SECURITY"; do
+for file in "$REFERENCE" "$MACOS_REFERENCE" "$WINDOWS_EXECUTION" "$WINDOWS_MANIFEST" "$WINDOWS_RESULT" "$HIGH_RISK_RUNTIME_SCHEMA" "$HIGH_RISK_RUNTIME_VALIDATOR" "$COMMUNITY_COPY" "$README" "$SECURITY"; do
   require_file "$file"
 done
 
@@ -78,6 +79,8 @@ require_text "$REFERENCE" "Use only assets attached to the same GitHub Release"
 require_text "$REFERENCE" "explicit owner actions only"
 require_text "$REFERENCE" "Not audited, not production-ready, not for sensitive communication"
 require_text "$REFERENCE" "not High-Risk-ready"
+require_text "$REFERENCE" "reference/PUBLIC_COMMUNITY_LAUNCH_COPY.md"
+require_text "$REFERENCE" "scripts/public_community_launch_copy_once.sh"
 require_text "$REFERENCE" "High-Risk runtime evidence validator is a redacted evidence-format gate"
 require_text "$REFERENCE" "high_risk_public_claim_allowed=false"
 require_text "$REFERENCE" "high_risk_ready_claim_allowed=false"
@@ -85,6 +88,10 @@ require_text "$REFERENCE" "compromised endpoint"
 require_text "$REFERENCE" "direct coercion"
 require_text "$REFERENCE" "full global traffic correlation"
 require_text "$REFERENCE" "scripts/cross_platform_public_beta_packet_once.sh"
+require_text "$COMMUNITY_COPY" "accountless 1:1 private messenger unsigned public"
+require_text "$COMMUNITY_COPY" "manual encrypted envelope exchange"
+require_text "$COMMUNITY_COPY" "windows_public_artifact_claim_allowed=false"
+require_text "$COMMUNITY_COPY" "high_risk_ready_claim_allowed=false"
 require_text "$HIGH_RISK_RUNTIME_SCHEMA" "high_risk_public_claim_allowed=false"
 require_text "$HIGH_RISK_RUNTIME_SCHEMA" "high_risk_ready_claim_allowed=false"
 require_text "$HIGH_RISK_RUNTIME_VALIDATOR" "high_risk_public_claim_allowed=false"
@@ -171,8 +178,15 @@ require_output "$public_claim_output" "high_risk_runtime_evidence_claim_separate
 require_output "$public_claim_output" "high_risk_public_claim_allowed=false"
 require_output "$public_claim_output" "high_risk_ready_claim_allowed=false"
 
+community_copy_output="$(run_and_capture "$ROOT_DIR/scripts/public_community_launch_copy_once.sh")"
+require_output "$community_copy_output" "public_community_launch_copy=ready"
+require_output "$community_copy_output" "release_class=unsigned-oss-public-beta"
+require_output "$community_copy_output" "windows_public_artifact_claim_allowed=false"
+require_output "$community_copy_output" "high_risk_ready_claim_allowed=false"
+
 cat <<'STATUS'
 cross_platform_public_beta_packet=source-ready
+public_community_launch_copy=ready
 release_class=unsigned-oss-public-beta
 macos_unsigned_public_beta_ready=true
 macos_release_upload_authorized=false

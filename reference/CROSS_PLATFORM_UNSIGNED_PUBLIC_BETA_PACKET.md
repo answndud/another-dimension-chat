@@ -45,6 +45,11 @@ Allowed short public copy:
 > DMG from GitHub Releases. Windows is source-gated as a public artifact
 > candidate and is not yet published.
 
+Community launch copy source:
+
+- `reference/PUBLIC_COMMUNITY_LAUNCH_COPY.md`
+- `scripts/public_community_launch_copy_once.sh`
+
 Required disclaimer:
 
 > Not audited, not production-ready, not for sensitive communication, not High-Risk-ready, and not a Signal/Briar/Cwtch-equivalent privacy or security claim.

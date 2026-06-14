@@ -91,6 +91,14 @@ const windowsPublicArtifactExecutionPathReference = readFileSync(
   join(appRoot, "..", "..", "reference", "WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"),
   "utf8",
 );
+const publicCommunityLaunchCopyScript = readFileSync(
+  join(appRoot, "..", "..", "scripts", "public_community_launch_copy_once.sh"),
+  "utf8",
+);
+const publicCommunityLaunchCopyReference = readFileSync(
+  join(appRoot, "..", "..", "reference", "PUBLIC_COMMUNITY_LAUNCH_COPY.md"),
+  "utf8",
+);
 const functionBodyCache = new Map();
 
 function functionBody(source, name) {
@@ -366,6 +374,13 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(crossPlatformPublicBetaPacketScript, /windows_runtime_result_packet_required_for_public_artifact=true/);
   assert.match(crossPlatformPublicBetaPacketScript, /windows_manifest_checksum_provenance_separate_from_runtime_result=true/);
   assert.match(crossPlatformPublicBetaPacketScript, /windows_public_artifact_claim_allowed=false/);
+  assert.match(crossPlatformPublicBetaPacketScript, /public_community_launch_copy=ready/);
+  assert.match(publicCommunityLaunchCopyScript, /accountless 1:1 private messenger unsigned public/);
+  assert.match(publicCommunityLaunchCopyScript, /windows_public_artifact_claim_allowed=false/);
+  assert.match(publicCommunityLaunchCopyScript, /high_risk_ready_claim_allowed=false/);
+  assert.match(publicCommunityLaunchCopyReference, /manual encrypted envelope exchange/);
+  assert.match(publicCommunityLaunchCopyReference, /sensitive_use_claim_allowed=false/);
+  assert.match(publicCommunityLaunchCopyReference, /Windows is source-gated only and not yet published/);
   assert.match(publicReleaseReadinessPreflightScript, /final_claim_real_windows_runtime_result_present=false/);
   assert.match(publicReleaseReadinessPreflightScript, /final_claim_windows_public_artifact_claim_allowed=false/);
   assert.match(windowsRealRuntimeResultSchema, /real_windows_runtime_result_present=false/);
