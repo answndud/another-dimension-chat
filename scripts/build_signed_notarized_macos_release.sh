@@ -102,6 +102,7 @@ actual_signing_executed=false
 notary_submit_executed=false
 stapler_staple_executed=false
 gatekeeper_assess_executed=false
+macos_signed_notarized_artifact_ready=false
 release_upload_authorized=false
 dmg_rebuild_authorized=false
 STATUS
@@ -281,6 +282,7 @@ rc_artifact_sha256=$sha256
 provenance_out=$PROVENANCE_OUT
 distribution_manifest=$distribution_manifest
 macos_release_distribution_metadata_prepared=true
+macos_signed_notarized_artifact_ready=true
 release_upload_authorized=false
 dmg_rebuild_authorized=$DMG_REBUILD_AUTHORIZED_BOOL
 STATUS

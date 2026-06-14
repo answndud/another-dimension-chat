@@ -138,6 +138,7 @@ The script must not reuse a DMG that already contains an unsigned app bundle.
 - gatekeeper_assess_executed=false
 - rc_artifact_sha256_recorded=false
 - generated_provenance_written=false
+- macos_signed_notarized_artifact_ready=false
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false
 - generated_release_artifacts_staged=false
