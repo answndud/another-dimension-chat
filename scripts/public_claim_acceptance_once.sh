@@ -43,6 +43,10 @@ for file in "${PUBLIC_CLAIM_FILES[@]}"; do
   require_file "$file"
 done
 
+require_file "$ROOT_DIR/scripts/public_forbidden_claim_scanner_once.sh"
+bash -n "$ROOT_DIR/scripts/public_forbidden_claim_scanner_once.sh"
+"$ROOT_DIR/scripts/public_forbidden_claim_scanner_once.sh" >/dev/null
+
 require_text "$ROOT_DIR/README.md" "This project does not currently provide a secure messenger."
 require_text "$ROOT_DIR/SECURITY.md" "not a secure messenger release"
 require_text "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "not a secure messenger release"
