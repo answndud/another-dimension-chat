@@ -531,6 +531,7 @@ const latestProductionTwoProfileRealOnionResultsByRoom = new Map();
 const latestProductionTwoProfileRealOnionRecoveriesByRoom = new Map();
 let latestProductionOnionBridgeConfigStatus = null;
 let latestProductionHighRiskRuntimeEvidenceView = null;
+let latestEngineSidecarDiagnostics = engineSidecarDiagnosticsFallback();
 const latestProductionTwoProfileRealOnionWaitCanceledFingerprints = new Set();
 let activeProductionTwoProfileRealOnionInput = null;
 let productionTwoProfileRealOnionRunSequence = 0;
@@ -6507,6 +6508,117 @@ function fieldTestReportValue(value, fallback = "unknown") {
   return privateDeliveryState.fieldTestReportValue(value, fallback);
 }
 
+function engineSidecarDiagnosticsFallback(failureClass = "not-run") {
+  return {
+    statusRuntimeChecked: false,
+    statusFailureClass: failureClass,
+    statusContractValid: false,
+    statusRedactedDiagnosticsOnly: false,
+    statusRuntimeMode: "unknown",
+    manualSelfTestRuntimeChecked: false,
+    manualSelfTestFailureClass: failureClass,
+    manualSelfTestContractValid: false,
+    manualSelfTestPassed: false,
+    manualSelfTestRuntimeAvailable: false,
+    rawPathReturned: false,
+    stdoutReturned: false,
+    stderrReturned: false,
+    appLaunchNetworkAllowed: false,
+    roomOpenNetworkAllowed: false,
+    localRuntimePromotedToDeliveryProof: false,
+  };
+}
+
+function engineSidecarDiagnosticsFromProbes(statusProbe = {}, manualSelfTestProbe = {}) {
+  const manualSelfTestPassed =
+    manualSelfTestProbe.failure_class === "none" &&
+    manualSelfTestProbe.pairing_payload_roundtrip === true &&
+    manualSelfTestProbe.safety_transcript_bound === true &&
+    manualSelfTestProbe.noise_handshake_roundtrip === true &&
+    manualSelfTestProbe.envelope_roundtrip === true &&
+    manualSelfTestProbe.replay_duplicate_rejected === true &&
+    manualSelfTestProbe.plaintext_returned !== true &&
+    manualSelfTestProbe.key_material_exposed !== true &&
+    manualSelfTestProbe.passphrase_exposed !== true;
+  return {
+    statusRuntimeChecked: statusProbe.attempted === true,
+    statusFailureClass: fieldTestReportValue(statusProbe.failure_class, "unknown"),
+    statusContractValid:
+      statusProbe.schema_valid === true &&
+      statusProbe.protocol_valid === true &&
+      statusProbe.contract_version_valid === true,
+    statusRedactedDiagnosticsOnly: statusProbe.redacted_diagnostics_only === true,
+    statusRuntimeMode: fieldTestReportValue(statusProbe.runtime_mode, "unknown"),
+    manualSelfTestRuntimeChecked: manualSelfTestProbe.attempted === true,
+    manualSelfTestFailureClass: fieldTestReportValue(manualSelfTestProbe.failure_class, "unknown"),
+    manualSelfTestContractValid:
+      manualSelfTestProbe.schema_valid === true &&
+      manualSelfTestProbe.protocol_valid === true &&
+      manualSelfTestProbe.contract_version_valid === true,
+    manualSelfTestPassed,
+    manualSelfTestRuntimeAvailable: manualSelfTestProbe.manual_e2ee_runtime_available === true,
+    rawPathReturned:
+      statusProbe.raw_local_path_returned === true ||
+      statusProbe.sidecar_path_returned === true ||
+      manualSelfTestProbe.sidecar_path_returned === true,
+    stdoutReturned: statusProbe.stdout_returned === true || manualSelfTestProbe.stdout_returned === true,
+    stderrReturned: statusProbe.stderr_returned === true || manualSelfTestProbe.stderr_returned === true,
+    appLaunchNetworkAllowed:
+      statusProbe.app_launch_network_allowed === true || manualSelfTestProbe.app_launch_network_allowed === true,
+    roomOpenNetworkAllowed:
+      statusProbe.room_open_network_allowed === true || manualSelfTestProbe.room_open_network_allowed === true,
+    localRuntimePromotedToDeliveryProof: false,
+  };
+}
+
+async function updateEngineSidecarDiagnostics() {
+  if (!hasTauriRuntimeBridge()) {
+    latestEngineSidecarDiagnostics = engineSidecarDiagnosticsFallback("tauri-unavailable");
+    return latestEngineSidecarDiagnostics;
+  }
+  try {
+    const [statusProbe, manualSelfTestProbe] = await Promise.all([
+      invoke("engine_sidecar_status"),
+      invoke("engine_sidecar_manual_self_test"),
+    ]);
+    latestEngineSidecarDiagnostics = engineSidecarDiagnosticsFromProbes(statusProbe, manualSelfTestProbe);
+  } catch {
+    latestEngineSidecarDiagnostics = engineSidecarDiagnosticsFallback("sidecar-command-unavailable");
+  }
+  return latestEngineSidecarDiagnostics;
+}
+
+async function refreshFieldTestReportWithRuntimeDiagnostics() {
+  await updateEngineSidecarDiagnostics();
+  return refreshFieldTestReport();
+}
+
+async function refreshPublicBetaDiagnosticsWithRuntimeDiagnostics() {
+  await updateEngineSidecarDiagnostics();
+  return refreshPublicBetaDiagnostics();
+}
+
+function engineSidecarDiagnosticReportLines(diagnostics = latestEngineSidecarDiagnostics) {
+  return [
+    `engine_sidecar_status_runtime_checked=${diagnostics.statusRuntimeChecked === true}`,
+    `engine_sidecar_status_failure_class=${fieldTestReportValue(diagnostics.statusFailureClass, "unknown")}`,
+    `engine_sidecar_status_contract_valid=${diagnostics.statusContractValid === true}`,
+    `engine_sidecar_status_redacted_diagnostics_only=${diagnostics.statusRedactedDiagnosticsOnly === true}`,
+    `engine_sidecar_status_runtime_mode=${fieldTestReportValue(diagnostics.statusRuntimeMode, "unknown")}`,
+    `engine_sidecar_manual_self_test_runtime_checked=${diagnostics.manualSelfTestRuntimeChecked === true}`,
+    `engine_sidecar_manual_self_test_failure_class=${fieldTestReportValue(diagnostics.manualSelfTestFailureClass, "unknown")}`,
+    `engine_sidecar_manual_self_test_contract_valid=${diagnostics.manualSelfTestContractValid === true}`,
+    `engine_sidecar_manual_self_test_passed=${diagnostics.manualSelfTestPassed === true}`,
+    `engine_sidecar_manual_self_test_runtime_available=${diagnostics.manualSelfTestRuntimeAvailable === true}`,
+    `engine_sidecar_raw_path_returned=${diagnostics.rawPathReturned === true}`,
+    `engine_sidecar_stdout_returned=${diagnostics.stdoutReturned === true}`,
+    `engine_sidecar_stderr_returned=${diagnostics.stderrReturned === true}`,
+    `engine_sidecar_app_launch_network_allowed=${diagnostics.appLaunchNetworkAllowed === true}`,
+    `engine_sidecar_room_open_network_allowed=${diagnostics.roomOpenNetworkAllowed === true}`,
+    `engine_sidecar_local_runtime_promoted_to_delivery_proof=${diagnostics.localRuntimePromotedToDeliveryProof === true}`,
+  ];
+}
+
 function latestRealOnionBootstrapDiagnostic(result) {
   const events = Array.isArray(result?.event_summary) ? result.event_summary : [];
   const diagnostics = events.filter((event) => String(event).includes("bootstrap_diagnostic"));
@@ -7815,6 +7927,7 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `high_risk_runtime_failure_class=${fieldTestReportValue(highRiskRuntimeEvidence.failureClass, "none")}`,
     `high_risk_public_claim_allowed=${highRiskRuntimeEvidence.highRiskPublicClaimAllowed === true}`,
     `high_risk_ready_claim_allowed=${highRiskRuntimeEvidence.highRiskReadyClaimAllowed === true}`,
+    ...engineSidecarDiagnosticReportLines(),
     `delivery_notice_current_room=${deliveryNoticeCurrentRoom}`,
     `delivery_notice_key=${fieldTestReportValue(deliveryNoticeKey, "none")}`,
     `delivery_notice_tone=${fieldTestReportValue(deliveryNoticeTone, "neutral")}`,
@@ -7979,6 +8092,29 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
     publicDiagnostics.high_risk_runtime_failure_class,
     "none",
   );
+  const engineSidecarStatusRuntimeChecked = fieldTestReportValue(
+    publicDiagnostics.engine_sidecar_status_runtime_checked,
+    "false",
+  );
+  const engineSidecarStatusFailureClass = fieldTestReportValue(
+    publicDiagnostics.engine_sidecar_status_failure_class,
+    "unknown",
+  );
+  const engineSidecarManualSelfTestRuntimeChecked = fieldTestReportValue(
+    publicDiagnostics.engine_sidecar_manual_self_test_runtime_checked,
+    "false",
+  );
+  const engineSidecarManualSelfTestFailureClass = fieldTestReportValue(
+    publicDiagnostics.engine_sidecar_manual_self_test_failure_class,
+    "unknown",
+  );
+  const engineSidecarManualSelfTestPassed = fieldTestReportValue(
+    publicDiagnostics.engine_sidecar_manual_self_test_passed,
+    "false",
+  );
+  const engineSidecarRawPathReturned = fieldTestReportValue(publicDiagnostics.engine_sidecar_raw_path_returned, "false");
+  const engineSidecarStdoutReturned = fieldTestReportValue(publicDiagnostics.engine_sidecar_stdout_returned, "false");
+  const engineSidecarStderrReturned = fieldTestReportValue(publicDiagnostics.engine_sidecar_stderr_returned, "false");
   const allowedPublicIntakeFields = String(publicDiagnostics.allowed_public_intake_fields ?? "unknown").trim() || "unknown";
   const forbiddenPublicIntakeFields = String(publicDiagnostics.forbidden_public_intake_fields ?? "unknown").trim() || "unknown";
   const excludedFields = String(publicDiagnostics.excluded_fields ?? "unknown").trim() || "unknown";
@@ -8001,7 +8137,7 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
     excludedFields.includes("passphrases") &&
     excludedFields.includes("key_material");
   if (fields.publicBetaDiagnosticsSummary) {
-    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} public_intake_policy_fields_aligned=${publicIntakePolicyFieldsAligned} allowed_public_intake_fields=${allowedPublicIntakeFields} forbidden_public_intake_fields=${forbiddenPublicIntakeFields} excluded_fields=${excludedFields} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} local_manual_e2ee_runtime_boundary=${localManualE2eeBoundary} supported_local_manual_e2ee_ready=${supportedLocalManualE2eeReady} supported_local_manual_e2ee_scope=${supportedLocalManualE2eeScope} production_e2ee_ready=${productionE2eeReady} supported_local_key_lifecycle_ready=${supportedLocalKeyLifecycleReady} supported_local_key_lifecycle_scope=${supportedLocalKeyLifecycleScope} supported_rollback_detection_ready=${supportedRollbackDetectionReady} supported_rollback_detection_scope=${supportedRollbackDetectionScope} supported_local_deletion_scope_ready=${supportedLocalDeletionScopeReady} supported_local_deletion_scope=${supportedLocalDeletionScope} production_key_management_ready=${productionKeyManagementReady} rollback_prevention_claimed=${rollbackPreventionClaimed} secure_deletion_claim_allowed=${secureDeletionClaimAllowed} default_transport_path=${defaultTransportPath} supported_default_transport_ready=${supportedDefaultTransportReady} supported_default_transport_scope=${supportedDefaultTransportScope} default_transport_network_io=${defaultTransportNetworkIo} production_transport_ready=${productionTransportReady} reliable_external_delivery_claim_allowed=${reliableExternalDeliveryClaimAllowed} supported_owner_observed_usability_rehearsal_ready=${supportedOwnerObservedUsabilityRehearsalReady} supported_usability_recovery_scope=${supportedUsabilityRecoveryScope} critical_desktop_task_script_ready=${criticalDesktopTaskScriptReady} recovery_vocabulary_aligned=${recoveryVocabularyAligned} usability_study_completed=${usabilityStudyCompleted} production_wording_ready=${productionWordingReady} high_risk_onion_path=explicit-user-triggered-fail-closed high_risk_transport_mode=${highRiskTransportMode} high_risk_transport_ready=${highRiskTransportReady} high_risk_transport_not_ready_reason=${highRiskTransportNotReadyReason} high_risk_runtime_evidence_source=${highRiskRuntimeEvidenceSource} high_risk_runtime_evidence_accepted=${highRiskRuntimeEvidenceAccepted} high_risk_runtime_primary_blocker=${highRiskRuntimePrimaryBlocker} high_risk_runtime_failure_class=${highRiskRuntimeFailureClass} high_risk_transport_direct_fallback=false high_risk_transport_dns_endpoint=false high_risk_transport_ip_endpoint=false high_risk_transport_app_launch_bootstrap=false high_risk_public_claim_allowed=false high_risk_ready_claim_allowed=false release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
+    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} public_intake_policy_fields_aligned=${publicIntakePolicyFieldsAligned} allowed_public_intake_fields=${allowedPublicIntakeFields} forbidden_public_intake_fields=${forbiddenPublicIntakeFields} excluded_fields=${excludedFields} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} local_manual_e2ee_runtime_boundary=${localManualE2eeBoundary} supported_local_manual_e2ee_ready=${supportedLocalManualE2eeReady} supported_local_manual_e2ee_scope=${supportedLocalManualE2eeScope} production_e2ee_ready=${productionE2eeReady} supported_local_key_lifecycle_ready=${supportedLocalKeyLifecycleReady} supported_local_key_lifecycle_scope=${supportedLocalKeyLifecycleScope} supported_rollback_detection_ready=${supportedRollbackDetectionReady} supported_rollback_detection_scope=${supportedRollbackDetectionScope} supported_local_deletion_scope_ready=${supportedLocalDeletionScopeReady} supported_local_deletion_scope=${supportedLocalDeletionScope} production_key_management_ready=${productionKeyManagementReady} rollback_prevention_claimed=${rollbackPreventionClaimed} secure_deletion_claim_allowed=${secureDeletionClaimAllowed} default_transport_path=${defaultTransportPath} supported_default_transport_ready=${supportedDefaultTransportReady} supported_default_transport_scope=${supportedDefaultTransportScope} default_transport_network_io=${defaultTransportNetworkIo} production_transport_ready=${productionTransportReady} reliable_external_delivery_claim_allowed=${reliableExternalDeliveryClaimAllowed} supported_owner_observed_usability_rehearsal_ready=${supportedOwnerObservedUsabilityRehearsalReady} supported_usability_recovery_scope=${supportedUsabilityRecoveryScope} critical_desktop_task_script_ready=${criticalDesktopTaskScriptReady} recovery_vocabulary_aligned=${recoveryVocabularyAligned} usability_study_completed=${usabilityStudyCompleted} production_wording_ready=${productionWordingReady} high_risk_onion_path=explicit-user-triggered-fail-closed high_risk_transport_mode=${highRiskTransportMode} high_risk_transport_ready=${highRiskTransportReady} high_risk_transport_not_ready_reason=${highRiskTransportNotReadyReason} high_risk_runtime_evidence_source=${highRiskRuntimeEvidenceSource} high_risk_runtime_evidence_accepted=${highRiskRuntimeEvidenceAccepted} high_risk_runtime_primary_blocker=${highRiskRuntimePrimaryBlocker} high_risk_runtime_failure_class=${highRiskRuntimeFailureClass} engine_sidecar_status_runtime_checked=${engineSidecarStatusRuntimeChecked} engine_sidecar_status_failure_class=${engineSidecarStatusFailureClass} engine_sidecar_manual_self_test_runtime_checked=${engineSidecarManualSelfTestRuntimeChecked} engine_sidecar_manual_self_test_failure_class=${engineSidecarManualSelfTestFailureClass} engine_sidecar_manual_self_test_passed=${engineSidecarManualSelfTestPassed} engine_sidecar_raw_path_returned=${engineSidecarRawPathReturned} engine_sidecar_stdout_returned=${engineSidecarStdoutReturned} engine_sidecar_stderr_returned=${engineSidecarStderrReturned} engine_sidecar_local_runtime_promoted_to_delivery_proof=false high_risk_transport_direct_fallback=false high_risk_transport_dns_endpoint=false high_risk_transport_ip_endpoint=false high_risk_transport_app_launch_bootstrap=false high_risk_public_claim_allowed=false high_risk_ready_claim_allowed=false release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
   }
   return payload;
 }
@@ -8016,6 +8152,7 @@ function selectPublicBetaDiagnosticsPayload(payload) {
 }
 
 async function copyPublicBetaDiagnostics() {
+  await updateEngineSidecarDiagnostics();
   const payload = refreshPublicBetaDiagnostics();
   if (!payload) {
     return false;
@@ -14915,6 +15052,8 @@ async function renderPrototypeStatus() {
   try {
     const status = await invoke("prototype_status");
     renderAppStateSummary(status);
+    await updateEngineSidecarDiagnostics();
+    refreshFieldTestReport();
 
     setText(fields.releaseClaim, status.secure_release ? "Unexpected release claim" : t("noSecureReleaseClaim"));
     setText(
@@ -22049,7 +22188,7 @@ if (fields.loadProductionTwoProfileTranscript) {
 }
 
 if (fields.refreshFieldTestReport) {
-  fields.refreshFieldTestReport.addEventListener("click", refreshFieldTestReport);
+  fields.refreshFieldTestReport.addEventListener("click", refreshFieldTestReportWithRuntimeDiagnostics);
 }
 
 if (fields.copyFieldTestReport) {
@@ -22057,7 +22196,7 @@ if (fields.copyFieldTestReport) {
 }
 
 if (fields.refreshPublicBetaDiagnostics) {
-  fields.refreshPublicBetaDiagnostics.addEventListener("click", () => refreshPublicBetaDiagnostics());
+  fields.refreshPublicBetaDiagnostics.addEventListener("click", refreshPublicBetaDiagnosticsWithRuntimeDiagnostics);
 }
 
 if (fields.copyPublicBetaDiagnostics) {
