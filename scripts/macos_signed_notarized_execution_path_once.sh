@@ -61,6 +61,11 @@ for flag in \
   "macos_entitlements_configured=true" \
   "macos_entitlements_minimal=true" \
   "macos_signed_notarized_release_build_script_ready=true" \
+  "release_build_operator_runbook_ready=true" \
+  "release_build_expected_output_path_declared=true" \
+  "release_build_generated_file_set_declared=true" \
+  "release_build_failure_classes_declared=true" \
+  "credential_material_redacted_from_output=true" \
   "signed_app_build_path_ready=true" \
   "dmg_create_from_signed_app_path_ready=true" \
   "credential_probe_path_ready=true" \
@@ -111,6 +116,11 @@ must_contain "$SIGNED_BUILD_SCRIPT" "app_version"
 must_contain "$SIGNED_BUILD_SCRIPT" "app_bundle_id"
 must_contain "$SIGNED_BUILD_SCRIPT" "artifact_size_bytes"
 must_contain "$SIGNED_BUILD_SCRIPT" "signing_identity_sha256"
+must_contain "$SIGNED_BUILD_SCRIPT" "release_build_operator_runbook_ready=true"
+must_contain "$SIGNED_BUILD_SCRIPT" "signed_macos_release_artifact_name_template=another-dimension-chat-<app-version>-<build-channel>-<public-architecture>-signed-notarized.dmg"
+must_contain "$SIGNED_BUILD_SCRIPT" "signed_macos_release_generated_files=dmg,sha256,provenance-json"
+must_contain "$SIGNED_BUILD_SCRIPT" "notary_credential_modes_supported=keychain-profile,app-store-connect-api-key,apple-id-app-specific-password"
+must_contain "$SIGNED_BUILD_SCRIPT" "release_build_failure_classes=missing-explicit-env,missing-developer-id,missing-notary-credential,missing-tooling,contained-app-mismatch,gatekeeper-failure"
 must_contain "$SIGNED_BUILD_SCRIPT" "hdiutil create"
 must_contain "$SIGNED_BUILD_SCRIPT" "verify_macos_dmg_contained_app.sh"
 must_contain "$SIGNED_BUILD_SCRIPT" "xcrun notarytool submit"
@@ -210,6 +220,11 @@ macos_hardened_runtime_configured=true
 macos_entitlements_configured=true
 macos_entitlements_minimal=true
 macos_signed_notarized_release_build_script_ready=true
+release_build_operator_runbook_ready=true
+release_build_expected_output_path_declared=true
+release_build_generated_file_set_declared=true
+release_build_failure_classes_declared=true
+credential_material_redacted_from_output=true
 signed_app_build_path_ready=true
 dmg_create_from_signed_app_path_ready=true
 credential_probe_path_ready=true
@@ -349,6 +364,11 @@ macos_hardened_runtime_configured=true
 macos_entitlements_configured=true
 macos_entitlements_minimal=true
 macos_signed_notarized_release_build_script_ready=true
+release_build_operator_runbook_ready=true
+release_build_expected_output_path_declared=true
+release_build_generated_file_set_declared=true
+release_build_failure_classes_declared=true
+credential_material_redacted_from_output=true
 signed_app_build_path_ready=true
 dmg_create_from_signed_app_path_ready=true
 signed_rc_provenance_identity_fields_ready=true

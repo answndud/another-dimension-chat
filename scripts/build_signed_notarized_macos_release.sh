@@ -54,9 +54,14 @@ fi
 
 if [ "$EXECUTE" != "1" ] || [ "$BUILD_EXECUTE" != "1" ] ||
   [ "$DMG_REBUILD_AUTHORIZED" != "1" ]; then
-  cat <<'STATUS'
+  cat <<STATUS
 status=macos-signed-notarized-release-build-held
 macos_signed_notarized_release_build_script_ready=true
+release_build_operator_runbook_ready=true
+release_build_expected_output_path_declared=true
+release_build_generated_file_set_declared=true
+release_build_failure_classes_declared=true
+credential_material_redacted_from_output=true
 signed_app_build_path_ready=true
 signed_app_codesign_path_ready=true
 dmg_create_from_signed_app_path_ready=true
@@ -76,6 +81,11 @@ explicit_execution_env_required=true
 ad_execute_macos_sign_notary_required=true
 ad_build_macos_signed_rc_required=true
 ad_dmg_rebuild_authorized_required=true
+signed_macos_release_default_out_dir=$OUT_DIR
+signed_macos_release_artifact_name_template=another-dimension-chat-<app-version>-<build-channel>-<public-architecture>-signed-notarized.dmg
+signed_macos_release_generated_files=dmg,sha256,provenance-json
+notary_credential_modes_supported=keychain-profile,app-store-connect-api-key,apple-id-app-specific-password
+release_build_failure_classes=missing-explicit-env,missing-developer-id,missing-notary-credential,missing-tooling,contained-app-mismatch,gatekeeper-failure
 actual_release_build_executed=false
 actual_signing_executed=false
 notary_submit_executed=false
