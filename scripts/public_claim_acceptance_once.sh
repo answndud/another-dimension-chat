@@ -131,9 +131,10 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "scope=so
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "dmg_required=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "network_or_onion_work=false"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance,stable-candidate-rehearsal"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance,stable-candidate-rehearsal"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "run_step final-claim-acceptance check_final_claim_acceptance_hold"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "run_step stable-candidate-rehearsal"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_acceptance=hold-expected"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_stable_candidate_blocked_by_p0_p1_audit=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_high_risk_blocked_by_missing_required_conditions=true"
@@ -391,7 +392,7 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing hardening fallback" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance,stable-candidate-rehearsal" || {
     echo "FAIL release readiness preflight missing check list" >&2
     exit 1
   }
@@ -609,6 +610,14 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_forbidden_positive_public_claims_found=false" || {
     echo "FAIL release readiness preflight missing forbidden positive claim scan status" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "stable_candidate_rehearsal=source-only-hold" || {
+    echo "FAIL release readiness preflight missing stable candidate rehearsal status" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "stable_candidate_rehearsal_generated_artifacts_created=false" || {
+    echo "FAIL release readiness preflight missing stable candidate rehearsal artifact boundary" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "desktop_beta_acceptance_matrix=invite#create#join#verify#send#export#import#reply#receive#retry#cancel#delete#unlock#reopen#diagnostics#release-non-claim" || {

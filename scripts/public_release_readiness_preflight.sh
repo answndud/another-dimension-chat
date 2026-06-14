@@ -275,8 +275,8 @@ echo "scope=source-only-no-dmg-required-no-generated-artifacts"
 echo "artifact_generation=false"
 echo "dmg_required=false"
 echo "network_or_onion_work=false"
-echo "checks=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance"
-echo "checks_run=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance"
+echo "checks=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance,stable-candidate-rehearsal"
+echo "checks_run=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance,stable-candidate-rehearsal"
 
 run_step artifact-boundary "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" --check-artifact-boundary
 run_step update-integrity-policy "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" --check-policy
@@ -297,6 +297,7 @@ run_step desktop-default-transport-boundary "$ROOT_DIR/scripts/desktop_default_t
 run_step public-beta-gap "$ROOT_DIR/scripts/public_beta_gap_acceptance_once.sh"
 run_step public-claim-acceptance env PUBLIC_RELEASE_PREFLIGHT_CHILD=1 "$ROOT_DIR/scripts/public_claim_acceptance_once.sh"
 run_step final-claim-acceptance check_final_claim_acceptance_hold
+run_step stable-candidate-rehearsal "$ROOT_DIR/scripts/public_stable_candidate_rehearsal_once.sh"
 run_step macos-public-beta-final-sources check_macos_public_beta_final_sources
 run_step existing-release-output check_existing_release_output
 
@@ -374,6 +375,9 @@ echo "final_claim_external_evidence_present=false"
 echo "final_claim_macos_artifact_consistency=false"
 echo "final_claim_windows_artifact_consistency=false"
 echo "final_claim_forbidden_positive_public_claims_found=false"
+echo "stable_candidate_rehearsal=source-only-hold"
+echo "stable_candidate_rehearsal_generated_artifacts_created=false"
+echo "stable_candidate_rehearsal_docs_tracked=false"
 echo "public_support_incident_operations_ready=true"
 echo "stable_candidate_blocked_when_support_not_ready=true"
 echo "support_readiness_opens_public_claims=false"
