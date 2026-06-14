@@ -14,8 +14,10 @@ Public reports may include only:
 - build channel
 - build commit
 - platform
+- app status
 - public support diagnostics copied from the app
 - checksum verification result
+- release class readiness
 - unsigned macOS install step reached
 - failure class
 - redacted next action
@@ -28,14 +30,16 @@ Public reports may include only:
 Tester-facing reports must use redacted public support diagnostics, failure
 class, and recovery next action only.
 
-Allowed public fields are app version, build channel, build commit, platform,
-checksum result, public diagnostics, failure class, recovery next action,
-desktop local-private-flow acceptance status, desktop local-private-flow
-blocker summary, and whether app-launch network stayed false.
+Allowed public fields are app status, app version, build channel, build commit,
+platform, checksum result, public diagnostics, failure class, recovery next
+action, desktop local-private-flow acceptance status, desktop local-private-flow
+blocker summary, whether app-launch network stayed false, and release class
+readiness.
 
-Forbidden fields include raw logs, onion endpoints, invite codes,
-pairing/envelope/endpoint payloads, safety phrases, profile names, message text,
-local paths, passphrases, key material, and private planning notes.
+Forbidden fields include raw logs, crash dumps, screenshots, onion endpoints,
+invite codes, pairing/envelope/endpoint payloads, safety phrases, profile names,
+message text, local paths, passphrases, private keys, key material, private
+planning notes, and support bundles.
 
 Hold criteria are missing redacted diagnostics, forbidden private data, network
 before explicit action, or checksum mismatch.
@@ -64,6 +68,7 @@ Do not post:
 - raw logs
 - crash dumps
 - screenshots that show private room data
+- support bundles
 - passphrases
 - private keys
 - key material
@@ -76,19 +81,20 @@ Do not post:
 Use GitHub private vulnerability reporting when available.
 
 If private reporting is unavailable, open a minimal public issue that says a
-security report exists, but do not include exploit details, raw logs, payloads,
-keys, paths, endpoints, or private data. Ask for a private contact path.
+security report exists, but do not include exploit details, raw logs, crash
+dumps, screenshots, support bundles, payloads, keys, paths, endpoints, or
+private data. Ask only for a private contact path.
 
 ## Public Diagnostics Boundary
 
 The app's public support diagnostics are local-copy only. They do not upload crash
 reports, telemetry, raw logs, crash dumps, support bundles, raw diagnostic
 files, or local files. The intended public diagnostic payload is limited to app
-status, build identity, broad failure class, recovery next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary.
+status, build identity, checksum result, broad failure class, recovery next action, desktop local-private-flow acceptance status/blockers/non-claims, app-launch network boundary, and release class readiness.
 It must not include workflow state, manual network
 permission state, invite codes, endpoints, payloads, safety material, profile
-names, message text, paths, logs, passphrases, private keys, key material, files
-from `docs/`, or local app data.
+names, message text, paths, logs, crash dumps, screenshots, passphrases, private
+keys, key material, support bundles, files from `docs/`, or local app data.
 
 ## Public Recovery Vocabulary
 

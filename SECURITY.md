@@ -317,7 +317,7 @@ delivery claim, not audited status, and not a production-ready claim.
 
 If you find a security issue, please use GitHub's private vulnerability reporting feature if it is enabled for the repository.
 
-If private vulnerability reporting is not enabled, open a minimal public issue that does not include exploit details or sensitive information, and ask for a private contact path.
+If private vulnerability reporting is not enabled, open a minimal public issue that does not include exploit details, crash dumps, screenshots, support bundles, payload samples, endpoint details, or sensitive information, and ask only for a private contact path.
 
 Public issues, release comments, and support requests must follow
 `reference/PUBLIC_INTAKE_POLICY.md`. Use only redacted public support diagnostics or a
@@ -325,7 +325,7 @@ minimal private-contact request. Do not post bridge lines, onion endpoints,
 invite codes, pairing/envelope/endpoint payloads, safety phrases, profile names,
 message text, local paths, raw logs, crash dumps, screenshots of private room
 data, passphrases, private keys, key material, private planning notes, files
-from `docs/`, or local app data.
+from `docs/`, support bundles, or local app data.
 
 Public support diagnostics may include desktop local-private-flow acceptance
 status, blockers, recovery next action, and explicit non-claims. This is not
@@ -335,10 +335,11 @@ status, and not permission for sensitive communication.
 Maintainers should triage public beta reports with
 `reference/PUBLIC_SUPPORT_TRIAGE.md`. Public responses may ask for checksum
 retry, Gatekeeper recovery, profile recovery, payload retry/cancel, lifecycle
-confirmation, redacted diagnostics, or a private security contact path. They
-must not request raw logs, local paths, onion endpoints, invite codes, payloads,
-message text, passphrases, private keys, key material, private screenshots, or
-external delivery proof in public.
+confirmation, redacted diagnostics, broad failure class, checksum result,
+recovery next action, or a private security contact path. They must not request
+raw logs, crash dumps, screenshots, support bundles, local paths, onion
+endpoints, invite codes, payloads, message text, passphrases, private keys, key
+material, private screenshots, or external delivery proof in public.
 
 ## Non-Claims
 
@@ -525,7 +526,7 @@ The unsigned release upload set includes public provenance JSON, `GITHUB_RELEASE
 
 The upload set also includes `PUBLIC_THREAT_MODEL.md`, `PRIVACY_MODEL_COMPARISON.md`, `INDEPENDENT_REVIEW_PACKET.md`, `PUBLIC_INTAKE_POLICY.md`, `REPOSITORY_GOVERNANCE.md`, and `COMPONENT_BOUNDARIES.md` so reviewers can inspect allowed claims, non-claims, known gaps, public-safe review commands, private-reporting boundary, public issue/security intake redaction rules, maintainer-driven main-branch governance, component boundaries, and release guardrails without private planning notes.
 
-The app's public support diagnostics export is local-copy only and limited to app status, build identity, broad failure class, recovery next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary. It does not provide workflow-state export, crash upload, telemetry, raw log export, crash dump export, automated log collection, support bundle export, or raw diagnostic file export. It must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, profile names, message text, local paths, raw logs, crash dumps, screenshots of private room data, passphrases, private keys, key material, or private planning notes.
+The app's public support diagnostics export is local-copy only and limited to app status, build identity, checksum result, broad failure class, recovery next action, desktop local-private-flow acceptance status/blockers/non-claims, app-launch network boundary, and release class readiness. It does not provide workflow-state export, crash upload, telemetry, raw log export, crash dump export, automated log collection, support bundle export, or raw diagnostic file export. It must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, profile names, message text, local paths, raw logs, crash dumps, screenshots of private room data, passphrases, private keys, key material, private planning notes, or support bundles.
 
 Public unsigned beta artifacts must not include local app data, private planning notes, bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, plaintext messages, passphrases, private keys, key material, raw diagnostic logs, crash dumps, build caches, `docs/`, `target/`, `dist/`, `node_modules/`, `beta-artifacts/`, or generated public release folders committed into the repository.
 

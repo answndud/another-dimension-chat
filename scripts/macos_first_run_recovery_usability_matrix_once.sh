@@ -99,7 +99,7 @@ must_contain "$PRIVATE_STATE" "\"profile-names\""
 must_contain "$PRIVATE_STATE" "\"passphrases\""
 must_contain "$PRIVATE_STATE" "\"key-material\""
 must_contain "$PRIVATE_STATE" "\"private-planning-notes\""
-must_contain "apps/desktop-tauri/src/private-delivery-state.test.js" "forbidden_public_intake_fields=raw-logs#endpoints#invite-codes#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#key-material#private-planning-notes"
+must_contain "apps/desktop-tauri/src/private-delivery-state.test.js" "forbidden_public_intake_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles"
 
 must_contain "$UI_SMOKE" "first launch public beta warning keeps release and network boundaries visible"
 must_contain "$UI_SMOKE" "public diagnostics recovery guide keeps support-safe next actions visible"
