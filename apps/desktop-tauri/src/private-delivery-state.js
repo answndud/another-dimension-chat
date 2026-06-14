@@ -9,6 +9,136 @@ export function fieldTestReportValue(value, fallback = "unknown") {
     .slice(0, 96);
 }
 
+function manualEnvelopePanelItem(state, text) {
+  return {
+    state,
+    text,
+  };
+}
+
+function manualEnvelopeFailureForReason(reason) {
+  const normalized = fieldTestReportValue(reason, "").toLowerCase();
+  if (!normalized || normalized === "none" || normalized === "matched") {
+    return { failureClass: "none", recoveryNextAction: "continue-manual-envelope-flow" };
+  }
+  if (normalized.includes("replay")) {
+    return { failureClass: "replay-rejected", recoveryNextAction: "ask-for-fresh-envelope" };
+  }
+  if (
+    normalized.includes("malformed") ||
+    normalized.includes("corrupted") ||
+    normalized.includes("wrong_type") ||
+    normalized.includes("oversized") ||
+    normalized.includes("duplicate") ||
+    normalized.includes("payload-rejected")
+  ) {
+    return { failureClass: "malformed-envelope", recoveryNextAction: "ask-for-fresh-envelope" };
+  }
+  if (normalized === "empty-slot" || normalized === "missing-entry" || normalized.includes("missing-peer")) {
+    return { failureClass: "missing-peer-envelope", recoveryNextAction: "load-or-ask-for-peer-envelope" };
+  }
+  if (normalized.includes("stale") || normalized.includes("mismatch")) {
+    return { failureClass: "stale-envelope-selection", recoveryNextAction: "reapply-selected-row" };
+  }
+  if (normalized.includes("canceled")) {
+    return { failureClass: "canceled-envelope-row", recoveryNextAction: "write-and-export-new-message" };
+  }
+  return { failureClass: "manual-envelope-blocked", recoveryNextAction: "inspect-visible-next-action" };
+}
+
+export function manualEnvelopeExchangePanelView(input = {}) {
+  const sessionReady = input.sessionReady === true;
+  const safetyVerified = input.safetyVerified === true;
+  const manualReady = sessionReady && safetyVerified;
+  const selectedStale = input.selectedMessageInputMatches === false || input.selectedMessageInputStale === true;
+  const exported = Boolean(
+    input.hasLocalMessageEnvelope ||
+      input.senderEnvelopeSlotPresent ||
+      input.outboundExported ||
+      input.selectedNeedsPeerImport,
+  );
+  const exportReady = Boolean(input.hasOutboundMessageInput || input.selectedNeedsSenderExport);
+  const importReady = Boolean(input.hasInboundEnvelopeInput || input.hasRemoteMessageEnvelopeSlot);
+  const imported = Boolean(input.hasImportedMessage || input.hasReceivedMessage || input.inboundImported);
+  const replyDraft = input.hasTwoProfileReplyDraftInput === true;
+  const replySelected = input.hasTwoProfileReplySelected === true;
+  const plaintextReviewPending = input.plaintextReviewPending === true;
+  const retryReady = input.retryAvailable === true;
+  const cancelReady = input.cancelAvailable === true;
+  const latestFailure = manualEnvelopeFailureForReason(input.latestFailureClass);
+  let failure = latestFailure.failureClass === "none"
+    ? manualEnvelopeFailureForReason(input.slotMismatchReason)
+    : latestFailure;
+  if (selectedStale) {
+    failure = { failureClass: "stale-envelope-selection", recoveryNextAction: "reapply-selected-row" };
+  }
+  if (failure.failureClass === "none" && input.selectedNeedsPeerImport === true && !importReady && !imported) {
+    failure = { failureClass: "missing-peer-envelope", recoveryNextAction: "load-or-ask-for-peer-envelope" };
+  }
+  if (input.latestRecoveryNextAction) {
+    failure = {
+      failureClass: failure.failureClass,
+      recoveryNextAction: fieldTestReportValue(input.latestRecoveryNextAction, failure.recoveryNextAction),
+    };
+  }
+  const currentText = failure.failureClass === "none"
+    ? fieldTestReportValue(input.currentStep, "Current | open or create a room.")
+    : `Recovery | failure_class=${failure.failureClass} recovery_next_action=${failure.recoveryNextAction}`;
+  const exportItem = !manualReady
+    ? manualEnvelopePanelItem(
+        "blocked",
+        sessionReady ? "Compare the safety phrase before exporting." : "Open or create a verified room before exporting.",
+      )
+    : exported
+      ? manualEnvelopePanelItem("complete", "Envelope exported or ready for peer import.")
+      : exportReady
+        ? manualEnvelopePanelItem("ready", "Write message and export envelope from this device.")
+        : manualEnvelopePanelItem("waiting", "Write a message after safety verification.");
+  const importItem = imported
+    ? manualEnvelopePanelItem("complete", "Peer envelope imported for local plaintext review.")
+    : importReady
+      ? manualEnvelopePanelItem("ready", "Import the loaded peer envelope for this row.")
+      : manualEnvelopePanelItem(
+          input.selectedNeedsPeerImport ? "blocked" : "waiting",
+          input.selectedNeedsPeerImport
+            ? "Load the peer envelope or ask for a fresh export."
+            : "Wait for the peer envelope.",
+        );
+  const replyItem = replyDraft
+    ? manualEnvelopePanelItem("ready", "Reply draft ready; send it through the stored session.")
+    : plaintextReviewPending || input.hasImportedMessage
+      ? manualEnvelopePanelItem("ready", "Show plaintext locally before writing the reply.")
+      : replySelected || input.hasReceivedMessage
+        ? manualEnvelopePanelItem("ready", "Write the reply for the selected delivered row.")
+        : manualEnvelopePanelItem("waiting", "Reply unlocks after import and plaintext review.");
+  const recoveryText = retryReady || cancelReady
+    ? `Retry/cancel available for the selected pending send. retry=${retryReady} cancel=${cancelReady}`
+    : "No pending retry or cancel action.";
+  const recoveryItem = manualEnvelopePanelItem(retryReady || cancelReady ? "ready" : "waiting", recoveryText);
+  const failureItem = manualEnvelopePanelItem(
+    failure.failureClass === "none" ? "complete" : "failed",
+    `failure_class=${failure.failureClass} recovery_next_action=${failure.recoveryNextAction}`,
+  );
+  return {
+    current: manualEnvelopePanelItem(
+      failure.failureClass === "none" ? (safetyVerified ? "ready" : "waiting") : "failed",
+      currentText,
+    ),
+    export: exportItem,
+    import: importItem,
+    reply: replyItem,
+    recovery: recoveryItem,
+    failure: failureItem,
+    failureClass: failure.failureClass,
+    recoveryNextAction: failure.recoveryNextAction,
+    rawEnvelopePayloadReturned: false,
+    pairingPayloadReturned: false,
+    supportPayloadAllowed: false,
+    boundary:
+      "manual_envelope_panel=true raw_envelope_payload_returned=false pairing_payload_returned=false diagnostics_payload_allowed=false",
+  };
+}
+
 export const PUBLIC_SUPPORT_DIAGNOSTICS_ALLOWED_FIELDS = Object.freeze([
   "app-status",
   "app-version",
