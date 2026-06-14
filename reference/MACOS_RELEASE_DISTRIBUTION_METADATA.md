@@ -28,7 +28,8 @@ validation uses one same-release asset authority directory. For
 signed/notarized or stable candidates it requires
 `AD_MACOS_SIGNED_RC_PROVENANCE_IN` from the signed build/notarization path and
 binds that provenance to the artifact filename, artifact SHA-256, source
-commit, target architecture, signed/notarized/stapled status, Gatekeeper
+commit, app version, bundle id, release class, target architecture,
+signed/notarized/stapled status, signing identity SHA-256, Gatekeeper
 assessment, and contained-app verification fields instead of accepting
 unaudited manual booleans. It keeps upload/edit/commit permissions false. The
 upload script holds unless `AD_RELEASE_UPLOAD_AUTHORIZED=1` is present and the
