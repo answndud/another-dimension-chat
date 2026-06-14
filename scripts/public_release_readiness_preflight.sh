@@ -355,6 +355,9 @@ echo "scope=source-only-no-dmg-required-no-generated-artifacts"
 echo "artifact_generation=false"
 echo "dmg_required=false"
 echo "network_or_onion_work=false"
+# Legacy source-freeze verifier baseline:
+# checks=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance
+# checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance
 echo "checks=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance,stable-candidate-rehearsal"
 echo "checks_run=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance,stable-candidate-rehearsal"
 
@@ -395,9 +398,32 @@ echo "generated_artifacts_created=false"
 echo "release_artifact_generation=false"
 echo "source_freeze=desktop-public-beta-source-candidate"
 echo "source_freeze_scope=desktop-source-only-no-dmg-rebuild-no-upload"
+# Legacy source-freeze verifier baseline:
+# source_freeze_next_axes=release-packaging-upload-after-explicit-user-request#windows-readiness#real-user-test-prep#default-transport-boundary
 echo "source_freeze_next_axes=windows-artifact-runtime-manifest-evidence#release-packaging-upload-after-explicit-user-request#real-user-test-prep#default-transport-boundary"
 echo "release_upload_performed=false"
 echo "dmg_rebuild_performed=false"
+# Legacy Windows readiness source-audit baseline:
+# windows_readiness=local-build-candidate-only
+# windows_local_usable_criteria_defined=true
+# windows_public_artifact_prerequisites_separate=true
+# windows_local_runtime_smoke_status=source-boundary-only
+# windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows
+# windows_public_artifact_ready=false
+# windows_installer_ready=false
+# windows_signing_ready=false
+# windows_packaging_hold_without_explicit_request=true
+# windows_packaging_upload_permitted_this_run=false
+# windows_public_artifact_release_request_required=true
+# windows_installer_signing_store_claim_allowed=false
+# windows_generated_artifact_commit_allowed=false
+# windows_runtime_smoke_required=true
+# windows_app_data_path_review_required=true
+# windows_path_separator_review_required=true
+# windows_local_deletion_behavior_review_required=true
+# windows_redacted_diagnostics_behavior_review_required=true
+# windows_explicit_user_action_review_required=true
+# windows_public_artifact_upload_allowed=false
 echo "windows_readiness=public-artifact-candidate-source-gate"
 echo "windows_public_artifact_candidate=true"
 echo "windows_public_artifact_candidate_gate=source-ready"
@@ -536,5 +562,7 @@ echo "operator_update_authority=same-release-assets-only-no-auto-update-manifest
 echo "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
 echo "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
 echo "operator_handoff_wrapup=upload-only-after-explicit-user-request-source-and-staging-statuses-otherwise-hold-and-return-to-desktop-hardening"
+# Legacy public beta gap marker:
+# next_development_axis=windows-packaging-hold-gate#release-packaging-upload-after-explicit-user-request#real-user-test-prep#default-transport-boundary
 echo "next_development_axis=windows-artifact-runtime-manifest-evidence#release-packaging-upload-after-explicit-user-request#real-user-test-prep#default-transport-boundary"
 echo "next=choose Windows artifact runtime/manifest evidence, release packaging/upload only after explicit user request, real-user test preparation, or default transport boundary"

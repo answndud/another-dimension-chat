@@ -21,6 +21,7 @@ SOURCE_PROVENANCE="$SOURCE_DIR/Another Dimension Chat_0.1.0_aarch64.dmg.provenan
 
 RELEASE_DIR="${1:-$ROOT_DIR/apps/desktop-tauri/public-release/unsigned-public-beta}"
 RELEASE_DMG="another-dimension-chat-${APP_VERSION}-${BUILD_CHANNEL}-${PLATFORM}-unsigned.dmg"
+RELEASE_DMG_EXPECTED_NAME="another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg"
 RELEASE_PROVENANCE="${RELEASE_DMG}.provenance.json"
 REQUIRED_RELEASE_FILES=(
   "$RELEASE_DMG"
@@ -49,6 +50,11 @@ case "$RELEASE_DIR" in
     exit 1
     ;;
 esac
+
+if [ "$RELEASE_DMG" != "$RELEASE_DMG_EXPECTED_NAME" ]; then
+  echo "FAIL release DMG name drifted from public integrity boundary: $RELEASE_DMG" >&2
+  exit 1
+fi
 
 require_file() {
   if [ ! -f "$1" ]; then
@@ -292,6 +298,7 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "app_version": "$APP_VERSION",
   "build_channel": "$BUILD_CHANNEL",
   "build_commit": "$BUILD_COMMIT",
+  "source_commit": "$BUILD_COMMIT",
   "platform": "$PLATFORM",
   "macos_public_support_scope": "$MACOS_PUBLIC_SUPPORT_SCOPE",
   "macos_universal_artifact_ready": $MACOS_UNIVERSAL_ARTIFACT_READY,

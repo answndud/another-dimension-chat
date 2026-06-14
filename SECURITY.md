@@ -4,6 +4,10 @@
 
 Another Dimension Chat is not ready for real communication.
 
+The current macOS release path is an unsigned experimental public beta, not
+audited, not production-ready, and sensitive communication prohibited. It is
+not a secure messenger release.
+
 The current public repository contains a Rust/Tauri prototype and a local desktop beta candidate. It is useful for testing development flow, local encrypted-store boundaries, invite-room recovery, explicit user-mediated private-delivery actions, and fail-closed advanced onion/Tor attempt behavior, but it does not provide production-grade confidentiality, anonymity, metadata resistance, endpoint protection, or user safety.
 
 For the v0.1 unsigned public beta, the product surface is the desktop Tauri
