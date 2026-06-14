@@ -26,6 +26,8 @@ high_risk_matrix=remote_passive_observer:mitigated,remote_active_attacker:mitiga
 claimable_statuses=protected,mitigated
 not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation
 readiness_condition_set=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity
+high_risk_runtime_evidence_decisions=accepted#rejected#waiting
+high_risk_runtime_evidence_app_summary_fields=readiness_condition_set#readiness_missing_conditions#evidence_source#failure_class#clipboard_expiry_ready#emergency_controls_ready#local_storage_evidence_ready#release_integrity_ready
 audited_security_claim=false
 full_censorship_resistance_claim=false
 briar_cwtch_equivalence_claim=false
@@ -47,3 +49,12 @@ same vocabulary:
 
 Missing conditions are actionable status, not public permission to claim
 High-Risk readiness.
+
+Validator `next_owner_action` values must use the same readiness vocabulary:
+
+- `safety-verification` -> `verify-safety-number`
+- `high-risk-transport-runtime` -> `collect-real-redacted-runtime-report`
+- `emergency-controls` -> `open-emergency-controls`
+- `clipboard-expiry` -> `enable-clipboard-expiry`
+- `local-storage-evidence` -> `check-local-storage-runtime-evidence`
+- `release-integrity` -> `run-release-integrity-gate`
