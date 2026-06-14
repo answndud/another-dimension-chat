@@ -42,9 +42,33 @@ for file in \
   }
 done
 
-"$ROOT_DIR/scripts/public_support_incident_intake_once.sh" >/dev/null
+incident_output="$("$ROOT_DIR/scripts/public_support_incident_intake_once.sh")"
 "$ROOT_DIR/scripts/public_support_copy_sweep_once.sh" >/dev/null
 "$ROOT_DIR/scripts/emergency_notice_manual_verification_once.sh" >/dev/null
+
+require_output_text() {
+  local output="$1"
+  local text="$2"
+  if ! printf '%s\n' "$output" | grep -Fq -- "$text"; then
+    echo "FAIL missing public support readiness output: $text" >&2
+    exit 1
+  fi
+}
+
+for text in \
+  "public_issue_dry_run=redacted-support-triage-only" \
+  "dry_run_recovery_next_action=stay-on-manual-envelope" \
+  "dry_run_desktop_acceptance_status=not-claimed" \
+  "dry_run_high_risk_runtime_evidence_accepted=false" \
+  "dry_run_high_risk_runtime_failure_class=runtime-evidence-missing" \
+  "dry_run_engine_sidecar_status_failure_class=sidecar-unavailable" \
+  "dry_run_engine_sidecar_manual_self_test_failure_class=manual-self-test-not-run" \
+  "dry_run_engine_sidecar_redacted_runtime_status=redacted" \
+  "public_issue_accepted_usability_evidence=false" \
+  "public_issue_accepted_field_evidence=false" \
+  "public_issue_accepted_high_risk_evidence=false"; do
+  require_output_text "$incident_output" "$text"
+done
 
 require_text "$CORE" "production_public_support_incident_operations_summary"
 require_text "$CORE" "stable_candidate_blocked_when_support_not_ready"

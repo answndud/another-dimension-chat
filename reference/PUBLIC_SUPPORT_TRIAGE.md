@@ -19,6 +19,21 @@ private vulnerability reporting or a minimal security contact request. Do not re
 exploit details, crash dumps, screenshots, payload samples, endpoint details, or
 support bundles in a public issue.
 
+## Public Issue Dry-Run
+
+For a public issue dry-run, maintainers may use only redacted fields such as
+`recovery_next_action`, `desktop_acceptance_status`,
+`high_risk_runtime_evidence_accepted`, `high_risk_runtime_failure_class`,
+`engine_sidecar_status_failure_class`, and
+`engine_sidecar_manual_self_test_failure_class`.
+
+The expected dry-run classification is
+`public_issue_evidence_class=support-triage-only`,
+`accepted_usability_evidence=false`, `accepted_field_evidence=false`, and
+`accepted_high_risk_evidence=false`. Do not treat a public issue as
+representative usability evidence, production field evidence, or High-Risk
+readiness evidence.
+
 ## Triage Routing Matrix
 
 | Failure class | Maintainer next action | Public response snippet |
