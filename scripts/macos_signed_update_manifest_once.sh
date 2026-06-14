@@ -53,6 +53,7 @@ for flag in \
   "signed_update_manifest_requires_distribution_manifest_validation=true" \
   "signed_update_manifest_requires_signed_false_hold_flags=true" \
   "signed_update_manifest_previous_monotonicity_verifier_ready=true" \
+  "release_integrity_signed_update_manifest_candidate_ready=true" \
   "signed_update_manifest_ready=false" \
   "update_signature_ready=false" \
   "auto_update_channel_ready=false" \
@@ -118,6 +119,31 @@ printf '%s\n' "$empty_output" | grep -Fq "status=waiting-for-macos-signed-update
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
+fake_bin="$tmp_dir/fake-bin"
+mkdir -p "$fake_bin"
+cat >"$fake_bin/codesign" <<'SH'
+#!/usr/bin/env bash
+exit 0
+SH
+cat >"$fake_bin/spctl" <<'SH'
+#!/usr/bin/env bash
+exit 0
+SH
+cat >"$fake_bin/xcrun" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "${1:-}" = "--find" ] && [ "${2:-}" = "stapler" ]; then
+  echo "/usr/bin/true"
+  exit 0
+fi
+if [ "${1:-}" = "stapler" ] && [ "${2:-}" = "validate" ]; then
+  exit 0
+fi
+exit 1
+SH
+chmod +x "$fake_bin/codesign" "$fake_bin/spctl" "$fake_bin/xcrun"
+export PATH="$fake_bin:$PATH"
+
 artifact_name="another-dimension-chat-0.1.1-rc.1-macos-aarch64.dmg"
 printf 'signed update distribution binding fixture\n' >"$tmp_dir/$artifact_name"
 artifact_sha="$(shasum -a 256 "$tmp_dir/$artifact_name" | awk '{print $1}')"
@@ -129,6 +155,8 @@ cat >"$tmp_dir/$artifact_name.provenance.json" <<JSON
   "schema_version": "macos-release-distribution-provenance-v1",
   "repository": "answndud/another-dimension-chat",
   "source_commit": "$source_commit",
+  "app_version": "0.1.1",
+  "app_bundle_id": "chat.anotherdimension.app",
   "artifact_filename": "$artifact_name",
   "artifact_sha256": "$artifact_sha",
   "release_class": "signed-notarized-rc",
@@ -143,7 +171,20 @@ cat >"$tmp_dir/$artifact_name.provenance.json" <<JSON
   "dmg_contained_app_matches_signed_source_app": true,
   "release_upload_authorized": false,
   "macos_release_distribution_artifact_ready": false,
-  "generated_release_artifacts_commit_allowed": false
+  "generated_release_artifacts_commit_allowed": false,
+  "signed_rc_provenance_schema_version": "macos-signed-notarized-rc-provenance-v1",
+  "signed_rc_artifact": "$artifact_name",
+  "signed_rc_sha256": "$artifact_sha",
+  "signed_rc_source_commit": "$source_commit",
+  "signed_rc_app_version": "0.1.1",
+  "signed_rc_app_bundle_id": "chat.anotherdimension.app",
+  "signed_rc_release_class": "signed-notarized-rc",
+  "signed_rc_target_arch": "aarch64-apple-darwin",
+  "signed_rc_signing_identity_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "signed_rc_signed": true,
+  "signed_rc_notarized": true,
+  "signed_rc_stapled": true,
+  "signed_rc_gatekeeper_assessed": true
 }
 JSON
 provenance_sha="$(shasum -a 256 "$tmp_dir/$artifact_name.provenance.json" | awk '{print $1}')"
@@ -153,6 +194,7 @@ cat >"$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json" <<JSON
   "repository": "answndud/another-dimension-chat",
   "source_commit": "$source_commit",
   "version": "0.1.1",
+  "app_bundle_id": "chat.anotherdimension.app",
   "release_class": "signed-notarized-rc",
   "same_release_asset_authority_required": true,
   "release_upload_authorized": false,
@@ -163,6 +205,12 @@ cat >"$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json" <<JSON
     "not audited",
     "not production-ready"
   ],
+  "support_files": {
+    "install_guide_file": "INSTALL_UNSIGNED_MACOS.md",
+    "release_notes_file": "RELEASE_NOTES.md",
+    "update_integrity_file": "UPDATE_INTEGRITY.md",
+    "github_release_body_file": "GITHUB_RELEASE_BODY.md"
+  },
   "artifacts": [
     {
       "filename": "$artifact_name",
@@ -184,6 +232,19 @@ cat >"$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json" <<JSON
   ]
 }
 JSON
+for support_file in INSTALL_UNSIGNED_MACOS.md RELEASE_NOTES.md UPDATE_INTEGRITY.md GITHUB_RELEASE_BODY.md; do
+  cat >"$tmp_dir/$support_file" <<TXT
+Version: 0.1.1
+Source commit: $source_commit
+Artifact: $artifact_name
+SHA-256: $artifact_sha
+Signing status: signed
+Notarization status: notarized
+security_boundary=false
+auto_update_enabled=false
+release_upload_authorized=false
+TXT
+done
 distribution_manifest_sha="$(shasum -a 256 "$tmp_dir/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json" | awk '{print $1}')"
 
 node - \
@@ -399,6 +460,9 @@ signed_update_manifest_requires_dmg_contained_app_evidence=true
 signed_update_manifest_requires_distribution_manifest_validation=true
 signed_update_manifest_requires_signed_false_hold_flags=true
 signed_update_manifest_previous_monotonicity_verifier_ready=true
+readiness_condition=release-integrity
+release_integrity_condition=signed-update-manifest-candidate
+release_integrity_signed_update_manifest_candidate_ready=true
 signed_update_manifest_ready=false
 update_signature_ready=false
 auto_update_channel_ready=false
@@ -407,5 +471,7 @@ release_upload_authorized=false
 dmg_rebuild_authorized=false
 production_distribution_ready=false
 production_ready_claim_allowed=false
+high_risk_release_claim_allowed=false
+high_risk_ready_claim_allowed=false
 next_required_phase=O100-1-Operations-Incident-And-Vulnerability-Readiness
 STATUS

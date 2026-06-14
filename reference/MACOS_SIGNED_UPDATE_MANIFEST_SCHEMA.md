@@ -113,6 +113,9 @@ enables focused monotonic checks for `app_version`, `release_tag`, and
 - signed_update_manifest_requires_distribution_manifest_validation=true
 - signed_update_manifest_requires_signed_false_hold_flags=true
 - signed_update_manifest_previous_monotonicity_verifier_ready=true
+- readiness_condition=release-integrity
+- release_integrity_condition=signed-update-manifest-candidate
+- release_integrity_signed_update_manifest_candidate_ready=true
 - signed_update_manifest_ready=false
 - update_signature_ready=false
 - auto_update_channel_ready=false
@@ -121,6 +124,8 @@ enables focused monotonic checks for `app_version`, `release_tag`, and
 - dmg_rebuild_authorized=false
 - production_distribution_ready=false
 - production_ready_claim_allowed=false
+- high_risk_release_claim_allowed=false
+- high_risk_ready_claim_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false
 - next_required_phase=O100-1 Operations, Incident, And Vulnerability Readiness
