@@ -6,6 +6,9 @@ RELEASE_BODY="$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md"
 RELEASE_NOTES="$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md"
 INSTALL_GUIDE="$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md"
 PREPARE_SCRIPT="$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh"
+FINAL_REPORT="$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md"
+FRESH_RESULT="$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md"
+MATRIX="$ROOT_DIR/reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
 TAG="v0.1.0-beta-onion-unsigned"
 REPO="answndud/another-dimension-chat"
 DMG="another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg"
@@ -36,7 +39,7 @@ reject_text() {
   fi
 }
 
-for file in "$RELEASE_BODY" "$RELEASE_NOTES" "$INSTALL_GUIDE" "$PREPARE_SCRIPT"; do
+for file in "$RELEASE_BODY" "$RELEASE_NOTES" "$INSTALL_GUIDE" "$PREPARE_SCRIPT" "$FINAL_REPORT" "$FRESH_RESULT" "$MATRIX"; do
   require_file "$file"
 done
 
@@ -47,6 +50,10 @@ for file in "$RELEASE_BODY" "$RELEASE_NOTES" "$INSTALL_GUIDE"; do
   require_text "$file" "sensitive communication prohibited"
   require_text "$file" "$DMG"
   require_text "$file" "$DMG_SHA"
+  require_text "$file" "artifact_current_head_aligned=true"
+  require_text "$file" "public_artifact_stale=false"
+  require_text "$file" "public_artifact_state=current"
+  require_text "$file" "next_owner_action=run-clean-macos-fresh-install-with-disposable-profile"
   reject_text "$file" "sensitive communication allowed"
   reject_text "$file" "sensitive communication is safe"
   reject_text "$file" "safe for sensitive communication"
@@ -90,6 +97,15 @@ require_text "$RELEASE_NOTES" "macOS Apple Silicon is the only public app artifa
 require_text "$RELEASE_NOTES" "Manual encrypted envelope exchange is the practical default path"
 require_text "$RELEASE_NOTES" "external onion delivery success is not claimed"
 require_text "$RELEASE_NOTES" "Report only redacted diagnostics"
+require_text "$FINAL_REPORT" "## Final Public Beta Alignment"
+require_text "$FINAL_REPORT" "clean_macos_fresh_install_result=hold"
+require_text "$FINAL_REPORT" "clean_install_artifact_current=true"
+require_text "$FINAL_REPORT" "same_release_checksum_result=pass"
+require_text "$FRESH_RESULT" "clean_machine_result_accepted=false"
+require_text "$FRESH_RESULT" "local_fixture_promoted_to_clean_install_pass=false"
+require_text "$FRESH_RESULT" "same_release_checksum_result=pass"
+require_text "$MATRIX" "macos_unsigned_public_beta_final_alignment_available=true"
+require_text "$MATRIX" "public_support_redaction_aligned=true"
 
 require_text "$PREPARE_SCRIPT" "## Upload Allowlist"
 require_text "$PREPARE_SCRIPT" "## Forbidden Uploads"

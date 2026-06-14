@@ -114,6 +114,10 @@ require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh
 require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "public_artifact_stale=false"
 require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "public_artifact_state=current"
 require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "PUBLIC_ARTIFACT_CURRENT_ACTION=\"run-clean-macos-fresh-install-with-disposable-profile\""
+require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "CLEAN_INSTALL_RESULT=\"hold\""
+require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "clean_macos_fresh_install_result=%s"
+require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "clean_install_artifact_current=true"
+require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "same_release_checksum_result=pass"
 require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" 'next_owner_action=$next_action'
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "current_head_artifact_transition_gate_ready=true"
 require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "PUBLIC_ARTIFACT_CURRENT_ACTION=\"run-clean-macos-fresh-install-with-disposable-profile\""
@@ -123,6 +127,17 @@ require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "
 require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "public_artifact_stale=false"
 require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "public_artifact_state=current"
 require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "next_owner_action=run-clean-macos-fresh-install-with-disposable-profile"
+require_text "$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md" "Status: hold for manual GUI follow-through; same-release download and checksum passed."
+require_text "$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md" "clean_machine_result_accepted=false"
+require_text "$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md" "local_fixture_promoted_to_clean_install_pass=false"
+require_text "$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md" "artifact_sha256=ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13"
+require_text "$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md" "same_release_checksum_result=pass"
+require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "## Final Public Beta Alignment"
+require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "clean_macos_fresh_install_result=hold"
+require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "clean_install_artifact_current=true"
+require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "same_release_checksum_result=pass"
+require_text "$ROOT_DIR/reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md" "macos_unsigned_public_beta_final_alignment_available=true"
+require_text "$ROOT_DIR/reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md" "clean_macos_fresh_install_result=hold"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output file list differs from MANIFEST allowlist"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output dependency lockfile evidence is stale"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "If any after-upload confirmation fails"
@@ -417,6 +432,14 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
       exit 1
     }
   fi
+  printf '%s\n' "$preflight_output" | grep -Fq -- "macos_public_beta_final_report=ready" || {
+    echo "FAIL release readiness preflight missing macOS final report readiness" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "macos_fresh_install_rehearsal=source-linked" || {
+    echo "FAIL release readiness preflight missing clean-install source link" >&2
+    exit 1
+  }
   printf '%s\n' "$preflight_output" | grep -Fq -- "source_acceptance=desktop-release-source-accepted-for-operator-staging" || {
     echo "FAIL release readiness preflight missing source acceptance" >&2
     exit 1

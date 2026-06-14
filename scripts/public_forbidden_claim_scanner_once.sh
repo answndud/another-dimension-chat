@@ -45,6 +45,8 @@ done
 
 require_file "$ROOT_DIR/reference/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md"
 require_file "$ROOT_DIR/scripts/high_risk_runtime_evidence_validate_once.sh"
+require_file "$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md"
+require_file "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md"
 
 FORBIDDEN_POSITIVE_CLAIMS=(
   "production_ready_claim_allowed=true"
@@ -97,6 +99,10 @@ require_text "$ROOT_DIR/reference/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md" "high_ri
 require_text "$ROOT_DIR/reference/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md" "high_risk_ready_claim_allowed=false"
 require_text "$ROOT_DIR/scripts/high_risk_runtime_evidence_validate_once.sh" "high_risk_public_claim_allowed=false"
 require_text "$ROOT_DIR/scripts/high_risk_runtime_evidence_validate_once.sh" "high_risk_ready_claim_allowed=false"
+require_text "$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md" "clean_machine_result_accepted=false"
+require_text "$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md" "local_fixture_promoted_to_clean_install_pass=false"
+require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "clean_macos_fresh_install_result=hold"
+require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "no clean-machine pass claim"
 
 set +e
 final_acceptance_output="$("$ROOT_DIR/scripts/final_acceptance_once.sh" 2>&1)"
