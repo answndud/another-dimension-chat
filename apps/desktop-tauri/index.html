@@ -75,19 +75,19 @@
             aria-label="First-run local desktop flow"
             data-i18n-aria-label="firstRunChecklistLabel"
           >
-            <li data-i18n="firstRunProfileStep">
+            <li data-first-run-step="profile" data-step-status="current" aria-current="step" data-i18n="firstRunProfileStep">
               Create, unlock, or reopen your local profile before room actions.
             </li>
-            <li data-i18n="firstRunRoomStep">
+            <li data-first-run-step="room" data-step-status="pending" data-i18n="firstRunRoomStep">
               Create a pairwise invite room or paste the invite code you received.
             </li>
-            <li data-i18n="firstRunVerifyStep">
+            <li data-first-run-step="safety" data-step-status="pending" data-i18n="firstRunVerifyStep">
               Compare the mandatory safety phrase, then write a message.
             </li>
-            <li data-i18n="firstRunManualMessageStep">
+            <li data-first-run-step="message" data-step-status="pending" data-i18n="firstRunManualMessageStep">
               Export/import the manual encrypted envelope, then reply, retry, cancel, or delete locally.
             </li>
-            <li data-i18n="firstRunDiagnosticsStep">
+            <li data-first-run-step="diagnostics" data-step-status="pending" data-i18n="firstRunDiagnosticsStep">
               Copy public diagnostics only after redaction; blocked actions show the reason and next recovery action.
             </li>
           </ol>

@@ -152,6 +152,12 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(indexHtml, /data-i18n="firstRunVerifyStep"/);
   assert.match(indexHtml, /data-i18n="firstRunManualMessageStep"/);
   assert.match(indexHtml, /data-i18n="firstRunDiagnosticsStep"/);
+  assert.match(indexHtml, /data-first-run-step="profile"/);
+  assert.match(indexHtml, /data-first-run-step="room"/);
+  assert.match(indexHtml, /data-first-run-step="safety"/);
+  assert.match(indexHtml, /data-first-run-step="message"/);
+  assert.match(indexHtml, /data-first-run-step="diagnostics"/);
+  assert.match(indexHtml, /aria-current="step"/);
   assert.match(indexHtml, /data-i18n="firstRunPrimaryNextAction"/);
   assert.match(i18nJs, /same GitHub Release/);
   assert.match(i18nJs, /Privacy & Security manual allow/);
@@ -184,6 +190,10 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(i18nJs, /다음: 로컬 profile을 만들거나 unlock 하세요\./);
   assert.match(mainJs, /productionFirstRunDesktopSummaryView/);
   assert.match(functionBody(mainJs, "renderFirstRunDesktopSummary"), /fields\.firstRunPrimaryNextAction/);
+  assert.match(functionBody(mainJs, "renderFirstRunDesktopSummary"), /data-current-step/);
+  assert.match(functionBody(mainJs, "renderFirstRunDesktopSummary"), /aria-current/);
+  assert.match(stylesCss, /data-step-status="current"/);
+  assert.match(stylesCss, /data-step-status="complete"/);
   assert.match(actionStateJs, /export function productionHighRiskReadinessGateView/);
   assert.match(actionStateJs, /export function productionFinalReleaseAcceptanceView/);
   assert.match(actionStateJs, /export function productionExternalTwoMachineEvidenceView/);

@@ -526,6 +526,17 @@ test("first-run desktop summary keeps purpose release status and next action vis
 
   assert.equal(initial.purpose, "No-central-trusted-server 1:1 private messenger");
   assert.equal(initial.releaseStatus, "Unsigned public beta; no production security claim");
+  assert.equal(initial.currentStep, "profile");
+  assert.equal(initial.currentStepIndex, 1);
+  assert.equal(initial.stepCount, 5);
+  assert.equal(initial.stepStatuses.profile, "current");
+  assert.equal(noRoom.currentStep, "room");
+  assert.equal(unverified.currentStep, "safety");
+  assert.equal(readyToWrite.currentStep, "message");
+  assert.equal(active.currentStep, "diagnostics");
+  assert.equal(active.stepStatuses.profile, "complete");
+  assert.equal(active.stepStatuses.message, "complete");
+  assert.equal(active.stepStatuses.diagnostics, "current");
   assert.equal(initial.primaryNextAction, "Enter a local profile and passphrase.");
   assert.equal(locked.primaryNextAction, "Unlock or create the local profile.");
   assert.equal(noRoom.primaryNextAction, "Create an invite room or paste the invite code you received.");
@@ -533,6 +544,8 @@ test("first-run desktop summary keeps purpose release status and next action vis
   assert.equal(readyToWrite.primaryNextAction, "Write a message and export the encrypted envelope.");
   assert.equal(active.primaryNextAction, "Import, decrypt/display, reply, retry, or cancel from the room.");
   assert.match(initial.boundary, /first_run_summary=true/);
+  assert.match(initial.boundary, /first_run_current_step=profile/);
+  assert.match(initial.boundary, /first_run_progress_visible=true/);
   assert.match(initial.boundary, /primary_next_action_visible=true/);
   assert.match(initial.boundary, /sensitive_communication_claim=false/);
   assert.match(initial.boundary, /security_ready_claim=false/);
