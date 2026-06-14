@@ -43,6 +43,14 @@ const externalEvidenceSchema = readFileSync(
   join(appRoot, "..", "..", "reference", "EXTERNAL_TWO_MACHINE_EVIDENCE_SCHEMA.md"),
   "utf8",
 );
+const highRiskRuntimeEvidenceValidateScript = readFileSync(
+  join(appRoot, "..", "..", "scripts", "high_risk_runtime_evidence_validate_once.sh"),
+  "utf8",
+);
+const highRiskRuntimeEvidenceSchema = readFileSync(
+  join(appRoot, "..", "..", "reference", "HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md"),
+  "utf8",
+);
 const functionBodyCache = new Map();
 
 function functionBody(source, name) {
@@ -266,6 +274,21 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(externalEvidenceSchema, /local_path/);
   assert.match(externalEvidenceSchema, /passphrase/);
   assert.match(externalEvidenceSchema, /key_material/);
+  assert.match(highRiskRuntimeEvidenceSchema, /schema_version/);
+  assert.match(highRiskRuntimeEvidenceSchema, /high-risk-runtime-evidence-v1/);
+  assert.match(highRiskRuntimeEvidenceSchema, /high_risk_public_claim_allowed=false/);
+  assert.match(highRiskRuntimeEvidenceSchema, /high_risk_ready_claim_allowed=false/);
+  assert.match(highRiskRuntimeEvidenceSchema, /onion_endpoint/);
+  assert.match(highRiskRuntimeEvidenceSchema, /envelope_payload/);
+  assert.match(highRiskRuntimeEvidenceSchema, /local_path/);
+  assert.match(highRiskRuntimeEvidenceSchema, /key_material/);
+  assert.match(highRiskRuntimeEvidenceValidateScript, /high-risk-runtime-evidence-v1/);
+  assert.match(highRiskRuntimeEvidenceValidateScript, /high_risk_runtime_evidence_packet_valid=true/);
+  assert.match(highRiskRuntimeEvidenceValidateScript, /high_risk_public_claim_allowed=false/);
+  assert.match(highRiskRuntimeEvidenceValidateScript, /high_risk_ready_claim_allowed=false/);
+  assert.match(highRiskRuntimeEvidenceValidateScript, /forbidden-field:\$\{path\}\$\{key\}/);
+  assert.match(privateDeliveryStateJs, /high-risk-runtime-evidence-source/);
+  assert.match(privateDeliveryStateJs, /high-risk-runtime-failure-class/);
   assert.match(mainJs, /productionHighRiskReadinessGateView/);
   assert.match(mainJs, /productionHighRiskRuntimeEvidenceInputFromAttemptResult/);
   assert.match(mainJs, /productionHighRiskRuntimeEvidenceGateView/);
