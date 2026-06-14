@@ -37,8 +37,17 @@ jobs:
         shell: bash
         run: node apps/desktop-tauri/scripts/verify-windows-local-runtime-boundary.mjs
 
+      - name: Prepare Windows Perl for OpenSSL vendor build
+        shell: pwsh
+        run: |
+          if (!(Test-Path "C:\Strawberry\perl\bin\perl.exe")) {
+            choco install strawberryperl -y --no-progress
+          }
+          "C:\Strawberry\perl\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+          & "C:\Strawberry\perl\bin\perl.exe" -MLocale::Maketext::Simple -e "print qq(perl_ok\n)"
+
       - name: Build unsigned NSIS candidate
-        shell: bash
+        shell: pwsh
         working-directory: apps/desktop-tauri
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/.build-cache/cargo-target
