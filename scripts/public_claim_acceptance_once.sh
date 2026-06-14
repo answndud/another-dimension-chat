@@ -587,6 +587,30 @@ printf '%s\n' "$final_acceptance_output" | grep -Fq -- "external_delivery_claim=
   echo "FAIL final acceptance missing external delivery non-claim" >&2
   exit 1
 }
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "release_class=public_beta" || {
+  echo "FAIL final acceptance missing public beta release class" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "stable_candidate_ready=false" || {
+  echo "FAIL final acceptance missing stable candidate readiness hold" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "external_two_machine_evidence_present=false" || {
+  echo "FAIL final acceptance missing external evidence blocker" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "macos_public_artifact_consistency_verified=false" || {
+  echo "FAIL final acceptance missing macOS artifact blocker" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_public_artifact_consistency_verified=false" || {
+  echo "FAIL final acceptance missing Windows artifact blocker" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "emergency_advisory_path_ready=false" || {
+  echo "FAIL final acceptance missing emergency advisory blocker" >&2
+  exit 1
+}
 printf '%s\n' "$final_acceptance_output" | grep -Fq -- "scripts/public_release_readiness_preflight.sh" || {
   echo "FAIL final acceptance missing public release source gate next step" >&2
   exit 1

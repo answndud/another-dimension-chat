@@ -281,24 +281,44 @@ export function productionFinalReleaseAcceptanceView(input = {}) {
   const p0P1LocalBugsPresent = input.p0P1LocalBugsPresent === true;
   const sourceAcceptanceSuitePassed = input.sourceAcceptanceSuitePassed === true;
   const releaseArtifactConsistencyVerified = input.releaseArtifactConsistencyVerified === true;
+  const externalTwoMachineEvidencePresent = input.externalTwoMachineEvidencePresent === true;
+  const macosPublicArtifactConsistencyVerified = input.macosPublicArtifactConsistencyVerified === true;
+  const windowsPublicArtifactConsistencyVerified = input.windowsPublicArtifactConsistencyVerified === true;
+  const emergencyAdvisoryPathReady = input.emergencyAdvisoryPathReady === true;
   const publicCopyClaimsReviewed = input.publicCopyClaimsReviewed === true;
   const supportRedactionVerified = input.supportRedactionVerified === true;
-  const stablePublicAppReady =
+  const publicBetaReady =
     acceptanceBarCovered &&
     p0P1LocalBugAuditComplete &&
     !p0P1LocalBugsPresent &&
     sourceAcceptanceSuitePassed &&
-    releaseArtifactConsistencyVerified &&
     publicCopyClaimsReviewed &&
     supportRedactionVerified;
-  const highRiskModeReady = stablePublicAppReady && highRiskReadiness === "ready";
+  const stableCandidateReady =
+    publicBetaReady &&
+    externalTwoMachineEvidencePresent &&
+    macosPublicArtifactConsistencyVerified &&
+    windowsPublicArtifactConsistencyVerified &&
+    emergencyAdvisoryPathReady;
+  const stablePublicAppReady = stableCandidateReady && releaseArtifactConsistencyVerified;
+  const highRiskModeReady = highRiskReadiness === "ready";
+  const releaseClass = stablePublicAppReady
+    ? "stable"
+    : stableCandidateReady
+      ? "stable_candidate"
+      : "public_beta";
   const releaseDecision =
     stablePublicAppReady && highRiskModeReady
       ? "stable-and-high-risk-ready"
       : stablePublicAppReady
         ? "stable-ready-high-risk-hold"
+        : stableCandidateReady && highRiskModeReady
+          ? "stable-candidate-ready-high-risk-ready"
+          : stableCandidateReady
+            ? "stable-candidate-ready-high-risk-hold"
         : "hold";
   const summary = [
+    `release_class=${releaseClass}`,
     `acceptance_bar_items=${acceptanceBarItems}`,
     `acceptance_bar_covered=${acceptanceBarCovered}`,
     "payload_recorded=false",
@@ -309,8 +329,14 @@ export function productionFinalReleaseAcceptanceView(input = {}) {
     `p0_p1_local_bugs_present=${p0P1LocalBugsPresent}`,
     `source_acceptance_suite_passed=${sourceAcceptanceSuitePassed}`,
     `release_artifact_consistency_verified=${releaseArtifactConsistencyVerified}`,
+    `external_two_machine_evidence_present=${externalTwoMachineEvidencePresent}`,
+    `macos_public_artifact_consistency_verified=${macosPublicArtifactConsistencyVerified}`,
+    `windows_public_artifact_consistency_verified=${windowsPublicArtifactConsistencyVerified}`,
+    `emergency_advisory_path_ready=${emergencyAdvisoryPathReady}`,
     `public_copy_claims_reviewed=${publicCopyClaimsReviewed}`,
     `support_redaction_verified=${supportRedactionVerified}`,
+    `public_beta_ready=${publicBetaReady}`,
+    `stable_candidate_ready=${stableCandidateReady}`,
     `stable_public_app_ready=${stablePublicAppReady}`,
     `high_risk_readiness=${highRiskReadiness}`,
     `high_risk_mode_ready=${highRiskModeReady}`,
@@ -332,14 +358,21 @@ export function productionFinalReleaseAcceptanceView(input = {}) {
     p0P1LocalBugsPresent,
     sourceAcceptanceSuitePassed,
     releaseArtifactConsistencyVerified,
+    externalTwoMachineEvidencePresent,
+    macosPublicArtifactConsistencyVerified,
+    windowsPublicArtifactConsistencyVerified,
+    emergencyAdvisoryPathReady,
     publicCopyClaimsReviewed,
     supportRedactionVerified,
+    publicBetaReady,
+    stableCandidateReady,
     stablePublicAppReady,
     highRiskReadiness,
     highRiskModeReady,
+    releaseClass,
     releaseDecision,
     summary,
-    boundary: `${summary} readiness_streams=stable_public_app#high_risk_mode`,
+    boundary: `${summary} readiness_streams=public_beta#stable_candidate#stable_public_app#high_risk_mode`,
   };
 }
 
