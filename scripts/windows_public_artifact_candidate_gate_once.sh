@@ -39,9 +39,10 @@ REFERENCE="reference/WINDOWS_PUBLIC_ARTIFACT_CANDIDATE_GATE.md"
 MANIFEST_SCHEMA="reference/WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"
 RUNTIME_SCHEMA="reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md"
 RUNTIME_CONTRACT="scripts/windows_artifact_runtime_evidence_contract_once.sh"
+SIGNING_REPUTATION="scripts/windows_code_signing_reputation_boundary_once.sh"
 
 for file in "$CORE" "$STATE" "$STATE_TEST" "$SMOKE_TEST" "$TAURI_LIB" "$TAURI_STATUS" \
-  "$REFERENCE" "$MANIFEST_SCHEMA" "$RUNTIME_SCHEMA" "$RUNTIME_CONTRACT"; do
+  "$REFERENCE" "$MANIFEST_SCHEMA" "$RUNTIME_SCHEMA" "$RUNTIME_CONTRACT" "$SIGNING_REPUTATION"; do
   [ -f "$file" ] || fail "missing Windows public artifact candidate gate input: $file"
 done
 
@@ -112,6 +113,11 @@ runtime_contract_output="$("$RUNTIME_CONTRACT")"
 must_output_contain "$runtime_contract_output" "status=windows-artifact-runtime-evidence-contract-ready"
 must_output_contain "$runtime_contract_output" "windows_public_artifact_ready=false"
 
+signing_reputation_output="$("$SIGNING_REPUTATION")"
+must_output_contain "$signing_reputation_output" "windows_code_signing_reputation_boundary=source-ready"
+must_output_contain "$signing_reputation_output" "windows_signing_ready=false"
+must_output_contain "$signing_reputation_output" "code_signing_security_boundary_claimed=false"
+
 for file in "$STATE" "$TAURI_LIB" "$TAURI_STATUS" "$REFERENCE"; do
   must_not_match "$file" "windows_public_artifact_ready[=:] ?true"
   must_not_match "$file" "windows_installer_ready[=:] ?true"
@@ -134,6 +140,7 @@ echo "windows_app_data_path_review_required=false"
 echo "windows_redacted_diagnostics_behavior_review_required=false"
 echo "manifest_checksum_provenance_required=true"
 echo "runtime_evidence_contract_verified=true"
+echo "windows_code_signing_reputation_boundary=source-ready"
 echo "runtime_result_external_peer_evidence_separated=true"
 echo "windows_public_artifact_ready=false"
 echo "windows_production_claim_allowed=false"
