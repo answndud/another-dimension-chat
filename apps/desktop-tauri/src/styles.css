@@ -276,6 +276,50 @@ h1 {
   line-height: 1.4;
 }
 
+.loop-label[data-destructive-scope] {
+  color: var(--warning);
+}
+
+input[data-destructive-scope] {
+  border-color: color-mix(in srgb, var(--warning) 44%, var(--input-border));
+}
+
+button[data-destructive-scope] {
+  border-left: 3px solid var(--warning);
+}
+
+.lifecycle-action-note[data-destructive-scope] {
+  border-left: 2px solid color-mix(in srgb, var(--warning) 50%, transparent);
+  padding-left: 8px;
+}
+
+[data-destructive-scope="conversation-delete"] {
+  --destructive-scope-color: var(--accent-cyan);
+}
+
+[data-destructive-scope="session-delete"] {
+  --destructive-scope-color: var(--warning);
+}
+
+[data-destructive-scope="profile-delete"],
+[data-destructive-scope="full-local-wipe"],
+[data-destructive-scope="emergency-local-wipe"] {
+  --destructive-scope-color: var(--danger);
+}
+
+input[data-destructive-scope],
+button[data-destructive-scope],
+.lifecycle-action-note[data-destructive-scope] {
+  border-color: color-mix(in srgb, var(--destructive-scope-color) 52%, var(--panel-border));
+}
+
+button[data-destructive-scope="emergency-local-wipe"] {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--danger) 12%, transparent), transparent 70%),
+    var(--panel);
+  color: color-mix(in srgb, var(--danger) 82%, var(--button-text));
+}
+
 .local-dev-peer-label {
   position: fixed;
   z-index: 31;

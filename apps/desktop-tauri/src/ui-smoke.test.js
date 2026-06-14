@@ -1515,6 +1515,21 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(indexHtml, /fullWipeScopeNote/);
   assert.match(indexHtml, /id="production-session-delete-confirmation"/);
   assert.match(indexHtml, /id="production-conversation-delete-confirmation"/);
+  assert.match(indexHtml, /data-destructive-scope="conversation-delete"/);
+  assert.match(indexHtml, /data-destructive-scope="session-delete"/);
+  assert.match(indexHtml, /data-destructive-scope="profile-delete"/);
+  assert.match(indexHtml, /data-destructive-scope="full-local-wipe"/);
+  assert.match(indexHtml, /data-destructive-scope="emergency-local-wipe"/);
+  assert.match(indexHtml, /id="conversation-delete-scope-note"/);
+  assert.match(indexHtml, /id="session-delete-scope-note"/);
+  assert.match(indexHtml, /id="profile-delete-scope-note"/);
+  assert.match(indexHtml, /id="full-wipe-scope-note"/);
+  assert.match(indexHtml, /id="emergency-wipe-scope-note"/);
+  assert.match(indexHtml, /aria-describedby="conversation-delete-scope-note"/);
+  assert.match(indexHtml, /aria-describedby="session-delete-scope-note"/);
+  assert.match(indexHtml, /aria-describedby="profile-delete-scope-note"/);
+  assert.match(indexHtml, /aria-describedby="full-wipe-scope-note"/);
+  assert.match(indexHtml, /aria-describedby="emergency-wipe-scope-note"/);
   assert.match(indexHtml, /data-i18n="sessionDeleteConfirm"/);
   assert.match(indexHtml, /data-i18n="conversationDeleteConfirm"/);
   assert.match(i18nJs, /Conversation delete removes local message records and preserves session records/);
@@ -1527,6 +1542,11 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(i18nJs, /coercion-safe or compromised-device-safe protection/);
   assert.match(stylesCss, /\.lifecycle-guide/);
   assert.match(stylesCss, /\.lifecycle-action-note/);
+  assert.match(stylesCss, /button\[data-destructive-scope\]/);
+  assert.match(stylesCss, /input\[data-destructive-scope\]/);
+  assert.match(stylesCss, /\[data-destructive-scope="conversation-delete"\]/);
+  assert.match(stylesCss, /\[data-destructive-scope="session-delete"\]/);
+  assert.match(stylesCss, /\[data-destructive-scope="emergency-local-wipe"\]/);
 
   const viewBody = functionBody(mainJs, "dataLifecycleActionView");
   assert.match(viewBody, /destructive_action=\$\{destructiveAction\}/);
