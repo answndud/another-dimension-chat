@@ -166,6 +166,31 @@ current source HEAD. Treat the next action as
 `rebuild-or-republish-unsigned-public-beta-packet` before making any latest-app
 artifact statement.
 
+## Clean macOS Fresh-Install Result Contract
+
+The local source rehearsal may verify checklist readiness and same-release
+checksum handling, but it is not a clean-machine pass. A clean install result
+must use these public-safe fields:
+
+- `clean_machine_execution=false`
+- `clean_machine_result_accepted=false`
+- `local_fixture_promoted_to_clean_install_pass=false`
+- `checksum_result=OK`
+- `gatekeeper_manual_allow_result=hold`
+- `first_launch_result=hold`
+- `profile_unlock_result=hold`
+- `invite_join_result=hold`
+- `safety_compare_result=hold`
+- `envelope_exchange_result=hold`
+- `diagnostics_copy_result=hold`
+- `local_delete_result=hold`
+- `app_launch_network=false`
+- `next_owner_action=run-clean-macos-fresh-install-with-disposable-profile`
+
+Only a real clean macOS machine with disposable data can move the clean-machine
+fields out of `hold`. Local fixtures, ignored release packets, and source gates
+must not be promoted to a fresh-install pass.
+
 ## Platform Release Boundary
 
 The current public artifact is the unsigned macOS DMG. Future Windows, Android,
