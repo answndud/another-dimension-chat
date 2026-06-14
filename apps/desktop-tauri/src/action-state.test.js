@@ -11,6 +11,7 @@ import {
   productionHighRiskThreatModelClaimMatrix,
   productionHighRiskReadinessGateView,
   productionFinalReleaseAcceptanceView,
+  productionExternalTwoMachineEvidenceView,
   productionHighRiskTransportMetadataBoundaryView,
   productionPanicLockMitigationView,
   productionVersionIntegrityView,
@@ -280,6 +281,51 @@ test("final release acceptance separates beta candidate stable and high-risk rea
   assert.equal(stableOnly.releaseClass, "stable_candidate");
   assert.equal(stableOnly.releaseDecision, "stable-candidate-ready-high-risk-hold");
   assert.match(stableOnly.boundary, /readiness_streams=public_beta#stable_candidate#stable_public_app#high_risk_mode/);
+});
+
+test("external two-machine evidence accepts only redacted real peer reports", () => {
+  const base = {
+    machineAReportPresent: true,
+    machineBReportPresent: true,
+    appVersionMatch: true,
+    buildCommitMatch: true,
+    checksumMatch: true,
+    inviteCreated: true,
+    safetyCompared: true,
+    outboundExported: true,
+    inboundImported: true,
+    retryCancelDeleteVerified: true,
+    broadFailureClass: "none-redacted",
+  };
+
+  const localOnly = productionExternalTwoMachineEvidenceView({
+    ...base,
+    localOnlyRehearsal: true,
+  });
+  assert.equal(localOnly.accepted, false);
+  assert.equal(localOnly.stableCandidateEvidencePresent, false);
+  assert.equal(localOnly.primaryBlocker, "local-only-rehearsal");
+  assert.equal(localOnly.localOnlyPromotedToExternal, false);
+  assert.equal(localOnly.reliableDeliveryClaimAllowed, false);
+  assert.match(localOnly.summary, /local_only_rehearsal=true/);
+  assert.match(localOnly.summary, /reliable_delivery_claim_allowed=false/);
+
+  const forbidden = productionExternalTwoMachineEvidenceView({
+    ...base,
+    forbiddenFieldsPresent: true,
+  });
+  assert.equal(forbidden.accepted, false);
+  assert.equal(forbidden.primaryBlocker, "forbidden-field-present");
+  assert.match(forbidden.summary, /forbidden_fields_present=true/);
+  assert.match(forbidden.summary, /forbidden_fields=.*invite_body.*envelope_payload.*local_path.*passphrase.*key_material/);
+
+  const accepted = productionExternalTwoMachineEvidenceView(base);
+  assert.equal(accepted.accepted, true);
+  assert.equal(accepted.stableCandidateEvidencePresent, true);
+  assert.equal(accepted.primaryBlocker, "none");
+  assert.equal(accepted.nextAction, "ready-for-maintainer-review");
+  assert.match(accepted.boundary, /evidence_scope=real-two-machine-redacted-peer-reports-only/);
+  assert.doesNotMatch(accepted.summary, /invite_body=.*[^#\s]|envelope_payload=.*[^#\s]|passphrase=.*[^#\s]/);
 });
 
 test("version integrity view keeps manual update and rollback claims bounded", () => {

@@ -31,6 +31,18 @@ const finalAcceptanceScript = readFileSync(
   join(appRoot, "..", "..", "scripts", "final_acceptance_once.sh"),
   "utf8",
 );
+const externalEvidencePrepareScript = readFileSync(
+  join(appRoot, "..", "..", "scripts", "external_two_machine_evidence_prepare.sh"),
+  "utf8",
+);
+const externalEvidenceValidateScript = readFileSync(
+  join(appRoot, "..", "..", "scripts", "external_two_machine_evidence_validate.sh"),
+  "utf8",
+);
+const externalEvidenceSchema = readFileSync(
+  join(appRoot, "..", "..", "reference", "EXTERNAL_TWO_MACHINE_EVIDENCE_SCHEMA.md"),
+  "utf8",
+);
 const functionBodyCache = new Map();
 
 function functionBody(source, name) {
@@ -174,6 +186,7 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(functionBody(mainJs, "renderFirstRunDesktopSummary"), /fields\.firstRunPrimaryNextAction/);
   assert.match(actionStateJs, /export function productionHighRiskReadinessGateView/);
   assert.match(actionStateJs, /export function productionFinalReleaseAcceptanceView/);
+  assert.match(actionStateJs, /export function productionExternalTwoMachineEvidenceView/);
   assert.match(actionStateJs, /status_values=ready#limited#not_ready/);
   assert.match(actionStateJs, /public_support_high_risk_claim_allowed=\$\{highRiskReadyClaimAllowed\}/);
   assert.match(actionStateJs, /release_high_risk_claim_allowed=\$\{highRiskReadyClaimAllowed\}/);
@@ -203,6 +216,19 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(finalAcceptanceScript, /passphrase_recorded=false/);
   assert.match(finalAcceptanceScript, /local_path_recorded=false/);
   assert.match(finalAcceptanceScript, /key_material_recorded=false/);
+  assert.match(externalEvidencePrepareScript, /schema_version": "external-two-machine-evidence-v1"/);
+  assert.match(externalEvidencePrepareScript, /external_two_machine_evidence_present=false/);
+  assert.match(externalEvidenceValidateScript, /external_two_machine_evidence_present=true/);
+  assert.match(externalEvidenceValidateScript, /local_only_promoted_to_external=false/);
+  assert.match(externalEvidenceValidateScript, /reliable_delivery_claim_allowed=false/);
+  assert.match(externalEvidenceValidateScript, /audited_claim_allowed=false/);
+  assert.match(externalEvidenceValidateScript, /forbidden-field:\$\{path\}\$\{key\}/);
+  assert.match(externalEvidenceSchema, /schema_version/);
+  assert.match(externalEvidenceSchema, /invite_body/);
+  assert.match(externalEvidenceSchema, /envelope_payload/);
+  assert.match(externalEvidenceSchema, /local_path/);
+  assert.match(externalEvidenceSchema, /passphrase/);
+  assert.match(externalEvidenceSchema, /key_material/);
   assert.match(mainJs, /productionHighRiskReadinessGateView/);
   assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /twoProfileSafetyConfirmedForInput/);
   assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /data-readiness/);
