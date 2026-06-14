@@ -955,6 +955,9 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(actionStateJs, /shared_core_bypass_allowed=false/);
   assert.match(actionStateJs, /full_censorship_resistance_claim=false/);
   assert.match(actionStateJs, /high_risk_transport_mode=onion-only/);
+  assert.match(actionStateJs, /high_risk_transport_runtime_evidence_required_for_ready=true/);
+  assert.match(actionStateJs, /high_risk_transport_runtime_evidence_present=false/);
+  assert.match(actionStateJs, /transport-runtime-evidence-missing/);
   assert.match(actionStateJs, /high_risk_transport_not_ready_reason=runtime-network-disabled-until-explicit-user-action/);
   assert.doesNotMatch(actionStateJs, /windows_public_artifact_ready=true|shared_core_bypass_allowed=true/);
   assert.match(mainJs, /productionVersionIntegrityView/);
@@ -2780,6 +2783,12 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_onion_path=explicit-user-triggered-fail-closed/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_transport_mode=\$\{highRiskTransportMode\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_transport_not_ready_reason=\$\{highRiskTransportNotReadyReason\}/);
+  assert.match(privateDeliveryStateJs, /high_risk_transport_runtime_evidence_required_for_ready=true/);
+  assert.match(privateDeliveryStateJs, /high_risk_transport_runtime_evidence_present=false/);
+  assert.match(
+    privateDeliveryStateJs,
+    /high_risk_transport_failure_classes=bridge_config_missing#bootstrap_timeout#peer_unreachable#stale_endpoint#receive_owner_mismatch/,
+  );
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /production_e2ee_ready=\$\{productionE2eeReady\}/);
   assert.doesNotMatch(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public diagnostics ready failure_class=/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_completion=\$\{desktopCompletion\.status\}/);

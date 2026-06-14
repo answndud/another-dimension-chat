@@ -141,6 +141,47 @@ fn high_risk_transport_policy_enforces_onion_only_metadata_minimization() {
 }
 
 #[test]
+fn high_risk_onion_runtime_evidence_gate_requires_explicit_redacted_runtime_evidence() {
+    let summary = high_risk_onion_runtime_evidence_summary();
+
+    assert!(summary.boundary_closed());
+    assert_eq!(summary.policy_mode(), TransportMode::HighRiskOnionOnly);
+    assert_eq!(summary.runtime_route_kind(), TransportKind::OnionService);
+    assert!(summary.explicit_start_action_required());
+    assert!(summary.explicit_stop_action_supported());
+    assert!(!summary.app_launch_network_attempted());
+    assert!(!summary.room_open_network_attempted());
+    assert!(!summary.direct_fallback_allowed());
+    assert!(!summary.dns_endpoint_allowed());
+    assert!(!summary.ip_endpoint_allowed());
+    assert!(!summary.raw_bridge_line_exposed());
+    assert!(!summary.raw_onion_endpoint_exposed());
+    assert!(!summary.descriptor_exposed());
+    assert!(!summary.local_path_exposed());
+    assert!(summary.endpoint_rotation_state_separated());
+    assert!(summary.encrypted_endpoint_update_ready());
+    assert_eq!(
+        summary.stale_endpoint_refresh_action(),
+        "refresh-private-route"
+    );
+    assert!(summary.receive_loop_owner_scoped());
+    assert_eq!(
+        summary.failure_classes(),
+        &[
+            "bridge_config_missing",
+            "bootstrap_timeout",
+            "peer_unreachable",
+            "stale_endpoint",
+            "receive_owner_mismatch",
+        ]
+    );
+    assert!(summary.runtime_event_identifiers_redacted());
+    assert!(summary.runtime_evidence_required_for_ready());
+    assert!(!summary.runtime_evidence_present());
+    assert!(!summary.high_risk_transport_ready());
+}
+
+#[test]
 fn direct_peer_requires_explicit_low_risk_policy() {
     let policy = TransportPolicy::low_risk_direct_allowed();
     let onion = TransportRoute::onion("example.onion").expect("onion route");

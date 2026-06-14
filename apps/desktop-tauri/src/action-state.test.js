@@ -164,6 +164,12 @@ test("high-risk transport metadata boundary stays onion-only and redacted", () =
   assert.match(view.boundary, /high_risk_transport_timestamp_precision=minute/);
   assert.match(view.boundary, /high_risk_transport_redacted_contact_id=true/);
   assert.match(view.boundary, /high_risk_transport_redacted_session_id=true/);
+  assert.match(view.boundary, /high_risk_transport_runtime_evidence_required_for_ready=true/);
+  assert.match(view.boundary, /high_risk_transport_runtime_evidence_present=false/);
+  assert.match(
+    view.boundary,
+    /high_risk_transport_failure_classes=bridge_config_missing#bootstrap_timeout#peer_unreachable#stale_endpoint#receive_owner_mismatch/,
+  );
   assert.match(view.boundary, /high_risk_transport_ready=false/);
 });
 
@@ -204,10 +210,27 @@ test("high-risk readiness gate separates not ready limited and ready claims", ()
   assert.equal(limited.highRiskReadyClaimAllowed, false);
   assert.match(limited.boundary, /status_values=ready#limited#not_ready/);
 
+  const missingRuntimeEvidence = productionHighRiskReadinessGateView({
+    threatMatrixAccepted: true,
+    pairwiseSafetyVerified: true,
+    highRiskTransportReady: true,
+    productionKeyManagementReady: true,
+    rollbackMarkerHealthy: true,
+    diagnosticsRedacted: true,
+    releaseIntegrityAvailable: true,
+  });
+  assert.equal(missingRuntimeEvidence.status, "not_ready");
+  assert.equal(missingRuntimeEvidence.primaryReasonCode, "transport-runtime-evidence-missing");
+  assert.equal(missingRuntimeEvidence.nextAction, "run-high-risk-transport-runtime-evidence");
+  assert.equal(missingRuntimeEvidence.highRiskReadyClaimAllowed, false);
+  assert.match(missingRuntimeEvidence.summary, /high_risk_transport_runtime_evidence_present=false/);
+  assert.doesNotMatch(missingRuntimeEvidence.summary, /high_risk_ready_claim_allowed=true/);
+
   const ready = productionHighRiskReadinessGateView({
     threatMatrixAccepted: true,
     pairwiseSafetyVerified: true,
     highRiskTransportReady: true,
+    highRiskRuntimeEvidencePresent: true,
     productionKeyManagementReady: true,
     rollbackMarkerHealthy: true,
     diagnosticsRedacted: true,
