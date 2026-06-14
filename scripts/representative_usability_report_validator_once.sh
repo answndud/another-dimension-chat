@@ -41,6 +41,8 @@ must_contain "$PACKET" "representative_usability_redacted_support_report_require
 must_contain "$PACKET" "consent_non_sensitive_use_notice_ready=true"
 must_contain "$PACKET" "representative_usability_sample_threshold=3-5"
 must_contain "$PACKET" "representative_usability_candidate_requires_manual_review=true"
+must_contain "$PACKET" "representative_usability_intake_decision_values=waiting#rejected#candidate_requires_review"
+must_contain "$PACKET" "missing_evidence_is_next_owner_action=true"
 must_contain "$PACKET" "usability_study_completed=false"
 must_contain "$PACKET" "representative_usability_evidence_completed=false"
 must_contain "$PACKET" "sensitive communication prohibited"
@@ -57,6 +59,9 @@ must_contain "$VALIDATOR" "redacted_support_report_copy_status"
 must_contain "$VALIDATOR" "usability_study_completed=false"
 must_contain "$VALIDATOR" "representative_usability_evidence_completed=false"
 must_contain "$VALIDATOR" "manual-review-and-stable-gate-update-required"
+must_contain "$VALIDATOR" "evidence_intake_decision"
+must_contain "$VALIDATOR" "next_owner_action"
+must_contain "$VALIDATOR" "missing_evidence_is_next_owner_action=true"
 must_contain "$VALIDATOR" "forbidden-content"
 must_contain "$VALIDATOR" "non-claims-mismatch"
 
@@ -67,6 +72,11 @@ must_not_match "$PACKET" "sensitive_communication_allowed=true"
 
 empty_output="$(node "$VALIDATOR" "$ROOT/docs/representative-usability-reports")"
 printf '%s\n' "$empty_output" | grep -Fq "reports_found=0" || fail "empty validator run did not report zero reports"
+printf '%s\n' "$empty_output" | grep -Fq "evidence_intake_decision=waiting" || fail "empty validator did not mark waiting decision"
+printf '%s\n' "$empty_output" | grep -Fq "next_owner_action=collect-real-redacted-representative-usability-reports" ||
+  fail "empty validator did not report next owner action"
+printf '%s\n' "$empty_output" | grep -Fq "missing_evidence_is_next_owner_action=true" ||
+  fail "empty validator did not keep missing evidence as owner action"
 printf '%s\n' "$empty_output" | grep -Fq "status=waiting-for-representative-usability-reports" || fail "empty validator did not wait for reports"
 
 tmp_dir="$(mktemp -d)"
@@ -121,6 +131,10 @@ printf '%s\n' "$candidate_output" | grep -Fq "accepted_representative_usability_
 printf '%s\n' "$candidate_output" | grep -Fq "representative_usability_sample_threshold_met=true" || fail "candidate validator did not detect threshold"
 printf '%s\n' "$candidate_output" | grep -Fq "representative_usability_unique_dedup_tokens=true" || fail "candidate validator did not verify dedup tokens"
 printf '%s\n' "$candidate_output" | grep -Fq "usability_study_completed=false" || fail "validator must not auto-complete usability study"
+printf '%s\n' "$candidate_output" | grep -Fq "evidence_intake_decision=candidate_requires_review" ||
+  fail "candidate validator did not mark candidate decision"
+printf '%s\n' "$candidate_output" | grep -Fq "next_owner_action=manual-review-and-stable-gate-update-required" ||
+  fail "candidate validator did not preserve review next action"
 printf '%s\n' "$candidate_output" | grep -Fq "status=representative-usability-evidence-candidate-requires-review" || fail "candidate validator did not require review"
 
 cat >"$tmp_dir/invalid.md" <<'REPORT'
@@ -163,6 +177,9 @@ if node "$VALIDATOR" "$tmp_dir/invalid.md" >"$invalid_output" 2>&1; then
   fail "validator accepted forbidden email address"
 fi
 grep -Fq "forbidden-content:email-address" "$invalid_output" || fail "validator did not report forbidden email address"
+grep -Fq "evidence_intake_decision=rejected" "$invalid_output" || fail "validator did not mark invalid report rejected"
+grep -Fq "next_owner_action=fix-redaction-or-required-fields" "$invalid_output" ||
+  fail "validator did not report invalid next owner action"
 
 cp "$tmp_dir/r01.md" "$tmp_dir/invalid-build.md"
 perl -0pi -e 's/build_commit=abcdef1234567890/build_commit=test-redacted/' "$tmp_dir/invalid-build.md"

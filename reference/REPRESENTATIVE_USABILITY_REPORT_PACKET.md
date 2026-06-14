@@ -39,6 +39,15 @@ queue, but stable, production, public macOS 100%, and TARGET_STANDARD 100%
 claims still require real accepted usability evidence or a later explicit
 claim-policy decision.
 
+Missing reports are not a source blocker. The validator must report them as a
+next owner action:
+
+```text
+evidence_intake_decision=waiting
+next_owner_action=collect-real-redacted-representative-usability-reports
+missing_evidence_is_next_owner_action=true
+```
+
 ## Allowed Report Fields
 
 - `participant_label`
@@ -82,6 +91,29 @@ payloads, endpoint payloads, safety phrases, profile names, contact
 identifiers, message text, local paths, raw logs, crash dumps, screenshots of
 private room data, passphrases, private keys, key material, files from `docs/`,
 local app data, or private planning notes.
+
+## Validator Decision Contract
+
+The focused validator returns exactly one public-safe intake decision:
+
+- `evidence_intake_decision=waiting`: no reports or fewer than 3-5 unique
+  representative reports. `next_owner_action` names the collection task.
+- `evidence_intake_decision=rejected`: a report contains forbidden content,
+  unresolved template values, duplicate dedup tokens, missing required fields,
+  non-claim mismatch, or required task/network coverage failure.
+- `evidence_intake_decision=candidate_requires_review`: 3-5 unique redacted
+  reports pass the required first-run, invite, safety, manual envelope,
+  recovery, diagnostics, and local delete tasks.
+
+Even a candidate requires manual maintainer review and stable-gate update.
+The validator must keep:
+
+```text
+usability_study_completed=false
+representative_usability_evidence_completed=false
+production_wording_ready=false
+sensitive_communication_allowed=false
+```
 
 ## Report Template
 
@@ -134,6 +166,8 @@ non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-p
 - consent_non_sensitive_use_notice_ready=true
 - representative_usability_sample_threshold=3-5
 - representative_usability_candidate_requires_manual_review=true
+- representative_usability_intake_decision_values=waiting#rejected#candidate_requires_review
+- missing_evidence_is_next_owner_action=true
 - usability_study_completed=false
 - representative_usability_evidence_completed=false
 - production_wording_ready=false

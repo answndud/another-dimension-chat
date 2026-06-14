@@ -205,6 +205,9 @@ if (reports.length === 0) {
   console.log("offline_online_transition_covered=false");
   console.log("failed_delivery_recovery_documented=false");
   console.log("production_field_evidence_ready=false");
+  console.log("evidence_intake_decision=waiting");
+  console.log("next_owner_action=collect-real-redacted-two-machine-field-reports");
+  console.log("missing_evidence_is_next_owner_action=true");
   console.log("status=waiting-for-redacted-field-reports");
   process.exit(0);
 }
@@ -222,6 +225,9 @@ for (const report of validated) {
 }
 
 if (failures > 0) {
+  console.log("evidence_intake_decision=rejected");
+  console.log("next_owner_action=fix-redaction-or-required-fields");
+  console.log("missing_evidence_is_next_owner_action=true");
   console.log("status=invalid-redacted-field-reports");
   process.exit(1);
 }
@@ -255,13 +261,28 @@ console.log("production_field_evidence_ready=false");
 console.log("production_field_evidence_ready_reason=manual-review-and-stable-gate-update-required");
 
 if (!repeated) {
+  console.log("evidence_intake_decision=waiting");
+  console.log("next_owner_action=collect-repeated-two-machine-field-reports");
+  console.log("missing_evidence_is_next_owner_action=true");
   console.log("status=waiting-for-repeated-two-machine-reports");
 } else if (!requiredPlatformPairsCovered) {
+  console.log("evidence_intake_decision=waiting");
+  console.log("next_owner_action=collect-required-platform-pair-coverage");
+  console.log("missing_evidence_is_next_owner_action=true");
   console.log("status=waiting-for-required-platform-pair-coverage");
 } else if (!differentNetworksCovered) {
+  console.log("evidence_intake_decision=waiting");
+  console.log("next_owner_action=collect-different-network-report");
+  console.log("missing_evidence_is_next_owner_action=true");
   console.log("status=waiting-for-different-network-report");
 } else if (!allRequiredFlowPassed || !launchNetworkStayedFalse) {
+  console.log("evidence_intake_decision=rejected");
+  console.log("next_owner_action=rerun-required-flow-with-app-launch-network-false");
+  console.log("missing_evidence_is_next_owner_action=true");
   console.log("status=field-reports-need-required-flow-coverage");
 } else {
+  console.log("evidence_intake_decision=candidate_requires_review");
+  console.log("next_owner_action=manual-review-and-stable-gate-update-required");
+  console.log("missing_evidence_is_next_owner_action=true");
   console.log("status=redacted-field-evidence-candidate-requires-review");
 }

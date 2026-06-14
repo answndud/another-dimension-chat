@@ -28,6 +28,15 @@ F100-1 is closed for active-queue progress by owner waiver only. This packet
 still has no accepted production field reports and remains a candidate intake
 template until real external reports are submitted and reviewed.
 
+Missing real reports are not a local/source blocker. The validator must report
+them as a next owner action:
+
+```text
+evidence_intake_decision=waiting
+next_owner_action=collect-real-redacted-two-machine-field-reports
+missing_evidence_is_next_owner_action=true
+```
+
 ## Allowed Report Fields
 
 - `app_version`
@@ -64,6 +73,31 @@ envelope payloads, endpoint payloads, safety phrases, profile names, contact
 identifiers, message text, local paths, raw logs, crash dumps, screenshots of
 private room data, passphrases, private keys, key material, files from `docs/`,
 local app data, or private planning notes.
+
+## Validator Decision Contract
+
+The focused validator returns exactly one public-safe intake decision:
+
+- `evidence_intake_decision=waiting`: no reports, insufficient repeated
+  two-machine coverage, missing required platform pairs, or missing different
+  network coverage. `next_owner_action` names the collection task.
+- `evidence_intake_decision=rejected`: a report contains forbidden content,
+  unresolved template values, unknown fields, non-claim mismatch, required flow
+  failure, or app-launch network boundary failure.
+- `evidence_intake_decision=candidate_requires_review`: redacted two-machine
+  reports cover required platform pairs, different networks, restart/resume,
+  offline/online transition, failed-delivery recovery, and app-launch network
+  false.
+
+Even a candidate requires maintainer review and stable-gate update. The
+validator must keep:
+
+```text
+production_field_evidence_ready=false
+external_delivery_success_claim_allowed=false
+reliable_external_delivery_claim_allowed=false
+sensitive_communication_allowed=false
+```
 
 ## Report Template
 
@@ -115,6 +149,8 @@ non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-p
 - d100_4_external_evidence_intake_execution_reviewed=true
 - external_evidence_intake_operator_ready=true
 - field_report_validator_ready=true
+- redacted_field_report_intake_decision_values=waiting#rejected#candidate_requires_review
+- missing_evidence_is_next_owner_action=true
 - accepted_production_field_reports=0
 - required_platform_pairs_covered=false
 - local_two_instance_rehearsal_completed=false

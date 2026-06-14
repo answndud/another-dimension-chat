@@ -235,6 +235,9 @@ console.log(`reports_found=${reports.length}`);
 if (reports.length === 0) {
   console.log("accepted_representative_usability_reports=0");
   console.log("representative_usability_sample_threshold_met=false");
+  console.log("evidence_intake_decision=waiting");
+  console.log("next_owner_action=collect-real-redacted-representative-usability-reports");
+  console.log("missing_evidence_is_next_owner_action=true");
   console.log("usability_study_completed=false");
   console.log("representative_usability_evidence_completed=false");
   console.log("status=waiting-for-representative-usability-reports");
@@ -255,6 +258,9 @@ for (const report of validated) {
 }
 
 if (failures > 0) {
+  console.log("evidence_intake_decision=rejected");
+  console.log("next_owner_action=fix-redaction-or-required-fields");
+  console.log("missing_evidence_is_next_owner_action=true");
   console.log("status=invalid-representative-usability-reports");
   process.exit(1);
 }
@@ -283,9 +289,18 @@ console.log("representative_usability_evidence_completed=false");
 console.log("representative_usability_evidence_ready_reason=manual-review-and-stable-gate-update-required");
 
 if (!sampleThresholdMet) {
+  console.log("evidence_intake_decision=waiting");
+  console.log("next_owner_action=collect-3-to-5-unique-representative-usability-reports");
+  console.log("missing_evidence_is_next_owner_action=true");
   console.log("status=waiting-for-3-to-5-unique-representative-usability-reports");
 } else if (!allRequiredTasksPassed || !allLaunchNetworkStayedFalse) {
+  console.log("evidence_intake_decision=rejected");
+  console.log("next_owner_action=rerun-required-task-flow-with-redacted-report");
+  console.log("missing_evidence_is_next_owner_action=true");
   console.log("status=representative-usability-reports-need-required-task-coverage");
 } else {
+  console.log("evidence_intake_decision=candidate_requires_review");
+  console.log("next_owner_action=manual-review-and-stable-gate-update-required");
+  console.log("missing_evidence_is_next_owner_action=true");
   console.log("status=representative-usability-evidence-candidate-requires-review");
 }
