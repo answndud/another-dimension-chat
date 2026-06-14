@@ -57,7 +57,7 @@ must_contain "$POLICY" "next_required_phase=Phase O100-1 - Operations, Incident,
 
 must_contain "$TAURI_CONFIG" '"productName": "Another Dimension Chat"'
 must_contain "$TAURI_CONFIG" '"version": "0.1.0"'
-must_contain "$TAURI_CONFIG" '"identifier": "chat.anotherdimension.prototype"'
+must_contain "$TAURI_CONFIG" '"identifier": "chat.anotherdimension.app"'
 must_contain "$TAURI_CONFIG" '"active": true'
 must_contain "$TAURI_CONFIG" '"targets": "all"'
 must_contain "$PACKAGE_JSON" '"version": "0.1.0"'

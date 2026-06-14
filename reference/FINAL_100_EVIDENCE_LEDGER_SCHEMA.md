@@ -35,6 +35,10 @@ set. External review signoff and audit finding tracker child files must pass
 `scripts/validate_external_review_signoff.mjs` and
 `scripts/validate_audit_finding_tracker.mjs` before the final ledger can be
 accepted; critical/high audit findings must be closed in the tracker output.
+Windows artifact manifest and runtime result child files must pass
+`scripts/validate_windows_artifact_manifest.mjs` and
+`scripts/validate_windows_public_artifact_results.mjs`, including artifact,
+provenance, and manifest SHA binding, before the final ledger can be accepted.
 External field reports must pass `scripts/validate_redacted_field_reports.mjs`
 with required platform-pair coverage before the final ledger can be accepted.
 The validator can be run with `--require-current-head` or
@@ -55,6 +59,8 @@ sets public claims true by itself.
 - final_100_evidence_ledger_child_files_sha_verified=true
 - final_100_evidence_ledger_child_files_content_redacted=true
 - final_100_evidence_ledger_requires_valid_representative_usability_reports=true
+- final_100_evidence_ledger_requires_valid_windows_artifact_manifest=true
+- final_100_evidence_ledger_requires_valid_windows_runtime_result=true
 - final_100_evidence_ledger_requires_valid_external_review_signoff=true
 - final_100_evidence_ledger_requires_valid_audit_finding_tracker=true
 - final_100_evidence_ledger_requires_valid_redacted_field_reports=true

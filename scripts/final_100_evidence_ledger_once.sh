@@ -33,6 +33,8 @@ for flag in \
   "final_100_evidence_ledger_child_files_sha_verified=true" \
   "final_100_evidence_ledger_child_files_content_redacted=true" \
   "final_100_evidence_ledger_requires_valid_representative_usability_reports=true" \
+  "final_100_evidence_ledger_requires_valid_windows_artifact_manifest=true" \
+  "final_100_evidence_ledger_requires_valid_windows_runtime_result=true" \
   "final_100_evidence_ledger_requires_valid_external_review_signoff=true" \
   "final_100_evidence_ledger_requires_valid_audit_finding_tracker=true" \
   "final_100_evidence_ledger_requires_valid_redacted_field_reports=true" \
@@ -52,6 +54,10 @@ must_contain "$VALIDATOR" "final_100_evidence_ledger_child_files_sha_verified=tr
 must_contain "$VALIDATOR" "final_100_evidence_ledger_child_files_content_redacted=true"
 must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_valid_representative_usability_reports=true"
 must_contain "$VALIDATOR" "validate_representative_usability_reports.mjs"
+must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_valid_windows_artifact_manifest=true"
+must_contain "$VALIDATOR" "validate_windows_artifact_manifest.mjs"
+must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_valid_windows_runtime_result=true"
+must_contain "$VALIDATOR" "validate_windows_public_artifact_results.mjs"
 must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_valid_external_review_signoff=true"
 must_contain "$VALIDATOR" "validate_external_review_signoff.mjs"
 must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_valid_audit_finding_tracker=true"
@@ -132,6 +138,8 @@ write_field_report() {
 app_version=0.1.0
 build_channel=beta-onion
 build_commit=abcdef1234567890
+high_risk_readiness_condition_set=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity
+high_risk_readiness_condition_coverage=safety-verification#high-risk-transport-runtime
 platform_pair=$platform_pair
 checksum_result=pass
 install_path_reached=first-launch
@@ -165,8 +173,190 @@ write_evidence "macos/dmg-contained-app-assessment.txt" 'mounted DMG app codesig
 write_usability_report "macos/usability-1.md" "R01" "dedup_11111111111111111111111111111111"
 write_usability_report "macos/usability-2.md" "R02" "dedup_22222222222222222222222222222222"
 write_usability_report "macos/usability-3.md" "R03" "dedup_33333333333333333333333333333333"
-write_evidence "windows/artifact-manifest.json" '{"schema":"windows-public-artifact-manifest-v1","result":"verified"}'
-write_evidence "windows/runtime-result.md" 'real Windows runtime result: WebView2 and app-data checks passed'
+mkdir -p "$tmp_dir/windows"
+windows_artifact_name="Another Dimension Chat_0.1.0_x64-setup.exe"
+node - "$tmp_dir/windows/$windows_artifact_name" <<'NODE'
+const fs = require("node:fs");
+const file = process.argv[2];
+const bytes = Buffer.alloc(512, 0);
+bytes.write("MZ", 0, "ascii");
+bytes.writeUInt32LE(0x80, 0x3c);
+bytes.write("PE\0\0", 0x80, "binary");
+fs.writeFileSync(file, bytes);
+NODE
+windows_artifact_sha="$(shasum -a 256 "$tmp_dir/windows/$windows_artifact_name" | awk '{print $1}')"
+windows_artifact_size="$(wc -c <"$tmp_dir/windows/$windows_artifact_name" | tr -d ' ')"
+printf '%s  %s\n' "$windows_artifact_sha" "$windows_artifact_name" \
+  >"$tmp_dir/windows/$windows_artifact_name.sha256"
+cat >"$tmp_dir/windows/$windows_artifact_name.provenance.json" <<JSON
+{
+  "schema_version": "windows-public-artifact-provenance-v1",
+  "repository": "answndud/another-dimension-chat",
+  "source_commit": "abcdef1234567890",
+  "artifact_filename": "$windows_artifact_name",
+  "artifact_sha256": "$windows_artifact_sha",
+  "release_class": "unsigned-windows-beta",
+  "bundle_target": "nsis",
+  "signing_status": "unsigned-hold",
+  "release_upload_authorized": false,
+  "windows_public_artifact_ready": false,
+  "generated_release_artifacts_commit_allowed": false,
+  "engine_sidecar_required": true,
+  "engine_sidecar_packaged": true,
+  "engine_sidecar_runtime_mode": "manual-e2ee-engine-sidecar",
+  "engine_sidecar_protocol": "ad-engine-json-stdio-v1",
+  "engine_sidecar_contract_version": 1,
+  "engine_sidecar_status_command": "status",
+  "engine_sidecar_manual_self_test_command": "manual-self-test",
+  "engine_sidecar_manual_self_test_required": true,
+  "engine_sidecar_raw_path_returned": false,
+  "engine_sidecar_stdout_returned": false,
+  "engine_sidecar_stderr_returned": false,
+  "engine_sidecar_app_launch_network_allowed": false,
+  "engine_sidecar_room_open_network_allowed": false,
+  "engine_sidecar_local_runtime_promoted_to_delivery_proof": false
+}
+JSON
+windows_provenance_sha="$(shasum -a 256 "$tmp_dir/windows/$windows_artifact_name.provenance.json" | awk '{print $1}')"
+windows_manifest_name="WINDOWS_ARTIFACT_MANIFEST.json"
+cat >"$tmp_dir/windows/$windows_manifest_name" <<JSON
+{
+  "schema_version": "windows-public-artifact-manifest-v1",
+  "repository": "answndud/another-dimension-chat",
+  "source_commit": "abcdef1234567890",
+  "version": "0.1.0",
+  "release_class": "unsigned-windows-beta",
+  "manifest_file": "$windows_manifest_name",
+  "manifest_sha256_file": "$windows_manifest_name.sha256",
+  "default_bundle_target": "nsis",
+  "default_artifact_extension": ".exe",
+  "webview2_runtime_required": true,
+  "app_data_resolver": "tauri-app-data",
+  "redacted_diagnostics_required": true,
+  "auto_update": false,
+  "engine_sidecar_required": true,
+  "engine_sidecar_packaged": true,
+  "engine_sidecar_runtime_mode": "manual-e2ee-engine-sidecar",
+  "engine_sidecar_protocol": "ad-engine-json-stdio-v1",
+  "engine_sidecar_contract_version": 1,
+  "engine_sidecar_status_command": "status",
+  "engine_sidecar_manual_self_test_command": "manual-self-test",
+  "engine_sidecar_manual_self_test_required": true,
+  "engine_sidecar_raw_path_returned": false,
+  "engine_sidecar_stdout_returned": false,
+  "engine_sidecar_stderr_returned": false,
+  "engine_sidecar_app_launch_network_allowed": false,
+  "engine_sidecar_room_open_network_allowed": false,
+  "engine_sidecar_local_runtime_promoted_to_delivery_proof": false,
+  "same_release_asset_authority_required": true,
+  "release_upload_authorized": false,
+  "release_body_edit_authorized": false,
+  "windows_public_artifact_ready": false,
+  "windows_installer_ready": false,
+  "generated_release_artifacts_commit_allowed": false,
+  "public_non_claims": [
+    "unsigned experimental public beta",
+    "sensitive communication prohibited",
+    "not audited",
+    "not production-ready",
+    "no public Windows artifact",
+    "no Windows installer",
+    "no public artifact upload"
+  ],
+  "artifacts": [
+    {
+      "filename": "$windows_artifact_name",
+      "artifact_basename": "$windows_artifact_name",
+      "artifact_path_class": "generated-release-directory-relative-basename",
+      "sha256": "$windows_artifact_sha",
+      "size_bytes": $windows_artifact_size,
+      "platform": "windows",
+      "architecture": "windows-x64",
+      "bundle_target": "nsis",
+      "signing_status": "unsigned-hold",
+      "checksum_file": "$windows_artifact_name.sha256",
+      "provenance_file": "$windows_artifact_name.provenance.json",
+      "webview2_runtime_required": true,
+      "app_data_resolver": "tauri-app-data",
+      "encrypted_store_required": true,
+      "redacted_diagnostics_required": true,
+      "auto_update": false,
+      "smartscreen_reputation_claim": false,
+      "signing_trust_boundary": false,
+      "engine_sidecar_required": true,
+      "engine_sidecar_packaged": true,
+      "engine_sidecar_runtime_mode": "manual-e2ee-engine-sidecar",
+      "engine_sidecar_protocol": "ad-engine-json-stdio-v1",
+      "engine_sidecar_contract_version": 1,
+      "engine_sidecar_status_command": "status",
+      "engine_sidecar_manual_self_test_command": "manual-self-test",
+      "engine_sidecar_manual_self_test_required": true,
+      "engine_sidecar_raw_path_returned": false,
+      "engine_sidecar_stdout_returned": false,
+      "engine_sidecar_stderr_returned": false,
+      "engine_sidecar_app_launch_network_allowed": false,
+      "engine_sidecar_room_open_network_allowed": false,
+      "engine_sidecar_local_runtime_promoted_to_delivery_proof": false
+    }
+  ]
+}
+JSON
+windows_manifest_sha="$(shasum -a 256 "$tmp_dir/windows/$windows_manifest_name" | awk '{print $1}')"
+printf '%s  %s\n' "$windows_manifest_sha" "$windows_manifest_name" \
+  >"$tmp_dir/windows/$windows_manifest_name.sha256"
+cat >"$tmp_dir/windows/runtime-result.md" <<REPORT
+schema_version=windows-public-artifact-result-v1
+result_id=WIN-0001
+run_host=real-windows-machine
+platform=windows
+windows_version=Windows 11 23H2
+architecture=x64
+artifact_kind=nsis
+artifact_app_version=0.1.0
+artifact_release_class=unsigned-windows-beta
+artifact_path_redacted=true
+install_path_class=redacted-installer-default
+app_data_resolver_class=tauri-app-data
+artifact_manifest_file=$windows_manifest_name
+artifact_sha256=$windows_artifact_sha
+artifact_provenance_sha256=$windows_provenance_sha
+artifact_manifest_sha256=$windows_manifest_sha
+source_commit=abcdef1234567890
+webview2_rendered=pass
+app_data_root_redacted=pass
+path_separator_behavior=pass
+encrypted_store_profile_unlock=pass
+profile_create_unlock=pass
+local_deletion_behavior=pass
+redacted_diagnostics_only=pass
+redacted_diagnostics_copy=pass
+engine_sidecar_status_runtime_checked=true
+engine_sidecar_status_failure_class=none
+engine_sidecar_status_contract_valid=true
+engine_sidecar_status_redacted_diagnostics_only=true
+engine_sidecar_manual_self_test_runtime_checked=true
+engine_sidecar_manual_self_test_failure_class=none
+engine_sidecar_manual_self_test_contract_valid=true
+engine_sidecar_manual_self_test_passed=true
+engine_sidecar_manual_self_test_runtime_available=true
+engine_sidecar_raw_path_returned=false
+engine_sidecar_stdout_returned=false
+engine_sidecar_stderr_returned=false
+engine_sidecar_app_launch_network_allowed=false
+engine_sidecar_room_open_network_allowed=false
+engine_sidecar_local_runtime_promoted_to_delivery_proof=false
+explicit_user_action_before_network=pass
+app_launch_network=false
+local_manual_envelope_default_path=pass
+auto_update_channel_absent=pass
+public_non_claims_visible=pass
+installer_signing_decision=unsigned-hold
+smartscreen_reputation_claim=false
+public_copy_reviewed=true
+checksum_provenance_verified=true
+support_diagnostics_reviewed=true
+non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-prohibited#not-audited#not-production-ready#no-public-windows-artifact#no-windows-installer#no-public-artifact-upload
+REPORT
 write_evidence "android/artifact-manifest.json" '{"schema":"android-public-artifact-manifest-v1","result":"verified"}'
 write_evidence "android/device-result.md" 'real Android device result: shared-core flow and backup exclusion passed'
 write_evidence "ios/artifact-manifest.json" '{"schema":"ios-public-artifact-manifest-v1","result":"verified"}'
@@ -287,7 +477,7 @@ const ledger = {
       ],
     },
     windows: {
-      artifact_manifest: ref("windows/artifact-manifest.json"),
+      artifact_manifest: ref("windows/WINDOWS_ARTIFACT_MANIFEST.json"),
       runtime_result: ref("windows/runtime-result.md"),
     },
     android: {
@@ -386,6 +576,10 @@ printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_child_fi
   fail "final 100 ledger validator did not scan child evidence content"
 printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_requires_valid_representative_usability_reports=true" ||
   fail "final 100 ledger validator did not require valid representative usability reports"
+printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_requires_valid_windows_artifact_manifest=true" ||
+  fail "final 100 ledger validator did not require valid Windows artifact manifest"
+printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_requires_valid_windows_runtime_result=true" ||
+  fail "final 100 ledger validator did not require valid Windows runtime result"
 printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_requires_valid_external_review_signoff=true" ||
   fail "final 100 ledger validator did not require valid external review signoff"
 printf '%s\n' "$candidate_output" | grep -Fq "final_100_evidence_ledger_requires_valid_audit_finding_tracker=true" ||
@@ -422,6 +616,27 @@ fi
 grep -Fq "macos.representative_usability_reports:required-tasks-not-passed" \
   "$tmp_dir/invalid-usability.out" ||
   fail "final 100 ledger validator did not report invalid representative usability reports"
+
+sed 's/^artifact_manifest_sha256=.*/artifact_manifest_sha256=dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd/' \
+  "$tmp_dir/windows/runtime-result.md" >"$tmp_dir/windows/runtime-result-bad-manifest-sha.md"
+node - "$tmp_dir" <<'NODE'
+const { createHash } = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+const root = process.argv[2];
+const ledger = JSON.parse(fs.readFileSync(path.join(root, "valid-ledger.json"), "utf8"));
+const result = path.join(root, "windows/runtime-result-bad-manifest-sha.md");
+ledger.evidence_files.windows.runtime_result = {
+  path: "windows/runtime-result-bad-manifest-sha.md",
+  sha256: createHash("sha256").update(fs.readFileSync(result)).digest("hex"),
+};
+fs.writeFileSync(path.join(root, "invalid-windows-runtime-ledger.json"), `${JSON.stringify(ledger, null, 2)}\n`);
+NODE
+if node "$VALIDATOR" "$tmp_dir/invalid-windows-runtime-ledger.json" >"$tmp_dir/invalid-windows-runtime.out" 2>&1; then
+  fail "final 100 evidence ledger accepted Windows runtime result with mismatched artifact manifest SHA"
+fi
+grep -Fq "windows.runtime_result:validator-failed" "$tmp_dir/invalid-windows-runtime.out" ||
+  fail "final 100 ledger validator did not report invalid Windows runtime result"
 
 node - "$tmp_dir" <<'NODE'
 const { createHash } = require("node:crypto");
@@ -516,6 +731,8 @@ final_100_evidence_ledger_requires_child_evidence_files=true
 final_100_evidence_ledger_child_files_sha_verified=true
 final_100_evidence_ledger_child_files_content_redacted=true
 final_100_evidence_ledger_requires_valid_representative_usability_reports=true
+final_100_evidence_ledger_requires_valid_windows_artifact_manifest=true
+final_100_evidence_ledger_requires_valid_windows_runtime_result=true
 final_100_evidence_ledger_requires_valid_external_review_signoff=true
 final_100_evidence_ledger_requires_valid_audit_finding_tracker=true
 final_100_evidence_ledger_requires_valid_redacted_field_reports=true

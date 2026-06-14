@@ -229,6 +229,68 @@ function validateRepresentativeUsabilityReports(ledger, file, { requireCurrentHe
   return issues;
 }
 
+function validateWindowsArtifactManifest(ledger, file, { requireCurrentHead }) {
+  const refs = ledger.evidence_files?.windows?.artifact_manifest;
+  const manifestFiles = collectEvidenceFilePaths(path.dirname(file), refs);
+  if (manifestFiles.length === 0) return [];
+  const validator = path.join(process.cwd(), "scripts", "validate_windows_artifact_manifest.mjs");
+  const issues = [];
+  let output = "";
+  try {
+    output = execFileSync(process.execPath, [validator, ...manifestFiles], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        AD_REQUIRE_CURRENT_HEAD: requireCurrentHead ? "1" : process.env.AD_REQUIRE_CURRENT_HEAD ?? "",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch {
+    return ["windows.artifact_manifest:validator-failed"];
+  }
+  if (!output.includes(`accepted_windows_artifact_manifests=${manifestFiles.length}`)) {
+    issues.push("windows.artifact_manifest:not-all-accepted");
+  }
+  if (!output.includes("windows_artifact_package_structure_verified=true")) {
+    issues.push("windows.artifact_manifest:package-structure-not-verified");
+  }
+  if (!output.includes("status=windows-artifact-manifest-candidate-requires-release-gate")) {
+    issues.push("windows.artifact_manifest:not-candidate");
+  }
+  return issues;
+}
+
+function validateWindowsRuntimeResult(ledger, file, { requireCurrentHead }) {
+  const refs = ledger.evidence_files?.windows?.runtime_result;
+  const resultFiles = collectEvidenceFilePaths(path.dirname(file), refs);
+  if (resultFiles.length === 0) return [];
+  const validator = path.join(process.cwd(), "scripts", "validate_windows_public_artifact_results.mjs");
+  const issues = [];
+  let output = "";
+  try {
+    output = execFileSync(process.execPath, [validator, ...resultFiles], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        AD_REQUIRE_CURRENT_HEAD: requireCurrentHead ? "1" : process.env.AD_REQUIRE_CURRENT_HEAD ?? "",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch {
+    return ["windows.runtime_result:validator-failed"];
+  }
+  if (!output.includes(`accepted_windows_public_artifact_results=${resultFiles.length}`)) {
+    issues.push("windows.runtime_result:not-all-accepted");
+  }
+  if (!output.includes("windows_real_runtime_smoke_passed=true")) {
+    issues.push("windows.runtime_result:smoke-not-passed");
+  }
+  if (!output.includes("status=windows-public-artifact-candidate-requires-review")) {
+    issues.push("windows.runtime_result:not-candidate");
+  }
+  return issues;
+}
+
 function validateRedactedFieldReports(ledger, file) {
   const refs = ledger.evidence_files?.external?.redacted_field_reports;
   const reportFiles = collectEvidenceFilePaths(path.dirname(file), refs);
@@ -414,6 +476,8 @@ function validateLedger(file, { requireCurrentHead, head }) {
   }
   issues.push(...validateEvidenceFiles(ledger, file));
   issues.push(...validateRepresentativeUsabilityReports(ledger, file, { requireCurrentHead }));
+  issues.push(...validateWindowsArtifactManifest(ledger, file, { requireCurrentHead }));
+  issues.push(...validateWindowsRuntimeResult(ledger, file, { requireCurrentHead }));
   issues.push(...validateExternalReviewSignoff(ledger, file, { requireCurrentHead }));
   issues.push(...validateAuditFindingTracker(ledger, file));
   issues.push(...validateRedactedFieldReports(ledger, file));
@@ -440,6 +504,8 @@ if (files.length === 0) {
   console.log("accepted_final_100_evidence_ledgers=0");
   console.log("final_100_evidence_ledger_child_files_content_redacted=true");
   console.log("final_100_evidence_ledger_requires_valid_representative_usability_reports=true");
+  console.log("final_100_evidence_ledger_requires_valid_windows_artifact_manifest=true");
+  console.log("final_100_evidence_ledger_requires_valid_windows_runtime_result=true");
   console.log("final_100_evidence_ledger_requires_valid_external_review_signoff=true");
   console.log("final_100_evidence_ledger_requires_valid_audit_finding_tracker=true");
   console.log("final_100_evidence_ledger_requires_valid_redacted_field_reports=true");
@@ -473,6 +539,8 @@ console.log(`accepted_final_100_evidence_ledgers=${files.length}`);
 console.log("final_100_evidence_ledger_child_files_sha_verified=true");
 console.log("final_100_evidence_ledger_child_files_content_redacted=true");
 console.log("final_100_evidence_ledger_requires_valid_representative_usability_reports=true");
+console.log("final_100_evidence_ledger_requires_valid_windows_artifact_manifest=true");
+console.log("final_100_evidence_ledger_requires_valid_windows_runtime_result=true");
 console.log("final_100_evidence_ledger_requires_valid_external_review_signoff=true");
 console.log("final_100_evidence_ledger_requires_valid_audit_finding_tracker=true");
 console.log("final_100_evidence_ledger_requires_valid_redacted_field_reports=true");

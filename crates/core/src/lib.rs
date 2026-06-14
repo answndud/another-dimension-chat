@@ -18388,8 +18388,13 @@ pub mod production {
         );
         let passphrase_first_required =
             storage.passphrase_first_unlock() && high_risk_requires_passphrase;
-        let production_key_management_ready = storage.production_key_management_ready();
-        let app_key_wrapping_ready = false;
+        let source_key_lifecycle_ready = storage.profile_kdf_params_stored()
+            && storage.profile_root_key_derivation_ready()
+            && storage.domain_separated_profile_keys_ready()
+            && storage.passphrase_key_debug_redacted()
+            && storage.key_buffers_zeroized_on_drop();
+        let production_key_management_ready = false;
+        let app_key_wrapping_ready = storage.production_key_management_ready();
         let rollback_protection = storage.rollback_protection();
         let backup_exclusion_policy_decided = true;
         let backup_exclusion_verified = false;
@@ -18409,7 +18414,7 @@ pub mod production {
             rollback_protection == ReplayRollbackProtection::NotProvided;
         let boundary_closed = passphrase_first_required
             && os_keystore_only_rejected
-            && production_key_management_ready
+            && source_key_lifecycle_ready
             && app_key_wrapping_non_claim_decided
             && rollback_non_claim_decided
             && external_monotonic_state_required_before_claim
@@ -18419,7 +18424,7 @@ pub mod production {
         let supported_local_key_lifecycle_ready = boundary_closed
             && passphrase_first_required
             && os_keystore_only_rejected
-            && production_key_management_ready
+            && source_key_lifecycle_ready
             && app_key_wrapping_non_claim_decided
             && !app_key_wrapping_ready;
         let supported_rollback_detection_ready = boundary_closed
@@ -18468,8 +18473,7 @@ pub mod production {
         let profile_root_key_ready = storage.profile_root_key_derivation_ready();
         let session_key_hierarchy_ready = storage.domain_separated_profile_keys_ready()
             && storage.session_transport_persistence_allowed();
-        let message_key_hierarchy_ready =
-            production_message_storage_boundary_summary().production_key_management_ready();
+        let message_key_hierarchy_ready = storage.domain_separated_profile_keys_ready();
         let transport_key_policy_ready = key_rollback.supported_local_key_lifecycle_ready()
             && storage.session_transport_persistence_allowed();
         let lock_scope_separated = panic.immediate_lock_required()
@@ -18497,8 +18501,7 @@ pub mod production {
             key_rollback.rollback_prevention_claimed() || migration.rollback_prevention_claimed();
         let secure_media_deletion_claimed = key_rollback.secure_media_deletion_claimed()
             || migration.secure_media_deletion_claimed();
-        let production_key_management_ready = storage.production_key_management_ready()
-            && key_rollback.production_key_management_ready();
+        let production_key_management_ready = false;
         let boundary_closed = passphrase_first_required
             && os_keystore_only_rejected
             && kdf_params_versioned
@@ -18513,7 +18516,6 @@ pub mod production {
             && migration_failure_distinct_from_corrupt_store
             && rollback_marker_policy_ready
             && support_redaction_ready
-            && production_key_management_ready
             && !raw_path_returned
             && !passphrase_returned
             && !key_material_exposed
@@ -28584,7 +28586,7 @@ pub mod production {
             assert!(!boundary.backup_exclusion_verified());
             assert!(!boundary.secure_media_deletion_claimed());
             assert!(!boundary.secure_deletion_claim_allowed());
-            assert!(boundary.production_key_management_ready());
+            assert!(!boundary.production_key_management_ready());
             assert!(!boundary.security_ready_claimed());
             assert!(boundary
                 .policies()
@@ -28601,7 +28603,7 @@ pub mod production {
         fn profile_key_rotation_readiness_reports_key_hierarchy_without_wrapping_claim() {
             let boundary = production_key_rollback_boundary_summary();
 
-            assert!(boundary.production_key_management_ready());
+            assert!(!boundary.production_key_management_ready());
             assert!(boundary.supported_local_key_lifecycle_ready());
             assert!(boundary.minimum_forward_key_rotation_generation_ready());
             assert!(boundary.sqlcipher_passphrase_rotation_generation_source_ready());
@@ -28633,7 +28635,7 @@ pub mod production {
             assert!(summary.migration_failure_distinct_from_corrupt_store());
             assert!(summary.rollback_marker_policy_ready());
             assert!(summary.support_redaction_ready());
-            assert!(summary.production_key_management_ready());
+            assert!(!summary.production_key_management_ready());
             assert!(summary.boundary_closed());
             assert!(!summary.raw_path_returned());
             assert!(!summary.passphrase_returned());
@@ -28679,7 +28681,7 @@ pub mod production {
             assert!(!summary.backup_recovery_claimed());
             assert!(!summary.app_key_wrapping_ready());
             assert!(!summary.secure_deletion_claim_allowed());
-            assert!(summary.production_key_management_ready());
+            assert!(!summary.production_key_management_ready());
             assert!(summary.local_at_rest_mitigation_ready());
             assert!(!summary.compromised_endpoint_protected());
             assert_eq!(
@@ -29140,17 +29142,18 @@ pub mod production {
             assert!(missing_safety.boundary_closed());
 
             let limited = production_high_risk_readiness_gate(base);
-            assert_eq!(limited.status(), ProductionHighRiskReadinessStatus::Limited);
-            assert_eq!(limited.status().as_str(), "limited");
             assert_eq!(
-                limited.primary_reason_code(),
-                "transport-explicitly-disabled"
+                limited.status(),
+                ProductionHighRiskReadinessStatus::NotReady
             );
+            assert_eq!(limited.status().as_str(), "not_ready");
+            assert_eq!(limited.primary_reason_code(), "key-management-not-ready");
             assert_eq!(
                 limited.next_action(),
-                "enable-high-risk-transport-for-ready"
+                "unlock-profile-with-production-key-management"
             );
             assert!(limited.high_risk_transport_explicitly_disabled());
+            assert!(!limited.production_key_management_ready());
             assert!(!limited.high_risk_ready_claim_allowed());
             assert!(!limited.public_support_high_risk_claim_allowed());
             assert!(!limited.release_high_risk_claim_allowed());
@@ -29169,16 +29172,16 @@ pub mod production {
             assert_eq!(missing_runtime_evidence.status().as_str(), "not_ready");
             assert_eq!(
                 missing_runtime_evidence.primary_reason_code(),
-                "transport-runtime-evidence-missing"
+                "key-management-not-ready"
             );
             assert_eq!(
                 missing_runtime_evidence.next_action(),
-                "run-high-risk-transport-runtime-evidence"
+                "unlock-profile-with-production-key-management"
             );
             assert!(missing_runtime_evidence.threat_matrix_accepted());
             assert!(missing_runtime_evidence.pairwise_safety_verified());
             assert!(!missing_runtime_evidence.high_risk_transport_ready());
-            assert!(missing_runtime_evidence.production_key_management_ready());
+            assert!(!missing_runtime_evidence.production_key_management_ready());
             assert!(missing_runtime_evidence.rollback_marker_healthy());
             assert!(missing_runtime_evidence.diagnostics_redacted());
             assert!(missing_runtime_evidence.release_integrity_available());
