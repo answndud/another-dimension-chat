@@ -115,7 +115,7 @@ pub fn bucket_for_len(len: usize) -> Option<usize> {
         .find(|bucket| len <= *bucket)
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ProtocolError {
     PayloadTooLarge,
     InvalidEnvelope,
@@ -337,6 +337,72 @@ mod tests {
             )),
             Err(ProtocolError::InvalidEnvelope)
         );
+
+        let malformed_cases = vec![
+            ("empty", "".to_string(), ProtocolError::InvalidEnvelope),
+            (
+                "wrong-prefix",
+                "ADENV2|1|chan|1|data|00".to_string(),
+                ProtocolError::InvalidEnvelope,
+            ),
+            (
+                "missing-ciphertext",
+                "ADENV1|1|chan|1|data".to_string(),
+                ProtocolError::InvalidEnvelope,
+            ),
+            (
+                "extra-segment",
+                "ADENV1|1|chan|1|data|00|extra".to_string(),
+                ProtocolError::InvalidEnvelope,
+            ),
+            (
+                "non-numeric-version",
+                "ADENV1|x|chan|1|data|00".to_string(),
+                ProtocolError::InvalidEnvelope,
+            ),
+            (
+                "non-numeric-message",
+                "ADENV1|1|chan|x|data|00".to_string(),
+                ProtocolError::InvalidEnvelope,
+            ),
+            (
+                "empty-channel",
+                "ADENV1|1||1|data|00".to_string(),
+                ProtocolError::InvalidEnvelope,
+            ),
+            (
+                "wrong-message-type",
+                "ADENV1|1|chan|1|payload|00".to_string(),
+                ProtocolError::InvalidMessageType,
+            ),
+            (
+                "odd-hex",
+                "ADENV1|1|chan|1|data|0".to_string(),
+                ProtocolError::InvalidHex,
+            ),
+            (
+                "invalid-hex",
+                "ADENV1|1|chan|1|data|0g".to_string(),
+                ProtocolError::InvalidHex,
+            ),
+            (
+                "oversize-encoded",
+                "x".repeat(MAX_ENVELOPE_ENCODED_BYTES + 1),
+                ProtocolError::PayloadTooLarge,
+            ),
+            (
+                "oversize-ciphertext",
+                format!(
+                    "ADENV1|1|chan|1|data|{}",
+                    "00".repeat(MAX_ENVELOPE_CIPHERTEXT_BYTES + 1)
+                ),
+                ProtocolError::PayloadTooLarge,
+            ),
+        ];
+
+        for (name, sample, expected) in malformed_cases {
+            assert_eq!(Envelope::decode(&sample), Err(expected), "{name}");
+        }
     }
 
     #[test]
@@ -368,6 +434,47 @@ mod tests {
         assert_eq!(window.highest_seen(), 7);
         assert_eq!(
             window.accept_after_decrypt(7, || Ok::<_, ProtocolError>("replay")),
+            Err(ProtocolError::ReplayMessage)
+        );
+    }
+
+    #[test]
+    fn replay_window_rejects_replay_stale_and_tamper_corpus_without_state_advance() {
+        let mut window = ReplayWindow::new(4).expect("valid replay window");
+        for message_number in [10, 11, 12, 13] {
+            window.accept(message_number).expect("seed replay window");
+        }
+        let seeded_state = window.encode_state();
+
+        for (name, message_number, expected) in [
+            ("duplicate-low", 10, ProtocolError::ReplayMessage),
+            ("duplicate-high", 13, ProtocolError::ReplayMessage),
+            ("stale-before-window", 9, ProtocolError::OldMessage),
+            ("invalid-zero", 0, ProtocolError::InvalidMessageNumber),
+        ] {
+            assert_eq!(window.accept(message_number), Err(expected), "{name}");
+            assert_eq!(window.encode_state(), seeded_state, "{name}");
+        }
+
+        for (name, message_number, decrypt_error) in [
+            ("tamper-next", 14, ProtocolError::InvalidEnvelope),
+            ("tamper-future", 20, ProtocolError::InvalidHex),
+        ] {
+            assert_eq!(
+                window.accept_after_decrypt(message_number, || Err::<(), _>(decrypt_error)),
+                Err(decrypt_error),
+                "{name}"
+            );
+            assert_eq!(window.encode_state(), seeded_state, "{name}");
+        }
+
+        assert_eq!(
+            window.accept_after_decrypt(14, || Ok::<_, ProtocolError>("valid-after-tamper")),
+            Ok("valid-after-tamper")
+        );
+        assert_eq!(window.highest_seen(), 14);
+        assert_eq!(
+            window.accept_after_decrypt(14, || Ok::<_, ProtocolError>("duplicate")),
             Err(ProtocolError::ReplayMessage)
         );
     }
