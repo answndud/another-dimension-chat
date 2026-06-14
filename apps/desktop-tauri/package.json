@@ -14,6 +14,8 @@
     "test:browser-preview-peers": "node --test src/browser-preview-tauri.test.js",
     "test:windows-boundary": "node scripts/verify-windows-local-runtime-boundary.mjs",
     "test:local-peers": "node scripts/verify-local-peer-flow.mjs",
+    "engine:prepare-sidecar": "node scripts/prepare-engine-sidecar.mjs",
+    "engine:prepare-sidecar:release": "node scripts/prepare-engine-sidecar.mjs --release",
     "preview": "vite preview --host 127.0.0.1 --port 1420 --strictPort",
     "tauri": "node scripts/with-cargo-target.mjs tauri",
     "tauri:dev:beta-onion": "node scripts/with-cargo-target.mjs tauri dev --features manual-onion-client-attempt",
@@ -25,7 +27,7 @@
     "tauri:build": "node scripts/with-cargo-target.mjs tauri build",
     "tauri:build:beta-onion": "VITE_AD_BUILD_CHANNEL=beta-onion node scripts/with-cargo-target.mjs tauri build --features manual-onion-client-attempt",
     "tauri:build:windows-nsis:beta-onion": "VITE_AD_BUILD_CHANNEL=beta-onion node scripts/with-cargo-target.mjs tauri build --features manual-onion-client-attempt --bundles nsis",
-    "tauri:build:windows-nsis:shell": "node scripts/with-cargo-target.mjs tauri build --features windows-public-shell --bundles nsis -- --no-default-features",
+    "tauri:build:windows-nsis:shell": "npm run engine:prepare-sidecar:release && node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json --features windows-public-shell --bundles nsis -- --no-default-features",
     "tauri:build:windows-nsis:manual-e2ee": "VITE_AD_BUILD_CHANNEL=windows-manual-e2ee node scripts/with-cargo-target.mjs tauri build --bundles nsis",
     "tauri:build:beta-onion-bridge": "VITE_AD_BUILD_CHANNEL=beta-onion-bridge node scripts/with-cargo-target.mjs tauri build --features manual-onion-bridge-client"
   },

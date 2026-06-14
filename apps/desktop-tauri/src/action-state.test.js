@@ -600,6 +600,12 @@ test("windows public artifact candidate keeps installer and security claims fals
   assert.equal(view.manifestChecksumProvenanceRequired, true);
   assert.equal(view.manifestValidatesVersionCommitInstallerWebview2NoAutoUpdate, true);
   assert.equal(view.runtimeResultExternalPeerEvidenceSeparated, true);
+  assert.equal(view.engineSidecarRequired, true);
+  assert.equal(view.engineSidecarContractVersion, 1);
+  assert.equal(view.engineSidecarProtocol, "ad-engine-json-stdio-v1");
+  assert.equal(view.engineSidecarStatusCommand, "status");
+  assert.equal(view.engineSidecarRawPathReturned, false);
+  assert.equal(view.engineRuntimeMode, "manual-e2ee-engine-sidecar");
   assert.equal(view.localRuntimePromotedToDeliveryProof, false);
   assert.equal(view.smartscreenSecurityBoundaryClaimed, false);
   assert.equal(view.codeSigningSecurityBoundaryClaimed, false);
@@ -615,9 +621,11 @@ test("windows public artifact candidate keeps installer and security claims fals
   assert.match(view.summary, /runtime_mode=shell-sidecar-pending/);
   assert.match(view.summary, /onion_runtime_compiled=false/);
   assert.match(view.summary, /runtime_result_external_peer_evidence_separated=true/);
+  assert.match(view.summary, /engine_sidecar_protocol=ad-engine-json-stdio-v1/);
+  assert.match(view.summary, /engine_sidecar_raw_path_returned=false/);
   assert.doesNotMatch(
     view.boundary,
-    /windows_public_artifact_ready=true|windows_installer_ready=true|windows_signing_ready=true|smartscreen_security_boundary_claimed=true|shared_core_bypass_allowed=true/,
+    /windows_public_artifact_ready=true|windows_installer_ready=true|windows_signing_ready=true|smartscreen_security_boundary_claimed=true|shared_core_bypass_allowed=true|engine_sidecar_raw_path_returned=true/,
   );
 });
 

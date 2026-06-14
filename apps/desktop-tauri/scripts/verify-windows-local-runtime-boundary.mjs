@@ -93,7 +93,22 @@ requireText("apps/desktop-tauri/package.json", '"test:windows-boundary"');
 requireText("apps/desktop-tauri/package.json", "verify-windows-local-runtime-boundary.mjs");
 requireText("apps/desktop-tauri/package.json", '"tauri:build:windows-nsis:shell"');
 requireText("apps/desktop-tauri/package.json", "windows-public-shell");
+requireText("apps/desktop-tauri/package.json", '"engine:prepare-sidecar:release"');
+requireText("apps/desktop-tauri/package.json", "prepare-engine-sidecar.mjs");
 requireText("apps/desktop-tauri/src-tauri/tauri.conf.json", '"targets": "all"');
+requireText("apps/desktop-tauri/src-tauri/tauri.sidecar.conf.json", '"externalBin"');
+requireText("apps/desktop-tauri/src-tauri/tauri.sidecar.conf.json", "binaries/another-dimension-engine");
+requireText("apps/desktop-tauri/scripts/prepare-engine-sidecar.mjs", "another-dimension-engine-");
+requireText("apps/desktop-tauri/scripts/prepare-engine-sidecar.mjs", "x86_64-pc-windows-msvc");
+requireText("apps/engine/src/main.rs", "ad-engine-sidecar-status-v1");
+requireText("apps/engine/src/main.rs", "ad-engine-json-stdio-v1");
+requireText("apps/engine/src/main.rs", "manual-e2ee-engine-sidecar");
+requireText("apps/engine/src/main.rs", "app_launch_network_allowed: false");
+requireText("apps/engine/src/main.rs", "room_open_network_allowed: false");
+requireText("apps/engine/src/main.rs", "production_ready_claim: false");
+requireText("apps/engine/src/main.rs", "high_risk_claim: false");
+requireText("apps/engine/src/main.rs", "sensitive_communication_allowed: false");
+requireText(".gitignore", "apps/desktop-tauri/src-tauri/binaries/another-dimension-engine-*");
 
 requireText("apps/desktop-tauri/src-tauri/src/lib.rs", "windows_is_local_build_candidate_only");
 requireText("apps/desktop-tauri/src-tauri/src/lib.rs", "tauri_app_data_resolver_required: true");
@@ -120,6 +135,10 @@ requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_redacted_diag
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_explicit_user_action_review_required=true");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "public_artifact_upload_allowed=false");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "remaining_blocker=real-windows-artifact-runtime-manifest-evidence");
+requireText("apps/desktop-tauri/src-tauri/src/main.rs", "engine_sidecar_contract_version");
+requireText("apps/desktop-tauri/src-tauri/src/main.rs", "engine_sidecar_protocol");
+requireText("apps/desktop-tauri/src-tauri/src/main.rs", "engine_sidecar_raw_path_returned: false");
+requireText("apps/desktop-tauri/src-tauri/src/main.rs", "manual-e2ee-engine-sidecar");
 
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_app_data_path_review_required=true");
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_path_separator_review_required=true");
