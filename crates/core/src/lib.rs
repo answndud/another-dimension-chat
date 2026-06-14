@@ -4257,6 +4257,83 @@ pub mod production {
         next_action: &'static str,
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionMessageDeliveryPrimaryAction {
+        UnlockProfile,
+        CreateOrJoinRoom,
+        VerifySafety,
+        WriteMessage,
+        ExportEnvelope,
+        ImportReply,
+        ReplyOrRecover,
+        DeleteOrRebuild,
+    }
+
+    impl ProductionMessageDeliveryPrimaryAction {
+        pub fn as_str(self) -> &'static str {
+            match self {
+                Self::UnlockProfile => "unlock-profile",
+                Self::CreateOrJoinRoom => "create-or-join-room",
+                Self::VerifySafety => "verify-safety",
+                Self::WriteMessage => "write-message",
+                Self::ExportEnvelope => "export-envelope",
+                Self::ImportReply => "import-reply",
+                Self::ReplyOrRecover => "reply-or-recover",
+                Self::DeleteOrRebuild => "delete-or-rebuild",
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageDeliveryProductizationInput {
+        pub profile_unlocked: bool,
+        pub pairwise_invite_ready: bool,
+        pub mandatory_safety_verified: bool,
+        pub compose_ready: bool,
+        pub outbound_exported: bool,
+        pub inbound_imported: bool,
+        pub reply_ready: bool,
+        pub retry_available: bool,
+        pub cancel_available: bool,
+        pub local_delete_available: bool,
+        pub current_room_owns_state: bool,
+        pub current_profile_owns_state: bool,
+        pub duplicate_or_replay_rejected: bool,
+        pub peer_mismatch_blocks_verified: bool,
+        pub support_redacted: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageDeliveryProductizationSummary {
+        primary_action: ProductionMessageDeliveryPrimaryAction,
+        first_message_round_trip_ready: bool,
+        recovery_ready: bool,
+        current_input_owned: bool,
+        profile_unlocked: bool,
+        pairwise_invite_ready: bool,
+        mandatory_safety_verified: bool,
+        compose_ready: bool,
+        outbound_exported: bool,
+        inbound_imported: bool,
+        reply_ready: bool,
+        retry_available: bool,
+        cancel_available: bool,
+        local_delete_available: bool,
+        duplicate_or_replay_rejected: bool,
+        peer_mismatch_blocks_verified: bool,
+        support_redacted: bool,
+        false_delivered_allowed: bool,
+        false_verified_allowed: bool,
+        false_ready_allowed: bool,
+        message_body_in_support: bool,
+        envelope_payload_in_support: bool,
+        invite_body_in_support: bool,
+        local_path_in_support: bool,
+        key_or_passphrase_in_support: bool,
+        support_private_fields_allowed: bool,
+        boundary_closed: bool,
+    }
+
     impl ProductionManualEnvelopeOutboundDecision {
         pub fn state(self) -> ProductionManualEnvelopeOutboundState {
             self.state
@@ -4304,6 +4381,64 @@ pub mod production {
 
         pub fn next_action(self) -> &'static str {
             self.next_action
+        }
+    }
+
+    impl ProductionMessageDeliveryProductizationSummary {
+        pub fn primary_action(self) -> ProductionMessageDeliveryPrimaryAction {
+            self.primary_action
+        }
+
+        pub fn first_message_round_trip_ready(self) -> bool {
+            self.first_message_round_trip_ready
+        }
+
+        pub fn recovery_ready(self) -> bool {
+            self.recovery_ready
+        }
+
+        pub fn current_input_owned(self) -> bool {
+            self.current_input_owned
+        }
+
+        pub fn false_delivered_allowed(self) -> bool {
+            self.false_delivered_allowed
+        }
+
+        pub fn false_verified_allowed(self) -> bool {
+            self.false_verified_allowed
+        }
+
+        pub fn false_ready_allowed(self) -> bool {
+            self.false_ready_allowed
+        }
+
+        pub fn message_body_in_support(self) -> bool {
+            self.message_body_in_support
+        }
+
+        pub fn envelope_payload_in_support(self) -> bool {
+            self.envelope_payload_in_support
+        }
+
+        pub fn invite_body_in_support(self) -> bool {
+            self.invite_body_in_support
+        }
+
+        pub fn local_path_in_support(self) -> bool {
+            self.local_path_in_support
+        }
+
+        pub fn key_or_passphrase_in_support(self) -> bool {
+            self.key_or_passphrase_in_support
+        }
+
+        pub fn support_private_fields_allowed(self) -> bool {
+            self.support_private_fields_allowed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
         }
     }
 
@@ -20573,6 +20708,78 @@ pub mod production {
         }
     }
 
+    pub fn production_message_delivery_productization_summary(
+        input: ProductionMessageDeliveryProductizationInput,
+    ) -> ProductionMessageDeliveryProductizationSummary {
+        let current_input_owned = input.current_room_owns_state && input.current_profile_owns_state;
+        let recovery_ready =
+            input.retry_available && input.cancel_available && input.local_delete_available;
+        let fail_closed = input.duplicate_or_replay_rejected && input.peer_mismatch_blocks_verified;
+        let support_private_fields_allowed = false;
+        let first_message_round_trip_ready = input.profile_unlocked
+            && input.pairwise_invite_ready
+            && input.mandatory_safety_verified
+            && input.compose_ready
+            && input.outbound_exported
+            && input.inbound_imported
+            && input.reply_ready
+            && current_input_owned
+            && fail_closed
+            && input.support_redacted;
+        let primary_action = if !current_input_owned {
+            ProductionMessageDeliveryPrimaryAction::DeleteOrRebuild
+        } else if !input.profile_unlocked {
+            ProductionMessageDeliveryPrimaryAction::UnlockProfile
+        } else if !input.pairwise_invite_ready {
+            ProductionMessageDeliveryPrimaryAction::CreateOrJoinRoom
+        } else if !input.mandatory_safety_verified || !input.peer_mismatch_blocks_verified {
+            ProductionMessageDeliveryPrimaryAction::VerifySafety
+        } else if !input.compose_ready {
+            ProductionMessageDeliveryPrimaryAction::WriteMessage
+        } else if !input.outbound_exported {
+            ProductionMessageDeliveryPrimaryAction::ExportEnvelope
+        } else if !input.inbound_imported {
+            ProductionMessageDeliveryPrimaryAction::ImportReply
+        } else if !input.reply_ready || !input.duplicate_or_replay_rejected || !recovery_ready {
+            ProductionMessageDeliveryPrimaryAction::ReplyOrRecover
+        } else {
+            ProductionMessageDeliveryPrimaryAction::DeleteOrRebuild
+        };
+
+        ProductionMessageDeliveryProductizationSummary {
+            primary_action,
+            first_message_round_trip_ready,
+            recovery_ready,
+            current_input_owned,
+            profile_unlocked: input.profile_unlocked,
+            pairwise_invite_ready: input.pairwise_invite_ready,
+            mandatory_safety_verified: input.mandatory_safety_verified,
+            compose_ready: input.compose_ready,
+            outbound_exported: input.outbound_exported,
+            inbound_imported: input.inbound_imported,
+            reply_ready: input.reply_ready,
+            retry_available: input.retry_available,
+            cancel_available: input.cancel_available,
+            local_delete_available: input.local_delete_available,
+            duplicate_or_replay_rejected: input.duplicate_or_replay_rejected,
+            peer_mismatch_blocks_verified: input.peer_mismatch_blocks_verified,
+            support_redacted: input.support_redacted,
+            false_delivered_allowed: false,
+            false_verified_allowed: false,
+            false_ready_allowed: false,
+            message_body_in_support: false,
+            envelope_payload_in_support: false,
+            invite_body_in_support: false,
+            local_path_in_support: false,
+            key_or_passphrase_in_support: false,
+            support_private_fields_allowed,
+            boundary_closed: current_input_owned
+                && fail_closed
+                && input.support_redacted
+                && !support_private_fields_allowed,
+        }
+    }
+
     pub fn production_supply_chain_integrity_boundary_summary(
     ) -> ProductionSupplyChainIntegrityBoundarySummary {
         let manual_github_release_download_required = true;
@@ -27956,6 +28163,134 @@ pub mod production {
                 assert!(!decision.path_returned());
                 assert!(!decision.key_material_exposed());
                 assert_ne!(decision.next_action(), "generic_error");
+            }
+        }
+
+        #[test]
+        fn message_delivery_productization_flow_blocks_false_ready_and_private_support_leaks() {
+            let locked = production_message_delivery_productization_summary(
+                ProductionMessageDeliveryProductizationInput {
+                    profile_unlocked: false,
+                    pairwise_invite_ready: false,
+                    mandatory_safety_verified: false,
+                    compose_ready: false,
+                    outbound_exported: false,
+                    inbound_imported: false,
+                    reply_ready: false,
+                    retry_available: false,
+                    cancel_available: false,
+                    local_delete_available: false,
+                    current_room_owns_state: true,
+                    current_profile_owns_state: true,
+                    duplicate_or_replay_rejected: true,
+                    peer_mismatch_blocks_verified: true,
+                    support_redacted: true,
+                },
+            );
+            assert_eq!(
+                locked.primary_action(),
+                ProductionMessageDeliveryPrimaryAction::UnlockProfile
+            );
+            assert!(!locked.first_message_round_trip_ready());
+
+            let ready = production_message_delivery_productization_summary(
+                ProductionMessageDeliveryProductizationInput {
+                    profile_unlocked: true,
+                    pairwise_invite_ready: true,
+                    mandatory_safety_verified: true,
+                    compose_ready: true,
+                    outbound_exported: true,
+                    inbound_imported: true,
+                    reply_ready: true,
+                    retry_available: true,
+                    cancel_available: true,
+                    local_delete_available: true,
+                    current_room_owns_state: true,
+                    current_profile_owns_state: true,
+                    duplicate_or_replay_rejected: true,
+                    peer_mismatch_blocks_verified: true,
+                    support_redacted: true,
+                },
+            );
+            assert_eq!(
+                ready.primary_action(),
+                ProductionMessageDeliveryPrimaryAction::DeleteOrRebuild
+            );
+            assert!(ready.first_message_round_trip_ready());
+            assert!(ready.recovery_ready());
+            assert!(ready.current_input_owned());
+            assert!(ready.boundary_closed());
+
+            let stale_owner = production_message_delivery_productization_summary(
+                ProductionMessageDeliveryProductizationInput {
+                    current_room_owns_state: false,
+                    ..ProductionMessageDeliveryProductizationInput {
+                        profile_unlocked: true,
+                        pairwise_invite_ready: true,
+                        mandatory_safety_verified: true,
+                        compose_ready: true,
+                        outbound_exported: true,
+                        inbound_imported: true,
+                        reply_ready: true,
+                        retry_available: true,
+                        cancel_available: true,
+                        local_delete_available: true,
+                        current_room_owns_state: true,
+                        current_profile_owns_state: true,
+                        duplicate_or_replay_rejected: true,
+                        peer_mismatch_blocks_verified: true,
+                        support_redacted: true,
+                    }
+                },
+            );
+            assert_eq!(
+                stale_owner.primary_action(),
+                ProductionMessageDeliveryPrimaryAction::DeleteOrRebuild
+            );
+            assert!(!stale_owner.first_message_round_trip_ready());
+            assert!(!stale_owner.current_input_owned());
+            assert!(!stale_owner.boundary_closed());
+
+            let replay_or_mismatch_not_closed = production_message_delivery_productization_summary(
+                ProductionMessageDeliveryProductizationInput {
+                    duplicate_or_replay_rejected: false,
+                    peer_mismatch_blocks_verified: false,
+                    ..ProductionMessageDeliveryProductizationInput {
+                        profile_unlocked: true,
+                        pairwise_invite_ready: true,
+                        mandatory_safety_verified: true,
+                        compose_ready: true,
+                        outbound_exported: true,
+                        inbound_imported: true,
+                        reply_ready: true,
+                        retry_available: true,
+                        cancel_available: true,
+                        local_delete_available: true,
+                        current_room_owns_state: true,
+                        current_profile_owns_state: true,
+                        duplicate_or_replay_rejected: true,
+                        peer_mismatch_blocks_verified: true,
+                        support_redacted: true,
+                    }
+                },
+            );
+            assert_eq!(
+                replay_or_mismatch_not_closed.primary_action(),
+                ProductionMessageDeliveryPrimaryAction::VerifySafety
+            );
+            assert!(!replay_or_mismatch_not_closed.first_message_round_trip_ready());
+            assert!(!replay_or_mismatch_not_closed.boundary_closed());
+
+            for summary in [locked, ready, stale_owner, replay_or_mismatch_not_closed] {
+                assert!(!summary.false_delivered_allowed());
+                assert!(!summary.false_verified_allowed());
+                assert!(!summary.false_ready_allowed());
+                assert!(!summary.message_body_in_support());
+                assert!(!summary.envelope_payload_in_support());
+                assert!(!summary.invite_body_in_support());
+                assert!(!summary.local_path_in_support());
+                assert!(!summary.key_or_passphrase_in_support());
+                assert!(!summary.support_private_fields_allowed());
             }
         }
 
