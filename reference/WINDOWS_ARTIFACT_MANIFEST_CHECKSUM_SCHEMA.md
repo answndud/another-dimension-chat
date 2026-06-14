@@ -31,7 +31,10 @@ opening any upload, release edit, or generated artifact commit gate.
 It also binds bundle target to artifact extension (`msi` -> `.msi`,
 `nsis` -> `.exe`, `portable-archive` -> `.zip`, `msix` -> `.msix`) and compares
 provenance repository, release class, bundle target, and signing status against
-the manifest/artifact entry.
+the manifest/artifact entry. Candidate artifact files must also have the
+expected container header: PE for `.exe`, MSI compound-file magic for `.msi`,
+and ZIP magic for `.zip`/`.msix`, so a text file cannot satisfy the Windows
+artifact evidence gate.
 
 ## Manifest Fields
 
@@ -56,6 +59,7 @@ Each Windows artifact manifest uses
 - windows_artifact_manifest_checksum_verifier_ready=true
 - windows_artifact_requires_same_release_authority=true
 - windows_artifact_checksum_bytes_verified_by_validator=true
+- windows_artifact_package_structure_verified_by_validator=true
 - windows_artifact_provenance_consistency_verified_by_validator=true
 - windows_artifact_provenance_field_consistency_verified_by_validator=true
 - windows_artifact_bundle_target_extension_bound=true

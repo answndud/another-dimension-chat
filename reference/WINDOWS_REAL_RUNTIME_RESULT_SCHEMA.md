@@ -24,6 +24,10 @@ The D100-5 runbook is
 - `architecture=x64|arm64`
 - `artifact_kind=installer|portable-archive|msix|nsis|tauri-bundle`
 - `artifact_path_redacted=true`
+- `artifact_manifest_file`
+  - Relative to the result file directory. It must point to the same Windows
+    artifact manifest that validates with
+    `scripts/validate_windows_artifact_manifest.mjs`.
 - `artifact_sha256`
 - `artifact_provenance_sha256`
 - `artifact_manifest_sha256`
@@ -69,6 +73,10 @@ that describe private room/message/profile/invite content.
 - windows_result_requires_current_source_commit=true
 - windows_result_current_head_strict_mode_ready=true
 - windows_result_requires_checksum_provenance=true
+- windows_result_requires_valid_artifact_manifest=true
+- windows_result_artifact_manifest_sha_verified=true
+- windows_result_artifact_provenance_sha_verified=true
+- windows_result_artifact_bytes_sha_verified=true
 - windows_result_requires_support_diagnostics_review=true
 - windows_result_requires_public_non_claims=true
 - windows_result_rejects_local_only_or_private_data=true

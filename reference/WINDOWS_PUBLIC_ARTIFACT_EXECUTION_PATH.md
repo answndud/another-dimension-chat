@@ -39,14 +39,17 @@ Actual Windows artifact execution requires:
    SmartScreen, or code signing as a messenger security boundary.
 4. Generate checksum, provenance, and manifest evidence beside the candidate.
 5. Validate artifact bytes against the Windows manifest, `.sha256` sidecar,
-   and provenance JSON.
-6. Validate redacted support diagnostics and public non-claim copy.
-7. Validate the result with
+   provenance JSON, and minimal package/container structure.
+6. Bind the real Windows runtime result to that validated manifest through
+   relative `artifact_manifest_file`, artifact SHA-256, provenance SHA-256, and
+   manifest SHA-256 values.
+7. Validate redacted support diagnostics and public non-claim copy.
+8. Validate the result with
    `scripts/validate_windows_public_artifact_results.mjs`.
    Use `--require-current-head` or `AD_REQUIRE_CURRENT_HEAD=1` before any
    public claim review so stale Windows runtime results cannot bind to an old
    source commit.
-8. Keep public Windows artifact, installer, upload, production-ready, audited,
+9. Keep public Windows artifact, installer, upload, production-ready, audited,
    reliable-delivery, and sensitive-use claims false until later release gates
    explicitly approve them.
 
@@ -70,8 +73,13 @@ Actual Windows artifact execution requires:
 - windows_result_requires_current_source_commit=true
 - windows_result_current_head_strict_mode_ready=true
 - windows_result_requires_checksum_provenance=true
+- windows_result_requires_valid_artifact_manifest=true
+- windows_result_artifact_manifest_sha_verified=true
+- windows_result_artifact_provenance_sha_verified=true
+- windows_result_artifact_bytes_sha_verified=true
 - windows_artifact_requires_same_release_authority=true
 - windows_artifact_checksum_bytes_verified_by_validator=true
+- windows_artifact_package_structure_verified_by_validator=true
 - windows_artifact_provenance_consistency_verified_by_validator=true
 - windows_artifact_provenance_field_consistency_verified_by_validator=true
 - windows_artifact_bundle_target_extension_bound=true
