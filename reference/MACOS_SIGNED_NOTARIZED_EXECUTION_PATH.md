@@ -20,7 +20,12 @@ requires both `AD_EXECUTE_MACOS_SIGN_NOTARY=1` and
 runs Tauri build, signs the `.app`,
 creates a DMG with `hdiutil create`, signs/notarizes/staples the DMG, mounts
 the DMG to verify the contained `.app`, and records checksum/provenance under
-ignored generated artifact directories.
+ignored generated artifact directories. After signed RC provenance is written,
+it invokes `scripts/prepare_macos_release_distribution_metadata.sh` with
+`AD_PREPARE_MACOS_RELEASE_DISTRIBUTION_METADATA=1` so the signed DMG,
+checksum, signed provenance, distribution provenance, manifest, install guide,
+release notes, update integrity guide, and release body are generated under
+ignored release output before Phase 41 copy/upload work begins.
 
 The build script declares its operator contract without secrets:
 
@@ -28,7 +33,8 @@ The build script declares its operator contract without secrets:
   `apps/desktop-tauri/public-release/signed-notarized-rc`
 - artifact name template:
   `another-dimension-chat-<app-version>-<build-channel>-<public-architecture>-signed-notarized.dmg`
-- generated files: DMG, `.sha256`, provenance JSON
+- generated files: DMG, `.sha256`, signed provenance JSON, distribution
+  manifest packet
 - supported notary credential modes: keychain profile, App Store Connect API
   key, or Apple ID app-specific password
 - expected failure classes: missing explicit env, missing Developer ID,
@@ -103,6 +109,7 @@ The script must not reuse a DMG that already contains an unsigned app bundle.
 - release_build_expected_output_path_declared=true
 - release_build_generated_file_set_declared=true
 - release_build_failure_classes_declared=true
+- release_distribution_metadata_generator_path_ready=true
 - credential_material_redacted_from_output=true
 - signed_app_build_path_ready=true
 - dmg_create_from_signed_app_path_ready=true
