@@ -186,6 +186,7 @@ h1 {
 .first-run-checklist {
   display: grid;
   gap: 5px;
+  min-width: 0;
   max-width: 82ch;
   margin: 4px 0 0;
   padding-left: 18px;
@@ -195,6 +196,7 @@ h1 {
 }
 
 .first-run-checklist li {
+  min-width: 0;
   border-left: 2px solid transparent;
   padding-block: 1px;
   padding-left: 2px;
@@ -221,6 +223,7 @@ h1 {
 
 .first-run-step-detail {
   display: block;
+  min-width: 0;
   margin-top: 2px;
   color: var(--text-secondary);
   font-size: 11px;
@@ -234,6 +237,7 @@ h1 {
 }
 
 .first-run-primary-next-action {
+  min-width: 0;
   max-width: 82ch;
   margin: 8px 0 0;
   color: var(--text-primary);
