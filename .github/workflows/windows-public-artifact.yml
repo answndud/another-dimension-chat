@@ -19,7 +19,7 @@ jobs:
     env:
       CARGO_INCREMENTAL: "1"
       CARGO_TARGET_DIR: ${{ github.workspace }}/.build-cache/cargo-target
-      VITE_AD_BUILD_CHANNEL: windows-manual-e2ee
+      VITE_AD_BUILD_CHANNEL: windows-public-shell
 
     steps:
       - name: Checkout
@@ -68,7 +68,7 @@ jobs:
       - name: Build unsigned NSIS candidate
         shell: pwsh
         working-directory: apps/desktop-tauri
-        run: npm run tauri:build:windows-nsis:manual-e2ee
+        run: npm run tauri:build:windows-nsis:shell
 
       - name: Prepare ignored Windows release packet
         shell: bash
@@ -87,7 +87,7 @@ jobs:
 
           candidate_dir="$PWD/apps/desktop-tauri/beta-artifacts/windows-unsigned-public-beta-candidate"
           packet_dir="$PWD/apps/desktop-tauri/public-release/windows-unsigned-public-beta"
-          candidate_name="another-dimension-chat-${version}-unsigned-windows-beta-windows-x64-manual-e2ee-nsis-setup.exe"
+          candidate_name="another-dimension-chat-${version}-unsigned-windows-beta-windows-x64-shell-nsis-setup.exe"
           mkdir -p "$candidate_dir" "$packet_dir"
           cp "$source_exe" "$candidate_dir/$candidate_name"
 
@@ -98,7 +98,7 @@ jobs:
           AD_WINDOWS_BUNDLE_TARGET=nsis \
           AD_WINDOWS_ARTIFACT_ARCHITECTURE=windows-x64 \
           AD_WINDOWS_ARTIFACT_SIGNING_STATUS=unsigned-hold \
-          AD_WINDOWS_RUNTIME_MODE=manual-e2ee \
+          AD_WINDOWS_RUNTIME_MODE=shell-sidecar-pending \
           AD_WINDOWS_ONION_RUNTIME_COMPILED=0 \
             scripts/prepare_windows_public_artifact_metadata.sh
 

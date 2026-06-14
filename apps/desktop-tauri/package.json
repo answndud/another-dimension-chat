@@ -25,6 +25,7 @@
     "tauri:build": "node scripts/with-cargo-target.mjs tauri build",
     "tauri:build:beta-onion": "VITE_AD_BUILD_CHANNEL=beta-onion node scripts/with-cargo-target.mjs tauri build --features manual-onion-client-attempt",
     "tauri:build:windows-nsis:beta-onion": "VITE_AD_BUILD_CHANNEL=beta-onion node scripts/with-cargo-target.mjs tauri build --features manual-onion-client-attempt --bundles nsis",
+    "tauri:build:windows-nsis:shell": "VITE_AD_BUILD_CHANNEL=windows-public-shell node scripts/with-cargo-target.mjs tauri build --no-default-features --features windows-public-shell --bundles nsis",
     "tauri:build:windows-nsis:manual-e2ee": "VITE_AD_BUILD_CHANNEL=windows-manual-e2ee node scripts/with-cargo-target.mjs tauri build --bundles nsis",
     "tauri:build:beta-onion-bridge": "VITE_AD_BUILD_CHANNEL=beta-onion-bridge node scripts/with-cargo-target.mjs tauri build --features manual-onion-bridge-client"
   },

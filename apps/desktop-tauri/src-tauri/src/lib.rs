@@ -1,3 +1,5 @@
+#![cfg(feature = "full-runtime")]
+
 mod status;
 
 pub use status::PrototypeStatus;
@@ -242,9 +244,9 @@ pub fn desktop_platform_boundary_summary() -> DesktopPlatformBoundarySummary {
 pub fn windows_public_artifact_adapter_boundary_summary(
 ) -> WindowsPublicArtifactAdapterBoundarySummary {
     WindowsPublicArtifactAdapterBoundarySummary {
-        artifact_type: "windows-manual-e2ee-nsis-exe-installer-candidate",
+        artifact_type: "windows-shell-nsis-exe-installer-candidate",
         bundle_target: "nsis",
-        runtime_mode: "manual-e2ee",
+        runtime_mode: "shell-sidecar-pending",
         onion_runtime_compiled: false,
         app_data_resolver: "tauri-app-data",
         app_data_resolver_shared_storage_semantics: true,
@@ -17504,10 +17506,10 @@ replay check: no replayed messages after message 2
 
         assert_eq!(
             summary.artifact_type,
-            "windows-manual-e2ee-nsis-exe-installer-candidate"
+            "windows-shell-nsis-exe-installer-candidate"
         );
         assert_eq!(summary.bundle_target, "nsis");
-        assert_eq!(summary.runtime_mode, "manual-e2ee");
+        assert_eq!(summary.runtime_mode, "shell-sidecar-pending");
         assert!(!summary.onion_runtime_compiled);
         assert_eq!(summary.app_data_resolver, "tauri-app-data");
         assert!(summary.app_data_resolver_shared_storage_semantics);

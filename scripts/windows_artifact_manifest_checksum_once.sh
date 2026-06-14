@@ -75,8 +75,8 @@ must_contain "$VALIDATOR" "bundle-target-extension-mismatch"
 must_contain "$GENERATOR" "AD_PREPARE_WINDOWS_PUBLIC_ARTIFACT_METADATA"
 must_contain "$GENERATOR" "AD_WINDOWS_ARTIFACT"
 must_contain "$GENERATOR" "WINDOWS_ARTIFACT_MANIFEST.json.sha256"
-must_contain "apps/desktop-tauri/package.json" '"tauri:build:windows-nsis:manual-e2ee"'
-must_contain "apps/desktop-tauri/package.json" 'windows-manual-e2ee'
+must_contain "apps/desktop-tauri/package.json" '"tauri:build:windows-nsis:shell"'
+must_contain "apps/desktop-tauri/package.json" 'windows-public-shell'
 must_contain "$EXECUTION" "WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"
 must_contain "$EXECUTION" "validate_windows_artifact_manifest.mjs"
 must_contain "$SCHEMA" "WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"

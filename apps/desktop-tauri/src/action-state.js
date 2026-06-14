@@ -907,10 +907,10 @@ export function productionWindowsPublicArtifactCandidateView(input = {}) {
   const platform = releaseIntegrityToken(input.platform, "unknown-platform");
   const artifactType = releaseIntegrityToken(
     input.artifactType,
-    "windows-manual-e2ee-nsis-exe-installer-candidate",
+    "windows-shell-nsis-exe-installer-candidate",
   );
   const bundleTarget = releaseIntegrityToken(input.bundleTarget, "nsis");
-  const runtimeMode = releaseIntegrityToken(input.runtimeMode, "manual-e2ee");
+  const runtimeMode = releaseIntegrityToken(input.runtimeMode, "shell-sidecar-pending");
   const summary = [
     "windows_public_artifact_candidate=true",
     `artifact_type=${artifactType}`,

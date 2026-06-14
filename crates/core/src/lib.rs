@@ -21850,9 +21850,9 @@ pub mod production {
 
     pub fn production_windows_public_artifact_candidate_summary(
     ) -> ProductionWindowsPublicArtifactCandidateSummary {
-        let artifact_type = "windows-manual-e2ee-nsis-exe-installer-candidate";
+        let artifact_type = "windows-shell-nsis-exe-installer-candidate";
         let bundle_target = "nsis";
-        let runtime_mode = "manual-e2ee";
+        let runtime_mode = "shell-sidecar-pending";
         let onion_runtime_compiled = false;
         let default_extension = ".exe";
         let portable_default_allowed = false;
@@ -21893,9 +21893,9 @@ pub mod production {
                 .contains(&"smartscreen_security_boundary_claimed")
             && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_FORBIDDEN_CLAIMS
                 .contains(&"local_runtime_promoted_to_delivery_proof")
-            && artifact_type == "windows-manual-e2ee-nsis-exe-installer-candidate"
+            && artifact_type == "windows-shell-nsis-exe-installer-candidate"
             && bundle_target == "nsis"
-            && runtime_mode == "manual-e2ee"
+            && runtime_mode == "shell-sidecar-pending"
             && !onion_runtime_compiled
             && default_extension == ".exe"
             && !portable_default_allowed
@@ -28812,10 +28812,10 @@ pub mod production {
 
             assert_eq!(
                 summary.artifact_type(),
-                "windows-manual-e2ee-nsis-exe-installer-candidate"
+                "windows-shell-nsis-exe-installer-candidate"
             );
             assert_eq!(summary.bundle_target(), "nsis");
-            assert_eq!(summary.runtime_mode(), "manual-e2ee");
+            assert_eq!(summary.runtime_mode(), "shell-sidecar-pending");
             assert!(!summary.onion_runtime_compiled());
             assert_eq!(summary.default_extension(), ".exe");
             assert!(!summary.portable_default_allowed());
