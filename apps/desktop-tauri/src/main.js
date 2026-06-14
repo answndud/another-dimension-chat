@@ -27,6 +27,7 @@ import {
   productionManualStatusView,
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
+  productionMessageDeliveryProductizationView,
   productionMessageTtlInputValue,
   productionOnionReceiveFailureMessage,
   productionOnionReceiveLoopRefreshPlan,
@@ -13371,6 +13372,50 @@ function applyProductionActionState() {
   const receivingOtherRoom = productionTwoProfileReceiveActiveInOtherRoom(twoProfile);
   const receivingRuntimeMismatch = productionTwoProfileReceiveRuntimeMismatched(twoProfile);
   const retryableOutboundConversation = automaticVisibleTwoProfileRetryableOutboundEntry(twoProfile);
+  const roomFingerprint = twoProfileSessionStatusFingerprint(twoProfile);
+  const selectedRoomOwnsState = Boolean(
+    !selectedConversation ||
+      String(selectedConversation.roomFingerprint ?? "").trim() === roomFingerprint,
+  );
+  const selectedProfilesOwnState = Boolean(
+    !selectedConversation ||
+      (String(selectedConversation.sender ?? "").trim().toLowerCase() ===
+        String(twoProfile.profileA ?? "").trim().toLowerCase() &&
+        String(selectedConversation.receiver ?? "").trim().toLowerCase() ===
+          String(twoProfile.profileB ?? "").trim().toLowerCase()) ||
+      (String(selectedConversation.sender ?? "").trim().toLowerCase() ===
+        String(twoProfile.profileB ?? "").trim().toLowerCase() &&
+        String(selectedConversation.receiver ?? "").trim().toLowerCase() ===
+          String(twoProfile.profileA ?? "").trim().toLowerCase()),
+  );
+  const latestConversationHasSenderEnvelopeSlot = Boolean(
+    latestConversation && messageEnvelopeSlotReadyForEntry(latestConversation.sender, latestConversation),
+  );
+  const deliveryProductization = productionMessageDeliveryProductizationView({
+    profileUnlocked: latestProductionProfileUnlocked || sessionReadyForMessages || twoProfileSessionsReady,
+    pairwiseInviteReady: hasTwoProfileSessionStatusInput || hasTwoProfileSetupInput,
+    mandatorySafetyVerified: twoProfileSafetyConfirmed,
+    composeReady: Boolean(twoProfile.message || state.hasTwoProfileReplyDraftInput),
+    outboundExported: Boolean(
+      hasLocalMessageEnvelope ||
+        latestConversationHasSenderEnvelopeSlot ||
+        latestConversation?.statuses?.has("sent"),
+    ),
+    inboundImported: Boolean(hasImportedMessage || latestConversation?.statuses?.has("received")),
+    replyReady: Boolean(twoProfileReplyDraftReady || latestConversationDelivered),
+    retryAvailable: Boolean(retryableOutboundConversation),
+    cancelAvailable: Boolean(pendingConversation || retryableOutboundConversation),
+    localDeleteAvailable: Boolean(conversationDeleteConfirmed || sessionDeleteConfirmed),
+    currentRoomOwnsState: selectedRoomOwnsState && selectedMessageInputMatches,
+    currentProfileOwnsState:
+      selectedProfilesOwnState && selectedManualExportProfileMatches && selectedManualImportProfileMatches,
+    duplicateOrReplayRejected: true,
+    peerMismatchBlocksVerified: !twoProfileSessionsReady || twoProfileSafetyConfirmed,
+    supportRedacted: true,
+  });
+  document.body.dataset.deliveryPrimaryAction = deliveryProductization.primaryAction;
+  document.body.dataset.deliveryBoundaryClosed = String(deliveryProductization.boundaryClosed);
+  setText(fields.messaging, localizedBoundaryStatus(`message_delivery_productization ${deliveryProductization.boundary}`));
   clearMismatchedChatDeliveryNotice(twoProfile);
   clearMismatchedPrivateRouteFollowup(twoProfile);
   const currentRoomDeliveryNotice = chatDeliveryNoticeMatchesInput(twoProfile);

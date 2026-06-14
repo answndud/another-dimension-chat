@@ -188,6 +188,9 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(actionStateJs, /export function productionFinalReleaseAcceptanceView/);
   assert.match(actionStateJs, /export function productionExternalTwoMachineEvidenceView/);
   assert.match(actionStateJs, /export function productionMessageDeliveryProductizationView/);
+  assert.match(mainJs, /productionMessageDeliveryProductizationView/);
+  assert.match(mainJs, /dataset\.deliveryPrimaryAction/);
+  assert.match(mainJs, /message_delivery_productization/);
   assert.match(actionStateJs, /primary_action=\$\{primaryAction\}/);
   assert.match(actionStateJs, /first_message_round_trip_ready=\$\{firstMessageRoundTripReady\}/);
   assert.match(actionStateJs, /false_delivered_allowed=false/);
