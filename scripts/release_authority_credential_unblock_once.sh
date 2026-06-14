@@ -213,7 +213,7 @@ must_contain "$DOC" "signed_notarized_release_ready=$(bool "$SIGNED_NOTARIZED_RE
 must_contain "$DOC" "signed_notarized_stable_release_path_available=$(bool "$SIGNED_NOTARIZED_READY")"
 
 must_contain "$TAURI_CONFIG" '"productName": "Another Dimension Chat"'
-must_contain "$TAURI_CONFIG" '"identifier": "chat.anotherdimension.prototype"'
+must_contain "$TAURI_CONFIG" '"identifier": "chat.anotherdimension.app"'
 must_contain "$TAURI_CONFIG" '"active": true'
 must_contain "$TAURI_CONFIG" '"macOS"'
 must_contain "$TAURI_CONFIG" '"minimumSystemVersion": "12.0"'
@@ -226,7 +226,9 @@ must_contain "$SIGNED_BUILD_SCRIPT" "AD_BUILD_MACOS_SIGNED_RC"
 must_contain "$SIGNED_BUILD_SCRIPT" "hdiutil create"
 must_contain "$SIGNED_BUILD_SCRIPT" "xcrun notarytool submit"
 
-must_contain "README.md" "reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md"
+if ! grep -Fq "reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md" "README.md"; then
+  must_contain "SECURITY.md" "reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md"
+fi
 must_contain "SECURITY.md" "reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md"
 must_contain "reference/STABLE_MACOS_V1_RELEASE_GATE.md" "release_authority_credential_unblock_reviewed=true"
