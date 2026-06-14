@@ -21,6 +21,9 @@ Allowed public-safe wording:
 - OS-keystore-only unlock is rejected for high-risk local profile access,
 - rollback handling is detection-only and routes users to local reset/rebuild
   recovery,
+- rollback suspicion keeps High-Risk and verified/delivered-state claims closed,
+- replay-window storage rejects wrong kind, corrupt state, scope mismatch, and
+  missing/deleted records fail closed,
 - conversation delete, session delete, profile delete, and full local wipe are
   explicit local actions with separate scopes.
 
@@ -103,6 +106,10 @@ Do not claim:
 - key_rotation_marker_monotonic_write_enforced=true
 - key_rotation_marker_scope_bound=true
 - replay_window_scope_bound_loader_ready=true
+- rollback_marker_negative_corpus_ready=true
+- replay_window_negative_corpus_ready=true
+- missing_record_delete_idempotency_ready=true
+- locked_profile_no_plaintext_read_boundary_ready=true
 - minimum_forward_key_rotation_generation_ready=true
 - tauri_profile_passphrase_rekey_command_ready=true
 - project_owned_argon2_scrypt_kdf_ready=false
