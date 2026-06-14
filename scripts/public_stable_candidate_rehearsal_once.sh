@@ -19,12 +19,23 @@ require_output() {
 }
 
 require_file "$ROOT_DIR/scripts/final_acceptance_once.sh"
+require_file "$ROOT_DIR/scripts/android_public_app_candidate_once.sh"
 require_file "$ROOT_DIR/scripts/public_forbidden_claim_scanner_once.sh"
 require_file "$ROOT_DIR/scripts/public_release_readiness_preflight.sh"
 
 bash -n "$ROOT_DIR/scripts/final_acceptance_once.sh"
+bash -n "$ROOT_DIR/scripts/android_public_app_candidate_once.sh"
 bash -n "$ROOT_DIR/scripts/public_forbidden_claim_scanner_once.sh"
 bash -n "$ROOT_DIR/scripts/public_release_readiness_preflight.sh"
+
+android_output="$("$ROOT_DIR/scripts/android_public_app_candidate_once.sh")"
+require_output "$android_output" "status=android-public-app-candidate-source-ready"
+require_output "$android_output" "android_shell_uses_shared_core_json_bridge_candidate=true"
+require_output "$android_output" "android_forbidden_dependency_scan_ready=true"
+require_output "$android_output" "android_apk_aab_artifact_ready=false"
+require_output "$android_output" "android_public_artifact_ready=false"
+require_output "$android_output" "android_public_claim_allowed=false"
+require_output "$android_output" "mobile_readiness_claimed=false"
 
 scanner_output="$("$ROOT_DIR/scripts/public_forbidden_claim_scanner_once.sh")"
 require_output "$scanner_output" "forbidden_positive_claims_found=false"
@@ -43,6 +54,11 @@ require_output "$final_output" "forbidden_positive_public_claims_found=false"
 require_output "$final_output" "external_two_machine_evidence_present=false"
 require_output "$final_output" "macos_public_artifact_consistency_verified=false"
 require_output "$final_output" "windows_public_artifact_consistency_verified=false"
+require_output "$final_output" "android_public_app_candidate_source_ready=true"
+require_output "$final_output" "android_apk_aab_artifact_ready=false"
+require_output "$final_output" "android_public_artifact_ready=false"
+require_output "$final_output" "android_public_claim_allowed=false"
+require_output "$final_output" "mobile_readiness_claimed=false"
 require_output "$final_output" "stable_candidate_blocked_by_p0_p1_audit=true"
 require_output "$final_output" "high_risk_blocked_by_missing_required_conditions=true"
 
@@ -67,6 +83,11 @@ release_decision=hold
 forbidden_positive_claims_found=false
 external_evidence_presence=false
 artifact_consistency_verified=false
+android_public_app_candidate_source_ready=true
+android_apk_aab_artifact_ready=false
+android_public_artifact_ready=false
+android_public_claim_allowed=false
+mobile_readiness_claimed=false
 production_claim_allowed=false
 high_risk_public_claim_allowed=false
 EOF
