@@ -2663,6 +2663,9 @@ test("public diagnostics recovery guide keeps support-safe next actions visible"
   assert.match(actionStateJs, /envelope_payload=<redacted>/);
   assert.match(actionStateJs, /raw_local_path=<redacted>/);
   assert.match(actionStateJs, /credential=<redacted>/);
+  assert.match(actionStateJs, /support_bundle_requested=false/);
+  assert.match(actionStateJs, /diagnostic_upload_requested=false/);
+  assert.match(actionStateJs, /telemetry_upload_requested=false/);
   assert.match(mainJs, /productionRedactedSupportReportView/);
   assert.match(mainJs, /function renderRedactedSupportReport/);
   assert.match(mainJs, /function rememberFailureSupportReport/);
@@ -2675,6 +2678,15 @@ test("public diagnostics recovery guide keeps support-safe next actions visible"
   assert.match(functionBody(mainJs, "wipeProductionLocalData"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "deleteProductionSessionLifecycle"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "deleteProductionConversation"), /rememberFailureSupportReport\(/);
+  assert.match(functionBody(mainJs, "dataLifecycleDestructivePreflightView"), /destructive_scope=/);
+  assert.match(functionBody(mainJs, "dataLifecycleDestructivePreflightView"), /confirmation_phrase=/);
+  assert.match(functionBody(mainJs, "deleteProductionSessionLifecycle"), /action: "session-delete"/);
+  assert.match(functionBody(mainJs, "deleteProductionConversation"), /action: "conversation-delete"/);
+  assert.match(indexHtml, /data-destructive-scope="conversation-delete"/);
+  assert.match(indexHtml, /data-destructive-scope="session-delete"/);
+  assert.match(indexHtml, /data-destructive-scope="profile-delete"/);
+  assert.match(indexHtml, /data-destructive-scope="full-local-wipe"/);
+  assert.match(indexHtml, /data-destructive-scope="emergency-local-wipe"/);
 });
 
 test("empty loading and error states keep UI error details redacted", () => {

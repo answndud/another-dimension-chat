@@ -766,6 +766,9 @@ test("redacted support report excludes sensitive inputs", () => {
   assert.match(view.payload, /recovery_next_action=retry-passphrase/);
   assert.match(view.payload, /passphrase=<redacted>/);
   assert.match(view.payload, /private_key=<redacted>/);
+  assert.match(view.boundary, /support_bundle_requested=false/);
+  assert.match(view.boundary, /diagnostic_upload_requested=false/);
+  assert.match(view.boundary, /telemetry_upload_requested=false/);
   assert.match(view.boundary, /support_bundle_export=false/);
   assert.match(view.boundary, /security_ready_proof_claim=false/);
   for (const forbidden of [
@@ -921,6 +924,9 @@ test("local lifecycle boundary keeps backup recovery and secure delete as non-cl
   });
 
   assert.match(boundary, /local_only=true/);
+  assert.match(boundary, /destructive_action=false/);
+  assert.match(boundary, /destructive_scope=local-lifecycle-readiness/);
+  assert.match(boundary, /confirmation_phrase=none/);
   assert.match(boundary, /cloud_backup_sync=false/);
   assert.match(boundary, /backup_recovery=false/);
   assert.match(boundary, /marker_only_rollback=true/);
@@ -930,6 +936,36 @@ test("local lifecycle boundary keeps backup recovery and secure delete as non-cl
   assert.match(boundary, /secure_delete_claim=false/);
   assert.match(boundary, /path_returned=false/);
   assert.match(boundary, /key_material=false/);
+
+  const conversationDelete = productionLocalLifecycleBoundaryView(
+    { session_records_preserved: true },
+    { action: "conversation-delete" },
+  );
+  const sessionDelete = productionLocalLifecycleBoundaryView(
+    { message_records_preserved: true },
+    { action: "session-delete" },
+  );
+  const profileDelete = productionLocalLifecycleBoundaryView(
+    { profile_deleted: true },
+    { action: "profile-delete" },
+  );
+  const fullWipe = productionLocalLifecycleBoundaryView(
+    { full_local_data_wiped: true },
+    { action: "full-local-wipe" },
+  );
+
+  assert.match(conversationDelete, /destructive_scope=conversation-message-records/);
+  assert.match(conversationDelete, /confirmation_phrase=DELETE_CONVERSATION/);
+  assert.match(conversationDelete, /session_records_preserved=true/);
+  assert.match(sessionDelete, /destructive_scope=session-resume-records/);
+  assert.match(sessionDelete, /confirmation_phrase=DELETE_SESSION/);
+  assert.match(sessionDelete, /message_records_preserved=true/);
+  assert.match(profileDelete, /destructive_scope=local-profile-store/);
+  assert.match(profileDelete, /confirmation_phrase=exact_profile_name/);
+  assert.match(profileDelete, /profile_store_removed=true/);
+  assert.match(fullWipe, /destructive_scope=owned-local-app-data/);
+  assert.match(fullWipe, /confirmation_phrase=WIPE_LOCAL_DATA/);
+  assert.match(fullWipe, /owned_app_data_removed=true/);
 });
 
 test("session lifecycle view exposes local-only lifecycle non-claims", () => {
@@ -953,10 +989,12 @@ test("session lifecycle view exposes local-only lifecycle non-claims", () => {
     network_io_attempted: false,
     transport_io_opened: false,
     runtime_messaging_enabled: false,
-  });
+  }, { action: "session-delete" });
 
   assert.match(view.lifecycle, /resume=true/);
   assert.match(view.boundary, /message_records_preserved=true/);
+  assert.match(view.boundary, /destructive_scope=session-resume-records/);
+  assert.match(view.boundary, /confirmation_phrase=DELETE_SESSION/);
   assert.match(view.boundary, /local_only=true/);
   assert.match(view.boundary, /backup_recovery=false/);
   assert.match(view.boundary, /cloud_backup_sync=false/);
