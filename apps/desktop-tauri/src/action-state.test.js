@@ -10,6 +10,7 @@ import {
   productionHighRiskThreatModelBoundaryView,
   productionHighRiskThreatModelClaimMatrix,
   productionHighRiskReadinessGateView,
+  productionHighRiskRuntimeEvidenceGateView,
   productionFinalReleaseAcceptanceView,
   productionExternalTwoMachineEvidenceView,
   productionHighRiskTransportMetadataBoundaryView,
@@ -174,6 +175,62 @@ test("high-risk transport metadata boundary stays onion-only and redacted", () =
   assert.match(view.boundary, /high_risk_transport_ready=false/);
 });
 
+test("high-risk runtime evidence gate rejects local fabricated and unsafe evidence", () => {
+  const localOnly = productionHighRiskRuntimeEvidenceGateView({
+    evidenceSource: "local-fixture",
+    explicitUserAction: true,
+    onionOnly: true,
+    endpointRotationObserved: true,
+    redactedRuntimeEventRecorded: true,
+    clipboardTtlMs: 5000,
+    emergencyControlsReachable: true,
+    localOnlyEvidence: true,
+  });
+
+  assert.equal(localOnly.accepted, false);
+  assert.equal(localOnly.runtimeEvidencePresent, false);
+  assert.equal(localOnly.primaryBlocker, "runtime-report-missing");
+  assert.match(localOnly.summary, /local_only_evidence=true/);
+  assert.match(localOnly.summary, /local_only_evidence_promoted=false/);
+  assert.match(localOnly.summary, /high_risk_public_claim_allowed=false/);
+  assert.match(localOnly.summary, /high_risk_ready_claim_allowed=false/);
+
+  const fabricated = productionHighRiskRuntimeEvidenceGateView({
+    evidenceSource: "runtime-report",
+    explicitUserAction: true,
+    onionOnly: true,
+    endpointRotationObserved: true,
+    redactedRuntimeEventRecorded: true,
+    clipboardTtlMs: 5000,
+    emergencyControlsReachable: true,
+    fabricatedEvidence: true,
+  });
+  assert.equal(fabricated.accepted, false);
+  assert.match(fabricated.summary, /fabricated_evidence=true/);
+  assert.match(fabricated.summary, /fabricated_evidence_promoted=false/);
+
+  const accepted = productionHighRiskRuntimeEvidenceGateView({
+    evidenceSource: "runtime-report",
+    explicitUserAction: true,
+    onionOnly: true,
+    directFallbackAttempted: false,
+    appLaunchBootstrapAttempted: false,
+    roomOpenNetworkAttempted: false,
+    endpointRotationObserved: true,
+    redactedRuntimeEventRecorded: true,
+    failureClass: "stale_endpoint",
+    clipboardTtlMs: 5000,
+    emergencyControlsReachable: true,
+  });
+  assert.equal(accepted.accepted, true);
+  assert.equal(accepted.runtimeEvidencePresent, true);
+  assert.equal(accepted.highRiskPublicClaimAllowed, false);
+  assert.equal(accepted.highRiskReadyClaimAllowed, false);
+  assert.match(accepted.boundary, /evidence_contract=runtime-report#explicit-user-action#onion-only#no-direct-fallback/);
+  assert.match(accepted.summary, /runtime_failure_class=stale_endpoint/);
+  assert.match(accepted.summary, /endpoint_value_recorded=false/);
+});
+
 test("high-risk readiness gate separates not ready limited and ready claims", () => {
   const missingSafety = productionHighRiskReadinessGateView({
     threatMatrixAccepted: true,
@@ -238,10 +295,15 @@ test("high-risk readiness gate separates not ready limited and ready claims", ()
     releaseIntegrityAvailable: true,
   });
   assert.equal(ready.status, "ready");
+  assert.equal(ready.highRiskOperationalReady, true);
   assert.equal(ready.primaryReasonCode, "none");
   assert.equal(ready.nextAction, "ready");
-  assert.equal(ready.highRiskReadyClaimAllowed, true);
-  assert.match(ready.summary, /high_risk_ready_claim_allowed=true/);
+  assert.equal(ready.highRiskReadyClaimAllowed, false);
+  assert.equal(ready.publicSupportHighRiskClaimAllowed, false);
+  assert.equal(ready.releaseHighRiskClaimAllowed, false);
+  assert.match(ready.summary, /high_risk_operational_ready=true/);
+  assert.match(ready.summary, /high_risk_ready_claim_allowed=false/);
+  assert.match(ready.summary, /high_risk_public_claim_allowed=false/);
 });
 
 test("final release acceptance separates beta candidate stable and high-risk readiness", () => {

@@ -505,6 +505,10 @@ test("default transport boundary keeps the public diagnostic path manual and non
   assert.match(diagnostics, /high_risk_transport_app_launch_bootstrap=false/);
   assert.match(diagnostics, /high_risk_transport_runtime_evidence_required_for_ready=true/);
   assert.match(diagnostics, /high_risk_transport_runtime_evidence_present=false/);
+  assert.match(diagnostics, /high_risk_runtime_evidence_source=absent/);
+  assert.match(diagnostics, /local_only_evidence_promoted=false/);
+  assert.match(diagnostics, /fabricated_evidence_promoted=false/);
+  assert.match(diagnostics, /high_risk_public_claim_allowed=false/);
   assert.match(
     diagnostics,
     /high_risk_transport_failure_classes=bridge_config_missing#bootstrap_timeout#peer_unreachable#stale_endpoint#receive_owner_mismatch/,
@@ -545,11 +549,16 @@ test("high-risk transport metadata boundary exposes only redacted status", () =>
   assert.equal(boundary.runtimeEventIdentifiersRedacted, true);
   assert.equal(boundary.runtimeEvidenceRequiredForReady, true);
   assert.equal(boundary.runtimeEvidencePresent, false);
+  assert.equal(boundary.runtimeEvidenceSource, "absent");
+  assert.equal(boundary.localOnlyEvidencePromoted, false);
+  assert.equal(boundary.fabricatedEvidencePromoted, false);
+  assert.equal(boundary.highRiskPublicClaimAllowed, false);
   assert.equal(boundary.highRiskTransportReady, false);
   assert.equal(boundary.notReadyReason, "runtime-network-disabled-until-explicit-user-action");
   assert.match(boundary.boundary, /high_risk_transport_bridge_failure_class=redacted/);
   assert.match(boundary.boundary, /high_risk_transport_room_open_network=false/);
   assert.match(boundary.boundary, /high_risk_transport_runtime_evidence_present=false/);
+  assert.match(boundary.boundary, /high_risk_runtime_evidence_contract=runtime-report#explicit-user-action#onion-only#no-direct-fallback/);
   assert.doesNotMatch(boundary.boundary, /bridge_line=|onion_endpoint=|descriptor=|local_path=/);
 });
 

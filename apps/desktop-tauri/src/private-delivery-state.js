@@ -457,6 +457,8 @@ function desktopCompletionCanSendOrRecover(parsed) {
 }
 
 export function highRiskTransportMetadataBoundaryStatus() {
+  const runtimeEvidenceContract =
+    "runtime-report#explicit-user-action#onion-only#no-direct-fallback#endpoint-rotation#redacted-runtime-event#clipboard-expiry#emergency-controls";
   return {
     mode: "onion-only",
     onionOnly: true,
@@ -494,6 +496,11 @@ export function highRiskTransportMetadataBoundaryStatus() {
     runtimeEventIdentifiersRedacted: true,
     runtimeEvidenceRequiredForReady: true,
     runtimeEvidencePresent: false,
+    runtimeEvidenceSource: "absent",
+    runtimeEvidenceContract,
+    localOnlyEvidencePromoted: false,
+    fabricatedEvidencePromoted: false,
+    highRiskPublicClaimAllowed: false,
     highRiskTransportReady: false,
     notReadyReason: "runtime-network-disabled-until-explicit-user-action",
     boundary: [
@@ -527,6 +534,11 @@ export function highRiskTransportMetadataBoundaryStatus() {
       "high_risk_transport_runtime_event_identifiers_redacted=true",
       "high_risk_transport_runtime_evidence_required_for_ready=true",
       "high_risk_transport_runtime_evidence_present=false",
+      "high_risk_runtime_evidence_source=absent",
+      `high_risk_runtime_evidence_contract=${runtimeEvidenceContract}`,
+      "local_only_evidence_promoted=false",
+      "fabricated_evidence_promoted=false",
+      "high_risk_public_claim_allowed=false",
       "high_risk_transport_ready=false",
       "high_risk_transport_not_ready_reason=runtime-network-disabled-until-explicit-user-action",
     ].join(" "),
