@@ -506,6 +506,9 @@ test("default transport boundary keeps the public diagnostic path manual and non
   assert.match(diagnostics, /high_risk_transport_runtime_evidence_required_for_ready=true/);
   assert.match(diagnostics, /high_risk_transport_runtime_evidence_present=false/);
   assert.match(diagnostics, /high_risk_runtime_evidence_source=absent/);
+  assert.match(diagnostics, /high_risk_runtime_evidence_accepted=false/);
+  assert.match(diagnostics, /high_risk_runtime_primary_blocker=none/);
+  assert.match(diagnostics, /high_risk_runtime_failure_class=none/);
   assert.match(diagnostics, /local_only_evidence_promoted=false/);
   assert.match(diagnostics, /fabricated_evidence_promoted=false/);
   assert.match(diagnostics, /high_risk_public_claim_allowed=false/);
@@ -514,6 +517,36 @@ test("default transport boundary keeps the public diagnostic path manual and non
     /high_risk_transport_failure_classes=bridge_config_missing#bootstrap_timeout#peer_unreachable#stale_endpoint#receive_owner_mismatch/,
   );
   assert.match(diagnostics, /high_risk_transport_not_ready_reason=runtime-network-disabled-until-explicit-user-action/);
+});
+
+test("public diagnostics carries redacted high-risk runtime evidence status without claims", () => {
+  const diagnostics = publicBetaDiagnosticsReport(
+    [
+      "room_present=true",
+      "session_ready=true",
+      "safety_confirmed=true",
+      "route_readiness_ready=true",
+      "receive_enabled=true",
+      "receive_state=running",
+      "composer_next_action=send-message",
+      "high_risk_runtime_evidence_source=runtime-report",
+      "high_risk_runtime_evidence_accepted=true",
+      "high_risk_runtime_evidence_present=true",
+      "high_risk_runtime_primary_blocker=none",
+      "high_risk_runtime_failure_class=stale_endpoint",
+      "high_risk_public_claim_allowed=false",
+      "high_risk_ready_claim_allowed=false",
+    ].join("\n"),
+  );
+
+  assert.match(diagnostics, /high_risk_transport_runtime_evidence_present=true/);
+  assert.match(diagnostics, /high_risk_runtime_evidence_source=runtime-report/);
+  assert.match(diagnostics, /high_risk_runtime_evidence_accepted=true/);
+  assert.match(diagnostics, /high_risk_runtime_primary_blocker=none/);
+  assert.match(diagnostics, /high_risk_runtime_failure_class=stale_endpoint/);
+  assert.match(diagnostics, /high_risk_public_claim_allowed=false/);
+  assert.match(diagnostics, /high_risk_ready_claim_allowed=false/);
+  assert.doesNotMatch(diagnostics, /^onion_endpoint=|^envelope_payload=|^local_path=|^key_material=/m);
 });
 
 test("high-risk transport metadata boundary exposes only redacted status", () => {

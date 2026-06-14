@@ -198,6 +198,7 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(stylesCss, /data-step-status="current"/);
   assert.match(stylesCss, /data-step-status="complete"/);
   assert.match(actionStateJs, /export function productionHighRiskReadinessGateView/);
+  assert.match(actionStateJs, /export function productionHighRiskRuntimeEvidenceInputFromAttemptResult/);
   assert.match(actionStateJs, /export function productionHighRiskRuntimeEvidenceGateView/);
   assert.match(actionStateJs, /export function productionFinalReleaseAcceptanceView/);
   assert.match(actionStateJs, /export function productionExternalTwoMachineEvidenceView/);
@@ -266,7 +267,19 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(externalEvidenceSchema, /passphrase/);
   assert.match(externalEvidenceSchema, /key_material/);
   assert.match(mainJs, /productionHighRiskReadinessGateView/);
+  assert.match(mainJs, /productionHighRiskRuntimeEvidenceInputFromAttemptResult/);
   assert.match(mainJs, /productionHighRiskRuntimeEvidenceGateView/);
+  assert.match(mainJs, /let latestProductionHighRiskRuntimeEvidenceView = null/);
+  assert.match(functionBody(mainJs, "rememberHighRiskRuntimeEvidenceFromAttemptResult"), /productionHighRiskRuntimeEvidenceInputFromAttemptResult/);
+  assert.match(functionBody(mainJs, "rememberHighRiskRuntimeEvidenceFromAttemptResult"), /productionHighRiskRuntimeEvidenceGateView/);
+  assert.match(functionBody(mainJs, "attemptOnionOutboundEnvelopeSend"), /rememberHighRiskRuntimeEvidenceFromAttemptResult\(result/);
+  assert.match(functionBody(mainJs, "attemptOnionInboundEnvelopeReceive"), /rememberHighRiskRuntimeEvidenceFromAttemptResult\(result/);
+  assert.match(functionBody(mainJs, "sendProductionTwoProfileEndpointUpdate"), /rememberHighRiskRuntimeEvidenceFromAttemptResult\(result,[\s\S]*endpointRotationObserved: true/);
+  assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /localOnlyEvidence: result\.local_dev_roundtrip_result === true/);
+  assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /syntheticFailure: true/);
+  assert.match(functionBody(mainJs, "buildFieldTestReport"), /high_risk_runtime_evidence_source=/);
+  assert.match(functionBody(mainJs, "buildFieldTestReport"), /high_risk_public_claim_allowed=/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_runtime_evidence_source=\$\{highRiskRuntimeEvidenceSource\}/);
   assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /twoProfileSafetyConfirmedForInput/);
   assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /data-readiness/);
   assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /data-high-risk-ready-claim-allowed/);
@@ -274,7 +287,9 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /operational_ready=\$\{view\.highRiskOperationalReady\}/);
   assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /data-high-risk-operational-ready/);
   assert.match(functionBody(mainJs, "renderHighRiskTransportMetadataStatus"), /runtime_evidence=\$\{runtimeEvidence\.runtimeEvidencePresent\}/);
+  assert.match(functionBody(mainJs, "renderHighRiskTransportMetadataStatus"), /runtime_evidence_accepted=\$\{runtimeEvidence\.accepted\}/);
   assert.match(functionBody(mainJs, "renderHighRiskTransportMetadataStatus"), /data-runtime-evidence-source/);
+  assert.match(functionBody(mainJs, "renderHighRiskTransportMetadataStatus"), /data-runtime-evidence-accepted/);
   assert.match(functionBody(mainJs, "renderHighRiskTransportMetadataStatus"), /data-high-risk-public-claim-allowed/);
   assert.match(functionBody(mainJs, "renderHighRiskThreatModelStatus"), /data-not-protected/);
   assert.match(functionBody(mainJs, "renderHighRiskThreatModelStatus"), /compromised_endpoint_safe=false/);

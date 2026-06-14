@@ -23,6 +23,10 @@ export const PUBLIC_SUPPORT_DIAGNOSTICS_ALLOWED_FIELDS = Object.freeze([
   "desktop-acceptance-blockers",
   "app-launch-network",
   "release-class-readiness",
+  "high-risk-runtime-evidence-source",
+  "high-risk-runtime-evidence-accepted",
+  "high-risk-runtime-primary-blocker",
+  "high-risk-runtime-failure-class",
 ]);
 
 export const PUBLIC_SUPPORT_DIAGNOSTICS_FORBIDDEN_FIELDS = Object.freeze([
@@ -921,7 +925,15 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     `high_risk_transport_failure_classes=bridge_config_missing#bootstrap_timeout#peer_unreachable#stale_endpoint#receive_owner_mismatch`,
     `high_risk_transport_runtime_event_identifiers_redacted=true`,
     `high_risk_transport_runtime_evidence_required_for_ready=true`,
-    `high_risk_transport_runtime_evidence_present=false`,
+    `high_risk_transport_runtime_evidence_present=${fieldTestReportValue(parsed.high_risk_runtime_evidence_present, "false")}`,
+    `high_risk_runtime_evidence_source=${fieldTestReportValue(parsed.high_risk_runtime_evidence_source, "absent")}`,
+    `high_risk_runtime_evidence_accepted=${fieldTestReportValue(parsed.high_risk_runtime_evidence_accepted, "false")}`,
+    `high_risk_runtime_primary_blocker=${fieldTestReportValue(parsed.high_risk_runtime_primary_blocker, "none")}`,
+    `high_risk_runtime_failure_class=${fieldTestReportValue(parsed.high_risk_runtime_failure_class, "none")}`,
+    `local_only_evidence_promoted=false`,
+    `fabricated_evidence_promoted=false`,
+    `high_risk_public_claim_allowed=false`,
+    `high_risk_ready_claim_allowed=false`,
     `high_risk_transport_ready=false`,
     `high_risk_transport_not_ready_reason=${fieldTestReportValue(desktopCompletion.highRiskTransportNotReadyReason, "unknown")}`,
     `automatic_network_on_launch=false`,

@@ -10,6 +10,7 @@ import {
   productionHighRiskThreatModelBoundaryView,
   productionHighRiskThreatModelClaimMatrix,
   productionHighRiskReadinessGateView,
+  productionHighRiskRuntimeEvidenceInputFromAttemptResult,
   productionHighRiskRuntimeEvidenceGateView,
   productionFinalReleaseAcceptanceView,
   productionExternalTwoMachineEvidenceView,
@@ -229,6 +230,62 @@ test("high-risk runtime evidence gate rejects local fabricated and unsafe eviden
   assert.match(accepted.boundary, /evidence_contract=runtime-report#explicit-user-action#onion-only#no-direct-fallback/);
   assert.match(accepted.summary, /runtime_failure_class=stale_endpoint/);
   assert.match(accepted.summary, /endpoint_value_recorded=false/);
+});
+
+test("high-risk runtime evidence input summarizes explicit attempts without private fields", () => {
+  const sendAttempt = productionHighRiskRuntimeEvidenceInputFromAttemptResult({
+    manual_network_permission_enabled: true,
+    send_attempt_started: true,
+    redacted_send_result_event_recorded: true,
+    stream_dial_attempted: true,
+    network_io_attempted: true,
+    next_blocker: "PeerUnreachable",
+  });
+  const sendGate = productionHighRiskRuntimeEvidenceGateView(sendAttempt);
+  assert.equal(sendAttempt.evidenceSource, "runtime-report");
+  assert.equal(sendAttempt.explicitUserAction, true);
+  assert.equal(sendAttempt.endpointRotationObserved, false);
+  assert.equal(sendAttempt.failureClass, "peer_unreachable");
+  assert.equal(sendAttempt.forbiddenFieldsPresent, false);
+  assert.equal(sendGate.accepted, false);
+  assert.match(sendGate.summary, /primary_blocker=endpoint-rotation-missing/);
+
+  const endpointUpdate = productionHighRiskRuntimeEvidenceInputFromAttemptResult({
+    manual_network_permission_enabled: true,
+    send_attempt_started: true,
+    redacted_send_result_event_recorded: true,
+    endpoint_update_applied: true,
+    stale_endpoint_status_cleared: true,
+  }, {
+    emergencyControlsReachable: true,
+  });
+  const endpointUpdateGate = productionHighRiskRuntimeEvidenceGateView(endpointUpdate);
+  assert.equal(endpointUpdate.endpointRotationObserved, true);
+  assert.equal(endpointUpdateGate.accepted, true);
+  assert.equal(endpointUpdateGate.highRiskReadyClaimAllowed, false);
+  assert.match(endpointUpdateGate.summary, /high_risk_public_claim_allowed=false/);
+
+  const localDev = productionHighRiskRuntimeEvidenceInputFromAttemptResult({
+    manual_network_permission_enabled: true,
+    send_attempt_started: true,
+    redacted_send_result_event_recorded: true,
+    endpoint_update_applied: true,
+    local_dev_roundtrip_result: true,
+  }, {
+    emergencyControlsReachable: true,
+  });
+  const stale = productionHighRiskRuntimeEvidenceInputFromAttemptResult(
+    {
+      manual_network_permission_enabled: true,
+      send_attempt_started: true,
+      redacted_send_result_event_recorded: true,
+      endpoint_update_applied: true,
+    },
+    { staleInput: true },
+  );
+  assert.equal(productionHighRiskRuntimeEvidenceGateView(localDev).accepted, false);
+  assert.equal(productionHighRiskRuntimeEvidenceGateView(stale).accepted, false);
+  assert.match(productionHighRiskRuntimeEvidenceGateView(localDev).summary, /local_only_evidence_promoted=false/);
 });
 
 test("high-risk readiness gate separates not ready limited and ready claims", () => {
