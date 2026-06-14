@@ -40,7 +40,9 @@ jobs:
       - name: Build unsigned NSIS candidate
         shell: bash
         working-directory: apps/desktop-tauri
-        run: node scripts/with-cargo-target.mjs tauri build --features manual-onion-client-attempt --bundles nsis
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/.build-cache/cargo-target
+        run: npm exec tauri -- build --features manual-onion-client-attempt --bundles nsis
 
       - name: Prepare ignored Windows release packet
         shell: bash
