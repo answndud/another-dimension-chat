@@ -386,10 +386,58 @@ export function productionHighRiskRuntimeEvidenceGateView(input = {}) {
     readinessConditionSet: readiness.conditionSet,
     readinessMissingConditions: readiness.missingConditions,
     failureClass,
+    clipboardExpiryReady,
+    emergencyControlsReady: readiness.emergencyControlsReady,
+    localStorageEvidenceReady: readiness.localStorageEvidenceReady,
+    releaseIntegrityReady: readiness.releaseIntegrityReady,
     highRiskPublicClaimAllowed: false,
     highRiskReadyClaimAllowed: false,
     summary,
     boundary: `${summary} evidence_contract=runtime-report#explicit-user-action#onion-only#no-direct-fallback#endpoint-rotation#redacted-runtime-event#clipboard-expiry#emergency-controls`,
+  };
+}
+
+export function productionHighRiskRuntimeEvidenceSummaryView(input = {}) {
+  const gate = productionHighRiskRuntimeEvidenceGateView(input);
+  const copyablePayload = {
+    readiness_condition_set: gate.readinessConditionSet,
+    readiness_missing_conditions: gate.readinessMissingConditions.join("#") || "none",
+    evidence_source: gate.evidenceSource,
+    failure_class: gate.failureClass,
+    clipboard_expiry_ready: gate.clipboardExpiryReady,
+    emergency_controls_ready: gate.emergencyControlsReady,
+    local_storage_evidence_ready: gate.localStorageEvidenceReady,
+    release_integrity_ready: gate.releaseIntegrityReady,
+  };
+  const copyablePayloadText = Object.entries(copyablePayload)
+    .map(([key, value]) => `${key}=${value}`)
+    .join("\n");
+  const copyableFieldSet = Object.keys(copyablePayload).join("#");
+  const boundary = [
+    "high_risk_runtime_evidence_summary=true",
+    `copyable_field_set=${copyableFieldSet}`,
+    "copy_requires_explicit_user_action=true",
+    `copy_enabled=${input.copyRequested === true}`,
+    `high_risk_runtime_evidence_accepted=${gate.accepted}`,
+    `high_risk_ready_claim_allowed=${gate.highRiskReadyClaimAllowed}`,
+    `high_risk_public_claim_allowed=${gate.highRiskPublicClaimAllowed}`,
+    "endpoint_value_recorded=false",
+    "descriptor_recorded=false",
+    "bridge_line_recorded=false",
+    "raw_logs_recorded=false",
+    "local_path_recorded=false",
+    "payload_recorded=false",
+    "key_material_recorded=false",
+  ].join(" ");
+  return {
+    copyablePayload,
+    copyablePayloadText,
+    copyableFieldSet,
+    accepted: gate.accepted,
+    highRiskReadyClaimAllowed: false,
+    highRiskPublicClaimAllowed: false,
+    boundary,
+    summary: `${copyablePayloadText.replaceAll("\n", " ")} ${boundary}`,
   };
 }
 

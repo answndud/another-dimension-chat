@@ -13,6 +13,7 @@ import {
   productionHighRiskReadinessGateView,
   productionHighRiskRuntimeEvidenceInputFromAttemptResult,
   productionHighRiskRuntimeEvidenceGateView,
+  productionHighRiskRuntimeEvidenceSummaryView,
   productionFinalReleaseAcceptanceView,
   productionExternalTwoMachineEvidenceView,
   productionHighRiskTransportMetadataBoundaryView,
@@ -301,6 +302,50 @@ test("high-risk runtime evidence input summarizes explicit attempts without priv
   assert.equal(productionHighRiskRuntimeEvidenceGateView(localDev).accepted, false);
   assert.equal(productionHighRiskRuntimeEvidenceGateView(stale).accepted, false);
   assert.match(productionHighRiskRuntimeEvidenceGateView(localDev).summary, /local_only_evidence_promoted=false/);
+});
+
+test("high-risk runtime evidence summary exposes only copy-safe readiness fields", () => {
+  const view = productionHighRiskRuntimeEvidenceSummaryView({
+    evidenceSource: "runtime-report",
+    explicitUserAction: true,
+    onionOnly: true,
+    endpointRotationObserved: true,
+    redactedRuntimeEventRecorded: true,
+    failureClass: "stale_endpoint",
+    clipboardTtlMs: 5000,
+    emergencyControlsReachable: true,
+    safetyVerificationReady: true,
+    localStorageEvidenceReady: true,
+    releaseIntegrityReady: true,
+    copyRequested: true,
+  });
+
+  assert.equal(view.accepted, true);
+  assert.deepEqual(Object.keys(view.copyablePayload), [
+    "readiness_condition_set",
+    "readiness_missing_conditions",
+    "evidence_source",
+    "failure_class",
+    "clipboard_expiry_ready",
+    "emergency_controls_ready",
+    "local_storage_evidence_ready",
+    "release_integrity_ready",
+  ]);
+  assert.equal(view.copyablePayload.readiness_missing_conditions, "none");
+  assert.equal(view.copyablePayload.evidence_source, "runtime-report");
+  assert.equal(view.copyablePayload.failure_class, "stale_endpoint");
+  assert.equal(view.copyablePayload.clipboard_expiry_ready, true);
+  assert.equal(view.copyablePayload.emergency_controls_ready, true);
+  assert.equal(view.copyablePayload.local_storage_evidence_ready, true);
+  assert.equal(view.copyablePayload.release_integrity_ready, true);
+  assert.equal(view.highRiskReadyClaimAllowed, false);
+  assert.match(view.boundary, /copy_requires_explicit_user_action=true/);
+  assert.match(view.boundary, /copy_enabled=true/);
+  assert.match(view.boundary, /high_risk_ready_claim_allowed=false/);
+  assert.doesNotMatch(
+    view.copyablePayloadText,
+    /(^|\n)(endpoint|descriptor|bridge_line|raw_logs|local_path|payload|key_material)=/i,
+  );
 });
 
 test("high-risk readiness gate separates not ready limited and ready claims", () => {

@@ -9,6 +9,17 @@ export function fieldTestReportValue(value, fallback = "unknown") {
     .slice(0, 96);
 }
 
+function fieldTestReportEvidenceValue(value, fallback = "unknown") {
+  const text = String(value ?? "").trim();
+  if (!text) {
+    return fallback;
+  }
+  return text
+    .replace(/[^\w .:/#=-]+/g, "-")
+    .replace(/\s+/g, " ")
+    .slice(0, 192);
+}
+
 function manualEnvelopePanelItem(state, text) {
   return {
     state,
@@ -1069,6 +1080,14 @@ function desktopCompletionBlockerFailureClass(blockers = []) {
 }
 
 export function publicDiagnosticsFailureClass(parsed, desktopCompletion = null) {
+  if (
+    parsed.evidence_source &&
+    parsed.failure_class &&
+    parsed.failure_class !== "none" &&
+    !parsed.failure_class.includes("/")
+  ) {
+    return fieldTestReportValue(parsed.failure_class, "none");
+  }
   if (publicDiagnosticsLocalRecoveryAction(parsed)) {
     return "local-recovery-needed";
   }
@@ -1102,6 +1121,14 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
   const desktopCompletion = desktopFirstCompletionStatus(report);
   const failureClass = publicDiagnosticsFailureClass(parsed, desktopCompletion);
   const recoveryNextAction = publicDiagnosticsDesktopNextAction(parsed, desktopCompletion);
+  const highRiskRuntimeEvidenceSource = fieldTestReportValue(
+    parsed.evidence_source ?? parsed.high_risk_runtime_evidence_source,
+    "absent",
+  );
+  const highRiskRuntimeFailureClass = fieldTestReportValue(
+    parsed.failure_class ?? parsed.high_risk_runtime_failure_class,
+    "none",
+  );
   const desktopAcceptanceNonClaims = [
     "external-onion-delivery",
     "production-messaging",
@@ -1227,10 +1254,17 @@ export function publicBetaDiagnosticsReport(report, options = {}) {
     `high_risk_transport_runtime_event_identifiers_redacted=true`,
     `high_risk_transport_runtime_evidence_required_for_ready=true`,
     `high_risk_transport_runtime_evidence_present=${fieldTestReportValue(parsed.high_risk_runtime_evidence_present, "false")}`,
-    `high_risk_runtime_evidence_source=${fieldTestReportValue(parsed.high_risk_runtime_evidence_source, "absent")}`,
+    `readiness_condition_set=${fieldTestReportEvidenceValue(parsed.readiness_condition_set, "unknown")}`,
+    `readiness_missing_conditions=${fieldTestReportEvidenceValue(parsed.readiness_missing_conditions, "unknown")}`,
+    `evidence_source=${highRiskRuntimeEvidenceSource}`,
+    `clipboard_expiry_ready=${fieldTestReportValue(parsed.clipboard_expiry_ready, "false")}`,
+    `emergency_controls_ready=${fieldTestReportValue(parsed.emergency_controls_ready, "false")}`,
+    `local_storage_evidence_ready=${fieldTestReportValue(parsed.local_storage_evidence_ready, "false")}`,
+    `release_integrity_ready=${fieldTestReportValue(parsed.release_integrity_ready, "false")}`,
+    `high_risk_runtime_evidence_source=${highRiskRuntimeEvidenceSource}`,
     `high_risk_runtime_evidence_accepted=${fieldTestReportValue(parsed.high_risk_runtime_evidence_accepted, "false")}`,
     `high_risk_runtime_primary_blocker=${fieldTestReportValue(parsed.high_risk_runtime_primary_blocker, "none")}`,
-    `high_risk_runtime_failure_class=${fieldTestReportValue(parsed.high_risk_runtime_failure_class, "none")}`,
+    `high_risk_runtime_failure_class=${highRiskRuntimeFailureClass}`,
     `engine_sidecar_status_runtime_checked=${fieldTestReportValue(parsed.engine_sidecar_status_runtime_checked, "false")}`,
     `engine_sidecar_status_failure_class=${fieldTestReportValue(parsed.engine_sidecar_status_failure_class, "not-run")}`,
     `engine_sidecar_status_contract_valid=${fieldTestReportValue(parsed.engine_sidecar_status_contract_valid, "false")}`,

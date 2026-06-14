@@ -664,6 +664,14 @@ test("public diagnostics carries redacted high-risk runtime evidence status with
       "receive_enabled=true",
       "receive_state=running",
       "composer_next_action=send-message",
+      "readiness_condition_set=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity",
+      "readiness_missing_conditions=release-integrity",
+      "evidence_source=runtime-report",
+      "failure_class=stale_endpoint",
+      "clipboard_expiry_ready=true",
+      "emergency_controls_ready=true",
+      "local_storage_evidence_ready=true",
+      "release_integrity_ready=false",
       "high_risk_runtime_evidence_source=runtime-report",
       "high_risk_runtime_evidence_accepted=true",
       "high_risk_runtime_evidence_present=true",
@@ -675,6 +683,17 @@ test("public diagnostics carries redacted high-risk runtime evidence status with
   );
 
   assert.match(diagnostics, /high_risk_transport_runtime_evidence_present=true/);
+  assert.match(
+    diagnostics,
+    /readiness_condition_set=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity/,
+  );
+  assert.match(diagnostics, /readiness_missing_conditions=release-integrity/);
+  assert.match(diagnostics, /evidence_source=runtime-report/);
+  assert.match(diagnostics, /failure_class=stale_endpoint/);
+  assert.match(diagnostics, /clipboard_expiry_ready=true/);
+  assert.match(diagnostics, /emergency_controls_ready=true/);
+  assert.match(diagnostics, /local_storage_evidence_ready=true/);
+  assert.match(diagnostics, /release_integrity_ready=false/);
   assert.match(diagnostics, /high_risk_runtime_evidence_source=runtime-report/);
   assert.match(diagnostics, /high_risk_runtime_evidence_accepted=true/);
   assert.match(diagnostics, /high_risk_runtime_primary_blocker=none/);
