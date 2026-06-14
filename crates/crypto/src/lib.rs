@@ -170,6 +170,7 @@ pub mod production {
     pub const NOISE_PREKEY_BUNDLE_PREFIX: &str = "adnoise1";
     pub const NOISE_PREKEY_BUNDLE_ALGORITHM: &str = "xx25519-chachapoly-blake2s";
     pub const NOISE_STATIC_PUBLIC_KEY_BYTES: usize = 32;
+    pub const PROFILE_KDF_PARAMS_VERSION: u16 = 1;
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProfileKdfParams {
@@ -357,9 +358,11 @@ pub mod production {
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProfileKeyHierarchyBoundarySummary {
+        kdf_params_version: u16,
         kdf_algorithm: &'static str,
         per_profile_salt_stored: bool,
         kdf_params_stored: bool,
+        kdf_params_versioned: bool,
         profile_root_key_derived: bool,
         domain_separated_keys_ready: bool,
         domain_count: usize,
@@ -373,6 +376,10 @@ pub mod production {
     }
 
     impl ProfileKeyHierarchyBoundarySummary {
+        pub fn kdf_params_version(self) -> u16 {
+            self.kdf_params_version
+        }
+
         pub fn kdf_algorithm(self) -> &'static str {
             self.kdf_algorithm
         }
@@ -383,6 +390,10 @@ pub mod production {
 
         pub fn kdf_params_stored(self) -> bool {
             self.kdf_params_stored
+        }
+
+        pub fn kdf_params_versioned(self) -> bool {
+            self.kdf_params_versioned
         }
 
         pub fn profile_root_key_derived(self) -> bool {
@@ -428,6 +439,7 @@ pub mod production {
         pub fn production_key_management_ready(self) -> bool {
             self.per_profile_salt_stored
                 && self.kdf_params_stored
+                && self.kdf_params_versioned
                 && self.profile_root_key_derived
                 && self.domain_separated_keys_ready
                 && self.rekey_command_available
@@ -465,9 +477,11 @@ pub mod production {
 
     pub fn profile_key_hierarchy_boundary_summary() -> ProfileKeyHierarchyBoundarySummary {
         ProfileKeyHierarchyBoundarySummary {
+            kdf_params_version: PROFILE_KDF_PARAMS_VERSION,
             kdf_algorithm: "argon2id-v1.3",
             per_profile_salt_stored: true,
             kdf_params_stored: true,
+            kdf_params_versioned: true,
             profile_root_key_derived: true,
             domain_separated_keys_ready: true,
             domain_count: ProfileKeyDomain::ALL.len(),
@@ -1483,7 +1497,7 @@ mod tests {
     fn profile_key_hierarchy_derives_domain_separated_redacted_keys() {
         use crate::production::{
             derive_profile_root_key, profile_key_hierarchy_boundary_summary, ProfileKdfParams,
-            ProfileKdfSalt, ProfileKeyDomain,
+            ProfileKdfSalt, ProfileKeyDomain, PROFILE_KDF_PARAMS_VERSION,
         };
         use std::collections::BTreeSet;
 
@@ -1502,6 +1516,8 @@ mod tests {
             .collect::<BTreeSet<_>>();
 
         assert_eq!(summary.kdf_algorithm(), "argon2id-v1.3");
+        assert_eq!(summary.kdf_params_version(), PROFILE_KDF_PARAMS_VERSION);
+        assert!(summary.kdf_params_versioned());
         assert!(summary.production_key_management_ready());
         assert!(summary.per_profile_salt_stored());
         assert!(summary.kdf_params_stored());

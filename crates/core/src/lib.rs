@@ -22,8 +22,9 @@ pub mod production {
     };
     use another_dimension_storage::production::{
         production_emergency_local_wipe_decision, production_message_storage_boundary_summary,
-        protection_for, require_encrypted_record_allowed, require_persistence_allowed,
-        EncryptedRecord, EncryptedRecordId, EncryptedRecordScope, LocalProfileRecoveryFailureKind,
+        production_storage_migration_redaction_boundary_summary, protection_for,
+        require_encrypted_record_allowed, require_persistence_allowed, EncryptedRecord,
+        EncryptedRecordId, EncryptedRecordScope, LocalProfileRecoveryFailureKind,
         LockedProfileStore, ProductionRecordKind, ProductionStorageError,
         ProductionStoragePolicyError, ProfilePassphrase, ProfileStoreUnlockFailureKind,
         ReplayRollbackProtection, SqlCipherRecordStore, StorageBackendKind, StorageProtection,
@@ -3113,6 +3114,32 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionStorageKeyManagementHardeningSummary {
+        passphrase_first_required: bool,
+        os_keystore_only_rejected: bool,
+        kdf_params_versioned: bool,
+        profile_root_key_ready: bool,
+        session_key_hierarchy_ready: bool,
+        message_key_hierarchy_ready: bool,
+        transport_key_policy_ready: bool,
+        lock_scope_separated: bool,
+        auto_lock_scope_separated: bool,
+        panic_lock_mitigation_only: bool,
+        rekey_ready: bool,
+        migration_failure_distinct_from_corrupt_store: bool,
+        rollback_marker_policy_ready: bool,
+        support_redaction_ready: bool,
+        raw_path_returned: bool,
+        passphrase_returned: bool,
+        key_material_exposed: bool,
+        backup_recovery_claimed: bool,
+        rollback_prevention_claimed: bool,
+        secure_media_deletion_claimed: bool,
+        production_key_management_ready: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionBackupMigrationBoundarySummary {
         policies: &'static [&'static str],
         backup_exclusion_policy_decided: bool,
@@ -5323,6 +5350,96 @@ pub mod production {
 
         pub fn security_ready_claimed(self) -> bool {
             self.security_ready_claimed
+        }
+    }
+
+    impl ProductionStorageKeyManagementHardeningSummary {
+        pub fn passphrase_first_required(self) -> bool {
+            self.passphrase_first_required
+        }
+
+        pub fn os_keystore_only_rejected(self) -> bool {
+            self.os_keystore_only_rejected
+        }
+
+        pub fn kdf_params_versioned(self) -> bool {
+            self.kdf_params_versioned
+        }
+
+        pub fn profile_root_key_ready(self) -> bool {
+            self.profile_root_key_ready
+        }
+
+        pub fn session_key_hierarchy_ready(self) -> bool {
+            self.session_key_hierarchy_ready
+        }
+
+        pub fn message_key_hierarchy_ready(self) -> bool {
+            self.message_key_hierarchy_ready
+        }
+
+        pub fn transport_key_policy_ready(self) -> bool {
+            self.transport_key_policy_ready
+        }
+
+        pub fn lock_scope_separated(self) -> bool {
+            self.lock_scope_separated
+        }
+
+        pub fn auto_lock_scope_separated(self) -> bool {
+            self.auto_lock_scope_separated
+        }
+
+        pub fn panic_lock_mitigation_only(self) -> bool {
+            self.panic_lock_mitigation_only
+        }
+
+        pub fn rekey_ready(self) -> bool {
+            self.rekey_ready
+        }
+
+        pub fn migration_failure_distinct_from_corrupt_store(self) -> bool {
+            self.migration_failure_distinct_from_corrupt_store
+        }
+
+        pub fn rollback_marker_policy_ready(self) -> bool {
+            self.rollback_marker_policy_ready
+        }
+
+        pub fn support_redaction_ready(self) -> bool {
+            self.support_redaction_ready
+        }
+
+        pub fn raw_path_returned(self) -> bool {
+            self.raw_path_returned
+        }
+
+        pub fn passphrase_returned(self) -> bool {
+            self.passphrase_returned
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn backup_recovery_claimed(self) -> bool {
+            self.backup_recovery_claimed
+        }
+
+        pub fn rollback_prevention_claimed(self) -> bool {
+            self.rollback_prevention_claimed
+        }
+
+        pub fn secure_media_deletion_claimed(self) -> bool {
+            self.secure_media_deletion_claimed
+        }
+
+        pub fn production_key_management_ready(self) -> bool {
+            self.production_key_management_ready
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
         }
     }
 
@@ -17580,6 +17697,98 @@ pub mod production {
         }
     }
 
+    pub fn production_storage_key_management_hardening_summary(
+    ) -> ProductionStorageKeyManagementHardeningSummary {
+        let storage =
+            another_dimension_storage::production::storage_backend_integration_boundary_summary();
+        let key_rollback = production_key_rollback_boundary_summary();
+        let migration = production_storage_migration_redaction_boundary_summary();
+        let panic = panic_lock_mitigation_summary();
+        let passphrase_first_required = key_rollback.passphrase_first_required();
+        let os_keystore_only_rejected = key_rollback.os_keystore_only_rejected();
+        let kdf_params_versioned = migration.current_kdf_params_version() > 0;
+        let profile_root_key_ready = storage.profile_root_key_derivation_ready();
+        let session_key_hierarchy_ready = storage.domain_separated_profile_keys_ready()
+            && storage.session_transport_persistence_allowed();
+        let message_key_hierarchy_ready =
+            production_message_storage_boundary_summary().production_key_management_ready();
+        let transport_key_policy_ready = key_rollback.supported_local_key_lifecycle_ready()
+            && storage.session_transport_persistence_allowed();
+        let lock_scope_separated = panic.immediate_lock_required()
+            && !panic.transcript_visible_when_locked()
+            && !panic.invite_visible_when_locked();
+        let auto_lock_scope_separated = lock_scope_separated;
+        let panic_lock_mitigation_only =
+            panic.panic_lock_available() && !panic.compromised_device_safe_claimed();
+        let rekey_ready = key_rollback.sqlcipher_passphrase_rotation_generation_source_ready()
+            && key_rollback.key_rotation_marker_monotonic_write_enforced();
+        let migration_failure_distinct_from_corrupt_store =
+            migration.migration_failure_distinct_from_corrupt_store();
+        let rollback_marker_policy_ready = key_rollback.supported_rollback_detection_ready()
+            && key_rollback.external_monotonic_state_required_before_claim();
+        let support_redaction_ready = storage.passphrase_key_debug_redacted()
+            && !migration.raw_path_returned()
+            && !migration.passphrase_returned()
+            && !migration.key_material_exposed();
+        let raw_path_returned = migration.raw_path_returned();
+        let passphrase_returned = migration.passphrase_returned();
+        let key_material_exposed = migration.key_material_exposed();
+        let backup_recovery_claimed =
+            production_backup_migration_boundary_summary().backup_recovery_claimed();
+        let rollback_prevention_claimed =
+            key_rollback.rollback_prevention_claimed() || migration.rollback_prevention_claimed();
+        let secure_media_deletion_claimed = key_rollback.secure_media_deletion_claimed()
+            || migration.secure_media_deletion_claimed();
+        let production_key_management_ready = storage.production_key_management_ready()
+            && key_rollback.production_key_management_ready();
+        let boundary_closed = passphrase_first_required
+            && os_keystore_only_rejected
+            && kdf_params_versioned
+            && profile_root_key_ready
+            && session_key_hierarchy_ready
+            && message_key_hierarchy_ready
+            && transport_key_policy_ready
+            && lock_scope_separated
+            && auto_lock_scope_separated
+            && panic_lock_mitigation_only
+            && rekey_ready
+            && migration_failure_distinct_from_corrupt_store
+            && rollback_marker_policy_ready
+            && support_redaction_ready
+            && production_key_management_ready
+            && !raw_path_returned
+            && !passphrase_returned
+            && !key_material_exposed
+            && !backup_recovery_claimed
+            && !rollback_prevention_claimed
+            && !secure_media_deletion_claimed;
+
+        ProductionStorageKeyManagementHardeningSummary {
+            passphrase_first_required,
+            os_keystore_only_rejected,
+            kdf_params_versioned,
+            profile_root_key_ready,
+            session_key_hierarchy_ready,
+            message_key_hierarchy_ready,
+            transport_key_policy_ready,
+            lock_scope_separated,
+            auto_lock_scope_separated,
+            panic_lock_mitigation_only,
+            rekey_ready,
+            migration_failure_distinct_from_corrupt_store,
+            rollback_marker_policy_ready,
+            support_redaction_ready,
+            raw_path_returned,
+            passphrase_returned,
+            key_material_exposed,
+            backup_recovery_claimed,
+            rollback_prevention_claimed,
+            secure_media_deletion_claimed,
+            production_key_management_ready,
+            boundary_closed,
+        }
+    }
+
     pub fn production_backup_migration_boundary_summary() -> ProductionBackupMigrationBoundarySummary
     {
         let local_data = production_local_data_lifecycle_policy_summary();
@@ -27265,6 +27474,34 @@ pub mod production {
                 "passphrase-first-sqlcipher-local-profile-store-only"
             );
             assert!(!boundary.security_ready_claimed());
+        }
+
+        #[test]
+        fn production_storage_key_management_hardening_summary_closes_phase32_source_boundary() {
+            let summary = production_storage_key_management_hardening_summary();
+
+            assert!(summary.passphrase_first_required());
+            assert!(summary.os_keystore_only_rejected());
+            assert!(summary.kdf_params_versioned());
+            assert!(summary.profile_root_key_ready());
+            assert!(summary.session_key_hierarchy_ready());
+            assert!(summary.message_key_hierarchy_ready());
+            assert!(summary.transport_key_policy_ready());
+            assert!(summary.lock_scope_separated());
+            assert!(summary.auto_lock_scope_separated());
+            assert!(summary.panic_lock_mitigation_only());
+            assert!(summary.rekey_ready());
+            assert!(summary.migration_failure_distinct_from_corrupt_store());
+            assert!(summary.rollback_marker_policy_ready());
+            assert!(summary.support_redaction_ready());
+            assert!(summary.production_key_management_ready());
+            assert!(summary.boundary_closed());
+            assert!(!summary.raw_path_returned());
+            assert!(!summary.passphrase_returned());
+            assert!(!summary.key_material_exposed());
+            assert!(!summary.backup_recovery_claimed());
+            assert!(!summary.rollback_prevention_claimed());
+            assert!(!summary.secure_media_deletion_claimed());
         }
 
         #[test]
