@@ -12,6 +12,12 @@ must_contain() {
   grep -Fq "$needle" "$file" || fail "$file missing required text: $needle"
 }
 
+must_output_contain() {
+  local text="$1"
+  local needle="$2"
+  printf '%s\n' "$text" | grep -Fq "$needle" || fail "missing required output: $needle"
+}
+
 must_not_match() {
   local file="$1"
   local pattern="$2"
@@ -32,9 +38,10 @@ TAURI_STATUS="apps/desktop-tauri/src-tauri/src/status.rs"
 REFERENCE="reference/WINDOWS_PUBLIC_ARTIFACT_CANDIDATE_GATE.md"
 MANIFEST_SCHEMA="reference/WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"
 RUNTIME_SCHEMA="reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md"
+RUNTIME_CONTRACT="scripts/windows_artifact_runtime_evidence_contract_once.sh"
 
 for file in "$CORE" "$STATE" "$STATE_TEST" "$SMOKE_TEST" "$TAURI_LIB" "$TAURI_STATUS" \
-  "$REFERENCE" "$MANIFEST_SCHEMA" "$RUNTIME_SCHEMA"; do
+  "$REFERENCE" "$MANIFEST_SCHEMA" "$RUNTIME_SCHEMA" "$RUNTIME_CONTRACT"; do
   [ -f "$file" ] || fail "missing Windows public artifact candidate gate input: $file"
 done
 
@@ -94,6 +101,17 @@ must_contain "$REFERENCE" "auto_update_claimed=false"
 must_contain "$REFERENCE" "windows_public_artifact_upload_allowed=false"
 must_contain "$REFERENCE" "windows_production_claim_allowed=false"
 
+must_contain "$RUNTIME_CONTRACT" "status=windows-artifact-runtime-evidence-contract-ready"
+must_contain "$RUNTIME_CONTRACT" "windows_artifact_manifest_fixture_accepted=true"
+must_contain "$RUNTIME_CONTRACT" "windows_runtime_result_fixture_accepted=true"
+must_contain "$RUNTIME_CONTRACT" "windows_result_requires_real_windows_machine=true"
+must_contain "$RUNTIME_CONTRACT" "windows_result_rejects_private_local_app_data=true"
+must_contain "$RUNTIME_CONTRACT" "windows_strict_current_head_rejects_stale_evidence=true"
+
+runtime_contract_output="$("$RUNTIME_CONTRACT")"
+must_output_contain "$runtime_contract_output" "status=windows-artifact-runtime-evidence-contract-ready"
+must_output_contain "$runtime_contract_output" "windows_public_artifact_ready=false"
+
 for file in "$STATE" "$TAURI_LIB" "$TAURI_STATUS" "$REFERENCE"; do
   must_not_match "$file" "windows_public_artifact_ready[=:] ?true"
   must_not_match "$file" "windows_installer_ready[=:] ?true"
@@ -115,6 +133,7 @@ echo "app_data_resolver_public_support_safe=true"
 echo "windows_app_data_path_review_required=false"
 echo "windows_redacted_diagnostics_behavior_review_required=false"
 echo "manifest_checksum_provenance_required=true"
+echo "runtime_evidence_contract_verified=true"
 echo "runtime_result_external_peer_evidence_separated=true"
 echo "windows_public_artifact_ready=false"
 echo "windows_production_claim_allowed=false"
