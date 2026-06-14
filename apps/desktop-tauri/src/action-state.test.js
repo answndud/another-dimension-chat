@@ -433,6 +433,7 @@ test("high-risk readiness gate separates not ready limited and ready claims", ()
     highRiskRuntimeEvidencePresent: true,
     emergencyControlsReady: false,
     clipboardExpiryReady: false,
+    clipboardClearReady: false,
     localStorageEvidenceReady: false,
     productionKeyManagementReady: true,
     rollbackMarkerHealthy: true,
@@ -449,6 +450,40 @@ test("high-risk readiness gate separates not ready limited and ready claims", ()
     missingLocalStorageAndControls.summary,
     /readiness_missing_condition_fields=emergency_controls_ready#clipboard_expiry_ready#local_storage_evidence_ready/,
   );
+  assert.match(missingLocalStorageAndControls.summary, /panic_lock_ready=true/);
+  assert.match(missingLocalStorageAndControls.summary, /emergency_local_wipe_ready=true/);
+  assert.match(missingLocalStorageAndControls.summary, /manual_emergency_release_notice_ready=false/);
+  assert.match(missingLocalStorageAndControls.summary, /clipboard_clear_ready=false/);
+  assert.match(missingLocalStorageAndControls.summary, /clipboard_ttl_ms=15000/);
+
+  const controlsReadyFromMitigations = productionHighRiskReadinessGateView({
+    threatMatrixAccepted: true,
+    pairwiseSafetyVerified: true,
+    highRiskTransportReady: true,
+    highRiskRuntimeEvidencePresent: true,
+    clipboardTtlMs: 5000,
+    manualEmergencyReleaseNoticeReady: true,
+    localStorageEvidenceReady: true,
+    productionKeyManagementReady: true,
+    rollbackMarkerHealthy: true,
+    diagnosticsRedacted: true,
+    releaseIntegrityAvailable: true,
+  });
+  assert.equal(controlsReadyFromMitigations.status, "ready");
+  assert.equal(controlsReadyFromMitigations.emergencyControlsReady, true);
+  assert.equal(controlsReadyFromMitigations.panicLockReady, true);
+  assert.equal(controlsReadyFromMitigations.emergencyLocalWipeReady, true);
+  assert.equal(controlsReadyFromMitigations.emergencyWipeConfirmation, "EMERGENCY WIPE LOCAL DATA");
+  assert.equal(controlsReadyFromMitigations.standardLocalWipeConfirmation, "WIPE LOCAL DATA");
+  assert.equal(controlsReadyFromMitigations.emergencyWipeSeparateFromStandardWipe, true);
+  assert.equal(controlsReadyFromMitigations.manualEmergencyReleaseNoticeReady, true);
+  assert.equal(controlsReadyFromMitigations.clipboardClearReady, true);
+  assert.equal(controlsReadyFromMitigations.clipboardExpiryReady, true);
+  assert.equal(controlsReadyFromMitigations.clipboardTtlMs, 5000);
+  assert.match(controlsReadyFromMitigations.summary, /emergency_wipe_separate_from_standard_wipe=true/);
+  assert.match(controlsReadyFromMitigations.summary, /manual_emergency_release_notice_ready=true/);
+  assert.match(controlsReadyFromMitigations.summary, /coercion_safe_claim=false/);
+  assert.match(controlsReadyFromMitigations.summary, /compromised_device_safe_claim=false/);
 
   const ready = productionHighRiskReadinessGateView({
     threatMatrixAccepted: true,

@@ -541,6 +541,23 @@ export function productionHighRiskReadinessGateView(input = {}) {
   const rollbackMarkerHealthy = input.rollbackMarkerHealthy === true;
   const diagnosticsRedacted = input.diagnosticsRedacted === true;
   const releaseIntegrityAvailable = input.releaseIntegrityAvailable === true;
+  const panicLock = productionPanicLockMitigationView({ clipboardTtlMs: input.clipboardTtlMs });
+  const standardLocalWipeConfirmation = "WIPE LOCAL DATA";
+  const emergencyWipeSeparateFromStandardWipe =
+    panicLock.emergencyConfirmation !== standardLocalWipeConfirmation;
+  const emergencyLocalWipeReady =
+    panicLock.emergencyWipeReachable === true &&
+    emergencyWipeSeparateFromStandardWipe &&
+    input.emergencyLocalWipeDisabled !== true;
+  const panicLockReady = panicLock.panicLockReachable === true && input.panicLockDisabled !== true;
+  const manualEmergencyReleaseNoticeReady = input.manualEmergencyReleaseNoticeReady === true;
+  const clipboardClearReady = input.clipboardClearReady !== false && panicLock.boundary.includes("clipboard_clear=true");
+  const clipboardExpiryReady =
+    input.clipboardExpiryReady === true ||
+    (clipboardClearReady && panicLock.clipboardTtlMs > 0 && panicLock.clipboardTtlMs <= 30000);
+  const emergencyControlsReady =
+    input.emergencyControlsReady === true ||
+    (panicLockReady && emergencyLocalWipeReady && manualEmergencyReleaseNoticeReady);
   const localStorageEvidenceReady =
     input.localStorageEvidenceReady === true ||
     input.localStorageRuntimeEvidenceReady === true ||
@@ -549,6 +566,8 @@ export function productionHighRiskReadinessGateView(input = {}) {
     {
       ...input,
       pairwiseSafetyVerified,
+      emergencyControlsReady,
+      clipboardExpiryReady,
       localStorageEvidenceReady,
       releaseIntegrityAvailable,
     },
@@ -587,7 +606,15 @@ export function productionHighRiskReadinessGateView(input = {}) {
     `safety_verification_ready=${readiness.safetyVerificationReady}`,
     `high_risk_transport_runtime_ready=${readiness.highRiskTransportRuntimeReady}`,
     `emergency_controls_ready=${readiness.emergencyControlsReady}`,
+    `panic_lock_ready=${panicLockReady}`,
+    `emergency_local_wipe_ready=${emergencyLocalWipeReady}`,
+    `emergency_wipe_confirmation=${panicLock.emergencyConfirmation.replace(/\s+/g, "_")}`,
+    `standard_local_wipe_confirmation=${standardLocalWipeConfirmation.replace(/\s+/g, "_")}`,
+    `emergency_wipe_separate_from_standard_wipe=${emergencyWipeSeparateFromStandardWipe}`,
+    `manual_emergency_release_notice_ready=${manualEmergencyReleaseNoticeReady}`,
     `clipboard_expiry_ready=${readiness.clipboardExpiryReady}`,
+    `clipboard_clear_ready=${clipboardClearReady}`,
+    `clipboard_ttl_ms=${panicLock.clipboardTtlMs}`,
     `local_storage_evidence_ready=${readiness.localStorageEvidenceReady}`,
     `release_integrity_ready=${readiness.releaseIntegrityReady}`,
     `threat_matrix_accepted=${threatMatrixAccepted}`,
@@ -604,6 +631,8 @@ export function productionHighRiskReadinessGateView(input = {}) {
     "high_risk_public_claim_allowed=false",
     "public_support_high_risk_claim_allowed=false",
     "release_high_risk_claim_allowed=false",
+    "coercion_safe_claim=false",
+    "compromised_device_safe_claim=false",
     "unmet_conditions_hidden=false",
   ].join(" ");
   return {
@@ -620,7 +649,15 @@ export function productionHighRiskReadinessGateView(input = {}) {
     safetyVerificationReady: readiness.safetyVerificationReady,
     highRiskTransportRuntimeReady: readiness.highRiskTransportRuntimeReady,
     emergencyControlsReady: readiness.emergencyControlsReady,
+    panicLockReady,
+    emergencyLocalWipeReady,
+    emergencyWipeConfirmation: panicLock.emergencyConfirmation,
+    standardLocalWipeConfirmation,
+    emergencyWipeSeparateFromStandardWipe,
+    manualEmergencyReleaseNoticeReady,
     clipboardExpiryReady: readiness.clipboardExpiryReady,
+    clipboardClearReady,
+    clipboardTtlMs: panicLock.clipboardTtlMs,
     localStorageEvidenceReady: readiness.localStorageEvidenceReady,
     releaseIntegrityReady: readiness.releaseIntegrityReady,
     highRiskReadyClaimAllowed,

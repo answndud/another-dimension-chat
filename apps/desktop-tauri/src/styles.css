@@ -275,6 +275,11 @@ h1 {
   color: var(--text-primary);
 }
 
+.high-risk-readiness-status[data-emergency-controls-ready="false"],
+.high-risk-readiness-status[data-clipboard-expiry-ready="false"] {
+  border-style: dashed;
+}
+
 .lifecycle-guide {
   display: grid;
   gap: 6px;
