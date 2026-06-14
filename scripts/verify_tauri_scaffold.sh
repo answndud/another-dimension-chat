@@ -55,6 +55,7 @@ required_files=(
   "$APP_DIR/scripts/noop-dev-server.mjs"
   "$APP_DIR/scripts/run-local-peer.mjs"
   "$APP_DIR/scripts/verify-local-peer-flow.mjs"
+  "$APP_DIR/scripts/verify-ui-loop-scripts.mjs"
   "$APP_DIR/src/transcript-export.js"
   "$APP_DIR/src/transcript-retention.js"
   "$APP_DIR/src/styles.css"
@@ -779,4 +780,7 @@ fi
 
 cargo metadata --manifest-path "$TAURI_DIR/Cargo.toml" --no-deps --format-version 1 >/dev/null
 
-printf 'tauri scaffold static verification passed\n'
+npm --prefix "$APP_DIR" run verify:ui-loop-scripts
+npm --prefix "$APP_DIR" run test:ui-fast
+
+printf 'tauri scaffold static and UI verification passed\n'
