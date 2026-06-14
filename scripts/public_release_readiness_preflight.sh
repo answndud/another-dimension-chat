@@ -192,13 +192,65 @@ check_macos_public_beta_final_sources() {
   echo "macos_public_support_triage=source-linked"
 }
 
+check_final_claim_acceptance_hold() {
+  bash -n "$ROOT_DIR/scripts/final_acceptance_once.sh"
+  local final_acceptance_output
+  if final_acceptance_output="$("$ROOT_DIR/scripts/final_acceptance_once.sh" 2>&1)"; then
+    echo "FAIL final acceptance unexpectedly opened public release claim" >&2
+    exit 1
+  fi
+
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "stable_candidate_ready=false" || {
+    echo "FAIL final acceptance missing stable candidate hold" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "stable_public_app_ready=false" || {
+    echo "FAIL final acceptance missing stable app hold" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "high_risk_mode_ready=false" || {
+    echo "FAIL final acceptance missing High-Risk hold" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "forbidden_positive_public_claims_found=false" || {
+    echo "FAIL final acceptance missing forbidden public claim scan result" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "external_two_machine_evidence_present=false" || {
+    echo "FAIL final acceptance missing external evidence blocker" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "macos_public_artifact_consistency_verified=false" || {
+    echo "FAIL final acceptance missing macOS artifact blocker" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_public_artifact_consistency_verified=false" || {
+    echo "FAIL final acceptance missing Windows artifact blocker" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "support_redaction_verified=true" || {
+    echo "FAIL final acceptance missing support redaction status" >&2
+    exit 1
+  }
+
+  echo "final_claim_acceptance=hold-expected"
+  echo "final_claim_stable_candidate_ready=false"
+  echo "final_claim_stable_public_app_ready=false"
+  echo "final_claim_high_risk_mode_ready=false"
+  echo "final_claim_external_evidence_present=false"
+  echo "final_claim_macos_artifact_consistency=false"
+  echo "final_claim_windows_artifact_consistency=false"
+  echo "final_claim_support_redaction_verified=true"
+  echo "final_claim_forbidden_positive_public_claims_found=false"
+}
+
 echo "preflight=public-release-readiness"
 echo "scope=source-only-no-dmg-required-no-generated-artifacts"
 echo "artifact_generation=false"
 echo "dmg_required=false"
 echo "network_or_onion_work=false"
-echo "checks=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
-echo "checks_run=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
+echo "checks=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance"
+echo "checks_run=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance"
 
 run_step artifact-boundary "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" --check-artifact-boundary
 run_step update-integrity-policy "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" --check-policy
@@ -218,6 +270,7 @@ run_step desktop-real-user-test-prep "$ROOT_DIR/scripts/desktop_real_user_test_p
 run_step desktop-default-transport-boundary "$ROOT_DIR/scripts/desktop_default_transport_boundary_once.sh"
 run_step public-beta-gap "$ROOT_DIR/scripts/public_beta_gap_acceptance_once.sh"
 run_step public-claim-acceptance env PUBLIC_RELEASE_PREFLIGHT_CHILD=1 "$ROOT_DIR/scripts/public_claim_acceptance_once.sh"
+run_step final-claim-acceptance check_final_claim_acceptance_hold
 run_step macos-public-beta-final-sources check_macos_public_beta_final_sources
 run_step existing-release-output check_existing_release_output
 
@@ -276,6 +329,14 @@ echo "windows_explicit_user_action_review_required=true"
 echo "windows_public_artifact_upload_allowed=false"
 echo "windows_local_runtime_smoke_passed=false"
 echo "support_redaction_verified=true"
+echo "final_claim_acceptance=hold-expected"
+echo "final_claim_stable_candidate_ready=false"
+echo "final_claim_stable_public_app_ready=false"
+echo "final_claim_high_risk_mode_ready=false"
+echo "final_claim_external_evidence_present=false"
+echo "final_claim_macos_artifact_consistency=false"
+echo "final_claim_windows_artifact_consistency=false"
+echo "final_claim_forbidden_positive_public_claims_found=false"
 echo "public_support_incident_operations_ready=true"
 echo "stable_candidate_blocked_when_support_not_ready=true"
 echo "support_readiness_opens_public_claims=false"
