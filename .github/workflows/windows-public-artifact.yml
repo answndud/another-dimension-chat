@@ -1,0 +1,81 @@
+name: Windows Public Artifact Candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-public-artifact-candidate:
+    name: Build unsigned Windows candidate
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    env:
+      CARGO_INCREMENTAL: "0"
+      VITE_AD_BUILD_CHANNEL: beta-onion
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/desktop-tauri/package-lock.json
+
+      - name: Install desktop dependencies
+        run: npm ci --prefix apps/desktop-tauri
+
+      - name: Check Windows source boundary
+        shell: bash
+        run: node apps/desktop-tauri/scripts/verify-windows-local-runtime-boundary.mjs
+
+      - name: Build unsigned NSIS candidate
+        shell: bash
+        working-directory: apps/desktop-tauri
+        run: node scripts/with-cargo-target.mjs tauri build --features manual-onion-client-attempt --bundles nsis
+
+      - name: Prepare ignored Windows release packet
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
+          source_exe="$(find apps/desktop-tauri/src-tauri/target/release/bundle/nsis -maxdepth 1 -type f -name '*.exe' | sort | head -n 1)"
+          if [ -z "$source_exe" ]; then
+            echo "missing NSIS .exe output" >&2
+            exit 1
+          fi
+
+          candidate_dir="$PWD/apps/desktop-tauri/beta-artifacts/windows-unsigned-public-beta-candidate"
+          packet_dir="$PWD/apps/desktop-tauri/public-release/windows-unsigned-public-beta"
+          candidate_name="another-dimension-chat-${version}-unsigned-windows-beta-windows-x64-nsis-setup.exe"
+          mkdir -p "$candidate_dir" "$packet_dir"
+          cp "$source_exe" "$candidate_dir/$candidate_name"
+
+          AD_PREPARE_WINDOWS_PUBLIC_ARTIFACT_METADATA=1 \
+          AD_WINDOWS_ARTIFACT="$candidate_dir/$candidate_name" \
+          AD_WINDOWS_ARTIFACT_METADATA_OUT_DIR="$packet_dir" \
+          AD_WINDOWS_RELEASE_CLASS=unsigned-windows-beta \
+          AD_WINDOWS_BUNDLE_TARGET=nsis \
+          AD_WINDOWS_ARTIFACT_ARCHITECTURE=windows-x64 \
+          AD_WINDOWS_ARTIFACT_SIGNING_STATUS=unsigned-hold \
+            scripts/prepare_windows_public_artifact_metadata.sh
+
+          node scripts/validate_windows_artifact_manifest.mjs \
+            "$packet_dir/WINDOWS_ARTIFACT_MANIFEST.json" \
+            --require-current-head
+
+      - name: Upload Windows candidate packet
+        uses: actions/upload-artifact@v6
+        with:
+          name: another-dimension-chat-windows-unsigned-public-beta-candidate
+          path: apps/desktop-tauri/public-release/windows-unsigned-public-beta/
+          if-no-files-found: error
+          retention-days: 14
