@@ -137,6 +137,12 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "run_step
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "run_step stable-candidate-rehearsal"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_acceptance=hold-expected"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_stable_candidate_blocked_by_p0_p1_audit=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_independent_review_packet_source_ready=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_stable_candidate_evidence_required_before_external_review=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_external_review_not_local_source_progress_blocker=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_external_review_complete=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_external_review_claim_allowed=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_stable_candidate_blocked_by_external_review_evidence=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_high_risk_blocked_by_missing_required_conditions=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "generated_artifacts_created=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_artifact_generation=false"
@@ -154,6 +160,12 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "macos_ar
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_artifact_consistency_verified=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_evidence_presence=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_evidence_required_for_stable_candidate=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "independent_review_packet_source_ready=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "stable_candidate_evidence_required_before_external_review=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_review_not_local_source_progress_blocker=true"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_review_complete=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_review_claim_allowed=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "stable_candidate_blocked_by_external_review_evidence=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_artifact_type=windows-nsis-exe-installer-candidate"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_bundle_target=nsis"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_ready=false"
@@ -592,6 +604,22 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing P0/P1 stable candidate blocker" >&2
     exit 1
   }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_independent_review_packet_source_ready=true" || {
+    echo "FAIL release readiness preflight missing final independent review packet source output" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_external_review_not_local_source_progress_blocker=true" || {
+    echo "FAIL release readiness preflight missing final external review source non-blocking output" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_external_review_complete=false" || {
+    echo "FAIL release readiness preflight missing final external review completion hold" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_stable_candidate_blocked_by_external_review_evidence=true" || {
+    echo "FAIL release readiness preflight missing final external review evidence blocker" >&2
+    exit 1
+  }
   printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_stable_public_app_blocked_by_p0_p1_audit=true" || {
     echo "FAIL release readiness preflight missing P0/P1 stable app blocker" >&2
     exit 1
@@ -687,6 +715,26 @@ printf '%s\n' "$final_acceptance_output" | grep -Fq -- "release_class=public_bet
 }
 printf '%s\n' "$final_acceptance_output" | grep -Fq -- "stable_candidate_ready=false" || {
   echo "FAIL final acceptance missing stable candidate readiness hold" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "independent_review_packet_source_ready=true" || {
+  echo "FAIL final acceptance missing independent review packet source readiness" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "stable_candidate_evidence_required_before_external_review=true" || {
+  echo "FAIL final acceptance missing stable evidence external review ordering" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "external_review_not_local_source_progress_blocker=true" || {
+  echo "FAIL final acceptance missing external review source non-blocking policy" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "external_review_complete=false" || {
+  echo "FAIL final acceptance missing external review completion hold" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "stable_candidate_blocked_by_external_review_evidence=true" || {
+  echo "FAIL final acceptance missing external review evidence blocker" >&2
   exit 1
 }
 printf '%s\n' "$final_acceptance_output" | grep -Fq -- "external_two_machine_evidence_present=false" || {
