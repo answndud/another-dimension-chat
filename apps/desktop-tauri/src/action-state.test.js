@@ -9,6 +9,7 @@ import {
   productionBridgeCensorshipBoundaryView,
   productionHighRiskThreatModelBoundaryView,
   productionHighRiskThreatModelClaimMatrix,
+  HIGH_RISK_READINESS_CONDITION_SET,
   productionHighRiskReadinessGateView,
   productionHighRiskRuntimeEvidenceInputFromAttemptResult,
   productionHighRiskRuntimeEvidenceGateView,
@@ -228,8 +229,21 @@ test("high-risk runtime evidence gate rejects local fabricated and unsafe eviden
   assert.equal(accepted.runtimeEvidencePresent, true);
   assert.equal(accepted.highRiskPublicClaimAllowed, false);
   assert.equal(accepted.highRiskReadyClaimAllowed, false);
+  assert.equal(
+    accepted.readinessConditionSet,
+    "safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity",
+  );
+  assert.deepEqual(accepted.readinessMissingConditions, [
+    "safety-verification",
+    "local-storage-evidence",
+    "release-integrity",
+  ]);
   assert.match(accepted.boundary, /evidence_contract=runtime-report#explicit-user-action#onion-only#no-direct-fallback/);
   assert.match(accepted.summary, /runtime_failure_class=stale_endpoint/);
+  assert.match(
+    accepted.summary,
+    /readiness_condition_set=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity/,
+  );
   assert.match(accepted.summary, /endpoint_value_recorded=false/);
 });
 
@@ -290,11 +304,22 @@ test("high-risk runtime evidence input summarizes explicit attempts without priv
 });
 
 test("high-risk readiness gate separates not ready limited and ready claims", () => {
+  assert.deepEqual(HIGH_RISK_READINESS_CONDITION_SET, [
+    "safety-verification",
+    "high-risk-transport-runtime",
+    "emergency-controls",
+    "clipboard-expiry",
+    "local-storage-evidence",
+    "release-integrity",
+  ]);
   const missingSafety = productionHighRiskReadinessGateView({
     threatMatrixAccepted: true,
     pairwiseSafetyVerified: false,
     highRiskTransportReady: false,
     highRiskTransportExplicitlyDisabled: true,
+    emergencyControlsReady: true,
+    clipboardExpiryReady: true,
+    localStorageEvidenceReady: true,
     productionKeyManagementReady: true,
     rollbackMarkerHealthy: true,
     diagnosticsRedacted: true,
@@ -302,13 +327,18 @@ test("high-risk readiness gate separates not ready limited and ready claims", ()
   });
 
   assert.equal(missingSafety.status, "not_ready");
-  assert.equal(missingSafety.primaryReasonCode, "safety-not-verified");
+  assert.equal(missingSafety.primaryReasonCode, "safety-verification");
   assert.equal(missingSafety.nextAction, "verify-safety-number");
+  assert.deepEqual(missingSafety.readinessMissingConditions, [
+    "safety-verification",
+    "high-risk-transport-runtime",
+  ]);
   assert.equal(missingSafety.highRiskReadyClaimAllowed, false);
   assert.equal(missingSafety.publicSupportHighRiskClaimAllowed, false);
   assert.equal(missingSafety.releaseHighRiskClaimAllowed, false);
   assert.equal(missingSafety.unmetConditionsHidden, false);
-  assert.match(missingSafety.summary, /reason_codes=safety-not-verified/);
+  assert.match(missingSafety.summary, /reason_codes=safety-verification#high-risk-transport-runtime/);
+  assert.match(missingSafety.summary, /readiness_missing_conditions=safety-verification#high-risk-transport-runtime/);
   assert.doesNotMatch(missingSafety.summary, /high_risk_ready_claim_allowed=true/);
 
   const limited = productionHighRiskReadinessGateView({
@@ -316,37 +346,73 @@ test("high-risk readiness gate separates not ready limited and ready claims", ()
     pairwiseSafetyVerified: true,
     highRiskTransportReady: false,
     highRiskTransportExplicitlyDisabled: true,
+    emergencyControlsReady: true,
+    clipboardExpiryReady: true,
+    localStorageEvidenceReady: true,
     productionKeyManagementReady: true,
     rollbackMarkerHealthy: true,
     diagnosticsRedacted: true,
     releaseIntegrityAvailable: true,
   });
   assert.equal(limited.status, "limited");
-  assert.equal(limited.primaryReasonCode, "transport-explicitly-disabled");
+  assert.equal(limited.primaryReasonCode, "high-risk-transport-runtime");
+  assert.equal(limited.nextAction, "run-high-risk-transport-runtime-evidence");
   assert.equal(limited.highRiskReadyClaimAllowed, false);
+  assert.deepEqual(limited.readinessMissingConditions, ["high-risk-transport-runtime"]);
   assert.match(limited.boundary, /status_values=ready#limited#not_ready/);
 
   const missingRuntimeEvidence = productionHighRiskReadinessGateView({
     threatMatrixAccepted: true,
     pairwiseSafetyVerified: true,
     highRiskTransportReady: true,
+    emergencyControlsReady: true,
+    clipboardExpiryReady: true,
+    localStorageEvidenceReady: true,
     productionKeyManagementReady: true,
     rollbackMarkerHealthy: true,
     diagnosticsRedacted: true,
     releaseIntegrityAvailable: true,
   });
   assert.equal(missingRuntimeEvidence.status, "not_ready");
-  assert.equal(missingRuntimeEvidence.primaryReasonCode, "transport-runtime-evidence-missing");
+  assert.equal(missingRuntimeEvidence.primaryReasonCode, "high-risk-transport-runtime");
   assert.equal(missingRuntimeEvidence.nextAction, "run-high-risk-transport-runtime-evidence");
   assert.equal(missingRuntimeEvidence.highRiskReadyClaimAllowed, false);
+  assert.deepEqual(missingRuntimeEvidence.readinessMissingConditions, ["high-risk-transport-runtime"]);
   assert.match(missingRuntimeEvidence.summary, /high_risk_transport_runtime_evidence_present=false/);
   assert.doesNotMatch(missingRuntimeEvidence.summary, /high_risk_ready_claim_allowed=true/);
+
+  const missingLocalStorageAndControls = productionHighRiskReadinessGateView({
+    threatMatrixAccepted: true,
+    pairwiseSafetyVerified: true,
+    highRiskTransportReady: true,
+    highRiskRuntimeEvidencePresent: true,
+    emergencyControlsReady: false,
+    clipboardExpiryReady: false,
+    localStorageEvidenceReady: false,
+    productionKeyManagementReady: true,
+    rollbackMarkerHealthy: true,
+    diagnosticsRedacted: true,
+    releaseIntegrityAvailable: true,
+  });
+  assert.deepEqual(missingLocalStorageAndControls.readinessMissingConditions, [
+    "emergency-controls",
+    "clipboard-expiry",
+    "local-storage-evidence",
+  ]);
+  assert.equal(missingLocalStorageAndControls.primaryReasonCode, "emergency-controls");
+  assert.match(
+    missingLocalStorageAndControls.summary,
+    /readiness_missing_condition_fields=emergency_controls_ready#clipboard_expiry_ready#local_storage_evidence_ready/,
+  );
 
   const ready = productionHighRiskReadinessGateView({
     threatMatrixAccepted: true,
     pairwiseSafetyVerified: true,
     highRiskTransportReady: true,
     highRiskRuntimeEvidencePresent: true,
+    emergencyControlsReady: true,
+    clipboardExpiryReady: true,
+    localStorageEvidenceReady: true,
     productionKeyManagementReady: true,
     rollbackMarkerHealthy: true,
     diagnosticsRedacted: true,
@@ -356,10 +422,13 @@ test("high-risk readiness gate separates not ready limited and ready claims", ()
   assert.equal(ready.highRiskOperationalReady, true);
   assert.equal(ready.primaryReasonCode, "none");
   assert.equal(ready.nextAction, "ready");
+  assert.deepEqual(ready.readinessMissingConditions, []);
   assert.equal(ready.highRiskReadyClaimAllowed, false);
   assert.equal(ready.publicSupportHighRiskClaimAllowed, false);
   assert.equal(ready.releaseHighRiskClaimAllowed, false);
   assert.match(ready.summary, /high_risk_operational_ready=true/);
+  assert.match(ready.summary, /readiness_missing_conditions=none/);
+  assert.match(ready.summary, /local_storage_evidence_ready=true/);
   assert.match(ready.summary, /high_risk_ready_claim_allowed=false/);
   assert.match(ready.summary, /high_risk_public_claim_allowed=false/);
 });
