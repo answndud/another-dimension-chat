@@ -17,7 +17,7 @@ const dictionaries = {
     versionIntegrityStatusInitial:
       "current_version=unknown release_authority=same-github-release-assets checksum_verification=matching-sha256-before-open auto_update_ready=false rollback_prevention_claimed=false",
     windowsRuntimeParityStatusInitial:
-      "platform_scope=desktop-shared-core windows_distribution=local-build-candidate-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false",
+      "platform_scope=desktop-public-shell windows_distribution=local-build-candidate-only windows_artifact_candidate=windows-shell-nsis-exe-installer-candidate runtime_path=desktop-sidecar-public-shell full_runtime_compiled=false beta_onion_path=manual-explicit-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false",
     highRiskThreatModelStatusInitial:
       "High-Risk threat model: protected=none / mitigated=remote_passive_observer,remote_active_attacker,malicious_peer,local_at_rest_attacker,supply_chain_update_attacker / not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation / claims: audited=false briar_cwtch_equivalent=false compromised_endpoint_safe=false coercion_safe=false global_correlation_safe=false",
     highRiskTransportMetadataStatusInitial:
@@ -729,7 +729,7 @@ const dictionaries = {
     noSecureReleaseClaim: "No secure-release claim",
     releaseIntegrityValue: "Manual GitHub Release download; same-release checksum required; no auto-update",
     desktopPlatformBoundaryValue:
-      "macOS public beta only; Windows is a local build candidate until app-data path, path separator, installer, and signing boundary review is complete.",
+      "Desktop public-shell artifact scope only: full-runtime path and beta onion transport are separate and not compiled into this desktop public shell. Windows is a local build candidate until app-data path, path separator, installer, and signing boundary review is complete.",
     supplyChainBoundaryValue:
       "DMG SHA-256, provenance, manifest, dependency inventory, and lockfile hashes required",
     noRuntimeMessagingPath: "No runtime messaging path",
@@ -1207,7 +1207,7 @@ const dictionaries = {
     versionIntegrityStatusInitial:
       "current_version=unknown release_authority=same-github-release-assets checksum_verification=matching-sha256-before-open auto_update_ready=false rollback_prevention_claimed=false",
     windowsRuntimeParityStatusInitial:
-      "platform_scope=desktop-shared-core windows_distribution=local-build-candidate-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false",
+      "platform_scope=desktop-public-shell windows_distribution=local-build-candidate-only windows_artifact_candidate=windows-shell-nsis-exe-installer-candidate runtime_path=desktop-sidecar-public-shell full_runtime_compiled=false beta_onion_path=manual-explicit-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false",
     highRiskThreatModelStatusInitial:
       "High-Risk threat model: protected=none / mitigated=remote_passive_observer,remote_active_attacker,malicious_peer,local_at_rest_attacker,supply_chain_update_attacker / not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation / claims: audited=false briar_cwtch_equivalent=false compromised_endpoint_safe=false coercion_safe=false global_correlation_safe=false",
     highRiskTransportMetadataStatusInitial:
@@ -1916,7 +1916,7 @@ const dictionaries = {
     noSecureReleaseClaim: "정식 보안 출시 주장은 아직 하지 않습니다",
     releaseIntegrityValue: "수동 GitHub Release 다운로드, 같은 release의 checksum 필요, auto-update 없음",
     desktopPlatformBoundaryValue:
-      "macOS 공개 베타만 제공됩니다. Windows는 app data 경로, 경로 구분자, installer, signing boundary 검토가 끝날 때까지 로컬 빌드 후보입니다.",
+      "desktop public shell 경로만 제공합니다. full runtime 및 beta onion transport는 별도 경로이며 현재 desktop public shell에는 포함되지 않습니다. Windows는 app data 경로, 경로 구분자, installer, signing boundary 검토 전까지 로컬 빌드 후보입니다.",
     supplyChainBoundaryValue: "DMG SHA-256, provenance, manifest, dependency inventory, lockfile hash 필요",
     noRuntimeMessagingPath: "자동 실행되는 메시지 경로가 없습니다",
     coreBoundaryOnly: "핵심 로직의 노출 여부만 확인합니다",

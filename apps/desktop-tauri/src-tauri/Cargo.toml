@@ -26,7 +26,6 @@ legacy-embedded-runtime = [
     "dep:tokio",
 ]
 full-runtime = ["legacy-embedded-runtime"]
-windows-public-shell = ["public-shell"]
 manual-onion-client-attempt = [
     "legacy-embedded-runtime",
     "another-dimension-transport/arti-manual-bootstrap",
