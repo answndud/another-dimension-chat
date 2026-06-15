@@ -67,7 +67,7 @@ must_contain "$CORE" "PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_FORBIDDEN_CLAIMS"
 must_contain "$CORE" "windows_public_artifact_candidate_keeps_claims_false_and_shared_core_bound"
 
 must_contain "$STATE" "productionWindowsPublicArtifactCandidateView"
-must_contain "apps/desktop-tauri/package.json" "engine:prepare-sidecar:release:manual && node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json --features windows-public-shell"
+must_contain "apps/desktop-tauri/package.json" "engine:prepare-sidecar:release:manual && node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json --features public-shell"
 must_contain "$STATE_TEST" "windows public artifact candidate keeps installer and security claims false"
 must_contain "$SMOKE_TEST" "productionWindowsPublicArtifactCandidateView"
 must_contain "$TAURI_LIB" "windows_public_artifact_adapter_boundary_summary"
