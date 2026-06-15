@@ -80,8 +80,7 @@ must_contain "$GENERATOR" "AD_PREPARE_WINDOWS_PUBLIC_ARTIFACT_METADATA"
 must_contain "$GENERATOR" "AD_WINDOWS_ARTIFACT"
 must_contain "$GENERATOR" "WINDOWS_ARTIFACT_MANIFEST.json.sha256"
 must_contain "$GENERATOR" "engine_sidecar_runtime_mode"
-must_contain "apps/desktop-tauri/package.json" '"tauri:build:windows-nsis:shell"'
-must_contain "apps/desktop-tauri/package.json" 'windows-public-shell'
+must_contain "apps/desktop-tauri/package.json" '"tauri:build:windows-nsis:shell": "npm run engine:prepare-sidecar:release:manual && node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json --features public-shell --bundles nsis -- --no-default-features"'
 must_contain "$EXECUTION" "WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"
 must_contain "$EXECUTION" "validate_windows_artifact_manifest.mjs"
 must_contain "$SCHEMA" "WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"

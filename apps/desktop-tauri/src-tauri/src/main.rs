@@ -280,7 +280,7 @@ fn prototype_status(app: tauri::AppHandle) -> DesktopPublicShellStatus {
     let engine_sidecar_present = engine_sidecar_present(&app, &engine_sidecar_basename);
     DesktopPublicShellStatus {
         warning:
-            "desktop public shell; engine sidecar packaging does not open messaging or high-risk claims",
+            "desktop public shell path; sidecar-first design, no full runtime and no beta onion route in this artifact",
         artifact_type: public_shell_artifact_type(),
         runtime_mode: "shell-sidecar-pending",
         engine_runtime_mode: "manual-e2ee-engine-sidecar",

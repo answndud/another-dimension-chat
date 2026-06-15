@@ -11,6 +11,7 @@
     "build": "vite build",
     "test:state": "node --test src/action-state.test.js src/private-delivery-state.test.js src/i18n.test.js src/ui-smoke.test.js",
     "test:ui-fast": "npm run test:state",
+    "test:engine-runtime-core": "cargo test -p another-dimension-core production_two_profile_resume_reloads_status_and_transcripts_after_new_command_invocations production_onion_send_attempt_result_persists_failed_and_sent_resume_state production_two_profile_room_setup_accepts_invite_derived_profiles",
     "test:native-shell": "cargo check --manifest-path src-tauri/Cargo.toml",
     "verify:ui-loop-scripts": "node scripts/verify-ui-loop-scripts.mjs",
     "test:desktop-single-machine": "../../scripts/desktop_single_machine_acceptance_once.sh",
@@ -41,7 +42,7 @@
     "tauri:build:full": "npm run legacy:tauri:build:embedded-runtime",
     "tauri:build:beta-onion": "npm run engine:prepare-sidecar:release:manual && VITE_AD_BUILD_CHANNEL=beta-onion node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json",
     "tauri:build:windows-nsis:beta-onion": "npm run engine:prepare-sidecar:release:manual && VITE_AD_BUILD_CHANNEL=beta-onion node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json --bundles nsis",
-    "tauri:build:windows-nsis:shell": "npm run engine:prepare-sidecar:release:manual && node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json --features windows-public-shell --bundles nsis -- --no-default-features",
+    "tauri:build:windows-nsis:shell": "npm run engine:prepare-sidecar:release:manual && node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json --features public-shell --bundles nsis -- --no-default-features",
     "tauri:build:windows-nsis:manual-e2ee": "npm run engine:prepare-sidecar:release:manual && VITE_AD_BUILD_CHANNEL=windows-manual-e2ee node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json --bundles nsis",
     "tauri:build:beta-onion-bridge": "npm run engine:prepare-sidecar:release:manual && VITE_AD_BUILD_CHANNEL=beta-onion-bridge node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json"
   },
