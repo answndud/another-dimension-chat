@@ -3626,8 +3626,9 @@ async function runSavedInviteRoomListAction(room, action) {
     return true;
   }
   if (String(action ?? "").startsWith("real-onion-")) {
-    const currentRoom = savedInviteRoomForRoomFingerprint(privateRouteRoomKey(productionTwoProfileInput()));
-    const currentAction = currentRoom ? savedInviteRoomListAction(currentRoom)?.action ?? "" : "";
+    const current = currentSavedInviteRoomView(productionTwoProfileInput());
+    const currentRoom = current.room;
+    const currentAction = current.action;
     if (currentAction && currentAction !== action) {
       return runSavedInviteRoomListAction(currentRoom, currentAction);
     }
@@ -3903,6 +3904,19 @@ function savedInviteRoomListItemView(room, context = {}) {
       waitingPeerCode,
     }),
     waitingPeerCode,
+  };
+}
+
+function currentSavedInviteRoomView(input = productionTwoProfileInput()) {
+  const currentRoom = savedInviteRoomForRoomFingerprint(privateRouteRoomKey(input));
+  if (!currentRoom) {
+    return { room: null, view: null, action: "" };
+  }
+  const view = savedInviteRoomListItemView(currentRoom, { currentCode: currentInviteRoomCode() });
+  return {
+    room: currentRoom,
+    view,
+    action: view?.nextAction?.action ?? "",
   };
 }
 
@@ -5029,16 +5043,15 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     : false;
   const deliveryNoticeKey = deliveryNoticeCurrentRoom ? latestChatDeliveryNoticeKey : "none";
   const deliveryNoticeTone = deliveryNoticeCurrentRoom ? latestChatDeliveryNoticeTone : "neutral";
-  const currentRoomCode = currentInviteRoomCode();
-  const currentSavedRoom = savedInviteRooms().find((room) => room.code === currentRoomCode) ?? null;
-  const currentSavedRoomView = currentSavedRoom ? savedInviteRoomListItemView(currentSavedRoom, { currentCode: currentRoomCode }) : null;
+  const currentSavedRoom = currentSavedInviteRoomView(input);
+  const currentSavedRoomView = currentSavedRoom.view;
   const routeReadiness = externalPeerSendReadiness(input, {
     allowMissingMessage: true,
     latestOnionOutbound: null,
   });
   const roomListNextAction = outboundRecoveryAction !== "none"
     ? outboundRecoveryAction
-    : currentSavedRoomView?.nextAction?.action;
+    : currentSavedRoom.action;
 
   return [
     "Another Dimension Chat beta field test report",
