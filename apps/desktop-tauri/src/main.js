@@ -3271,6 +3271,9 @@ function savedInviteRoomRealOnionRecoveryView(room) {
 
 function savedInviteRoomRouteReadinessView(room) {
   const input = savedInviteRoomInput(room);
+  if (!latestTwoProfileSessionStatusForCurrentInput(input)) {
+    return null;
+  }
   const readiness = externalPeerSendReadiness(input, {
     allowMissingMessage: true,
     latestOnionOutbound: null,
