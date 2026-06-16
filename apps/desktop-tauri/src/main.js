@@ -1554,7 +1554,7 @@ function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
   messageText.textContent = text;
   fields.chatDeliveryNotice.append(statusLabel, messageText);
   if (primaryAction) {
-    const outboundActionState = productionTwoProfileOutboundActionState(
+    const outboundActionState = currentTwoProfileOutboundActionState(
       pendingEntry,
       productionTwoProfileInput(),
       twoProfileInviteCodeModeActive(),
@@ -1682,7 +1682,7 @@ function currentTwoProfileOutboundAction(entry, options = {}) {
   if (!currentEntry) {
     return null;
   }
-  const outboundActionState = productionTwoProfileOutboundActionState(
+  const outboundActionState = currentTwoProfileOutboundActionState(
     currentEntry,
     input,
     twoProfileInviteCodeModeActive(),
@@ -1705,7 +1705,7 @@ function currentTwoProfileOutboundCancelableEntry(entry, options = {}) {
   if (!currentEntry) {
     return null;
   }
-  const outboundActionState = productionTwoProfileOutboundActionState(
+  const outboundActionState = currentTwoProfileOutboundActionState(
     currentEntry,
     input,
     twoProfileInviteCodeModeActive(),
@@ -1743,6 +1743,14 @@ function currentTwoProfileOutboundPrimaryAction(entry, input = productionTwoProf
       };
     }
     if (routeReadiness.nextAction === "start-receiving") {
+      if (productionTwoProfileReceiveStoppingInOtherRoom(input)) {
+        return {
+          action: "wait-receive-stop",
+          labelKey: "receiveStopPending",
+          noticeKey: "receiveStopPending",
+          recoveryKey: "receiveStopPending",
+        };
+      }
       return {
         action: "start-receiving",
         labelKey: "startReceiving",
@@ -1819,6 +1827,18 @@ function currentTwoProfileOutboundPrimaryAction(entry, input = productionTwoProf
   return primaryAction;
 }
 
+function currentTwoProfileOutboundActionState(entry, input = productionTwoProfileInput(), inviteCodeMode = twoProfileInviteCodeModeActive()) {
+  const state = productionTwoProfileOutboundActionState(entry, input, inviteCodeMode);
+  if (!state.showActions || !productionTwoProfileReceiveStoppingInOtherRoom(input)) {
+    return state;
+  }
+  return {
+    ...state,
+    canRunNow: false,
+    disabledReason: t("receiveStopPending"),
+  };
+}
+
 function outboundPrimaryActionLabel(primaryAction) {
   return t(primaryAction?.labelKey || "retrySend");
 }
@@ -1886,7 +1906,7 @@ async function runTwoProfileOutboundPrimaryAction(entry) {
     showCurrentRetryableOutboundMissing(entry);
     return;
   }
-  const outboundActionState = productionTwoProfileOutboundActionState(
+  const outboundActionState = currentTwoProfileOutboundActionState(
     resolvedEntry,
     productionTwoProfileInput(),
     twoProfileInviteCodeModeActive(),
@@ -1904,6 +1924,11 @@ async function runTwoProfileOutboundPrimaryAction(entry) {
   if (resolvedPrimaryAction.action === "start-receiving") {
     selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
     await startProductionTwoProfileOnionReceive();
+    return;
+  }
+  if (resolvedPrimaryAction.action === "wait-receive-stop") {
+    selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
+    showSavedInviteRoomReceiveStopPending();
     return;
   }
   if (resolvedPrimaryAction.action === "verify") {
@@ -1929,6 +1954,9 @@ function outboundRecoveryClass(primaryAction, statusLabel = "") {
     return "is-permission-needed";
   }
   if (primaryAction?.action === "start-receiving" || status === "receive stopped") {
+    return "is-route-needed";
+  }
+  if (primaryAction?.action === "wait-receive-stop") {
     return "is-route-needed";
   }
   if (status === "route missing") {
@@ -1959,6 +1987,9 @@ function outboundRecoveryReasonKey(primaryAction, statusLabel = "") {
   }
   if (primaryAction?.action === "start-receiving" || status === "receive stopped") {
     return "sendReasonStartReceiving";
+  }
+  if (primaryAction?.action === "wait-receive-stop") {
+    return "receiveStopPending";
   }
   if (status === "route missing") {
     return "sendReasonRouteMissing";
@@ -7543,7 +7574,7 @@ function renderProductionTwoProfileConversationList() {
     const outboundPending = twoProfileConversationOutboundRetryable(entry);
     const outboundCanceled = entry.outboundDeliveryState === "canceled";
     const outboundStatusLabel = productionTwoProfileOutboundStatusLabel(entry);
-    const outboundActionState = productionTwoProfileOutboundActionState(
+    const outboundActionState = currentTwoProfileOutboundActionState(
       entry,
       input,
       twoProfileInviteCodeModeActive(),
@@ -7988,6 +8019,14 @@ function twoProfileRetryableOutboundActionView(entry, fallback) {
       focusTarget: "start-receiving",
     };
   }
+  if (primaryAction.action === "wait-receive-stop") {
+    return {
+      ...common,
+      nextAction: `Receive is stopping: wait until it finishes, then retry message ${label}.`,
+      rowLabel: "action: wait for receive stop",
+      focusTarget: "retry-send",
+    };
+  }
   if (primaryAction.action === "retry-network") {
     return {
       ...common,
@@ -8068,6 +8107,11 @@ function retryableTwoProfileOutboundWarning(entry) {
     return currentLanguage === "ko"
       ? `메시지 ${label} 전송이 멈췄습니다. 메시지 받기를 시작한 뒤 다시 보내거나 취소할 수 있습니다.`
       : `Message ${label} is waiting. Start receiving, then retry or cancel this send.`;
+  }
+  if (primaryAction.action === "wait-receive-stop") {
+    return currentLanguage === "ko"
+      ? `메시지 ${label} 전송이 멈췄습니다. 받기 중지가 완료된 뒤 다시 보내거나 취소할 수 있습니다.`
+      : `Message ${label} is waiting. Wait for receiving to stop, then retry or cancel this send.`;
   }
   if (primaryAction.action === "retry-network") {
     return currentLanguage === "ko"
