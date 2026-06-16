@@ -4451,6 +4451,23 @@ function fieldTestExternalOnionDelivered(parsed) {
   );
 }
 
+function fieldTestReportNextActionValue(parsed) {
+  if (parsed.room_list_next_action && parsed.room_list_next_action !== "none") {
+    return parsed.room_list_next_action;
+  }
+  if (parsed.outbound_recovery_action && parsed.outbound_recovery_action !== "none") {
+    return parsed.outbound_recovery_action;
+  }
+  const routeReadinessAction = fieldTestBlockedRouteReadinessAction(parsed);
+  if (routeReadinessAction) {
+    return routeReadinessAction;
+  }
+  if (parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none") {
+    return parsed.real_onion_recovery_action;
+  }
+  return "none";
+}
+
 function fieldTestReportSummary(report) {
   const parsed = parseFieldTestReport(report);
   const room = parsed.room_present === "true" ? "room" : "no-room";
@@ -4473,16 +4490,7 @@ function fieldTestReportSummary(report) {
   const receive = parsed.receive_enabled === "true"
     ? `receive-${fieldTestReportValue(parsed.receive_state, "unknown")}`
     : "receive-off";
-  const nextAction =
-    parsed.room_list_next_action && parsed.room_list_next_action !== "none"
-      ? parsed.room_list_next_action
-      : parsed.outbound_recovery_action && parsed.outbound_recovery_action !== "none"
-        ? parsed.outbound_recovery_action
-        : fieldTestBlockedRouteReadinessAction(parsed)
-          ? fieldTestBlockedRouteReadinessAction(parsed)
-          : parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none"
-            ? parsed.real_onion_recovery_action
-            : "none";
+  const nextAction = fieldTestReportNextActionValue(parsed);
   const blocker = fieldTestReportBlocker(parsed);
   return `summary ${room} ${safety} ${delivery} ${route} ${receive} next=${fieldTestReportValue(nextAction, "none")} blocker=${fieldTestReportValue(blocker, "none")}`;
 }
@@ -4509,16 +4517,7 @@ function fieldTestReportTriageState(report) {
     receive: parsed.receive_enabled === "true"
       ? `receive-${fieldTestReportValue(parsed.receive_state, "unknown")}`
       : "receive-off",
-    next:
-      parsed.room_list_next_action && parsed.room_list_next_action !== "none"
-        ? parsed.room_list_next_action
-        : parsed.outbound_recovery_action && parsed.outbound_recovery_action !== "none"
-          ? parsed.outbound_recovery_action
-          : fieldTestBlockedRouteReadinessAction(parsed)
-            ? fieldTestBlockedRouteReadinessAction(parsed)
-            : parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none"
-              ? parsed.real_onion_recovery_action
-              : "none",
+    next: fieldTestReportNextActionValue(parsed),
     blocker: fieldTestReportBlocker(parsed),
   };
 }
