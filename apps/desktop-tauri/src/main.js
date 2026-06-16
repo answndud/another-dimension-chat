@@ -3625,6 +3625,16 @@ async function runSavedInviteRoomListAction(room, action) {
     await startProductionTwoProfileOnionReceive();
     return true;
   }
+  if (String(action ?? "").startsWith("real-onion-")) {
+    const currentRoom = savedInviteRoomForRoomFingerprint(privateRouteRoomKey(productionTwoProfileInput()));
+    const currentAction = currentRoom ? savedInviteRoomListAction(currentRoom)?.action ?? "" : "";
+    if (currentAction && currentAction !== action) {
+      return runSavedInviteRoomListAction(currentRoom, currentAction);
+    }
+    if (!currentAction) {
+      return showSavedInviteRoomExpiredRealOnionAction();
+    }
+  }
   if (action === "real-onion-enable-private-delivery") {
     const recoveryView = savedInviteRoomRealOnionRecoveryView(room);
     if (recoveryView?.action !== action) {
