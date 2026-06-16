@@ -5238,8 +5238,6 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   });
   const roomListNextAction = outboundRecoveryAction !== "none"
     ? outboundRecoveryAction
-    : routeReadiness.nextAction && routeReadiness.nextAction !== "none" && routeReadiness.ready !== true
-      ? routeReadiness.nextAction
     : currentSavedRoom.action;
 
   return [
