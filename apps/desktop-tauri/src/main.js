@@ -3610,13 +3610,18 @@ function currentRoomConversationMetadata() {
   return productionInviteRoomConversationMetadata([...productionTwoProfileConversationEntries.values()]);
 }
 
-function reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries) {
+function reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries, options = {}) {
   const code = currentInviteRoomCode();
   const role = connectionCodeRoleFor(code);
   if (!code || !role) {
     return false;
   }
-  rememberInviteRoom(code, role, productionInviteRoomConversationMetadata(entries ?? []));
+  const input = options.input ?? productionTwoProfileInput();
+  let metadata = productionInviteRoomConversationMetadata(entries ?? []);
+  if (options.sessionStatus) {
+    metadata = savedInviteRoomMetadataWithSessionStatus(metadata, input, options.sessionStatus);
+  }
+  rememberInviteRoom(code, role, metadata);
   return true;
 }
 
@@ -15151,7 +15156,10 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       );
     }
     const staleMessageEnvelopeSlotsPruned = renderProductionTwoProfileTranscriptEntries(entries, transcriptInput);
-    reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries);
+    reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries, {
+      input: transcriptInput,
+      sessionStatus,
+    });
     clearStaleSendRecoveryNotice(transcriptInput);
     const resumeWarning = appendStaleMessageEnvelopeSlotsPruned(
       appendExpiredMessagesPurged(
