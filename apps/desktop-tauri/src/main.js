@@ -4415,6 +4415,22 @@ function fieldTestReportsAligned(localReport, peerReport) {
   return !comparison || comparison.startsWith("compare reports-aligned");
 }
 
+function fieldTestActionRequiresLocalRecovery(key) {
+  return Boolean(key) && ![
+    "fieldTestNextPastePeerReport",
+    "fieldTestNextCompareMismatch",
+    "fieldTestNextComplete",
+  ].includes(key);
+}
+
+function fieldTestPeerLocalStateNextActionKey(localReport, peerReport) {
+  if (!String(peerReport ?? "").trim() || !fieldTestReportsAligned(localReport, peerReport)) {
+    return "";
+  }
+  const peerNextActionKey = fieldTestNextActionKey(peerReport, "");
+  return fieldTestActionRequiresLocalRecovery(peerNextActionKey) ? peerNextActionKey : "";
+}
+
 function fieldTestBuildIdentityMatches(localReport, peerReport) {
   if (!String(peerReport ?? "").trim()) {
     return null;
@@ -4604,6 +4620,9 @@ function fieldTestNextActionKey(report, peerReport = "") {
   if (!fieldTestReportsAligned(report, peerReport)) {
     return "fieldTestNextCompareMismatch";
   }
+  if (fieldTestPeerLocalStateNextActionKey(report, peerReport)) {
+    return "fieldTestNextPeerLocalRecovery";
+  }
   return "fieldTestNextComplete";
 }
 
@@ -4667,7 +4686,12 @@ function fieldTestReportCopyPayload(report) {
   const comparison = fieldTestReportComparison(report, peerReport);
   const nextActionKey = fieldTestNextActionKey(report, peerReport);
   const nextAction = `next_action=${fieldTestReportValue(nextActionKey, "none")}`;
-  return comparison ? `${report}\n${comparison}\n${nextAction}` : `${report}\n${nextAction}`;
+  const peerNextActionKey = fieldTestPeerLocalStateNextActionKey(report, peerReport);
+  const peerNextAction = peerNextActionKey
+    ? `peer_next_action=${fieldTestReportValue(peerNextActionKey, "none")}`
+    : "";
+  const actionLines = peerNextAction ? `${nextAction}\n${peerNextAction}` : nextAction;
+  return comparison ? `${report}\n${comparison}\n${actionLines}` : `${report}\n${actionLines}`;
 }
 
 function realOnionResultConfirmsExternalPeerDelivery(result) {
