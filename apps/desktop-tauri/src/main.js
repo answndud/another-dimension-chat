@@ -4292,6 +4292,26 @@ function parseFieldTestReport(report) {
   return fields;
 }
 
+function fieldTestReportBlocker(parsed) {
+  const routeReadinessBlocked =
+    parsed.route_readiness_ready !== "true" &&
+    parsed.route_readiness_failure_kind &&
+    parsed.route_readiness_failure_kind !== "none";
+  if (routeReadinessBlocked) {
+    return parsed.route_readiness_failure_kind;
+  }
+  if (parsed.real_onion_next_blocker && parsed.real_onion_next_blocker !== "none") {
+    return parsed.real_onion_next_blocker;
+  }
+  if (parsed.receive_failure_kind && parsed.receive_failure_kind !== "none") {
+    return parsed.receive_failure_kind;
+  }
+  if (parsed.outbound_failure_class && parsed.outbound_failure_class !== "none") {
+    return parsed.outbound_failure_class;
+  }
+  return "none";
+}
+
 function fieldTestReportSummary(report) {
   const parsed = parseFieldTestReport(report);
   const room = parsed.room_present === "true" ? "room" : "no-room";
@@ -4321,16 +4341,7 @@ function fieldTestReportSummary(report) {
           : parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none"
             ? parsed.real_onion_recovery_action
             : "none";
-  const blocker =
-    parsed.real_onion_next_blocker && parsed.real_onion_next_blocker !== "none"
-      ? parsed.real_onion_next_blocker
-      : parsed.receive_failure_kind && parsed.receive_failure_kind !== "none"
-        ? parsed.receive_failure_kind
-        : parsed.outbound_failure_class && parsed.outbound_failure_class !== "none"
-          ? parsed.outbound_failure_class
-          : parsed.route_readiness_failure_kind && parsed.route_readiness_failure_kind !== "none"
-            ? parsed.route_readiness_failure_kind
-            : "none";
+  const blocker = fieldTestReportBlocker(parsed);
   return `summary ${room} ${safety} ${delivery} ${route} ${receive} next=${fieldTestReportValue(nextAction, "none")} blocker=${fieldTestReportValue(blocker, "none")}`;
 }
 
@@ -4367,16 +4378,7 @@ function fieldTestReportTriageState(report) {
             : parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none"
               ? parsed.real_onion_recovery_action
               : "none",
-    blocker:
-      parsed.real_onion_next_blocker && parsed.real_onion_next_blocker !== "none"
-        ? parsed.real_onion_next_blocker
-      : parsed.receive_failure_kind && parsed.receive_failure_kind !== "none"
-        ? parsed.receive_failure_kind
-        : parsed.outbound_failure_class && parsed.outbound_failure_class !== "none"
-          ? parsed.outbound_failure_class
-          : parsed.route_readiness_failure_kind && parsed.route_readiness_failure_kind !== "none"
-            ? parsed.route_readiness_failure_kind
-            : "none",
+    blocker: fieldTestReportBlocker(parsed),
   };
 }
 
