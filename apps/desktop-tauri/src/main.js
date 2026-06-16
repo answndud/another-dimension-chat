@@ -5505,6 +5505,7 @@ async function finishInviteRoomReadyFromStatus(input, status, warningText) {
   renderRoomIdentityBar(roomInput, status.both_ready_for_message_envelope);
   renderRoomStatusSummary(roomInput, status.both_ready_for_message_envelope);
   updateMinimalChatMode(input, status.both_ready_for_message_envelope);
+  renderSavedInviteRooms();
   await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
   setProductionTwoProfileState("Room ready");
   setText(fields.productionTwoProfileWarning, warningText);
