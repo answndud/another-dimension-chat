@@ -3604,6 +3604,30 @@ function showRealOnionRouteReadinessBlock(readiness, input = productionTwoProfil
   return true;
 }
 
+function savedInviteRoomActionRechecksAfterOpen(action) {
+  const normalized = String(action ?? "");
+  return (
+    normalized.startsWith("real-onion-") ||
+    new Set([
+      "enable-private-delivery",
+      "prepare-private-route",
+      "refresh-endpoint",
+      "start-receiving",
+      "verify-safety",
+    ]).has(normalized)
+  );
+}
+
+function showSavedInviteRoomActionNowReady() {
+  rememberCurrentInviteRoomMetadata();
+  renderSavedInviteRooms();
+  setProductionTwoProfileState("Room ready");
+  setText(fields.productionTwoProfileWarning, t("inviteRoomReadyAfterSessionCode"));
+  setChatDeliveryNoticeByKey("inviteRoomReadyAfterSessionCode", "success", productionTwoProfileInput());
+  fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
+  return true;
+}
+
 async function runSavedInviteRoomListAction(room, action) {
   if (action === "start-receiving" && await openSavedInviteRoomReceiveOwnerBeforeSwitch(room)) {
     return true;
@@ -3611,6 +3635,19 @@ async function runSavedInviteRoomListAction(room, action) {
   const opened = await openSavedInviteRoom(room);
   if (!opened) {
     return false;
+  }
+  if (savedInviteRoomActionRechecksAfterOpen(action)) {
+    const current = currentSavedInviteRoomView(productionTwoProfileInput());
+    const currentRoom = current.room;
+    const currentAction = current.action;
+    if (currentAction && currentAction !== action) {
+      return runSavedInviteRoomListAction(currentRoom, currentAction);
+    }
+    if (!currentAction) {
+      return String(action ?? "").startsWith("real-onion-")
+        ? showSavedInviteRoomExpiredRealOnionAction()
+        : showSavedInviteRoomActionNowReady();
+    }
   }
   if (action === "paste-peer-code") {
     const input = productionTwoProfileInput();
@@ -3706,17 +3743,6 @@ async function runSavedInviteRoomListAction(room, action) {
   if (action === "start-receiving") {
     await startProductionTwoProfileOnionReceive();
     return true;
-  }
-  if (String(action ?? "").startsWith("real-onion-")) {
-    const current = currentSavedInviteRoomView(productionTwoProfileInput());
-    const currentRoom = current.room;
-    const currentAction = current.action;
-    if (currentAction && currentAction !== action) {
-      return runSavedInviteRoomListAction(currentRoom, currentAction);
-    }
-    if (!currentAction) {
-      return showSavedInviteRoomExpiredRealOnionAction();
-    }
   }
   if (action === "real-onion-enable-private-delivery") {
     const recoveryView = savedInviteRoomRealOnionRecoveryView(room);
