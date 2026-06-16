@@ -451,6 +451,7 @@ let latestSimulation = null;
 let latestProductionSessionState = null;
 let latestProductionSessionStateFingerprint = "";
 let latestProductionTwoProfileSessionStatus = null;
+const latestProductionTwoProfileSessionStatusesByRoom = new Map();
 let latestProductionTwoProfileSafety = null;
 let latestProductionTwoProfileSuccess = null;
 let latestProductionTwoProfileOnionEndpoints = null;
@@ -3093,6 +3094,7 @@ function forgetInviteRoom(code) {
       inviteRole: role,
     };
     rememberReceiveIntentForRoom(roomInput, false);
+    forgetTwoProfileSessionStatusForInput(roomInput);
     clearPrivateRouteFollowupForRoom(roomInput);
     for (const key of twoProfileSafetyStorageKeys(roomInput)) {
       localStoreRemove(key);
@@ -3839,6 +3841,7 @@ async function refreshSavedInviteRoomMetadataForFingerprint(roomFingerprint, opt
     }
     if (options.refreshSessionStatus === true) {
       const sessionStatus = await invokeInviteRoomSessionStatus(input);
+      rememberTwoProfileSessionStatus(input, sessionStatus);
       metadata = savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus);
     }
     rememberInviteRoom(
@@ -3906,6 +3909,7 @@ async function syncSavedInviteRoomMetadataFromLocalStores() {
           try {
             const input = savedInviteRoomInput(room);
             const sessionStatus = await invokeInviteRoomSessionStatus(input);
+            rememberTwoProfileSessionStatus(input, sessionStatus);
             metadata = savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus);
           } catch {
             // Keep transcript refresh useful even if session status cannot be read yet.
@@ -6085,13 +6089,14 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
 }
 
 function latestTwoProfileSessionStatusForCurrentInput(input = productionTwoProfileInput()) {
-  if (!latestProductionTwoProfileSessionStatus) {
+  const currentFingerprint = twoProfileSessionStatusFingerprint(input);
+  if (!currentFingerprint) {
     return null;
   }
-  const currentFingerprint = twoProfileSessionStatusFingerprint(input);
-  return latestProductionTwoProfileSessionStatus.fingerprint === currentFingerprint
-    ? latestProductionTwoProfileSessionStatus.result
-    : null;
+  if (latestProductionTwoProfileSessionStatus?.fingerprint === currentFingerprint) {
+    return latestProductionTwoProfileSessionStatus.result;
+  }
+  return latestProductionTwoProfileSessionStatusesByRoom.get(currentFingerprint)?.result ?? null;
 }
 
 function twoProfileSafetyStorageKey(input = productionTwoProfileInput()) {
@@ -6197,10 +6202,35 @@ function rejectCurrentTwoProfileSafety() {
 }
 
 function rememberTwoProfileSessionStatus(input, result) {
+  const fingerprint = twoProfileSessionStatusFingerprint(input);
+  if (!fingerprint) {
+    return;
+  }
   latestProductionTwoProfileSessionStatus = {
-    fingerprint: twoProfileSessionStatusFingerprint(input),
+    fingerprint,
     result,
   };
+  latestProductionTwoProfileSessionStatusesByRoom.set(fingerprint, {
+    result,
+    updatedAt: Date.now(),
+  });
+  for (const key of latestProductionTwoProfileSessionStatusesByRoom.keys()) {
+    if (latestProductionTwoProfileSessionStatusesByRoom.size <= savedInviteRoomStorageLimit) {
+      break;
+    }
+    latestProductionTwoProfileSessionStatusesByRoom.delete(key);
+  }
+}
+
+function forgetTwoProfileSessionStatusForInput(input) {
+  const fingerprint = twoProfileSessionStatusFingerprint(input);
+  if (!fingerprint) {
+    return;
+  }
+  latestProductionTwoProfileSessionStatusesByRoom.delete(fingerprint);
+  if (latestProductionTwoProfileSessionStatus?.fingerprint === fingerprint) {
+    latestProductionTwoProfileSessionStatus = null;
+  }
 }
 
 function renderProductionTwoProfileSessionStatusResult(result) {
@@ -15325,7 +15355,7 @@ async function checkProductionTwoProfileSessionStatus() {
     if (!twoProfileTranscriptInputStillCurrent(sessionCheckInput)) {
       return;
     }
-    latestProductionTwoProfileSessionStatus = null;
+    forgetTwoProfileSessionStatusForInput(sessionCheckInput);
     setProductionTwoProfileState("Session check failed");
     setText(fields.productionTwoProfileSessionStatus, "Saved connection check failed");
     setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("session-status", error));
