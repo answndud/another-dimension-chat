@@ -4830,11 +4830,21 @@ function renderFieldTestReportComparison() {
 function fieldTestReportCopyPayload(report) {
   const peerReport = fields.peerFieldTestReport?.value ?? "";
   const comparison = fieldTestReportComparison(report, peerReport);
+  const localRecoveryAction = fieldTestReportNextActionValue(parseFieldTestReport(report));
   const nextActionKey = fieldTestNextActionKey(report, peerReport);
-  const nextAction = `next_action=${fieldTestReportValue(nextActionKey, "none")}`;
+  const nextAction = [
+    `next_action=${fieldTestReportValue(nextActionKey, "none")}`,
+    `local_recovery_action=${fieldTestReportValue(localRecoveryAction, "none")}`,
+  ].join("\n");
   const peerNextActionKey = fieldTestPeerLocalStateNextActionKey(report, peerReport);
+  const peerRecoveryAction = peerNextActionKey
+    ? fieldTestReportNextActionValue(parseFieldTestReport(peerReport))
+    : "";
   const peerNextAction = peerNextActionKey
-    ? `peer_next_action=${fieldTestReportValue(peerNextActionKey, "none")}`
+    ? [
+        `peer_next_action=${fieldTestReportValue(peerNextActionKey, "none")}`,
+        `peer_recovery_action=${fieldTestReportValue(peerRecoveryAction, "none")}`,
+      ].join("\n")
     : "";
   const actionLines = peerNextAction ? `${nextAction}\n${peerNextAction}` : nextAction;
   return comparison ? `${report}\n${comparison}\n${actionLines}` : `${report}\n${actionLines}`;
