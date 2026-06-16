@@ -4316,14 +4316,24 @@ function fieldTestReportBlocker(parsed) {
   return "none";
 }
 
+function fieldTestExternalOnionDelivered(parsed) {
+  return (
+    parsed.real_onion_external_peer_delivery_confirmed === "true" &&
+    parsed.real_onion_local_dev_roundtrip_result !== "true"
+  );
+}
+
 function fieldTestReportSummary(report) {
   const parsed = parseFieldTestReport(report);
   const room = parsed.room_present === "true" ? "room" : "no-room";
   const safety = parsed.safety_confirmed === "true" ? "verified" : "unverified";
+  const externalOnionDelivered = fieldTestExternalOnionDelivered(parsed);
+  const routeReadinessBlocked = fieldTestRouteReadinessBlocked(parsed);
   const delivery =
-    parsed.real_onion_external_peer_delivery_confirmed === "true" &&
-    parsed.real_onion_local_dev_roundtrip_result !== "true"
-      ? "external-onion-delivered"
+    externalOnionDelivered
+      ? routeReadinessBlocked
+        ? "external-onion-delivered-current-route-blocked"
+        : "external-onion-delivered"
       : parsed.real_onion_local_dev_roundtrip_result === "true"
         ? "local-dev-roundtrip"
         : "external-delivery-unconfirmed";
@@ -4358,8 +4368,7 @@ function fieldTestReportTriageState(report) {
     room: parsed.room_present === "true" ? "room" : "no-room",
     safety: parsed.safety_confirmed === "true" ? "verified" : "unverified",
     delivery:
-      parsed.real_onion_external_peer_delivery_confirmed === "true" &&
-      parsed.real_onion_local_dev_roundtrip_result !== "true"
+      fieldTestExternalOnionDelivered(parsed)
         ? "external-onion-delivered"
         : parsed.real_onion_local_dev_roundtrip_result === "true"
           ? "local-dev-roundtrip"
@@ -4454,9 +4463,7 @@ function fieldTestChecklistItems(report, peerReport = "") {
   const receiveState = fieldTestReportValue(parsed.receive_state, "stopped");
   const realOnionAttempted = parsed.real_onion_attempted === "true";
   const realOnionRetryable = parsed.real_onion_retryable === "true";
-  const externalOnionDelivered =
-    parsed.real_onion_external_peer_delivery_confirmed === "true" &&
-    parsed.real_onion_local_dev_roundtrip_result !== "true";
+  const externalOnionDelivered = fieldTestExternalOnionDelivered(parsed);
   const roomListState = fieldTestReportValue(parsed.room_list_state_key, "none");
   const routeReadinessBlocked = fieldTestRouteReadinessBlocked(parsed);
   const buildMatch = fieldTestBuildIdentityMatches(report, peerReport);
@@ -4488,7 +4495,15 @@ function fieldTestChecklistItems(report, peerReport = "") {
     },
     {
       key: "messages",
-      status: externalOnionDelivered || (sentRows > 0 && receivedRows > 0) ? "done" : sentRows > 0 ? "check" : "pending",
+      status: externalOnionDelivered
+        ? routeReadinessBlocked
+          ? "check"
+          : "done"
+        : sentRows > 0 && receivedRows > 0
+          ? "done"
+          : sentRows > 0
+            ? "check"
+            : "pending",
       label: t("fieldTestChecklistMessages"),
     },
     {
