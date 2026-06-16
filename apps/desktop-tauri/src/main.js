@@ -4834,8 +4834,10 @@ function fieldTestReportCopyPayload(report) {
   const nextActionKey = fieldTestNextActionKey(report, peerReport);
   const nextAction = [
     `next_action=${fieldTestReportValue(nextActionKey, "none")}`,
-    `local_recovery_action=${fieldTestReportValue(localRecoveryAction, "none")}`,
-  ].join("\n");
+    localRecoveryAction && localRecoveryAction !== "none"
+      ? `local_recovery_action=${fieldTestReportValue(localRecoveryAction, "none")}`
+      : "",
+  ].filter(Boolean).join("\n");
   const peerNextActionKey = fieldTestPeerLocalStateNextActionKey(report, peerReport);
   const peerRecoveryAction = peerNextActionKey
     ? fieldTestReportNextActionValue(parseFieldTestReport(peerReport))
