@@ -3322,11 +3322,11 @@ function savedInviteRoomResumePriority(room) {
   if (savedInviteRoomReceiveState(room) === "paused") {
     return 20;
   }
+  if (savedInviteRoomWaitingForPeerCode(room)) {
+    return 18;
+  }
   if (savedInviteRoomRouteReadinessView(room)) {
     return 15;
-  }
-  if (savedInviteRoomWaitingForPeerCode(room)) {
-    return 10;
   }
   return 0;
 }
@@ -3371,9 +3371,6 @@ function savedInviteRoomState(room, options = {}) {
     if (realOnionRecoveryView) {
       return realOnionRecoveryView.state;
     }
-    if (routeReadinessView) {
-      return routeReadinessView.state;
-    }
     if (receiveState === "listening") {
       return { key: "listening", label: t("roomStateListening") };
     }
@@ -3382,6 +3379,9 @@ function savedInviteRoomState(room, options = {}) {
     }
     if (waitingPeerCode) {
       return { key: "waiting-peer-code", label: t("roomStateWaitingPeerCode") };
+    }
+    if (routeReadinessView) {
+      return routeReadinessView.state;
     }
     if (room.code === currentCode && roomDetailOpen) {
       return { key: "active", label: t("roomStateActive") };
@@ -3426,13 +3426,6 @@ function savedInviteRoomListAction(room, options = {}) {
   if (realOnionRecovery) {
     return { action: realOnionRecovery.action, labelKey: realOnionRecovery.labelKey };
   }
-  const hasRouteReadinessView = Object.prototype.hasOwnProperty.call(options, "routeReadinessView");
-  const routeReadinessView = hasRouteReadinessView
-    ? options.routeReadinessView
-    : savedInviteRoomRouteReadinessView(room);
-  if (routeReadinessView) {
-    return { action: routeReadinessView.action, labelKey: routeReadinessView.labelKey };
-  }
   const receiveState = options.receiveState ?? savedInviteRoomReceiveState(room);
   if (receiveState === "paused") {
     return { action: "start-receiving", labelKey: "startReceiving" };
@@ -3440,6 +3433,13 @@ function savedInviteRoomListAction(room, options = {}) {
   const waitingPeerCode = options.waitingPeerCode ?? savedInviteRoomWaitingForPeerCode(room);
   if (waitingPeerCode) {
     return { action: "paste-peer-code", labelKey: "roomActionPastePeerCode" };
+  }
+  const hasRouteReadinessView = Object.prototype.hasOwnProperty.call(options, "routeReadinessView");
+  const routeReadinessView = hasRouteReadinessView
+    ? options.routeReadinessView
+    : savedInviteRoomRouteReadinessView(room);
+  if (routeReadinessView) {
+    return { action: routeReadinessView.action, labelKey: routeReadinessView.labelKey };
   }
   return null;
 }
