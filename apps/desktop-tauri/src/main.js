@@ -4292,12 +4292,16 @@ function parseFieldTestReport(report) {
   return fields;
 }
 
-function fieldTestReportBlocker(parsed) {
-  const routeReadinessBlocked =
+function fieldTestRouteReadinessBlocked(parsed) {
+  return (
     parsed.route_readiness_ready !== "true" &&
     parsed.route_readiness_failure_kind &&
-    parsed.route_readiness_failure_kind !== "none";
-  if (routeReadinessBlocked) {
+    parsed.route_readiness_failure_kind !== "none"
+  );
+}
+
+function fieldTestReportBlocker(parsed) {
+  if (fieldTestRouteReadinessBlocked(parsed)) {
     return parsed.route_readiness_failure_kind;
   }
   if (parsed.real_onion_next_blocker && parsed.real_onion_next_blocker !== "none") {
@@ -4424,6 +4428,7 @@ function fieldTestChecklistItems(report, peerReport = "") {
     parsed.real_onion_external_peer_delivery_confirmed === "true" &&
     parsed.real_onion_local_dev_roundtrip_result !== "true";
   const roomListState = fieldTestReportValue(parsed.room_list_state_key, "none");
+  const routeReadinessBlocked = fieldTestRouteReadinessBlocked(parsed);
   const buildMatch = fieldTestBuildIdentityMatches(report, peerReport);
   return [
     {
@@ -4463,7 +4468,13 @@ function fieldTestChecklistItems(report, peerReport = "") {
     },
     {
       key: "report",
-      status: realOnionAttempted ? (realOnionRetryable ? "check" : "done") : "pending",
+      status: externalOnionDelivered
+        ? "done"
+        : routeReadinessBlocked
+          ? "pending"
+          : realOnionAttempted
+            ? (realOnionRetryable ? "check" : "done")
+            : "pending",
       label: t("fieldTestChecklistReport"),
     },
   ];
