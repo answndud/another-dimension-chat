@@ -9179,6 +9179,13 @@ function twoProfileComposerPrimaryIntent({
     allowMissingMessage: true,
     latestOnionOutbound: null,
   });
+  if (productionTwoProfileReceiveStoppingInOtherRoom(input)) {
+    return {
+      action: "wait-receive-stop",
+      labelKey: "receiveStopPending",
+      disabledReason: t("receiveStopPending"),
+    };
+  }
   if ((needsReceiveStart || needsReceiveBeforeSend) || routeReadiness.nextAction === "start-receiving") {
     return {
       action: "start-receiving",
@@ -10592,15 +10599,18 @@ function applyProductionActionState() {
     peerEndpointState,
   });
   const composerPrimaryAvailableWithoutDraft = composerPrimaryIntent.action !== "send";
+  const composerPrimaryWaitingForReceiveStop = composerPrimaryIntent.action === "wait-receive-stop";
   setActionButtonState(
     fields.runProductionTwoProfileMessageRoundtrip,
     composerPrimaryAvailableWithoutDraft
-      ? busy || !hasMessageRetentionPolicy
+      ? busy || !hasMessageRetentionPolicy || composerPrimaryWaitingForReceiveStop
       : !availability.runTwoProfileMessageRoundtrip,
     busy
       ? "Wait for the active production action."
       : !hasMessageRetentionPolicy
         ? retentionPolicyBlocker
+      : composerPrimaryWaitingForReceiveStop
+        ? composerPrimaryIntent.disabledReason
       : composerPrimaryIntent.action === "start-receiving"
         ? t("receiveIntentRestartReady")
       : composerPrimaryIntent.action !== "send"
@@ -14809,6 +14819,10 @@ async function runProductionTwoProfileComposerPrimaryAction() {
   if (intent.action === "start-receiving") {
     setChatDeliveryNoticeByKey("chatNoticeReceiveRestart", "success", input);
     await startProductionTwoProfileOnionReceive();
+    return;
+  }
+  if (intent.action === "wait-receive-stop") {
+    showSavedInviteRoomReceiveStopPending();
     return;
   }
   if (intent.action === "verify") {
