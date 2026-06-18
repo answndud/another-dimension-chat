@@ -347,6 +347,28 @@ npm run test:native-shell
 npm run tauri:dev
 ```
 
+
+### Build Speed Boundary
+
+The default `public-shell` feature pulls in only `tauri` + `serde` + `serde_json`.
+Zero `another-dimension-*` runtime crates, `tokio`, `rusqlite`, `rustls`, or
+arti/Tor deps in the default build. The heavy runtime features
+(`legacy-embedded-runtime`, `full-runtime`, `manual-onion-client-attempt`,
+`manual-onion-bridge-client`) are explicit opt-in and require full `cargo build`
+with native compilation, vendored sqlcipher/OpenSSL, and optional arti.
+
+The fast path is: `npm run build` (Vite-only) + `cargo check --manifest-path src-tauri/Cargo.toml`.
+The `test:native-shell` script (`cargo check` on the Tauri Cargo.toml) without
+additional `--features` uses the fast path only.
+
+Machine-checkable from the repository root:
+
+```bash
+bash scripts/build_speed_boundary_once.sh
+```
+
+Expected output begins with `build_speed_boundary_status=ok`.
+
 Dependency/build gate:
 
 - `package-lock.json` is committed to pin the scaffold dependency graph.

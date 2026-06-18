@@ -390,6 +390,30 @@ request without exploit details.
 
 See [SUPPORT.md](SUPPORT.md) and [reference/PUBLIC_INTAKE_POLICY.md](reference/PUBLIC_INTAKE_POLICY.md).
 
+
+## Build Speed Boundary
+
+The desktop Tauri shell uses a two-tier build dependency strategy. The fast
+path (`public-shell` + Vite) avoids heavy Rust crate compilation. The heavy
+path is explicit opt-in for full-runtime/release builds.
+
+- **Fast path (`public-shell` default)**: Rust deps are `tauri`, `serde`, and
+  `serde_json` only. No `another-dimension-*` runtime crates, no `tokio`, no
+  `rusqlite`/bundled-sqlcipher, no `rustls`, no arti/Tor. Vite frontend build
+  adds no Rust compilation. Engine sidecar is not built or bundled.
+- **Heavy opt-in path** (`legacy-embedded-runtime`, `full-runtime`,
+  `manual-onion-client-attempt`, `manual-onion-bridge-client`): pulls in all
+  seven runtime crates, `rustls`, `tokio`, `rusqlite` with bundled
+  `sqlcipher`/vendored OpenSSL, and optional arti-client/Tor deps.
+  Requires `cargo build` with native compilation.
+
+This boundary is machine-checkable:
+
+```bash
+bash scripts/build_speed_boundary_once.sh
+```
+
+Expected output begins with `build_speed_boundary_status=ok`.
 ## Engineering Notes
 
 For a portfolio-style explanation of why this exists and how it is built, read
