@@ -29,9 +29,10 @@ const dictionaries = {
     firstRunRoomStep: "Create a pairwise invite room or paste the invite code you received.",
     firstRunVerifyStep: "Compare the mandatory safety phrase, then write a message.",
     firstRunManualMessageStep:
-      "Export/import the manual encrypted envelope, then reply, retry, cancel, or delete locally.",
+      "Export/import the manual encrypted envelope, then reply, retry, or cancel locally.",
     firstRunDiagnosticsStep:
       "Copy public diagnostics only after redaction; blocked actions show the reason and next recovery action.",
+    firstRunLocalDeleteStep: "Delete local data on this device only after the manual flow is done.",
     firstRunPrimaryNextAction: "Next: create or unlock your local profile.",
     firstRunStatusDone: "Done",
     firstRunStatusNow: "Now",
@@ -179,7 +180,7 @@ const dictionaries = {
     fieldTestReportCopyFallback: "Could not copy automatically. The report is selected; copy it manually.",
     publicBetaDiagnostics: "Public support diagnostics",
     publicBetaDiagnosticsHint:
-      "Support-safe status, build, broad failure class, next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary only. No crash upload, telemetry, raw log export, workflow state, codes, endpoints, messages, profiles, paths, passphrases, or key material.",
+      "Support-safe status, build, broad failure class, next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary only. It must not ask for raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, or screenshots.",
     publicRecoveryGuide: "Recovery guide",
     publicRecoveryInstall:
       "Install/checksum failure: stop, verify the same-release .sha256, then follow README or INSTALL_UNSIGNED_MACOS.md.",
@@ -192,15 +193,15 @@ const dictionaries = {
     publicRecoveryLifecycle:
       "Lifecycle confirmation required: confirm the local-only delete or wipe scope before continuing.",
     redactedSupportReport: "Redacted support report",
-    copyRedactedSupportReport: "Copy support report",
-    redactedSupportReportReady: "Redacted support report ready.",
+    copyRedactedSupportReport: "Copy redacted support report",
+    redactedSupportReportReady: "Redacted support report ready; raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, and screenshots are excluded.",
     redactedSupportReportEmpty: "No failure report yet.",
     redactedSupportReportCopied: "Redacted support report copied.",
     redactedSupportReportCopyFallback:
       "Could not copy automatically. The redacted support report is selected; copy it manually.",
     refreshPublicBetaDiagnostics: "Refresh diagnostics",
     copyPublicBetaDiagnostics: "Copy diagnostics",
-    publicBetaDiagnosticsCopied: "Public support diagnostics copied.",
+    publicBetaDiagnosticsCopied: "Public support diagnostics copied; no raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, or screenshots included.",
     publicBetaDiagnosticsCopyFallback:
       "Could not copy automatically. The diagnostics are selected; copy them manually.",
     peerFieldTestReport: "Peer report",
@@ -1219,9 +1220,10 @@ const dictionaries = {
     firstRunRoomStep: "pairwise invite room을 만들거나 받은 invite code를 붙여넣습니다.",
     firstRunVerifyStep: "mandatory safety phrase를 비교한 뒤 메시지를 작성합니다.",
     firstRunManualMessageStep:
-      "manual encrypted envelope를 export/import한 뒤 reply, retry, cancel, delete를 로컬에서 처리합니다.",
+      "manual encrypted envelope를 export/import한 뒤 reply, retry, cancel을 로컬에서 처리합니다.",
     firstRunDiagnosticsStep:
       "public diagnostics는 redaction 후에만 복사합니다. blocked action은 reason과 next recovery action을 표시합니다.",
+    firstRunLocalDeleteStep: "manual flow가 끝난 뒤에만 이 기기의 local data를 삭제합니다.",
     firstRunPrimaryNextAction: "다음: 로컬 profile을 만들거나 unlock 하세요.",
     firstRunStatusDone: "완료",
     firstRunStatusNow: "지금",
@@ -1369,7 +1371,7 @@ const dictionaries = {
     fieldTestReportCopyFallback: "자동 복사에 실패했습니다. 리포트를 선택해 두었으니 직접 복사하세요.",
     publicBetaDiagnostics: "공개 지원용 진단 정보",
     publicBetaDiagnosticsHint:
-      "지원에 필요한 상태, 빌드, 넓은 실패 분류, 다음 액션, desktop local-private-flow acceptance status/blockers/non-claims, app-launch network boundary만 포함합니다. crash upload, telemetry, raw log export, 작업 흐름 상태, 코드, endpoint, 메시지, 프로필명, 경로, passphrase, key material은 제외합니다.",
+      "지원에 필요한 상태, 빌드, 넓은 실패 분류, 다음 액션, desktop local-private-flow acceptance status/blockers/non-claims, app-launch network boundary만 포함합니다. raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, screenshots는 요구하지 않습니다.",
     publicRecoveryGuide: "복구 안내",
     publicRecoveryInstall:
       "Install/checksum failure: 중단하고 같은 release의 .sha256을 확인한 뒤 README 또는 INSTALL_UNSIGNED_MACOS.md를 따르세요.",
@@ -1382,15 +1384,15 @@ const dictionaries = {
     publicRecoveryLifecycle:
       "Lifecycle confirmation required: 계속하기 전에 local-only delete 또는 wipe 범위를 확인하세요.",
     redactedSupportReport: "민감정보 제거 지원 리포트",
-    copyRedactedSupportReport: "지원 리포트 복사",
-    redactedSupportReportReady: "민감정보 제거 지원 리포트가 준비되었습니다.",
+    copyRedactedSupportReport: "민감정보 제거 지원 리포트 복사",
+    redactedSupportReportReady: "민감정보 제거 지원 리포트가 준비되었습니다. raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, screenshots는 제외됩니다.",
     redactedSupportReportEmpty: "아직 실패 리포트가 없습니다.",
     redactedSupportReportCopied: "민감정보 제거 지원 리포트를 복사했습니다.",
     redactedSupportReportCopyFallback:
       "자동 복사에 실패했습니다. 민감정보 제거 지원 리포트를 선택해 두었으니 직접 복사하세요.",
     refreshPublicBetaDiagnostics: "진단 정보 새로고침",
     copyPublicBetaDiagnostics: "진단 정보 복사",
-    publicBetaDiagnosticsCopied: "공개 지원용 진단 정보를 복사했습니다.",
+    publicBetaDiagnosticsCopied: "공개 지원용 진단 정보를 복사했습니다. raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, screenshots는 포함되지 않습니다.",
     publicBetaDiagnosticsCopyFallback:
       "자동 복사에 실패했습니다. 진단 정보를 선택해 두었으니 직접 복사하세요.",
     peerFieldTestReport: "상대 리포트",

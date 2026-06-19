@@ -25204,11 +25204,6 @@ pub mod production {
             ContactId, PairwisePublicKey, PairwiseSignature, ProductionPairwisePrivateKey,
             ProfileName,
         };
-        use std::{
-            fs,
-            path::{Path, PathBuf},
-            time::{SystemTime, UNIX_EPOCH},
-        };
         use another_dimension_pairing::{
             production_pairing_payload_for, ProductionPairingPayloadParams, DEFAULT_TTL_SECONDS,
         };
@@ -25220,6 +25215,11 @@ pub mod production {
         use another_dimension_transport::{
             EndpointUpdateChannel, OnionServiceEndpoint, PairwiseRendezvousEndpoint,
             RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
+        };
+        use std::{
+            fs,
+            path::{Path, PathBuf},
+            time::{SystemTime, UNIX_EPOCH},
         };
 
         #[test]
@@ -34031,9 +34031,15 @@ pub mod production {
             ) -> ((&PathBuf, &ProfileName), (&PathBuf, &ProfileName)) {
                 let is_sender_alice = sender_name == self.alice.as_str();
                 if is_sender_alice {
-                    ((&self.alice_store, &self.alice), (&self.bob_store, &self.bob))
+                    (
+                        (&self.alice_store, &self.alice),
+                        (&self.bob_store, &self.bob),
+                    )
                 } else {
-                    ((&self.bob_store, &self.bob), (&self.alice_store, &self.alice))
+                    (
+                        (&self.bob_store, &self.bob),
+                        (&self.alice_store, &self.alice),
+                    )
                 }
             }
 
@@ -34117,7 +34123,10 @@ pub mod production {
                             &passphrase,
                         )
                         .expect("bob init export fallback");
-                        assert!(bob_init.handshake_message_created(), "one side must initiate");
+                        assert!(
+                            bob_init.handshake_message_created(),
+                            "one side must initiate"
+                        );
                         let bob_init_payload = bob_init.export_payload().to_string();
                         (
                             bob.clone(),
@@ -34216,7 +34225,8 @@ pub mod production {
         }
 
         #[test]
-        fn production_two_profile_resume_reloads_status_and_transcripts_after_new_command_invocations() {
+        fn production_two_profile_resume_reloads_status_and_transcripts_after_new_command_invocations(
+        ) {
             let root = temp_root("core_resume_reload");
             let fixture = CoreConversationFixture::setup_invite_room(
                 &root,
@@ -34228,7 +34238,8 @@ pub mod production {
             );
 
             let sender_name = fixture.alice.as_str();
-            let ((sender_store, sender), (receiver_store, receiver)) = fixture.sender_receiver(sender_name);
+            let ((sender_store, sender), (receiver_store, receiver)) =
+                fixture.sender_receiver(sender_name);
 
             let sent = fixture.send_and_import(
                 sender,
@@ -34269,7 +34280,10 @@ pub mod production {
                 .find(|entry| entry.message_number() == sent)
                 .expect("sender sent entry");
             assert_eq!(sender_entry.direction(), "sent");
-            assert_eq!(sender_entry.ttl_seconds(), PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS);
+            assert_eq!(
+                sender_entry.ttl_seconds(),
+                PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS
+            );
             assert_eq!(sender_entry.plaintext(), b"resume after restart");
 
             let receiver_transcript = production_message_transcript_export(
@@ -34338,7 +34352,8 @@ pub mod production {
             );
 
             let sender_name = fixture.alice.as_str();
-            let ((sender_store, sender), (receiver_store, receiver)) = fixture.sender_receiver(sender_name);
+            let ((sender_store, sender), (receiver_store, receiver)) =
+                fixture.sender_receiver(sender_name);
             let sent = fixture.send_and_import(
                 sender,
                 sender_store,
@@ -34368,7 +34383,10 @@ pub mod production {
                 .find(|entry| entry.message_number() == sent)
                 .expect("failed entry");
             assert_eq!(failed_entry.outbound_delivery_state(), Some("failed"));
-            assert_eq!(failed_entry.outbound_failure_kind(), Some("peer-endpoint-missing"));
+            assert_eq!(
+                failed_entry.outbound_failure_kind(),
+                Some("peer-endpoint-missing")
+            );
             assert!(failed_entry.outbound_retryable());
 
             let _endpoint = production_pairing_session_remote_endpoint_status(

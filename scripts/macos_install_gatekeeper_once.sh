@@ -84,8 +84,8 @@ require_text "$FRESH_REHEARSAL" "Do not use terminal quarantine-removal commands
 require_text "$FRESH_REHEARSAL" "gatekeeper_manual_allow_result"
 require_text "$FRESH_REHEARSAL" "app_launch_network=false"
 require_text "$FRESH_REHEARSAL" "next_owner_action=run-clean-macos-fresh-install-with-disposable-profile"
-require_text "$FRESH_RESULT" "gatekeeper_manual_allow_result: hold"
-require_text "$FRESH_RESULT" "app_launch_network: false"
+require_text "$FRESH_RESULT" "gatekeeper_manual_allow_result=hold"
+require_text "$FRESH_RESULT" "app_launch_network=false"
 require_text "$FRESH_RESULT" "clean_machine_result_accepted=false"
 require_text "$FRESH_RESULT" "next_owner_action=run-clean-macos-fresh-install-with-disposable-profile"
 

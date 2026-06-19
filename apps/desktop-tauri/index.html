@@ -85,10 +85,13 @@
               Compare the mandatory safety phrase, then write a message.
             </li>
             <li data-first-run-step="message" data-step-status="pending" data-i18n="firstRunManualMessageStep">
-              Export/import the manual encrypted envelope, then reply, retry, cancel, or delete locally.
+              Export/import the manual encrypted envelope, then reply, retry, or cancel locally.
             </li>
             <li data-first-run-step="diagnostics" data-step-status="pending" data-i18n="firstRunDiagnosticsStep">
               Copy public diagnostics only after redaction; blocked actions show the reason and next recovery action.
+            </li>
+            <li data-first-run-step="localDelete" data-step-status="pending" data-i18n="firstRunLocalDeleteStep">
+              Delete local data on this device only after the manual flow is done.
             </li>
           </ol>
           <p
@@ -729,7 +732,7 @@
                 <section class="public-diagnostics-panel" aria-labelledby="public-beta-diagnostics-title">
                   <h5 id="public-beta-diagnostics-title" data-i18n="publicBetaDiagnostics">Public diagnostics</h5>
                   <p data-i18n="publicBetaDiagnosticsHint">
-                    Status, build, and failure class only. No crash upload, telemetry, or raw log export. It excludes codes, endpoints, messages, profiles, paths, logs, passphrases, and key material.
+                    Status, build, broad failure class, next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary only. It must not ask for raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, or screenshots.
                   </p>
                   <section class="public-recovery-guide" aria-labelledby="public-recovery-guide-title">
                     <h6 id="public-recovery-guide-title" data-i18n="publicRecoveryGuide">Recovery guide</h6>
@@ -762,7 +765,7 @@
                       data-i18n="copyRedactedSupportReport"
                       disabled
                     >
-                      Copy support report
+                      Copy redacted support report
                     </button>
                   </section>
                   <textarea id="public-beta-diagnostics" rows="6" readonly></textarea>
