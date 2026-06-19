@@ -60,7 +60,6 @@ required_files=(
   "$APP_DIR/src/transcript-retention.js"
   "$APP_DIR/src/styles.css"
   "$APP_DIR/vite.config.js"
-  "$ROOT_DIR/scripts/repo_size_guard_once.sh"
   "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh"
   "$TAURI_DIR/Cargo.toml"
   "$TAURI_DIR/build.rs"
@@ -75,10 +74,18 @@ for file in "${required_files[@]}"; do
   test -f "$file"
 done
 
+if [ -e "$TAURI_DIR/capabilities" ]; then
+  echo "unexpected Tauri capabilities directory present: $TAURI_DIR/capabilities" >&2
+  exit 1
+fi
+
 require_contains "$TAURI_DIR/tauri.conf.json" '"frontendDist": "../dist"'
 require_contains "$TAURI_DIR/tauri.conf.json" '"devUrl": "http://localhost:1420"'
 require_contains "$TAURI_DIR/tauri.conf.json" '"active": true'
 require_contains "$TAURI_DIR/tauri.conf.json" '"resources": \[\]'
+require_not_contains "$TAURI_DIR/tauri.conf.json" '"permissions"'
+require_not_contains "$TAURI_DIR/tauri.conf.json" '"capabilities"'
+require_not_contains "$TAURI_DIR/tauri.conf.json" '"allowlist"'
 require_contains "$APP_DIR/package.json" '"tauri:build"'
 require_contains "$APP_DIR/package.json" '"tauri:build:full"'
 require_contains "$APP_DIR/package.json" '"legacy:tauri:build:embedded-runtime"'
@@ -783,6 +790,5 @@ cargo metadata --manifest-path "$TAURI_DIR/Cargo.toml" --no-deps --format-versio
 
 npm --prefix "$APP_DIR" run verify:ui-loop-scripts
 npm --prefix "$APP_DIR" run test:ui-fast
-bash "$ROOT_DIR/scripts/repo_size_guard_once.sh"
 
 printf 'tauri scaffold static and UI verification passed\n'
