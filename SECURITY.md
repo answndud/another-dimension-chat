@@ -21,7 +21,7 @@ storage, transport, pairing, or contact-discovery semantics.
 The later iOS candidate follows the same shape as a thin Swift shell over
 UniFFI or another narrow FFI boundary into the shared Rust core. iOS-specific
 distribution constraints are product constraints, not security claims.
-The public desktop artifact is currently the unsigned macOS DMG path. Windows
+The public desktop packet is currently the unsigned macOS DMG path. Windows
 is a local desktop build candidate only; before any public Windows artifact, it
 must keep the same Tauri app-data resolver semantics, encrypted local store,
 local deletion controls, redacted diagnostics, explicit user-action boundary,

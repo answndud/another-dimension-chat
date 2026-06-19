@@ -325,6 +325,7 @@ test("high-risk runtime evidence summary exposes only copy-safe readiness fields
     "readiness_condition_set",
     "readiness_missing_conditions",
     "evidence_source",
+    "high_risk_runtime_evidence_decision",
     "failure_class",
     "clipboard_expiry_ready",
     "emergency_controls_ready",
@@ -333,14 +334,19 @@ test("high-risk runtime evidence summary exposes only copy-safe readiness fields
   ]);
   assert.equal(view.copyablePayload.readiness_missing_conditions, "none");
   assert.equal(view.copyablePayload.evidence_source, "runtime-report");
+  assert.equal(view.copyablePayload.high_risk_runtime_evidence_decision, "accepted");
   assert.equal(view.copyablePayload.failure_class, "stale_endpoint");
   assert.equal(view.copyablePayload.clipboard_expiry_ready, true);
   assert.equal(view.copyablePayload.emergency_controls_ready, true);
   assert.equal(view.copyablePayload.local_storage_evidence_ready, true);
   assert.equal(view.copyablePayload.release_integrity_ready, true);
   assert.equal(view.highRiskReadyClaimAllowed, false);
+  assert.equal(view.decision, "accepted");
+  assert.equal(view.nextOwnerAction, "none");
   assert.match(view.boundary, /copy_requires_explicit_user_action=true/);
   assert.match(view.boundary, /copy_enabled=true/);
+  assert.match(view.boundary, /high_risk_runtime_evidence_decision=accepted/);
+  assert.match(view.boundary, /next_owner_action=none/);
   assert.match(view.boundary, /high_risk_ready_claim_allowed=false/);
   assert.doesNotMatch(
     view.copyablePayloadText,
@@ -637,6 +643,11 @@ test("version integrity view keeps manual update and rollback claims bounded", (
   assert.equal(view.versionComparison, "manual-review-newer-or-different-version");
   assert.equal(view.expectedReleaseAuthority, "same-github-release-assets");
   assert.equal(view.checksumVerification, "matching-sha256-before-open");
+  assert.equal(view.releaseIntegrityConditionSet, "checksum-provenance#manual-advisory#signed-update-manifest-candidate");
+  assert.equal(view.releaseIntegrityChecksumProvenanceReady, true);
+  assert.equal(view.releaseIntegrityManualAdvisoryReady, true);
+  assert.equal(view.releaseIntegritySignedUpdateManifestCandidateReady, true);
+  assert.equal(view.releaseIntegrityReady, true);
   assert.equal(view.autoUpdateReady, false);
   assert.equal(view.signedUpdateManifestReady, false);
   assert.equal(view.rollbackPreventionClaimed, false);
@@ -670,6 +681,11 @@ test("version integrity view keeps manual update and rollback claims bounded", (
   assert.match(view.boundary, /push_update_notice=false/);
   assert.match(view.boundary, /forced_upgrade=false/);
   assert.match(view.boundary, /release_artifact_checksum_policy=same-release-sha256-required/);
+  assert.match(view.boundary, /release_integrity_condition_set=checksum-provenance#manual-advisory#signed-update-manifest-candidate/);
+  assert.match(view.boundary, /release_integrity_checksum_provenance_ready=true/);
+  assert.match(view.boundary, /release_integrity_manual_advisory_ready=true/);
+  assert.match(view.boundary, /release_integrity_signed_update_manifest_candidate_ready=true/);
+  assert.match(view.boundary, /release_integrity_ready=true/);
   assert.match(view.boundary, /signed_manifest_source_gate=true/);
   assert.match(view.boundary, /dependency_inventory_lockfile_hash_bound=true/);
   assert.match(view.boundary, /high_risk_release_claim_allowed=false/);
@@ -733,6 +749,7 @@ test("windows public artifact candidate keeps installer and security claims fals
   const view = productionWindowsPublicArtifactCandidateView({ platform: "Win32" });
 
   assert.equal(view.artifactType, "windows-shell-nsis-exe-installer-candidate");
+  assert.equal(view.artifactFilename, "AnotherDimension-0.1.0-windows-shell-nsis.exe");
   assert.equal(view.bundleTarget, "nsis");
   assert.equal(view.runtimeMode, "shell-sidecar-pending");
   assert.equal(view.onionRuntimeCompiled, false);
@@ -748,6 +765,10 @@ test("windows public artifact candidate keeps installer and security claims fals
   assert.equal(view.sharedCoreBypassAllowed, false);
   assert.equal(view.profileSessionMessageStorageBypassAllowed, false);
   assert.equal(view.manifestChecksumProvenanceRequired, true);
+  assert.equal(
+    view.artifactIdentityTuple,
+    "AnotherDimension-0.1.0-windows-shell-nsis.exe#AnotherDimension-0.1.0-windows-shell-nsis.exe.sha256#AnotherDimension-0.1.0-windows-shell-nsis.exe.provenance.json#WINDOWS_ARTIFACT_MANIFEST.json",
+  );
   assert.equal(view.manifestValidatesVersionCommitInstallerWebview2NoAutoUpdate, true);
   assert.equal(view.runtimeResultExternalPeerEvidenceSeparated, true);
   assert.equal(view.engineSidecarRequired, true);
@@ -762,6 +783,8 @@ test("windows public artifact candidate keeps installer and security claims fals
   assert.equal(view.engineSidecarStdoutReturned, false);
   assert.equal(view.engineSidecarStderrReturned, false);
   assert.equal(view.engineRuntimeMode, "manual-e2ee-engine-sidecar");
+  assert.equal(view.installOpenBasicFlow, "redacted_status_only");
+  assert.equal(view.sidecarSelfTestStatus, "manual-self-test-redacted-status-only");
   assert.equal(view.localRuntimePromotedToDeliveryProof, false);
   assert.equal(view.smartscreenSecurityBoundaryClaimed, false);
   assert.equal(view.codeSigningSecurityBoundaryClaimed, false);
@@ -774,6 +797,7 @@ test("windows public artifact candidate keeps installer and security claims fals
   assert.equal(view.windowsProductionClaimAllowed, false);
   assert.match(view.summary, /windows_public_artifact_candidate=true/);
   assert.match(view.summary, /webview2_runtime_required=true/);
+  assert.match(view.summary, /artifact_identity_tuple=AnotherDimension-0\.1\.0-windows-shell-nsis\.exe#AnotherDimension-0\.1\.0-windows-shell-nsis\.exe\.sha256#AnotherDimension-0\.1\.0-windows-shell-nsis\.exe\.provenance\.json#WINDOWS_ARTIFACT_MANIFEST\.json/);
   assert.match(view.summary, /runtime_mode=shell-sidecar-pending/);
   assert.match(view.summary, /onion_runtime_compiled=false/);
   assert.match(view.summary, /runtime_result_external_peer_evidence_separated=true/);
@@ -785,6 +809,8 @@ test("windows public artifact candidate keeps installer and security claims fals
   assert.match(view.summary, /engine_sidecar_raw_path_returned=false/);
   assert.match(view.summary, /engine_sidecar_stdout_returned=false/);
   assert.match(view.summary, /engine_sidecar_stderr_returned=false/);
+  assert.match(view.summary, /install_open_basic_flow=redacted_status_only/);
+  assert.match(view.summary, /sidecar_self_test_status=manual-self-test-redacted-status-only/);
   assert.doesNotMatch(
     view.boundary,
     /windows_public_artifact_ready=true|windows_installer_ready=true|windows_signing_ready=true|smartscreen_security_boundary_claimed=true|shared_core_bypass_allowed=true|engine_sidecar_raw_path_returned=true|engine_sidecar_stdout_returned=true|engine_sidecar_stderr_returned=true/,
@@ -815,62 +841,69 @@ test("first-run desktop summary keeps purpose release status and next action vis
     roomPresent: true,
     safetyVerified: true,
     messageFlowReady: true,
+    diagnosticsCopied: true,
   });
 
   assert.equal(initial.purpose, "No-central-trusted-server 1:1 private messenger");
   assert.equal(initial.releaseStatus, "Unsigned public beta; no production security claim");
   assert.equal(initial.currentStep, "profile");
   assert.equal(initial.currentStepIndex, 1);
-  assert.equal(initial.stepCount, 5);
+  assert.equal(initial.stepCount, 6);
   assert.equal(initial.stepStatuses.profile, "current");
   assert.equal(initial.stepStatuses.room, "blocked");
   assert.equal(initial.stepStatuses.safety, "blocked");
   assert.equal(initial.stepStatuses.message, "blocked");
   assert.equal(initial.stepStatuses.diagnostics, "blocked");
+  assert.equal(initial.stepStatuses.localDelete, "blocked");
   assert.equal(noRoom.currentStep, "room");
   assert.equal(unverified.currentStep, "safety");
   assert.equal(readyToWrite.currentStep, "message");
-  assert.equal(active.currentStep, "diagnostics");
+  assert.equal(active.currentStep, "localDelete");
   assert.equal(active.stepStatuses.profile, "complete");
   assert.equal(active.stepStatuses.message, "complete");
-  assert.equal(active.stepStatuses.diagnostics, "current");
+  assert.equal(active.stepStatuses.diagnostics, "complete");
+  assert.equal(active.stepStatuses.localDelete, "current");
   assert.equal(initial.primaryNextAction, "Enter a local profile and passphrase.");
   assert.equal(locked.primaryNextAction, "Unlock or create the local profile.");
   assert.equal(noRoom.primaryNextAction, "Create an invite room or paste the invite code you received.");
   assert.equal(unverified.primaryNextAction, "Compare the safety phrase before messaging.");
   assert.equal(readyToWrite.primaryNextAction, "Write a message and export the encrypted envelope.");
-  assert.equal(active.primaryNextAction, "Copy the redacted support report only if you need help.");
+  assert.equal(active.primaryNextAction, "Delete the local data on this device when you are done.");
   assert.equal(initial.stepDetails.profile.nextAction, "enter-local-profile-and-passphrase");
   assert.equal(initial.stepDetails.profile.blockedReason, "profile-input-missing");
   assert.equal(noRoom.stepDetails.room.nextAction, "create-or-join-pairwise-invite-room");
   assert.equal(noRoom.stepDetails.room.blockedReason, "room-missing");
   assert.equal(unverified.stepDetails.safety.blockedReason, "safety-not-verified");
   assert.equal(readyToWrite.stepDetails.message.nextAction, "export-manual-encrypted-envelope");
-  assert.equal(active.stepDetails.diagnostics.nextAction, "copy-redacted-support-report-if-needed");
-  assert.equal(active.stepDetails.diagnostics.blockedReason, "diagnostics-not-copied");
+  assert.equal(active.stepDetails.message.nextAction, "import-reply-retry-cancel");
+  assert.equal(active.stepDetails.diagnostics.nextAction, "done");
+  assert.equal(active.stepDetails.diagnostics.blockedReason, "none");
+  assert.equal(active.stepDetails.localDelete.nextAction, "delete-local-data-on-this-device");
+  assert.equal(active.stepDetails.localDelete.blockedReason, "local-delete-not-completed");
   assert.equal(initial.currentAction, "enter-local-profile-and-passphrase");
   assert.equal(initial.currentBlockedReason, "profile-input-missing");
   assert.equal(initial.stepDetails.profile.keyboardLabel, "keyboard-profile-form");
-  assert.equal(initial.stepDetails.message.localDeleteWarning, "delete-local-data-removes-this-device-copy-no-cloud-recovery");
+  assert.equal(initial.stepDetails.localDelete.localDeleteWarning, "delete-local-data-removes-this-device-copy-no-cloud-recovery");
   assert.equal(initial.stepDetails.diagnostics.copyStatus, "not-copied");
-  assert.equal(active.currentAction, "copy-redacted-support-report-if-needed");
-  assert.equal(active.diagnosticsCopyStatus, "not-copied");
+  assert.equal(active.currentAction, "delete-local-data-on-this-device");
+  assert.equal(active.currentBlockedReason, "local-delete-not-completed");
+  assert.equal(active.diagnosticsCopyStatus, "copied");
   assert.match(initial.boundary, /first_run_summary=true/);
   assert.match(initial.boundary, /first_run_current_step=profile/);
   assert.match(initial.boundary, /first_run_progress_visible=true/);
   assert.match(initial.boundary, /first_run_status_values=complete#current#blocked/);
   assert.match(initial.boundary, /primary_next_action_visible=true/);
   assert.match(active.boundary, /first_run_step_next_actions=/);
-  assert.match(active.boundary, /diagnostics:copy-redacted-support-report-if-needed/);
+  assert.match(active.boundary, /localDelete:delete-local-data-on-this-device/);
   assert.match(active.boundary, /first_run_blocked_reasons=/);
-  assert.match(active.boundary, /diagnostics:diagnostics-not-copied/);
+  assert.match(active.boundary, /localDelete:local-delete-not-completed/);
   assert.match(active.boundary, /first_run_keyboard_labels=/);
   assert.match(active.boundary, /message:keyboard-manual-envelope-actions/);
-  assert.match(active.boundary, /first_run_current_action=diagnostics:copy-redacted-support-report-if-needed/);
-  assert.match(active.boundary, /first_run_current_blocked_reason=diagnostics-not-copied/);
+  assert.match(active.boundary, /first_run_current_action=localDelete:delete-local-data-on-this-device/);
+  assert.match(active.boundary, /first_run_current_blocked_reason=local-delete-not-completed/);
   assert.match(active.boundary, /first_run_recovery_next_action_visible=true/);
   assert.match(active.boundary, /first_run_local_delete_warning=delete-local-data-removes-this-device-copy-no-cloud-recovery/);
-  assert.match(active.boundary, /first_run_diagnostics_copy_status=not-copied/);
+  assert.match(active.boundary, /first_run_diagnostics_copy_status=copied/);
   assert.match(active.boundary, /first_run_mobile_desktop_wrap_safe=true/);
   assert.match(initial.boundary, /sensitive_communication_claim=false/);
   assert.match(initial.boundary, /security_ready_claim=false/);

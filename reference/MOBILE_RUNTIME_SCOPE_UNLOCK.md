@@ -31,6 +31,10 @@ or messaging capability.
 - ios_json_bridge_adapter_ready=true
 - mobile_forbidden_dependency_scan_ready=true
 - mobile_error_taxonomy_bound_to_json_bridge=true
+- app_launch_network_boundary_required=true
+- shared_core_api_boundary_closed=true
+- shared_core_diagnostics_boundary_closed=true
+- shared_core_runtime_status_boundary_closed=true
 - profile_unlock_status_failure_class=locked_profile
 - callable_json_bridge_implemented=true
 - callable_ffi_implemented=false

@@ -52,6 +52,17 @@ same vocabulary:
 Missing conditions are actionable status, not public permission to claim
 High-Risk readiness.
 
+Release integrity readiness must expose its own subconditions with the same
+source vocabulary:
+
+- `checksum-provenance`
+- `manual-advisory`
+- `signed-update-manifest-candidate`
+
+When the app shows `release-integrity` as ready, it must also show all three
+subconditions as ready. That status supports the readiness boundary; it does
+not authorize a stable signed update claim.
+
 Validator `next_owner_action` values must use the same readiness vocabulary:
 
 - `safety-verification` -> `verify-safety-number`

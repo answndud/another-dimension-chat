@@ -3337,6 +3337,7 @@ function renderFirstRunDesktopSummary(input = {}) {
   fields.firstRunPrimaryNextAction?.setAttribute("data-recovery-next-action", view.currentAction);
   fields.firstRunPrimaryNextAction?.setAttribute("data-local-delete-warning", view.localDeleteWarning);
   fields.firstRunPrimaryNextAction?.setAttribute("data-diagnostics-copy-status", view.diagnosticsCopyStatus);
+  fields.firstRunPrimaryNextAction?.setAttribute("data-local-delete-complete", String(Boolean(input.localDeleteComplete)));
   fields.firstRunPrimaryNextAction?.setAttribute("aria-label", `${view.progressLabel}. Next: ${view.primaryNextAction}`);
   fields.firstRunChecklistItems?.forEach((item) => {
     const step = item.dataset.firstRunStep;
@@ -3369,22 +3370,22 @@ function renderFirstRunDesktopSummary(input = {}) {
           ]
         : [`${statusLabel}: ${t("firstRunStepNextPrefix")} ${nextAction}`];
     detailParts.push(`keyboard ${keyboardLabel}`);
-    if (step === "message") {
-      detailParts.push(`warning ${view.localDeleteWarning}`);
-    }
     if (step === "diagnostics") {
       detailParts.push(`copy ${view.diagnosticsCopyStatus}`);
+    }
+    if (step === "localDelete") {
+      detailParts.push(`warning ${view.localDeleteWarning}`);
     }
     const detailText = `${detailParts.join("; ")}.`;
     item.dataset.stepStatus = status;
     item.setAttribute("data-next-action", nextAction);
     item.setAttribute("data-blocked-reason", blockedReason);
     item.setAttribute("data-keyboard-label", keyboardLabel);
-    if (step === "message") {
-      item.setAttribute("data-local-delete-warning", view.localDeleteWarning);
-    }
     if (step === "diagnostics") {
       item.setAttribute("data-diagnostics-copy-status", view.diagnosticsCopyStatus);
+    }
+    if (step === "localDelete") {
+      item.setAttribute("data-local-delete-warning", view.localDeleteWarning);
     }
     detailNode.textContent = detailText;
     detailNode.setAttribute("data-step-detail-status", status);

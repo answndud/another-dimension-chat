@@ -43,6 +43,9 @@ identity, iCloud backup, Keychain-only unlock, App Store/TestFlight trust,
 Developer ID/notarization trust, external onion delivery success, or
 security-ready behavior.
 
+Generated artifact guards and diagnostics copy must stay source-boundary only;
+they must not turn into IPA release evidence or real-device readiness claims.
+
 The only allowed mobile command surface remains:
 
 - `shared_core_status_surface`

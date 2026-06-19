@@ -43,6 +43,9 @@ contact discovery, background delivery, push delivery, Google account, Play
 Services, Firebase Cloud Messaging, Android Keystore-only unlock, cloud backup,
 Play Store trust, external onion delivery success, or security-ready behavior.
 
+Generated artifact guards and diagnostics copy must stay source-boundary only;
+they must not turn into APK release evidence or real-device readiness claims.
+
 The only allowed mobile command surface remains:
 
 - `shared_core_status_surface`

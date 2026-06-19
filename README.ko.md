@@ -6,48 +6,81 @@
 
 [English](README.md) | 한국어
 
-Another Dimension Chat은 **중앙에서 신뢰해야 하는 서버가 없는** 고위험 1:1
-메신저 방향을 실험하는 초기 Rust/Tauri 프로토타입입니다.
+Another Dimension Chat은 Rust와 Tauri로 만든 local-first 1:1 private messenger 실험이다.
+central account, phone number, searchable username, central contact discovery,
+cloud message storage, push-notification dependency, cloud backup을 피하는 방향으로 설계했다.
 
-이 프로젝트는 일반적인 "서버 없는 채팅" 데모가 아닙니다. v0.1 기본 범위에서는
-전화번호, 이메일, 글로벌 계정, 검색 가능한 사용자 이름, 중앙 연락처 검색,
-중앙 메시지 서버, 푸시 알림, 클라우드 백업을 의도적으로 제외합니다.
+현재 beta는 pairwise invite room, safety material 비교, local encrypted storage,
+manual encrypted envelope exchange를 사용한다.
 
-현재 공개 빌드는 **서명되지 않은 실험적 macOS Apple Silicon 베타**입니다.
-notarization을 받지 않았고, 외부 감사를 완료하지 않았으며, production-ready가
-아닙니다. 민감한 실제 커뮤니케이션에는 사용하지 마세요.
+> 현재 공개 빌드는 unsigned macOS Apple Silicon beta이며, unaudited, non-production, sensitive communication 불가 상태다.
 
 ![Another Dimension Chat first-run beta screen](reference/screenshots/macos-public-beta-first-run-desktop.png)
 
-공개용 screenshot 목록은 [reference/screenshots/README.md](reference/screenshots/README.md)에
-있습니다. private room data가 보이는 screenshot은 올리지 말고, 다른 앱 이미지를
-게시하기 전에는 [reference/PUBLIC_SCREENSHOT_CHECKLIST.md](reference/PUBLIC_SCREENSHOT_CHECKLIST.md)를
-확인하세요.
+## 현재 상태
 
-## 다운로드
+| 항목 | 상태 |
+| --- | --- |
+| Public artifact | GitHub Release `v0.1.0-beta-onion-unsigned`의 unsigned macOS Apple Silicon beta DMG |
+| Production readiness | 아님 |
+| External audit | 없음 |
+| Sensitive communication | 허용하지 않음 |
+| Default transport | manual encrypted envelope exchange |
+| External onion delivery | experimental, explicit, fail-closed, reliable delivery claim 아님 |
+| Windows | local build candidate only; public artifact 없음 |
+| Android / iOS | source-shell candidate only; public mobile artifact 없음 |
 
-현재 unsigned packet은 아래 GitHub Release에 게시되어 있습니다.
+공개용 screenshot은 [reference/screenshots/README.md](reference/screenshots/README.md)를 보세요.
+private room data가 보이는 이미지는 올리지 말고, 다른 앱 이미지를 게시하기 전에는
+[reference/PUBLIC_SCREENSHOT_CHECKLIST.md](reference/PUBLIC_SCREENSHOT_CHECKLIST.md)를 확인하세요.
+
+## 왜 이 프로젝트가 있나
+
+이 프로젝트의 목표는 default 1:1 messaging 경로에서 central trust를 줄이면서,
+security-sensitive behavior는 Rust core에 남겨두는 것이다.
+
+편의성은 일부 포기한다. pairwise room, safety comparison, manual envelope exchange는
+central mailbox, searchable identity layer, push provider, reliable automatic delivery를
+암시하지 않기 위해 현재 beta에 들어 있다.
+
+## 지금 테스트할 수 있는 것
+
+현재 beta로 로컬 desktop 흐름을 끝까지 확인할 수 있다.
+
+1. local profile 만들기
+2. invite code로 pairwise room 만들기 또는 참가하기
+3. room을 trust하기 전에 safety material 비교하기
+4. message를 로컬에 작성하기
+5. encrypted message envelope export하기
+6. 사용자가 정한 channel로 envelope 보내기
+7. 상대쪽에서 encrypted envelope import하기
+8. message를 로컬에서 읽기
+9. 필요하면 reply, retry, cancel, local data delete 실행하기
+
+## macOS beta 사용하기
+
+DMG와 checksum 파일을 같은 GitHub Release에서 내려받으세요.
 
 <https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned>
-
-같은 release에서 아래 두 파일을 모두 받으세요.
 
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
 
-DMG를 열기 전에 checksum을 확인하세요.
+열기 전에 checksum을 확인합니다.
 
 ```bash
 shasum -a 256 -c another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256
 ```
 
-예상 SHA-256:
+checksum이 맞으면 DMG를 열고 app을 한 번 실행해 보세요. 이 build는 unsigned이므로 macOS가 차단할 수 있습니다.
+검증 후에만 Privacy & Security의 정상 allow 흐름을 사용하세요.
 
-```text
-ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13
-```
+프로젝트 문서가 명시하지 않는 unsafe terminal quarantine-removal command는 쓰지 마세요.
 
-Artifact identity:
+<details>
+<summary>Artifact details and release metadata</summary>
+
+아래 값은 release note, install guide, beta checklist와 동일하게 유지해야 합니다.
 
 ```text
 artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13#beta-onion#e724bd39#v0.1.0-beta-onion-unsigned#macos-aarch64
@@ -57,136 +90,84 @@ public_artifact_state=current
 next_owner_action=run-clean-macos-fresh-install-with-disposable-profile
 ```
 
-즉, generated packet은 현재 public packet source와 일치합니다. Matching DMG,
-checksum, provenance, manifest, release body는 GitHub Release에 업로드되어
-있습니다. 다음 owner action은 disposable profile로 clean macOS fresh-install을
-실행하는 것입니다. 그 pass가 accepted 되면 다음으로 유용한 evidence는
-representative redacted usability report이며, 이 단계들도 production/security/
-sensitive-use/High-Risk-ready claim을 열지 않습니다.
+Expected SHA-256:
 
-이 빌드는 서명되지 않았기 때문에 macOS가 실행을 막을 수 있습니다. DMG를 열고
-앱 실행을 한 번 시도한 뒤, checksum이 일치할 때만 시스템 설정 > 개인정보 보호
-및 보안에서 차단된 앱을 허용하세요. 설치 단계로 터미널에서 quarantine을 제거하는
-명령은 사용하지 마세요.
+```text
+ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13
+```
 
-자세한 설치 문서: [reference/UNSIGNED_PUBLIC_BETA_INSTALL.md](reference/UNSIGNED_PUBLIC_BETA_INSTALL.md)
+이 packet은 unsigned, not notarized, unaudited, non-production 상태다.
 
-## 지금 테스트할 수 있는 것
+</details>
 
-v0.1 공개 베타는 현재 제품 경계와 로컬 desktop 흐름을 검토하기 위한 빌드입니다.
+자세한 설치 절차는 [reference/UNSIGNED_PUBLIC_BETA_INSTALL.md](reference/UNSIGNED_PUBLIC_BETA_INSTALL.md)를 보세요.
 
-- 로컬 profile 생성 및 unlock
-- invite-code room 생성 또는 참가
-- room을 신뢰하기 전 safety material 비교
-- 로컬 암호화 profile/session/message store 흐름 확인
-- 수동 encrypted envelope export/import
-- pending envelope 흐름 retry, cancel, recovery
-- conversation, session, profile, app-owned data를 명시적 destructive action으로 삭제
-- public support용 redacted diagnostics 복사
-- 앱 시작 시 network/onion 작업이 자동으로 시작되지 않는지 확인
+## 현재 message flow
 
-이 베타의 실용적인 기본 transport는 **수동 encrypted envelope exchange**입니다.
-onion/Tor 경로는 기본 경로와 분리된 고위험 advanced 경로이며, 사용자의 명시적
-액션 뒤에만 시도되고 실패 시 닫힌 상태로 멈춥니다. 이 베타는 real-network onion
-delivery의 신뢰성을 claim하지 않습니다.
+```mermaid
+flowchart TD
+  A["local profile 만들기"] --> B["pairwise room 만들기"]
+  B --> C["invite code 공유"]
+  C --> D["safety material 비교"]
+  D --> E["message를 로컬에 작성"]
+  E --> F["encrypted envelope export"]
+  F --> G["사용자가 고른 channel로 envelope 전달"]
+  G --> H["encrypted envelope import"]
+  H --> I["message를 로컬에서 읽기"]
+```
 
-High-Risk Mode는 threat-model target일 뿐 보편적 안전 보장이 아닙니다. compromised
-endpoint, coercion, full global traffic correlation은 보호하지 않으며, audited security,
-production readiness, Briar/Cwtch equivalence, reliable external onion delivery,
-sensitive-use safety를 claim하지 않습니다.
+기본 경로는 manual envelope exchange다.
+experimental onion/network delivery는 별도 경로이며 explicit하고 fail-closed다.
+reliable delivery claim은 하지 않는다.
 
-![Manual encrypted envelope flow](reference/screenshots/macos-public-beta-manual-envelope-desktop.png)
+## Security boundary
 
-### 로컬 데이터 lifecycle
+high-risk threat model은 design target이지, 현재 safety guarantee가 아니다.
 
-desktop beta는 로컬 destructive action을 분리합니다.
+현재 beta의 한계는 다음과 같다.
 
-- conversation delete는 local message record를 제거하고 session record는 유지합니다.
-- session delete는 local session resume record를 제거하고 message record는 유지합니다.
-- profile delete는 정확한 local profile name 입력 후 해당 profile store를 제거합니다.
-- full local wipe는 `WIPE LOCAL DATA` 입력 후 app-owned local data를 제거합니다.
+- compromised endpoint 보호 불가
+- physical coercion 보호 불가
+- full global traffic correlation 보호 불가
+- unaudited implementation bug에 대한 audit claim 없음
+- external onion delivery reliability claim 없음
 
-이 기능들은 cloud backup recovery, cloud sync, rollback prevention, storage media
-수준의 secure deletion을 제공하지 않습니다.
+자세한 boundary는 [SECURITY.md](SECURITY.md)와 [reference/PUBLIC_THREAT_MODEL.md](reference/PUBLIC_THREAT_MODEL.md)를 보세요.
 
 ## 현재 제공하지 않는 것
 
-이 저장소는 현재 secure messenger를 제공하지 않습니다.
+이 프로젝트는 현재 아래를 claim하지 않는다.
 
-현재 베타는 아래를 claim하지 않습니다.
+- secure
+- audited
+- production-ready
+- anonymous 또는 untraceable
+- Briar/Cwtch-equivalent
+- sensitive communication에 적합한 제품
+- current public Android/iOS artifact
 
-- production secure messaging
-- 감사 완료 또는 production-ready E2EE
-- 민감한 커뮤니케이션에 대한 안전성
-- reliable external Tor/onion delivery
-- Briar/Cwtch와 동등한 privacy 또는 security
-- bridge 또는 censorship-circumvention readiness
-- Windows, Android, iOS 공개 release artifact
-- signing, notarization, auto-update, reproducible build, supply-chain audit 완료 상태
-- endpoint compromise, coercion, malicious contact, global traffic correlation 방어
+또한 일반적인 serverless chat demo가 아니다. v0.1에는 phone number, email identity,
+searchable username, central contact discovery, central message server, push notification,
+cloud backup이 없다.
 
-전체 public security boundary는 [SECURITY.md](SECURITY.md)를 보세요.
+## Architecture highlights
 
-## Source gate
-
-- Desktop-only v0.1 acceptance matrix와 desktop local-private-flow acceptance blockers는
-  `scripts/public_release_readiness_preflight.sh`에서 확인합니다.
-- 현재 unsigned packet은 `scripts/prepare_unsigned_public_beta_release.sh`가 허용한
-  source-prepared packet입니다. build channel `beta-onion`, commit `e724bd39`,
-  release tag `v0.1.0-beta-onion-unsigned`, SHA-256
-  `ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13`.
-- Artifact status는 machine-checkable합니다: `artifact_current_head_aligned=true`,
-  `public_artifact_stale=false`, `public_artifact_state=current`,
-  `next_owner_action=run-clean-macos-fresh-install-with-disposable-profile`.
-  GitHub Release asset set은 current 상태이며, 다음 owner action은 disposable
-  profile clean macOS fresh-install run이고, pass가 accepted 되면 representative
-  redacted usability evidence가 다음 단계입니다.
-- 이 상태는 packaging readiness, audit readiness, release go signal이 아닙니다.
-- production claim 제거는
-  [reference/PRODUCTION_READINESS_CLAIM_GATE.md](reference/PRODUCTION_READINESS_CLAIM_GATE.md)와
-  [reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md](reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md)가
-  충족될 때까지 막혀 있습니다.
-
-## 프로젝트 방향
-
-핵심 원칙은 보안에 민감한 동작을 얇은 UI shell이 아니라 Rust core가 소유한다는
-것입니다.
+security-sensitive behavior는 Rust core가 소유해야 한다. Tauri desktop shell은 thin하게 유지해야 한다.
+UI는 account, contact discovery, relay, push, telemetry, backup behavior를 새로 만들면 안 된다.
 
 ```text
 crates/
-  identity/    pairwise identity and contact types
-  pairing/     pairing payloads and safety transcript logic
-  crypto/      cryptographic boundary code and test fixtures
-  protocol/    message envelopes, replay windows, and retention rules
-  transport/   fail-closed transport policy, onion/runtime boundaries
-  storage/     encrypted local storage and lifecycle policy boundary
-  core/        profile, pairing, messaging, and orchestration
+  core/        profile, pairing, messaging, orchestration
+  pairing/     pairing payload and safety transcript logic
+  protocol/    message envelope and replay window prototype
+  storage/     encrypted local storage boundary
+  transport/   fail-closed transport policy and onion/runtime boundaries
 
 apps/
-  cli/              development and boundary-check CLI
-  desktop-tauri/    macOS desktop beta shell
-  mobile/           source-only mobile shell candidates
+  cli/         development and boundary-check CLI
+  desktop-tauri/  macOS desktop beta shell
+  mobile/      source-only mobile shell candidates
 ```
-
-UI shell은 redacted status를 요청하거나 사용자가 명시적으로 실행한 action을 호출할
-수 있습니다. 별도의 protocol, storage, transport, pairing, contact discovery,
-account, push notification, cloud backup semantics를 UI shell에서 새로 정의하면
-안 됩니다.
-
-## 현재 플랫폼 상태
-
-| Platform | Status |
-| --- | --- |
-| macOS Apple Silicon | 현재 공개된 unsigned experimental public beta DMG |
-| macOS Intel / Universal | claim 없음; 별도 artifact 작업 필요 |
-| Windows | local build candidate only; 공개 artifact/installer 없음 |
-| Android | source shell candidate only; APK/AAB/public artifact 없음 |
-| iOS | source shell candidate only; IPA/TestFlight/App Store artifact 없음 |
-
-Signing, notarization, app-store approval, SmartScreen reputation, Google Play,
-TestFlight, APNs, FCM, iCloud, cloud backup은 나중에 distribution ergonomics에
-영향을 줄 수 있습니다. 하지만 이 프로젝트 방향에서는 그런 요소들을 messenger의
-trusted security boundary로 보지 않습니다.
 
 ## 소스에서 빌드
 
@@ -195,7 +176,7 @@ trusted security boundary로 보지 않습니다.
 - Rust stable toolchain
 - `rustfmt`
 - full verification용 `clippy`
-- desktop Tauri shell용 Node.js 및 npm
+- desktop Tauri shell용 Node.js와 npm
 
 Rust component 설치:
 
@@ -203,13 +184,13 @@ Rust component 설치:
 rustup component add rustfmt clippy
 ```
 
-가벼운 repository verification:
+가벼운 verification:
 
 ```bash
 scripts/verify_all.sh
 ```
 
-위험한 cross-cutting 변경 전 heavy local engineering pass:
+더 무거운 local engineering pass:
 
 ```bash
 scripts/verify_full.sh
@@ -222,133 +203,79 @@ cd apps/desktop-tauri
 npm ci --workspaces=false
 ```
 
-frontend preview 로컬 실행:
+유용한 desktop command:
 
 ```bash
 npm run dev
+npm run test:ui-fast
+npm run build
 ```
 
-manual onion attempt feature를 compile한 local Tauri beta shell 실행:
+manual E2EE engine sidecar를 확인할 때만 local Tauri beta shell을 실행합니다.
 
 ```bash
 npm run tauri:dev:beta-onion
 ```
 
-local-only Tauri desktop artifact 빌드:
+local-only packaging build:
 
 ```bash
 npm run tauri:build
 ```
 
-이 generic local build output은 public release upload artifact가 아닙니다.
+## 문서 맵
 
-## CLI Boundary Check
+### Start here
 
-기본 CLI 빌드는 boundary check만 노출합니다. 여기서 "production"은 deploy 가능한
-보안 제품이 아니라 non-`dev-insecure` 기본 빌드 경계를 뜻합니다.
-
-```bash
-cargo run -q -- production self-test
-cargo run -q -- production preflight
-```
-
-개발용 prototype command는 `dev-insecure` feature가 필요하며 실제 커뮤니케이션에
-사용하면 안 됩니다.
-
-```bash
-cargo run -q --features dev-insecure -- demo local
-scripts/demo_dev_cli.sh
-scripts/smoke_dev_cli.sh
-```
-
-`dev-insecure` 빌드는 경고를 출력하며 실제 메시지에 사용하면 안 됩니다.
-
-## Release Discipline
-
-DMG의 release authority는 같은 GitHub Release에 첨부된 asset set입니다. `main`
-branch에는 release 이후 문서나 소스 변경이 들어갈 수 있으므로, 다운로드한 앱
-artifact를 branch file이나 GitHub source archive로 검증하지 마세요.
-
-maintainer-only 공개 베타 staging command:
-
-```bash
-scripts/public_release_readiness_preflight.sh
-scripts/prepare_unsigned_public_beta_release.sh
-```
-
-생성되는 release folder는 ignored 상태이며 commit하면 안 됩니다.
-
-- `apps/desktop-tauri/beta-artifacts/`
-- `apps/desktop-tauri/public-release/`
-
-`docs/`, app data, bridge line, onion endpoint, invite code,
-pairing/envelope/endpoint payload, safety phrase, plaintext message,
-passphrase, private key, key material, raw log, crash dump, private room data가
-보이는 screenshot, `target/`, `dist/`, `node_modules/`, generated beta artifact는
-공개하거나 commit하지 마세요.
-
-## Public Support
-
-public issue는 redacted support report에만 사용하세요. broad failure class,
-checksum result, platform, app version/build channel, recovery next action,
-앱에서 복사한 diagnostics만 포함하세요.
-
-raw log, local path, endpoint, invite code, payload, message text, passphrase,
-private key, key material, private screenshot, private planning note를 공개
-issue에 올리면 안 됩니다.
-
-민감한 security report는 가능하면 GitHub private vulnerability reporting을
-사용하세요. 사용할 수 없다면 exploit detail 없이 최소한의 public security-contact
-request만 여세요.
-
-[SUPPORT.md](SUPPORT.md)와 [reference/PUBLIC_INTAKE_POLICY.md](reference/PUBLIC_INTAKE_POLICY.md)를 참고하세요.
-
-## Engineering Notes
-
-공유용 public beta 소개글은 [blog/00-public-beta-launch.md](blog/00-public-beta-launch.md)에
-있습니다. 왜 이 프로젝트를 만들었고 어떻게 설계했는지는 public-safe engineering
-notes인 [blog/](blog/)에 정리되어 있습니다.
-
-짧은 소개 문구:
-
-> Another Dimension Chat은 중앙에서 신뢰해야 하는 계정/연락처 검색/메시지 서버 없이
-> pairwise invite, safety material 비교, 수동 encrypted envelope exchange, local data
-> ownership, redacted diagnostics를 실험하는 macOS Apple Silicon용 unsigned public
-> beta입니다. 현재 공개 artifact는 GitHub Release의 unsigned macOS DMG이며,
-> checksum 확인과 macOS Privacy & Security 수동 허용이 필요합니다.
-
-이 프로젝트에 사용된 보안, 통신, 저장소, transport, release 개념을 초보자도
-따라올 수 있게 설명한 guide는 [reference/learning/](reference/learning/)에
-정리되어 있습니다.
-
-public roadmap 및 boundary 문서:
-
-- [reference/ROADMAP.md](reference/ROADMAP.md)
+- [SECURITY.md](SECURITY.md)
 - [reference/PUBLIC_THREAT_MODEL.md](reference/PUBLIC_THREAT_MODEL.md)
 - [reference/PRIVACY_MODEL_COMPARISON.md](reference/PRIVACY_MODEL_COMPARISON.md)
-- [reference/COMPONENT_BOUNDARIES.md](reference/COMPONENT_BOUNDARIES.md)
-- [reference/PRODUCTION_READINESS_CLAIM_GATE.md](reference/PRODUCTION_READINESS_CLAIM_GATE.md)
-- [reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md](reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md)
-- [reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md](reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md)
-- [reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md](reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md)
 
-production readiness claim gate가 실제 evidence로 충족되기 전까지는 beta,
-non-production, non-audited, sensitive-use-prohibited 문구를 유지해야 합니다.
+### For users
+
+- [reference/UNSIGNED_PUBLIC_BETA_INSTALL.md](reference/UNSIGNED_PUBLIC_BETA_INSTALL.md)
+- [reference/screenshots/README.md](reference/screenshots/README.md)
+- [SUPPORT.md](SUPPORT.md)
+- [reference/PUBLIC_SUPPORT_TRIAGE.md](reference/PUBLIC_SUPPORT_TRIAGE.md)
+
+### For reviewers
+
+- [reference/COMPONENT_BOUNDARIES.md](reference/COMPONENT_BOUNDARIES.md)
+- [reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md](reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md)
+- [reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md](reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md)
+- [reference/EXTERNAL_REVIEW_AUDIT_READINESS.md](reference/EXTERNAL_REVIEW_AUDIT_READINESS.md)
+
+### For contributors / maintainers
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [scripts/verify_all.sh](scripts/verify_all.sh)
+- [scripts/verify_full.sh](scripts/verify_full.sh)
+- [reference/ROADMAP.md](reference/ROADMAP.md)
+
+## Support / security reports
+
+public issue에는 redacted support report만 올리세요. broad failure class, checksum result,
+platform, app version/build channel, recovery next action, copied diagnostics를 포함하면 됩니다.
+
+raw logs, local paths, endpoints, invite codes, payloads, message text, passphrases, private keys,
+key material, private screenshots, private planning notes는 올리지 마세요.
+
+sensitive security report는 private vulnerability reporting을 우선 사용하세요. 없으면 exploit detail 없이
+minimal public security-contact request만 남기세요.
 
 ## Contributing
 
-public issue나 pull request를 열기 전에 [CONTRIBUTING.md](CONTRIBUTING.md)를
-읽어 주세요.
+public issue나 pull request를 열기 전에 [CONTRIBUTING.md](CONTRIBUTING.md)를 읽으세요.
 
 요약:
 
-- no-central-trusted-server 제품 방향 유지
-- fake/development behavior는 `dev-insecure` 뒤에 유지
-- private planning note는 public change에 포함하지 않기
-- v0.1 기본값으로 central account, contact discovery, central relay, push
-  notification dependency, telemetry, crash upload, auto-update, cloud backup을 추가하지 않기
-- public docs는 실제 구현 evidence와 non-claim에 맞게 유지하기
+- no-central-trusted-server 방향을 유지한다
+- fake 또는 development behavior는 `dev-insecure` 뒤에 둔다
+- private planning notes는 public change에 넣지 않는다
+- v0.1 default로 central account, contact discovery, central relay, push-notification dependency, telemetry,
+  crash upload, auto-update, cloud backup을 추가하지 않는다
+- public docs를 현재 구현 evidence와 non-claim에 맞춘다
 
 ## License
 
-이 저장소는 현재 Rust workspace metadata에서 `UNLICENSED`로 표시되어 있습니다.
+Rust workspace metadata에서 현재 `UNLICENSED`로 표시되어 있다.

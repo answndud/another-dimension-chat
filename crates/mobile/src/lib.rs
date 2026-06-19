@@ -26,17 +26,21 @@ const MOBILE_LOCAL_PRIVACY_BOUNDARY_JSON: &str = "[\"platform_private_app_data_o
 pub fn shared_core_status_surface_json(platform: MobilePlatform) -> String {
     let runtime = production_mobile_runtime_command_surface_status_summary();
     let api = production_mobile_shared_core_api_freeze_boundary_summary();
+    let diagnostics = production_mobile_diagnostics_redaction_boundary_summary();
     format!(
         concat!(
             "{{",
             "\"account_contact_discovery_claimed\":false,",
             "\"apns_enabled\":false,",
             "\"app_purpose\":\"no-central-trusted-server-1:1-private-messenger\",",
+            "\"app_launch_network_boundary_required\":true,",
             "\"backup_exclusion_state\":\"platform_private_data_only_no_cloud_backup\",",
             "\"binding_strategy\":\"shared_core_json_bridge\",",
             "\"callable_json_bridge_implemented\":true,",
             "\"cloud_backup_claimed\":false,",
             "\"diagnostics_redaction_state\":\"redacted_status_support_only\",",
+            "\"diagnostics_redaction_boundary_closed\":true,",
+            "\"generated_artifact_guard\":\"source_boundary_only\",",
             "\"error_taxonomy\":{},",
             "\"fcm_enabled\":false,",
             "\"icloud_backup_claimed\":false,",
@@ -51,9 +55,11 @@ pub fn shared_core_status_surface_json(platform: MobilePlatform) -> String {
             "\"profile_lock_state\":\"not_unlocked_by_status_bridge\",",
             "\"public_non_claims\":[\"sensitive communication prohibited\",\"not audited\",\"not production-ready\",\"mobile public artifact unavailable\"],",
             "\"runtime_command_surface\":[\"explicit_user_action_required\",\"no_network_on_launch\",\"no_background_delivery\"],",
+            "\"runtime_launch_network_boundary\":\"explicit_user_action_required_no_network_on_launch\",",
             "\"schema_version\":1,",
             "\"security_ready_claimed\":false,",
             "\"shared_core_api_boundary_closed\":{},",
+            "\"shared_core_diagnostics_boundary_closed\":{},",
             "\"shared_core_runtime_status_boundary_closed\":{},",
             "\"unavailable_actions\":{}",
             "}}"
@@ -62,6 +68,7 @@ pub fn shared_core_status_surface_json(platform: MobilePlatform) -> String {
         MOBILE_LOCAL_PRIVACY_BOUNDARY_JSON,
         platform.as_str(),
         api.boundary_closed(),
+        diagnostics.boundary_closed(),
         runtime.boundary_closed(),
         MOBILE_UNAVAILABLE_ACTIONS_JSON
     )
@@ -78,6 +85,7 @@ pub fn redacted_support_diagnostics_json(platform: MobilePlatform) -> String {
             "\"cloud_backup_claimed\":false,",
             "\"diagnostics_redaction_state\":\"redacted_status_support_only\",",
             "\"failure_class\":\"none\",",
+            "\"generated_artifact_guard\":\"source_boundary_only\",",
             "\"fcm_enabled\":false,",
             "\"icloud_backup_claimed\":false,",
             "\"independent_protocol_storage_transport_claimed\":false,",
@@ -150,7 +158,11 @@ mod tests {
         assert!(status.contains("\"platform\":\"android_runtime_candidate\""));
         assert!(status.contains("\"callable_json_bridge_implemented\":true"));
         assert!(status.contains("\"shared_core_api_boundary_closed\":true"));
+        assert!(status.contains("\"shared_core_diagnostics_boundary_closed\":true"));
         assert!(status.contains("\"shared_core_runtime_status_boundary_closed\":true"));
+        assert!(status.contains("\"app_launch_network_boundary_required\":true"));
+        assert!(status.contains("\"runtime_launch_network_boundary\":\"explicit_user_action_required_no_network_on_launch\""));
+        assert!(status.contains("\"generated_artifact_guard\":\"source_boundary_only\""));
         assert!(status.contains("\"mobile_readiness_claimed\":false"));
         assert!(status.contains("\"native_network_delivery_enabled\":false"));
         assert!(!status.contains("phone"));
@@ -162,6 +174,7 @@ mod tests {
         let diagnostics = redacted_support_diagnostics_json(MobilePlatform::Ios);
         assert!(diagnostics.contains("\"platform\":\"ios_runtime_candidate\""));
         assert!(diagnostics.contains("\"local_copy_only\":true"));
+        assert!(diagnostics.contains("\"generated_artifact_guard\":\"source_boundary_only\""));
         assert!(diagnostics.contains("\"background_upload_enabled\":false"));
         assert!(!diagnostics.contains("local_paths"));
         assert!(!diagnostics.contains("raw_logs"));

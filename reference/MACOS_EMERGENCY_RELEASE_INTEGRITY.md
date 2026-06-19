@@ -62,6 +62,7 @@ inventing evidence or mutating a live release from a source-side gate.
 - release_integrity_manual_advisory_ready=true
 - release_integrity_signed_update_manifest_candidate_ready=true
 - release_integrity_ready=true
+- release_integrity_ready_claim_requires=release_integrity_checksum_provenance_ready#release_integrity_manual_advisory_ready#release_integrity_signed_update_manifest_candidate_ready
 - readiness_missing_conditions=none
 - same_release_asset_authority_required=true
 - branch_source_release_authority_allowed=false
