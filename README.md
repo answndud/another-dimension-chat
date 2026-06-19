@@ -47,29 +47,28 @@ exchange.
 
 ## Download And Open On macOS
 
-The current public unsigned packet is attached to this GitHub Release tag:
-
 <https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned>
 
-Download both files from that release:
+Download:
 
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
 
-Verify the DMG before opening it:
+Verify:
 
 ```bash
 shasum -a 256 -c another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256
 ```
 
-Expected result:
+Open:
 
 ```text
 another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg: OK
 ```
 
 Because this build is unsigned, macOS may block it. Open the DMG, try to open
-the app once, then allow the blocked app from System Settings > Privacy & Security only after the checksum matches.
+the app once, then allow it from System Settings > Privacy & Security only after
+the checksum matches.
 
 Do not use terminal quarantine-removal commands as an install step.
 
