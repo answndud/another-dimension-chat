@@ -297,6 +297,7 @@ export function productionHighRiskRuntimeEvidenceGateView(input = {}) {
   const localOnlyEvidence = input.localOnlyEvidence === true || evidenceSource === "local-fixture";
   const fabricatedEvidence = input.fabricatedEvidence === true || evidenceSource === "fabricated";
   const forbiddenFieldsPresent = input.forbiddenFieldsPresent === true;
+  const rejectedSource = localOnlyEvidence || fabricatedEvidence;
   const accepted =
     evidenceSource === "runtime-report" &&
     explicitUserAction &&
@@ -336,14 +337,26 @@ export function productionHighRiskRuntimeEvidenceGateView(input = {}) {
     },
   );
   const primaryBlocker = blockers[0] ?? "none";
+  const decision = accepted ? "accepted" : rejectedSource ? "rejected" : "waiting";
+  const nextOwnerAction = accepted
+    ? readiness.missingConditions.length > 0
+      ? readiness.missingConditions
+          .map((condition) => HIGH_RISK_READINESS_CONDITION_ACTIONS[condition] ?? "collect-real-redacted-runtime-report")
+          .join("#")
+      : "none"
+    : rejectedSource
+      ? "replace-with-real-redacted-runtime-report"
+      : "collect-real-redacted-runtime-report";
   const nextAction = accepted ? "keep-public-claim-closed" : "collect-real-redacted-runtime-report";
   const summary = [
     `high_risk_runtime_evidence_source=${evidenceSource}`,
+    `high_risk_runtime_evidence_decision=${decision}`,
     `high_risk_runtime_evidence_accepted=${accepted}`,
     `high_risk_transport_runtime_evidence_present=${accepted}`,
     `primary_blocker=${primaryBlocker}`,
     `blockers=${blockers.join("#") || "none"}`,
     `next_action=${nextAction}`,
+    `next_owner_action=${nextOwnerAction}`,
     `explicit_user_action=${explicitUserAction}`,
     `onion_only=${onionOnly}`,
     `direct_fallback_attempted=${directFallbackAttempted}`,
@@ -381,6 +394,8 @@ export function productionHighRiskRuntimeEvidenceGateView(input = {}) {
     runtimeEvidencePresent: accepted,
     evidenceSource,
     primaryBlocker,
+    decision,
+    nextOwnerAction,
     blockers,
     nextAction,
     readinessConditionSet: readiness.conditionSet,
@@ -403,6 +418,7 @@ export function productionHighRiskRuntimeEvidenceSummaryView(input = {}) {
     readiness_condition_set: gate.readinessConditionSet,
     readiness_missing_conditions: gate.readinessMissingConditions.join("#") || "none",
     evidence_source: gate.evidenceSource,
+    high_risk_runtime_evidence_decision: gate.decision,
     failure_class: gate.failureClass,
     clipboard_expiry_ready: gate.clipboardExpiryReady,
     emergency_controls_ready: gate.emergencyControlsReady,
@@ -419,8 +435,10 @@ export function productionHighRiskRuntimeEvidenceSummaryView(input = {}) {
     "copy_requires_explicit_user_action=true",
     `copy_enabled=${input.copyRequested === true}`,
     `high_risk_runtime_evidence_accepted=${gate.accepted}`,
+    `high_risk_runtime_evidence_decision=${gate.decision}`,
     `high_risk_ready_claim_allowed=${gate.highRiskReadyClaimAllowed}`,
     `high_risk_public_claim_allowed=${gate.highRiskPublicClaimAllowed}`,
+    `next_owner_action=${gate.nextOwnerAction}`,
     "endpoint_value_recorded=false",
     "descriptor_recorded=false",
     "bridge_line_recorded=false",
@@ -434,6 +452,8 @@ export function productionHighRiskRuntimeEvidenceSummaryView(input = {}) {
     copyablePayloadText,
     copyableFieldSet,
     accepted: gate.accepted,
+    decision: gate.decision,
+    nextOwnerAction: gate.nextOwnerAction,
     highRiskReadyClaimAllowed: false,
     highRiskPublicClaimAllowed: false,
     boundary,
@@ -901,6 +921,15 @@ export function productionVersionIntegrityView(input = {}) {
   const currentReleaseTag = releaseIntegrityToken(input.currentReleaseTag, "current-release-tag-unknown");
   const expectedReleaseAuthority = "same-github-release-assets";
   const checksumVerification = "matching-sha256-before-open";
+  const releaseIntegrityConditionSet = "checksum-provenance#manual-advisory#signed-update-manifest-candidate";
+  const releaseIntegrityChecksumProvenanceReady = input.releaseIntegrityChecksumProvenanceReady !== false;
+  const releaseIntegrityManualAdvisoryReady = input.releaseIntegrityManualAdvisoryReady !== false;
+  const releaseIntegritySignedUpdateManifestCandidateReady =
+    input.releaseIntegritySignedUpdateManifestCandidateReady !== false;
+  const releaseIntegrityReady =
+    releaseIntegrityChecksumProvenanceReady &&
+    releaseIntegrityManualAdvisoryReady &&
+    releaseIntegritySignedUpdateManifestCandidateReady;
   const emergencyAdvisoryPath = "scripts/prepare_macos_emergency_release_advisory_packet.sh";
   const highRiskReleaseIntegrityGatePath = "scripts/high_risk_release_integrity_gate_once.sh";
   const emergencyNoticeMode = "manual-release-identity-verification";
@@ -919,6 +948,11 @@ export function productionVersionIntegrityView(input = {}) {
     `version_comparison=${versionComparison}`,
     `release_authority=${expectedReleaseAuthority}`,
     `checksum_verification=${checksumVerification}`,
+    `release_integrity_condition_set=${releaseIntegrityConditionSet}`,
+    `release_integrity_checksum_provenance_ready=${releaseIntegrityChecksumProvenanceReady}`,
+    `release_integrity_manual_advisory_ready=${releaseIntegrityManualAdvisoryReady}`,
+    `release_integrity_signed_update_manifest_candidate_ready=${releaseIntegritySignedUpdateManifestCandidateReady}`,
+    `release_integrity_ready=${releaseIntegrityReady}`,
     "auto_update_ready=false",
     "signed_update_manifest_ready=false",
     "rollback_prevention_claimed=false",
@@ -943,6 +977,11 @@ export function productionVersionIntegrityView(input = {}) {
     versionComparison,
     expectedReleaseAuthority,
     checksumVerification,
+    releaseIntegrityConditionSet,
+    releaseIntegrityChecksumProvenanceReady,
+    releaseIntegrityManualAdvisoryReady,
+    releaseIntegritySignedUpdateManifestCandidateReady,
+    releaseIntegrityReady,
     emergencyAdvisoryPath,
     emergencyNoticeMode,
     highRiskReleaseIntegrityGatePath,
@@ -965,6 +1004,11 @@ export function productionVersionIntegrityView(input = {}) {
       `version_comparison=${versionComparison}`,
       `expected_release_authority=${expectedReleaseAuthority}`,
       `checksum_verification=${checksumVerification}`,
+      `release_integrity_condition_set=${releaseIntegrityConditionSet}`,
+      `release_integrity_checksum_provenance_ready=${releaseIntegrityChecksumProvenanceReady}`,
+      `release_integrity_manual_advisory_ready=${releaseIntegrityManualAdvisoryReady}`,
+      `release_integrity_signed_update_manifest_candidate_ready=${releaseIntegritySignedUpdateManifestCandidateReady}`,
+      `release_integrity_ready=${releaseIntegrityReady}`,
       "manual_update_required=true",
       "auto_update_ready=false",
       "auto_update_claim=false",
@@ -1094,9 +1138,26 @@ export function productionWindowsPublicArtifactCandidateView(input = {}) {
   );
   const bundleTarget = releaseIntegrityToken(input.bundleTarget, "nsis");
   const runtimeMode = releaseIntegrityToken(input.runtimeMode, "shell-sidecar-pending");
+  const artifactFilename = releaseIntegrityToken(
+    input.artifactFilename,
+    "AnotherDimension-0.1.0-windows-shell-nsis.exe",
+  );
+  const checksumFile = releaseIntegrityToken(
+    input.checksumFile,
+    "AnotherDimension-0.1.0-windows-shell-nsis.exe.sha256",
+  );
+  const provenanceFile = releaseIntegrityToken(
+    input.provenanceFile,
+    "AnotherDimension-0.1.0-windows-shell-nsis.exe.provenance.json",
+  );
+  const manifestFile = releaseIntegrityToken(
+    input.manifestFile,
+    "WINDOWS_ARTIFACT_MANIFEST.json",
+  );
   const summary = [
     "windows_public_artifact_candidate=true",
     `artifact_type=${artifactType}`,
+    `artifact_filename=${artifactFilename}`,
     `bundle_target=${bundleTarget}`,
     `runtime_mode=${runtimeMode}`,
     "onion_runtime_compiled=false",
@@ -1112,6 +1173,7 @@ export function productionWindowsPublicArtifactCandidateView(input = {}) {
     "shared_core_bypass_allowed=false",
     "profile_session_message_storage_bypass_allowed=false",
     "manifest_checksum_provenance_required=true",
+    `artifact_identity_tuple=${artifactFilename}#${checksumFile}#${provenanceFile}#${manifestFile}`,
     "manifest_validates_version_commit_installer_webview2_no_auto_update=true",
     "runtime_result_external_peer_evidence_separated=true",
     "engine_sidecar_required=true",
@@ -1126,6 +1188,8 @@ export function productionWindowsPublicArtifactCandidateView(input = {}) {
     "engine_sidecar_stdout_returned=false",
     "engine_sidecar_stderr_returned=false",
     "engine_runtime_mode=manual-e2ee-engine-sidecar",
+    "install_open_basic_flow=redacted_status_only",
+    "sidecar_self_test_status=manual-self-test-redacted-status-only",
     "local_runtime_promoted_to_delivery_proof=false",
     "smartscreen_security_boundary_claimed=false",
     "code_signing_security_boundary_claimed=false",
@@ -1141,8 +1205,12 @@ export function productionWindowsPublicArtifactCandidateView(input = {}) {
   return {
     platform,
     artifactType,
+    artifactFilename,
     bundleTarget,
     runtimeMode,
+    checksumFile,
+    provenanceFile,
+    manifestFile,
     onionRuntimeCompiled: false,
     defaultExtension: ".exe",
     portableDefaultAllowed: false,
@@ -1156,6 +1224,7 @@ export function productionWindowsPublicArtifactCandidateView(input = {}) {
     sharedCoreBypassAllowed: false,
     profileSessionMessageStorageBypassAllowed: false,
     manifestChecksumProvenanceRequired: true,
+    artifactIdentityTuple: `${artifactFilename}#${checksumFile}#${provenanceFile}#${manifestFile}`,
     manifestValidatesVersionCommitInstallerWebview2NoAutoUpdate: true,
     runtimeResultExternalPeerEvidenceSeparated: true,
     engineSidecarRequired: true,
@@ -1170,6 +1239,8 @@ export function productionWindowsPublicArtifactCandidateView(input = {}) {
     engineSidecarStdoutReturned: false,
     engineSidecarStderrReturned: false,
     engineRuntimeMode: "manual-e2ee-engine-sidecar",
+    installOpenBasicFlow: "redacted_status_only",
+    sidecarSelfTestStatus: "manual-self-test-redacted-status-only",
     localRuntimePromotedToDeliveryProof: false,
     smartscreenSecurityBoundaryClaimed: false,
     codeSigningSecurityBoundaryClaimed: false,
@@ -1192,6 +1263,7 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
   const safetyVerified = Boolean(input.safetyVerified);
   const messageFlowReady = Boolean(input.messageFlowReady);
   const diagnosticsCopied = Boolean(input.diagnosticsCopied);
+  const localDeleteComplete = Boolean(input.localDeleteComplete);
   const purpose = "No-central-trusted-server 1:1 private messenger";
   const releaseStatus = "Unsigned public beta; no production security claim";
   const keyboardLabels = {
@@ -1200,6 +1272,7 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
     safety: "keyboard-safety-phrase-compare",
     message: "keyboard-manual-envelope-actions",
     diagnostics: "keyboard-redacted-diagnostics-copy",
+    localDelete: "keyboard-local-delete-actions",
   };
   const localDeleteWarning = "delete-local-data-removes-this-device-copy-no-cloud-recovery";
   const diagnosticsCopyStatus = diagnosticsCopied ? "copied" : "not-copied";
@@ -1214,8 +1287,14 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
         : diagnosticsCopied
           ? "complete"
           : "current",
+    localDelete:
+      !profileUnlocked || !roomPresent || !safetyVerified || !messageFlowReady || !diagnosticsCopied
+        ? "blocked"
+        : localDeleteComplete
+          ? "complete"
+          : "current",
   };
-  const stepOrder = ["profile", "room", "safety", "message", "diagnostics"];
+  const stepOrder = ["profile", "room", "safety", "message", "diagnostics", "localDelete"];
   const currentStep = stepOrder.find((step) => stepStatuses[step] === "current") ?? "diagnostics";
   const currentStepIndex = stepOrder.indexOf(currentStep) + 1;
   const progressLabel = `Step ${currentStepIndex} of ${stepOrder.length}: ${currentStep}`;
@@ -1231,7 +1310,9 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
             ? "Write a message and export the encrypted envelope."
             : !diagnosticsCopied
               ? "Copy the redacted support report only if you need help."
-              : "Repeat the manual envelope flow or delete local data when finished.";
+              : !localDeleteComplete
+                ? "Delete the local data on this device when you are done."
+                : "Repeat the manual envelope flow or delete local data when finished.";
   const stepDetails = {
     profile: {
       status: stepStatuses.profile,
@@ -1253,10 +1334,9 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
     },
     message: {
       status: stepStatuses.message,
-      nextAction: messageFlowReady ? "import-reply-retry-cancel-or-delete" : "export-manual-encrypted-envelope",
+      nextAction: messageFlowReady ? "import-reply-retry-cancel" : "export-manual-encrypted-envelope",
       blockedReason: safetyVerified ? (messageFlowReady ? "none" : "manual-envelope-not-exported") : "safety-not-verified",
       keyboardLabel: keyboardLabels.message,
-      localDeleteWarning,
     },
     diagnostics: {
       status: stepStatuses.diagnostics,
@@ -1264,6 +1344,13 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
       blockedReason: messageFlowReady ? (diagnosticsCopied ? "none" : "diagnostics-not-copied") : "message-flow-not-ready",
       keyboardLabel: keyboardLabels.diagnostics,
       copyStatus: diagnosticsCopyStatus,
+    },
+    localDelete: {
+      status: stepStatuses.localDelete,
+      nextAction: localDeleteComplete ? "done" : "delete-local-data-on-this-device",
+      blockedReason: diagnosticsCopied ? (localDeleteComplete ? "none" : "local-delete-not-completed") : "diagnostics-not-copied",
+      keyboardLabel: keyboardLabels.localDelete,
+      localDeleteWarning,
     },
   };
   const currentAction = stepDetails[currentStep].nextAction;
@@ -1286,7 +1373,7 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
       "first_run_summary=true",
       `first_run_current_step=${currentStep}`,
       `first_run_current_step_index=${currentStepIndex}`,
-      "first_run_step_count=5",
+      "first_run_step_count=6",
       "first_run_progress_visible=true",
       "purpose=no-central-trusted-server-1:1-private-messenger",
       "release_status=unsigned-public-beta",
@@ -1298,6 +1385,7 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
       `safety_verified=${safetyVerified}`,
       `message_flow_ready=${messageFlowReady}`,
       `diagnostics_copied=${diagnosticsCopied}`,
+      `local_delete_complete=${localDeleteComplete}`,
       `first_run_step_next_actions=${stepOrder.map((step) => `${step}:${stepDetails[step].nextAction}`).join("#")}`,
       `first_run_blocked_reasons=${stepOrder.map((step) => `${step}:${stepDetails[step].blockedReason}`).join("#")}`,
       `first_run_keyboard_labels=${stepOrder.map((step) => `${step}:${stepDetails[step].keyboardLabel}`).join("#")}`,

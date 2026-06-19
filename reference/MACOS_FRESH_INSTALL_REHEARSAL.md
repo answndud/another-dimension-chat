@@ -16,6 +16,7 @@ Current public-safe result record:
 
 Record only:
 
+- clean_install_schema_version=1
 - release tag
 - app artifact name
 - artifact filename
@@ -24,25 +25,25 @@ Record only:
 - build commit
 - release_download_source: github-release
 - same_release_download_result: pass, fail, or not_run
-- same_release_checksum_result: pass, fail, or not_run
-- checksum_result: OK, mismatch, or not_run
+- same_release_checksum_result=pass, fail, or not_run
+- checksum_result=OK, mismatch, or not_run
 - dmg_mount_result: pass, hold, fail, or not_run
 - manual_privacy_security_allow_result: pass, hold, fail, or not_run
-- gatekeeper_manual_allow_result: pass, hold, fail, or not_run
-- first_launch_result: pass, hold, fail, or not_run
+- gatekeeper_manual_allow_result=pass, hold, fail, or not_run
+- first_launch_result=pass, hold, fail, or not_run
 - profile_create_result: pass, hold, fail, or not_run
-- profile_unlock_result: pass, hold, fail, or not_run
+- profile_unlock_result=pass, hold, fail, or not_run
 - invite_join_safety_result: pass, hold, fail, or not_run
-- invite_join_result: pass, hold, fail, or not_run
-- safety_compare_result: pass, hold, fail, or not_run
-- manual_envelope_exchange_result: pass, hold, fail, or not_run
-- envelope_exchange_result: pass, hold, fail, or not_run
-- diagnostics_redaction_result: pass, hold, fail, or not_run
-- diagnostics_copy_result: pass, hold, fail, or not_run
-- local_delete_result: pass, hold, fail, or not_run
+- invite_join_result=pass, hold, fail, or not_run
+- safety_compare_result=pass, hold, fail, or not_run
+- manual_envelope_exchange_result=pass, hold, fail, or not_run
+- envelope_exchange_result=pass, hold, fail, or not_run
+- diagnostics_redaction_result=pass, hold, fail, or not_run
+- diagnostics_copy_result=pass, hold, fail, or not_run
+- local_delete_result=pass, hold, fail, or not_run
 - network_before_explicit_action: false, true, or not_observed
-- app_launch_network: false, true, or not_observed
-- platform: macos-aarch64
+- app_launch_network=false, true, or not_observed
+- platform=macos-aarch64
 - clean_install_evidence_source: owner-clean-mac
 - broad failure class, if any
 - recovery next action, if any

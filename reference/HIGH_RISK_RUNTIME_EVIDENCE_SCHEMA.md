@@ -50,6 +50,12 @@ paths, payloads, or key material. The validator returns one of:
 
 Missing readiness conditions are returned with `next_owner_action`.
 
+The app-copy summary may also surface these helper fields to keep the evidence
+state distinct from the readiness state:
+
+- `high_risk_runtime_evidence_decision`
+- `next_owner_action`
+
 ## Allowed Fields
 
 The report JSON may contain only these top-level fields:
@@ -64,6 +70,8 @@ The report JSON may contain only these top-level fields:
 - `high_risk_transport_runtime_ready`
 - `emergency_controls_ready`
 - `primary_blocker`
+- `high_risk_runtime_evidence_decision`
+- `next_owner_action`
 - `failure_class`
 - `explicit_user_action`
 - `onion_only`

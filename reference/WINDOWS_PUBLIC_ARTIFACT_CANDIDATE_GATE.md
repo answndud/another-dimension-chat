@@ -12,6 +12,11 @@ and does not allow sensitive communication claims.
 
 - windows_public_artifact_candidate=true
 - artifact_type=windows-shell-nsis-exe-installer-candidate
+- artifact_filename=AnotherDimension-0.1.0-windows-shell-nsis.exe
+- checksum_file=AnotherDimension-0.1.0-windows-shell-nsis.exe.sha256
+- provenance_file=AnotherDimension-0.1.0-windows-shell-nsis.exe.provenance.json
+- manifest_file=WINDOWS_ARTIFACT_MANIFEST.json
+- artifact_identity_tuple=AnotherDimension-0.1.0-windows-shell-nsis.exe#AnotherDimension-0.1.0-windows-shell-nsis.exe.sha256#AnotherDimension-0.1.0-windows-shell-nsis.exe.provenance.json#WINDOWS_ARTIFACT_MANIFEST.json
 - build_command=npm --prefix apps/desktop-tauri run tauri:build:windows-nsis:shell
 - bundle_target=nsis
 - runtime_mode=shell-sidecar-pending

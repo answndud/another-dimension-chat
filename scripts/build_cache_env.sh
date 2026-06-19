@@ -8,7 +8,7 @@ default_build_cache_dir() {
 
   case "$platform" in
     Darwin)
-      if [[ -n "${HOME:-}" ]]; then
+      if [[ -n "${HOME:-}" && -d "$HOME/Library/Caches" && -w "$HOME/Library/Caches" ]]; then
         printf '%s\n' "$HOME/Library/Caches/another-dimension"
         return
       fi
@@ -20,11 +20,11 @@ default_build_cache_dir() {
       fi
       ;;
     *)
-      if [[ -n "${XDG_CACHE_HOME:-}" ]]; then
+      if [[ -n "${XDG_CACHE_HOME:-}" && -d "$XDG_CACHE_HOME" && -w "$XDG_CACHE_HOME" ]]; then
         printf '%s\n' "$XDG_CACHE_HOME/another-dimension"
         return
       fi
-      if [[ -n "${HOME:-}" ]]; then
+      if [[ -n "${HOME:-}" && -d "$HOME/.cache" && -w "$HOME/.cache" ]]; then
         printf '%s\n' "$HOME/.cache/another-dimension"
         return
       fi
