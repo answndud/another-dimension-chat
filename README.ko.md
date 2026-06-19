@@ -46,29 +46,27 @@ cloud message storage, push-notification dependency, cloud backup 없이 pairwis
 
 ## macOS에서 다운로드하고 열기
 
-현재 public unsigned packet은 아래 GitHub Release에 있다.
-
 <https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned>
 
-같은 release에서 두 파일을 모두 받는다.
+다운로드:
 
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
 
-DMG를 열기 전에 checksum을 확인한다.
+검증:
 
 ```bash
 shasum -a 256 -c another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256
 ```
 
-예상 결과:
+열기:
 
 ```text
 another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg: OK
 ```
 
 이 build는 unsigned라 macOS가 막을 수 있다. DMG를 열고 app 실행을 한 번 시도한 뒤,
-checksum이 맞을 때만 System Settings > Privacy & Security에서 차단된 app을 허용한다.
+checksum이 맞을 때만 System Settings > Privacy & Security에서 허용한다.
 
 terminal quarantine-removal command를 install step으로 사용하지 않는다.
 
