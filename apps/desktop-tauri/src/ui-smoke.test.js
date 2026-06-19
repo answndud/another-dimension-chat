@@ -16,6 +16,7 @@ import {
   productionManualCurrentFocusTarget,
   productionManualPrimaryActions,
   productionManualTransferStepLabel,
+  productionPairwiseSafetyActionGateView,
 } from "./action-state.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -496,6 +497,8 @@ test("startup invokes only redacted local onion status", () => {
   assert.doesNotMatch(startupBlock, /production_onion_client_start/);
   assert.doesNotMatch(startupBlock, /production_onion_outbound_envelope_send_attempt/);
   assert.doesNotMatch(startupBlock, /production_onion_receive_loop_start/);
+  assert.doesNotMatch(startupBlock, /refreshTwoProfileOutboundEndpointThenRetry\(/);
+  assert.doesNotMatch(startupBlock, /retryTwoProfileOutboundEntry\(/);
   assert.doesNotMatch(startupBlock, /startProductionTwoProfileOnionReceive\(\)/);
 });
 
@@ -611,6 +614,11 @@ test("saved room open carries current session status into metadata reconciliatio
     functionBody(mainJs, "loadProductionTwoProfileTranscript"),
     /reconcileCurrentInviteRoomMetadataFromTranscriptEntries\(entries,[\s\S]*sessionStatus/,
   );
+  assert.match(functionBody(mainJs, "openSavedInviteRoom"), /const openInput = productionTwoProfileInput\(\)/);
+  assert.match(functionBody(mainJs, "openSavedInviteRoom"), /return openInviteRoomFromToken\(openInput\)/);
+  assert.match(functionBody(mainJs, "refreshSavedInviteRoomMetadataForFingerprint"), /const input = savedInviteRoomInput\(room\)/);
+  assert.match(functionBody(mainJs, "refreshSavedInviteRoomMetadataForFingerprint"), /rememberInviteRoom\(\n      room\.code,\n      room\.role,/);
+  assert.match(functionBody(mainJs, "savedInviteRoomForRoomFingerprint"), /privateRouteRoomKey\(savedInviteRoomInput\(room\)\) === fingerprint/);
 });
 
 test("saved room list shows receive runtime and restart intent", () => {
@@ -982,6 +990,10 @@ test("room list controls are wired to room flow instead of settings", () => {
   assert.doesNotMatch(mainJs, /You can send a message now|바로 메시지를 보낼 수 있습니다|Room is ready\. Write a message to continue/);
   assert.match(i18nJs, /No usernames or address book/);
   assert.match(i18nJs, /사용자 이름이나 주소록 없이/);
+  assert.match(indexHtml, /Start with one invite code\. Network features stay off until you click a network action\./);
+  assert.match(indexHtml, /Create a code or paste the one from the other device\./);
+  assert.match(indexHtml, /The invite code opens the room; compare the verification phrase before messaging\./);
+  assert.doesNotMatch(indexHtml, /username|search|contact discovery/i);
 });
 
 test("room list create action does not overlap the app settings action", () => {
@@ -1132,6 +1144,10 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(functionBody(mainJs, "productionTwoProfileInput"), /inviteRole:/);
   assert.match(functionBody(mainJs, "twoProfileSessionStatusFingerprint"), /input\.connectionCode/);
   assert.match(functionBody(mainJs, "twoProfileSessionStatusFingerprint"), /input\.inviteRole/);
+  assert.match(functionBody(mainJs, "savedInviteRoomInput"), /code = String\(room\?\.code \?\? ""\)\.trim\(\)/);
+  assert.match(functionBody(mainJs, "savedInviteRoomInput"), /role = room\?\.role === "inviter" \? "inviter" : room\?\.role === "joiner" \? "joiner" : ""/);
+  assert.match(functionBody(mainJs, "savedInviteRoomInput"), /return \{ profileA: localProfile, profileB: peerProfile, passphrase: code, connectionCode: code, inviteRole: role \}/);
+  assert.match(functionBody(mainJs, "savedInviteRoomForRoomFingerprint"), /privateRouteRoomKey\(savedInviteRoomInput\(room\)\)/);
   assert.match(functionBody(mainJs, "currentInviteRoomIdentityForInput"), /input\?\.profileA/);
   assert.match(functionBody(mainJs, "currentInviteRoomIdentityForInput"), /return \{ connectionCode: "", inviteRole: "" \}/);
   assert.match(functionBody(mainJs, "twoProfileSafetyConfirmedForInput"), /legacyTwoProfileSafetyStorageKey\(input\)/);
@@ -1469,6 +1485,47 @@ test("manual message envelope import decision fails closed for malformed and rep
   assert.equal(wrongType.kind, "wrong_type");
   assert.equal(duplicate.kind, "duplicate");
   assert.equal(replayed.kind, "replay_rejected");
+});
+
+test("replayed and stale message envelopes stay blocked from successful import state", () => {
+  const replayed = messageEnvelopePayloadImportDecision("ADENV1|1|chan|9|data|00", {
+    replayedMessageNumbers: new Set([9]),
+  });
+  const staleSlot = createMessageEnvelopeSlot("alice", "ADENV1|1|chan|8|data|00", {
+    explicitUserAction: true,
+    manualAction: "export-envelope",
+    receiver: "bob",
+    roomFingerprint: "room-a",
+    messageNumber: 8,
+    message: "hello",
+  });
+  const staleMismatchReason = messageEnvelopeSlotMismatchReason(
+    staleSlot,
+    {
+      sender: "alice",
+      receiver: "bob",
+      roomFingerprint: "room-b",
+      messageNumber: 8,
+      message: "hello",
+    },
+  );
+  const staleHint = messageEnvelopeSlotRecoveryHint(staleSlot, {
+    sender: "alice",
+    receiver: "bob",
+    roomFingerprint: "room-b",
+    messageNumber: 8,
+    message: "hello",
+  });
+
+  assert.equal(replayed.accepted, false);
+  assert.equal(replayed.imported, false);
+  assert.equal(replayed.delivered, false);
+  assert.equal(replayed.kind, "replay_rejected");
+  assert.match(replayed.boundary, /accepted=false/);
+  assert.match(replayed.boundary, /imported=false/);
+  assert.match(replayed.boundary, /delivered=false/);
+  assert.equal(staleMismatchReason, "room-fingerprint-mismatch");
+  assert.match(staleHint, /another room/);
 });
 
 test("manual message envelope slots are scoped to the room fingerprint", () => {
@@ -1839,6 +1896,18 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(conversationDeleteBody, /not backup recovery, rollback prevention, or secure media deletion/);
   assert.match(i18nJs, /dataLifecycleDestructivePreflightReady/);
   assert.match(i18nJs, /파괴적 로컬 작업 확인/);
+});
+
+test("destructive lifecycle rebuild guidance returns to fresh invite room flow", () => {
+  const guidanceBody = functionBody(mainJs, "applyPostDestructiveLifecycleRebuildGuidance");
+  assert.match(guidanceBody, /clearAllSavedInviteRoomLocalState\(\)/);
+  assert.match(guidanceBody, /clearCurrentInviteRoomInput\(\)/);
+  assert.match(guidanceBody, /showRoomList\(\)/);
+  assert.match(guidanceBody, /renderManualInviteRoomRebuildFlow\("rebuild-needed"/);
+  assert.match(guidanceBody, /rebuild_required=true/);
+  assert.match(i18nJs, /postDeleteRoomRebuildNext/);
+  assert.match(i18nJs, /postWipeRoomRebuildNext/);
+  assert.match(i18nJs, /fresh invite room/);
 });
 
 test("destructive lifecycle actions clear stale room retry state before rebuild", () => {
@@ -2793,6 +2862,7 @@ test("private delivery stays explicit before network work starts", () => {
   assert.match(functionBody(mainJs, "enablePrivateDeliveryPermission"), /setManualNetworkPermission\(true\)/);
   assert.doesNotMatch(functionBody(mainJs, "enablePrivateDeliveryPermission"), /production_onion_persistent_client_start/);
   assert.doesNotMatch(functionBody(mainJs, "enablePrivateDeliveryPermission"), /production_onion_service_launch_attempt/);
+  assert.doesNotMatch(functionBody(mainJs, "enablePrivateDeliveryPermission"), /startProductionTwoProfileOnionReceive\(/);
   const intentBody = functionBody(mainJs, "twoProfileComposerPrimaryIntent");
   assert.ok(intentBody.indexOf("if (input.message)") < intentBody.indexOf("if (!manualNetworkPermission)"));
   const messageBody = functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip");
@@ -2802,6 +2872,14 @@ test("private delivery stays explicit before network work starts", () => {
   assert.match(messageBody, /default_transport_network_io=false high_risk_onion_path=explicit-user-triggered-fail-closed external_delivery_claim=false/);
   assert.doesNotMatch(messageBody, /production_onion_outbound_envelope_send_attempt|production_two_profile_real_onion_roundtrip/);
   assert.match(functionBody(mainJs, "ensurePrivateDeliveryRuntimeReady"), /production_onion_persistent_client_start/);
+});
+
+test("receive and retry actions stay tied to explicit click handlers", () => {
+  assert.match(mainJs, /addEventListener\("click", startProductionTwoProfileOnionReceive\)/);
+  assert.match(functionBody(mainJs, "retryTwoProfileOutboundEntry"), /setText\(fields\.productionTwoProfileWarning, t\("sendRetrying"\)\)/);
+  assert.match(functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry"), /setText\(fields\.productionTwoProfileWarning, t\("sendRefreshWrongDirection"\)\)/);
+  assert.doesNotMatch(functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry"), /initializeLanguage\(\)/);
+  assert.doesNotMatch(functionBody(mainJs, "retryTwoProfileOutboundEntry"), /initializeLanguage\(\)/);
 });
 
 test("manual encrypted envelope guide keeps local default flow visible", () => {
@@ -2861,6 +2939,7 @@ test("public diagnostics recovery guide keeps support-safe next actions visible"
   assert.match(i18nJs, /Redacted support report/);
   assert.match(i18nJs, /Copy redacted support report/);
   assert.match(i18nJs, /raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, and screenshots are excluded/);
+  assert.match(i18nJs, /Public support diagnostics copied; no raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, or screenshots included\./);
   assert.match(i18nJs, /민감정보 제거 지원 리포트/);
   assert.match(i18nJs, /raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, screenshots는 요구하지 않습니다\./);
   assert.match(i18nJs, /민감정보 제거 지원 리포트 복사/);
@@ -2931,6 +3010,22 @@ test("safety mismatch revokes the saved room verification", () => {
   assert.match(functionBody(mainJs, "rejectCurrentTwoProfileSafety"), /applyProductionActionState\(\)/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip"), /!twoProfileSafetyConfirmedForInput\(roomInput\)/);
   assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /!twoProfileSafetyConfirmedForInput\(input\)/);
+});
+
+test("pairwise safety gate keeps send export import blocked until verification", () => {
+  const gate = productionPairwiseSafetyActionGateView({});
+  assert.equal(gate.failureClass, "safety_not_verified");
+  assert.equal(gate.sendAllowed, false);
+  assert.equal(gate.exportAllowed, false);
+  assert.equal(gate.importAllowed, false);
+  assert.equal(gate.verifiedStateAllowed, false);
+  assert.equal(gate.deliveredStateAllowed, false);
+  assert.equal(gate.nextAction, "compare-safety-before-messaging");
+  assert.match(gate.boundary, /pairwise_safety_action_gate=true/);
+  assert.match(gate.boundary, /safety_verified=false/);
+  assert.match(gate.boundary, /send_allowed=false/);
+  assert.match(gate.boundary, /export_allowed=false/);
+  assert.match(gate.boundary, /import_allowed=false/);
 });
 
 test("composer and delivery-route controls stay on the chat delivery path", () => {
@@ -3147,6 +3242,7 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /external_delivery_evidence_claim=false/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /security_ready_proof_claim=false/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /app_launch_network=false/);
+  assert.match(actionStateJs, /app_launch_network_boundary=/);
   assert.match(mainJs, /Attempt explicit private delivery for message #/);
   assert.doesNotMatch(mainJs, /Attempt external onion send/);
 });
