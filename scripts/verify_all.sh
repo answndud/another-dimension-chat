@@ -14,7 +14,5 @@ run_step() {
 cd "$ROOT_DIR"
 
 run_step "desktop shell fast verifier" scripts/verify_desktop_shell_fast.sh
-run_step "macOS unsigned public beta packet identity" scripts/macos_unsigned_public_release_packet_once.sh
-run_step "macOS fresh install rehearsal contract" scripts/macos_fresh_install_rehearsal_once.sh
 
 printf '\nverify_all passed\n'

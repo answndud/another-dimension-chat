@@ -94,6 +94,23 @@ test("invite code creates opposite local and peer roles", () => {
   });
 });
 
+test("invite code profiles stay stable for the same code and normalized role", () => {
+  assert.deepEqual(productionInviteCodeProfiles("  abcd-2345  ", "inviter"), {
+    connectionCode: "abcd-2345",
+    role: "inviter",
+    slug: "abcd-2345",
+    localProfile: "inviter-abcd-2345",
+    peerProfile: "joiner-abcd-2345",
+  });
+  assert.deepEqual(productionInviteCodeProfiles("abcd-2345", undefined), {
+    connectionCode: "abcd-2345",
+    role: "joiner",
+    slug: "abcd-2345",
+    localProfile: "joiner-abcd-2345",
+    peerProfile: "inviter-abcd-2345",
+  });
+});
+
 test("invite identity boundary stays accountless and redacted", () => {
   const boundary = productionInviteIdentityBoundaryView({
     profileA: "inviter-abcd-2345-1ufszcs",
@@ -993,6 +1010,33 @@ test("pairwise invite import failure view splits non-generic recovery kinds", ()
   }
 });
 
+test("pairwise invite import failure kinds keep distinct recovery actions", () => {
+  const views = {
+    malformed: productionPairwiseInviteImportFailureView({ error: "pairwise_invite_import_failure=malformed" }),
+    duplicate: productionPairwiseInviteImportFailureView({ error: "CoreError::PairingAlreadyPending" }),
+    already_paired: productionPairwiseInviteImportFailureView({ error: "CoreError::ContactAlreadyActive" }),
+    stale: productionPairwiseInviteImportFailureView({ error: "PairingError::ExpiredPayload" }),
+    identity_mismatch: productionPairwiseInviteImportFailureView({
+      error: "ProductionSessionError::LocalPairingPayloadMismatch",
+    }),
+    revoked_re_pair_required: productionPairwiseInviteImportFailureView({
+      error: "pairwise_invite_import_failure=revoked_re_pair_required",
+    }),
+  };
+
+  assert.equal(views.malformed.nextAction, "Ask for a fresh invite payload.");
+  assert.equal(views.duplicate.nextAction, "Open the existing pending pairing.");
+  assert.equal(views.already_paired.nextAction, "Open the existing room.");
+  assert.equal(views.stale.nextAction, "Ask for a fresh invite.");
+  assert.equal(views.identity_mismatch.nextAction, "Stop and rebuild with a fresh invite.");
+  assert.equal(views.revoked_re_pair_required.nextAction, "Re-pair with a fresh invite.");
+  for (const view of Object.values(views)) {
+    assert.match(view.boundary, /malicious_input_fail_closed=true/);
+    assert.match(view.boundary, /generic_error=false/);
+    assert.doesNotMatch(view.message, /generic error/i);
+  }
+});
+
 test("pairwise safety verification flow routes mismatch and revoked to re-pair", () => {
   const compare = productionPairwiseSafetyVerificationFlowView({
     safetyTranscriptBound: true,
@@ -1163,6 +1207,10 @@ test("redacted support report excludes sensitive inputs", () => {
   assert.match(view.payload, /recovery_next_action=retry-passphrase/);
   assert.match(view.payload, /passphrase=<redacted>/);
   assert.match(view.payload, /private_key=<redacted>/);
+  assert.match(
+    view.boundary,
+    /allowed_fields=app-status#app-version#build-channel#build-commit#platform#checksum-result#release-class#release-class-readiness#app-launch-network-boundary#active-flow#redacted-error-code#non-sensitive-status#recovery-next-action/,
+  );
   assert.match(view.boundary, /support_bundle_requested=false/);
   assert.match(view.boundary, /diagnostic_upload_requested=false/);
   assert.match(view.boundary, /telemetry_upload_requested=false/);

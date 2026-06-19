@@ -152,7 +152,7 @@
               <span data-i18n="privacyModel">Privacy model</span>
               <strong id="privacy-model-summary" data-i18n="privacyModelSummary">Defined threat model; not universal safety</strong>
               <p data-i18n="privacyModelSummaryHelp">
-                Ordinary use avoids phone, email, accounts, and contact discovery. High-Risk Mode mitigates remote observers, malicious peers, local-at-rest access, and update risk; compromised endpoints, coercion, and full global traffic correlation are not protected.
+                Ordinary use avoids phone, email, accounts, and contact lookup. High-Risk Mode mitigates remote observers, malicious peers, local-at-rest access, and update risk; compromised endpoints, coercion, and full global traffic correlation are not protected.
               </p>
             </article>
           </section>
@@ -631,7 +631,7 @@
                 </li>
                 <li>
                   <strong data-i18n="connectionGuideSetup">3. Room ready</strong>
-                  <span data-i18n="connectionGuideSetupText">The invite token verifies this room for messaging.</span>
+                  <span data-i18n="connectionGuideSetupText">The invite code opens the room; compare the verification phrase before messaging.</span>
                 </li>
                 <li>
                   <strong data-i18n="connectionGuideChat">4. Write a message</strong>
@@ -1215,7 +1215,7 @@
                 </div>
                 <label class="loop-label" for="production-profile-name" data-i18n="profiles">Profile</label>
                 <select id="production-profile-selector"></select>
-                <input id="production-profile-name" type="text" value="alice" autocomplete="username" />
+                <input id="production-profile-name" type="text" value="alice" autocomplete="off" />
                 <div class="loop-actions" aria-label="Manual profile presets">
                   <button id="use-alice-production-profile" type="button" class="flow-control is-secondary" data-i18n="useAlice">
                     Use Alice
