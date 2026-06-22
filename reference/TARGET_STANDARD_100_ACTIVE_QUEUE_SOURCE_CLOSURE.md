@@ -24,7 +24,7 @@ hold states remain visible.
 | C100-2 pairwise identity and safety verification closure | closed by active-queue waiver, identity audit claims held | `reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md`, `scripts/pairwise_identity_safety_product_closure_once.sh` |
 | C100-3 key management, rollback prevention, and storage lifecycle | closed by active-queue waiver, key/rollback/security claims held | `reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md`, `scripts/production_key_management_source_gate_once.sh`, `reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md`, `reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md` |
 | C100-4 default practical transport product path | closed by active-queue waiver, production transport claims held | `reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md`, `reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md` |
-| C100-5 advanced onion/Tor path evidence boundary | source gate with external evidence hold | `reference/TRANSPORT_EXPERIMENT_RUNBOOK.md`, `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md` |
+| C100-5 advanced onion/Tor path evidence boundary | closed by active-queue waiver, external onion/reliability claims held | `reference/TRANSPORT_EXPERIMENT_RUNBOOK.md`, `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md` |
 | M100-6 macOS representative usability evidence | closed by active-queue waiver, evidence claims held | `reference/MACOS_USABILITY_RECOVERY_CLOSURE.md`, `reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md` |
 | M100-7 macOS update and rollback-safe release channel | closed by active-queue waiver, signed update and rollback claims held | `reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md`, `scripts/macos_update_rollback_safe_release_channel_once.sh` |
 | M100-8 macOS stable release gate and public copy upgrade | closed by active-queue waiver, stable/public copy claims held | `reference/STABLE_MACOS_V1_RELEASE_GATE.md`, `scripts/stable_macos_v1_release_gate_once.sh` |
@@ -82,6 +82,12 @@ censorship-resistant.
 - default_transport_policy_waiver_authorized=true
 - default_transport_usability_evidence_required_for_claims=true
 - default_transport_field_evidence_required_for_claims=true
+- c100_5_onion_evidence_blocker_closed=true
+- advanced_onion_policy_waiver_authorized=true
+- advanced_onion_waiver_scope=active-queue-unblock-only
+- advanced_onion_field_evidence_required_for_claims=true
+- advanced_onion_repeated_external_evidence_required_for_claims=true
+- external_delivery_success_claim_allowed=false
 - beta_wording_removal_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false

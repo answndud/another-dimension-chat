@@ -60,7 +60,7 @@ updated, and a later explicit release/claim task authorizes the wording.
 | Redacted public diagnostics and support | Public diagnostics/support never request or export raw logs, payloads, paths, message text, passphrases, keys, or private notes. | pass for current beta/source boundary | [PUBLIC_INTAKE_POLICY.md](PUBLIC_INTAKE_POLICY.md), [PUBLIC_SUPPORT_TRIAGE.md](PUBLIC_SUPPORT_TRIAGE.md) |
 | Security trust base is not platform signing/store authority | Apple, Google, Microsoft, app stores, notarization, signing, SmartScreen, Play Store, TestFlight, or store review are distribution aids only. | pass as non-claim | [MACOS_PRODUCTION_DISTRIBUTION_GATE.md](MACOS_PRODUCTION_DISTRIBUTION_GATE.md), [UPDATE_INTEGRITY.md](UPDATE_INTEGRITY.md) |
 | Default practical transport understandable to normal users | Family/friend/client users can complete exchange, failure, retry, and recovery in app without a central trusted server. | supported-scope pass; production transport false | [PRODUCTION_DEFAULT_TRANSPORT_PATH.md](PRODUCTION_DEFAULT_TRANSPORT_PATH.md), [MACOS_PRODUCTION_UX_ONBOARDING.md](MACOS_PRODUCTION_UX_ONBOARDING.md) |
-| High-risk onion/Tor path separated | Onion/Tor stays advanced, explicit, fail-closed, and separate from default delivery. | pass for current boundary; reliable external delivery false | [TRANSPORT_EXPERIMENT_RUNBOOK.md](TRANSPORT_EXPERIMENT_RUNBOOK.md), [PRODUCTION_DEFAULT_TRANSPORT_PATH.md](PRODUCTION_DEFAULT_TRANSPORT_PATH.md) |
+| High-risk onion/Tor path separated | Onion/Tor stays advanced, explicit, fail-closed, and separate from default delivery. | pass for current boundary; C100-5 active blocker closed by waiver; reliable external delivery false | [TRANSPORT_EXPERIMENT_RUNBOOK.md](TRANSPORT_EXPERIMENT_RUNBOOK.md), [PRODUCTION_DEFAULT_TRANSPORT_PATH.md](PRODUCTION_DEFAULT_TRANSPORT_PATH.md) |
 | No automatic network start | App launch must not bootstrap Tor, publish descriptors, open streams, send envelopes, or receive envelopes. | pass for current boundary | [PRODUCTION_DEFAULT_TRANSPORT_PATH.md](PRODUCTION_DEFAULT_TRANSPORT_PATH.md), [FIELD_EVIDENCE_RELIABILITY_PROGRAM.md](FIELD_EVIDENCE_RELIABILITY_PROGRAM.md) |
 | User-authorized network actions only | Network behavior requires explicit user action and redacted status. | pass for current boundary | [TRANSPORT_EXPERIMENT_RUNBOOK.md](TRANSPORT_EXPERIMENT_RUNBOOK.md) |
 | No external onion delivery claim before evidence | Reliable external onion delivery and repeated external onion evidence remain false until repeated external two-machine evidence exists. | hold | [FIELD_EVIDENCE_RELIABILITY_PROGRAM.md](FIELD_EVIDENCE_RELIABILITY_PROGRAM.md), [REDACTED_FIELD_REPORT_PACKET.md](REDACTED_FIELD_REPORT_PACKET.md) |
@@ -141,6 +141,12 @@ updated, and a later explicit release/claim task authorizes the wording.
 - default_transport_policy_waiver_authorized=true
 - default_transport_usability_evidence_required_for_claims=true
 - default_transport_field_evidence_required_for_claims=true
+- c100_5_onion_evidence_blocker_closed=true
+- advanced_onion_policy_waiver_authorized=true
+- advanced_onion_waiver_scope=active-queue-unblock-only
+- advanced_onion_field_evidence_required_for_claims=true
+- advanced_onion_repeated_external_evidence_required_for_claims=true
+- external_delivery_success_claim_allowed=false
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
 - macos_release_credential_evidence_collector_available=true
@@ -262,4 +268,4 @@ updated, and a later explicit release/claim task authorizes the wording.
 - generated_release_artifacts_staged=false
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false
-- next_required_phase=Phase C100-5 - Advanced Onion/Tor Evidence Boundary
+- next_required_phase=Phase A100-1 - External Security Review Packet Freeze

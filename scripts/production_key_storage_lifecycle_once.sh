@@ -56,7 +56,7 @@ must_contain "$DOC" "rollback_prevention_claimed=false"
 must_contain "$DOC" "secure_media_deletion_claimed=false"
 must_contain "$DOC" "production_key_management_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
-must_contain "$DOC" "next_required_phase=Phase C100-5 - Advanced Onion/Tor Evidence Boundary"
+must_contain "$DOC" "next_required_phase=Phase A100-1 - External Security Review Packet Freeze"
 
 must_contain "README.md" "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
 must_contain "SECURITY.md" "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
@@ -123,5 +123,5 @@ rollback_prevention_claimed=false
 secure_media_deletion_claimed=false
 production_key_management_ready=false
 security_ready_claimed=false
-next_required_phase=Phase-C100-5-Advanced-Onion-Tor-Evidence-Boundary
+next_required_phase=Phase-A100-1-External-Security-Review-Packet-Freeze
 STATUS

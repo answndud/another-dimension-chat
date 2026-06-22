@@ -30,12 +30,18 @@ GATE="reference/PRODUCTION_READINESS_CLAIM_GATE.md"
 VALIDATOR="scripts/validate_redacted_field_reports.mjs"
 SCOPE_DOWN="reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md"
 INTAKE="reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md"
+RUNBOOK="reference/TRANSPORT_EXPERIMENT_RUNBOOK.md"
 
-for file in "$PROGRAM" "$PACKET" "$REVIEW_PACKET" "$GATE" "$VALIDATOR" "$SCOPE_DOWN" "$INTAKE" "README.md" "SECURITY.md"; do
+for file in "$PROGRAM" "$PACKET" "$REVIEW_PACKET" "$GATE" "$VALIDATOR" "$SCOPE_DOWN" "$INTAKE" "$RUNBOOK" "README.md" "SECURITY.md"; do
   [ -f "$file" ] || fail "missing required field evidence input: $file"
 done
 
 must_contain "$PROGRAM" "field_evidence_reliability_program_reviewed=true"
+must_contain "$PROGRAM" "c100_5_onion_evidence_blocker_closed=true"
+must_contain "$PROGRAM" "advanced_onion_policy_waiver_authorized=true"
+must_contain "$PROGRAM" "advanced_onion_waiver_scope=active-queue-unblock-only"
+must_contain "$PROGRAM" "advanced_onion_field_evidence_required_for_claims=true"
+must_contain "$PROGRAM" "advanced_onion_repeated_external_evidence_required_for_claims=true"
 must_contain "$PROGRAM" "d100_4_external_evidence_intake_execution_reviewed=true"
 must_contain "$PROGRAM" "external_evidence_intake_operator_ready=true"
 must_contain "$PROGRAM" "field_report_validator_ready=true"
@@ -54,6 +60,7 @@ must_contain "$PROGRAM" "raw_logs_or_private_payloads_allowed=false"
 must_contain "$PROGRAM" "fabricated_peer_evidence_allowed=false"
 must_contain "$PROGRAM" "external_delivery_success_claim_allowed=false"
 must_contain "$PROGRAM" "reliable_external_delivery_claim_allowed=false"
+must_contain "$PROGRAM" "repeated_external_onion_evidence_claim_allowed=false"
 must_contain "$PROGRAM" "production_field_evidence_ready=false"
 must_contain "$PROGRAM" "sensitive_communication_allowed=false"
 must_contain "$PROGRAM" "stable_or_production_release_allowed_without_field_evidence=false"
@@ -78,6 +85,27 @@ must_contain "$PACKET" "external_delivery_success_claim_allowed=false"
 must_contain "$PACKET" "reliable_external_delivery_claim_allowed=false"
 must_contain "$PACKET" "production_field_evidence_ready=false"
 must_contain "$PACKET" "sensitive_communication_allowed=false"
+
+must_contain "$RUNBOOK" "c100_5_onion_evidence_blocker_closed=true"
+must_contain "$RUNBOOK" "advanced_onion_policy_waiver_authorized=true"
+must_contain "$RUNBOOK" "advanced_onion_waiver_scope=active-queue-unblock-only"
+must_contain "$RUNBOOK" "advanced_onion_path=explicit-user-triggered-fail-closed-onion-only"
+must_contain "$RUNBOOK" "advanced_onion_direct_fallback=false"
+must_contain "$RUNBOOK" "advanced_onion_send_receive_available=false"
+must_contain "$RUNBOOK" "advanced_onion_usable_messaging_claim_allowed=false"
+must_contain "$RUNBOOK" "advanced_onion_field_evidence_required_for_claims=true"
+must_contain "$RUNBOOK" "advanced_onion_repeated_external_evidence_required_for_claims=true"
+must_contain "$RUNBOOK" "automatic_network_on_launch_allowed=false"
+must_contain "$RUNBOOK" "external_two_machine_delivery_verified=false"
+must_contain "$RUNBOOK" "external_delivery_success_claim_allowed=false"
+must_contain "$RUNBOOK" "reliable_external_delivery_claim_allowed=false"
+must_contain "$RUNBOOK" "repeated_external_onion_evidence_claim_allowed=false"
+must_contain "$RUNBOOK" "production_transport_ready=false"
+must_contain "$RUNBOOK" "censorship_resistant_claim_allowed=false"
+must_contain "$RUNBOOK" "secure_messenger_claim_allowed=false"
+must_contain "$RUNBOOK" "production_ready_claim_allowed=false"
+must_contain "$RUNBOOK" "audited_claim_allowed=false"
+must_contain "$RUNBOOK" "sensitive_communication_allowed=false"
 
 for required in \
   "reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md" \
@@ -119,7 +147,7 @@ must_contain "$GATE" "next_required_action=external-audit-field-evidence-signed-
 must_contain "reference/PUBLIC_INTAKE_POLICY.md" "Desktop Real-User Test Preparation Boundary"
 must_contain "reference/PUBLIC_SUPPORT_TRIAGE.md" "Do not ask for external two-machine success evidence"
 
-for file in "$PROGRAM" "$PACKET" "$REVIEW_PACKET" "$GATE" "$SCOPE_DOWN" "README.md" "SECURITY.md"; do
+for file in "$PROGRAM" "$PACKET" "$REVIEW_PACKET" "$GATE" "$SCOPE_DOWN" "$RUNBOOK" "README.md" "SECURITY.md"; do
   must_not_match "$file" "macos_two_machine_real_user_flow_repeated=true"
   must_not_match "$file" "different_networks_covered=true"
   must_not_match "$file" "repeated_redacted_field_reports_available=true"
@@ -127,6 +155,7 @@ for file in "$PROGRAM" "$PACKET" "$REVIEW_PACKET" "$GATE" "$SCOPE_DOWN" "README.
   must_not_match "$file" "fabricated_peer_evidence_allowed=true"
   must_not_match "$file" "external_delivery_success_claim_allowed=true"
   must_not_match "$file" "reliable_external_delivery_claim_allowed=true"
+  must_not_match "$file" "repeated_external_onion_evidence_claim_allowed=true"
   must_not_match "$file" "production_field_evidence_ready=true"
   must_not_match "$file" "sensitive_communication_allowed=true"
   must_not_match "$file" "stable_or_production_release_allowed_without_field_evidence=true"
@@ -139,6 +168,11 @@ scripts/field_evidence_release_class_scope_down_once.sh >/dev/null
 cat <<'STATUS'
 status=field-evidence-reliability-program-ready
 field_evidence_reliability_program_reviewed=true
+c100_5_onion_evidence_blocker_closed=true
+advanced_onion_policy_waiver_authorized=true
+advanced_onion_waiver_scope=active-queue-unblock-only
+advanced_onion_field_evidence_required_for_claims=true
+advanced_onion_repeated_external_evidence_required_for_claims=true
 d100_4_external_evidence_intake_execution_reviewed=true
 external_evidence_intake_operator_ready=true
 field_report_validator_ready=true
@@ -157,6 +191,7 @@ raw_logs_or_private_payloads_allowed=false
 fabricated_peer_evidence_allowed=false
 external_delivery_success_claim_allowed=false
 reliable_external_delivery_claim_allowed=false
+repeated_external_onion_evidence_claim_allowed=false
 production_field_evidence_ready=false
 sensitive_communication_allowed=false
 stable_or_production_release_allowed_without_field_evidence=false
