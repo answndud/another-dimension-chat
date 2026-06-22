@@ -49,6 +49,13 @@ for lower release classes such as signed public beta or RC. Field evidence
 still blocks stable, production, reliable external delivery, and sensitive-use
 wording.
 
+RB-6 external review scope-down is recorded in
+`reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md`. It does not claim a
+completed independent review or audit. It only removes missing review/audit as a
+blocker for lower release classes such as signed public beta or RC. Review and
+audit still block stable, production, audited, security-ready, and sensitive-use
+wording.
+
 ## Gate Decision
 
 Decision: hold.
@@ -67,7 +74,7 @@ field evidence, and a separate owner release decision.
 | Default transport | Supported local/manual courier envelope default exists; broad `production_transport_ready=false`. | Hold reliable external delivery claims. |
 | macOS UX/onboarding | Owner-observed task script exists; `usability_study_completed=false`. | Hold production wording removal. |
 | macOS distribution | Distribution gate exists; `stable_signed_notarized_artifact_available=false`. | Hold stable release publication. |
-| External review/audit | Review packet exists; `external_review_completed=false` and `audit_completed=false`. | Keep `not audited`. |
+| External review/audit | Review packet exists; RB-6 scope-down permits lower release classes only; `external_review_completed=false` and `audit_completed=false`. | Keep `not audited`; hold stable, production, security-ready, and sensitive-use claims. |
 | Field evidence | Program and validator exist; RB-5 scope-down permits lower release classes only; `macos_two_machine_real_user_flow_repeated=false`. | Hold stable, reliable delivery, production, and sensitive-use claims. |
 | Operations | Incident/support process exists; `production_operational_readiness_claim_allowed=false`. | Hold production operations claim. |
 
@@ -127,6 +134,7 @@ preflight after the blockers below are resolved.
 - stable_signed_notarized_artifact_available=false
 - external_review_completed=false
 - audit_completed=false
+- rb_6_external_review_release_class_scope_down_reviewed=true
 - macos_two_machine_real_user_flow_repeated=false
 - rb_5_field_evidence_release_class_scope_down_reviewed=true
 - real_external_macos_two_machine_reports_available=false
@@ -168,6 +176,10 @@ preflight after the blockers below are resolved.
 - beta_wording_removal_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false
+- stable_or_production_release_allowed_without_external_review=false
+- signed_public_beta_or_rc_release_class_allowed_without_external_review=true
+- external_review_no_longer_blocks_lower_release_class=true
+- external_review_still_blocks_stable_or_production_claims=true
 - reliable_external_delivery_claim_allowed=false
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false

@@ -94,10 +94,15 @@ not production readiness by themselves.
 - stable_signed_notarized_artifact_available=false
 - production_distribution_ready=false
 - ops_7_external_review_audit_readiness_gate_reviewed=true
+- rb_6_external_review_release_class_scope_down_reviewed=true
 - external_review_completed=false
 - audit_completed=false
 - reviewer_signoff_claimed=false
 - public_user_safety_signoff_claimed=false
+- stable_or_production_release_allowed_without_external_review=false
+- signed_public_beta_or_rc_release_class_allowed_without_external_review=true
+- external_review_no_longer_blocks_lower_release_class=true
+- external_review_still_blocks_stable_or_production_claims=true
 - ops_8_field_evidence_reliability_program_reviewed=true
 - rb_5_field_evidence_release_class_scope_down_reviewed=true
 - redacted_field_report_packet_available=true
