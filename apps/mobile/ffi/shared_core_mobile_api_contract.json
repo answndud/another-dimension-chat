@@ -281,6 +281,8 @@
   "owner_authorization_transition_runbook_file": "apps/mobile/ffi/owner_authorization_transition_runbook.json",
   "pre_implementation_handoff_packet_verified": true,
   "pre_implementation_handoff_packet_file": "apps/mobile/ffi/pre_implementation_handoff_packet.json",
+  "authorization_boundary_closure_verified": true,
+  "authorization_boundary_closure_file": "apps/mobile/ffi/authorization_boundary_closure.json",
   "callable_ffi_authorization_hold_blocks": [
     "udl_file_creation",
     "uniffi_scaffolding",
