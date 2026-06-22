@@ -152,4 +152,4 @@ Targeted tests that anchor this gate:
 - secure_media_deletion_claimed=false
 - production_key_management_ready=false
 - security_ready_claimed=false
-- next_required_phase=Phase C100-4 - Default Practical Transport Product Path
+- next_required_phase=Phase C100-5 - Advanced Onion/Tor Evidence Boundary

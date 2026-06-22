@@ -1,6 +1,7 @@
 # Production Default Transport Product Path
 
-Status: OPS-4 and RB-3 source-side product path gates closed. The supported
+Status: OPS-4 and RB-3 source-side product path gates closed. C100-4 is closed
+for active-queue progress by explicit owner policy waiver only. The supported
 default practical transport scope is local/manual courier envelope exchange
 only. This is a default product flow decision and review input, not a claim of
 reliable external onion delivery, automatic network messaging, production
@@ -74,6 +75,13 @@ The allowed evidence order is:
 OPS-4 only fixes the product path and source gate. It does not fabricate or
 replace external two-machine evidence.
 
+The selected workaround is an explicit owner policy waiver for C100-4 only:
+missing representative usability and real field evidence no longer keep C100-4
+in the active queue, but production transport, reliable external delivery,
+automatic delivery, remote acknowledgement, security-ready, and sensitive-use
+claims remain blocked until real evidence or a later explicit claim-policy
+decision exists.
+
 ## Evidence Anchors
 
 - Practical transport split: `production_practical_transport_split_summary`
@@ -99,6 +107,11 @@ Targeted tests that anchor this gate:
 ## Current Gate Flags
 
 - production_default_transport_path_reviewed=true
+- c100_4_transport_blocker_closed=true
+- default_transport_policy_waiver_authorized=true
+- default_transport_waiver_scope=active-queue-unblock-only
+- default_transport_usability_evidence_required_for_claims=true
+- default_transport_field_evidence_required_for_claims=true
 - rb_3_default_practical_transport_closure_reviewed=true
 - supported_default_transport_ready=true
 - supported_default_transport_scope=local-manual-courier-envelope-exchange-only
@@ -120,4 +133,4 @@ Targeted tests that anchor this gate:
 - production_transport_ready=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=RB-4 macOS UX usability and recovery closure
+- next_required_phase=Phase C100-5 - Advanced Onion/Tor Evidence Boundary

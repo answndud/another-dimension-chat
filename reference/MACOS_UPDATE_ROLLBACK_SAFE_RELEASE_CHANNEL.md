@@ -73,4 +73,4 @@ and owner release authorization before public wording changes.
 - production_distribution_ready=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=C100-4 Default Practical Transport Product Path
+- next_required_phase=C100-5 Advanced Onion/Tor Evidence Boundary

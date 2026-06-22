@@ -256,5 +256,5 @@ dmg_rebuild_authorized=false
 production_ready_claim_allowed=false
 audited_claim_allowed=false
 sensitive_communication_allowed=false
-next_required_phase=Phase-C100-4-Default-Practical-Transport-Product-Path
+next_required_phase=Phase-C100-5-Advanced-Onion-Tor-Evidence-Boundary
 STATUS
