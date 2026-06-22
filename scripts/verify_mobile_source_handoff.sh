@@ -22,6 +22,7 @@ scripts/verify_mobile_source_boundary_cleanup.sh
 scripts/verify_mobile_authorization_hold_regression_matrix.sh
 scripts/verify_mobile_owner_authorization_transition.sh
 scripts/verify_mobile_pre_implementation_handoff.sh
+scripts/verify_mobile_authorization_boundary_closure.sh
 scripts/verify_mobile_binding_gate.sh
 scripts/verify_android_shell_boundary.sh
 scripts/verify_ios_shell_boundary.sh

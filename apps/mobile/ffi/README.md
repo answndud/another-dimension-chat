@@ -172,6 +172,36 @@ delivery, do not create release packaging, do not claim mobile readiness, do not
 claim security ready, and run `scripts/verify_mobile_source_handoff.sh` before
 any transition.
 
+## Authorization Boundary Closure
+
+`authorization_boundary_closure.json` closes the current mobile authorization
+false source-boundary set. It does not authorize generated bindings, callable
+FFI, native runtime messaging, native network delivery, release packaging, store
+distribution, mobile readiness claims, or security-ready claims.
+
+Verified closure files:
+
+- binding prerequisite closure
+- callable FFI authorization hold
+- source boundary cleanup
+- authorization hold regression matrix
+- owner authorization transition runbook
+- pre-implementation handoff packet
+
+Required closure outputs include
+`status=mobile-binding-prerequisite-closure-verified`,
+`status=mobile-callable-ffi-authorization-hold-verified`,
+`status=mobile-source-boundary-cleanup-verified`,
+`status=mobile-authorization-hold-regression-matrix-verified`,
+`status=mobile-owner-authorization-transition-verified`,
+`status=mobile-pre-implementation-handoff-verified`, and
+`status=mobile-source-handoff-verified`.
+
+The closure state remains authorization false implementation blocked. Source
+handoff must continue to report source boundary only true, release packaging
+false, generated bindings false, runtime messaging false, mobile readiness
+claim false, and security-ready claim false.
+
 ## Read-Only Native Status Adapter Boundary
 
 Android and iOS now carry a source-only read-only adapter path for the first
@@ -216,11 +246,10 @@ Use `scripts/verify_mobile_source_handoff.sh` to check the current mobile source
 scaffold state. It aggregates the targeted source-boundary verifiers for the
 read-only status adapter, blocked command adapter, shell presentation,
 redacted diagnostics copy, local lifecycle confirmation, no-network launch
-boundary, Android shell boundary, iOS shell boundary, binding gate, and mobile
-skeleton boundary. It also includes the callable FFI authorization hold, source
-boundary cleanup, authorization hold regression matrix, and owner authorization
-transition runbook verifiers. It also includes the pre-implementation handoff
-packet verifier.
+boundary, Android shell boundary, iOS shell boundary, binding gate, mobile
+skeleton boundary, callable FFI authorization hold, source boundary cleanup,
+authorization hold regression matrix, owner authorization transition runbook,
+pre-implementation handoff packet, and authorization boundary closure verifiers.
 
 This handoff verifier is not a release build, not generated binding validation,
 not APK/AAB/IPA packaging, not store distribution, not runtime messaging
