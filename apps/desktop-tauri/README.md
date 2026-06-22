@@ -59,6 +59,25 @@ npm run tauri:build
 
 This generic Tauri build output is not a public release upload artifact. Public staging accepts only the pinned frozen DMG and provenance checked by `scripts/prepare_unsigned_public_beta_release.sh`; update that script's commit and SHA constants deliberately before changing the public release input.
 
+Windows desktop cross-platform parity intake is source-only and tracked in
+`windows_desktop_parity_intake.json`.
+
+It keeps these non-claims:
+
+- Windows local build candidate only
+- no public Windows artifact
+- no Windows installer
+- no public artifact upload
+- not audited
+- not production-ready
+- sensitive communication prohibited
+
+The intake lists WebView2 runtime smoke, Tauri app-data storage
+roots, path separator behavior, encrypted-store parity, local deletion behavior,
+redacted diagnostics, explicit user action review, no-auto-update parity, and
+local-manual envelope default path as parity gaps before any Windows public
+artifact work.
+
 Build the beta with the manual onion networking attempt feature compiled in:
 
 ```bash

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "status": "source-boundary-windows-desktop-cross-platform-parity-intake",
+  "windows_desktop_parity_intake_verified": true,
+  "current_state": "windows-local-build-candidate-only",
+  "windows_public_artifact_ready": false,
+  "windows_installer_ready": false,
+  "windows_public_artifact_upload_allowed": false,
+  "windows_local_runtime_smoke_passed": false,
+  "release_packaging_allowed": false,
+  "generated_artifact_commit_allowed": false,
+  "parity_gap_items": [
+    "webview2_runtime_smoke",
+    "tauri_app_data_storage_roots",
+    "path_separator_review",
+    "encrypted_store_parity",
+    "local_deletion_behavior_review",
+    "redacted_diagnostics_review",
+    "explicit_user_action_review",
+    "no_auto_update_parity",
+    "local_manual_envelope_default_path",
+    "installer_signing_decisions",
+    "checksum_provenance",
+    "public_upload_hold_review"
+  ],
+  "source_evidence": [
+    "scripts/desktop_windows_readiness_source_audit_once.sh",
+    "scripts/desktop_windows_local_runtime_smoke_boundary_once.sh",
+    "apps/desktop-tauri/scripts/verify-windows-local-runtime-boundary.mjs",
+    "apps/desktop-tauri/package.json:test:windows-boundary",
+    "scripts/public_release_readiness_preflight.sh"
+  ],
+  "public_non_claims": [
+    "unsigned experimental public beta",
+    "sensitive communication prohibited",
+    "not audited",
+    "not production-ready",
+    "no public Windows artifact",
+    "no Windows installer",
+    "no public artifact upload",
+    "Windows local build candidate only"
+  ],
+  "next_required_actions": [
+    "run_test_windows_boundary_on_real_windows",
+    "review_app_data_path_behavior_on_windows",
+    "review_path_separator_behavior_on_windows",
+    "review_local_deletion_behavior_on_windows",
+    "review_redacted_diagnostics_behavior_on_windows",
+    "review_explicit_user_action_before_network_on_windows",
+    "keep_release_packaging_hold_until_explicit_request"
+  ]
+}
