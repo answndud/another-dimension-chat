@@ -1,8 +1,10 @@
 # Field Evidence And Reliability Program
 
-Status: OPS-8 source-side field evidence program gate closed. This is a
-public-safe evidence collection plan and reliability claim boundary, not a real
-external two-machine success result, not repeated field evidence, not production
+Status: OPS-8 source-side field evidence program gate closed, with RB-5
+release-class scope-down recorded in
+`reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md`. This is a public-safe
+evidence collection plan and reliability claim boundary, not a real external
+two-machine success result, not repeated field evidence, not production
 readiness, not audited security, and not permission for sensitive communication.
 
 The program defines which evidence can change transport and production wording.
@@ -90,10 +92,22 @@ If any required area is missing, the decision is hold. A hold keeps
 `reliable external delivery`, `production-ready`, `security-ready`, `audited`,
 and `sensitive communication allowed` wording false.
 
+## RB-5 Scope-Down
+
+RB-5 does not fabricate evidence. Instead, it removes missing field evidence as
+a blocker for lower release classes only. Source-side work may continue toward
+a signed public beta or RC while field evidence remains a stable/production
+claim blocker.
+
+Public wording must still say `sensitive communication prohibited`,
+`not audited`, and `not production-ready`.
+
 ## Current Gate Flags
 
 - field_evidence_reliability_program_reviewed=true
+- rb_5_field_evidence_release_class_scope_down_reviewed=true
 - redacted_field_report_packet_available=true
+- redacted_field_report_validator_available=true
 - same_machine_rehearsal_source_available=true
 - local_two_instance_rehearsal_completed=false
 - macos_two_machine_real_user_flow_repeated=false
@@ -108,4 +122,8 @@ and `sensitive communication allowed` wording false.
 - reliable_external_delivery_claim_allowed=false
 - production_field_evidence_ready=false
 - sensitive_communication_allowed=false
-- next_required_phase=OPS-9 operational support, incident, and vulnerability process
+- stable_or_production_release_allowed_without_field_evidence=false
+- signed_public_beta_or_rc_release_class_allowed_without_field_evidence=true
+- field_evidence_no_longer_blocks_lower_release_class=true
+- field_evidence_still_blocks_stable_or_production_claims=true
+- next_required_phase=RB-6 external review and audit closure

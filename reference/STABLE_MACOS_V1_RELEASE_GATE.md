@@ -42,6 +42,13 @@ critical desktop task script and recovery vocabulary alignment. Representative
 3-5-person usability study completion and production wording readiness remain
 false.
 
+RB-5 field evidence scope-down is recorded in
+`reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md`. It does not claim real
+macOS two-machine evidence. It only removes missing field evidence as a blocker
+for lower release classes such as signed public beta or RC. Field evidence
+still blocks stable, production, reliable external delivery, and sensitive-use
+wording.
+
 ## Gate Decision
 
 Decision: hold.
@@ -61,7 +68,7 @@ field evidence, and a separate owner release decision.
 | macOS UX/onboarding | Owner-observed task script exists; `usability_study_completed=false`. | Hold production wording removal. |
 | macOS distribution | Distribution gate exists; `stable_signed_notarized_artifact_available=false`. | Hold stable release publication. |
 | External review/audit | Review packet exists; `external_review_completed=false` and `audit_completed=false`. | Keep `not audited`. |
-| Field evidence | Program exists; `macos_two_machine_real_user_flow_repeated=false`. | Hold reliable delivery and sensitive-use claims. |
+| Field evidence | Program and validator exist; RB-5 scope-down permits lower release classes only; `macos_two_machine_real_user_flow_repeated=false`. | Hold stable, reliable delivery, production, and sensitive-use claims. |
 | Operations | Incident/support process exists; `production_operational_readiness_claim_allowed=false`. | Hold production operations claim. |
 
 ## Public Wording Decision
@@ -121,6 +128,8 @@ preflight after the blockers below are resolved.
 - external_review_completed=false
 - audit_completed=false
 - macos_two_machine_real_user_flow_repeated=false
+- rb_5_field_evidence_release_class_scope_down_reviewed=true
+- real_external_macos_two_machine_reports_available=false
 - rb_1_local_manual_e2ee_claim_closure_reviewed=true
 - supported_local_manual_e2ee_ready=true
 - supported_local_manual_e2ee_scope=1:1-local-manual-envelope-message-content-only
@@ -148,6 +157,10 @@ preflight after the blockers below are resolved.
 - secure_deletion_claim_allowed=false
 - production_transport_ready=false
 - reliable_external_delivery_claim_allowed=false
+- stable_or_production_release_allowed_without_field_evidence=false
+- signed_public_beta_or_rc_release_class_allowed_without_field_evidence=true
+- field_evidence_no_longer_blocks_lower_release_class=true
+- field_evidence_still_blocks_stable_or_production_claims=true
 - production_distribution_ready=false
 - production_field_evidence_ready=false
 - production_operational_readiness_claim_allowed=false
