@@ -75,4 +75,4 @@ wording changes.
 - external_delivery_claim_allowed=false
 - sensitive_communication_allowed=false
 - security_ready_claimed=false
-- next_required_phase=Phase C100-4 - Default Practical Transport Product Path
+- next_required_phase=Phase C100-5 - Advanced Onion/Tor Evidence Boundary

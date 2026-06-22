@@ -67,7 +67,7 @@ must_contain "$DOC" "global_identity_claim_allowed=false"
 must_contain "$DOC" "production_identity_audit_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
 must_contain "$DOC" "sensitive_communication_allowed=false"
-must_contain "$DOC" "next_required_phase=Phase C100-4 - Default Practical Transport Product Path"
+must_contain "$DOC" "next_required_phase=Phase C100-5 - Advanced Onion/Tor Evidence Boundary"
 
 must_contain "README.md" "reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md"
 must_contain "SECURITY.md" "reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md"
@@ -128,5 +128,5 @@ accountless_contact_discovery_preserved=true
 production_identity_audit_ready=false
 security_ready_claimed=false
 sensitive_communication_allowed=false
-next_required_phase=Phase-C100-4-Default-Practical-Transport-Product-Path
+next_required_phase=Phase-C100-5-Advanced-Onion-Tor-Evidence-Boundary
 STATUS

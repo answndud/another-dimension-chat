@@ -26,6 +26,11 @@ cd "$ROOT"
 DOC="reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md"
 
 must_contain "$DOC" "production_default_transport_path_reviewed=true"
+must_contain "$DOC" "c100_4_transport_blocker_closed=true"
+must_contain "$DOC" "default_transport_policy_waiver_authorized=true"
+must_contain "$DOC" "default_transport_waiver_scope=active-queue-unblock-only"
+must_contain "$DOC" "default_transport_usability_evidence_required_for_claims=true"
+must_contain "$DOC" "default_transport_field_evidence_required_for_claims=true"
 must_contain "$DOC" "default_transport_product_path=local-manual-encrypted-envelope-exchange"
 must_contain "$DOC" "default_transport_network_io=false"
 must_contain "$DOC" "default_transport_automatic_delivery=false"
@@ -42,7 +47,7 @@ must_contain "$DOC" "external_two_machine_delivery_verified=false"
 must_contain "$DOC" "reliable_external_delivery_claim_allowed=false"
 must_contain "$DOC" "production_transport_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
-must_contain "$DOC" "next_required_phase=RB-4 macOS UX usability and recovery closure"
+must_contain "$DOC" "next_required_phase=Phase C100-5 - Advanced Onion/Tor Evidence Boundary"
 
 must_contain "README.md" "reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md"
 must_contain "SECURITY.md" "reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md"
@@ -83,6 +88,11 @@ scripts/desktop_default_transport_boundary_once.sh >/dev/null
 cat <<'STATUS'
 status=production-default-transport-product-path-ready
 production_default_transport_path_reviewed=true
+c100_4_transport_blocker_closed=true
+default_transport_policy_waiver_authorized=true
+default_transport_waiver_scope=active-queue-unblock-only
+default_transport_usability_evidence_required_for_claims=true
+default_transport_field_evidence_required_for_claims=true
 default_transport_product_path=local-manual-encrypted-envelope-exchange
 default_transport_network_io=false
 default_transport_automatic_delivery=false
@@ -99,5 +109,5 @@ external_two_machine_delivery_verified=false
 reliable_external_delivery_claim_allowed=false
 production_transport_ready=false
 security_ready_claimed=false
-next_required_phase=RB-4-macos-ux-usability-recovery-closure
+next_required_phase=Phase-C100-5-Advanced-Onion-Tor-Evidence-Boundary
 STATUS

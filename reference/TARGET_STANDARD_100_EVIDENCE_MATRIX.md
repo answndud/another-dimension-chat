@@ -137,6 +137,10 @@ updated, and a later explicit release/claim task authorizes the wording.
 - app_key_wrapping_required_for_key_management_claims=true
 - rollback_prevention_external_monotonic_state_required_for_claims=true
 - secure_deletion_evidence_required_for_claims=true
+- c100_4_transport_blocker_closed=true
+- default_transport_policy_waiver_authorized=true
+- default_transport_usability_evidence_required_for_claims=true
+- default_transport_field_evidence_required_for_claims=true
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
 - macos_release_credential_evidence_collector_available=true
@@ -258,4 +262,4 @@ updated, and a later explicit release/claim task authorizes the wording.
 - generated_release_artifacts_staged=false
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false
-- next_required_phase=Phase C100-4 - Default Practical Transport Product Path
+- next_required_phase=Phase C100-5 - Advanced Onion/Tor Evidence Boundary
