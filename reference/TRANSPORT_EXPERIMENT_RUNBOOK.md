@@ -87,6 +87,18 @@ The public status classes are intentionally coarse:
 
 These status classes are reporting boundaries only. They do not mean transport is usable.
 
+## C100-5 Evidence Boundary
+
+C100-5 is closed for active-queue progress by explicit owner policy waiver
+only. The waiver does not add external evidence, does not allow usable onion
+messaging claims, and does not relax the fail-closed experiment boundary.
+
+Repeated external two-machine field evidence, accepted redacted reports, and
+external review remain required before any reliable external onion delivery,
+repeated external onion evidence, production transport, censorship-resistant,
+secure messenger, production-ready, audited, or sensitive-use wording can be
+considered.
+
 ## Hard Stops
 
 Stop the experiment and return to fail-closed defaults if any of these become necessary:
@@ -99,3 +111,26 @@ Stop the experiment and return to fail-closed defaults if any of these become ne
 - Direct P2P, WebRTC, STUN, TURN, ICE, or libp2p direct dialing.
 - Production storage unlock/key management.
 - Claims of production E2EE, production anonymity, production transport readiness, or secure messenger release.
+
+## Current Gate Flags
+
+- c100_5_onion_evidence_blocker_closed=true
+- advanced_onion_policy_waiver_authorized=true
+- advanced_onion_waiver_scope=active-queue-unblock-only
+- advanced_onion_path=explicit-user-triggered-fail-closed-onion-only
+- advanced_onion_direct_fallback=false
+- advanced_onion_send_receive_available=false
+- advanced_onion_usable_messaging_claim_allowed=false
+- advanced_onion_field_evidence_required_for_claims=true
+- advanced_onion_repeated_external_evidence_required_for_claims=true
+- automatic_network_on_launch_allowed=false
+- external_two_machine_delivery_verified=false
+- external_delivery_success_claim_allowed=false
+- reliable_external_delivery_claim_allowed=false
+- repeated_external_onion_evidence_claim_allowed=false
+- production_transport_ready=false
+- censorship_resistant_claim_allowed=false
+- secure_messenger_claim_allowed=false
+- production_ready_claim_allowed=false
+- audited_claim_allowed=false
+- sensitive_communication_allowed=false
