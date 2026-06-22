@@ -3366,13 +3366,21 @@ function savedInviteRoomResumePriority(room) {
   if (savedInviteRoomRealOnionRecoveryView(room)) {
     return 25;
   }
-  if (savedInviteRoomReceiveState(room) === "paused") {
+  const receiveState = savedInviteRoomReceiveState(room);
+  if (receiveState === "stopping") {
+    return 22;
+  }
+  if (receiveState === "paused") {
     return 20;
+  }
+  const routeReadinessView = savedInviteRoomRouteReadinessView(room);
+  if (routeReadinessView?.action === "wait-receive-stop") {
+    return 19;
   }
   if (savedInviteRoomWaitingForPeerCode(room)) {
     return 18;
   }
-  if (savedInviteRoomRouteReadinessView(room)) {
+  if (routeReadinessView) {
     return 15;
   }
   return 0;
