@@ -15101,7 +15101,7 @@ async function cancelTwoProfileOutboundEntry(entry) {
     setText(fields.productionTwoProfileWarning, t("sendCanceledNotice"));
     setChatDeliveryNoticeByKey("sendCanceledNotice", "success", input);
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
-    showLatestRetryableOutboundNotice(input);
+    showLatestRetryableOutboundNotice(input, { allowAutomatic: false });
   } catch (error) {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
