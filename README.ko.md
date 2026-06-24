@@ -49,13 +49,19 @@ Assets에서 **2개 파일** 다운로드:
 shasum -a 256 -c *.dmg.sha256
 ```
 
-출력이 `OK`여야 진행. macOS에서 차단되면 System Settings > Privacy & Security
-에서 허용.
+예상 출력:
+
+```text
+another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg: OK
+```
+
+출력이 `OK`여야 진행. macOS에서 차단되면 checksum 검증 후
+System Settings > Privacy & Security에서 허용.
 
 ## 빠른 시작
 
 1. 로컬 프로필 생성.
-2. 초대 코드 또는 QR로 페어와이즈 룸 생성 또는 참가.
+2. 초대 코드로 페어와이즈 룸 생성 또는 참가.
 3. 상대와 safety material 비교.
 4. 메시지 작성 → 암호화된 봉투 내보내기.
 5. 원하는 채널(Signal, 이메일 등)로 봉투 전달.

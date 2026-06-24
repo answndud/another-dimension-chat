@@ -15,12 +15,15 @@ normal macOS Privacy & Security manual allow path if Gatekeeper blocks the app.
 
 ## Files
 
-Download these files from the GitHub Release:
+For normal install, download only these two files from the GitHub Release:
 
 <https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned>
 
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
+
+The other attached files are reviewer or maintainer evidence:
+
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
 - `INSTALL_UNSIGNED_MACOS.md`
 - `RELEASE_NOTES.md`
