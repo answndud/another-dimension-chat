@@ -1,12 +1,49 @@
 # Security Policy
 
-## Current Security Status
+## Current Status
 
 Another Dimension Chat is not ready for real communication.
 
-The current macOS release path is an unsigned experimental public beta, not
-audited, not production-ready, and sensitive communication prohibited. It is
-not a secure messenger release.
+The current macOS release is an unsigned experimental public beta. It is not
+signed, not notarized, not audited, not production-ready, and not for sensitive
+communication. It is not a secure messenger release.
+
+## Supported Public Build
+
+| Platform | Public status |
+|----------|---------------|
+| macOS Apple Silicon | Unsigned public beta DMG |
+| Windows | No public app yet |
+| Android / iOS | No public app yet |
+
+## Report A Vulnerability
+
+Use GitHub private vulnerability reporting when available.
+
+If private reporting is unavailable, open a minimal public contact request
+without exploit details, private room data, keys, payloads, invite codes, raw
+logs, crash dumps, local paths, or screenshots of private room data.
+
+## Non-Claims
+
+This beta does not claim:
+
+- audited security
+- production readiness
+- safety for sensitive communication
+- anonymity or untraceability
+- reliable onion/network delivery
+- Briar/Cwtch-equivalent privacy or security
+- protection from compromised endpoints, coercion, unaudited implementation
+  bugs, or full global traffic correlation
+
+Experimental onion/network delivery is explicit, fail-closed, and outside the
+default manual encrypted-envelope flow. It is not a reliable delivery claim.
+
+<details>
+<summary>Detailed readiness and engineering boundary ledger</summary>
+
+## Detailed Security Status
 
 The current public repository contains a Rust/Tauri prototype and a local desktop beta candidate. It is useful for testing development flow, local encrypted-store boundaries, invite-room recovery, explicit user-mediated private-delivery actions, and fail-closed advanced onion/Tor attempt behavior, but it does not provide production-grade confidentiality, anonymity, metadata resistance, endpoint protection, or user safety.
 
@@ -560,3 +597,5 @@ Public unsigned beta artifacts must not include local app data, private planning
   prove it preserves the no-central-trusted-server model.
 - Do not persist production private keys, replay state, message envelopes, local message indexes, or session transport state as plaintext.
 - Do not publish private planning notes or sensitive threat-model details from ignored local documentation.
+
+</details>
