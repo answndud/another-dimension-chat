@@ -3,7 +3,7 @@
 <p>
   <img src="https://img.shields.io/badge/status-unsigned%20beta-orange" alt="Status">
   <img src="https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-lightgrey" alt="Platform">
-  <img src="https://img.shields.io/badge/license-not%20selected-lightgrey" alt="License">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
 </p>
 
 [English](README.md) | 한국어
@@ -16,6 +16,16 @@ safety material 비교, 로컬 암호화 저장, 수동 sealed-message 교환을
 
 > **현재 상태:** 서명되지 않은 macOS Apple Silicon 베타. 감사되지 않았고,
 > production-ready가 아니며, 민감한 통신에 사용하면 안 됨.
+
+## 지금 제공하는 이점
+
+| 이점 | 현재 베타 동작 |
+|------|----------------|
+| 계정 생성 없음 | 내 기기에 로컬 프로필 생성 |
+| 공개 식별자 없음 | 초대 코드로 한 사람과만 연결 |
+| 중앙 메시지 저장 없음 | 내보내기 전까지 메시지는 로컬에 보관 |
+| 전달 채널 직접 선택 | sealed message를 원하는 채널로 전달 |
+| 명확한 안전 확인 | room 사용 전 safety material 비교 |
 
 ## 다운로드
 
@@ -97,5 +107,11 @@ scripts/verify_all.sh   # 가벼운 검증
 scripts/verify_full.sh  # 전체 사전-릴리즈 검증
 ```
 
-자세한 내용은 [CONTRIBUTING.md](CONTRIBUTING.md) 참고. 프로젝트 라이선스는
-아직 선택되지 않았으므로 permissive OSS 라이선스로 간주하면 안 됨.
+## 프로젝트 문서
+
+| 필요 | 시작 문서 |
+|------|-----------|
+| 보안 경계 | [SECURITY.md](SECURITY.md) |
+| 지원 / 버그 제보 | [SUPPORT.md](SUPPORT.md) |
+| 기여 | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| 라이선스 | [MIT](LICENSE) |
