@@ -1323,6 +1323,25 @@ test("chat action moves from setup to compose to stored send", () => {
     }),
     "stored-message",
   );
+  assert.equal(
+    productionTwoProfileCurrentAction({
+      input,
+      hasMessageRetentionPolicy: true,
+      sessionsReady: false,
+      hasKnownSessionStatus: false,
+      hasRecoveredConversation: true,
+    }),
+    "check-session",
+  );
+  assert.equal(
+    productionTwoProfileCurrentAction({
+      input,
+      busy: true,
+      hasMessageRetentionPolicy: true,
+      sessionsReady: true,
+    }),
+    null,
+  );
 });
 
 test("resume target prioritizes retryable sends before normal replies", () => {
