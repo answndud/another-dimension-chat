@@ -102,6 +102,10 @@ scripts/public_release_readiness_preflight.sh
 scripts/prepare_unsigned_public_beta_release.sh
 ```
 
+These packaging commands are historical release-task references, not part of
+the current maintained development baseline. The current local verification
+entrypoints are `scripts/verify_all.sh` and `scripts/verify_full.sh`.
+
 The preflight is source-only, does not require a DMG, and must not generate or commit `public-release/` or `beta-artifacts/` contents.
 
 Default output:

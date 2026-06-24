@@ -88,6 +88,9 @@ Posting boundary:
   endpoints, payloads, message text, local paths, passphrases, private keys, or
   key material in public replies.
 
-Machine gate:
+Historical copy gate:
 
 - `scripts/public_community_launch_copy_once.sh`
+
+This validator is retained as release-task reference material. It is not part
+of the current maintained development baseline.
