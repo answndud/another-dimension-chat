@@ -12,10 +12,13 @@ and do not use terminal quarantine-removal commands as an install step.
 
 ## Download
 
-Download all files from this same GitHub Release:
+For normal install, download only these two files from this same GitHub Release:
 
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
+
+The other attached files are reviewer or maintainer evidence:
+
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
 - `INSTALL_UNSIGNED_MACOS.md`
 - `RELEASE_NOTES.md`
@@ -38,12 +41,17 @@ Use the files attached to this GitHub Release as the release authority. The
 verify the downloaded DMG against branch files copied from GitHub's source
 browser, GitHub source archives, or files from a different release.
 
+<details>
+<summary>Maintainer upload boundary</summary>
+
 Upload boundary for operators: this GitHub Release should contain exactly the
 files listed above and in `MANIFEST.md`. Use `GITHUB_RELEASE_BODY.md` exactly as
 the release body. Do not upload `docs/`, `beta-artifacts/`, the
 `public-release/` folder itself, branch files, source archives, raw logs, crash
 dumps, screenshots, local app data, private diagnostics, private planning notes,
 or any file not listed in the manifest.
+
+</details>
 
 ## Verify Before Opening
 

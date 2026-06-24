@@ -49,13 +49,19 @@ Verify before opening:
 shasum -a 256 -c *.dmg.sha256
 ```
 
-Proceed only if output is `OK`. If macOS blocks the unsigned app, allow via
-System Settings > Privacy & Security.
+Expected output:
+
+```text
+another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg: OK
+```
+
+Proceed only if the output is `OK`. If macOS blocks the unsigned app, allow via
+System Settings > Privacy & Security after checksum verification.
 
 ## Quick Start
 
 1. Create a local profile.
-2. Create or join a pairwise room via invite code or QR.
+2. Create or join a pairwise room via invite code.
 3. Compare safety material with the other person.
 4. Write a message → export encrypted envelope.
 5. Send the envelope through your own channel (Signal, email, etc.).
