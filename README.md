@@ -3,7 +3,7 @@
 <p>
   <img src="https://img.shields.io/badge/status-unsigned%20beta-orange" alt="Status">
   <img src="https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-lightgrey" alt="Platform">
-  <img src="https://img.shields.io/badge/license-not%20selected-lightgrey" alt="License">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
 </p>
 
 English | [한국어](README.ko.md)
@@ -17,6 +17,16 @@ exchange.
 
 > **Current status:** unsigned macOS Apple Silicon beta. Not audited, not
 > production-ready, and not for sensitive communication.
+
+## What You Get Today
+
+| Benefit | Current beta behavior |
+|---------|-----------------------|
+| No account setup | Create a local profile on your device |
+| No public identifier | Pair with one person using an invite code |
+| No central message storage | Messages stay local unless you export them |
+| User-chosen delivery | Move sealed messages through any channel you choose |
+| Clear safety step | Compare safety material before using the room |
 
 ## Download
 
@@ -98,5 +108,11 @@ scripts/verify_all.sh   # light verify
 scripts/verify_full.sh  # full pre-release verify
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for more. The project license has not
-been selected yet; do not treat this repository as permissively licensed.
+## Project Docs
+
+| Need | Start here |
+|------|------------|
+| Security boundary | [SECURITY.md](SECURITY.md) |
+| Support / bug reports | [SUPPORT.md](SUPPORT.md) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| License | [MIT](LICENSE) |
