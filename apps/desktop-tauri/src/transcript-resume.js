@@ -68,3 +68,33 @@ export function savedInviteRoomMetadataSyncCandidates(rooms, dependency) {
     .map(({ room }) => room)
     .slice(0, dependency.savedRoomMetadataStartupSyncLimit);
 }
+
+export function transcriptResumeWarningText(input = {}) {
+  const {
+    target = null,
+    baseWarning = "",
+    selectedMessageNumber = null,
+    staleMessageEnvelopeSlotsPruned = 0,
+    expiredMessagesPurged = 0,
+    currentLanguage = "en",
+    appendExpiredMessagesPurged = (text) => text,
+    appendStaleMessageEnvelopeSlotsPruned = (text) => text,
+  } = input;
+  if (target === "pending-review") {
+    return selectedMessageNumber
+      ? currentLanguage === "ko"
+        ? `메시지 #${selectedMessageNumber}가 아직 완료되지 않았습니다. 대화는 저장되어 있으며 필요한 작업을 이어갈 수 있습니다.`
+        : `Message #${selectedMessageNumber} is still pending. The conversation is saved and ready to continue.`
+      : baseWarning;
+  }
+  if (target === "reply-latest") {
+    return appendExpiredMessagesPurged(
+      appendStaleMessageEnvelopeSlotsPruned(
+        "Stored conversation recovered. Latest delivered message is selected as the reply target.",
+        staleMessageEnvelopeSlotsPruned,
+      ),
+      expiredMessagesPurged,
+    );
+  }
+  return baseWarning;
+}

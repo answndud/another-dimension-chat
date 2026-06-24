@@ -1157,3 +1157,27 @@ test("public diagnostics failure class maps detailed blockers to broad support c
     "advanced-transport-blocked",
   );
 });
+
+test("public diagnostics report keeps local recovery next action ahead of room and transport blockers", () => {
+  const diagnostics = publicBetaDiagnosticsReport(
+    [
+      "app_version=0.1.0",
+      "build_channel=beta-onion",
+      "build_commit=806ecad1",
+      "room_present=false",
+      "session_ready=false",
+      "local_recovery_action=check-data-lifecycle",
+      "rollback_suspicion=true",
+      "resume_blocked=true",
+      "real_onion_next_blocker=BootstrapTimeout",
+    ].join("\n"),
+    { includeCopyBoundary: true },
+  );
+
+  assert.match(diagnostics, /failure_class=local-recovery-needed/);
+  assert.match(diagnostics, /recovery_next_action=check-data-lifecycle/);
+  assert.match(diagnostics, /diagnostics_copy_next_action=check-data-lifecycle/);
+  assert.match(diagnostics, /desktop_acceptance_next_action=check-data-lifecycle/);
+  assert.doesNotMatch(diagnostics, /failure_class=room-not-open/);
+  assert.doesNotMatch(diagnostics, /recovery_next_action=retry-network/);
+});
