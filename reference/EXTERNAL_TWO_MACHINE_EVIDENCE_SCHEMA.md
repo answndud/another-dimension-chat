@@ -4,12 +4,16 @@ Status: source-level schema for future real peer evidence. This file is not
 external delivery proof, not reliable delivery evidence, not an audit result,
 not production-ready status, and not permission for sensitive communication.
 
-Focused scripts:
+Historical focused validators:
 
 ```bash
 scripts/external_two_machine_evidence_prepare.sh
 scripts/external_two_machine_evidence_validate.sh <report.json>
 ```
+
+These validator names are retained here as schema reference material. They are
+not part of the current maintained development baseline unless restored in a
+separate field-evidence task.
 
 ## Scope
 

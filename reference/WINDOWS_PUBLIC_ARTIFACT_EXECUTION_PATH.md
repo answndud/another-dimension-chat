@@ -7,9 +7,15 @@ upload authorization. This is not a public Windows artifact, not a Windows
 installer, not a Windows signing result, not production-ready, not audited, and
 not permission for sensitive communication.
 
-The focused verifier is `scripts/windows_public_artifact_execution_path_once.sh`.
-It checks the source-side execution path and the real-Windows result validator
-without building, uploading, or committing generated artifacts.
+The previously referenced focused verifier
+`scripts/windows_public_artifact_execution_path_once.sh` is not part of the
+current maintained development baseline. Keep Windows validation source-side and
+redacted until a separate Windows packaging task explicitly restores a focused
+verifier.
+
+This execution path remains documentation of the expected boundary and
+real-Windows evidence requirements without building, uploading, or committing
+generated artifacts.
 The result schema is `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md`.
 Artifact manifest/checksum consistency is tracked in
 `reference/WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md` and verified by

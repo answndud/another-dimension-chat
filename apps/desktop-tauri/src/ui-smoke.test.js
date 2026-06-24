@@ -29,40 +29,12 @@ const actionStateJs = readFileSync(join(here, "action-state.js"), "utf8");
 const privateDeliveryStateJs = readFileSync(join(here, "private-delivery-state.js"), "utf8");
 const stylesCss = readFileSync(join(here, "styles.css"), "utf8");
 const securityMd = readFileSync(join(appRoot, "..", "..", "SECURITY.md"), "utf8");
-const finalAcceptanceScript = readFileSync(
-  join(appRoot, "..", "..", "scripts", "final_acceptance_once.sh"),
-  "utf8",
-);
-const externalEvidencePrepareScript = readFileSync(
-  join(appRoot, "..", "..", "scripts", "external_two_machine_evidence_prepare.sh"),
-  "utf8",
-);
-const externalEvidenceValidateScript = readFileSync(
-  join(appRoot, "..", "..", "scripts", "external_two_machine_evidence_validate.sh"),
-  "utf8",
-);
 const externalEvidenceSchema = readFileSync(
   join(appRoot, "..", "..", "reference", "EXTERNAL_TWO_MACHINE_EVIDENCE_SCHEMA.md"),
   "utf8",
 );
-const highRiskRuntimeEvidenceValidateScript = readFileSync(
-  join(appRoot, "..", "..", "scripts", "high_risk_runtime_evidence_validate_once.sh"),
-  "utf8",
-);
 const highRiskRuntimeEvidenceSchema = readFileSync(
   join(appRoot, "..", "..", "reference", "HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md"),
-  "utf8",
-);
-const crossPlatformPublicBetaPacketScript = readFileSync(
-  join(appRoot, "..", "..", "scripts", "cross_platform_public_beta_packet_once.sh"),
-  "utf8",
-);
-const macosUnsignedPublicReleasePacketScript = readFileSync(
-  join(appRoot, "..", "..", "scripts", "macos_unsigned_public_release_packet_once.sh"),
-  "utf8",
-);
-const publicReleaseReadinessPreflightScript = readFileSync(
-  join(appRoot, "..", "..", "scripts", "public_release_readiness_preflight.sh"),
   "utf8",
 );
 const crossPlatformPublicBetaPacketReference = readFileSync(
@@ -73,28 +45,12 @@ const unsignedPublicBetaGithubReleaseBody = readFileSync(
   join(appRoot, "..", "..", "reference", "UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md"),
   "utf8",
 );
-const windowsArtifactRuntimeEvidenceContractScript = readFileSync(
-  join(appRoot, "..", "..", "scripts", "windows_artifact_runtime_evidence_contract_once.sh"),
-  "utf8",
-);
-const windowsPublicArtifactExecutionPathScript = readFileSync(
-  join(appRoot, "..", "..", "scripts", "windows_public_artifact_execution_path_once.sh"),
-  "utf8",
-);
-const windowsPublicArtifactCandidateGateScript = readFileSync(
-  join(appRoot, "..", "..", "scripts", "windows_public_artifact_candidate_gate_once.sh"),
-  "utf8",
-);
 const windowsRealRuntimeResultSchema = readFileSync(
   join(appRoot, "..", "..", "reference", "WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md"),
   "utf8",
 );
 const windowsPublicArtifactExecutionPathReference = readFileSync(
   join(appRoot, "..", "..", "reference", "WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"),
-  "utf8",
-);
-const publicCommunityLaunchCopyScript = readFileSync(
-  join(appRoot, "..", "..", "scripts", "public_community_launch_copy_once.sh"),
   "utf8",
 );
 const publicCommunityLaunchCopyReference = readFileSync(
@@ -326,33 +282,6 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(actionStateJs, /passphrase_recorded=false/);
   assert.match(actionStateJs, /local_path_recorded=false/);
   assert.match(actionStateJs, /key_material_recorded=false/);
-  assert.match(finalAcceptanceScript, /release_class=public_beta/);
-  assert.match(finalAcceptanceScript, /acceptance_bar_items=27/);
-  assert.match(finalAcceptanceScript, /stable_candidate_ready=false/);
-  assert.match(finalAcceptanceScript, /stable_public_app_ready=false/);
-  assert.match(finalAcceptanceScript, /high_risk_mode_ready=false/);
-  assert.match(finalAcceptanceScript, /external_two_machine_evidence_present=false/);
-  assert.match(finalAcceptanceScript, /macos_public_artifact_consistency_verified=false/);
-  assert.match(finalAcceptanceScript, /windows_public_artifact_consistency_verified=false/);
-  assert.match(finalAcceptanceScript, /real_windows_runtime_result_present=false/);
-  assert.match(finalAcceptanceScript, /windows_runtime_result_packet_required_for_public_artifact=true/);
-  assert.match(finalAcceptanceScript, /windows_manifest_checksum_provenance_separate_from_runtime_result=true/);
-  assert.match(finalAcceptanceScript, /windows_public_artifact_claim_allowed=false/);
-  assert.match(finalAcceptanceScript, /windows_installer_claim_allowed=false/);
-  assert.match(finalAcceptanceScript, /windows_upload_claim_allowed=false/);
-  assert.match(finalAcceptanceScript, /emergency_advisory_path_ready=false/);
-  assert.match(finalAcceptanceScript, /external_delivery_claim=false/);
-  assert.match(finalAcceptanceScript, /payload_recorded=false/);
-  assert.match(finalAcceptanceScript, /passphrase_recorded=false/);
-  assert.match(finalAcceptanceScript, /local_path_recorded=false/);
-  assert.match(finalAcceptanceScript, /key_material_recorded=false/);
-  assert.match(externalEvidencePrepareScript, /schema_version": "external-two-machine-evidence-v1"/);
-  assert.match(externalEvidencePrepareScript, /external_two_machine_evidence_present=false/);
-  assert.match(externalEvidenceValidateScript, /external_two_machine_evidence_present=true/);
-  assert.match(externalEvidenceValidateScript, /local_only_promoted_to_external=false/);
-  assert.match(externalEvidenceValidateScript, /reliable_delivery_claim_allowed=false/);
-  assert.match(externalEvidenceValidateScript, /audited_claim_allowed=false/);
-  assert.match(externalEvidenceValidateScript, /forbidden-field:\$\{path\}\$\{key\}/);
   assert.match(externalEvidenceSchema, /schema_version/);
   assert.match(externalEvidenceSchema, /invite_body/);
   assert.match(externalEvidenceSchema, /envelope_payload/);
@@ -367,53 +296,15 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(highRiskRuntimeEvidenceSchema, /envelope_payload/);
   assert.match(highRiskRuntimeEvidenceSchema, /local_path/);
   assert.match(highRiskRuntimeEvidenceSchema, /key_material/);
-  assert.match(highRiskRuntimeEvidenceValidateScript, /high-risk-runtime-evidence-v1/);
-  assert.match(highRiskRuntimeEvidenceValidateScript, /high_risk_runtime_evidence_packet_valid=true/);
-  assert.match(highRiskRuntimeEvidenceValidateScript, /high_risk_public_claim_allowed=false/);
-  assert.match(highRiskRuntimeEvidenceValidateScript, /high_risk_ready_claim_allowed=false/);
-  assert.match(highRiskRuntimeEvidenceValidateScript, /forbidden-field:\$\{path\}\$\{key\}/);
-  assert.match(finalAcceptanceScript, /high_risk_runtime_evidence_validator_ready=true/);
-  assert.match(finalAcceptanceScript, /high_risk_runtime_evidence_claim_separated=true/);
-  assert.match(finalAcceptanceScript, /high_risk_runtime_evidence_accepted=false/);
-  assert.match(finalAcceptanceScript, /high_risk_ready_claim_allowed=false/);
-  assert.match(finalAcceptanceScript, /scripts\/high_risk_runtime_evidence_validate_once\.sh/);
-  assert.match(finalAcceptanceScript, /reference\/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA\.md/);
-  assert.match(crossPlatformPublicBetaPacketScript, /high_risk_runtime_evidence_validator_ready=true/);
-  assert.match(crossPlatformPublicBetaPacketScript, /high_risk_runtime_evidence_claim_separated=true/);
-  assert.match(crossPlatformPublicBetaPacketScript, /high_risk_ready_claim_allowed=false/);
-  assert.match(macosUnsignedPublicReleasePacketScript, /High-Risk runtime evidence validator is a redacted evidence-format gate/);
-  assert.match(macosUnsignedPublicReleasePacketScript, /high_risk_runtime_evidence_validator_ready=true/);
-  assert.match(macosUnsignedPublicReleasePacketScript, /high_risk_ready_claim_allowed=false/);
-  assert.match(publicReleaseReadinessPreflightScript, /final_claim_high_risk_runtime_evidence_validator_ready=true/);
-  assert.match(publicReleaseReadinessPreflightScript, /final_claim_high_risk_ready_claim_allowed=false/);
   assert.match(crossPlatformPublicBetaPacketReference, /High-Risk runtime evidence validator is a redacted evidence-format gate/);
   assert.match(crossPlatformPublicBetaPacketReference, /high_risk_public_claim_allowed=false/);
   assert.match(crossPlatformPublicBetaPacketReference, /high_risk_ready_claim_allowed=false/);
   assert.match(unsignedPublicBetaGithubReleaseBody, /High-Risk runtime evidence validator is a redacted evidence-format gate/);
   assert.match(unsignedPublicBetaGithubReleaseBody, /high_risk_public_claim_allowed=false/);
   assert.match(unsignedPublicBetaGithubReleaseBody, /high_risk_ready_claim_allowed=false/);
-  assert.match(windowsArtifactRuntimeEvidenceContractScript, /real_windows_runtime_result_present=false/);
-  assert.match(windowsArtifactRuntimeEvidenceContractScript, /windows_runtime_result_packet_required_for_public_artifact=true/);
-  assert.match(windowsArtifactRuntimeEvidenceContractScript, /windows_manifest_checksum_provenance_separate_from_runtime_result=true/);
-  assert.match(windowsArtifactRuntimeEvidenceContractScript, /windows_non_windows_runtime_result_promoted=false/);
-  assert.match(windowsArtifactRuntimeEvidenceContractScript, /windows_local_or_fabricated_runtime_result_promoted=false/);
-  assert.match(windowsPublicArtifactExecutionPathScript, /real_windows_runtime_result_present=false/);
-  assert.match(windowsPublicArtifactExecutionPathScript, /windows_public_artifact_claim_allowed=false/);
-  assert.match(windowsPublicArtifactCandidateGateScript, /windows_runtime_result_packet_required_for_public_artifact=true/);
-  assert.match(windowsPublicArtifactCandidateGateScript, /windows_installer_claim_allowed=false/);
-  assert.match(crossPlatformPublicBetaPacketScript, /real_windows_runtime_result_present=false/);
-  assert.match(crossPlatformPublicBetaPacketScript, /windows_runtime_result_packet_required_for_public_artifact=true/);
-  assert.match(crossPlatformPublicBetaPacketScript, /windows_manifest_checksum_provenance_separate_from_runtime_result=true/);
-  assert.match(crossPlatformPublicBetaPacketScript, /windows_public_artifact_claim_allowed=false/);
-  assert.match(crossPlatformPublicBetaPacketScript, /public_community_launch_copy=ready/);
-  assert.match(publicCommunityLaunchCopyScript, /accountless 1:1 private messenger unsigned public/);
-  assert.match(publicCommunityLaunchCopyScript, /windows_public_artifact_claim_allowed=false/);
-  assert.match(publicCommunityLaunchCopyScript, /high_risk_ready_claim_allowed=false/);
   assert.match(publicCommunityLaunchCopyReference, /manual encrypted envelope exchange/);
   assert.match(publicCommunityLaunchCopyReference, /sensitive_use_claim_allowed=false/);
   assert.match(publicCommunityLaunchCopyReference, /Windows is source-gated only and not yet published/);
-  assert.match(publicReleaseReadinessPreflightScript, /final_claim_real_windows_runtime_result_present=false/);
-  assert.match(publicReleaseReadinessPreflightScript, /final_claim_windows_public_artifact_claim_allowed=false/);
   assert.match(windowsRealRuntimeResultSchema, /real_windows_runtime_result_present=false/);
   assert.match(windowsRealRuntimeResultSchema, /windows_local_or_fabricated_runtime_result_promoted=false/);
   assert.match(windowsRealRuntimeResultSchema, /windows_public_artifact_claim_allowed=false/);
@@ -422,8 +313,6 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(crossPlatformPublicBetaPacketReference, /windows_upload_claim_allowed=false/);
   assert.match(windowsPublicArtifactExecutionPathReference, /windows_manifest_checksum_provenance_separate_from_runtime_result=true/);
   assert.match(windowsPublicArtifactExecutionPathReference, /windows_upload_claim_allowed=false/);
-  assert.match(externalEvidenceValidateScript, /reliable_delivery_claim_allowed=false/);
-  assert.match(externalEvidenceValidateScript, /audited_claim_allowed=false/);
   assert.match(privateDeliveryStateJs, /high-risk-runtime-evidence-source/);
   assert.match(privateDeliveryStateJs, /high-risk-runtime-failure-class/);
   assert.match(mainJs, /productionHighRiskReadinessGateView/);

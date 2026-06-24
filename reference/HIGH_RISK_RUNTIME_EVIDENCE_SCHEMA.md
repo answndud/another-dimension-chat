@@ -5,13 +5,17 @@ is not High-Risk readiness, not reliable onion delivery evidence, not an audit
 result, not production-ready status, and not permission for sensitive
 communication.
 
-Focused script:
+Historical focused validator:
 
 ```bash
 scripts/high_risk_runtime_evidence_validate_once.sh <report.json>
 ```
 
 Use `-` as the file name to validate one JSON report from stdin.
+
+This validator name is retained here as schema reference material. It is not
+part of the current maintained development baseline unless restored in a
+separate release/evidence task.
 
 ## Scope
 

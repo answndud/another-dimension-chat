@@ -345,13 +345,11 @@ This release class gate is not an audited, production-ready, or sensitive-use
 security claim.
 
 External two-machine evidence uses the source schema in
-`reference/EXTERNAL_TWO_MACHINE_EVIDENCE_SCHEMA.md` and the local validators
-`scripts/external_two_machine_evidence_prepare.sh` and
-`scripts/external_two_machine_evidence_validate.sh`. Accepted evidence may only
+`reference/EXTERNAL_TWO_MACHINE_EVIDENCE_SCHEMA.md`. Accepted evidence may only
 contain redacted version, build, platform, checksum, flow-completion, and broad
 failure-class fields. It must not contain invite bodies, envelope payloads,
 onion endpoints, local paths, profile names, message bodies, passphrases,
-private keys, key material, or raw logs. Validator acceptance is not a reliable
+private keys, key material, or raw logs. Evidence acceptance is not a reliable
 delivery claim, not audited status, and not a production-ready claim.
 
 ## Reporting Security Issues
@@ -533,7 +531,7 @@ report is expected or required for this v0.1 claim, and no external delivery
 claim is made.
 
 The current GitHub Release asset set matches the ignored public-release source
-DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`: build
+DMG for the current unsigned public beta packet: build
 channel `beta-onion`, commit `e724bd39`, and SHA-256
 `ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13`. The next
 owner action is a clean macOS fresh-install run with a disposable profile.
@@ -562,12 +560,15 @@ for an external success claim, or requests to use the beta for sensitive
 communication. There is no external two-machine success claim, no production
 readiness claim, and sensitive communication prohibited remains in force.
 
+Current maintained local verification entrypoints are:
+
 ```bash
-scripts/public_release_readiness_preflight.sh
-scripts/prepare_unsigned_public_beta_release.sh
+scripts/verify_all.sh
+scripts/verify_full.sh
 ```
 
-Run the source-only preflight before staging artifacts; it includes the desktop public beta source freeze candidate gate, does not require a DMG, does not rebuild a DMG, does not upload, and does not generate release files. The packaging decision is `proceed-to-packaging-only-with-frozen-ignored-dmg`, but packaging/upload remains held unless the current task explicitly requests release packaging/upload; if the source preflight fails, return to desktop hardening instead of staging artifacts.
+Release packaging/upload is outside the current development baseline unless a
+separate task explicitly restores and validates packaging commands.
 
 The generated public release folder is `apps/desktop-tauri/public-release/unsigned-public-beta/`. It is ignored and should contain only the DMG, matching `.sha256`, public provenance JSON, `INSTALL_UNSIGNED_MACOS.md`, `RELEASE_NOTES.md`, `GITHUB_RELEASE_BODY.md`, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, `DEPENDENCY_INVENTORY.md`, `PUBLIC_THREAT_MODEL.md`, `PRIVACY_MODEL_COMPARISON.md`, `INDEPENDENT_REVIEW_PACKET.md`, `PUBLIC_INTAKE_POLICY.md`, `REPOSITORY_GOVERNANCE.md`, `COMPONENT_BOUNDARIES.md`, `DEPENDENCY_LOCKFILES.sha256`, `OPERATOR_FINAL_HANDOFF.md`, and `MANIFEST.md`.
 

@@ -79,10 +79,8 @@ npm run tauri:build
 ```
 
 This generic Tauri build output is a public-shell artifact, not a public release
-upload artifact. Public staging accepts only the pinned frozen DMG and
-provenance checked by `scripts/prepare_unsigned_public_beta_release.sh`; update
-that script's commit and SHA constants deliberately before changing the public
-release input.
+upload artifact. It is useful for local shell checks only and is not the active
+public release packaging path.
 
 Build caches default to the OS user cache, not the repository. Inspect generated
 cache paths before deleting them:
@@ -229,14 +227,16 @@ Current local beta handoff, separate from the public release packaging input:
 - External Tor/onion field testing should record whether bootstrap, onion endpoint launch, endpoint exchange, send, receive, retry, and cancel complete or fail closed. Do not treat Tor blocking, timeout, or peer offline results as release-blocking security failures unless they expose secrets, silently start network work, or corrupt transcript/session state.
 - Peer reports must use the listed leading status tokens and must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, passphrases, profile names, message text, local paths, raw logs, or key material.
 
-Public unsigned GitHub Release staging:
+Current maintained verification commands:
 
 ```bash
-scripts/public_release_readiness_preflight.sh
-scripts/prepare_unsigned_public_beta_release.sh
+scripts/verify_all.sh
+scripts/verify_full.sh
 ```
 
-Run the source-only preflight from the repository root before staging artifacts; it does not require a DMG and does not generate release files. Treat `decision=proceed-to-packaging-only-with-frozen-ignored-dmg` as the packaging go signal only when the current task explicitly requests release packaging/upload, and return to desktop hardening if the source preflight fails or no explicit request exists. Then run the release staging command after the frozen local DMG and provenance JSON exist in `apps/desktop-tauri/beta-artifacts/`. It writes the ignored upload set to `apps/desktop-tauri/public-release/unsigned-public-beta/`; upload only the files listed in the generated `MANIFEST.md`.
+These are the active local development checks. Historical release packaging
+commands referenced in older review packets are not part of the current
+baseline unless they are restored deliberately in a separate release task.
 
 Desktop public beta source freeze candidate: this is a source-only candidate,
 with no DMG rebuild, no upload, and no generated release artifact commit. Final
