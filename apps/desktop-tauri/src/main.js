@@ -132,6 +132,16 @@ import {
   savedInviteRoomMetadataSyncCandidates as transcriptSavedInviteRoomMetadataSyncCandidates,
 } from "./transcript-resume.js";
 import {
+  localizedSendAttemptMessage as chatDeliveryLocalizedSendAttemptMessage,
+  localizedSendFailureMessage as chatDeliveryLocalizedSendFailureMessage,
+  sendAttemptFailureText as chatDeliverySendAttemptFailureText,
+  sendFailureNeedsEndpointRefresh as chatDeliverySendFailureNeedsEndpointRefresh,
+  sendFailureNeedsNetworkRetry as chatDeliverySendFailureNeedsNetworkRetry,
+  sendFailureNeedsRouteSetup as chatDeliverySendFailureNeedsRouteSetup,
+  sendFailureNeedsStartReceiving as chatDeliverySendFailureNeedsStartReceiving,
+  sendRuntimeOwnerMismatch as chatDeliverySendRuntimeOwnerMismatch,
+} from "./chat-delivery-notice-state.js";
+import {
   refreshCurrentRoomAfterReceiveImport as savedRoomRefreshCurrentRoomAfterReceiveImport,
   refreshSavedInviteRoomMetadataForFingerprint as savedRoomRefreshSavedInviteRoomMetadataForFingerprint,
   rememberCurrentInviteRoomMetadata as savedRoomRememberCurrentInviteRoomMetadata,
@@ -1084,56 +1094,32 @@ function localizedReceiveFailureMessage(message) {
 }
 
 function localizedSendFailureMessage(error) {
-  const text = String(error ?? "").toLowerCase();
-  if (sendFailureNeedsStartReceiving(text)) {
-    return t("externalSendNeedsReceive");
-  }
-  if (text.includes("timeout")) {
-    return t("sendTimeout");
-  }
-  if (sendFailureNeedsRouteSetup(text)) {
-    return t("privateDeliveryRouteNeeded");
-  }
-  if (sendFailureNeedsEndpointRefresh(text)) {
-    return t("staleEndpoint");
-  }
-  if (sendFailureNeedsNetworkRetry(text)) {
-    return t("retryNetwork");
-  }
-  if (text.includes("manualnetworkpermission") || text.includes("permission")) {
-    return t("permissionOff");
-  }
-  if (text.includes("offline") || text.includes("peer")) {
-    return t("peerOffline");
-  }
-  return t("sendFailedGeneric");
+  return chatDeliveryLocalizedSendFailureMessage({
+    error,
+    t,
+    sendFailureNeedsStartReceiving: chatDeliverySendFailureNeedsStartReceiving,
+    sendFailureNeedsRouteSetup: chatDeliverySendFailureNeedsRouteSetup,
+    sendFailureNeedsEndpointRefresh: chatDeliverySendFailureNeedsEndpointRefresh,
+    sendFailureNeedsNetworkRetry: chatDeliverySendFailureNeedsNetworkRetry,
+  });
 }
 
 function localizedSendAttemptMessage(result) {
-  const failureText = sendAttemptFailureText(result);
-  if (result?.send_attempt_succeeded) {
-    return t("chatNoticeExternalSendWritten");
-  }
-  if (sendRuntimeOwnerMismatch(result)) {
-    return t("sendRuntimeMismatch");
-  }
-  if (sendFailureNeedsStartReceiving(failureText)) {
-    return t("externalSendNeedsReceive");
-  }
-  if (sendFailureNeedsRouteSetup(failureText)) {
-    return t("privateDeliveryRouteNeeded");
-  }
-  if (result?.peer_endpoint_refresh_recommended || result?.retry_recommended_after_endpoint_refresh) {
-    return t("chatNoticeRefreshAddress");
-  }
-  if (sendFailureNeedsNetworkRetry(failureText)) {
-    return t("retryNetwork");
-  }
-  return localizedSendFailureMessage(failureText);
+  return chatDeliveryLocalizedSendAttemptMessage({
+    result,
+    t,
+    sendAttemptFailureText: chatDeliverySendAttemptFailureText,
+    sendRuntimeOwnerMismatch: chatDeliverySendRuntimeOwnerMismatch,
+    sendFailureNeedsStartReceiving: chatDeliverySendFailureNeedsStartReceiving,
+    sendFailureNeedsRouteSetup: chatDeliverySendFailureNeedsRouteSetup,
+    sendFailureNeedsNetworkRetry: chatDeliverySendFailureNeedsNetworkRetry,
+    localizedSendFailureMessage: chatDeliveryLocalizedSendFailureMessage,
+    sendFailureNeedsEndpointRefresh: chatDeliverySendFailureNeedsEndpointRefresh,
+  });
 }
 
 function sendRuntimeOwnerMismatch(result) {
-  return Boolean(result?.owner_profile_bound === true && result?.owner_matches_send_profile === false);
+  return chatDeliverySendRuntimeOwnerMismatch(result);
 }
 
 function setChatDeliveryNoticeForSendAttempt(result, input = productionTwoProfileInput()) {
@@ -1167,38 +1153,23 @@ function setChatDeliveryNoticeForSendAttempt(result, input = productionTwoProfil
 }
 
 function sendAttemptFailureText(result) {
-  const blockers = Array.isArray(result?.blockers) ? result.blockers : [];
-  return [result?.next_blocker, result?.warning, ...blockers].join(" ").toLowerCase();
+  return chatDeliverySendAttemptFailureText(result);
 }
 
 function sendFailureNeedsRouteSetup(text) {
-  return (
-    text.includes("peer-endpoint-missing") ||
-    text.includes("endpoint-missing") ||
-    text.includes("endpointunavailable") ||
-    text.includes("stored remote endpoint unavailable") ||
-    text.includes("runtimeownerprofilemismatch")
-  );
+  return chatDeliverySendFailureNeedsRouteSetup(text);
 }
 
 function sendFailureNeedsStartReceiving(text) {
-  return (
-    text.includes("localonionendpointnotready") ||
-    text.includes("local onion endpoint not ready") ||
-    text.includes("receive stopped") ||
-    text.includes("receive mode stopped") ||
-    text.includes("message listening stopped") ||
-    text.includes("message listening is off")
-  );
+  return chatDeliverySendFailureNeedsStartReceiving(text);
 }
 
 function sendFailureNeedsEndpointRefresh(text) {
-  return !sendFailureNeedsRouteSetup(text) && (text.includes("stale") || text.includes("refresh"));
+  return chatDeliverySendFailureNeedsEndpointRefresh(text);
 }
 
 function sendFailureNeedsNetworkRetry(text) {
-  const normalized = String(text ?? "").toLowerCase();
-  return normalized.includes("persistentclientnotready") || normalized.includes("bootstrap");
+  return chatDeliverySendFailureNeedsNetworkRetry(text);
 }
 
 function setChatDeliveryNoticeForOutboundFailureKind(failureKind, input = productionTwoProfileInput()) {
