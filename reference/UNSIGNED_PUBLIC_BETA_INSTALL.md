@@ -22,6 +22,9 @@ For normal install, download only these two files from the GitHub Release:
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
 
+<details>
+<summary>Reviewer and maintainer evidence files</summary>
+
 The other attached files are reviewer or maintainer evidence:
 
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
@@ -64,6 +67,8 @@ GitHub Release body, and beta checklist:
 The generated DMG remains valid only as the same-release upload-set artifact
 named above. Its provenance build commit matches the current public packet
 source, and the matching GitHub Release asset set is current.
+
+</details>
 
 ## Verify The Download
 
