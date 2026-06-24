@@ -510,9 +510,11 @@ test("saved room open carries current session status into metadata reconciliatio
   assert.match(functionBody(mainJs, "openSavedInviteRoom"), /const openInput = productionTwoProfileInput\(\)/);
   assert.match(functionBody(mainJs, "openSavedInviteRoom"), /return openInviteRoomFromToken\(openInput\)/);
   assert.match(savedRoomRefreshJs, /export async function refreshSavedInviteRoomMetadataForFingerprint/);
+  assert.match(functionBody(savedRoomRefreshJs, "refreshSavedInviteRoomMetadataForFingerprint"), /input\.roomFingerprintForRoom\(room\)/);
   assert.match(functionBody(savedRoomRefreshJs, "refreshSavedInviteRoomMetadataForFingerprint"), /savedInviteRoomInput\(room\)/);
   assert.match(functionBody(savedRoomRefreshJs, "refreshSavedInviteRoomMetadataForFingerprint"), /rememberInviteRoom\(room\.code, room\.role,/);
   assert.match(functionBody(mainJs, "savedInviteRoomForRoomFingerprint"), /privateRouteRoomKey\(savedInviteRoomInput\(room\)\) === fingerprint/);
+  assert.match(functionBody(mainJs, "refreshSavedInviteRoomMetadataForFingerprint"), /roomFingerprintForRoom: \(room\) => privateRouteRoomKey\(savedInviteRoomInput\(room\)\)/);
 });
 
 test("saved room list shows receive runtime and restart intent", () => {
@@ -559,6 +561,9 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "enable-private-delivery"/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "prepare-private-route"/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "refresh-and-retry"/);
+  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /showSavedInviteRoomReceiveStopPending\(input\)/);
+  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /showSavedInviteRoomActionNowReady\(input\)/);
+  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /showSavedInviteRoomExpiredRealOnionAction\(input\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /runSavedInviteRoomRetryableOutboundAction\(room, input, action, actionOrigin\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomRetryableOutboundAction"), /runTwoProfileOutboundPrimaryAction\(pending, \{ action \}\)/);
   assert.match(mainJs, /function normalizedExpectedOutboundPrimaryAction/);
@@ -2107,6 +2112,21 @@ test("manual rebuild recovery resumes from saved room metadata", () => {
   assert.match(openRecoveryBody, /current\.action === "paste-peer-code"[\s\S]*showSavedInviteRoomPeerCodePrompt\(input\)/);
   assert.ok(openRecoveryBody.indexOf("showManualRebuildRecoveryAfterSavedRoomOpen") < openRecoveryBody.indexOf("!current.action"));
   assert.ok(openRecoveryBody.indexOf('current.action === "paste-peer-code"') < openRecoveryBody.indexOf("externalPeerSendReadiness"));
+
+  const readyBody = functionBody(mainJs, "showSavedInviteRoomActionNowReady");
+  assert.match(mainJs, /function showSavedInviteRoomActionNowReady\(input = productionTwoProfileInput\(\)\)/);
+  assert.match(readyBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
+  assert.match(readyBody, /setChatDeliveryNoticeByKey\("inviteRoomReadyAfterSessionCode", "success", input\)/);
+
+  const expiredRecoveryBody = functionBody(mainJs, "showSavedInviteRoomExpiredRealOnionAction");
+  assert.match(mainJs, /function showSavedInviteRoomExpiredRealOnionAction\(input = productionTwoProfileInput\(\)\)/);
+  assert.match(expiredRecoveryBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
+  assert.match(expiredRecoveryBody, /showRealOnionRouteReadinessBlock\(routeReadiness, input\)/);
+
+  const receiveStopPendingBody = functionBody(mainJs, "showSavedInviteRoomReceiveStopPending");
+  assert.match(mainJs, /function showSavedInviteRoomReceiveStopPending\(input = productionTwoProfileInput\(\)\)/);
+  assert.match(receiveStopPendingBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
+  assert.match(receiveStopPendingBody, /setChatDeliveryNoticeByKey\("receiveStopPending", "warning", input\)/);
 
   const peerCodePromptBody = functionBody(mainJs, "showSavedInviteRoomPeerCodePrompt");
   assert.match(peerCodePromptBody, /twoProfileTranscriptInputStillCurrent\(input\)/);

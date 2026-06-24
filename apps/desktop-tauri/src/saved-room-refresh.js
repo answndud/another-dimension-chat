@@ -34,7 +34,18 @@ export async function refreshSavedInviteRoomMetadataForFingerprint(input) {
     rememberInviteRoom,
     renderSavedInviteRooms,
   } = input;
+  const fingerprintMatchesRoom = () => {
+    const expectedFingerprint = String(roomFingerprint ?? "").trim();
+    if (!expectedFingerprint || !room || typeof input.roomFingerprintForRoom !== "function") {
+      return true;
+    }
+    return String(input.roomFingerprintForRoom(room) ?? "").trim() === expectedFingerprint;
+  };
   if (!room) {
+    renderSavedInviteRooms();
+    return false;
+  }
+  if (!fingerprintMatchesRoom()) {
     renderSavedInviteRooms();
     return false;
   }
@@ -58,6 +69,10 @@ export async function refreshSavedInviteRoomMetadataForFingerprint(input) {
       } catch {
         forgetTwoProfileSessionStatusForInput(roomInput);
       }
+    }
+    if (!fingerprintMatchesRoom()) {
+      renderSavedInviteRooms();
+      return false;
     }
     rememberInviteRoom(room.code, room.role, input.options?.preserveUpdatedAt ? { ...metadata, updatedAt: room.updatedAt } : metadata, {
       render: false,
