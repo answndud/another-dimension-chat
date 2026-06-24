@@ -17,6 +17,9 @@ For normal install, download only these two files from this same GitHub Release:
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
 
+<details>
+<summary>Reviewer and maintainer evidence files</summary>
+
 The other attached files are reviewer or maintainer evidence:
 
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
@@ -40,9 +43,6 @@ Use the files attached to this GitHub Release as the release authority. The
 `main` branch may contain later documentation or source updates, so do not
 verify the downloaded DMG against branch files copied from GitHub's source
 browser, GitHub source archives, or files from a different release.
-
-<details>
-<summary>Maintainer upload boundary</summary>
 
 Upload boundary for operators: this GitHub Release should contain exactly the
 files listed above and in `MANIFEST.md`. Use `GITHUB_RELEASE_BODY.md` exactly as
@@ -77,6 +77,9 @@ Only after the checksum matches, use the normal macOS Privacy & Security manual 
 
 Do not use terminal quarantine-removal commands as an install step.
 
+<details>
+<summary>Shared packet boundary</summary>
+
 ## Shared Packet Boundary
 
 These values must stay identical across the install guide, release notes,
@@ -95,6 +98,8 @@ GitHub Release body, and beta checklist:
 This generated DMG packet is aligned to the current public packet source.
 Verify it with the same-release checksum and provenance; the matching GitHub
 Release asset set is current.
+
+</details>
 
 ## Install
 
