@@ -91,6 +91,53 @@ import { combinedTwoProfileTranscriptTsv } from "./transcript-export.js";
 import { transcriptRetentionView } from "./transcript-retention.js";
 import { applyStaticTranslations, normalizeLanguage, translate } from "./i18n.js";
 import * as privateDeliveryState from "./private-delivery-state.js";
+import {
+  connectionCodeRoleStorageKey,
+  inviteRoomMetadataValue,
+  inviteRoomMetadataWithoutManualRebuild,
+  inviteRoomUpdatedAtValue,
+  inviteRoomsStorageKey,
+  lastInviteRoomStorageKey,
+  localPrivateRouteCodesStorageKey,
+  localPrivateRouteLifecycleStorageKey,
+  normalizeSavedRoomManualRebuildMetadata,
+  normalizedSavedRoomManualRebuildDeliveryAction,
+  normalizedSavedRoomManualRebuildMessageNumber,
+  normalizedSavedRoomRetryableAction,
+  normalizedSavedRoomRetryableMessage,
+  normalizedSavedRoomRetryableMessageNumber,
+  normalizeStoredRealOnionRecovery,
+  peerPrivateRouteDraftsStorageKey,
+  privateRouteMapStorageLimit,
+  readSavedInviteRooms,
+  readStoredLifecycleMap,
+  readStoredStringMap,
+  realOnionRecoveriesStorageKey,
+  receiveIntentRoomsStorageKey,
+  roomListStoragePayload,
+  savedRoomManualRebuildExpired,
+  savedInviteRoomMetadataStartupSyncLimit,
+  savedInviteRoomStorageLimit,
+  serializeStoredLifecycleMap,
+  serializeStoredStringMap,
+} from "./saved-room-storage.js";
+import {
+  savedInviteRoomActionRechecksAfterOpen,
+  savedInviteRoomManualRebuildRecoveryCandidate,
+  savedInviteRoomRecheckedRouteReadinessAction,
+} from "./saved-room-recovery.js";
+import {
+  currentRoomConversationMetadata as transcriptCurrentRoomConversationMetadata,
+  reconcileCurrentInviteRoomMetadataFromTranscriptEntries as transcriptReconcileCurrentInviteRoomMetadataFromTranscriptEntries,
+  savedInviteRoomMetadataSyncCandidates as transcriptSavedInviteRoomMetadataSyncCandidates,
+} from "./transcript-resume.js";
+import {
+  refreshCurrentRoomAfterReceiveImport as savedRoomRefreshCurrentRoomAfterReceiveImport,
+  refreshSavedInviteRoomMetadataForFingerprint as savedRoomRefreshSavedInviteRoomMetadataForFingerprint,
+  rememberCurrentInviteRoomMetadata as savedRoomRememberCurrentInviteRoomMetadata,
+  savedInviteRoomMetadataFromLocalStores as savedRoomRefreshSavedInviteRoomMetadataFromLocalStores,
+  syncSavedInviteRoomMetadataFromLocalStores as savedRoomSyncSavedInviteRoomMetadataFromLocalStores,
+} from "./saved-room-refresh.js";
 import "./styles.css";
 
 const FIELD_TEST_APP_VERSION = __AD_FIELD_TEST_APP_VERSION__;
@@ -3658,52 +3705,6 @@ function isDerivedConnectionProfile(value) {
   return /^(local|inviter|joiner|peer)-/.test(String(value ?? "").trim().toLowerCase());
 }
 
-function connectionCodeRoleStorageKey(code) {
-  const slug = connectionCodeSlug(code);
-  return `ad.connectionCodeRole.v1.${encodeURIComponent(slug)}`;
-}
-
-const lastInviteRoomStorageKey = "ad.lastInviteRoom.v1";
-const inviteRoomsStorageKey = "ad.inviteRooms.v1";
-const receiveIntentRoomsStorageKey = "ad.receiveIntentRooms.v1";
-const localPrivateRouteCodesStorageKey = "ad.localPrivateRouteCodes.v1";
-const localPrivateRouteLifecycleStorageKey = "ad.localPrivateRouteLifecycle.v1";
-const peerPrivateRouteDraftsStorageKey = "ad.peerPrivateRouteDrafts.v1";
-const realOnionRecoveriesStorageKey = "ad.realOnionRecoveries.v1";
-const savedInviteRoomStorageLimit = 24;
-const savedRoomMetadataStartupSyncLimit = 8;
-const realOnionRecoveryPersistenceTtlMs = 24 * 60 * 60 * 1000;
-const manualRebuildRecoveryPersistenceTtlMs = 7 * 24 * 60 * 60 * 1000;
-
-function normalizeStoredRealOnionRecovery(record, options = {}) {
-  const action = String(record?.action ?? "").trim();
-  const reason = String(record?.reason ?? "").trim();
-  const now = Number.parseInt(options.now ?? Date.now(), 10) || Date.now();
-  const updatedAt = Number.parseInt(record?.updatedAt ?? 0, 10) || now;
-  if (
-    !new Set([
-      "bootstrap-cancelled",
-      "enable-private-delivery",
-      "inspect-diagnostics",
-      "prepare-network-or-bridge",
-      "retry-bootstrap",
-      "retry-private-delivery",
-    ]).has(action)
-  ) {
-    return null;
-  }
-  if (updatedAt + realOnionRecoveryPersistenceTtlMs < now) {
-    return null;
-  }
-  return {
-    action,
-    retryable: record?.retryable === true,
-    waitCancellable: false,
-    reason: /^[a-z0-9-]{1,96}$/.test(reason) ? reason : "persisted-recovery",
-    updatedAt,
-  };
-}
-
 function hydrateRealOnionRecoveries() {
   latestProductionTwoProfileRealOnionRecoveriesByRoom.clear();
   try {
@@ -3758,67 +3759,25 @@ function pruneExpiredRealOnionRecoveries() {
 
 function hydratePrivateRouteMap(storageKey, target) {
   target.clear();
-  try {
-    const parsed = JSON.parse(localStoreGet(storageKey) ?? "{}");
-    const entries = Object.entries(parsed && typeof parsed === "object" ? parsed : {});
-    for (const [roomKey, routeCode] of entries.slice(-48)) {
-      const key = String(roomKey ?? "").trim();
-      const value = String(routeCode ?? "").trim();
-      if (key && value) {
-        target.set(key, value);
-      }
-    }
-  } catch {
-    target.clear();
+  for (const [roomKey, routeCode] of readStoredStringMap(localStoreGet(storageKey), privateRouteMapStorageLimit).entries()) {
+    target.set(roomKey, routeCode);
   }
 }
 
 function persistPrivateRouteMap(storageKey, source) {
-  const entries = [...source.entries()]
-    .map(([roomKey, routeCode]) => [String(roomKey ?? "").trim(), String(routeCode ?? "").trim()])
-    .filter(([roomKey, routeCode]) => roomKey && routeCode)
-    .slice(-48);
+  const entries = serializeStoredStringMap(source, privateRouteMapStorageLimit);
   localStoreSet(storageKey, JSON.stringify(Object.fromEntries(entries)));
 }
 
 function hydratePrivateRouteLifecycleMap(storageKey, target) {
   target.clear();
-  try {
-    const parsed = JSON.parse(localStoreGet(storageKey) ?? "{}");
-    const entries = Object.entries(parsed && typeof parsed === "object" ? parsed : {});
-    for (const [roomKey, record] of entries.slice(-48)) {
-      const key = String(roomKey ?? "").trim();
-      const endpoint = String(record?.endpoint ?? "").trim();
-      const state = String(record?.state ?? "").trim() === "listening"
-        ? "stopped"
-        : String(record?.state ?? "").trim();
-      if (key && endpoint && state) {
-        target.set(key, {
-          endpoint,
-          state,
-          updatedAt: Number.parseInt(record?.updatedAt ?? 0, 10) || 0,
-          generation: Number.parseInt(record?.generation ?? 0, 10) || 0,
-        });
-      }
-    }
-  } catch {
-    target.clear();
+  for (const [roomKey, record] of readStoredLifecycleMap(localStoreGet(storageKey), privateRouteMapStorageLimit).entries()) {
+    target.set(roomKey, record);
   }
 }
 
 function persistPrivateRouteLifecycleMap(storageKey, source) {
-  const entries = [...source.entries()]
-    .map(([roomKey, record]) => [
-      String(roomKey ?? "").trim(),
-      {
-        endpoint: String(record?.endpoint ?? "").trim(),
-        state: String(record?.state ?? "").trim(),
-        updatedAt: Number.parseInt(record?.updatedAt ?? 0, 10) || 0,
-        generation: Number.parseInt(record?.generation ?? 0, 10) || 0,
-      },
-    ])
-    .filter(([roomKey, record]) => roomKey && record.endpoint && record.state)
-    .slice(-48);
+  const entries = serializeStoredLifecycleMap(source, privateRouteMapStorageLimit);
   localStoreSet(storageKey, JSON.stringify(Object.fromEntries(entries)));
 }
 
@@ -3830,7 +3789,7 @@ hydrateRealOnionRecoveries();
 function rememberConnectionCodeRole(code, role) {
   const normalizedRole = role === "inviter" ? "inviter" : "joiner";
   latestConnectionCodeRole = normalizedRole;
-  localStoreSet(connectionCodeRoleStorageKey(code), normalizedRole);
+  localStoreSet(connectionCodeRoleStorageKey(code, connectionCodeSlug), normalizedRole);
   if (fields.productionTwoProfileB && fields.productionTwoProfileB.value === String(code ?? "").trim()) {
     fields.productionTwoProfileB.dataset.inviteCodeRole = normalizedRole;
   }
@@ -3859,185 +3818,10 @@ function forgetLastInviteRoom(code) {
   forgetInviteRoom(trimmedCode);
 }
 
-function normalizedSavedRoomRetryableMessageNumber(count, value) {
-  return count > 0 ? Number.parseInt(value ?? 0, 10) || 0 : 0;
-}
-
-function normalizedSavedRoomRetryableAction(count, value) {
-  return count > 0 ? savedInviteRoomRetryableAction(value) : "";
-}
-
-function normalizedSavedRoomRetryableMessage(count, value) {
-  return count > 0 ? String(value ?? "").trim() : "";
-}
-
-function normalizedSavedRoomManualRebuildFlow(value) {
-  return value === true || value === "true";
-}
-
-function normalizedSavedRoomManualRebuildDeliveryScope(value) {
-  const normalized = String(value ?? "").trim();
-  return new Set(["retry", "receive", "delivery-code", "explicit-delivery"]).has(normalized)
-    ? normalized
-    : "";
-}
-
-function normalizedSavedRoomManualRebuildDeliveryAction(value) {
-  const normalized = String(value ?? "").trim();
-  return /^[a-z0-9-]+$/.test(normalized) ? normalized : "";
-}
-
-function normalizedSavedRoomManualRebuildMessageNumber(value) {
-  return Math.max(0, Number.parseInt(value ?? 0, 10) || 0);
-}
-
-function savedRoomManualRebuildUpdatedAtValue(value) {
-  return Number(value ?? 0) || 0;
-}
-
-function savedRoomManualRebuildExpired(updatedAt, now = Date.now()) {
-  const timestamp = savedRoomManualRebuildUpdatedAtValue(updatedAt);
-  return Boolean(timestamp && now - timestamp > manualRebuildRecoveryPersistenceTtlMs);
-}
-
-function normalizeSavedRoomManualRebuildMetadata(room, now = Date.now()) {
-  const manualRebuildUpdatedAt = savedRoomManualRebuildUpdatedAtValue(room?.manualRebuildUpdatedAt);
-  const manualRebuildFlow =
-    normalizedSavedRoomManualRebuildFlow(room?.manualRebuildFlow) &&
-    !savedRoomManualRebuildExpired(manualRebuildUpdatedAt, now);
-  return {
-    manualRebuildFlow,
-    manualRebuildDeliveryScope: manualRebuildFlow
-      ? normalizedSavedRoomManualRebuildDeliveryScope(room?.manualRebuildDeliveryScope)
-      : "",
-    manualRebuildDeliveryAction: manualRebuildFlow
-      ? normalizedSavedRoomManualRebuildDeliveryAction(room?.manualRebuildDeliveryAction)
-      : "",
-    manualRebuildMessageNumber: manualRebuildFlow
-      ? normalizedSavedRoomManualRebuildMessageNumber(room?.manualRebuildMessageNumber)
-      : 0,
-    manualRebuildUpdatedAt: manualRebuildFlow ? manualRebuildUpdatedAt : 0,
-  };
-}
-
-function inviteRoomMetadataWithoutManualRebuild(room) {
-  return {
-    ...room,
-    manualRebuildFlow: false,
-    manualRebuildDeliveryScope: "",
-    manualRebuildDeliveryAction: "",
-    manualRebuildMessageNumber: 0,
-    manualRebuildUpdatedAt: 0,
-  };
-}
-
 function savedInviteRooms() {
-  let rooms = [];
-  try {
-    const parsed = JSON.parse(localStoreGet(inviteRoomsStorageKey) ?? "[]");
-    if (Array.isArray(parsed)) {
-      rooms = parsed
-        .map((room) => {
-          const retryableOutboundCount = Math.max(0, Number.parseInt(room?.retryableOutboundCount ?? 0, 10) || 0);
-          const manualRebuildMetadata = normalizeSavedRoomManualRebuildMetadata(room);
-          return {
-            code: String(room?.code ?? "").trim(),
-            role: room?.role === "inviter" ? "inviter" : room?.role === "joiner" ? "joiner" : "",
-            updatedAt: Number(room?.updatedAt ?? 0),
-            lastMessagePreview: String(room?.lastMessagePreview ?? "").trim(),
-            lastMessageAt: Number(room?.lastMessageAt ?? 0),
-            messageCount: Math.max(0, Number.parseInt(room?.messageCount ?? 0, 10) || 0),
-            retryableOutboundCount,
-            retryableOutboundMessageNumber: normalizedSavedRoomRetryableMessageNumber(
-              retryableOutboundCount,
-              room?.retryableOutboundMessageNumber,
-            ),
-            retryableOutboundMessage: normalizedSavedRoomRetryableMessage(
-              retryableOutboundCount,
-              room?.retryableOutboundMessage,
-            ),
-            retryableOutboundAction: normalizedSavedRoomRetryableAction(
-              retryableOutboundCount,
-              room?.retryableOutboundAction,
-            ),
-            ...manualRebuildMetadata,
-          };
-        })
-        .filter((room) => room.code && room.role);
-    }
-  } catch {
-    rooms = [];
-  }
-  try {
-    const saved = JSON.parse(localStoreGet(lastInviteRoomStorageKey) ?? "null");
-    const code = String(saved?.code ?? "").trim();
-    const role = saved?.role === "inviter" ? "inviter" : saved?.role === "joiner" ? "joiner" : "";
-    if (code && role && !rooms.some((room) => room.code === code)) {
-      rooms.push({
-        code,
-        role,
-        updatedAt: 0,
-        lastMessagePreview: "",
-        lastMessageAt: 0,
-        messageCount: 0,
-        retryableOutboundCount: 0,
-        retryableOutboundMessageNumber: 0,
-        retryableOutboundMessage: "",
-        retryableOutboundAction: "",
-        manualRebuildFlow: false,
-        manualRebuildDeliveryScope: "",
-        manualRebuildDeliveryAction: "",
-        manualRebuildMessageNumber: 0,
-        manualRebuildUpdatedAt: 0,
-      });
-    }
-  } catch {
-    // Ignore legacy room migration failures.
-  }
-  return rooms.sort((a, b) => b.updatedAt - a.updatedAt);
-}
-
-function roomListStoragePayload(rooms) {
-  return rooms.slice(0, savedInviteRoomStorageLimit).map((room) => {
-    const retryableOutboundCount = Math.max(0, Number.parseInt(room.retryableOutboundCount ?? 0, 10) || 0);
-    const manualRebuildMetadata = normalizeSavedRoomManualRebuildMetadata(room);
-    return {
-      code: room.code,
-      role: room.role,
-      updatedAt: Number(room.updatedAt ?? 0),
-      lastMessagePreview: String(room.lastMessagePreview ?? "").trim(),
-      lastMessageAt: Number(room.lastMessageAt ?? 0),
-      messageCount: Math.max(0, Number.parseInt(room.messageCount ?? 0, 10) || 0),
-      retryableOutboundCount,
-      retryableOutboundMessageNumber: normalizedSavedRoomRetryableMessageNumber(
-        retryableOutboundCount,
-        room.retryableOutboundMessageNumber,
-      ),
-      retryableOutboundMessage: normalizedSavedRoomRetryableMessage(
-        retryableOutboundCount,
-        room.retryableOutboundMessage,
-      ),
-      retryableOutboundAction: normalizedSavedRoomRetryableAction(
-        retryableOutboundCount,
-        room.retryableOutboundAction,
-      ),
-      ...manualRebuildMetadata,
-    };
+  return readSavedInviteRooms(localStoreGet(inviteRoomsStorageKey), localStoreGet(lastInviteRoomStorageKey), {
+    normalizeRetryableAction: savedInviteRoomRetryableAction,
   });
-}
-
-function inviteRoomMetadataValue(metadata, existing, key) {
-  return Object.prototype.hasOwnProperty.call(metadata ?? {}, key) ? metadata[key] : existing?.[key];
-}
-
-function inviteRoomUpdatedAtValue(metadata, existing) {
-  if (Object.prototype.hasOwnProperty.call(metadata ?? {}, "updatedAt")) {
-    return Number(metadata.updatedAt ?? 0);
-  }
-  if (Object.keys(metadata ?? {}).length > 0) {
-    return Date.now();
-  }
-  return Number(existing?.updatedAt ?? Date.now());
 }
 
 function rememberInviteRoom(code, role, metadata = {}, options = {}) {
@@ -4085,7 +3869,10 @@ function rememberInviteRoom(code, role, metadata = {}, options = {}) {
     ),
     ...manualRebuildMetadata,
   });
-  localStoreSet(inviteRoomsStorageKey, JSON.stringify(roomListStoragePayload(rooms)));
+  localStoreSet(
+    inviteRoomsStorageKey,
+    JSON.stringify(roomListStoragePayload(rooms, { normalizeRetryableAction: savedInviteRoomRetryableAction })),
+  );
   if (options.render !== false) {
     renderSavedInviteRooms();
   }
@@ -4139,7 +3926,10 @@ function forgetInviteRoom(code) {
   }
   persistPrivateRouteRuntimeState();
   const rooms = savedInviteRooms().filter((room) => room.code !== trimmedCode);
-  localStoreSet(inviteRoomsStorageKey, JSON.stringify(roomListStoragePayload(rooms)));
+  localStoreSet(
+    inviteRoomsStorageKey,
+    JSON.stringify(roomListStoragePayload(rooms, { normalizeRetryableAction: savedInviteRoomRetryableAction })),
+  );
   renderSavedInviteRooms();
 }
 
@@ -4318,7 +4108,7 @@ function rememberManualRebuildRecoveryForInput(input, action, options = {}) {
   if (!room) {
     return false;
   }
-  const normalizedAction = normalizedSavedRoomManualRebuildDeliveryAction(action);
+  const normalizedAction = String(action ?? "").trim();
   rememberInviteRoom(
     room.code,
     room.role,
@@ -4326,7 +4116,7 @@ function rememberManualRebuildRecoveryForInput(input, action, options = {}) {
       manualRebuildFlow: true,
       manualRebuildDeliveryScope: manualRebuildDeliveryScopeKind(normalizedAction),
       manualRebuildDeliveryAction: normalizedAction,
-      manualRebuildMessageNumber: normalizedSavedRoomManualRebuildMessageNumber(options.messageNumber),
+      manualRebuildMessageNumber: options.messageNumber,
       manualRebuildUpdatedAt: Date.now(),
     },
     { render: false },
@@ -5132,25 +4922,6 @@ function showRealOnionRouteReadinessBlock(readiness, input = productionTwoProfil
   return true;
 }
 
-function savedInviteRoomActionRechecksAfterOpen(action) {
-  const normalized = String(action ?? "");
-  return (
-    normalized.startsWith("real-onion-") ||
-    new Set([
-      "enable-private-delivery",
-      "prepare-private-route",
-      "refresh-endpoint",
-      "refresh-and-retry",
-      "retry",
-      "retry-network",
-      "start-receiving",
-      "stop-receiving",
-      "wait-receive-stop",
-      "verify-safety",
-    ]).has(normalized)
-  );
-}
-
 function showSavedInviteRoomActionNowReady() {
   rememberCurrentInviteRoomMetadata();
   renderSavedInviteRooms();
@@ -5159,52 +4930,6 @@ function showSavedInviteRoomActionNowReady() {
   setChatDeliveryNoticeByKey("inviteRoomReadyAfterSessionCode", "success", productionTwoProfileInput());
   fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
   return true;
-}
-
-function savedInviteRoomManualRebuildRecoveryCandidate(current, input = productionTwoProfileInput()) {
-  const room = current?.room;
-  if (room?.manualRebuildFlow !== true) {
-    return null;
-  }
-  const receiveState = current?.view?.receiveState ?? savedInviteRoomReceiveState(room);
-  const waitingPeerCode = current?.view?.waitingPeerCode ?? savedInviteRoomWaitingForPeerCode(room);
-  const routeReadinessView = savedInviteRoomRouteReadinessView(room);
-  const manualAction = normalizedSavedRoomManualRebuildDeliveryAction(room.manualRebuildDeliveryAction);
-  const manualMessageNumber = normalizedSavedRoomManualRebuildMessageNumber(room.manualRebuildMessageNumber);
-  if (savedInviteRoomHasRetryableOutbound(room)) {
-    return {
-      action: current?.action || manualAction || "retry",
-      actionOrigin: current?.actionOrigin || "retryable-outbound",
-      messageNumber: Number.parseInt(room.retryableOutboundMessageNumber ?? 0, 10) || manualMessageNumber,
-    };
-  }
-  if (waitingPeerCode) {
-    return { action: "paste-peer-code", actionOrigin: "route-readiness", messageNumber: manualMessageNumber };
-  }
-  if (receiveState === "paused") {
-    return { action: "start-receiving", actionOrigin: "receive-state", messageNumber: manualMessageNumber };
-  }
-  if (receiveState === "stopping") {
-    return { action: "wait-receive-stop", actionOrigin: "receive-state", messageNumber: manualMessageNumber };
-  }
-  if (routeReadinessView?.action) {
-    return {
-      action: routeReadinessView.action,
-      actionOrigin: "route-readiness",
-      messageNumber: manualMessageNumber,
-    };
-  }
-  if (current?.action && !String(current.action).startsWith("real-onion-")) {
-    return {
-      action: current.action,
-      actionOrigin: current.actionOrigin || "saved-room",
-      messageNumber: manualMessageNumber,
-    };
-  }
-  if (manualAction) {
-    return { action: manualAction, actionOrigin: "manual-rebuild-metadata", messageNumber: manualMessageNumber };
-  }
-  return null;
 }
 
 function focusManualRebuildRecoveryAction(action, input = productionTwoProfileInput()) {
@@ -5351,20 +5076,6 @@ function showSavedInviteRoomRealOnionNeedsMessage(input = productionTwoProfileIn
     ?.focus?.({ preventScroll: true });
   refreshFieldTestReport();
   return true;
-}
-
-function savedInviteRoomRecheckedRouteReadinessAction(action, actionOrigin, currentRoom) {
-  if (actionOrigin !== "route-readiness") {
-    return null;
-  }
-  const routeReadinessView = savedInviteRoomRouteReadinessView(currentRoom);
-  if (!routeReadinessView) {
-    return { ready: true };
-  }
-  if (routeReadinessView.action === action) {
-    return { ready: false, action };
-  }
-  return { ready: false, action: routeReadinessView.action };
 }
 
 function savedInviteRoomPreservesOpenActionOrigin(actionOrigin) {
@@ -5594,21 +5305,19 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
 }
 
 function currentRoomConversationMetadata(options = {}) {
-  let metadata = productionInviteRoomConversationMetadata([...productionTwoProfileConversationEntries.values()]);
   const input = options.input ?? productionTwoProfileInput();
   const existingRoom = savedInviteRoomForRoomFingerprint(privateRouteRoomKey(input));
-  const preferredMessageNumber = Number.parseInt(existingRoom?.retryableOutboundMessageNumber ?? 0, 10) || 0;
-  if (preferredMessageNumber > 0) {
-    metadata = savedInviteRoomMetadataWithPreferredRetryable(
-      metadata,
-      input,
-      [...productionTwoProfileConversationEntries.values()],
-      preferredMessageNumber,
-    );
-  } else if (options.allowRetryableFallback !== true) {
-    metadata = inviteRoomMetadataWithoutRetryableOutbound(metadata);
-  }
-  return metadata;
+  return transcriptCurrentRoomConversationMetadata({
+    currentTranscriptMetadata: productionInviteRoomConversationMetadata([...productionTwoProfileConversationEntries.values()]),
+    existingRoom,
+    roomInput: input,
+    conversationEntries: [...productionTwoProfileConversationEntries.values()],
+    allowRetryableFallback: options.allowRetryableFallback,
+    inviteRoomMetadataWithoutRetryableOutbound,
+    savedInviteRoomMetadataWithPreferredRetryable,
+    savedInviteRoomMetadataWithSessionStatus,
+    sessionStatus: options.sessionStatus ?? null,
+  });
 }
 
 function reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries, options = {}) {
@@ -5618,43 +5327,50 @@ function reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries, option
     return false;
   }
   const input = options.input ?? productionTwoProfileInput();
-  let metadata = productionInviteRoomConversationMetadata(entries ?? []);
   const existingRoom = savedInviteRoomForRoomFingerprint(privateRouteRoomKey(input));
-  const preferredMessageNumber = Number.parseInt(existingRoom?.retryableOutboundMessageNumber ?? 0, 10) || 0;
-  if (preferredMessageNumber > 0) {
-    metadata = savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries ?? [], preferredMessageNumber);
-  } else if (options.allowRetryableFallback === false) {
-    metadata = inviteRoomMetadataWithoutRetryableOutbound(metadata);
-  }
-  if (options.sessionStatus) {
-    metadata = savedInviteRoomMetadataWithSessionStatus(metadata, input, options.sessionStatus);
-  }
-  rememberInviteRoom(code, role, metadata);
-  return true;
+  return transcriptReconcileCurrentInviteRoomMetadataFromTranscriptEntries({
+    code,
+    role,
+    entries,
+    existingRoom,
+    allowRetryableFallback: options.allowRetryableFallback,
+    sessionStatus: options.sessionStatus ?? null,
+    productionInviteRoomConversationMetadata,
+    inviteRoomMetadataWithoutRetryableOutbound,
+    savedInviteRoomMetadataWithPreferredRetryable,
+    savedInviteRoomMetadataWithSessionStatus,
+    rememberInviteRoom,
+    roomInput: input,
+  });
 }
 
 async function savedInviteRoomMetadataFromLocalStores(room, options = {}) {
-  const input = savedInviteRoomInput(room);
-  const { profileA, profileB, passphrase } = input;
-  if (!profileA || !profileB || profileA === profileB || !passphrase) {
-    return null;
-  }
-  const [profileAResult, profileBResult] = await Promise.all([
-    invoke("production_message_transcript_export", { profile: profileA, passphrase }),
-    invoke("production_message_transcript_export", { profile: profileB, passphrase }),
-  ]);
-  const entries = [
-    ...twoProfileTranscriptEntriesFromProfile(profileA, profileB, profileAResult.entries),
-    ...twoProfileTranscriptEntriesFromProfile(profileB, profileA, profileBResult.entries),
-  ];
-  let metadata = productionInviteRoomConversationMetadata(entries);
-  const preferredMessageNumber = Number.parseInt(room?.retryableOutboundMessageNumber ?? 0, 10) || 0;
-  if (preferredMessageNumber > 0) {
-    metadata = savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries, preferredMessageNumber);
-  } else if (options.allowRetryableFallback !== true) {
-    metadata = inviteRoomMetadataWithoutRetryableOutbound(metadata);
-  }
-  return metadata;
+  return savedRoomRefreshSavedInviteRoomMetadataFromLocalStores({
+    room,
+    roomInput: savedInviteRoomInput(room),
+    invokeRoomTranscriptExport: (currentRoom) => {
+      const input = savedInviteRoomInput(currentRoom);
+      const { profileA, profileB, passphrase } = input;
+      if (!profileA || !profileB || profileA === profileB || !passphrase) {
+        return null;
+      }
+      return Promise.all([
+        invoke("production_message_transcript_export", { profile: profileA, passphrase }),
+        invoke("production_message_transcript_export", { profile: profileB, passphrase }),
+      ]).then(([profileAResult, profileBResult]) => ({
+        entries: [
+          ...twoProfileTranscriptEntriesFromProfile(profileA, profileB, profileAResult.entries),
+          ...twoProfileTranscriptEntriesFromProfile(profileB, profileA, profileBResult.entries),
+        ],
+        metadata: productionInviteRoomConversationMetadata([
+          ...twoProfileTranscriptEntriesFromProfile(profileA, profileB, profileAResult.entries),
+          ...twoProfileTranscriptEntriesFromProfile(profileB, profileA, profileBResult.entries),
+        ]),
+      }));
+    },
+    savedInviteRoomMetadataWithPreferredRetryable,
+    inviteRoomMetadataWithoutRetryableOutbound,
+  });
 }
 
 function inviteRoomMetadataWithoutRetryableOutbound(metadata) {
@@ -5768,54 +5484,28 @@ function savedInviteRoomForRoomFingerprint(roomFingerprint, rooms = savedInviteR
 }
 
 async function refreshSavedInviteRoomMetadataForFingerprint(roomFingerprint, options = {}) {
-  const room = savedInviteRoomForRoomFingerprint(roomFingerprint);
-  if (!room) {
-    renderSavedInviteRooms();
-    return false;
-  }
-  try {
-    const input = savedInviteRoomInput(room);
-    let metadata = await savedInviteRoomMetadataFromLocalStores(room);
-    if (!metadata) {
-      renderSavedInviteRooms();
-      return false;
-    }
-    const retryableMetadataCleared =
-      savedInviteRoomHasRetryableOutbound(room) && !savedInviteRoomHasRetryableOutbound(metadata);
-    const refreshSessionStatus =
-      options.refreshSessionStatus === true ||
-      (retryableMetadataCleared && !latestTwoProfileSessionStatusForCurrentInput(input));
-    if (refreshSessionStatus) {
-      try {
-        const sessionStatus = await invokeInviteRoomSessionStatus(input);
-        rememberTwoProfileSessionStatus(input, sessionStatus);
-        metadata = savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus);
-      } catch {
-        forgetTwoProfileSessionStatusForInput(input);
-      }
-    }
-    rememberInviteRoom(
-      room.code,
-      room.role,
-      options.preserveUpdatedAt ? { ...metadata, updatedAt: room.updatedAt } : metadata,
-      { render: false },
-    );
-    renderSavedInviteRooms();
-    return true;
-  } catch {
-    renderSavedInviteRooms();
-    return false;
-  }
+  return savedRoomRefreshSavedInviteRoomMetadataForFingerprint({
+    room: savedInviteRoomForRoomFingerprint(roomFingerprint),
+    roomFingerprint,
+    options,
+    savedInviteRoomMetadataFromLocalStores,
+    savedInviteRoomMetadataWithSessionStatus,
+    invokeInviteRoomSessionStatus,
+    rememberTwoProfileSessionStatus,
+    forgetTwoProfileSessionStatusForInput,
+    rememberInviteRoom,
+    renderSavedInviteRooms,
+    savedInviteRoomInput,
+    savedInviteRoomHasRetryableOutbound,
+    latestTwoProfileSessionStatusForCurrentInput,
+  });
 }
 
 function savedInviteRoomMetadataSyncCandidates(rooms = savedInviteRooms()) {
-  return savedInviteRoomPriorityEntries(rooms)
-    .sort((left, right) => {
-      const priority = right.priority - left.priority;
-      return priority || right.updatedAt - left.updatedAt || left.index - right.index;
-    })
-    .map(({ room }) => room)
-    .slice(0, savedRoomMetadataStartupSyncLimit);
+  return transcriptSavedInviteRoomMetadataSyncCandidates(rooms, {
+    savedInviteRoomPriorityEntries,
+    savedRoomMetadataStartupSyncLimit,
+  });
 }
 
 function renderSavedRoomMetadataSyncStatus() {
@@ -5839,72 +5529,48 @@ function setSavedRoomMetadataSyncStatus(key = "", tone = "muted", values = {}) {
 }
 
 async function syncSavedInviteRoomMetadataFromLocalStores() {
-  if (savedRoomMetadataSyncInFlight) {
-    return false;
-  }
-  const candidates = savedInviteRoomMetadataSyncCandidates();
-  if (!candidates.length) {
-    setSavedRoomMetadataSyncStatus("");
-    return false;
-  }
-  savedRoomMetadataSyncInFlight = true;
-  setSavedRoomMetadataSyncStatus("roomListSyncRunning", "progress", { count: candidates.length });
-  let refreshed = 0;
-  let failed = 0;
-  try {
-    for (const room of candidates) {
-      try {
-        let metadata = await savedInviteRoomMetadataFromLocalStores(room);
-        if (metadata) {
-          try {
-            const input = savedInviteRoomInput(room);
-            const sessionStatus = await invokeInviteRoomSessionStatus(input);
-            rememberTwoProfileSessionStatus(input, sessionStatus);
-            metadata = savedInviteRoomMetadataWithSessionStatus(metadata, input, sessionStatus);
-          } catch {
-            forgetTwoProfileSessionStatusForInput(savedInviteRoomInput(room));
-            // Keep transcript refresh useful even if session status cannot be read yet.
-          }
-          rememberInviteRoom(room.code, room.role, { ...metadata, updatedAt: room.updatedAt }, { render: false });
-          refreshed += 1;
-        }
-      } catch {
-        failed += 1;
-        // A room may not have local transcript data yet; keep the saved list entry unchanged.
-      }
-    }
-    renderSavedInviteRooms();
-    setSavedRoomMetadataSyncStatus(
-      failed ? "roomListSyncPartial" : "roomListSyncComplete",
-      failed ? "warning" : "muted",
-      { count: refreshed },
-    );
-    return true;
-  } finally {
-    savedRoomMetadataSyncInFlight = false;
-  }
+  return savedRoomSyncSavedInviteRoomMetadataFromLocalStores({
+    savedRoomMetadataSyncInFlight: () => savedRoomMetadataSyncInFlight,
+    savedRoomMetadataSyncInFlightSet: (value) => {
+      savedRoomMetadataSyncInFlight = value;
+    },
+    savedInviteRoomMetadataSyncCandidates,
+    savedInviteRoomMetadataFromLocalStores,
+    savedInviteRoomInput,
+    invokeInviteRoomSessionStatus,
+    rememberTwoProfileSessionStatus,
+    forgetTwoProfileSessionStatusForInput,
+    savedInviteRoomMetadataWithSessionStatus,
+    rememberInviteRoom,
+    renderSavedInviteRooms,
+    setSavedRoomMetadataSyncStatus,
+  });
 }
 
 function rememberCurrentInviteRoomMetadata() {
-  const code = currentInviteRoomCode();
-  const role = connectionCodeRoleFor(code);
-  if (!code || !role) {
-    return;
-  }
-  const allowRetryableFallback = allowCurrentRoomRetryableMetadataFallbackOnce === true;
-  allowCurrentRoomRetryableMetadataFallbackOnce = false;
-  rememberInviteRoom(code, role, currentRoomConversationMetadata({ allowRetryableFallback }));
+  return savedRoomRememberCurrentInviteRoomMetadata({
+    currentInviteRoomCode,
+    connectionCodeRoleFor,
+    allowCurrentRoomRetryableMetadataFallbackOnce,
+    allowCurrentRoomRetryableMetadataFallbackOnceSet: (value) => {
+      allowCurrentRoomRetryableMetadataFallbackOnce = value;
+    },
+    rememberInviteRoom,
+    currentRoomConversationMetadata,
+  });
 }
 
 function refreshCurrentRoomAfterReceiveImport(refreshPlan = {}, input = productionTwoProfileInput()) {
-  const sessionsReady = twoProfileSessionsReadyForInput(input);
-  rememberCurrentInviteRoomMetadata();
-  renderSavedInviteRooms();
-  renderRoomStatusSummary(input, sessionsReady);
-  renderRoomIdentityBar(input, sessionsReady);
-  if (refreshPlan.messageImported) {
-    renderProductionTwoProfileMemory(input);
-  }
+  return savedRoomRefreshCurrentRoomAfterReceiveImport({
+    refreshPlan,
+    roomInput: input,
+    twoProfileSessionsReadyForInput,
+    rememberCurrentInviteRoomMetadata,
+    renderSavedInviteRooms,
+    renderRoomStatusSummary,
+    renderRoomIdentityBar,
+    renderProductionTwoProfileMemory,
+  });
 }
 
 function currentInviteRoomCode() {
@@ -6377,7 +6043,7 @@ function connectionCodeRoleFor(code) {
   if (latestConnectionCodeRole && trimmedCode === latestDerivedConnectionCode) {
     return latestConnectionCodeRole;
   }
-  const stored = localStoreGet(connectionCodeRoleStorageKey(trimmedCode));
+  const stored = localStoreGet(connectionCodeRoleStorageKey(trimmedCode, connectionCodeSlug));
   if (stored === "inviter" || stored === "joiner") {
     latestConnectionCodeRole = stored;
     return stored;
