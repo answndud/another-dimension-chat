@@ -27,6 +27,10 @@ const browserPreviewTauriJs = readFileSync(join(here, "browser-preview-tauri.js"
 const i18nJs = readFileSync(join(here, "i18n.js"), "utf8");
 const actionStateJs = readFileSync(join(here, "action-state.js"), "utf8");
 const privateDeliveryStateJs = readFileSync(join(here, "private-delivery-state.js"), "utf8");
+const transcriptResumeJs = readFileSync(join(here, "transcript-resume.js"), "utf8");
+const savedRoomRefreshJs = readFileSync(join(here, "saved-room-refresh.js"), "utf8");
+const savedRoomStorageJs = readFileSync(join(here, "saved-room-storage.js"), "utf8");
+const savedRoomRecoveryJs = readFileSync(join(here, "saved-room-recovery.js"), "utf8");
 const stylesCss = readFileSync(join(here, "styles.css"), "utf8");
 const securityMd = readFileSync(join(appRoot, "..", "..", "SECURITY.md"), "utf8");
 const externalEvidenceSchema = readFileSync(
@@ -441,7 +445,7 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(mainJs, /function syncSavedInviteRoomMetadataFromLocalStores/);
   assert.match(mainJs, /let savedRoomMetadataSyncInFlight = false/);
   assert.match(mainJs, /roomListSyncStatus: document\.querySelector\("#room-list-sync-status"\)/);
-  assert.match(mainJs, /const savedRoomMetadataStartupSyncLimit = 8/);
+  assert.match(savedRoomStorageJs, /export const savedRoomMetadataStartupSyncLimit = 8/);
   assert.match(mainJs, /function savedInviteRoomResumeRoom/);
   assert.match(mainJs, /function savedInviteRoomListItemView/);
   assert.match(mainJs, /createNewInviteRoomFromList/);
@@ -467,26 +471,26 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(functionBody(mainJs, "prepareRoomListReturnState"), /!savedRoomMetadataSyncInFlight/);
   assert.match(functionBody(mainJs, "prepareRoomListReturnState"), /setSavedRoomMetadataSyncStatus\(""\)/);
   assert.match(mainJs, /showRoomList\(\);\s*syncSavedInviteRoomMetadataFromLocalStores\(\);/);
-  assert.match(functionBody(mainJs, "savedInviteRoomMetadataFromLocalStores"), /production_message_transcript_export/);
-  assert.match(functionBody(mainJs, "savedInviteRoomMetadataSyncCandidates"), /right\.priority - left\.priority/);
-  assert.match(functionBody(mainJs, "savedInviteRoomMetadataSyncCandidates"), /slice\(0, savedRoomMetadataStartupSyncLimit\)/);
-  assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncRunning/);
-  assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncComplete/);
-  assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncPartial/);
-  assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /rememberInviteRoom\(room\.code, room\.role[\s\S]*render: false/);
-  assert.match(functionBody(mainJs, "syncSavedInviteRoomMetadataFromLocalStores"), /savedInviteRoomMetadataSyncCandidates\(\)/);
-  assert.match(mainJs, /function inviteRoomMetadataValue/);
-  assert.match(functionBody(mainJs, "inviteRoomMetadataValue"), /hasOwnProperty\.call\(metadata \?\? \{\}, key\)/);
-  assert.match(mainJs, /function inviteRoomUpdatedAtValue/);
-  assert.match(functionBody(mainJs, "inviteRoomUpdatedAtValue"), /hasOwnProperty\.call\(metadata \?\? \{\}, "updatedAt"\)/);
-  assert.match(functionBody(mainJs, "inviteRoomUpdatedAtValue"), /Object\.keys\(metadata \?\? \{\}\)\.length > 0[\s\S]*Date\.now\(\)/);
+  assert.match(savedRoomRefreshJs, /export async function savedInviteRoomMetadataFromLocalStores/);
+  assert.match(functionBody(savedRoomRefreshJs, "savedInviteRoomMetadataFromLocalStores"), /invokeRoomTranscriptExport\(room\)/);
+  assert.match(functionBody(savedRoomRefreshJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncRunning/);
+  assert.match(functionBody(savedRoomRefreshJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncComplete/);
+  assert.match(functionBody(savedRoomRefreshJs, "syncSavedInviteRoomMetadataFromLocalStores"), /roomListSyncPartial/);
+  assert.match(functionBody(savedRoomRefreshJs, "syncSavedInviteRoomMetadataFromLocalStores"), /rememberInviteRoom\(room\.code, room\.role[\s\S]*render: false/);
+  assert.match(functionBody(transcriptResumeJs, "savedInviteRoomMetadataSyncCandidates"), /right\.priority - left\.priority/);
+  assert.match(functionBody(transcriptResumeJs, "savedInviteRoomMetadataSyncCandidates"), /slice\(0, dependency\.savedRoomMetadataStartupSyncLimit\)/);
+  assert.match(savedRoomStorageJs, /export function inviteRoomMetadataValue/);
+  assert.match(functionBody(savedRoomStorageJs, "inviteRoomMetadataValue"), /hasOwnProperty\.call\(metadata \?\? \{\}, key\)/);
+  assert.match(savedRoomStorageJs, /export function inviteRoomUpdatedAtValue/);
+  assert.match(functionBody(savedRoomStorageJs, "inviteRoomUpdatedAtValue"), /hasOwnProperty\.call\(metadata \?\? \{\}, "updatedAt"\)/);
+  assert.match(functionBody(savedRoomStorageJs, "inviteRoomUpdatedAtValue"), /Object\.keys\(metadata \?\? \{\}\)\.length > 0[\s\S]*Date\.now\(\)/);
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /updatedAt: inviteRoomUpdatedAtValue\(metadata, existing\)/);
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundCount"\)/);
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundMessageNumber"\)/);
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundAction"\)/);
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "manualRebuildFlow"\)/);
-  assert.match(functionBody(mainJs, "roomListStoragePayload"), /const manualRebuildMetadata = normalizeSavedRoomManualRebuildMetadata\(room\)/);
-  assert.match(functionBody(mainJs, "savedInviteRooms"), /const manualRebuildMetadata = normalizeSavedRoomManualRebuildMetadata\(room\)/);
+  assert.match(functionBody(savedRoomStorageJs, "roomListStoragePayload"), /const manualRebuildMetadata = normalizeSavedRoomManualRebuildMetadata\(room, now\)/);
+  assert.match(functionBody(savedRoomStorageJs, "readSavedInviteRooms"), /const normalizeAction = options\.normalizeRetryableAction \?\? \(\(value\) => String\(value \?\? ""\)\.trim\(\)\)/);
   assert.match(indexHtml, /id="back-to-room-list"/);
   assert.match(stylesCss, /body\.is-room-list-mode [\s\S]*#production-two-profile-transcript/);
   assert.match(stylesCss, /body\.is-room-detail-mode \.room-list-panel/);
@@ -505,8 +509,9 @@ test("saved room open carries current session status into metadata reconciliatio
   );
   assert.match(functionBody(mainJs, "openSavedInviteRoom"), /const openInput = productionTwoProfileInput\(\)/);
   assert.match(functionBody(mainJs, "openSavedInviteRoom"), /return openInviteRoomFromToken\(openInput\)/);
-  assert.match(functionBody(mainJs, "refreshSavedInviteRoomMetadataForFingerprint"), /const input = savedInviteRoomInput\(room\)/);
-  assert.match(functionBody(mainJs, "refreshSavedInviteRoomMetadataForFingerprint"), /rememberInviteRoom\(\n      room\.code,\n      room\.role,/);
+  assert.match(savedRoomRefreshJs, /export async function refreshSavedInviteRoomMetadataForFingerprint/);
+  assert.match(functionBody(savedRoomRefreshJs, "refreshSavedInviteRoomMetadataForFingerprint"), /savedInviteRoomInput\(room\)/);
+  assert.match(functionBody(savedRoomRefreshJs, "refreshSavedInviteRoomMetadataForFingerprint"), /rememberInviteRoom\(room\.code, room\.role,/);
   assert.match(functionBody(mainJs, "savedInviteRoomForRoomFingerprint"), /privateRouteRoomKey\(savedInviteRoomInput\(room\)\) === fingerprint/);
 });
 
@@ -977,7 +982,7 @@ test("saved room removal is list-only and transcript switching rebuilds entries"
   assert.match(functionBody(mainJs, "resetProductionTwoProfileTranscript"), /productionTwoProfileConversationEntries\.clear\(\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /rememberCurrentInviteRoomMetadata\(\)/);
   assert.match(mainJs, /function reconcileCurrentInviteRoomMetadataFromTranscriptEntries/);
-  assert.match(functionBody(mainJs, "reconcileCurrentInviteRoomMetadataFromTranscriptEntries"), /productionInviteRoomConversationMetadata\(entries \?\? \[\]\)/);
+  assert.match(functionBody(mainJs, "reconcileCurrentInviteRoomMetadataFromTranscriptEntries"), /transcriptReconcileCurrentInviteRoomMetadataFromTranscriptEntries\(\{/);
 });
 
 test("room transcript refresh is scoped to the current room", () => {
@@ -1013,6 +1018,19 @@ test("room transcript refresh is scoped to the current room", () => {
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /!transcriptLoaded \|\| !twoProfileTranscriptInputStillCurrent\(sessionCheckInput\)/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /rememberTwoProfileSessionStatus\(sessionCheckInput, result\)/);
   assert.match(functionBody(mainJs, "twoProfileTranscriptInputStillCurrent"), /twoProfileSessionStatusFingerprint\(current\) === twoProfileSessionStatusFingerprint\(input\)/);
+});
+
+test("transcript metadata reconciliation lives in the transcript resume module", () => {
+  assert.match(transcriptResumeJs, /export function currentRoomConversationMetadata/);
+  assert.match(functionBody(transcriptResumeJs, "currentRoomConversationMetadata"), /savedInviteRoomMetadataWithPreferredRetryable/);
+  assert.match(functionBody(transcriptResumeJs, "currentRoomConversationMetadata"), /inviteRoomMetadataWithoutRetryableOutbound/);
+  assert.match(functionBody(transcriptResumeJs, "currentRoomConversationMetadata"), /savedInviteRoomMetadataWithSessionStatus/);
+  assert.match(transcriptResumeJs, /export function reconcileCurrentInviteRoomMetadataFromTranscriptEntries/);
+  assert.match(functionBody(transcriptResumeJs, "reconcileCurrentInviteRoomMetadataFromTranscriptEntries"), /productionInviteRoomConversationMetadata\(entries \?\? \[\]\)/);
+  assert.match(functionBody(transcriptResumeJs, "reconcileCurrentInviteRoomMetadataFromTranscriptEntries"), /rememberInviteRoom\(code, role, metadata\)/);
+  assert.match(transcriptResumeJs, /export function savedInviteRoomMetadataSyncCandidates/);
+  assert.match(functionBody(transcriptResumeJs, "savedInviteRoomMetadataSyncCandidates"), /right\.priority - left\.priority/);
+  assert.match(functionBody(transcriptResumeJs, "savedInviteRoomMetadataSyncCandidates"), /slice\(0, dependency\.savedRoomMetadataStartupSyncLimit\)/);
 });
 
 test("conversation selection keys are scoped to the active invite room", () => {
@@ -2029,23 +2047,23 @@ test("rebuild delivery retry and receive actions stay room-scoped", () => {
 });
 
 test("manual rebuild recovery resumes from saved room metadata", () => {
-  assert.match(mainJs, /function normalizedSavedRoomManualRebuildFlow/);
-  assert.match(mainJs, /function normalizedSavedRoomManualRebuildDeliveryScope/);
-  assert.match(mainJs, /function normalizedSavedRoomManualRebuildDeliveryAction/);
-  assert.match(mainJs, /const manualRebuildRecoveryPersistenceTtlMs = 7 \* 24 \* 60 \* 60 \* 1000/);
-  assert.match(mainJs, /function savedRoomManualRebuildExpired/);
-  assert.match(mainJs, /function normalizeSavedRoomManualRebuildMetadata/);
-  assert.match(mainJs, /function inviteRoomMetadataWithoutManualRebuild/);
+  assert.match(savedRoomStorageJs, /export function normalizedSavedRoomManualRebuildFlow/);
+  assert.match(savedRoomStorageJs, /export function normalizedSavedRoomManualRebuildDeliveryScope/);
+  assert.match(savedRoomStorageJs, /export function normalizedSavedRoomManualRebuildDeliveryAction/);
+  assert.match(savedRoomStorageJs, /export const manualRebuildRecoveryPersistenceTtlMs = 7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(savedRoomStorageJs, /export function savedRoomManualRebuildExpired/);
+  assert.match(savedRoomStorageJs, /export function normalizeSavedRoomManualRebuildMetadata/);
+  assert.match(savedRoomStorageJs, /export function inviteRoomMetadataWithoutManualRebuild/);
   assert.match(mainJs, /function rememberManualRebuildRecoveryForInput/);
-  assert.match(mainJs, /function savedInviteRoomManualRebuildRecoveryCandidate/);
+  assert.match(savedRoomRecoveryJs, /export function savedInviteRoomManualRebuildRecoveryCandidate/);
   assert.match(mainJs, /function showManualRebuildRecoveryAfterSavedRoomOpen/);
   assert.match(mainJs, /function showSavedInviteRoomPeerCodePrompt/);
   assert.match(mainJs, /function clearSavedInviteRoomManualRebuildMetadata/);
   assert.match(mainJs, /function savedInviteRoomManualRebuildNeedsRecovery/);
   assert.match(mainJs, /function savedInviteRoomWithoutResolvedManualRebuild/);
 
-  assert.match(functionBody(mainJs, "savedInviteRooms"), /normalizeSavedRoomManualRebuildMetadata\(room\)/);
-  assert.match(functionBody(mainJs, "roomListStoragePayload"), /normalizeSavedRoomManualRebuildMetadata\(room\)/);
+  assert.match(functionBody(savedRoomStorageJs, "readSavedInviteRooms"), /normalizeSavedRoomManualRebuildMetadata\(room, now\)/);
+  assert.match(functionBody(savedRoomStorageJs, "roomListStoragePayload"), /normalizeSavedRoomManualRebuildMetadata\(room, now\)/);
   assert.match(functionBody(mainJs, "rememberInviteRoom"), /normalizeSavedRoomManualRebuildMetadata/);
 
   const rememberBody = functionBody(mainJs, "rememberManualRebuildRecoveryForInput");
@@ -2055,13 +2073,12 @@ test("manual rebuild recovery resumes from saved room metadata", () => {
   assert.match(rememberBody, /manualRebuildMessageNumber/);
   assert.match(rememberBody, /rememberInviteRoom/);
 
-  const candidateBody = functionBody(mainJs, "savedInviteRoomManualRebuildRecoveryCandidate");
+  const candidateBody = functionBody(savedRoomRecoveryJs, "savedInviteRoomManualRebuildRecoveryCandidate");
   assert.match(candidateBody, /room\?\.manualRebuildFlow !== true/);
-  assert.match(candidateBody, /savedInviteRoomHasRetryableOutbound\(room\)/);
-  assert.match(candidateBody, /savedInviteRoomWaitingForPeerCode\(room\)/);
+  assert.match(candidateBody, /waitingPeerCode/);
   assert.match(candidateBody, /receiveState === "paused"/);
   assert.match(candidateBody, /receiveState === "stopping"/);
-  assert.match(candidateBody, /savedInviteRoomRouteReadinessView\(room\)/);
+  assert.match(candidateBody, /routeReadinessView/);
 
   const needsRecoveryBody = functionBody(mainJs, "savedInviteRoomManualRebuildNeedsRecovery");
   assert.match(needsRecoveryBody, /savedRoomManualRebuildExpired\(room\.manualRebuildUpdatedAt\)/);
@@ -2208,14 +2225,15 @@ test("standalone onion diagnostics ignore stale profile and endpoint inputs", ()
 test("receive imports refresh room list metadata immediately", () => {
   assert.match(mainJs, /function refreshCurrentRoomAfterReceiveImport/);
   assert.match(mainJs, /function savedInviteRoomForRoomFingerprint/);
-  assert.match(mainJs, /function refreshSavedInviteRoomMetadataForFingerprint/);
   assert.match(functionBody(mainJs, "savedInviteRoomForRoomFingerprint"), /privateRouteRoomKey\(savedInviteRoomInput\(room\)\) === fingerprint/);
-  assert.match(functionBody(mainJs, "refreshSavedInviteRoomMetadataForFingerprint"), /savedInviteRoomMetadataFromLocalStores\(room\)/);
-  assert.match(functionBody(mainJs, "refreshSavedInviteRoomMetadataForFingerprint"), /rememberInviteRoom\(/);
-  assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /rememberCurrentInviteRoomMetadata\(\)/);
-  assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /renderSavedInviteRooms\(\)/);
-  assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /renderRoomStatusSummary\(input, sessionsReady\)/);
-  assert.match(functionBody(mainJs, "refreshCurrentRoomAfterReceiveImport"), /renderProductionTwoProfileMemory\(input\)/);
+  assert.match(savedRoomRefreshJs, /export async function refreshSavedInviteRoomMetadataForFingerprint/);
+  assert.match(functionBody(savedRoomRefreshJs, "refreshSavedInviteRoomMetadataForFingerprint"), /savedInviteRoomMetadataFromLocalStores\(room\)/);
+  assert.match(functionBody(savedRoomRefreshJs, "refreshSavedInviteRoomMetadataForFingerprint"), /rememberInviteRoom\(/);
+  assert.match(savedRoomRefreshJs, /export function refreshCurrentRoomAfterReceiveImport/);
+  assert.match(functionBody(savedRoomRefreshJs, "refreshCurrentRoomAfterReceiveImport"), /rememberCurrentInviteRoomMetadata\(\)/);
+  assert.match(functionBody(savedRoomRefreshJs, "refreshCurrentRoomAfterReceiveImport"), /renderSavedInviteRooms\(\)/);
+  assert.match(functionBody(savedRoomRefreshJs, "refreshCurrentRoomAfterReceiveImport"), /input\.renderRoomStatusSummary\(input\.roomInput, sessionsReady\)/);
+  assert.match(functionBody(savedRoomRefreshJs, "refreshCurrentRoomAfterReceiveImport"), /input\.renderProductionTwoProfileMemory\(input\.roomInput\)/);
   const pollBody = functionBody(mainJs, "pollProductionTwoProfileOnionReceiveLoopStatus");
   assert.match(pollBody, /const receivingCurrentRoom = productionTwoProfileReceiveMatchesInput\(currentInput\)/);
   assert.match(pollBody, /rememberProductionTwoProfileOnionReceiveRuntimeState\(runtimeState, runtimeResult\)/);
