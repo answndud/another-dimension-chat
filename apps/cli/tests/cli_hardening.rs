@@ -2345,15 +2345,17 @@ fn default_build_runs_production_boundary_self_test_without_secrets() {
     assert!(output.status.success());
     let out = stdout(&output);
     assert!(out.contains("production boundary self-test passed"));
-    assert!(out.contains("production session candidate: snow Noise XX synchronous boundary"));
+    assert!(out.contains(
+        "production session candidate: snow Noise XX synchronous 1:1 invite-code boundary"
+    ));
     assert!(out.contains("production session guard coverage: pairing=true"));
     assert!(out.contains("safety_transcript=true"));
     assert!(out.contains("canonical_dialer=true"));
     assert!(out.contains("tamper_rejection=true"));
     assert!(out.contains("replay_before_decrypt=true"));
-    assert!(out.contains("in_memory_only=true"));
+    assert!(out.contains("in_memory_only=false"));
     assert!(out.contains("production session non-readiness: production_e2ee=false"));
-    assert!(out.contains("durable_session_persistence=false"));
+    assert!(out.contains("durable_session_persistence=true"));
     assert!(out.contains("tauri_production_messaging_command=false"));
     assert!(out.contains("usable_async_messaging=false"));
     let error = stderr(&output);

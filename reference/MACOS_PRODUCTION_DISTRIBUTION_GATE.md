@@ -80,11 +80,17 @@ Public wording must still say `not production-ready` and
   `reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md`
 - Release distribution metadata schema:
   `reference/MACOS_RELEASE_DISTRIBUTION_METADATA.md`
-- Release page update gate: `scripts/macos_release_page_update_gate_once.sh`
-- Public beta source preflight:
+- Historical release page update gate:
+  `scripts/macos_release_page_update_gate_once.sh`
+- Historical public beta source preflight:
   `scripts/macos_public_beta_final_source_preflight_once.sh`
-- Release staging script:
+- Historical release staging script:
   `scripts/prepare_unsigned_public_beta_release.sh`
+
+These release-task scripts remain documented as hold-record references. They
+are not part of the current maintained development baseline; current local
+verification entrypoints are `scripts/verify_all.sh` and
+`scripts/verify_full.sh`.
 
 ## Current Gate Flags
 

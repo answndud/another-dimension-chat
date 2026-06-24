@@ -7,7 +7,8 @@ The current public packet is asymmetric by design:
 
 - macOS Apple Silicon: unsigned OSS public beta DMG, checksum, provenance,
   install guide, release notes, update-integrity note, and GitHub Release body
-  are source-gated by `scripts/macos_unsigned_public_release_packet_once.sh`.
+  are defined by the historical unsigned public beta packet workflow. That
+  packaging flow is not part of the current maintained development baseline.
 - Windows: public artifact candidate path is source-defined for an NSIS `.exe`
   installer, but the public artifact claim remains false until a real Windows
   machine result binds to a valid artifact manifest/checksum/provenance set and
@@ -48,7 +49,7 @@ Allowed short public copy:
 Community launch copy source:
 
 - `reference/PUBLIC_COMMUNITY_LAUNCH_COPY.md`
-- `scripts/public_community_launch_copy_once.sh`
+- historical validator: `scripts/public_community_launch_copy_once.sh`
 
 Required disclaimer:
 
@@ -90,6 +91,10 @@ Not protected:
 - direct coercion,
 - full global traffic correlation.
 
-Machine gate:
+Historical packaging gate:
 
 - `scripts/cross_platform_public_beta_packet_once.sh`
+
+This gate remains as release-task reference material only. It is not part of
+the current maintained development baseline. Use `scripts/verify_all.sh` and
+`scripts/verify_full.sh` for current local verification.

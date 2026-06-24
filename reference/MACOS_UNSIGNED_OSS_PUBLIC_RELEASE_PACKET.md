@@ -90,6 +90,10 @@ Forbidden public claims:
 - coercion safety
 - full global traffic-correlation defense
 
-Machine gate:
+Historical packaging gate:
 
 - `scripts/macos_unsigned_public_release_packet_once.sh`
+
+This packaging gate is retained here as release-task reference material. It is
+not part of the current maintained development baseline. For current local
+verification, use `scripts/verify_all.sh` and `scripts/verify_full.sh`.
