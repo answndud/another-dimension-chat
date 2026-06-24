@@ -3,34 +3,30 @@
 <p>
   <img src="https://img.shields.io/badge/status-unsigned%20beta-orange" alt="Status">
   <img src="https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-lightgrey" alt="Platform">
-  <img src="https://img.shields.io/badge/license-UNLICENSED-red" alt="License">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
 </p>
 
 English | [한국어](README.ko.md)
 
-**Experimental local-first 1:1 private messenger.**
-Unsigned public beta — not audited, not production-ready.
-Do not use for sensitive communication.
+**A local-first 1:1 messenger beta that avoids accounts, phone numbers,
+contact discovery, cloud message storage, and push-notification dependency.**
 
-No phone number, email, global account, contact discovery, message relay,
-push notification, or cloud backup. Built with **Rust** and **Tauri**.
+Built with **Rust** and **Tauri**. Current testing uses pairwise invite rooms,
+safety material comparison, local encrypted storage, and manual sealed-message
+exchange.
 
-## Screenshots
+> **Current status:** unsigned macOS Apple Silicon beta. Not audited, not
+> production-ready, and not for sensitive communication.
 
-<table>
-<tr>
-  <td><img src="reference/screenshots/macos-public-beta-first-run-desktop.png" width="320" alt="First run"></td>
-  <td><img src="reference/screenshots/macos-public-beta-room-flow-desktop.png" width="320" alt="Pairwise room"></td>
-  <td><img src="reference/screenshots/macos-public-beta-manual-envelope-desktop.png" width="320" alt="Manual envelope"></td>
-</tr>
-<tr>
-  <td align="center">Profile creation</td>
-  <td align="center">Pairwise room &amp; invite</td>
-  <td align="center">Envelope export</td>
-</tr>
-</table>
+## What You Get Today
 
-[More screenshots](reference/screenshots/)
+| Benefit | Current beta behavior |
+|---------|-----------------------|
+| No account setup | Create a local profile on your device |
+| No public identifier | Pair with one person using an invite code |
+| No central message storage | Messages stay local unless you export them |
+| User-chosen delivery | Move sealed messages through any channel you choose |
+| Clear safety step | Compare safety material before using the room |
 
 ## Download
 
@@ -49,27 +45,59 @@ Verify before opening:
 shasum -a 256 -c *.dmg.sha256
 ```
 
-Proceed only if output is `OK`. If macOS blocks the unsigned app, allow via
-System Settings > Privacy & Security.
+Expected output:
+
+```text
+another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg: OK
+```
+
+Proceed only if the output is `OK`. If macOS blocks the unsigned app, allow via
+System Settings > Privacy & Security after checksum verification.
 
 ## Quick Start
 
 1. Create a local profile.
-2. Create or join a pairwise room via invite code or QR.
+2. Create or join a pairwise room via invite code.
 3. Compare safety material with the other person.
-4. Write a message → export encrypted envelope.
-5. Send the envelope through your own channel (Signal, email, etc.).
-6. Import the envelope on the other side.
+4. Write a message and export a sealed message (`encrypted envelope`).
+5. Send that file/text through your own channel.
+6. Import it on the other side, then reply the same way.
+
+There is no central account, searchable username, contact discovery service,
+message relay, cloud backup, or push notification service.
+
+## Screenshots
+
+<table>
+<tr>
+  <td><img src="reference/screenshots/macos-public-beta-first-run-desktop.png" width="320" alt="Create a local profile"></td>
+  <td><img src="reference/screenshots/macos-public-beta-room-flow-desktop.png" width="320" alt="Create a pairwise room"></td>
+  <td><img src="reference/screenshots/macos-public-beta-manual-envelope-desktop.png" width="320" alt="Export a sealed message"></td>
+</tr>
+<tr>
+  <td align="center">Create a local profile</td>
+  <td align="center">Share one invite code</td>
+  <td align="center">Export a sealed message</td>
+</tr>
+</table>
+
+[More screenshots](reference/screenshots/)
 
 ## Platforms
 
-**macOS Apple Silicon** (unsigned DMG). Windows, Android, iOS: source-only.
+| Platform | Public status |
+|----------|---------------|
+| macOS Apple Silicon | Unsigned DMG beta |
+| Windows | No public app yet |
+| Android / iOS | No public app yet |
 
 ## Before Using
 
-This beta makes **no security claim**. Read [SECURITY.md](SECURITY.md). For
-support, open a redacted public issue — no invite codes, payloads, keys, or
-raw logs.
+This beta makes **no security claim**. Experimental onion/network delivery is
+explicit, fail-closed, and not a reliable delivery claim.
+
+Read [SECURITY.md](SECURITY.md). For support, open a redacted public issue:
+no invite codes, payloads, keys, raw logs, or screenshots of private room data.
 
 ## From Source
 
@@ -80,4 +108,11 @@ scripts/verify_all.sh   # light verify
 scripts/verify_full.sh  # full pre-release verify
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for more.
+## Project Docs
+
+| Need | Start here |
+|------|------------|
+| Security boundary | [SECURITY.md](SECURITY.md) |
+| Support / bug reports | [SUPPORT.md](SUPPORT.md) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| License | [MIT](LICENSE) |

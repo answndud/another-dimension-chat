@@ -12,10 +12,16 @@ and do not use terminal quarantine-removal commands as an install step.
 
 ## Download
 
-Download all files from this same GitHub Release:
+For normal install, download only these two files from this same GitHub Release:
 
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
+
+<details>
+<summary>Reviewer and maintainer evidence files</summary>
+
+The other attached files are reviewer or maintainer evidence:
+
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.provenance.json`
 - `INSTALL_UNSIGNED_MACOS.md`
 - `RELEASE_NOTES.md`
@@ -45,6 +51,8 @@ the release body. Do not upload `docs/`, `beta-artifacts/`, the
 dumps, screenshots, local app data, private diagnostics, private planning notes,
 or any file not listed in the manifest.
 
+</details>
+
 ## Verify Before Opening
 
 Run:
@@ -69,6 +77,9 @@ Only after the checksum matches, use the normal macOS Privacy & Security manual 
 
 Do not use terminal quarantine-removal commands as an install step.
 
+<details>
+<summary>Shared packet boundary</summary>
+
 ## Shared Packet Boundary
 
 These values must stay identical across the install guide, release notes,
@@ -87,6 +98,8 @@ GitHub Release body, and beta checklist:
 This generated DMG packet is aligned to the current public packet source.
 Verify it with the same-release checksum and provenance; the matching GitHub
 Release asset set is current.
+
+</details>
 
 ## Install
 
