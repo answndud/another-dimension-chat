@@ -96,7 +96,9 @@ import {
 } from "./invite-qr.js";
 import { createInviteQrController } from "./invite-qr-controller.js";
 import { createDiagnosticsCopyController } from "./diagnostics-copy-controller.js";
+import { createDiagnosticsReportController } from "./diagnostics-report-controller.js";
 import { createDesktopPanelController } from "./desktop-panel-controller.js";
+import { createTranscriptController } from "./transcript-controller.js";
 import { combinedTwoProfileTranscriptTsv } from "./transcript-export.js";
 import { transcriptRetentionView } from "./transcript-retention.js";
 import { applyStaticTranslations, normalizeLanguage, translate } from "./i18n.js";
@@ -131,6 +133,7 @@ import {
   serializeStoredLifecycleMap,
   serializeStoredStringMap,
 } from "./saved-room-storage.js";
+import { createSavedRoomController } from "./saved-room-controller.js";
 import {
   savedInviteRoomActionRechecksAfterOpen,
   savedInviteRoomManualRebuildRecoveryCandidate,
@@ -3701,9 +3704,6 @@ let copiedInviteCode = "";
 let latestConnectionCodeRole = "";
 let inviteRoomPresenceRefreshTimer = null;
 let inviteRoomPresenceRefreshFingerprint = "";
-let inviteRoomTranscriptRefreshTimer = null;
-let inviteRoomTranscriptRefreshFingerprint = "";
-let inviteRoomTranscriptRefreshInFlight = false;
 let savedRoomMetadataSyncInFlight = false;
 let savedRoomMetadataSyncStatus = { key: "", tone: "muted", values: {} };
 let roomDetailOpen = false;
@@ -3833,89 +3833,6 @@ function rememberConnectionCodeRole(code, role) {
   }
 }
 
-function rememberLastInviteRoom(code, role) {
-  const trimmedCode = String(code ?? "").trim();
-  const normalizedRole = role === "inviter" ? "inviter" : "joiner";
-  if (!trimmedCode) {
-    return;
-  }
-  localStoreSet(lastInviteRoomStorageKey, JSON.stringify({ code: trimmedCode, role: normalizedRole }));
-  rememberInviteRoom(trimmedCode, normalizedRole);
-}
-
-function forgetLastInviteRoom(code) {
-  const trimmedCode = String(code ?? "").trim();
-  try {
-    const saved = JSON.parse(localStoreGet(lastInviteRoomStorageKey) ?? "null");
-    if (!trimmedCode || saved?.code === trimmedCode) {
-      localStoreRemove(lastInviteRoomStorageKey);
-    }
-  } catch {
-    localStoreRemove(lastInviteRoomStorageKey);
-  }
-  forgetInviteRoom(trimmedCode);
-}
-
-function savedInviteRooms() {
-  return readSavedInviteRooms(localStoreGet(inviteRoomsStorageKey), localStoreGet(lastInviteRoomStorageKey), {
-    normalizeRetryableAction: savedInviteRoomRetryableAction,
-  });
-}
-
-function rememberInviteRoom(code, role, metadata = {}, options = {}) {
-  const trimmedCode = String(code ?? "").trim();
-  const normalizedRole = role === "inviter" ? "inviter" : "joiner";
-  if (!trimmedCode) {
-    return;
-  }
-  const existing = savedInviteRooms().find((room) => room.code === trimmedCode) ?? {};
-  const rooms = savedInviteRooms().filter((room) => room.code !== trimmedCode);
-  const retryableOutboundCount = Math.max(
-    0,
-    Number.parseInt(inviteRoomMetadataValue(metadata, existing, "retryableOutboundCount") ?? 0, 10) || 0,
-  );
-  const manualRebuildMetadata = normalizeSavedRoomManualRebuildMetadata({
-    manualRebuildFlow: inviteRoomMetadataValue(metadata, existing, "manualRebuildFlow"),
-    manualRebuildDeliveryScope: inviteRoomMetadataValue(metadata, existing, "manualRebuildDeliveryScope"),
-    manualRebuildDeliveryAction: inviteRoomMetadataValue(metadata, existing, "manualRebuildDeliveryAction"),
-    manualRebuildMessageNumber: inviteRoomMetadataValue(metadata, existing, "manualRebuildMessageNumber"),
-    manualRebuildUpdatedAt: inviteRoomMetadataValue(metadata, existing, "manualRebuildUpdatedAt"),
-  });
-  rooms.unshift({
-    ...existing,
-    code: trimmedCode,
-    role: normalizedRole,
-    updatedAt: inviteRoomUpdatedAtValue(metadata, existing),
-    lastMessagePreview: String(metadata.lastMessagePreview ?? existing.lastMessagePreview ?? "").trim(),
-    lastMessageAt: Number(metadata.lastMessageAt ?? existing.lastMessageAt ?? 0),
-    messageCount: Math.max(
-      0,
-      Number.parseInt(inviteRoomMetadataValue(metadata, existing, "messageCount") ?? 0, 10) || 0,
-    ),
-    retryableOutboundCount,
-    retryableOutboundMessageNumber: normalizedSavedRoomRetryableMessageNumber(
-      retryableOutboundCount,
-      inviteRoomMetadataValue(metadata, existing, "retryableOutboundMessageNumber"),
-    ),
-    retryableOutboundMessage: normalizedSavedRoomRetryableMessage(
-      retryableOutboundCount,
-      inviteRoomMetadataValue(metadata, existing, "retryableOutboundMessage"),
-    ),
-    retryableOutboundAction: normalizedSavedRoomRetryableAction(
-      retryableOutboundCount,
-      inviteRoomMetadataValue(metadata, existing, "retryableOutboundAction"),
-    ),
-    ...manualRebuildMetadata,
-  });
-  localStoreSet(
-    inviteRoomsStorageKey,
-    JSON.stringify(roomListStoragePayload(rooms, { normalizeRetryableAction: savedInviteRoomRetryableAction })),
-  );
-  if (options.render !== false) {
-    renderSavedInviteRooms();
-  }
-}
-
 function clearPrivateRouteRuntimeStateForInput(input) {
   let cleared = false;
   for (const roomKey of privateRouteRoomKeys(input)) {
@@ -3939,37 +3856,150 @@ function persistPrivateRouteRuntimeState() {
   persistRealOnionRecoveries();
 }
 
-function forgetInviteRoom(code) {
-  const trimmedCode = String(code ?? "").trim();
-  if (!trimmedCode) {
-    return;
-  }
-  for (const role of ["inviter", "joiner"]) {
-    const { localProfile, peerProfile } = productionInviteCodeProfiles(trimmedCode, role);
-    const roomInput = {
-      profileA: localProfile,
-      profileB: peerProfile,
-      passphrase: trimmedCode,
-      connectionCode: trimmedCode,
-      inviteRole: role,
-    };
-    rememberReceiveIntentForRoom(roomInput, false);
-    forgetTwoProfileSessionStatusForInput(roomInput);
-    clearPrivateRouteFollowupForRoom(roomInput);
-    clearChatDeliveryNoticeForInput(roomInput);
-    for (const key of twoProfileSafetyStorageKeys(roomInput)) {
-      localStoreRemove(key);
-    }
-    clearPrivateRouteRuntimeStateForInput(roomInput);
-  }
-  persistPrivateRouteRuntimeState();
-  const rooms = savedInviteRooms().filter((room) => room.code !== trimmedCode);
-  localStoreSet(
-    inviteRoomsStorageKey,
-    JSON.stringify(roomListStoragePayload(rooms, { normalizeRetryableAction: savedInviteRoomRetryableAction })),
-  );
-  renderSavedInviteRooms();
-}
+const transcriptController = createTranscriptController({
+  currentLanguage,
+  productionTwoProfileInput,
+  twoProfileRoomIdentityInput,
+  setProductionTwoProfileState,
+  setText,
+  fields,
+  setProductionBusyAction: (action) => {
+    productionBusyAction = action;
+  },
+  clearProductionBusyAction,
+  applyProductionActionState,
+  redactedUiErrorMessage,
+  invokeTwoProfileRuntimeResumeStatus,
+  runtimeResumeRollbackBlocked,
+  applyRuntimeResumeRollbackRecovery,
+  invoke,
+  twoProfileTranscriptEntriesFromProfile,
+  twoProfileTranscriptInputStillCurrent,
+  latestTwoProfileSessionStatusForCurrentInput,
+  rememberTwoProfileSessionStatus,
+  renderProductionTwoProfileSessionStatusResult,
+  combinedTwoProfileTranscriptTsv,
+  renderProductionTwoProfileTranscriptEntries,
+  reconcileCurrentInviteRoomMetadataFromTranscriptEntries,
+  refreshRouteReadinessNoticeAfterSessionRefresh,
+  clearStaleSendRecoveryNotice,
+  appendExpiredMessagesPurged,
+  appendStaleMessageEnvelopeSlotsPruned,
+  transcriptLoadWarnings,
+  autoSelectTwoProfileResumeTarget,
+  transcriptLoadUiState,
+  twoProfileResumeWarningForTarget,
+  renderManualInviteRoomRebuildFlow,
+  renderProductionTwoProfileMemory,
+  autoSelectPendingTwoProfileConversation,
+  invokeInviteRoomSessionStatus,
+  twoProfileInviteCodeModeActive,
+  twoProfileSessionStatusFingerprint,
+  getProductionBusyAction: () => productionBusyAction,
+  clearLatestTwoProfileSessionStatus: () => {
+    latestProductionTwoProfileSessionStatus = null;
+  },
+  twoProfileRecoveryMessage,
+  window,
+});
+const {
+  loadProductionTwoProfileTranscript,
+  startInviteRoomTranscriptRefresh,
+  stopInviteRoomTranscriptRefresh,
+} = transcriptController;
+
+const savedRoomController = createSavedRoomController({
+  localStoreGet,
+  localStoreSet,
+  localStoreRemove,
+  inviteRoomsStorageKey,
+  lastInviteRoomStorageKey,
+  inviteRoomMetadataValue,
+  inviteRoomUpdatedAtValue,
+  savedInviteRoomRetryableAction,
+  productionInviteCodeProfiles,
+  renderSavedInviteRooms,
+  rememberReceiveIntentForRoom,
+  forgetTwoProfileSessionStatusForInput,
+  clearPrivateRouteFollowupForRoom,
+  clearChatDeliveryNoticeForInput,
+  twoProfileSafetyStorageKeys,
+  clearPrivateRouteRuntimeStateForInput,
+  persistPrivateRouteRuntimeState,
+  showRoomDetail,
+  clearCurrentInviteRoomInput,
+  rememberConnectionCodeRole,
+  syncTwoProfileDerivedConnectionFields,
+  renderCurrentInviteCodeDisplay,
+  applyProductionActionState,
+  productionTwoProfileInput,
+  waitForMessageRetentionPolicyReady,
+  twoProfileTranscriptInputStillCurrent,
+  openInviteRoomFromToken,
+  stopProductionTwoProfileOnionReceiveForInput,
+  currentInviteRoomCode,
+  showRoomList,
+  setProductionTwoProfileState,
+  setText,
+  t,
+  applyPairwiseInviteGuidance,
+  openSavedInviteRoomReceiveOwnerBeforeSwitch,
+  savedInviteRoomActionIsRouteReadinessOnly,
+  clearRouteReadinessOnlyFollowupContext,
+  savedInviteRoomActionCanUseRetryableOutbound,
+  savedInviteRoomResolvedRetryableOutbound,
+  handleSavedInviteRoomMissingPendingAction,
+  savedInviteRoomActionRechecksAfterOpen,
+  currentSavedInviteRoomView,
+  savedInviteRoomRecheckedRouteReadinessAction,
+  savedInviteRoomPreservesOpenActionOrigin,
+  showSavedInviteRoomReceiveStopPending,
+  showSavedInviteRoomExpiredRealOnionAction,
+  showSavedInviteRoomActionNowReady,
+  showManualRebuildRecoveryAfterSavedRoomOpen,
+  showExactRetryableOutboundPrompt,
+  showSavedInviteRoomPeerCodePrompt,
+  externalPeerSendReadiness,
+  showRealOnionRouteReadinessBlock,
+  realOnionRecoveryRunAction,
+  focusLocalDiagnostic,
+  runProductionTwoProfileRealOnionRoundtrip,
+  showSavedInviteRoomRealOnionNeedsMessage,
+  applyProductionActionStateAfterListAction: applyProductionActionState,
+  rememberPrivateRouteFollowup,
+  renderManualRebuildDeliveryScopeGate,
+  focusPrivateRouteNextAction,
+  runSavedInviteRoomRetryableOutboundAction,
+  openPrivateDeliverySettings,
+  preparePrivateDeliveryRoute,
+  focusSafetyConfirmation,
+  startProductionTwoProfileOnionReceive,
+  stopProductionTwoProfileOnionReceive,
+  savedInviteRoomRealOnionRecoveryView,
+  enablePrivateDeliveryPermission,
+  fields,
+  setChatDeliveryNoticeByKey,
+  openPrivateDeliveryBridgeSettings,
+  setCurrentInviteCodeShareVisible: (value) => {
+    currentInviteCodeShareVisible = value;
+  },
+  setLatestCreatedInviteCode: (value) => {
+    latestCreatedInviteCode = value;
+  },
+  window,
+});
+const {
+  rememberLastInviteRoom,
+  forgetLastInviteRoom,
+  savedInviteRooms,
+  rememberInviteRoom,
+  forgetInviteRoom,
+  openSavedInviteRoom,
+  removeSavedInviteRoom,
+  runSavedInviteRoomListAction,
+  savedLastInviteRoom,
+  savedInviteRoomInput,
+} = savedRoomController;
 
 function savedInviteRoomReferencesProfile(room, profile) {
   const normalizedProfile = String(profile ?? "").trim().toLowerCase();
@@ -4162,17 +4192,6 @@ function rememberManualRebuildRecoveryForInput(input, action, options = {}) {
   return true;
 }
 
-function savedLastInviteRoom() {
-  try {
-    const saved = JSON.parse(localStoreGet(lastInviteRoomStorageKey) ?? "null");
-    const code = String(saved?.code ?? "").trim();
-    const role = saved?.role === "inviter" ? "inviter" : saved?.role === "joiner" ? "joiner" : "";
-    return code && role ? { code, role } : null;
-  } catch {
-    return null;
-  }
-}
-
 function savedInviteRoomShortSlug(room) {
   const slug = connectionCodeSlug(room.code);
   return slug.length > 18 ? `${slug.slice(0, 18)}...` : slug;
@@ -4193,16 +4212,6 @@ function savedInviteRoomPreview(room) {
       : formatTemplate("roomPreviewRetryableSend", { preview });
   }
   return preview;
-}
-
-function savedInviteRoomInput(room) {
-  const code = String(room?.code ?? "").trim();
-  const role = room?.role === "inviter" ? "inviter" : room?.role === "joiner" ? "joiner" : "";
-  if (!code || !role) {
-    return { profileA: "", profileB: "", passphrase: "" };
-  }
-  const { localProfile, peerProfile } = productionInviteCodeProfiles(code, role);
-  return { profileA: localProfile, profileB: peerProfile, passphrase: code, connectionCode: code, inviteRole: role };
 }
 
 function savedInviteRoomReceiveState(room) {
@@ -5122,196 +5131,6 @@ function clearRouteReadinessOnlyFollowupContext(input = productionTwoProfileInpu
   return changed;
 }
 
-async function runSavedInviteRoomListAction(room, action, options = {}) {
-  const actionOrigin = String(options.actionOrigin ?? "").trim();
-  if (
-    action === "start-receiving" &&
-    !savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin) &&
-    await openSavedInviteRoomReceiveOwnerBeforeSwitch(room)
-  ) {
-    return true;
-  }
-  const opened = await openSavedInviteRoom(room);
-  if (!opened) {
-    return false;
-  }
-  const input = productionTwoProfileInput();
-  if (savedInviteRoomActionIsRouteReadinessOnly(actionOrigin)) {
-    clearRouteReadinessOnlyFollowupContext(input);
-  }
-  if (
-    savedInviteRoomActionCanUseRetryableOutbound(action, actionOrigin) &&
-    !savedInviteRoomResolvedRetryableOutbound(room, input, action, actionOrigin)
-  ) {
-    await handleSavedInviteRoomMissingPendingAction(action);
-    return true;
-  }
-  if (savedInviteRoomActionRechecksAfterOpen(action)) {
-    const current = currentSavedInviteRoomView(input);
-    const currentRoom = current.room;
-    const currentAction = current.action;
-    if (currentAction && (currentAction !== action || current.actionOrigin !== actionOrigin)) {
-      if (currentAction === "wait-receive-stop") {
-        return showSavedInviteRoomReceiveStopPending(input);
-      }
-      if (savedInviteRoomActionIsRouteReadinessOnly(actionOrigin)) {
-        const routeRecheck = savedInviteRoomRecheckedRouteReadinessAction(action, actionOrigin, currentRoom);
-        if (routeRecheck?.ready) {
-          return showSavedInviteRoomActionNowReady(input);
-        }
-        if (routeRecheck?.action && routeRecheck.action !== action) {
-          return runSavedInviteRoomListAction(currentRoom, routeRecheck.action, { actionOrigin: "route-readiness" });
-        }
-        if (routeRecheck?.action === action) {
-          // Keep the original route-only action even if transcript refresh exposed another origin.
-        } else {
-          return showSavedInviteRoomActionNowReady(input);
-        }
-      } else if (savedInviteRoomPreservesOpenActionOrigin(actionOrigin)) {
-        // Preserve explicit non-send intent after transcript metadata refresh.
-      } else {
-        return runSavedInviteRoomListAction(currentRoom, currentAction, { actionOrigin: current.actionOrigin });
-      }
-    }
-    if (!currentAction) {
-      return String(action ?? "").startsWith("real-onion-")
-        ? showSavedInviteRoomExpiredRealOnionAction(input)
-        : showSavedInviteRoomActionNowReady(input);
-    }
-  }
-  if (savedInviteRoomRetryOnlyWithoutRetryableOrigin(action, actionOrigin)) {
-    clearRouteReadinessOnlyFollowupContext(input);
-    return showSavedInviteRoomActionNowReady(input);
-  }
-  if (action === "paste-peer-code") {
-    rememberReceiveIntentForRoom(input, true);
-    rememberPrivateRouteFollowup("receive", input);
-    renderManualRebuildDeliveryScopeGate(input, action);
-    focusPrivateRouteNextAction(input);
-    return true;
-  }
-  if (action === "review-send") {
-    return runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin, { reviewOnly: true });
-  }
-  if (action === "retry") {
-    return runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin);
-  }
-  if (action === "retry-network") {
-    return runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin);
-  }
-  if (action === "enable-private-delivery") {
-    if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
-      return true;
-    }
-    renderManualRebuildDeliveryScopeGate(input, action);
-    openPrivateDeliverySettings(input);
-    return true;
-  }
-  if (action === "prepare-private-route") {
-    if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
-      return true;
-    }
-    renderManualRebuildDeliveryScopeGate(input, action);
-    focusPrivateRouteNextAction(input);
-    return true;
-  }
-  if (action === "refresh-endpoint") {
-    if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
-      return true;
-    }
-    renderManualRebuildDeliveryScopeGate(input, action);
-    setChatDeliveryNoticeByKey("chatNoticeRefreshAddress", "warning", input);
-    await preparePrivateDeliveryRoute({ input, forceRefresh: true, allowRetryRecovery: false });
-    return true;
-  }
-  if (action === "verify-safety") {
-    if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
-      return true;
-    }
-    focusSafetyConfirmation();
-    return true;
-  }
-  if (action === "refresh-and-retry") {
-    return runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin);
-  }
-  if (action === "start-receiving") {
-    if (await runSavedInviteRoomRetryableOutboundAction(room, input, action, actionOrigin)) {
-      return true;
-    }
-    renderManualRebuildDeliveryScopeGate(input, action);
-    await startProductionTwoProfileOnionReceive();
-    return true;
-  }
-  if (action === "stop-receiving") {
-    stopProductionTwoProfileOnionReceive();
-    return true;
-  }
-  if (action === "wait-receive-stop") {
-    return showSavedInviteRoomReceiveStopPending(input);
-  }
-  if (action === "real-onion-enable-private-delivery") {
-    const recoveryView = savedInviteRoomRealOnionRecoveryView(room);
-    if (recoveryView?.action !== action) {
-      return showSavedInviteRoomExpiredRealOnionAction(input);
-    }
-    enablePrivateDeliveryPermission();
-    renderSavedInviteRooms();
-    return true;
-  }
-  if (action === "real-onion-network-settings") {
-    const input = productionTwoProfileInput();
-    const recoveryView = savedInviteRoomRealOnionRecoveryView(room);
-    if (recoveryView?.action !== action) {
-      return showSavedInviteRoomExpiredRealOnionAction(input);
-    }
-    const recovery = recoveryView.recovery;
-    const runAction = realOnionRecoveryRunAction(recovery);
-    if (runAction.opensNetworkSettings) {
-      openPrivateDeliveryBridgeSettings(recovery, input);
-      return true;
-    }
-    if (runAction.ready) {
-      await runProductionTwoProfileRealOnionRoundtrip();
-      return true;
-    }
-    return true;
-  }
-  if (action === "real-onion-inspect-diagnostics") {
-    const input = productionTwoProfileInput();
-    const recoveryView = savedInviteRoomRealOnionRecoveryView(room);
-    if (recoveryView?.action !== action) {
-      return showSavedInviteRoomExpiredRealOnionAction(input);
-    }
-    setText(fields.productionTwoProfileWarning, t("fieldTestNextInspectDiagnostics"));
-    setChatDeliveryNoticeByKey("fieldTestNextInspectDiagnostics", "warning", input);
-    focusLocalDiagnostic();
-    return true;
-  }
-  if (action === "real-onion-retry") {
-    const input = productionTwoProfileInput();
-    const recoveryView = savedInviteRoomRealOnionRecoveryView(room);
-    if (recoveryView?.action !== action) {
-      return showSavedInviteRoomExpiredRealOnionAction(input);
-    }
-    const routeReadiness = externalPeerSendReadiness(input, {
-      allowMissingMessage: true,
-      latestOnionOutbound: null,
-    });
-    if (!routeReadiness.ready) {
-      showRealOnionRouteReadinessBlock(routeReadiness, input);
-      applyProductionActionState();
-      return true;
-    }
-    if (showSavedInviteRoomRealOnionNeedsMessage(input)) {
-      applyProductionActionState();
-      return true;
-    }
-    await runProductionTwoProfileRealOnionRoundtrip();
-    return true;
-  }
-  return false;
-}
-
 function currentRoomConversationMetadata(options = {}) {
   const input = options.input ?? productionTwoProfileInput();
   const existingRoom = savedInviteRoomForRoomFingerprint(privateRouteRoomKey(input));
@@ -5970,26 +5789,6 @@ function renderSavedInviteRooms() {
   }
 }
 
-function removeSavedInviteRoom(room) {
-  const code = String(room?.code ?? "").trim();
-  if (!code) {
-    return false;
-  }
-  if (!window.confirm(t("removeRoomConfirm"))) {
-    return false;
-  }
-  stopProductionTwoProfileOnionReceiveForInput(savedInviteRoomInput(room), { silent: true });
-  forgetInviteRoom(code);
-  if (code === currentInviteRoomCode()) {
-    clearCurrentInviteRoomInput();
-    showRoomList();
-  }
-  setProductionTwoProfileState("Room removed from list");
-  setText(fields.productionTwoProfileWarning, t("removeRoomNotice"));
-  applyPairwiseInviteGuidance("delete", { input: savedInviteRoomInput(room), role: room?.role });
-  return true;
-}
-
 function connectionCodeRoleFor(code) {
   const trimmedCode = String(code ?? "").trim();
   if (!trimmedCode) {
@@ -6160,6 +5959,38 @@ const inviteQrController = createInviteQrController({
   setText,
   renderReceivedInviteCodeActionState,
   createRoomFromReceivedInviteCode,
+});
+
+const diagnosticsReportController = createDiagnosticsReportController({
+  fields,
+  FIELD_TEST_APP_VERSION,
+  FIELD_TEST_BUILD_CHANNEL,
+  FIELD_TEST_BUILD_COMMIT,
+  currentLanguage: () => currentLanguage,
+  productionTwoProfileInput,
+  productionTwoProfileConversationEntries,
+  twoProfilePeerEndpointState,
+  currentSavedInviteRoomView,
+  fieldTestRetryableOutboundEntry,
+  currentTwoProfileOutboundPrimaryAction,
+  fieldTestReceiveModeSnapshot,
+  localRecoveryDiagnosticsBoundaryText,
+  manualInviteRoomRebuildFlowActive,
+  latestRealOnionFieldTestResult,
+  latestProductionOnionBridgeConfigStatus: () => latestProductionOnionBridgeConfigStatus,
+  realOnionWaitCanceledForInput,
+  latestProductionHighRiskRuntimeEvidenceView: () => latestProductionHighRiskRuntimeEvidenceView,
+  productionHighRiskRuntimeEvidenceGateView,
+  latestChatDeliveryNoticeKey: () => latestChatDeliveryNoticeKey,
+  latestChatDeliveryNoticeTone: () => latestChatDeliveryNoticeTone,
+  chatDeliveryNoticeMatchesInput,
+  externalPeerSendReadiness,
+  engineSidecarDiagnosticReportLines,
+  localRehearsalReportLines,
+  manualNetworkPermissionEnabled,
+  twoProfileSessionsReadyForInput,
+  twoProfileSafetyConfirmedForInput,
+  savedInviteRoomActionCanUseRetryableOutbound,
 });
 
 const diagnosticsCopyController = createDiagnosticsCopyController({
@@ -7554,194 +7385,8 @@ function localRecoveryDiagnosticsBoundaryText() {
 }
 
 function buildFieldTestReport(input = productionTwoProfileInput()) {
-  const hasRoom = Boolean(input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase);
-  const route = twoProfilePeerEndpointState(input);
-  const entries = [...productionTwoProfileConversationEntries.values()];
-  const sentRows = entries.filter((entry) => entry.statuses?.has("sent")).length;
-  const receivedRows = entries.filter((entry) => entry.statuses?.has("received")).length;
-  const failedRows = entries.filter((entry) => entry.outboundDeliveryState === "failed").length;
-  const canceledRows = entries.filter((entry) => entry.outboundDeliveryState === "canceled").length;
-  const currentSavedRoom = currentSavedInviteRoomView(input);
-  const currentSavedRoomView = currentSavedRoom.view;
-  const retryableOutbound = fieldTestRetryableOutboundEntry(input, currentSavedRoom);
-  const outboundFailureClass = retryableOutbound
-    ? productionTwoProfileOutboundStatusLabel(retryableOutbound)
-    : "none";
-  const currentOutboundRecovery = retryableOutbound
-    ? currentTwoProfileOutboundPrimaryAction(retryableOutbound, input)
-    : null;
-  const outboundRecoveryAction = currentOutboundRecovery?.action ?? "none";
-  const outboundRecoveryKey = currentOutboundRecovery?.recoveryKey ?? "none";
-  const outboundRecoveryNoticeKey = currentOutboundRecovery?.noticeKey ?? "none";
-  const receiveMode = fieldTestReceiveModeSnapshot(input);
-  const boundaryText = fields.productionTwoProfileBoundary?.textContent ?? "";
-  const localRecoveryBoundaryText = localRecoveryDiagnosticsBoundaryText();
-  const localRecoveryAction = fieldTestBoundaryValue(localRecoveryBoundaryText, "local_recovery", "none");
-  const localRecoveryFallback = fieldTestBoundaryValue(localRecoveryBoundaryText, "recovery", "none");
-  const rollbackSuspicion =
-    fieldTestBoundaryValue(localRecoveryBoundaryText, "rollback_suspicion", "false") === "true";
-  const resumeBlocked =
-    fieldTestBoundaryValue(localRecoveryBoundaryText, "resume_blocked", "false") === "true";
-  const rebuildDeliveryDiagnostics = manualRebuildDeliveryDiagnostics(input, boundaryText);
-  const sendAttemptBoundaryText = fields.onionOutboundEnvelopeSendAttempt?.textContent ?? "";
-  const receiveFailureKind = receiveMode.ownerCurrentRoom
-    ? fieldTestBoundaryValue(boundaryText, "failure")
-    : "none";
-  const realOnionResult = latestRealOnionFieldTestResult(input);
-  const bridgeStatus = latestProductionOnionBridgeConfigStatus;
-  const bridgeCapableBuild =
-    realOnionResult?.bridge_capable_build === true || bridgeStatus?.bridge_capable_build === true;
-  const bridgeConfiguredForBootstrap =
-    bridgeStatus
-      ? bridgeStatus.bridge_configured_for_bootstrap === true
-      : realOnionResult?.bridge_configured_for_bootstrap === true;
-  const bridgeConfigState = bridgeStatus
-    ? bridgeStatus.bridge_config_state
-    : realOnionResult?.bridge_configured_for_bootstrap === true
-      ? "configured"
-      : realOnionResult?.bridge_config_state;
-  const bridgeConfigNextAction = bridgeStatus
-    ? bridgeStatus.bridge_config_next_action
-    : realOnionResult?.bridge_configured_for_bootstrap === true
-      ? "retry-network"
-      : realOnionResult?.bridge_config_next_action;
-  const realOnionBlockers = Array.isArray(realOnionResult?.blockers)
-    ? realOnionResult.blockers.join("#")
-    : "none";
-  const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(realOnionResult);
-  const realOnionExternalPeerDeliveryConfirmed =
-    realOnionResultConfirmsExternalPeerDelivery(realOnionResult);
-  const realOnionWaitCancelled = realOnionWaitCanceledForInput(input);
-  const highRiskRuntimeEvidence =
-    latestProductionHighRiskRuntimeEvidenceView ?? productionHighRiskRuntimeEvidenceGateView();
-  const deliveryNoticeCurrentRoom = latestChatDeliveryNoticeKey
-    ? chatDeliveryNoticeMatchesInput(input)
-    : false;
-  const deliveryNoticeKey = deliveryNoticeCurrentRoom ? latestChatDeliveryNoticeKey : "none";
-  const deliveryNoticeTone = deliveryNoticeCurrentRoom ? latestChatDeliveryNoticeTone : "neutral";
-  const routeReadiness = externalPeerSendReadiness(input, {
-    allowMissingMessage: true,
-    latestOnionOutbound: null,
-  });
-  const routeReadinessBlocked = routeReadiness.ready !== true;
-  const routeReadinessNextAction = routeReadinessBlocked ? routeReadiness.nextAction : "none";
-  const routeReadinessFailureKind = routeReadinessBlocked ? routeReadiness.failureKind : "none";
-  const routeReadinessNoticeKey = routeReadinessBlocked ? routeReadiness.noticeKey : "none";
-  const composerNextAction = !retryableOutbound && routeReadiness.ready === true
-    ? input.message
-      ? "send-message"
-      : "write-message"
-    : "none";
-  const inviteIdentityBoundary = productionInviteIdentityBoundaryView(input);
-  const roomListNextAction = fieldTestRoomListNextAction(
-    currentSavedRoom,
-    outboundRecoveryAction,
-    retryableOutbound,
-  );
-
-  const reportLines = [
-    "Another Dimension Chat beta field test report",
-    "report_version=1",
-    `app_version=${FIELD_TEST_APP_VERSION}`,
-    `build_channel=${FIELD_TEST_BUILD_CHANNEL}`,
-    `build_commit=${FIELD_TEST_BUILD_COMMIT}`,
-    `language=${fieldTestReportValue(currentLanguage)}`,
-    `room_present=${hasRoom}`,
-    `session_ready=${twoProfileSessionsReadyForInput(input)}`,
-    `safety_confirmed=${twoProfileSafetyConfirmedForInput(input)}`,
-    `accountless_invite_boundary=${fieldTestReportValue(inviteIdentityBoundary)}`,
-    `manual_network_permission=${manualNetworkPermissionEnabled()}`,
-    `route_ready=${route.ready === true}`,
-    `route_stale=${route.stale === true}`,
-    `route_source=${fieldTestReportValue(route.source)}`,
-    `route_reason=${fieldTestReportValue(route.reason)}`,
-    `route_readiness_ready=${routeReadiness.ready === true}`,
-    `route_readiness_next_action=${fieldTestReportValue(routeReadinessNextAction, "none")}`,
-    `route_readiness_failure_kind=${fieldTestReportValue(routeReadinessFailureKind, "none")}`,
-    `route_readiness_notice_key=${fieldTestReportValue(routeReadinessNoticeKey, "none")}`,
-    `composer_next_action=${fieldTestReportValue(composerNextAction, "none")}`,
-    `receive_owner_current_room=${receiveMode.ownerCurrentRoom === true}`,
-    `receive_enabled=${receiveMode.enabled === true}`,
-    `receive_stop_requested=${receiveMode.stopRequested === true}`,
-    `receive_state=${fieldTestReportValue(receiveMode.runtimeState, "stopped")}`,
-    `receive_in_flight=${receiveMode.inFlight === true}`,
-    `receive_attempts=${Number.parseInt(receiveMode.attempt ?? 0, 10) || 0}`,
-    `receive_message_imports=${Number.parseInt(receiveMode.lastProcessedMessageImportCount ?? 0, 10) || 0}`,
-    `receive_endpoint_updates=${Number.parseInt(receiveMode.lastProcessedEndpointUpdateCount ?? 0, 10) || 0}`,
-    `conversation_rows=${entries.length}`,
-    `sent_rows=${sentRows}`,
-    `received_rows=${receivedRows}`,
-    `failed_outbound_rows=${failedRows}`,
-    `canceled_outbound_rows=${canceledRows}`,
-    `retryable_outbound_present=${Boolean(retryableOutbound)}`,
-    `outbound_failure_class=${fieldTestReportValue(outboundFailureClass, "none")}`,
-    `outbound_recovery_action=${fieldTestReportValue(outboundRecoveryAction, "none")}`,
-    `outbound_recovery_key=${fieldTestReportValue(outboundRecoveryKey, "none")}`,
-    `outbound_recovery_notice_key=${fieldTestReportValue(outboundRecoveryNoticeKey, "none")}`,
-    `room_list_state_key=${fieldTestReportValue(currentSavedRoomView?.state?.key, "none")}`,
-    `room_list_state_label=${fieldTestReportValue(currentSavedRoomView?.state?.label, "none")}`,
-    `room_list_next_action=${fieldTestReportValue(roomListNextAction, "none")}`,
-    `room_list_next_origin=${fieldTestReportValue(currentSavedRoom.actionOrigin, "none")}`,
-    `receive_failure_kind=${fieldTestReportValue(receiveFailureKind, "none")}`,
-    `real_onion_attempted=${Boolean(realOnionResult)}`,
-    `real_onion_next_blocker=${fieldTestReportValue(realOnionResult?.next_blocker, "none")}`,
-    `real_onion_blockers=${fieldTestReportValue(realOnionBlockers, "none")}`,
-    `real_onion_recovery_action=${fieldTestReportValue(realOnionRecovery.action, "none")}`,
-    `real_onion_recovery_reason=${fieldTestReportValue(realOnionRecovery.reason, "none")}`,
-    `real_onion_retryable=${realOnionRecovery.retryable === true}`,
-    `real_onion_wait_cancellable=${realOnionRecovery.waitCancellable === true}`,
-    `real_onion_wait_cancelled=${realOnionWaitCancelled === true}`,
-    `real_onion_bridge_capable_build=${bridgeCapableBuild}`,
-    `real_onion_bridge_configured_for_bootstrap=${bridgeConfiguredForBootstrap}`,
-    `real_onion_bridge_config_state=${fieldTestReportValue(bridgeConfigState, "unknown")}`,
-    `real_onion_bridge_config_next_action=${fieldTestReportValue(bridgeConfigNextAction, "unknown")}`,
-    `real_onion_bootstrap_retry_limit=${Number.parseInt(realOnionResult?.bootstrap_retry_limit ?? 0, 10) || 0}`,
-    `real_onion_profile_a_bootstrap_attempts=${Number.parseInt(realOnionResult?.profile_a_bootstrap_attempts ?? 0, 10) || 0}`,
-    `real_onion_profile_b_bootstrap_attempts=${Number.parseInt(realOnionResult?.profile_b_bootstrap_attempts ?? 0, 10) || 0}`,
-    `real_onion_bootstrap_diagnostic=${fieldTestReportValue(latestRealOnionBootstrapDiagnostic(realOnionResult), "none")}`,
-    `real_onion_profile_a_bootstrap_reused=${realOnionResult?.profile_a_bootstrap_reused === true}`,
-    `real_onion_profile_b_bootstrap_reused=${realOnionResult?.profile_b_bootstrap_reused === true}`,
-    `real_onion_external_peer_delivery_confirmed=${realOnionExternalPeerDeliveryConfirmed}`,
-    `real_onion_local_dev_roundtrip_result=${realOnionResult?.local_dev_roundtrip_result === true}`,
-    `room_runtime_promoted_from_real_onion_cache=${fieldTestBoundaryValue(boundaryText, "promoted_cache") === "true"}`,
-    `room_runtime_owner_profile_bound=${fieldTestBoundaryValue(boundaryText, "owner_profile_bound") === "true"}`,
-    `room_runtime_owner_matches_receive_profile=${fieldTestBoundaryValue(boundaryText, "owner_matches_receive") === "true"}`,
-    `send_runtime_owner_profile_bound=${fieldTestBoundaryValue(sendAttemptBoundaryText, "owner_profile_bound") === "true"}`,
-    `send_runtime_owner_matches_send_profile=${fieldTestBoundaryValue(sendAttemptBoundaryText, "owner_matches_send") === "true"}`,
-    `local_recovery_action=${fieldTestReportValue(localRecoveryAction !== "none" ? localRecoveryAction : localRecoveryFallback, "none")}`,
-    `rollback_suspicion=${rollbackSuspicion}`,
-    `resume_blocked=${resumeBlocked}`,
-    `real_onion_network_io=${realOnionResult?.network_io_attempted === true}`,
-    `real_onion_transport_io=${realOnionResult?.transport_io_opened === true}`,
-    `real_onion_runtime=${realOnionResult?.runtime_messaging_enabled === true}`,
-    `high_risk_runtime_evidence_source=${fieldTestReportValue(highRiskRuntimeEvidence.evidenceSource, "absent")}`,
-    `high_risk_runtime_evidence_accepted=${highRiskRuntimeEvidence.accepted === true}`,
-    `high_risk_runtime_evidence_present=${highRiskRuntimeEvidence.runtimeEvidencePresent === true}`,
-    `high_risk_runtime_primary_blocker=${fieldTestReportValue(highRiskRuntimeEvidence.primaryBlocker, "none")}`,
-    `high_risk_runtime_failure_class=${fieldTestReportValue(highRiskRuntimeEvidence.failureClass, "none")}`,
-    `high_risk_public_claim_allowed=${highRiskRuntimeEvidence.highRiskPublicClaimAllowed === true}`,
-    `high_risk_ready_claim_allowed=${highRiskRuntimeEvidence.highRiskReadyClaimAllowed === true}`,
-    ...engineSidecarDiagnosticReportLines(),
-    `delivery_notice_current_room=${deliveryNoticeCurrentRoom}`,
-    `delivery_notice_key=${fieldTestReportValue(deliveryNoticeKey, "none")}`,
-    `delivery_notice_tone=${fieldTestReportValue(deliveryNoticeTone, "neutral")}`,
-    `manual_rebuild_flow=${rebuildDeliveryDiagnostics.manualRebuildFlow === true}`,
-    `rebuild_room_scoped=${rebuildDeliveryDiagnostics.rebuiltRoomScoped === true}`,
-    `rebuild_delivery_scope=${fieldTestReportValue(rebuildDeliveryDiagnostics.deliveryScope, "none")}`,
-    `rebuild_delivery_action=${fieldTestReportValue(rebuildDeliveryDiagnostics.deliveryAction, "none")}`,
-    `rebuild_retry_scoped=${rebuildDeliveryDiagnostics.retryScoped === true}`,
-    `rebuild_receive_scoped=${rebuildDeliveryDiagnostics.receiveScoped === true}`,
-    `rebuild_delivery_code_exchange_scoped=${rebuildDeliveryDiagnostics.deliveryCodeExchangeScoped === true}`,
-    `rebuild_explicit_private_delivery_required=${rebuildDeliveryDiagnostics.explicitPrivateDeliveryRequired === true}`,
-    `rebuild_delivery_network_io=${rebuildDeliveryDiagnostics.networkIo === true}`,
-    `rebuild_delivery_live_network_attempt=${rebuildDeliveryDiagnostics.liveNetworkAttempt === true}`,
-    "rebuild_external_peer_evidence_claim=false",
-    `ui_state=${fieldTestReportValue(fields.productionTwoProfileState?.textContent)}`,
-    `redacted_boundary=${fieldTestBoundarySummary(boundaryText)}`,
-  ];
-  return [...reportLines, ...localRehearsalReportLines(reportLines.join("\n"))].join("\n");
+  return diagnosticsReportController.buildFieldTestReport(input);
 }
-
 function refreshFieldTestReport() {
   if (!fields.fieldTestReport) {
     renderFieldTestReportSummary("");
@@ -7756,194 +7401,7 @@ function refreshFieldTestReport() {
 }
 
 function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || buildFieldTestReport()) {
-  if (!fields.publicBetaDiagnostics) {
-    return "";
-  }
-  const payload = publicBetaDiagnosticsReport(report, { includeCopyBoundary: true });
-  fields.publicBetaDiagnostics.value = payload;
-  const publicDiagnostics = parseFieldTestReport(payload);
-  const desktopCompletion = desktopFirstCompletionStatus(report);
-  const failureClass = fieldTestReportValue(publicDiagnostics.failure_class, "none");
-  const recoveryNextAction = fieldTestReportValue(publicDiagnostics.recovery_next_action, "none");
-  const copyNextAction = fieldTestReportValue(publicDiagnostics.diagnostics_copy_next_action, "none");
-  const desktopAcceptanceNextAction = fieldTestReportValue(publicDiagnostics.desktop_acceptance_next_action, "none");
-  const localManualE2eeBoundary = fieldTestReportValue(publicDiagnostics.local_manual_e2ee_runtime_boundary, "unknown");
-  const supportedLocalManualE2eeReady = fieldTestReportValue(
-    publicDiagnostics.supported_local_manual_e2ee_ready,
-    "false",
-  );
-  const supportedLocalManualE2eeScope = fieldTestReportValue(
-    publicDiagnostics.supported_local_manual_e2ee_scope,
-    "unknown",
-  );
-  const productionE2eeReady = fieldTestReportValue(publicDiagnostics.production_e2ee_ready, "false");
-  const supportedLocalKeyLifecycleReady = fieldTestReportValue(
-    publicDiagnostics.supported_local_key_lifecycle_ready,
-    "false",
-  );
-  const supportedLocalKeyLifecycleScope = fieldTestReportValue(
-    publicDiagnostics.supported_local_key_lifecycle_scope,
-    "unknown",
-  );
-  const supportedRollbackDetectionReady = fieldTestReportValue(
-    publicDiagnostics.supported_rollback_detection_ready,
-    "false",
-  );
-  const supportedRollbackDetectionScope = fieldTestReportValue(
-    publicDiagnostics.supported_rollback_detection_scope,
-    "unknown",
-  );
-  const supportedLocalDeletionScopeReady = fieldTestReportValue(
-    publicDiagnostics.supported_local_deletion_scope_ready,
-    "false",
-  );
-  const supportedLocalDeletionScope = fieldTestReportValue(
-    publicDiagnostics.supported_local_deletion_scope,
-    "unknown",
-  );
-  const productionKeyManagementReady = fieldTestReportValue(
-    publicDiagnostics.production_key_management_ready,
-    "false",
-  );
-  const rollbackPreventionClaimed = fieldTestReportValue(
-    publicDiagnostics.rollback_prevention_claimed,
-    "false",
-  );
-  const secureDeletionClaimAllowed = fieldTestReportValue(
-    publicDiagnostics.secure_deletion_claim_allowed,
-    "false",
-  );
-  const defaultTransportPath = fieldTestReportValue(
-    publicDiagnostics.default_transport_path,
-    "local-manual-encrypted-envelope-exchange",
-  );
-  const supportedDefaultTransportReady = fieldTestReportValue(
-    publicDiagnostics.supported_default_transport_ready,
-    "false",
-  );
-  const supportedDefaultTransportScope = fieldTestReportValue(
-    publicDiagnostics.supported_default_transport_scope,
-    "unknown",
-  );
-  const defaultTransportNetworkIo = fieldTestReportValue(publicDiagnostics.default_transport_network_io, "false");
-  const productionTransportReady = fieldTestReportValue(
-    publicDiagnostics.production_transport_ready,
-    "false",
-  );
-  const reliableExternalDeliveryClaimAllowed = fieldTestReportValue(
-    publicDiagnostics.reliable_external_delivery_claim_allowed,
-    "false",
-  );
-  const supportedOwnerObservedUsabilityRehearsalReady = fieldTestReportValue(
-    publicDiagnostics.supported_owner_observed_usability_rehearsal_ready,
-    "false",
-  );
-  const supportedUsabilityRecoveryScope = fieldTestReportValue(
-    publicDiagnostics.supported_usability_recovery_scope,
-    "unknown",
-  );
-  const criticalDesktopTaskScriptReady = fieldTestReportValue(
-    publicDiagnostics.critical_desktop_task_script_ready,
-    "false",
-  );
-  const recoveryVocabularyAligned = fieldTestReportValue(
-    publicDiagnostics.recovery_vocabulary_aligned,
-    "false",
-  );
-  const usabilityStudyCompleted = fieldTestReportValue(
-    publicDiagnostics.usability_study_completed,
-    "false",
-  );
-  const productionWordingReady = fieldTestReportValue(
-    publicDiagnostics.production_wording_ready,
-    "false",
-  );
-  const highRiskTransportMode = fieldTestReportValue(
-    publicDiagnostics.high_risk_transport_mode,
-    "onion-only",
-  );
-  const highRiskTransportReady = fieldTestReportValue(
-    publicDiagnostics.high_risk_transport_ready,
-    "false",
-  );
-  const highRiskTransportNotReadyReason = fieldTestReportValue(
-    publicDiagnostics.high_risk_transport_not_ready_reason,
-    "runtime-network-disabled-until-explicit-user-action",
-  );
-  const highRiskRuntimeEvidenceSource = fieldTestReportValue(
-    publicDiagnostics.high_risk_runtime_evidence_source,
-    "absent",
-  );
-  const highRiskRuntimeEvidenceAccepted = fieldTestReportValue(
-    publicDiagnostics.high_risk_runtime_evidence_accepted,
-    "false",
-  );
-  const highRiskRuntimePrimaryBlocker = fieldTestReportValue(
-    publicDiagnostics.high_risk_runtime_primary_blocker,
-    "none",
-  );
-  const highRiskRuntimeFailureClass = fieldTestReportValue(
-    publicDiagnostics.high_risk_runtime_failure_class,
-    "none",
-  );
-  const engineSidecarStatusRuntimeChecked = fieldTestReportValue(
-    publicDiagnostics.engine_sidecar_status_runtime_checked,
-    "false",
-  );
-  const engineSidecarStatusFailureClass = fieldTestReportValue(
-    publicDiagnostics.engine_sidecar_status_failure_class,
-    "unknown",
-  );
-  const engineSidecarManualSelfTestRuntimeChecked = fieldTestReportValue(
-    publicDiagnostics.engine_sidecar_manual_self_test_runtime_checked,
-    "false",
-  );
-  const engineSidecarManualSelfTestFailureClass = fieldTestReportValue(
-    publicDiagnostics.engine_sidecar_manual_self_test_failure_class,
-    "unknown",
-  );
-  const engineSidecarManualSelfTestPassed = fieldTestReportValue(
-    publicDiagnostics.engine_sidecar_manual_self_test_passed,
-    "false",
-  );
-  const engineSidecarRawPathReturned = fieldTestReportValue(publicDiagnostics.engine_sidecar_raw_path_returned, "false");
-  const engineSidecarStdoutReturned = fieldTestReportValue(publicDiagnostics.engine_sidecar_stdout_returned, "false");
-  const engineSidecarStderrReturned = fieldTestReportValue(publicDiagnostics.engine_sidecar_stderr_returned, "false");
-  const allowedPublicIntakeFields = String(publicDiagnostics.allowed_public_intake_fields ?? "unknown").trim() || "unknown";
-  const forbiddenPublicIntakeFields = String(publicDiagnostics.forbidden_public_intake_fields ?? "unknown").trim() || "unknown";
-  const publicIntakePolicyVersion = fieldTestReportValue(
-    publicDiagnostics.public_intake_policy_version,
-    "unknown",
-  );
-  const publicIntakePolicyAlignment = fieldTestReportValue(
-    publicDiagnostics.public_intake_policy_alignment,
-    "unknown",
-  );
-  const excludedFields = String(publicDiagnostics.excluded_fields ?? "unknown").trim() || "unknown";
-  const payloadNextActionMatchesSummary =
-    recoveryNextAction === copyNextAction && recoveryNextAction === desktopAcceptanceNextAction;
-  const rawStateExcluded =
-    publicDiagnostics.diagnostics_copy_boundary === "redacted-status-build-failure-class-recovery-action-only";
-  const publicIntakePolicyFieldsAligned =
-    publicDiagnostics.public_intake_policy_fields_aligned === "true" &&
-    publicIntakePolicyAlignment === "app-diagnostics#github-issue-template#reference-policy" &&
-    allowedPublicIntakeFields.includes("failure-class") &&
-    allowedPublicIntakeFields.includes("recovery-next-action") &&
-    forbiddenPublicIntakeFields.includes("raw-logs") &&
-    forbiddenPublicIntakeFields.includes("endpoints") &&
-    forbiddenPublicIntakeFields.includes("invite-codes") &&
-    forbiddenPublicIntakeFields.includes("message-text") &&
-    forbiddenPublicIntakeFields.includes("local-paths") &&
-    forbiddenPublicIntakeFields.includes("payloads") &&
-    forbiddenPublicIntakeFields.includes("passphrases") &&
-    forbiddenPublicIntakeFields.includes("key-material") &&
-    excludedFields.includes("logs") &&
-    excludedFields.includes("passphrases") &&
-    excludedFields.includes("key_material");
-  if (fields.publicBetaDiagnosticsSummary) {
-    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} public_intake_policy_version=${publicIntakePolicyVersion} public_intake_policy_alignment=${publicIntakePolicyAlignment} public_intake_policy_fields_aligned=${publicIntakePolicyFieldsAligned} allowed_public_intake_fields=${allowedPublicIntakeFields} forbidden_public_intake_fields=${forbiddenPublicIntakeFields} excluded_fields=${excludedFields} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} local_manual_e2ee_runtime_boundary=${localManualE2eeBoundary} supported_local_manual_e2ee_ready=${supportedLocalManualE2eeReady} supported_local_manual_e2ee_scope=${supportedLocalManualE2eeScope} production_e2ee_ready=${productionE2eeReady} supported_local_key_lifecycle_ready=${supportedLocalKeyLifecycleReady} supported_local_key_lifecycle_scope=${supportedLocalKeyLifecycleScope} supported_rollback_detection_ready=${supportedRollbackDetectionReady} supported_rollback_detection_scope=${supportedRollbackDetectionScope} supported_local_deletion_scope_ready=${supportedLocalDeletionScopeReady} supported_local_deletion_scope=${supportedLocalDeletionScope} production_key_management_ready=${productionKeyManagementReady} rollback_prevention_claimed=${rollbackPreventionClaimed} secure_deletion_claim_allowed=${secureDeletionClaimAllowed} default_transport_path=${defaultTransportPath} supported_default_transport_ready=${supportedDefaultTransportReady} supported_default_transport_scope=${supportedDefaultTransportScope} default_transport_network_io=${defaultTransportNetworkIo} production_transport_ready=${productionTransportReady} reliable_external_delivery_claim_allowed=${reliableExternalDeliveryClaimAllowed} supported_owner_observed_usability_rehearsal_ready=${supportedOwnerObservedUsabilityRehearsalReady} supported_usability_recovery_scope=${supportedUsabilityRecoveryScope} critical_desktop_task_script_ready=${criticalDesktopTaskScriptReady} recovery_vocabulary_aligned=${recoveryVocabularyAligned} usability_study_completed=${usabilityStudyCompleted} production_wording_ready=${productionWordingReady} high_risk_onion_path=explicit-user-triggered-fail-closed high_risk_transport_mode=${highRiskTransportMode} high_risk_transport_ready=${highRiskTransportReady} high_risk_transport_not_ready_reason=${highRiskTransportNotReadyReason} high_risk_runtime_evidence_source=${highRiskRuntimeEvidenceSource} high_risk_runtime_evidence_accepted=${highRiskRuntimeEvidenceAccepted} high_risk_runtime_primary_blocker=${highRiskRuntimePrimaryBlocker} high_risk_runtime_failure_class=${highRiskRuntimeFailureClass} engine_sidecar_status_runtime_checked=${engineSidecarStatusRuntimeChecked} engine_sidecar_status_failure_class=${engineSidecarStatusFailureClass} engine_sidecar_manual_self_test_runtime_checked=${engineSidecarManualSelfTestRuntimeChecked} engine_sidecar_manual_self_test_failure_class=${engineSidecarManualSelfTestFailureClass} engine_sidecar_manual_self_test_passed=${engineSidecarManualSelfTestPassed} engine_sidecar_raw_path_returned=${engineSidecarRawPathReturned} engine_sidecar_stdout_returned=${engineSidecarStdoutReturned} engine_sidecar_stderr_returned=${engineSidecarStderrReturned} engine_sidecar_local_runtime_promoted_to_delivery_proof=false high_risk_transport_direct_fallback=false high_risk_transport_dns_endpoint=false high_risk_transport_ip_endpoint=false high_risk_transport_app_launch_bootstrap=false high_risk_public_claim_allowed=false high_risk_ready_claim_allowed=false release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
-  }
-  return payload;
+  return diagnosticsReportController.refreshPublicBetaDiagnostics(report);
 }
 
 function buildRedactedSupportReport(input = {}) {
@@ -8076,36 +7534,6 @@ async function createNewInviteRoomFromList() {
   clearCurrentInviteRoomInput();
   showRoomDetail();
   return createInviteCode();
-}
-
-async function openSavedInviteRoom(room) {
-  const code = String(room?.code ?? "").trim();
-  const role = room?.role === "inviter" ? "inviter" : room?.role === "joiner" ? "joiner" : "";
-  if (!code || !role) {
-    return false;
-  }
-  showRoomDetail();
-  clearCurrentInviteRoomInput();
-  currentInviteCodeShareVisible = false;
-  rememberConnectionCodeRole(code, role);
-  if (role === "inviter") {
-    latestCreatedInviteCode = code;
-  }
-  if (fields.productionTwoProfileB) {
-    fields.productionTwoProfileB.value = code;
-    fields.productionTwoProfileB.dataset.inviteCodeRole = role;
-  }
-  syncTwoProfileDerivedConnectionFields();
-  renderCurrentInviteCodeDisplay();
-  applyProductionActionState();
-  const openInput = productionTwoProfileInput();
-  if (!(await waitForMessageRetentionPolicyReady())) {
-    return false;
-  }
-  if (!twoProfileTranscriptInputStillCurrent(openInput)) {
-    return false;
-  }
-  return openInviteRoomFromToken(openInput);
 }
 
 async function startInviteRoomFromCode({ code, role, copyBeforePrepare = false }) {
@@ -8349,14 +7777,6 @@ function stopInviteRoomPresenceRefresh() {
   inviteRoomPresenceRefreshFingerprint = "";
 }
 
-function stopInviteRoomTranscriptRefresh() {
-  if (inviteRoomTranscriptRefreshTimer !== null) {
-    window.clearInterval(inviteRoomTranscriptRefreshTimer);
-    inviteRoomTranscriptRefreshTimer = null;
-  }
-  inviteRoomTranscriptRefreshFingerprint = "";
-}
-
 function startInviteRoomPresenceRefresh(input = productionTwoProfileInput()) {
   stopInviteRoomPresenceRefresh();
   if (currentInviteCodeRole() !== "inviter" || !input.profileA || !input.profileB || !input.passphrase) {
@@ -8383,50 +7803,6 @@ function startInviteRoomPresenceRefresh(input = productionTwoProfileInput()) {
   };
   refresh();
   inviteRoomPresenceRefreshTimer = window.setInterval(refresh, 2000);
-}
-
-function startInviteRoomTranscriptRefresh(input = productionTwoProfileInput()) {
-  if (!twoProfileInviteCodeModeActive() || !input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
-    stopInviteRoomTranscriptRefresh();
-    return;
-  }
-  const status = latestTwoProfileSessionStatusForCurrentInput(input);
-  if (!status?.both_ready_for_message_envelope) {
-    stopInviteRoomTranscriptRefresh();
-    return;
-  }
-  const fingerprint = twoProfileSessionStatusFingerprint(input);
-  if (inviteRoomTranscriptRefreshTimer !== null && inviteRoomTranscriptRefreshFingerprint === fingerprint) {
-    return;
-  }
-  stopInviteRoomTranscriptRefresh();
-  inviteRoomTranscriptRefreshFingerprint = fingerprint;
-  const refresh = async () => {
-    if (productionBusyAction !== null || inviteRoomTranscriptRefreshInFlight) {
-      return;
-    }
-    const currentInput = productionTwoProfileInput();
-    if (
-      twoProfileSessionStatusFingerprint(currentInput) !== fingerprint ||
-      !latestTwoProfileSessionStatusForCurrentInput(currentInput)?.both_ready_for_message_envelope
-    ) {
-      stopInviteRoomTranscriptRefresh();
-      return;
-    }
-    inviteRoomTranscriptRefreshInFlight = true;
-    try {
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
-    } finally {
-      inviteRoomTranscriptRefreshInFlight = false;
-    }
-  };
-  inviteRoomTranscriptRefreshTimer = window.setInterval(() => {
-    refresh().catch(() => {
-      if (inviteRoomTranscriptRefreshFingerprint === fingerprint) {
-        stopInviteRoomTranscriptRefresh();
-      }
-    });
-  }, 1500);
 }
 
 async function refreshInviteLocalSessionReady(input = productionTwoProfileInput()) {
@@ -20040,200 +19416,6 @@ function twoProfileTranscriptInputStillCurrent(input) {
     current.passphrase === input.passphrase &&
     twoProfileSessionStatusFingerprint(current) === twoProfileSessionStatusFingerprint(input)
   );
-}
-
-async function loadProductionTwoProfileTranscript(options = {}) {
-  const input = options.input ?? productionTwoProfileInput();
-  const { profileA, profileB, passphrase } = input;
-  const transcriptInput = twoProfileRoomIdentityInput(input);
-  const quiet = options.quiet === true;
-  const refreshSessionStatus = options.refreshSessionStatus !== false;
-  const autoResume = options.autoResume === true;
-  if (!profileA || !profileB || profileA === profileB || !passphrase) {
-    if (!quiet) {
-      setProductionTwoProfileState("Conversation load needs profiles");
-      setText(
-        fields.productionTwoProfileWarning,
-        currentLanguage === "ko"
-          ? "대화를 불러오려면 초대 코드를 먼저 만들거나 붙여넣으세요."
-          : "Create or paste an invite code before loading the conversation.",
-      );
-    }
-    return;
-  }
-
-  if (!quiet) {
-    setProductionTwoProfileState("Conversation loading");
-    setText(fields.productionTwoProfileWarning, "Reading stored conversation after local unlock.");
-    productionBusyAction = "two-profile-transcript-load";
-    applyProductionActionState();
-  }
-
-  try {
-    const runtimeResumeResult = options.runtimeResumeResult ?? (
-      refreshSessionStatus
-        ? await invokeTwoProfileRuntimeResumeStatus({ profileA, profileB, passphrase })
-        : null
-    );
-    if (runtimeResumeRollbackBlocked(runtimeResumeResult)) {
-      applyRuntimeResumeRollbackRecovery(runtimeResumeResult, { source: "transcript-load" });
-      return false;
-    }
-    const [profileAResult, profileBResult] = runtimeResumeResult
-      ? [runtimeResumeResult.profile_a_transcript, runtimeResumeResult.profile_b_transcript]
-      : await Promise.all([
-          invoke("production_message_transcript_export", { profile: profileA, passphrase }),
-          invoke("production_message_transcript_export", { profile: profileB, passphrase }),
-        ]);
-    const entries = [
-      ...twoProfileTranscriptEntriesFromProfile(profileA, profileB, profileAResult.entries),
-      ...twoProfileTranscriptEntriesFromProfile(profileB, profileA, profileBResult.entries),
-    ];
-    if (!twoProfileTranscriptInputStillCurrent(transcriptInput)) {
-      return false;
-    }
-    const expiredMessagesPurged =
-      Number.parseInt(profileAResult.expired_messages_purged ?? 0, 10) +
-      Number.parseInt(profileBResult.expired_messages_purged ?? 0, 10);
-    let sessionStatus =
-      options.sessionStatus ??
-      runtimeResumeResult?.session_status ??
-      latestTwoProfileSessionStatusForCurrentInput(transcriptInput);
-    if (runtimeResumeResult?.session_status) {
-      sessionStatus = runtimeResumeResult.session_status;
-      rememberTwoProfileSessionStatus(transcriptInput, sessionStatus);
-      renderProductionTwoProfileSessionStatusResult(sessionStatus);
-      setText(fields.productionPairingWarning, sessionStatus.warning);
-    } else if (refreshSessionStatus) {
-      sessionStatus = await invokeInviteRoomSessionStatus({
-        profileA,
-        profileB,
-        passphrase,
-      });
-      if (!twoProfileTranscriptInputStillCurrent(transcriptInput)) {
-        return false;
-      }
-      rememberTwoProfileSessionStatus(transcriptInput, sessionStatus);
-      renderProductionTwoProfileSessionStatusResult(sessionStatus);
-      setText(fields.productionPairingWarning, sessionStatus.warning);
-    }
-    if (fields.productionTwoProfileTranscriptExport) {
-      fields.productionTwoProfileTranscriptExport.value = combinedTwoProfileTranscriptTsv(
-        profileA,
-        profileAResult,
-        profileB,
-        profileBResult,
-      );
-    }
-    const staleMessageEnvelopeSlotsPruned = renderProductionTwoProfileTranscriptEntries(entries, transcriptInput);
-    reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries, {
-      input: transcriptInput,
-      sessionStatus,
-      allowRetryableFallback: options.allowRetryableMetadataFallback,
-    });
-    if (
-      options.suppressRouteReadinessNoticeRefresh !== true &&
-      !refreshRouteReadinessNoticeAfterSessionRefresh(transcriptInput)
-    ) {
-      clearStaleSendRecoveryNotice(transcriptInput);
-    }
-    const transcriptWarnings = transcriptLoadWarnings({
-      appendExpiredMessagesPurged,
-      appendStaleMessageEnvelopeSlotsPruned,
-      expiredMessagesPurged,
-      staleMessageEnvelopeSlotsPruned,
-    });
-    if (!quiet) {
-      const ready = Boolean(sessionStatus?.both_ready_for_message_envelope);
-      const resumeTarget = sessionStatus?.both_ready_for_message_envelope
-        ? autoSelectTwoProfileResumeTarget(sessionStatus)
-        : null;
-      const uiState = transcriptLoadUiState({
-        quiet,
-        autoResume,
-        sessionStatus,
-        resumeTarget,
-        resumeWarningText: twoProfileResumeWarningForTarget(
-          resumeTarget,
-          transcriptWarnings.resumeWarning,
-          staleMessageEnvelopeSlotsPruned,
-          expiredMessagesPurged,
-        ),
-        loadedWarning: transcriptWarnings.loadedWarning,
-      });
-      setProductionTwoProfileState(uiState.state);
-      if (!renderManualInviteRoomRebuildFlow(ready ? "conversation-loaded" : "session-check")) {
-        setText(
-          fields.productionTwoProfileWarning,
-          uiState.warning,
-        );
-      }
-      if (uiState.shouldRenderMemory) {
-        renderProductionTwoProfileMemory();
-      }
-      if (uiState.shouldAutoSelectPending) {
-        autoSelectPendingTwoProfileConversation();
-      }
-      if (uiState.shouldStartRefresh) {
-        startInviteRoomTranscriptRefresh(transcriptInput);
-      } else if (uiState.shouldStopRefresh) {
-        stopInviteRoomTranscriptRefresh();
-      }
-    } else if (autoResume && sessionStatus?.both_ready_for_message_envelope) {
-      const resumeTarget = autoSelectTwoProfileResumeTarget(sessionStatus);
-      const uiState = transcriptLoadUiState({
-        quiet,
-        autoResume,
-        sessionStatus,
-        resumeTarget,
-        autoResumeWarningText: twoProfileResumeWarningForTarget(
-          resumeTarget,
-          transcriptWarnings.autoResumeBaseWarning,
-          staleMessageEnvelopeSlotsPruned,
-          expiredMessagesPurged,
-        ),
-      });
-      setProductionTwoProfileState(uiState.state);
-      setText(
-        fields.productionTwoProfileWarning,
-        uiState.warning,
-      );
-      if (uiState.shouldRenderMemory) {
-        renderProductionTwoProfileMemory();
-      }
-      if (uiState.shouldStartRefresh) {
-        startInviteRoomTranscriptRefresh(transcriptInput);
-      }
-    } else if (autoResume) {
-      const autoResumeSessionCheckState = "Resume needs session check";
-      const uiState = transcriptLoadUiState({
-        quiet,
-        autoResume,
-        sessionStatus,
-      });
-      if (uiState.shouldStopRefresh) {
-        stopInviteRoomTranscriptRefresh();
-      }
-      setProductionTwoProfileState(uiState.state || autoResumeSessionCheckState);
-      setText(fields.productionTwoProfileWarning, uiState.warning);
-    }
-    return true;
-  } catch (error) {
-    if (!quiet) {
-      setProductionTwoProfileState("Conversation load failed");
-      setText(fields.productionTwoProfileWarning, redactedUiErrorMessage("conversation-load", error));
-    } else if (autoResume) {
-      latestProductionTwoProfileSessionStatus = null;
-      setProductionTwoProfileState("Resume needs review");
-      setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("session-status", error));
-    }
-    return false;
-  } finally {
-    if (!quiet) {
-      clearProductionBusyAction("two-profile-transcript-load");
-      applyProductionActionState();
-    }
-  }
 }
 
 async function refreshTwoProfileConversationAfterManualImport(
