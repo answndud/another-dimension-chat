@@ -6,8 +6,10 @@ import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import {
   productionInviteRoomConversationMetadata,
+  productionInviteCodeProfiles,
   productionTwoProfileLatestRetryableOutbound,
 } from "./action-state.js";
+import { normalizeInviteQrPayload } from "./invite-qr.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const previewSource = readFileSync(join(here, "browser-preview-tauri.js"), "utf8");
@@ -727,6 +729,51 @@ test("browser preview keeps room transcript, retryable send, and receive state a
     ),
     true,
   );
+});
+
+test("browser preview keeps the same room identity after qr-normalized invite reload", async () => {
+  const storage = new Map();
+  const sharedPreviewApi = createPreviewApiFetch();
+  const passphrase = normalizeInviteQrPayload("  preview-qr-reload-code  ");
+  const inviterProfiles = productionInviteCodeProfiles(passphrase, "inviter");
+  const joinerProfiles = productionInviteCodeProfiles(passphrase, "joiner");
+  const beforeReload = createPreviewRuntime({ storage, peer: "peer-a", fetch: sharedPreviewApi });
+
+  await setupPreviewInviteRoom(beforeReload, inviterProfiles.localProfile, inviterProfiles.peerProfile, passphrase);
+
+  const beforeReloadStatus = await beforeReload("production_two_profile_runtime_resume_status", {
+    localProfile: inviterProfiles.localProfile,
+    peerProfile: inviterProfiles.peerProfile,
+    passphrase,
+  });
+  assert.equal(beforeReloadStatus.runtime_resume_ready, true);
+
+  const afterReload = createPreviewRuntime({ storage, peer: "peer-a", fetch: sharedPreviewApi });
+  const afterReloadStatus = await afterReload("production_two_profile_runtime_resume_status", {
+    localProfile: inviterProfiles.localProfile,
+    peerProfile: inviterProfiles.peerProfile,
+    passphrase,
+  });
+  assert.equal(afterReloadStatus.runtime_resume_ready, true);
+
+  const inviterTranscript = await afterReload("production_message_transcript_export", {
+    profile: inviterProfiles.localProfile,
+    passphrase,
+  });
+  const joinerTranscript = await afterReload("production_message_transcript_export", {
+    profile: joinerProfiles.localProfile,
+    passphrase,
+  });
+  const metadata = previewRoomMetadataFromTranscripts(
+    inviterProfiles.localProfile,
+    inviterProfiles.peerProfile,
+    inviterTranscript.entries,
+    joinerTranscript.entries,
+  );
+  assert.equal(inviterProfiles.localProfile, "inviter-preview-qr-reload-code");
+  assert.equal(joinerProfiles.localProfile, "joiner-preview-qr-reload-code");
+  assert.equal(metadata.retryableOutboundCount, 0);
+  assert.equal(afterReloadStatus.latest_retryable_message_number, null);
 });
 
 test("browser preview receive loop starts and stops after delivery code is applied", async () => {

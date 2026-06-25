@@ -831,6 +831,9 @@
                     aria-label="Created invite code"
                     data-i18n-aria-label="createdInviteCode"
                   ></textarea>
+                  <button id="show-created-invite-qr" type="button" class="flow-control is-secondary" data-i18n="showInviteQr">
+                    Show invite QR
+                  </button>
                   <button id="copy-created-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
                     Copy invite code
                   </button>
@@ -866,6 +869,10 @@
                     data-i18n-placeholder="connectionCodePlaceholder"
                     placeholder="Paste invite code"
                   />
+                  <button id="import-received-invite-qr" type="button" class="flow-control is-secondary" data-i18n="importInviteQr">
+                    Import invite QR
+                  </button>
+                  <input id="received-invite-qr-file" type="file" accept="image/*" hidden />
                   <button id="create-room-from-received-code" type="button" class="flow-control is-secondary" data-i18n="createConnection">
                     Join room
                   </button>
@@ -874,6 +881,15 @@
                   </span>
                 </article>
               </div>
+              <section id="invite-qr-panel" class="invite-qr-panel" hidden aria-labelledby="invite-qr-title">
+                <div class="invite-qr-panel-header">
+                  <h5 id="invite-qr-title" data-i18n="inviteQrTitle">Invite QR</h5>
+                  <button id="hide-invite-qr" type="button" class="flow-control is-secondary" data-i18n="hideInviteQr">
+                    Hide QR
+                  </button>
+                </div>
+                <img id="invite-qr-image" class="invite-qr-image" alt="Invite code QR" />
+              </section>
             </section>
             <section id="room-invite-token-panel" class="room-invite-token-panel" aria-label="Room invite token">
               <label class="loop-label" for="room-invite-token-display" data-i18n="currentInviteCode">

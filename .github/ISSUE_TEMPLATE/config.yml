@@ -3,6 +3,6 @@ contact_links:
   - name: Security issue with sensitive details
     url: https://github.com/answndud/another-dimension-chat/security/advisories/new
     about: Use private vulnerability reporting when the report contains exploit details, payloads, logs, endpoints, paths, keys, or other sensitive material.
-  - name: Unsigned public beta release
+  - name: Legacy unsigned DMG release
     url: https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned
-    about: Download the unsigned experimental public beta and matching checksum from the same release.
+    about: Download the unsigned DMG fallback and matching checksum from the same release if you explicitly want the legacy path.
