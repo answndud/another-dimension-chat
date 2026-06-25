@@ -1817,7 +1817,7 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(wipeBody, /dataLifecycleWipeRunning/);
   assert.match(wipeBody, /renderProductionDataLifecycleAction\(result, "full-local-wipe"\)/);
   assert.match(wipeBody, /await checkProductionProductUnlockStatus\(\)/);
-  const emergencyWipeBody = functionBody(mainJs, "emergencyWipeProductionLocalData");
+  const emergencyWipeBody = functionBody(productionProfileControllerJs, "emergencyWipeProductionLocalData");
   assert.match(indexHtml, /id="emergency-wipe-production-local-data"/);
   assert.match(indexHtml, /id="production-emergency-wipe-confirmation"/);
   assert.match(emergencyWipeBody, /confirmation !== boundary\.emergencyConfirmation/);
