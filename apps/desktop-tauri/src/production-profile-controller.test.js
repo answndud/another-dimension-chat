@@ -16,12 +16,18 @@ function createHarness(options = {}) {
     productionPairingBoundary: {},
     productionSessionLifecycle: {},
     productionMessageBoundary: {},
+    productionMessageWarning: {},
+    productionMessageNextAction: {},
+    productionMessageOutbound: {},
+    productionMessageInbound: {},
+    productionMessageEnvelope: { value: "" },
     lockProductionProfile: { disabled: false },
     unlockProductionProfile: { disabled: false },
     productionProfileDeleteConfirmation: { value: "" },
     productionFullWipeConfirmation: { value: "" },
     productionEmergencyWipeConfirmation: { value: "" },
     productionSessionDeleteConfirmation: { value: "" },
+    productionConversationDeleteConfirmation: { value: "" },
   };
   const calls = {
     states: [],
@@ -153,6 +159,18 @@ function createHarness(options = {}) {
     },
     setProductionPairingState: (value) => calls.pairingStates.push(value),
     setProductionMessageState: (value) => calls.messageStates.push(value),
+    clearSavedInviteRoomConversationMetadataForProfile: () => true,
+    clearActiveConversationStateAfterLocalDelete: () => true,
+    resetProductionMessageTranscript: () => {
+      calls.resetTranscript = (calls.resetTranscript ?? 0) + 1;
+    },
+    resetProductionMessageImportState: () => {
+      calls.resetImport = (calls.resetImport ?? 0) + 1;
+    },
+    productionLocalLifecycleBoundaryView: (_result, options) => `boundary:${options.action}`,
+    checkProductionSessionState: async (input) => {
+      calls.checkSessionState = input;
+    },
     loadProductionMessageRetentionPreference: async (...args) => calls.loadRetention.push(args),
     loadProductionProfileList: async () => {
       calls.loadProfileList += 1;
@@ -501,4 +519,58 @@ test("deleteProductionSessionLifecycle deletes and rebuilds session flow", async
   assert.equal(fields.productionPairingBoundary.textContent, "session-boundary:session-delete");
   assert.equal(fields.productionMessageBoundary.textContent, "session-boundary:session-delete");
   assert.deepEqual(calls.messageStates, ["Message flow idle"]);
+});
+
+test("deleteProductionConversation requires exact confirmation", async () => {
+  const { controller, fields, calls, invoked } = createHarness();
+  fields.productionConversationDeleteConfirmation.value = "wrong";
+
+  const result = await controller.deleteProductionConversation();
+
+  assert.equal(result, undefined);
+  assert.deepEqual(invoked, []);
+  assert.deepEqual(calls.messageStates, ["Conversation delete needs confirmation"]);
+  assert.equal(fields.productionMessageWarning.textContent, "preflight:conversation-delete");
+  assert.equal(fields.productionMessageNextAction.textContent, "next:conversation-delete");
+  assert.equal(fields.productionMessageBoundary.textContent, undefined);
+  assert.deepEqual(calls.preflights[0], {
+    action: "conversation-delete",
+    options: { confirmationMatched: false, profile: "alice" },
+  });
+});
+
+test("deleteProductionConversation deletes conversation state and refreshes session view", async () => {
+  const deleteResult = {
+    sent_messages_deleted: 1,
+    message_envelopes_deleted: 2,
+    local_message_indexes_deleted: 3,
+    message_counter_deleted: true,
+    received_messages_deleted: 4,
+    conversation_records_deleted: 5,
+    session_records_preserved: true,
+    warning: "conversation deleted",
+  };
+  const { controller, fields, calls, invoked } = createHarness({
+    invokeResults: new Map([["production_conversation_delete", deleteResult]]),
+  });
+  fields.productionConversationDeleteConfirmation.value = "DELETE CONVERSATION";
+
+  const result = await controller.deleteProductionConversation();
+
+  assert.equal(result, undefined);
+  assert.deepEqual(invoked, ["production_conversation_delete"]);
+  assert.deepEqual(calls.busyActions, ["conversation-delete"]);
+  assert.deepEqual(calls.clearedBusyActions, ["conversation-delete"]);
+  assert.deepEqual(calls.resetTranscript, 1);
+  assert.deepEqual(calls.resetImport, 1);
+  assert.equal(fields.productionMessageEnvelope.value, "");
+  assert.deepEqual(calls.messageStates, ["Conversation deleting", "Conversation deleted"]);
+  assert.equal(fields.productionMessageWarning.textContent, "conversation deleted");
+  assert.equal(fields.productionMessageOutbound.textContent, "sent_deleted=1 envelopes_deleted=2 indexes_deleted=3 counter_deleted=true");
+  assert.equal(
+    fields.productionMessageInbound.textContent,
+    "received_deleted=4 total_records=5 session_preserved=true saved_rooms_cleared=true active_room_cleared=true",
+  );
+  assert.equal(fields.productionMessageBoundary.textContent, "boundary:conversation-delete");
+  assert.deepEqual(calls.checkSessionState, { profile: "alice", passphrase: "secret" });
 });

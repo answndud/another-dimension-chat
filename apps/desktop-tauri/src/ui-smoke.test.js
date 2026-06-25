@@ -1834,7 +1834,7 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(sessionDeleteBody, /production_session_lifecycle_delete"[\s\S]*confirmation/);
   assert.match(sessionDeleteBody, /local session lifecycle records only/);
   assert.match(sessionDeleteBody, /Message data, backups, and secure deletion claims are handled separately/);
-  const conversationDeleteBody = functionBody(mainJs, "deleteProductionConversation");
+  const conversationDeleteBody = functionBody(productionProfileControllerJs, "deleteProductionConversation");
   assert.match(conversationDeleteBody, /renderDataLifecycleDestructivePreflight\("conversation-delete"/);
   assert.match(conversationDeleteBody, /confirmation === "DELETE CONVERSATION"/);
   assert.match(conversationDeleteBody, /production_conversation_delete"[\s\S]*confirmation/);
@@ -1898,7 +1898,7 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(activeConversationClearBody, /clearActiveRoomInteractionStateAfterLocalLifecycle\(input, \{ preserveSessionRuntime: true \}\)/);
   assert.match(activeConversationClearBody, /resetProductionTwoProfileTranscript\(\)/);
   assert.match(activeConversationClearBody, /renderRoomStatusSummary\(input, twoProfileSessionsReadyForInput\(input\)\)/);
-  const conversationDeleteBody = functionBody(mainJs, "deleteProductionConversation");
+  const conversationDeleteBody = functionBody(productionProfileControllerJs, "deleteProductionConversation");
   assert.match(conversationDeleteBody, /roomInputBeforeDelete = productionTwoProfileInput\(\)/);
   assert.match(conversationDeleteBody, /clearSavedInviteRoomConversationMetadataForProfile\(profile\)/);
   assert.match(conversationDeleteBody, /clearActiveConversationStateAfterLocalDelete\(profile, roomInputBeforeDelete\)/);
@@ -2929,11 +2929,11 @@ test("public diagnostics recovery guide keeps support-safe next actions visible"
   assert.match(functionBody(productionProfileControllerJs, "deleteProductionProfile"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(productionProfileControllerJs, "wipeProductionLocalData"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(productionProfileControllerJs, "deleteProductionSessionLifecycle"), /rememberFailureSupportReport\(/);
-  assert.match(functionBody(mainJs, "deleteProductionConversation"), /rememberFailureSupportReport\(/);
+  assert.match(functionBody(productionProfileControllerJs, "deleteProductionConversation"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "dataLifecycleDestructivePreflightView"), /destructive_scope=/);
   assert.match(functionBody(mainJs, "dataLifecycleDestructivePreflightView"), /confirmation_phrase=/);
   assert.match(functionBody(productionProfileControllerJs, "deleteProductionSessionLifecycle"), /action: "session-delete"/);
-  assert.match(functionBody(mainJs, "deleteProductionConversation"), /action: "conversation-delete"/);
+  assert.match(functionBody(productionProfileControllerJs, "deleteProductionConversation"), /action: "conversation-delete"/);
   assert.match(indexHtml, /data-destructive-scope="conversation-delete"/);
   assert.match(indexHtml, /data-destructive-scope="session-delete"/);
   assert.match(indexHtml, /data-destructive-scope="profile-delete"/);

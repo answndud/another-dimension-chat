@@ -32,15 +32,21 @@ export function createProductionProfileController(input) {
     resetProductionProfileView,
     resetProductionPairingView,
     resetProductionMessageView,
+    resetProductionMessageTranscript,
+    resetProductionMessageImportState,
     applyPostDestructiveLifecycleRebuildGuidance,
     rememberProductionSessionState,
     productionSessionLifecycleView,
+    productionLocalLifecycleBoundaryView,
+    clearSavedInviteRoomConversationMetadataForProfile,
+    clearActiveConversationStateAfterLocalDelete,
     setProductionPairingState,
     setProductionMessageState,
     loadProductionMessageRetentionPreference,
     loadProductionProfileList,
     restoreProductionSessionAfterUnlock,
     refreshTwoProfileSessionAfterProfileUnlock,
+    checkProductionSessionState,
   } = input;
 
   function renderProductionProductUnlockStatus(result) {
@@ -560,6 +566,80 @@ export function createProductionProfileController(input) {
     }
   }
 
+  async function deleteProductionConversation() {
+    const inputValue = productionProfileInput();
+    const roomInputBeforeDelete = productionTwoProfileInput();
+    const { profile, passphrase } = inputValue;
+    if (!profile || !passphrase) {
+      setProductionMessageState("Conversation delete needs profile");
+      setText(fields.productionMessageWarning, "Enter profile and passphrase first.");
+      return;
+    }
+    const confirmation = (fields.productionConversationDeleteConfirmation?.value ?? "").trim();
+    const preflight = renderDataLifecycleDestructivePreflight("conversation-delete", {
+      confirmationMatched: confirmation === "DELETE CONVERSATION",
+      profile,
+    });
+    if (confirmation !== "DELETE CONVERSATION") {
+      setProductionMessageState("Conversation delete needs confirmation");
+      setText(fields.productionMessageWarning, preflight.warning);
+      setText(fields.productionMessageNextAction, preflight.next);
+      setText(fields.productionMessageBoundary, preflight.summary);
+      return;
+    }
+    setProductionMessageState("Conversation deleting");
+    setText(
+      fields.productionMessageWarning,
+      "Deleting local conversation message records only. This is not backup recovery, rollback prevention, or secure media deletion.",
+    );
+    setProductionBusyAction("conversation-delete");
+    applyProductionActionState();
+    try {
+      const result = await invoke("production_conversation_delete", {
+        profile,
+        passphrase,
+        confirmation,
+      });
+      if (!productionProfileInputStillCurrent(inputValue)) {
+        return;
+      }
+      const savedRoomsCleared = clearSavedInviteRoomConversationMetadataForProfile(profile);
+      const activeRoomCleared = clearActiveConversationStateAfterLocalDelete(profile, roomInputBeforeDelete);
+      resetProductionMessageTranscript();
+      resetProductionMessageImportState();
+      if (fields.productionMessageEnvelope) {
+        fields.productionMessageEnvelope.value = "";
+      }
+      setProductionMessageState("Conversation deleted");
+      setText(fields.productionMessageWarning, result.warning);
+      setText(
+        fields.productionMessageOutbound,
+        `sent_deleted=${result.sent_messages_deleted} envelopes_deleted=${result.message_envelopes_deleted} indexes_deleted=${result.local_message_indexes_deleted} counter_deleted=${result.message_counter_deleted}`,
+      );
+      setText(
+        fields.productionMessageInbound,
+        `received_deleted=${result.received_messages_deleted} total_records=${result.conversation_records_deleted} session_preserved=${result.session_records_preserved} saved_rooms_cleared=${savedRoomsCleared} active_room_cleared=${activeRoomCleared}`,
+      );
+      setText(fields.productionMessageBoundary, productionLocalLifecycleBoundaryView(result, { action: "conversation-delete" }));
+      await checkProductionSessionState(inputValue);
+    } catch (error) {
+      if (!productionProfileInputStillCurrent(inputValue)) {
+        return;
+      }
+      setProductionMessageState("Conversation delete failed");
+      setText(fields.productionMessageWarning, redactedUiErrorMessage("conversation-delete", error));
+      rememberFailureSupportReport(
+        "conversation-delete",
+        "destructive_action_failed",
+        "retry-local-lifecycle-action",
+        "destructive_action_failed",
+      );
+    } finally {
+      clearProductionBusyAction("conversation-delete");
+      applyProductionActionState();
+    }
+  }
+
   return {
     renderProductionProductUnlockStatus,
     productionProductUnlockRecoveryView,
@@ -572,6 +652,7 @@ export function createProductionProfileController(input) {
     checkProductionDataLifecycle,
     prepareProductionDataLifecycle,
     deleteProductionSessionLifecycle,
+    deleteProductionConversation,
     lockProductionProfile,
     panicLockProductionProfile,
   };
