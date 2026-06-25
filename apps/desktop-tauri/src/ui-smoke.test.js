@@ -32,6 +32,7 @@ const savedRoomControllerJs = readFileSync(join(here, "saved-room-controller.js"
 const transcriptControllerJs = readFileSync(join(here, "transcript-controller.js"), "utf8");
 const diagnosticsReportControllerJs = readFileSync(join(here, "diagnostics-report-controller.js"), "utf8");
 const productionBusyActionStateJs = readFileSync(join(here, "production-busy-action-state.js"), "utf8");
+const productionProfileControllerJs = readFileSync(join(here, "production-profile-controller.js"), "utf8");
 const actionStateJs = readFileSync(join(here, "action-state.js"), "utf8");
 const privateDeliveryStateJs = readFileSync(join(here, "private-delivery-state.js"), "utf8");
 const transcriptResumeJs = readFileSync(join(here, "transcript-resume.js"), "utf8");
@@ -1602,7 +1603,7 @@ test("profile unlock and transcript load ignore stale profile inputs", () => {
 });
 
 test("product unlock lockout shows local-only recovery actions", () => {
-  const recoveryBody = functionBody(mainJs, "productionProductUnlockRecoveryView");
+  const recoveryBody = functionBody(productionProfileControllerJs, "productionProductUnlockRecoveryView");
   assert.match(recoveryBody, /os_keychain_fallback=false/);
   assert.match(recoveryBody, /backup_recovery=false/);
   assert.match(recoveryBody, /cloud_backup_sync=false/);
@@ -1617,17 +1618,17 @@ test("product unlock lockout shows local-only recovery actions", () => {
   assert.match(recoveryBody, /recoveryActions\.primaryNextAction/);
   assert.match(recoveryBody, /recoveryActions\.boundary/);
 
-  const renderBody = functionBody(mainJs, "renderProductionProductUnlockRecovery");
+  const renderBody = functionBody(productionProfileControllerJs, "renderProductionProductUnlockRecovery");
   assert.match(renderBody, /fields\.productionProfileNextAction/);
 
   const unlockBody = functionBody(mainJs, "unlockProductionProfile");
   assert.match(unlockBody, /const productUnlockRecovery = renderProductionProductUnlockRecovery\(productUnlock\)/);
   assert.match(unlockBody, /setText\(fields\.productionProfileBoundary, productUnlockRecovery\.boundary\)/);
 
-  const lockBody = functionBody(mainJs, "lockProductionProfile");
+  const lockBody = functionBody(productionProfileControllerJs, "lockProductionProfile");
   assert.match(lockBody, /renderProductionProductUnlockRecovery\(result, \{ lockedByUser: true \}\)/);
 
-  const panicBody = functionBody(mainJs, "panicLockProductionProfile");
+  const panicBody = functionBody(productionProfileControllerJs, "panicLockProductionProfile");
   assert.match(indexHtml, /id="panic-lock-production-profile"/);
   assert.match(panicBody, /productionPanicLockMitigationView\(\)/);
   assert.match(panicBody, /clearProductionSensitiveMemoryState\(\)/);
