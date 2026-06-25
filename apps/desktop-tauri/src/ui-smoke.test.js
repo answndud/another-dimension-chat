@@ -25,6 +25,9 @@ const indexHtml = readFileSync(join(appRoot, "index.html"), "utf8");
 const mainJs = readFileSync(join(here, "main.js"), "utf8");
 const browserPreviewTauriJs = readFileSync(join(here, "browser-preview-tauri.js"), "utf8");
 const i18nJs = readFileSync(join(here, "i18n.js"), "utf8");
+const inviteQrControllerJs = readFileSync(join(here, "invite-qr-controller.js"), "utf8");
+const diagnosticsCopyControllerJs = readFileSync(join(here, "diagnostics-copy-controller.js"), "utf8");
+const desktopPanelControllerJs = readFileSync(join(here, "desktop-panel-controller.js"), "utf8");
 const actionStateJs = readFileSync(join(here, "action-state.js"), "utf8");
 const privateDeliveryStateJs = readFileSync(join(here, "private-delivery-state.js"), "utf8");
 const transcriptResumeJs = readFileSync(join(here, "transcript-resume.js"), "utf8");
@@ -903,6 +906,12 @@ test("room list controls are wired to room flow instead of settings", () => {
 test("room list create action does not overlap the app settings action", () => {
   assert.match(stylesCss, /body\.is-room-list-mode \.room-list-panel\s*\{[\s\S]*padding-top:\s*48px;/);
   assert.match(stylesCss, /\.system-settings-panel\s*\{[\s\S]*top:\s*14px;[\s\S]*right:\s*14px;/);
+  assert.match(mainJs, /createDesktopPanelController/);
+  assert.match(mainJs, /desktopPanelController\.bindPanelControls\(\)/);
+  assert.match(desktopPanelControllerJs, /event\.key !== "Escape"/);
+  assert.match(desktopPanelControllerJs, /fields\.toggleChatSettings\.setAttribute\("aria-expanded", "false"\)/);
+  assert.match(desktopPanelControllerJs, /document\.addEventListener\("pointerdown"/);
+  assert.match(desktopPanelControllerJs, /fields\.openDeveloperTools\.addEventListener\("click"/);
   assert.match(
     stylesCss,
     /@media \(max-width: 560px\) \{[\s\S]*body\.is-room-list-mode \.room-list-header\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\);/,
@@ -940,13 +949,16 @@ test("created invite code stays visible after the room becomes ready", () => {
 });
 
 test("invite qr actions stay scoped to the existing invite code flows", () => {
-  assert.match(functionBody(mainJs, "showCurrentInviteQr"), /connectionCodeRoleFor\(code\) !== "inviter"/);
-  assert.match(functionBody(mainJs, "showCurrentInviteQr"), /setInviteQrPanel\(code, true\)/);
-  assert.match(functionBody(mainJs, "importReceivedInviteQr"), /fields\.receivedInviteQrFile\?\.click/);
-  assert.match(functionBody(mainJs, "handleReceivedInviteQrFileChange"), /fields\.receivedInviteCode\.value = code/);
-  assert.match(functionBody(mainJs, "handleReceivedInviteQrFileChange"), /return createRoomFromReceivedInviteCode\(\)/);
-  assert.match(mainJs, /buildInviteQrSvgDataUrl/);
-  assert.match(mainJs, /decodeInviteQrFile/);
+  assert.match(inviteQrControllerJs, /function showCurrentInviteQr\(\)/);
+  assert.match(functionBody(inviteQrControllerJs, "showCurrentInviteQr"), /connectionCodeRoleFor\(code\) !== "inviter"/);
+  assert.match(functionBody(inviteQrControllerJs, "showCurrentInviteQr"), /setInviteQrPanel\(code, true\)/);
+  assert.match(functionBody(inviteQrControllerJs, "importReceivedInviteQr"), /fields\.receivedInviteQrFile\?\.click/);
+  assert.match(functionBody(inviteQrControllerJs, "handleReceivedInviteQrFileChange"), /fields\.receivedInviteCode\.value = code/);
+  assert.match(functionBody(inviteQrControllerJs, "handleReceivedInviteQrFileChange"), /return createRoomFromReceivedInviteCode\(\)/);
+  assert.match(inviteQrControllerJs, /buildInviteQrSvgDataUrl/);
+  assert.match(inviteQrControllerJs, /decodeInviteQrFile/);
+  assert.match(mainJs, /createInviteQrController/);
+  assert.match(mainJs, /inviteQrController\.bindInviteQrControls\(\)/);
 });
 
 test("reopened inviter rooms do not show the invite code share panel", () => {
@@ -954,6 +966,7 @@ test("reopened inviter rooms do not show the invite code share panel", () => {
   assert.match(functionBody(mainJs, "renderCurrentInviteCodeDisplay"), /role === "inviter" && currentInviteCodeShareVisible/);
   assert.match(functionBody(mainJs, "createInviteCode"), /currentInviteCodeShareVisible = true/);
   assert.match(functionBody(mainJs, "openSavedInviteRoom"), /currentInviteCodeShareVisible = false/);
+  assert.match(functionBody(mainJs, "renderCurrentInviteCodeDisplay"), /inviteQrController\.isInviteQrVisible\(\)/);
   assert.match(functionBody(mainJs, "openSavedInviteRoom"), /const openInput = productionTwoProfileInput\(\)/);
   assert.match(functionBody(mainJs, "openSavedInviteRoom"), /twoProfileTranscriptInputStillCurrent\(openInput\)/);
   assert.match(functionBody(mainJs, "openSavedInviteRoom"), /return openInviteRoomFromToken\(openInput\)/);
@@ -2321,7 +2334,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(mainJs, /function renderFieldTestReportSummary/);
   assert.match(mainJs, /function renderFieldTestReportComparison/);
   assert.match(mainJs, /function fieldTestReportCopyPayload/);
-  assert.match(mainJs, /function copyFieldTestReport/);
+  assert.match(diagnosticsCopyControllerJs, /function copyFieldTestReport/);
   assert.match(mainJs, /function productionTwoProfileRealOnionSyntheticFailureResult/);
   assert.match(stylesCss, /\.field-test-report-panel/);
   assert.match(stylesCss, /\.field-test-report-summary/);
@@ -2379,9 +2392,11 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(functionBody(mainJs, "fieldTestReportCopyPayload"), /fieldTestReportComparison\(report, peerReport\)/);
   assert.match(functionBody(mainJs, "fieldTestReportCopyPayload"), /fieldTestNextActionKey\(report, peerReport\)/);
   assert.match(functionBody(mainJs, "fieldTestReportCopyPayload"), /next_action=/);
-  assert.match(functionBody(mainJs, "copyFieldTestReport"), /const payload = fieldTestReportCopyPayload\(report\)/);
-  assert.match(functionBody(mainJs, "copyFieldTestReport"), /writeClipboardWithTtl\(payload\)/);
-  assert.match(mainJs, /fields\.peerFieldTestReport\.addEventListener\("input", renderFieldTestReportComparison\)/);
+  assert.match(functionBody(diagnosticsCopyControllerJs, "copyFieldTestReport"), /const payload = fieldTestReportCopyPayload\(report\)/);
+  assert.match(functionBody(diagnosticsCopyControllerJs, "copyFieldTestReport"), /writeClipboardWithTtl\(payload\)/);
+  assert.match(diagnosticsCopyControllerJs, /fields\.peerFieldTestReport\.addEventListener\("input", renderFieldTestReportComparison\)/);
+  assert.match(mainJs, /createDiagnosticsCopyController/);
+  assert.match(mainJs, /diagnosticsCopyController\.bindDiagnosticsCopyControls\(\)/);
   assert.match(reportBody, /route_ready=/);
   assert.match(reportBody, /app_version=/);
   assert.match(reportBody, /build_channel=/);
@@ -2903,8 +2918,8 @@ test("public diagnostics recovery guide keeps support-safe next actions visible"
   assert.match(mainJs, /productionRedactedSupportReportView/);
   assert.match(mainJs, /function renderRedactedSupportReport/);
   assert.match(mainJs, /function rememberFailureSupportReport/);
-  assert.match(mainJs, /function copyRedactedSupportReport/);
-  assert.match(mainJs, /fields\.copyRedactedSupportReport\.addEventListener\("click", copyRedactedSupportReport\)/);
+  assert.match(diagnosticsCopyControllerJs, /function copyRedactedSupportReport/);
+  assert.match(diagnosticsCopyControllerJs, /fields\.copyRedactedSupportReport\.addEventListener\("click", copyRedactedSupportReport\)/);
   assert.match(functionBody(mainJs, "unlockProductionProfile"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "exportProductionMessageEnvelope"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "importProductionMessageEnvelope"), /rememberFailureSupportReport\(/);

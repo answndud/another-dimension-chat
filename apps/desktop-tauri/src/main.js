@@ -94,6 +94,9 @@ import {
   inviteQrImportAvailability,
   normalizeInviteQrPayload,
 } from "./invite-qr.js";
+import { createInviteQrController } from "./invite-qr-controller.js";
+import { createDiagnosticsCopyController } from "./diagnostics-copy-controller.js";
+import { createDesktopPanelController } from "./desktop-panel-controller.js";
 import { combinedTwoProfileTranscriptTsv } from "./transcript-export.js";
 import { transcriptRetentionView } from "./transcript-retention.js";
 import { applyStaticTranslations, normalizeLanguage, translate } from "./i18n.js";
@@ -3705,7 +3708,6 @@ let savedRoomMetadataSyncInFlight = false;
 let savedRoomMetadataSyncStatus = { key: "", tone: "muted", values: {} };
 let roomDetailOpen = false;
 let currentInviteCodeShareVisible = false;
-let currentInviteQrVisible = false;
 let latestManualInviteRoomRebuildFlow = null;
 
 function setRoomScreen(screen) {
@@ -6031,23 +6033,6 @@ function generateInviteCode() {
   return chars.join("");
 }
 
-function setInviteQrPanel(code, visible) {
-  const normalizedCode = normalizeInviteQrPayload(code);
-  const show = Boolean(visible && normalizedCode);
-  currentInviteQrVisible = show;
-  if (fields.inviteQrPanel) {
-    fields.inviteQrPanel.hidden = !show;
-  }
-  if (fields.inviteQrImage) {
-    fields.inviteQrImage.hidden = !show;
-    fields.inviteQrImage.src = show ? buildInviteQrSvgDataUrl(normalizedCode) : "";
-  }
-}
-
-function closeInviteQrPanel() {
-  setInviteQrPanel("", false);
-}
-
 function renderCurrentInviteCodeDisplay() {
   const code = (fields.productionTwoProfileB?.value ?? "").trim();
   const role = connectionCodeRoleFor(code);
@@ -6088,10 +6073,10 @@ function renderCurrentInviteCodeDisplay() {
   fields.showCreatedInviteQr?.toggleAttribute("disabled", !(code && inviterCode));
   fields.copyCreatedInviteCode?.toggleAttribute("disabled", !(code && inviterCode));
   fields.copyRoomInviteToken?.toggleAttribute("disabled", !(code && inviterCode));
-  if (!inviterCode || !currentInviteQrVisible) {
-    closeInviteQrPanel();
+  if (!inviterCode || !inviteQrController.isInviteQrVisible()) {
+    inviteQrController.closeInviteQrPanel();
   } else {
-    setInviteQrPanel(code, true);
+    inviteQrController.setInviteQrPanel(code, true);
   }
   renderSavedInviteRooms();
 }
@@ -6162,51 +6147,44 @@ function renderReceivedInviteCodeActionState() {
   }
 }
 
-async function showCurrentInviteQr() {
-  const code = normalizeInviteQrPayload(fields.productionTwoProfileB?.value ?? "");
-  if (!code || connectionCodeRoleFor(code) !== "inviter" || !currentInviteCodeShareVisible) {
-    setProductionTwoProfileState("Invite QR unavailable");
-    setText(fields.productionTwoProfileWarning, t("inviteQrUnavailable"));
-    return false;
-  }
-  setInviteQrPanel(code, true);
-  return true;
-}
+const inviteQrController = createInviteQrController({
+  fields,
+  t,
+  normalizeInviteQrPayload,
+  buildInviteQrSvgDataUrl,
+  canImportInviteQr,
+  decodeInviteQrFile,
+  connectionCodeRoleFor,
+  getCurrentInviteCodeShareVisible: () => currentInviteCodeShareVisible,
+  setProductionTwoProfileState,
+  setText,
+  renderReceivedInviteCodeActionState,
+  createRoomFromReceivedInviteCode,
+});
 
-async function importReceivedInviteQr() {
-  if (!canImportInviteQr()) {
-    setProductionTwoProfileState("Invite QR import unavailable");
-    setText(fields.productionTwoProfileWarning, t("inviteQrImportUnavailable"));
-    return false;
-  }
-  fields.receivedInviteQrFile?.click?.();
-  return true;
-}
+const diagnosticsCopyController = createDiagnosticsCopyController({
+  fields,
+  t,
+  updateEngineSidecarDiagnostics,
+  refreshFieldTestReport,
+  refreshPublicBetaDiagnostics,
+  renderRedactedSupportReport,
+  fieldTestReportCopyPayload,
+  writeClipboardWithTtl,
+  setProductionTwoProfileState,
+  setText,
+  renderFieldTestReportComparison,
+});
 
-async function handleReceivedInviteQrFileChange(event) {
-  const [file] = Array.from(event?.target?.files ?? []);
-  if (!file) {
-    return false;
-  }
-  try {
-    const code = normalizeInviteQrPayload(await decodeInviteQrFile(file));
-    if (fields.receivedInviteCode) {
-      fields.receivedInviteCode.value = code;
-    }
-    renderReceivedInviteCodeActionState();
-    setProductionTwoProfileState("Invite QR imported");
-    setText(fields.productionTwoProfileWarning, t("inviteQrImportReady"));
-    return createRoomFromReceivedInviteCode();
-  } catch {
-    setProductionTwoProfileState("Invite QR import failed");
-    setText(fields.productionTwoProfileWarning, t("inviteQrImportFailed"));
-    return false;
-  } finally {
-    if (fields.receivedInviteQrFile) {
-      fields.receivedInviteQrFile.value = "";
-    }
-  }
-}
+const desktopPanelController = createDesktopPanelController({
+  document,
+  fields,
+  openChatSettingsPanel,
+  closeChatSettingsPanel,
+  closeAppSettingsPanel,
+  enablePrivateDeliveryPermission,
+  openManualProductionTools,
+});
 
 function applyPairwiseInviteGuidance(step, options = {}) {
   const input = options.input ?? productionTwoProfileInput();
@@ -6412,16 +6390,6 @@ async function updateEngineSidecarDiagnostics() {
     latestEngineSidecarDiagnostics = engineSidecarDiagnosticsFallback("sidecar-command-unavailable");
   }
   return latestEngineSidecarDiagnostics;
-}
-
-async function refreshFieldTestReportWithRuntimeDiagnostics() {
-  await updateEngineSidecarDiagnostics();
-  return refreshFieldTestReport();
-}
-
-async function refreshPublicBetaDiagnosticsWithRuntimeDiagnostics() {
-  await updateEngineSidecarDiagnostics();
-  return refreshPublicBetaDiagnostics();
 }
 
 function engineSidecarDiagnosticReportLines(diagnostics = latestEngineSidecarDiagnostics) {
@@ -7042,16 +7010,6 @@ function fieldTestReportCopyPayload(report) {
   return comparison
     ? `${report}\n${comparison}\n${nextActionLine}\n${actionLines}`
     : `${report}\n${nextActionLine}\n${actionLines}`;
-}
-
-function selectFieldTestReportCopyPayload(payload) {
-  if (!fields.fieldTestReport) {
-    return false;
-  }
-  fields.fieldTestReport.value = payload;
-  fields.fieldTestReport.focus?.();
-  fields.fieldTestReport.select?.();
-  return true;
 }
 
 function realOnionResultConfirmsExternalPeerDelivery(result) {
@@ -7988,34 +7946,6 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
   return payload;
 }
 
-function selectPublicBetaDiagnosticsPayload(payload) {
-  if (!fields.publicBetaDiagnostics) {
-    return;
-  }
-  fields.publicBetaDiagnostics.value = payload;
-  fields.publicBetaDiagnostics.focus?.();
-  fields.publicBetaDiagnostics.select?.();
-}
-
-async function copyPublicBetaDiagnostics() {
-  await updateEngineSidecarDiagnostics();
-  const payload = refreshPublicBetaDiagnostics();
-  if (!payload) {
-    return false;
-  }
-  try {
-    await writeClipboardWithTtl(payload);
-    setProductionTwoProfileState("Public diagnostics copied");
-    setText(fields.productionTwoProfileWarning, t("publicBetaDiagnosticsCopied"));
-    return true;
-  } catch {
-    selectPublicBetaDiagnosticsPayload(payload);
-    setProductionTwoProfileState("Public diagnostics selected");
-    setText(fields.productionTwoProfileWarning, t("publicBetaDiagnosticsCopyFallback"));
-    return false;
-  }
-}
-
 function buildRedactedSupportReport(input = {}) {
   return productionRedactedSupportReportView({
     appVersion: FIELD_TEST_APP_VERSION,
@@ -8053,52 +7983,6 @@ function rememberFailureSupportReport(
     recoveryNextAction,
     nonSensitiveStatus,
   });
-}
-
-function selectRedactedSupportReportPayload(payload) {
-  if (!fields.redactedSupportReport) {
-    return;
-  }
-  fields.redactedSupportReport.value = payload;
-  fields.redactedSupportReport.focus?.();
-  fields.redactedSupportReport.select?.();
-}
-
-async function copyRedactedSupportReport() {
-  const payload = fields.redactedSupportReport?.value || renderRedactedSupportReport().payload;
-  if (!payload) {
-    return false;
-  }
-  try {
-    await writeClipboardWithTtl(payload);
-    setProductionTwoProfileState("Redacted support report copied");
-    setText(fields.productionTwoProfileWarning, t("redactedSupportReportCopied"));
-    return true;
-  } catch {
-    selectRedactedSupportReportPayload(payload);
-    setProductionTwoProfileState("Redacted support report selected");
-    setText(fields.productionTwoProfileWarning, t("redactedSupportReportCopyFallback"));
-    return false;
-  }
-}
-
-async function copyFieldTestReport() {
-  const report = refreshFieldTestReport();
-  if (!report) {
-    return false;
-  }
-  const payload = fieldTestReportCopyPayload(report);
-  try {
-    await writeClipboardWithTtl(payload);
-    setProductionTwoProfileState("Field test report copied");
-    setText(fields.productionTwoProfileWarning, t("fieldTestReportCopied"));
-    return true;
-  } catch {
-    selectFieldTestReportCopyPayload(payload);
-    setProductionTwoProfileState("Field test report selected");
-    setText(fields.productionTwoProfileWarning, t("fieldTestReportCopyFallback"));
-    return false;
-  }
 }
 
 function waitForTimeout(ms) {
@@ -8162,7 +8046,6 @@ function clearCurrentInviteRoomInput() {
   copiedInviteCode = "";
   latestConnectionCodeRole = "";
   currentInviteCodeShareVisible = false;
-  closeInviteQrPanel();
   if (fields.productionTwoProfileA) {
     fields.productionTwoProfileA.value = "";
   }
@@ -8182,6 +8065,7 @@ function clearCurrentInviteRoomInput() {
     fields.receivedInviteCode.value = "";
   }
   restorePrivateRouteExchangeForRoom(productionTwoProfileInput());
+  inviteQrController.closeInviteQrPanel();
   renderCurrentInviteCodeDisplay();
   renderProductionTwoProfileDirection(productionTwoProfileInput());
   updateMinimalChatMode(productionTwoProfileInput(), false);
@@ -21253,95 +21137,7 @@ if (fields.languageSelector) {
   });
 }
 
-if (fields.toggleChatSettings) {
-  fields.toggleChatSettings.setAttribute("aria-expanded", "false");
-  fields.toggleChatSettings.addEventListener("click", () => {
-    const panel = document.querySelector(".chat-settings-panel");
-    const systemPanel = document.querySelector(".system-settings-panel");
-    if (panel) {
-      if (panel.open) {
-        closeChatSettingsPanel();
-      } else {
-        openChatSettingsPanel();
-      }
-      if (panel.open && systemPanel) {
-        systemPanel.open = false;
-      }
-    }
-  });
-}
-
-if (fields.closeChatSettings) {
-  fields.closeChatSettings.addEventListener("click", () => {
-    closeChatSettingsPanel();
-    fields.toggleChatSettings?.focus();
-  });
-}
-
-if (fields.openPrivateDeliverySettings) {
-  fields.openPrivateDeliverySettings.addEventListener("click", () => enablePrivateDeliveryPermission());
-}
-
-document.querySelector(".chat-settings-panel")?.addEventListener("toggle", (event) => {
-  const open = Boolean(event.currentTarget.open);
-  document.body.classList.toggle("is-chat-settings-open", open);
-  fields.toggleChatSettings?.setAttribute("aria-expanded", open ? "true" : "false");
-});
-
-document.querySelector(".system-settings-panel")?.addEventListener("toggle", (event) => {
-  const open = Boolean(event.currentTarget.open);
-  document.body.classList.toggle("is-app-settings-open", open);
-  if (open) {
-    closeChatSettingsPanel();
-  }
-});
-
-if (fields.closeAppSettings) {
-  fields.closeAppSettings.addEventListener("click", () => {
-    closeAppSettingsPanel();
-    document.querySelector(".system-settings-panel > summary")?.focus();
-  });
-}
-
-document.addEventListener("keydown", (event) => {
-  if (event.key !== "Escape") {
-    return;
-  }
-  if (document.querySelector(".chat-settings-panel")?.open) {
-    closeChatSettingsPanel();
-    fields.toggleChatSettings?.focus();
-  }
-  if (document.querySelector(".system-settings-panel")?.open) {
-    closeAppSettingsPanel();
-    document.querySelector(".system-settings-panel > summary")?.focus();
-  }
-});
-
-document.addEventListener("pointerdown", (event) => {
-  const target = event.target;
-  const chatPanel = document.querySelector(".chat-settings-panel");
-  if (chatPanel?.open) {
-    if (chatPanel.contains(target) || fields.toggleChatSettings?.contains(target)) {
-      return;
-    }
-    closeChatSettingsPanel();
-  }
-  const appPanel = document.querySelector(".system-settings-panel");
-  const appSummary = document.querySelector(".system-settings-panel > summary");
-  if (appPanel?.open) {
-    if (appPanel.contains(target) || appSummary?.contains(target)) {
-      return;
-    }
-    closeAppSettingsPanel();
-  }
-});
-
-if (fields.openDeveloperTools) {
-  fields.openDeveloperTools.addEventListener("click", () => {
-    closeAppSettingsPanel();
-    openManualProductionTools();
-  });
-}
+desktopPanelController.bindPanelControls();
 
 if (fields.createRoomFromReceivedCode) {
   fields.createRoomFromReceivedCode.addEventListener("click", createRoomFromReceivedInviteCode);
@@ -21356,14 +21152,6 @@ if (fields.receivedInviteCode) {
     }
   });
   renderReceivedInviteCodeActionState();
-}
-
-if (fields.importReceivedInviteQr) {
-  fields.importReceivedInviteQr.addEventListener("click", importReceivedInviteQr);
-}
-
-if (fields.receivedInviteQrFile) {
-  fields.receivedInviteQrFile.addEventListener("change", handleReceivedInviteQrFileChange);
 }
 
 if (fields.roomListCreateRoom) {
@@ -21396,14 +21184,7 @@ if (fields.createInviteCode) {
 if (fields.createInviteCodeSettings) {
   fields.createInviteCodeSettings.addEventListener("click", createInviteCode);
 }
-
-if (fields.showCreatedInviteQr) {
-  fields.showCreatedInviteQr.addEventListener("click", showCurrentInviteQr);
-}
-
-if (fields.hideInviteQr) {
-  fields.hideInviteQr.addEventListener("click", closeInviteQrPanel);
-}
+inviteQrController.bindInviteQrControls();
 
 if (fields.copyInviteCode) {
   fields.copyInviteCode.addEventListener("click", () => {
@@ -22149,29 +21930,7 @@ if (fields.loadProductionTwoProfileTranscript) {
   );
 }
 
-if (fields.refreshFieldTestReport) {
-  fields.refreshFieldTestReport.addEventListener("click", refreshFieldTestReportWithRuntimeDiagnostics);
-}
-
-if (fields.copyFieldTestReport) {
-  fields.copyFieldTestReport.addEventListener("click", copyFieldTestReport);
-}
-
-if (fields.refreshPublicBetaDiagnostics) {
-  fields.refreshPublicBetaDiagnostics.addEventListener("click", refreshPublicBetaDiagnosticsWithRuntimeDiagnostics);
-}
-
-if (fields.copyPublicBetaDiagnostics) {
-  fields.copyPublicBetaDiagnostics.addEventListener("click", copyPublicBetaDiagnostics);
-}
-
-if (fields.copyRedactedSupportReport) {
-  fields.copyRedactedSupportReport.addEventListener("click", copyRedactedSupportReport);
-}
-
-if (fields.peerFieldTestReport) {
-  fields.peerFieldTestReport.addEventListener("input", renderFieldTestReportComparison);
-}
+diagnosticsCopyController.bindDiagnosticsCopyControls();
 
 if (fields.replyLatestTwoProfileMessage) {
   fields.replyLatestTwoProfileMessage.addEventListener("click", replyToLatestTwoProfileMessage);
