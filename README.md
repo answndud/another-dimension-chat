@@ -1,7 +1,7 @@
-# Another Dimension Chat — Unsigned Public Beta
+# Another Dimension Chat — Source Build Primary
 
 <p>
-  <img src="https://img.shields.io/badge/status-unsigned%20beta-orange" alt="Status">
+  <img src="https://img.shields.io/badge/status-source%20build%20primary-blue" alt="Source build primary">
   <img src="https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
 </p>
@@ -15,8 +15,8 @@ Built with **Rust** and **Tauri**. Current testing uses pairwise invite rooms,
 safety material comparison, local encrypted storage, and manual sealed-message
 exchange.
 
-> **Current status:** unsigned macOS Apple Silicon beta. Not audited, not
-> production-ready, and not for sensitive communication.
+> **Current status:** source-build-primary macOS Apple Silicon beta. Not
+> audited, not production-ready, and not for sensitive communication.
 
 ## What You Get Today
 
@@ -28,31 +28,37 @@ exchange.
 | User-chosen delivery | Move sealed messages through any channel you choose |
 | Clear safety step | Compare safety material before using the room |
 
-## Download
+## Source Build for macOS
+
+The default install path is now source build.
+
+If you want to run the app on macOS without relying on a GitHub Release DMG,
+follow the source build guide:
+
+- [Install from source on macOS](INSTALL_FROM_SOURCE_MACOS.md)
+
+Short version:
+
+```sh
+git clone https://github.com/answndud/another-dimension-chat.git
+cd another-dimension-chat
+npm ci --prefix apps/desktop-tauri
+npm --prefix apps/desktop-tauri run tauri:build:beta-onion
+```
+
+The built app bundle is under
+`apps/desktop-tauri/src-tauri/target/release/bundle/macos/Another Dimension Chat.app`.
+
+GitHub Release DMGs, when present, are optional unsigned convenience artifacts
+for people who explicitly want that path. They are not the primary install
+route.
+
+## Legacy Download
 
 > [**another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned**](https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned)
 
-**2 files** to download from Assets:
-
-| File | Purpose |
-|------|---------|
-| `*.dmg` | The app |
-| `*.dmg.sha256` | Checksum for verification |
-
-Verify before opening:
-
-```sh
-shasum -a 256 -c *.dmg.sha256
-```
-
-Expected output:
-
-```text
-another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg: OK
-```
-
-Proceed only if the output is `OK`. If macOS blocks the unsigned app, allow via
-System Settings > Privacy & Security after checksum verification.
+If you use a GitHub Release DMG, verify the checksum before opening it and
+follow the current macOS manual allow flow only after verification.
 
 ## Quick Start
 
@@ -87,7 +93,7 @@ message relay, cloud backup, or push notification service.
 
 | Platform | Public status |
 |----------|---------------|
-| macOS Apple Silicon | Unsigned DMG beta |
+| macOS Apple Silicon | Source build primary, unsigned DMG fallback |
 | Windows | No public app yet |
 | Android / iOS | No public app yet |
 
@@ -101,9 +107,13 @@ no invite codes, payloads, keys, raw logs, or screenshots of private room data.
 
 ## From Source
 
+Follow the macOS install guide for the primary build path:
+
+- [Install from source on macOS](INSTALL_FROM_SOURCE_MACOS.md)
+
+Then run the local verification entrypoints from the repository root:
+
 ```sh
-git clone https://github.com/answndud/another-dimension-chat.git
-cd another-dimension-chat
 scripts/verify_all.sh   # light verify
 scripts/verify_full.sh  # full pre-release verify
 ```
