@@ -30,17 +30,24 @@ forbidden_text() {
 require_file README.md
 require_file README.ko.md
 require_file INSTALL_FROM_SOURCE_MACOS.md
+require_file REPRODUCIBLE_BUILD_MACOS.md
 require_file apps/desktop-tauri/package.json
 require_file SECURITY.md
 
 require_text README.md "Source Build for macOS"
 require_text README.md "npm --prefix apps/desktop-tauri run tauri:build:beta-onion"
 require_text README.md "Install from source on macOS"
+require_text README.md "Reproducible build notes for macOS"
 require_text README.ko.md "macOS 소스 빌드"
 require_text README.ko.md "npm --prefix apps/desktop-tauri run tauri:build:beta-onion"
 require_text README.ko.md "macOS에서 소스 빌드로 설치"
+require_text README.ko.md "macOS 재현성 빌드 노트"
 require_text INSTALL_FROM_SOURCE_MACOS.md "npm --prefix apps/desktop-tauri run tauri:build:beta-onion"
 require_text INSTALL_FROM_SOURCE_MACOS.md "Xcode Command Line Tools"
+require_text INSTALL_FROM_SOURCE_MACOS.md "Reproducible build notes for macOS"
+require_text REPRODUCIBLE_BUILD_MACOS.md "Keep Fixed"
+require_text REPRODUCIBLE_BUILD_MACOS.md "byte-for-byte identical artifacts"
+require_text REPRODUCIBLE_BUILD_MACOS.md "Cargo.lock"
 require_text apps/desktop-tauri/package.json '"tauri:build:beta-onion"'
 
 forbidden_text README.md "xattr -dr com.apple.quarantine"
