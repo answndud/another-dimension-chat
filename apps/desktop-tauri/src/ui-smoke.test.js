@@ -31,6 +31,7 @@ const desktopPanelControllerJs = readFileSync(join(here, "desktop-panel-controll
 const savedRoomControllerJs = readFileSync(join(here, "saved-room-controller.js"), "utf8");
 const transcriptControllerJs = readFileSync(join(here, "transcript-controller.js"), "utf8");
 const diagnosticsReportControllerJs = readFileSync(join(here, "diagnostics-report-controller.js"), "utf8");
+const productionBusyActionStateJs = readFileSync(join(here, "production-busy-action-state.js"), "utf8");
 const actionStateJs = readFileSync(join(here, "action-state.js"), "utf8");
 const privateDeliveryStateJs = readFileSync(join(here, "private-delivery-state.js"), "utf8");
 const transcriptResumeJs = readFileSync(join(here, "transcript-resume.js"), "utf8");
@@ -1172,15 +1173,14 @@ test("same-profile invite rooms are scoped by invite code", () => {
 });
 
 test("busy actions only clear the action they started", () => {
-  assert.match(mainJs, /function clearProductionBusyAction\(action\)/);
-  assert.match(functionBody(mainJs, "clearProductionBusyAction"), /productionBusyAction === action/);
+  assert.match(mainJs, /createProductionBusyActionState/);
+  assert.match(mainJs, /clearAction: clearProductionBusyAction/);
+  assert.match(productionBusyActionStateJs, /function clearAction\(action\)/);
+  assert.match(functionBody(productionBusyActionStateJs, "clearAction"), /getAction\(\) === action/);
 
   const directNullClearedMain = mainJs
     .replace("let productionBusyAction = null;", "")
-    .replace(
-      /function clearProductionBusyAction\(action\) \{\s*if \(productionBusyAction === action\) \{\s*productionBusyAction = null;\s*\}\s*\}/,
-      "",
-    );
+    .replace(/setAction: \(action\) => \{\s*productionBusyAction = action;\s*\}/, "");
   assert.doesNotMatch(directNullClearedMain, /productionBusyAction = null;/);
 
   const busyActions = [...mainJs.matchAll(/productionBusyAction = "([^"]+)";/g)].map((match) => match[1]);
@@ -1189,13 +1189,11 @@ test("busy actions only clear the action they started", () => {
     assert.match(mainJs, new RegExp(`clearProductionBusyAction\\("${action}"\\)`), `missing scoped busy clear for ${action}`);
   }
 
-  assert.match(mainJs, /let activeInviteRoomOpenFingerprint = ""/);
-  assert.match(functionBody(mainJs, "setInviteRoomOpenBusy"), /productionBusyAction = "invite-room-open"/);
-  assert.match(functionBody(mainJs, "setInviteRoomOpenBusy"), /activeInviteRoomOpenFingerprint = twoProfileSessionStatusFingerprint\(input\)/);
-  assert.match(functionBody(mainJs, "inviteRoomOpenBusyMatches"), /productionBusyAction === "invite-room-open"/);
-  assert.match(functionBody(mainJs, "inviteRoomOpenBusyMatches"), /activeInviteRoomOpenFingerprint === twoProfileSessionStatusFingerprint\(input\)/);
-  assert.match(functionBody(mainJs, "clearInviteRoomOpenBusy"), /inviteRoomOpenBusyMatches\(input\)/);
-  assert.match(functionBody(mainJs, "clearInviteRoomOpenBusy"), /clearProductionBusyAction\("invite-room-open"\)/);
+  assert.match(productionBusyActionStateJs, /inviteRoomOpenFingerprint: ""/);
+  assert.match(productionBusyActionStateJs, /setFingerprintAction\("invite-room-open", "inviteRoomOpenFingerprint", inputValue\)/);
+  assert.match(productionBusyActionStateJs, /getAction\(\) === "invite-room-open"/);
+  assert.match(productionBusyActionStateJs, /active\.inviteRoomOpenFingerprint === fingerprint\(inputValue\)/);
+  assert.match(productionBusyActionStateJs, /clearFingerprintAction\("invite-room-open", "inviteRoomOpenFingerprint", inputValue\)/);
   assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /setInviteRoomOpenBusy\(openInput\)/);
   assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /clearInviteRoomOpenBusy\(openInput\)/);
   assert.match(functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"), /clearProductionBusyAction\("two-profile-transcript-load"\)/);
@@ -2219,10 +2217,9 @@ test("two-profile onion setup actions ignore stale room results", () => {
   const refreshBody = functionBody(mainJs, "refreshProductionTwoProfilePeerEndpoints");
   assert.match(mainJs, /async function refreshProductionTwoProfilePeerEndpoints\(input = productionTwoProfileInput\(\), options = \{\}\)/);
   assert.match(refreshBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
-  assert.match(mainJs, /let activeTwoProfilePeerEndpointRefreshFingerprint = ""/);
-  assert.match(functionBody(mainJs, "setTwoProfilePeerEndpointRefreshBusy"), /productionBusyAction = "two-profile-peer-endpoint-refresh"/);
-  assert.match(functionBody(mainJs, "setTwoProfilePeerEndpointRefreshBusy"), /activeTwoProfilePeerEndpointRefreshFingerprint = twoProfileSessionStatusFingerprint\(input\)/);
-  assert.match(functionBody(mainJs, "clearTwoProfilePeerEndpointRefreshBusy"), /activeTwoProfilePeerEndpointRefreshFingerprint === twoProfileSessionStatusFingerprint\(input\)/);
+  assert.match(productionBusyActionStateJs, /twoProfilePeerEndpointRefreshFingerprint: ""/);
+  assert.match(productionBusyActionStateJs, /setFingerprintAction\("two-profile-peer-endpoint-refresh", "twoProfilePeerEndpointRefreshFingerprint", inputValue\)/);
+  assert.match(productionBusyActionStateJs, /clearFingerprintAction\("two-profile-peer-endpoint-refresh", "twoProfilePeerEndpointRefreshFingerprint", inputValue\)/);
   assert.match(refreshBody, /setTwoProfilePeerEndpointRefreshBusy\(input\)/);
   assert.match(refreshBody, /clearTwoProfilePeerEndpointRefreshBusy\(input\)/);
 
@@ -2584,14 +2581,12 @@ test("saved local delivery codes must be refreshed before sharing", () => {
   assert.match(functionBody(mainJs, "rememberReceiveIntentForRoom"), /privateRouteRoomKeys\(input\)/);
   assert.match(functionBody(mainJs, "rememberLocalPrivateRouteCode"), /const updateUi = routeOptions\.updateUi !== false/);
   assert.match(functionBody(mainJs, "rememberLocalPrivateRouteCode"), /if \(!updateUi\) \{[\s\S]*return;[\s\S]*\}/);
-  assert.match(mainJs, /let activeInviteRoomPrivateRouteCodeFingerprint = ""/);
-  assert.match(mainJs, /let activeInviteRoomPeerRouteCodeFingerprint = ""/);
-  assert.match(functionBody(mainJs, "setInviteRoomPrivateRouteCodeBusy"), /productionBusyAction = "invite-room-private-route-code"/);
-  assert.match(functionBody(mainJs, "setInviteRoomPrivateRouteCodeBusy"), /activeInviteRoomPrivateRouteCodeFingerprint = twoProfileSessionStatusFingerprint\(input\)/);
-  assert.match(functionBody(mainJs, "clearInviteRoomPrivateRouteCodeBusy"), /activeInviteRoomPrivateRouteCodeFingerprint === twoProfileSessionStatusFingerprint\(input\)/);
-  assert.match(functionBody(mainJs, "setInviteRoomPeerRouteCodeBusy"), /productionBusyAction = "invite-room-peer-route-code"/);
-  assert.match(functionBody(mainJs, "setInviteRoomPeerRouteCodeBusy"), /activeInviteRoomPeerRouteCodeFingerprint = twoProfileSessionStatusFingerprint\(input\)/);
-  assert.match(functionBody(mainJs, "clearInviteRoomPeerRouteCodeBusy"), /activeInviteRoomPeerRouteCodeFingerprint === twoProfileSessionStatusFingerprint\(input\)/);
+  assert.match(productionBusyActionStateJs, /inviteRoomPrivateRouteCodeFingerprint: ""/);
+  assert.match(productionBusyActionStateJs, /inviteRoomPeerRouteCodeFingerprint: ""/);
+  assert.match(productionBusyActionStateJs, /setFingerprintAction\("invite-room-private-route-code", "inviteRoomPrivateRouteCodeFingerprint", inputValue\)/);
+  assert.match(productionBusyActionStateJs, /clearFingerprintAction\("invite-room-private-route-code", "inviteRoomPrivateRouteCodeFingerprint", inputValue\)/);
+  assert.match(productionBusyActionStateJs, /setFingerprintAction\("invite-room-peer-route-code", "inviteRoomPeerRouteCodeFingerprint", inputValue\)/);
+  assert.match(productionBusyActionStateJs, /clearFingerprintAction\("invite-room-peer-route-code", "inviteRoomPeerRouteCodeFingerprint", inputValue\)/);
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /twoProfileTranscriptInputStillCurrent\(input\)/);
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /setInviteRoomPrivateRouteCodeBusy\(input\)/);
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /clearInviteRoomPrivateRouteCodeBusy\(input\)/);
@@ -2682,12 +2677,12 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(sendBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(sendBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*quiet: true,[\s\S]*refreshSessionStatus: true,[\s\S]*input/);
   assert.match(sendBody, /setChatDeliveryNoticeForSendAttempt\(result, input\)/);
-  assert.match(mainJs, /let activeTwoProfileOnionEnvelopeSendKey = ""/);
-  assert.match(functionBody(mainJs, "twoProfileOnionEnvelopeSendKey"), /twoProfileSessionStatusFingerprint\(input\)/);
-  assert.match(functionBody(mainJs, "twoProfileOnionEnvelopeSendKey"), /normalizedNumber/);
-  assert.match(functionBody(mainJs, "setTwoProfileOnionEnvelopeSendBusy"), /productionBusyAction = "two-profile-onion-envelope-send"/);
-  assert.match(functionBody(mainJs, "setTwoProfileOnionEnvelopeSendBusy"), /activeTwoProfileOnionEnvelopeSendKey = twoProfileOnionEnvelopeSendKey\(input, messageNumber\)/);
-  assert.match(functionBody(mainJs, "clearTwoProfileOnionEnvelopeSendBusy"), /activeTwoProfileOnionEnvelopeSendKey === twoProfileOnionEnvelopeSendKey\(input, messageNumber\)/);
+  assert.match(productionBusyActionStateJs, /twoProfileOnionEnvelopeSendKey: ""/);
+  assert.match(functionBody(productionBusyActionStateJs, "onionEnvelopeSendKey"), /fingerprint\(inputValue\)/);
+  assert.match(functionBody(productionBusyActionStateJs, "onionEnvelopeSendKey"), /normalizedNumber/);
+  assert.match(productionBusyActionStateJs, /setAction\("two-profile-onion-envelope-send"\)/);
+  assert.match(productionBusyActionStateJs, /active\.twoProfileOnionEnvelopeSendKey = onionEnvelopeSendKey\(inputValue, messageNumber\)/);
+  assert.match(productionBusyActionStateJs, /active\.twoProfileOnionEnvelopeSendKey === onionEnvelopeSendKey\(inputValue, messageNumber\)/);
   assert.match(sendBody, /setTwoProfileOnionEnvelopeSendBusy\(input, latestOnionOutbound\.messageNumber\)/);
   assert.match(sendBody, /clearTwoProfileOnionEnvelopeSendBusy\(input, latestOnionOutbound\.messageNumber\)/);
 
