@@ -28,6 +28,9 @@ const i18nJs = readFileSync(join(here, "i18n.js"), "utf8");
 const inviteQrControllerJs = readFileSync(join(here, "invite-qr-controller.js"), "utf8");
 const diagnosticsCopyControllerJs = readFileSync(join(here, "diagnostics-copy-controller.js"), "utf8");
 const desktopPanelControllerJs = readFileSync(join(here, "desktop-panel-controller.js"), "utf8");
+const savedRoomControllerJs = readFileSync(join(here, "saved-room-controller.js"), "utf8");
+const transcriptControllerJs = readFileSync(join(here, "transcript-controller.js"), "utf8");
+const diagnosticsReportControllerJs = readFileSync(join(here, "diagnostics-report-controller.js"), "utf8");
 const actionStateJs = readFileSync(join(here, "action-state.js"), "utf8");
 const privateDeliveryStateJs = readFileSync(join(here, "private-delivery-state.js"), "utf8");
 const transcriptResumeJs = readFileSync(join(here, "transcript-resume.js"), "utf8");
@@ -338,9 +341,9 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(functionBody(mainJs, "sendProductionTwoProfileEndpointUpdate"), /rememberHighRiskRuntimeEvidenceFromAttemptResult\(result,[\s\S]*endpointRotationObserved: true/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /localOnlyEvidence: result\.local_dev_roundtrip_result === true/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /syntheticFailure: true/);
-  assert.match(functionBody(mainJs, "buildFieldTestReport"), /high_risk_runtime_evidence_source=/);
-  assert.match(functionBody(mainJs, "buildFieldTestReport"), /high_risk_public_claim_allowed=/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_runtime_evidence_source=\$\{highRiskRuntimeEvidenceSource\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "buildFieldTestReport"), /high_risk_runtime_evidence_source=/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "buildFieldTestReport"), /high_risk_public_claim_allowed=/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /high_risk_runtime_evidence_source=\$\{highRiskRuntimeEvidenceSource\}/);
   assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /twoProfileSafetyConfirmedForInput/);
   assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /data-readiness/);
   assert.match(functionBody(mainJs, "renderHighRiskReadinessStatus"), /data-high-risk-ready-claim-allowed/);
@@ -447,8 +450,8 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(mainJs, /function showRoomDetail/);
   assert.match(mainJs, /function prepareRoomListReturnState/);
   assert.match(mainJs, /function renderSavedInviteRooms/);
-  assert.match(mainJs, /function openSavedInviteRoom/);
-  assert.match(mainJs, /function removeSavedInviteRoom/);
+  assert.match(savedRoomControllerJs, /function openSavedInviteRoom/);
+  assert.match(savedRoomControllerJs, /function removeSavedInviteRoom/);
   assert.match(mainJs, /function rememberCurrentInviteRoomMetadata/);
   assert.match(mainJs, /function syncSavedInviteRoomMetadataFromLocalStores/);
   assert.match(mainJs, /let savedRoomMetadataSyncInFlight = false/);
@@ -461,7 +464,7 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(mainJs, /showRoomList\(\);/);
   assert.match(mainJs, /lastMessagePreview/);
   assert.match(mainJs, /messageCount/);
-  assert.match(mainJs, /removeRoomConfirm/);
+  assert.match(savedRoomControllerJs, /removeRoomConfirm/);
   assert.match(stylesCss, /\.saved-room-preview/);
   assert.match(stylesCss, /\.saved-room-state/);
   assert.match(stylesCss, /\.saved-room-primary-action/);
@@ -492,11 +495,12 @@ test("saved rooms can be listed and reopened", () => {
   assert.match(savedRoomStorageJs, /export function inviteRoomUpdatedAtValue/);
   assert.match(functionBody(savedRoomStorageJs, "inviteRoomUpdatedAtValue"), /hasOwnProperty\.call\(metadata \?\? \{\}, "updatedAt"\)/);
   assert.match(functionBody(savedRoomStorageJs, "inviteRoomUpdatedAtValue"), /Object\.keys\(metadata \?\? \{\}\)\.length > 0[\s\S]*Date\.now\(\)/);
-  assert.match(functionBody(mainJs, "rememberInviteRoom"), /updatedAt: inviteRoomUpdatedAtValue\(metadata, existing\)/);
-  assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundCount"\)/);
-  assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundMessageNumber"\)/);
-  assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundAction"\)/);
-  assert.match(functionBody(mainJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "manualRebuildFlow"\)/);
+  assert.match(mainJs, /createSavedRoomController/);
+  assert.match(functionBody(savedRoomControllerJs, "rememberInviteRoom"), /updatedAt: inviteRoomUpdatedAtValue\(metadata, existing\)/);
+  assert.match(functionBody(savedRoomControllerJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundCount"\)/);
+  assert.match(functionBody(savedRoomControllerJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundMessageNumber"\)/);
+  assert.match(functionBody(savedRoomControllerJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "retryableOutboundAction"\)/);
+  assert.match(functionBody(savedRoomControllerJs, "rememberInviteRoom"), /inviteRoomMetadataValue\(metadata, existing, "manualRebuildFlow"\)/);
   assert.match(functionBody(savedRoomStorageJs, "roomListStoragePayload"), /const manualRebuildMetadata = normalizeSavedRoomManualRebuildMetadata\(room, now\)/);
   assert.match(functionBody(savedRoomStorageJs, "readSavedInviteRooms"), /const normalizeAction = options\.normalizeRetryableAction \?\? \(\(value\) => String\(value \?\? ""\)\.trim\(\)\)/);
   assert.match(indexHtml, /id="back-to-room-list"/);
@@ -508,25 +512,28 @@ test("saved rooms can be listed and reopened", () => {
 test("saved room open carries current session status into metadata reconciliation", () => {
   assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /sessionStatus: status/);
   assert.match(
-    functionBody(mainJs, "loadProductionTwoProfileTranscript"),
+    functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"),
     /options\.sessionStatus \?\?[\s\S]*runtimeResumeResult\?\.session_status[\s\S]*latestTwoProfileSessionStatusForCurrentInput\(transcriptInput\)/,
   );
   assert.match(
-    functionBody(mainJs, "loadProductionTwoProfileTranscript"),
+    functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"),
     /reconcileCurrentInviteRoomMetadataFromTranscriptEntries\(entries,[\s\S]*sessionStatus/,
   );
-  assert.match(functionBody(mainJs, "openSavedInviteRoom"), /const openInput = productionTwoProfileInput\(\)/);
-  assert.match(functionBody(mainJs, "openSavedInviteRoom"), /return openInviteRoomFromToken\(openInput\)/);
+  assert.match(functionBody(savedRoomControllerJs, "openSavedInviteRoom"), /const openInput = productionTwoProfileInput\(\)/);
+  assert.match(functionBody(savedRoomControllerJs, "openSavedInviteRoom"), /return openInviteRoomFromToken\(openInput\)/);
   assert.match(savedRoomRefreshJs, /export async function refreshSavedInviteRoomMetadataForFingerprint/);
   assert.match(functionBody(savedRoomRefreshJs, "refreshSavedInviteRoomMetadataForFingerprint"), /input\.roomFingerprintForRoom\(room\)/);
   assert.match(functionBody(savedRoomRefreshJs, "refreshSavedInviteRoomMetadataForFingerprint"), /savedInviteRoomInput\(room\)/);
   assert.match(functionBody(savedRoomRefreshJs, "refreshSavedInviteRoomMetadataForFingerprint"), /rememberInviteRoom\(room\.code, room\.role,/);
   assert.match(functionBody(mainJs, "savedInviteRoomForRoomFingerprint"), /privateRouteRoomKey\(savedInviteRoomInput\(room\)\) === fingerprint/);
   assert.match(functionBody(mainJs, "refreshSavedInviteRoomMetadataForFingerprint"), /roomFingerprintForRoom: \(room\) => privateRouteRoomKey\(savedInviteRoomInput\(room\)\)/);
+  assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /savedInviteRoomActionRechecksAfterOpen\(action\)/);
+  assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /openSavedInviteRoom\(room\)/);
+  assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /savedInviteRoomActionCanUseRetryableOutbound\(action, actionOrigin\)/);
 });
 
 test("saved room list shows receive runtime and restart intent", () => {
-  assert.match(mainJs, /function savedInviteRoomInput/);
+  assert.match(savedRoomControllerJs, /function savedInviteRoomInput/);
   assert.match(mainJs, /function savedInviteRoomReceiveState/);
   assert.match(mainJs, /function productionTwoProfileReceiveMatchesInput/);
   assert.match(mainJs, /function productionTwoProfileReceiveActiveInOtherRoom/);
@@ -538,8 +545,8 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateListening/);
   assert.match(functionBody(mainJs, "savedInviteRoomState"), /roomStateReceivePaused/);
   assert.match(mainJs, /function savedInviteRoomWaitingForPeerCode/);
-  assert.match(functionBody(mainJs, "savedInviteRoomInput"), /connectionCode: code/);
-  assert.match(functionBody(mainJs, "savedInviteRoomInput"), /inviteRole: role/);
+  assert.match(functionBody(savedRoomControllerJs, "savedInviteRoomInput"), /connectionCode: code/);
+  assert.match(functionBody(savedRoomControllerJs, "savedInviteRoomInput"), /inviteRole: role/);
   assert.match(functionBody(mainJs, "savedInviteRoomWaitingForPeerCode"), /routeMapValueForRoom\(localPrivateRouteCodesByRoom, input/);
   assert.match(functionBody(mainJs, "savedInviteRoomWaitingForPeerCode"), /routeMapValueForRoom\(activeLocalPrivateRouteCodesByRoom, input\)/);
   assert.match(functionBody(mainJs, "savedInviteRoomWaitingForPeerCode"), /routeMapValueForRoom\(peerPrivateRouteDraftsByRoom, input/);
@@ -566,13 +573,13 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "savedRoomActionLabelKey"), /savedRoomActionUpdateCodeAndRetry/);
   assert.match(functionBody(mainJs, "savedRoomActionLabelKey"), /savedRoomActionWaitReceivingStop/);
   assert.doesNotMatch(functionBody(mainJs, "savedRoomActionLabelKey"), /normalized === "prepare-private-route" \|\| normalized === "real-onion-network-settings"/);
-  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "enable-private-delivery"/);
-  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "prepare-private-route"/);
-  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /action === "refresh-and-retry"/);
-  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /showSavedInviteRoomReceiveStopPending\(input\)/);
-  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /showSavedInviteRoomActionNowReady\(input\)/);
-  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /showSavedInviteRoomExpiredRealOnionAction\(input\)/);
-  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /runSavedInviteRoomRetryableOutboundAction\(room, input, action, actionOrigin\)/);
+  assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /action === "enable-private-delivery"/);
+  assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /action === "prepare-private-route"/);
+  assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /action === "refresh-and-retry"/);
+  assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /showSavedInviteRoomReceiveStopPending\(inputValue\)/);
+  assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /showSavedInviteRoomActionNowReady\(inputValue\)/);
+  assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /showSavedInviteRoomExpiredRealOnionAction\(inputValue\)/);
+  assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /runSavedInviteRoomRetryableOutboundAction\(room, inputValue, action, actionOrigin\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomRetryableOutboundAction"), /runTwoProfileOutboundPrimaryAction\(pending, \{ action \}\)/);
   assert.match(mainJs, /function normalizedExpectedOutboundPrimaryAction/);
   assert.match(functionBody(mainJs, "normalizedExpectedOutboundPrimaryAction"), /normalized === "verify-safety"[\s\S]*return "verify"/);
@@ -806,7 +813,7 @@ test("receive restart intent owns the room primary action", () => {
   assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /receiveState === "paused"/);
   assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /savedRoomActionLabelKey\("start-receiving"\)/);
   assert.match(functionBody(mainJs, "savedRoomActionLabelKey"), /savedRoomActionStartReceiving/);
-  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /rememberReceiveIntentForRoom\(input, true\)/);
+  assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /rememberReceiveIntentForRoom\(inputValue, true\)/);
   const actionBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
   assert.match(actionBody, /intent\.action === "start-receiving"/);
   assert.match(actionBody, /await startProductionTwoProfileOnionReceive\(\)/);
@@ -838,8 +845,8 @@ test("room list controls are wired to room flow instead of settings", () => {
   assert.match(pairwiseGuidanceBody, /fields\.productionProfileNextAction/);
   assert.match(pairwiseGuidanceBody, /setProductionFollowupActions\(true, next\)/);
   assert.match(functionBody(mainJs, "renderSavedInviteRooms"), /runSavedInviteRoomListAction\(view\.room \?\? room, view\.nextAction\.action, \{ actionOrigin: view\.nextAction\.origin \}\)/);
-  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /await openSavedInviteRoom\(room\)/);
-  assert.match(functionBody(mainJs, "runSavedInviteRoomListAction"), /focusPrivateRouteNextAction\(input\)/);
+  assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /await openSavedInviteRoom\(room\)/);
+  assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /focusPrivateRouteNextAction\(inputValue\)/);
   assert.match(functionBody(mainJs, "runSavedInviteRoomRetryableOutboundAction"), /showRetryableTwoProfileOutboundNotice\(pending\)/);
   assert.match(mainJs, /fields\.roomListInviteCode\.addEventListener\("input", renderReceivedInviteCodeActionState\)/);
   assert.match(
@@ -865,7 +872,7 @@ test("room list controls are wired to room flow instead of settings", () => {
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /const safetyConfirmed = twoProfileSafetyConfirmedForInput\(twoProfileRoomIdentityInput\(currentInput\)\)/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /: focusSafetyConfirmation/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /typeof postCheckFocus === "function"[\s\S]*postCheckFocus\(\)/);
-  assert.match(functionBody(mainJs, "removeSavedInviteRoom"), /applyPairwiseInviteGuidance\("delete"/);
+  assert.match(functionBody(savedRoomControllerJs, "removeSavedInviteRoom"), /applyPairwiseInviteGuidance\("delete"/);
 
   assert.match(functionBody(mainJs, "createRoomFromRoomListInviteCode"), /fields\.roomListInviteCode/);
   assert.match(
@@ -937,8 +944,8 @@ test("room context switches clear stale conversation selection", () => {
   assert.match(functionBody(mainJs, "resetProductionTwoProfileTranscript"), /selectedTwoProfileConversationKey = null/);
   assert.match(functionBody(mainJs, "resetProductionTwoProfileTranscript"), /productionTwoProfileConversationEntries\.clear\(\)/);
   assert.match(functionBody(mainJs, "createNewInviteRoomFromList"), /clearCurrentInviteRoomInput\(\)/);
-  assert.match(functionBody(mainJs, "openSavedInviteRoom"), /clearCurrentInviteRoomInput\(\)/);
-  assert.doesNotMatch(functionBody(mainJs, "removeSavedInviteRoom"), /clearCurrentInviteRoomInput\(\);\s*resetProductionTwoProfileTranscript\(\)/);
+  assert.match(functionBody(savedRoomControllerJs, "openSavedInviteRoom"), /clearCurrentInviteRoomInput\(\)/);
+  assert.doesNotMatch(functionBody(savedRoomControllerJs, "removeSavedInviteRoom"), /clearCurrentInviteRoomInput\(\);\s*resetProductionTwoProfileTranscript\(\)/);
 });
 
 test("created invite code stays visible after the room becomes ready", () => {
@@ -965,29 +972,29 @@ test("reopened inviter rooms do not show the invite code share panel", () => {
   assert.match(mainJs, /let currentInviteCodeShareVisible = false/);
   assert.match(functionBody(mainJs, "renderCurrentInviteCodeDisplay"), /role === "inviter" && currentInviteCodeShareVisible/);
   assert.match(functionBody(mainJs, "createInviteCode"), /currentInviteCodeShareVisible = true/);
-  assert.match(functionBody(mainJs, "openSavedInviteRoom"), /currentInviteCodeShareVisible = false/);
+  assert.match(functionBody(savedRoomControllerJs, "openSavedInviteRoom"), /setCurrentInviteCodeShareVisible\?\.\(false\)/);
   assert.match(functionBody(mainJs, "renderCurrentInviteCodeDisplay"), /inviteQrController\.isInviteQrVisible\(\)/);
-  assert.match(functionBody(mainJs, "openSavedInviteRoom"), /const openInput = productionTwoProfileInput\(\)/);
-  assert.match(functionBody(mainJs, "openSavedInviteRoom"), /twoProfileTranscriptInputStillCurrent\(openInput\)/);
-  assert.match(functionBody(mainJs, "openSavedInviteRoom"), /return openInviteRoomFromToken\(openInput\)/);
+  assert.match(functionBody(savedRoomControllerJs, "openSavedInviteRoom"), /const openInput = productionTwoProfileInput\(\)/);
+  assert.match(functionBody(savedRoomControllerJs, "openSavedInviteRoom"), /twoProfileTranscriptInputStillCurrent\(openInput\)/);
+  assert.match(functionBody(savedRoomControllerJs, "openSavedInviteRoom"), /return openInviteRoomFromToken\(openInput\)/);
   assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /const transcriptLoaded = await loadProductionTwoProfileTranscript/);
   assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /!transcriptLoaded \|\| !twoProfileTranscriptInputStillCurrent\(input\)/);
 });
 
 test("saved room removal is list-only and transcript switching rebuilds entries", () => {
-  assert.match(functionBody(mainJs, "removeSavedInviteRoom"), /forgetInviteRoom\(code\)/);
-  assert.match(functionBody(mainJs, "removeSavedInviteRoom"), /stopProductionTwoProfileOnionReceiveForInput\(savedInviteRoomInput\(room\), \{ silent: true \}\)/);
-  assert.match(functionBody(mainJs, "removeSavedInviteRoom"), /removeRoomConfirm/);
-  assert.match(mainJs, /removeRoomNotice/);
-  assert.doesNotMatch(functionBody(mainJs, "removeSavedInviteRoom"), /invoke\(/);
-  assert.match(functionBody(mainJs, "forgetInviteRoom"), /rememberReceiveIntentForRoom\(roomInput, false\)/);
-  assert.match(functionBody(mainJs, "forgetInviteRoom"), /clearPrivateRouteFollowupForRoom\(roomInput\)/);
-  assert.match(functionBody(mainJs, "forgetInviteRoom"), /clearChatDeliveryNoticeForInput\(roomInput\)/);
-  assert.match(functionBody(mainJs, "forgetInviteRoom"), /clearPrivateRouteRuntimeStateForInput\(roomInput\)/);
-  assert.match(functionBody(mainJs, "forgetInviteRoom"), /persistPrivateRouteRuntimeState\(\)/);
-  assert.match(functionBody(mainJs, "forgetInviteRoom"), /connectionCode: trimmedCode/);
-  assert.match(functionBody(mainJs, "forgetInviteRoom"), /twoProfileSafetyStorageKeys\(roomInput\)/);
-  assert.match(functionBody(mainJs, "forgetInviteRoom"), /localStoreRemove\(key\)/);
+  assert.match(functionBody(savedRoomControllerJs, "removeSavedInviteRoom"), /forgetInviteRoom\(code\)/);
+  assert.match(functionBody(savedRoomControllerJs, "removeSavedInviteRoom"), /stopProductionTwoProfileOnionReceiveForInput\(savedInviteRoomInput\(room\), \{ silent: true \}\)/);
+  assert.match(functionBody(savedRoomControllerJs, "removeSavedInviteRoom"), /removeRoomConfirm/);
+  assert.match(savedRoomControllerJs, /removeRoomNotice/);
+  assert.doesNotMatch(functionBody(savedRoomControllerJs, "removeSavedInviteRoom"), /invoke\(/);
+  assert.match(functionBody(savedRoomControllerJs, "forgetInviteRoom"), /rememberReceiveIntentForRoom\(roomInput, false\)/);
+  assert.match(functionBody(savedRoomControllerJs, "forgetInviteRoom"), /clearPrivateRouteFollowupForRoom\(roomInput\)/);
+  assert.match(functionBody(savedRoomControllerJs, "forgetInviteRoom"), /clearChatDeliveryNoticeForInput\(roomInput\)/);
+  assert.match(functionBody(savedRoomControllerJs, "forgetInviteRoom"), /clearPrivateRouteRuntimeStateForInput\(roomInput\)/);
+  assert.match(functionBody(savedRoomControllerJs, "forgetInviteRoom"), /persistPrivateRouteRuntimeState\(\)/);
+  assert.match(functionBody(savedRoomControllerJs, "forgetInviteRoom"), /connectionCode: trimmedCode/);
+  assert.match(functionBody(savedRoomControllerJs, "forgetInviteRoom"), /twoProfileSafetyStorageKeys\(roomInput\)/);
+  assert.match(functionBody(savedRoomControllerJs, "forgetInviteRoom"), /localStoreRemove\(key\)/);
   const routeRuntimeClearBody = functionBody(mainJs, "clearPrivateRouteRuntimeStateForInput");
   assert.match(routeRuntimeClearBody, /for \(const roomKey of privateRouteRoomKeys\(input\)\)/);
   assert.match(routeRuntimeClearBody, /clearProductionPayloadSlotsForRoomFingerprint\(roomKey\)/);
@@ -1031,20 +1038,20 @@ test("room transcript refresh is scoped to the current room", () => {
     functionBody(mainJs, "startInviteRoomPresenceRefresh"),
     /catch\(\(\) => \{[\s\S]*inviteRoomPresenceRefreshFingerprint === fingerprint[\s\S]*stopInviteRoomPresenceRefresh\(\)/,
   );
-  assert.match(mainJs, /let inviteRoomTranscriptRefreshInFlight = false/);
-  assert.match(functionBody(mainJs, "startInviteRoomTranscriptRefresh"), /inviteRoomTranscriptRefreshInFlight/);
-  assert.match(functionBody(mainJs, "startInviteRoomTranscriptRefresh"), /finally/);
+  assert.match(transcriptControllerJs, /let inviteRoomTranscriptRefreshInFlight = false/);
+  assert.match(functionBody(transcriptControllerJs, "startInviteRoomTranscriptRefresh"), /inviteRoomTranscriptRefreshInFlight/);
+  assert.match(functionBody(transcriptControllerJs, "startInviteRoomTranscriptRefresh"), /finally/);
   assert.match(
-    functionBody(mainJs, "startInviteRoomTranscriptRefresh"),
+    functionBody(transcriptControllerJs, "startInviteRoomTranscriptRefresh"),
     /catch\(\(\) => \{[\s\S]*inviteRoomTranscriptRefreshFingerprint === fingerprint[\s\S]*stopInviteRoomTranscriptRefresh\(\)/,
   );
   assert.match(mainJs, /function twoProfileTranscriptInputStillCurrent/);
-  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /transcriptInput/);
-  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /twoProfileTranscriptInputStillCurrent\(transcriptInput\)/);
-  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /return true;/);
-  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /catch \(error\)[\s\S]*return false;/);
-  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /invokeInviteRoomSessionStatus/);
-  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /reconcileCurrentInviteRoomMetadataFromTranscriptEntries\(entries,[\s\S]*sessionStatus/);
+  assert.match(functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"), /transcriptInput/);
+  assert.match(functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"), /twoProfileTranscriptInputStillCurrent\(transcriptInput\)/);
+  assert.match(functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"), /return true;/);
+  assert.match(functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"), /catch \(error\)[\s\S]*return false;/);
+  assert.match(functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"), /invokeInviteRoomSessionStatus/);
+  assert.match(functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"), /reconcileCurrentInviteRoomMetadataFromTranscriptEntries\(entries,[\s\S]*sessionStatus/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /const sessionCheckInput = twoProfileRoomIdentityInput\(input\)/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /twoProfileTranscriptInputStillCurrent\(sessionCheckInput\)/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /const transcriptLoaded = await loadProductionTwoProfileTranscript/);
@@ -1084,9 +1091,9 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(functionBody(mainJs, "productionTwoProfileInput"), /inviteRole:/);
   assert.match(functionBody(mainJs, "twoProfileSessionStatusFingerprint"), /input\.connectionCode/);
   assert.match(functionBody(mainJs, "twoProfileSessionStatusFingerprint"), /input\.inviteRole/);
-  assert.match(functionBody(mainJs, "savedInviteRoomInput"), /code = String\(room\?\.code \?\? ""\)\.trim\(\)/);
-  assert.match(functionBody(mainJs, "savedInviteRoomInput"), /role = room\?\.role === "inviter" \? "inviter" : room\?\.role === "joiner" \? "joiner" : ""/);
-  assert.match(functionBody(mainJs, "savedInviteRoomInput"), /return \{ profileA: localProfile, profileB: peerProfile, passphrase: code, connectionCode: code, inviteRole: role \}/);
+  assert.match(functionBody(savedRoomControllerJs, "savedInviteRoomInput"), /code = String\(room\?\.code \?\? ""\)\.trim\(\)/);
+  assert.match(functionBody(savedRoomControllerJs, "savedInviteRoomInput"), /role = room\?\.role === "inviter" \? "inviter" : room\?\.role === "joiner" \? "joiner" : ""/);
+  assert.match(functionBody(savedRoomControllerJs, "savedInviteRoomInput"), /return \{ profileA: localProfile, profileB: peerProfile, passphrase: code, connectionCode: code, inviteRole: role \}/);
   assert.match(functionBody(mainJs, "savedInviteRoomForRoomFingerprint"), /privateRouteRoomKey\(savedInviteRoomInput\(room\)\)/);
   assert.match(functionBody(mainJs, "currentInviteRoomIdentityForInput"), /input\?\.profileA/);
   assert.match(functionBody(mainJs, "currentInviteRoomIdentityForInput"), /return \{ connectionCode: "", inviteRole: "" \}/);
@@ -1161,7 +1168,7 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(functionBody(mainJs, "renderProductionTwoProfileMemory"), /latestTwoProfileSuccessForInput\(input\)/);
   assert.match(functionBody(mainJs, "sendProductionTwoProfileEndpointUpdate"), /latestTwoProfileSuccessForInput\(input\)/);
   assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /latestRealOnionFieldTestResult\(roomInput\)/);
-  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /latestTwoProfileSessionStatusForCurrentInput\(transcriptInput\)/);
+  assert.match(functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"), /latestTwoProfileSessionStatusForCurrentInput\(transcriptInput\)/);
 });
 
 test("busy actions only clear the action they started", () => {
@@ -1191,7 +1198,7 @@ test("busy actions only clear the action they started", () => {
   assert.match(functionBody(mainJs, "clearInviteRoomOpenBusy"), /clearProductionBusyAction\("invite-room-open"\)/);
   assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /setInviteRoomOpenBusy\(openInput\)/);
   assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /clearInviteRoomOpenBusy\(openInput\)/);
-  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /clearProductionBusyAction\("two-profile-transcript-load"\)/);
+  assert.match(functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"), /clearProductionBusyAction\("two-profile-transcript-load"\)/);
   assert.match(
     functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"),
     /clearProductionBusyAction\("two-profile-real-onion-roundtrip"\)/,
@@ -1700,14 +1707,14 @@ test("runtime resume rollback block routes users to local data recovery", () => 
   assert.match(mainJs, /function localRecoveryDiagnosticsBoundaryText/);
   assert.match(functionBody(mainJs, "localRecoveryDiagnosticsBoundaryText"), /fields\.productionProfileStorage/);
   assert.match(functionBody(mainJs, "localRecoveryDiagnosticsBoundaryText"), /fields\.productionDataLifecycle/);
-  assert.match(functionBody(mainJs, "buildFieldTestReport"), /local_recovery_action=/);
-  assert.match(functionBody(mainJs, "buildFieldTestReport"), /rollback_suspicion=/);
-  assert.match(functionBody(mainJs, "buildFieldTestReport"), /resume_blocked=/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "buildFieldTestReport"), /local_recovery_action=/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "buildFieldTestReport"), /rollback_suspicion=/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "buildFieldTestReport"), /resume_blocked=/);
 
   const profileUnlockResumeBody = functionBody(mainJs, "refreshTwoProfileSessionAfterProfileUnlock");
   assert.match(profileUnlockResumeBody, /applyRuntimeResumeRollbackRecovery\(resume, \{ source: "profile-unlock-auto-resume" \}\)/);
 
-  const loadTranscriptBody = functionBody(mainJs, "loadProductionTwoProfileTranscript");
+  const loadTranscriptBody = functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript");
   assert.match(loadTranscriptBody, /applyRuntimeResumeRollbackRecovery\(runtimeResumeResult, \{ source: "transcript-load" \}\)/);
 });
 
@@ -1992,7 +1999,7 @@ test("manual invite room rebuild flow stays local-only across setup steps", () =
   assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /renderManualInviteRoomRebuildFlow\("room-opening"\)/);
   assert.match(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /renderManualInviteRoomRebuildFlow\("room-ready"\)/);
   assert.match(functionBody(mainJs, "checkProductionTwoProfileSessionStatus"), /renderManualInviteRoomRebuildFlow\("session-check"\)/);
-  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /renderManualInviteRoomRebuildFlow\(ready \? "conversation-loaded" : "session-check"\)/);
+  assert.match(functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"), /renderManualInviteRoomRebuildFlow\(ready \? "conversation-loaded" : "session-check"\)/);
 });
 
 test("rebuild first message stops at explicit manual delivery gate", () => {
@@ -2059,11 +2066,11 @@ test("rebuild delivery retry and receive actions stay room-scoped", () => {
   const retryBody = functionBody(mainJs, "runSavedInviteRoomRetryableOutboundAction");
   assert.match(retryBody, /renderManualRebuildDeliveryScopeGate\(input, action, \{ messageNumber: pending\.messageNumber \}\)/);
 
-  const savedRoomActionBody = functionBody(mainJs, "runSavedInviteRoomListAction");
-  assert.match(savedRoomActionBody, /action === "paste-peer-code"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, action\)/);
-  assert.match(savedRoomActionBody, /action === "prepare-private-route"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, action\)/);
-  assert.match(savedRoomActionBody, /action === "refresh-endpoint"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, action\)/);
-  assert.match(savedRoomActionBody, /action === "start-receiving"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, action\)/);
+  const savedRoomActionBody = functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction");
+  assert.match(savedRoomActionBody, /action === "paste-peer-code"[\s\S]*renderManualRebuildDeliveryScopeGate\(inputValue, action\)/);
+  assert.match(savedRoomActionBody, /action === "prepare-private-route"[\s\S]*renderManualRebuildDeliveryScopeGate\(inputValue, action\)/);
+  assert.match(savedRoomActionBody, /action === "refresh-endpoint"[\s\S]*renderManualRebuildDeliveryScopeGate\(inputValue, action\)/);
+  assert.match(savedRoomActionBody, /action === "start-receiving"[\s\S]*renderManualRebuildDeliveryScopeGate\(inputValue, action\)/);
 
   const recoveryFocusBody = functionBody(mainJs, "focusManualRebuildRecoveryAction");
   assert.match(recoveryFocusBody, /action === "start-receiving"[\s\S]*startProductionTwoProfileOnionReceive/);
@@ -2097,7 +2104,7 @@ test("manual rebuild recovery resumes from saved room metadata", () => {
 
   assert.match(functionBody(savedRoomStorageJs, "readSavedInviteRooms"), /normalizeSavedRoomManualRebuildMetadata\(room, now\)/);
   assert.match(functionBody(savedRoomStorageJs, "roomListStoragePayload"), /normalizeSavedRoomManualRebuildMetadata\(room, now\)/);
-  assert.match(functionBody(mainJs, "rememberInviteRoom"), /normalizeSavedRoomManualRebuildMetadata/);
+  assert.match(functionBody(savedRoomControllerJs, "rememberInviteRoom"), /normalizeSavedRoomManualRebuildMetadata/);
 
   const rememberBody = functionBody(mainJs, "rememberManualRebuildRecoveryForInput");
   assert.match(rememberBody, /manualRebuildFlow: true/);
@@ -2219,8 +2226,8 @@ test("two-profile onion setup actions ignore stale room results", () => {
   assert.match(refreshBody, /setTwoProfilePeerEndpointRefreshBusy\(input\)/);
   assert.match(refreshBody, /clearTwoProfilePeerEndpointRefreshBusy\(input\)/);
 
-  const loadTranscriptBody = functionBody(mainJs, "loadProductionTwoProfileTranscript");
-  assert.match(loadTranscriptBody, /const input = options\.input \?\? productionTwoProfileInput\(\)/);
+  const loadTranscriptBody = functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript");
+  assert.match(loadTranscriptBody, /const currentInput = options\.input \?\? productionTwoProfileInput\(\)/);
   assert.match(loadTranscriptBody, /if \(!twoProfileTranscriptInputStillCurrent\(transcriptInput\)\) \{\s*return false;\s*\}/);
   assert.match(loadTranscriptBody, /invokeTwoProfileRuntimeResumeStatus/);
   assert.match(loadTranscriptBody, /runtimeResumeResult\?\.session_status/);
@@ -2321,7 +2328,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   ]) {
     assert.match(indexHtml, new RegExp(`id="${id}"`));
   }
-  assert.match(mainJs, /function buildFieldTestReport/);
+  assert.match(diagnosticsReportControllerJs, /function buildFieldTestReport/);
   assert.match(mainJs, /function parseFieldTestReport/);
   assert.match(mainJs, /function fieldTestReportSummary/);
   assert.match(mainJs, /function fieldTestReportTriageState/);
@@ -2344,11 +2351,11 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(i18nJs, /fieldTestReport/);
   assert.match(i18nJs, /현장 테스트 리포트/);
 
-  const reportBody = functionBody(mainJs, "buildFieldTestReport");
+  const reportBody = functionBody(diagnosticsReportControllerJs, "buildFieldTestReport");
   const summaryBody = functionBody(privateDeliveryStateJs, "fieldTestReportSummary");
   const compareBody = functionBody(privateDeliveryStateJs, "fieldTestReportComparison");
   const checklistBody = functionBody(mainJs, "fieldTestChecklistItems");
-  const rebuildDiagnosticsBody = functionBody(mainJs, "manualRebuildDeliveryDiagnostics");
+  const rebuildDiagnosticsBody = functionBody(diagnosticsReportControllerJs, "manualRebuildDeliveryDiagnostics");
   const publicDiagnosticsBody = functionBody(privateDeliveryStateJs, "publicBetaDiagnosticsReport");
   assert.match(functionBody(mainJs, "fieldTestReportSummary"), /privateDeliveryState\.fieldTestReportSummary\(report\)/);
   assert.match(functionBody(mainJs, "fieldTestReportComparison"), /privateDeliveryState\.fieldTestReportComparison\(localReport, peerReport\)/);
@@ -2401,7 +2408,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /app_version=/);
   assert.match(reportBody, /build_channel=/);
   assert.match(reportBody, /build_commit=/);
-  assert.match(reportBody, /productionInviteIdentityBoundaryView\(input\)/);
+  assert.match(reportBody, /productionInviteIdentityBoundaryView\(roomInput\)/);
   assert.match(reportBody, /accountless_invite_boundary=/);
   assert.match(reportBody, /receive_state=/);
   assert.match(reportBody, /retryable_outbound_present=/);
@@ -2409,7 +2416,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /outbound_recovery_action=/);
   assert.match(reportBody, /outbound_recovery_key=/);
   assert.match(reportBody, /outbound_recovery_notice_key=/);
-  assert.match(reportBody, /currentSavedInviteRoomView\(input\)/);
+  assert.match(reportBody, /currentSavedInviteRoomView\(roomInput\)/);
   assert.match(reportBody, /room_list_state_key=/);
   assert.match(reportBody, /room_list_state_label=/);
   assert.match(reportBody, /room_list_next_action=/);
@@ -2429,12 +2436,12 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /room_runtime_owner_matches_receive_profile=/);
   assert.match(reportBody, /deliveryNoticeCurrentRoom/);
   assert.match(reportBody, /delivery_notice_current_room=/);
-  assert.match(reportBody, /deliveryNoticeCurrentRoom \? latestChatDeliveryNoticeKey : "none"/);
-  assert.match(reportBody, /deliveryNoticeCurrentRoom \? latestChatDeliveryNoticeTone : "neutral"/);
+  assert.match(reportBody, /deliveryNoticeCurrentRoom \? input\.latestChatDeliveryNoticeKey\(\) : "none"/);
+  assert.match(reportBody, /deliveryNoticeCurrentRoom \? input\.latestChatDeliveryNoticeTone\(\) : "neutral"/);
   assert.match(reportBody, /send_runtime_owner_profile_bound=/);
   assert.match(reportBody, /send_runtime_owner_matches_send_profile=/);
   assert.match(reportBody, /real_onion_network_io=/);
-  assert.match(reportBody, /manualRebuildDeliveryDiagnostics\(input, boundaryText\)/);
+  assert.match(reportBody, /manualRebuildDeliveryDiagnostics\([\s\S]*roomInput,[\s\S]*boundaryText,/);
   assert.match(reportBody, /manual_rebuild_flow=/);
   assert.match(reportBody, /rebuild_room_scoped=/);
   assert.match(reportBody, /rebuild_delivery_scope=/);
@@ -2447,7 +2454,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(reportBody, /rebuild_delivery_live_network_attempt=/);
   assert.match(reportBody, /rebuild_external_peer_evidence_claim=false/);
   assert.match(reportBody, /localRehearsalReportLines\(reportLines\.join\("\\n"\)\)/);
-  assert.match(rebuildDiagnosticsBody, /manualInviteRoomRebuildFlowActive\(\)/);
+  assert.match(rebuildDiagnosticsBody, /manualRebuildFlowActive\(\)/);
   assert.match(rebuildDiagnosticsBody, /fieldTestBoundaryValue\(boundaryText, "delivery_scope", "none"\)/);
   assert.match(rebuildDiagnosticsBody, /fieldTestBoundaryValue\(boundaryText, "network_io", "false"\)/);
   assert.match(rebuildDiagnosticsBody, /fieldTestBoundaryValue\(boundaryText, "live_network_attempt", "false"\)/);
@@ -2468,7 +2475,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(publicDiagnosticsBody, /windows_redacted_diagnostics_behavior_review_required=true/);
   assert.match(publicDiagnosticsBody, /windows_explicit_user_action_review_required=true/);
   assert.match(publicDiagnosticsBody, /windows_release_blocker=local-build-smoke-and-release-boundary-review/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /windows_public_artifact=false/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /windows_public_artifact=false/);
   assert.match(functionBody(mainJs, "renderPrototypeStatus"), /desktop_platform_readiness_boundary/);
   assert.match(functionBody(mainJs, "renderPrototypeStatus"), /desktopPlatformBoundaryValue/);
   assert.match(i18nJs, /desktopPlatformBoundaryValue/);
@@ -2534,7 +2541,7 @@ test("single-machine local rehearsal is scoped apart from external field evidenc
 
   assert.match(functionBody(mainJs, "renderFieldTestReportSummary"), /renderLocalRehearsal\(report\)/);
   assert.match(functionBody(mainJs, "renderFieldTestReportComparison"), /renderLocalRehearsal/);
-  assert.match(functionBody(mainJs, "buildFieldTestReport"), /localRehearsalReportLines\(reportLines\.join\("\\n"\)\)/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "buildFieldTestReport"), /localRehearsalReportLines\(reportLines\.join\("\\n"\)\)/);
 });
 
 test("send diagnostics expose runtime owner match without raw profile names", () => {
@@ -2547,8 +2554,8 @@ test("send diagnostics expose runtime owner match without raw profile names", ()
   assert.match(mainJs, /function privateRouteRecoveryNoticeActive/);
   assert.match(functionBody(mainJs, "privateRouteRecoveryNoticeActive"), /privateRouteWaitingPeerCode/);
   assert.match(functionBody(mainJs, "applyProductionActionState"), /routeRecoveryReady/);
-  assert.match(functionBody(mainJs, "buildFieldTestReport"), /sendAttemptBoundaryText/);
-  assert.match(functionBody(mainJs, "buildFieldTestReport"), /send_runtime_owner_matches_send_profile=/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "buildFieldTestReport"), /sendAttemptBoundaryText/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "buildFieldTestReport"), /send_runtime_owner_matches_send_profile=/);
   assert.match(i18nJs, /sendRecoveryRuntimeMismatch/);
   assert.match(i18nJs, /sendRuntimeMismatch/);
 });
@@ -2946,7 +2953,7 @@ test("empty loading and error states keep UI error details redacted", () => {
     /No private payloads, local paths, keys, passphrases, endpoints, or message bodies are shown/,
   );
   assert.match(functionBody(mainJs, "twoProfileRecoveryMessage"), /error_class=\$\{redactedUiErrorClass\(error\)\}/);
-  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /redactedUiErrorMessage\("conversation-load", error\)/);
+  assert.match(functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"), /redactedUiErrorMessage\("conversation-load", error\)/);
   assert.match(functionBody(mainJs, "exportProductionMessageEnvelope"), /redactedUiErrorMessage\("message-export", error\)/);
   assert.match(functionBody(mainJs, "importProductionMessageEnvelope"), /redactedUiErrorMessage\("message-import", error\)/);
   assert.match(functionBody(mainJs, "exportProductionReceivedMessage"), /redactedUiErrorMessage\("received-export", error\)/);
@@ -3114,61 +3121,61 @@ test("public diagnostics summary includes desktop completion without production 
     /sensitive_communication_allowed=\$\{desktopCompletion\.sensitiveCommunicationAllowed === true\}/,
   );
   assert.match(mainJs, /function desktopFirstCompletionStatus\(report\)/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public diagnostics generated failure_class=/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /recovery_next_action=\$\{recoveryNextAction\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /parseFieldTestReport\(payload\)/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.failure_class/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.diagnostics_copy_next_action/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.desktop_acceptance_next_action/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.allowed_public_intake_fields/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.forbidden_public_intake_fields/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.public_intake_policy_version/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.public_intake_policy_alignment/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.excluded_fields/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /payload_next_action_match=\$\{payloadNextActionMatchesSummary\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /raw_state_excluded=\$\{rawStateExcluded\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public_intake_policy_fields_aligned=\$\{publicIntakePolicyFieldsAligned\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public_intake_policy_version=\$\{publicIntakePolicyVersion\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public_intake_policy_alignment=\$\{publicIntakePolicyAlignment\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /allowed_public_intake_fields=\$\{allowedPublicIntakeFields\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /forbidden_public_intake_fields=\$\{forbiddenPublicIntakeFields\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /local_manual_e2ee_runtime_boundary=\$\{localManualE2eeBoundary\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_local_manual_e2ee_ready=\$\{supportedLocalManualE2eeReady\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_local_manual_e2ee_scope=\$\{supportedLocalManualE2eeScope\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_local_key_lifecycle_ready=\$\{supportedLocalKeyLifecycleReady\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_local_key_lifecycle_scope=\$\{supportedLocalKeyLifecycleScope\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_rollback_detection_ready=\$\{supportedRollbackDetectionReady\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_rollback_detection_scope=\$\{supportedRollbackDetectionScope\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_local_deletion_scope_ready=\$\{supportedLocalDeletionScopeReady\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_local_deletion_scope=\$\{supportedLocalDeletionScope\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /production_key_management_ready=\$\{productionKeyManagementReady\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /rollback_prevention_claimed=\$\{rollbackPreventionClaimed\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /secure_deletion_claim_allowed=\$\{secureDeletionClaimAllowed\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /default_transport_path=\$\{defaultTransportPath\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_default_transport_ready=\$\{supportedDefaultTransportReady\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_default_transport_scope=\$\{supportedDefaultTransportScope\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /default_transport_network_io=\$\{defaultTransportNetworkIo\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /production_transport_ready=\$\{productionTransportReady\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /reliable_external_delivery_claim_allowed=\$\{reliableExternalDeliveryClaimAllowed\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_owner_observed_usability_rehearsal_ready=\$\{supportedOwnerObservedUsabilityRehearsalReady\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_usability_recovery_scope=\$\{supportedUsabilityRecoveryScope\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /critical_desktop_task_script_ready=\$\{criticalDesktopTaskScriptReady\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /recovery_vocabulary_aligned=\$\{recoveryVocabularyAligned\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /usability_study_completed=\$\{usabilityStudyCompleted\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /production_wording_ready=\$\{productionWordingReady\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_onion_path=explicit-user-triggered-fail-closed/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_transport_mode=\$\{highRiskTransportMode\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_transport_not_ready_reason=\$\{highRiskTransportNotReadyReason\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /public diagnostics generated failure_class=/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /recovery_next_action=\$\{recoveryNextAction\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /parseFieldTestReport\(payload\)/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.failure_class/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.diagnostics_copy_next_action/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.desktop_acceptance_next_action/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.allowed_public_intake_fields/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.forbidden_public_intake_fields/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.public_intake_policy_version/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.public_intake_policy_alignment/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.excluded_fields/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /payload_next_action_match=\$\{payloadNextActionMatchesSummary\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /raw_state_excluded=\$\{rawStateExcluded\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /public_intake_policy_fields_aligned=\$\{publicIntakePolicyFieldsAligned\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /public_intake_policy_version=\$\{publicIntakePolicyVersion\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /public_intake_policy_alignment=\$\{publicIntakePolicyAlignment\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /allowed_public_intake_fields=\$\{allowedPublicIntakeFields\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /forbidden_public_intake_fields=\$\{forbiddenPublicIntakeFields\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /local_manual_e2ee_runtime_boundary=\$\{localManualE2eeBoundary\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /supported_local_manual_e2ee_ready=\$\{supportedLocalManualE2eeReady\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /supported_local_manual_e2ee_scope=\$\{supportedLocalManualE2eeScope\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /supported_local_key_lifecycle_ready=\$\{supportedLocalKeyLifecycleReady\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /supported_local_key_lifecycle_scope=\$\{supportedLocalKeyLifecycleScope\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /supported_rollback_detection_ready=\$\{supportedRollbackDetectionReady\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /supported_rollback_detection_scope=\$\{supportedRollbackDetectionScope\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /supported_local_deletion_scope_ready=\$\{supportedLocalDeletionScopeReady\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /supported_local_deletion_scope=\$\{supportedLocalDeletionScope\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /production_key_management_ready=\$\{productionKeyManagementReady\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /rollback_prevention_claimed=\$\{rollbackPreventionClaimed\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /secure_deletion_claim_allowed=\$\{secureDeletionClaimAllowed\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /default_transport_path=\$\{defaultTransportPath\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /supported_default_transport_ready=\$\{supportedDefaultTransportReady\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /supported_default_transport_scope=\$\{supportedDefaultTransportScope\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /default_transport_network_io=\$\{defaultTransportNetworkIo\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /production_transport_ready=\$\{productionTransportReady\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /reliable_external_delivery_claim_allowed=\$\{reliableExternalDeliveryClaimAllowed\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /supported_owner_observed_usability_rehearsal_ready=\$\{supportedOwnerObservedUsabilityRehearsalReady\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /supported_usability_recovery_scope=\$\{supportedUsabilityRecoveryScope\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /critical_desktop_task_script_ready=\$\{criticalDesktopTaskScriptReady\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /recovery_vocabulary_aligned=\$\{recoveryVocabularyAligned\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /usability_study_completed=\$\{usabilityStudyCompleted\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /production_wording_ready=\$\{productionWordingReady\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /high_risk_onion_path=explicit-user-triggered-fail-closed/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /high_risk_transport_mode=\$\{highRiskTransportMode\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /high_risk_transport_not_ready_reason=\$\{highRiskTransportNotReadyReason\}/);
   assert.match(mainJs, /invoke\("engine_sidecar_status"\)/);
   assert.match(mainJs, /invoke\("engine_sidecar_manual_self_test"\)/);
   assert.match(mainJs, /invoke\("engine_sidecar_contract_command"/);
   assert.match(mainJs, /command: "redacted-support-diagnostics"/);
   assert.match(mainJs, /input: \{ diagnostics_ref: "public-beta-diagnostics" \}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_status_runtime_checked=\$\{engineSidecarStatusRuntimeChecked\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_manual_self_test_failure_class=\$\{engineSidecarManualSelfTestFailureClass\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_raw_path_returned=\$\{engineSidecarRawPathReturned\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_stdout_returned=\$\{engineSidecarStdoutReturned\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_stderr_returned=\$\{engineSidecarStderrReturned\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_status_runtime_checked=\$\{engineSidecarStatusRuntimeChecked\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_manual_self_test_failure_class=\$\{engineSidecarManualSelfTestFailureClass\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_raw_path_returned=\$\{engineSidecarRawPathReturned\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_stdout_returned=\$\{engineSidecarStdoutReturned\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_stderr_returned=\$\{engineSidecarStderrReturned\}/);
   assert.match(functionBody(mainJs, "engineSidecarDiagnosticReportLines"), /engine_sidecar_contract_failure_class=\$\{fieldTestReportValue\(diagnostics\.contractFailureClass/);
   assert.match(functionBody(mainJs, "engineSidecarDiagnosticReportLines"), /engine_sidecar_contract_raw_payload_returned=\$\{diagnostics\.contractRawPayloadReturned === true\}/);
   assert.match(privateDeliveryStateJs, /engine_sidecar_local_runtime_promoted_to_delivery_proof=false/);
@@ -3182,23 +3189,23 @@ test("public diagnostics summary includes desktop completion without production 
     privateDeliveryStateJs,
     /high_risk_transport_failure_classes=bridge_config_missing#bootstrap_timeout#peer_unreachable#stale_endpoint#receive_owner_mismatch/,
   );
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /production_e2ee_ready=\$\{productionE2eeReady\}/);
-  assert.doesNotMatch(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public diagnostics ready failure_class=/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_completion=\$\{desktopCompletion\.status\}/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_blockers=\$\{desktopCompletion\.blockerSummary\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /production_e2ee_ready=\$\{productionE2eeReady\}/);
+  assert.doesNotMatch(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /public diagnostics ready failure_class=/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /desktop_completion=\$\{desktopCompletion\.status\}/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /desktop_blockers=\$\{desktopCompletion\.blockerSummary\}/);
   assert.match(
-    functionBody(mainJs, "refreshPublicBetaDiagnostics"),
+    functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"),
     /release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited/,
   );
   assert.match(
-    functionBody(mainJs, "refreshPublicBetaDiagnostics"),
+    functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"),
     /non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication/,
   );
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /support_bundle_export=false/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /audit_evidence_claim=false/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /external_delivery_evidence_claim=false/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /security_ready_proof_claim=false/);
-  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /app_launch_network=false/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /support_bundle_export=false/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /audit_evidence_claim=false/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /external_delivery_evidence_claim=false/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /security_ready_proof_claim=false/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /app_launch_network=false/);
   assert.match(actionStateJs, /app_launch_network_boundary=/);
   assert.match(mainJs, /Attempt explicit private delivery for message #/);
   assert.doesNotMatch(mainJs, /Attempt external onion send/);
