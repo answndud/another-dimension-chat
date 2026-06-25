@@ -11,9 +11,12 @@ function createHarness(options = {}) {
     productionProfileStorage: {},
     productionProfileIdentity: {},
     lockProductionProfile: { disabled: false },
+    unlockProductionProfile: { disabled: false },
   };
   const calls = {
     states: [],
+    busyActions: [],
+    clearedBusyActions: [],
     highRiskReadiness: 0,
     clearMemory: 0,
     clearFields: 0,
@@ -21,12 +24,30 @@ function createHarness(options = {}) {
     applyActionState: 0,
     latestUnlocked: [],
     latestStatus: [],
+    failureReports: [],
+    loadRetention: [],
+    loadProfileList: 0,
+    restoreSession: [],
+    refreshTwoProfileSession: [],
+    removedBodyClass: "",
   };
+  let currentProfileInput = options.profileInput ?? { profile: "alice", passphrase: "secret" };
   const invokeResults = options.invokeResults ?? new Map();
+  const invoked = [];
   const controller = createProductionProfileController({
     fields,
-    document: { body: { classList: { add: (className) => (calls.bodyClass = className) } } },
+    document: {
+      body: {
+        classList: {
+          add: (className) => (calls.bodyClass = className),
+          remove: (className) => {
+            calls.removedBodyClass = className;
+          },
+        },
+      },
+    },
     invoke: async (cmd) => {
+      invoked.push(cmd);
       if (options.invokeError) {
         throw options.invokeError;
       }
@@ -40,6 +61,14 @@ function createHarness(options = {}) {
     setProductionProfileState: (value) => calls.states.push(value),
     redactedUiErrorMessage: (kind) => `redacted:${kind}`,
     t: (key) => `t:${key}`,
+    productionProfileInput: () => currentProfileInput,
+    productionTwoProfileInput: () => ({ profileA: "alice", profileB: "bob", passphrase: "room" }),
+    productionProfileInputStillCurrent: (input) => options.staleAfterProductUnlock !== true && input === currentProfileInput,
+    productionProfileUnlockView: () => ({
+      storage: "profile storage opened",
+      identity: "identity opened",
+      boundary: "profile_unlock_boundary=true",
+    }),
     productionProfileUnlockRecoveryView: () => ({
       kind: "wrong-passphrase",
       warning: "wrong passphrase",
@@ -50,7 +79,6 @@ function createHarness(options = {}) {
       primaryNextAction: "retry with passphrase",
       boundary: "recovery_actions=true",
     }),
-    productionProfileUnlockView: () => ({}),
     productionPanicLockMitigationView: () => ({ boundary: "panic_boundary=true" }),
     setLatestProductionProfileUnlocked: (value) => calls.latestUnlocked.push(value),
     setLatestProductionProductUnlockStatus: (value) => calls.latestStatus.push(value),
@@ -68,11 +96,28 @@ function createHarness(options = {}) {
       calls.clearClipboard += 1;
       return true;
     },
+    setProductionBusyAction: (action) => calls.busyActions.push(action),
+    clearProductionBusyAction: (action) => calls.clearedBusyActions.push(action),
     applyProductionActionState: () => {
       calls.applyActionState += 1;
     },
+    rememberFailureSupportReport: (...args) => calls.failureReports.push(args),
+    loadProductionMessageRetentionPreference: async (...args) => calls.loadRetention.push(args),
+    loadProductionProfileList: async () => {
+      calls.loadProfileList += 1;
+    },
+    restoreProductionSessionAfterUnlock: async (input) => calls.restoreSession.push(input),
+    refreshTwoProfileSessionAfterProfileUnlock: async (...args) => calls.refreshTwoProfileSession.push(args),
   });
-  return { controller, fields, calls };
+  return {
+    controller,
+    fields,
+    calls,
+    invoked,
+    setProfileInput: (input) => {
+      currentProfileInput = input;
+    },
+  };
 }
 
 test("renderProductionProductUnlockStatus updates redacted unlock status and lock control", () => {
@@ -168,4 +213,49 @@ test("panicLockProductionProfile clears sensitive UI before best-effort runtime 
   assert.equal(fields.productionProfileWarning.textContent, "Private views hidden and local memory state cleared.");
   assert.match(fields.productionProfileBoundary.textContent, /passphrase_first=false/);
   assert.match(fields.productionProfileBoundary.textContent, /store_path_returned=false/);
+});
+
+test("unlockProductionProfile runs profile unlock then restores only while input is current", async () => {
+  const productUnlock = { unlocked: true, redacted_reason: "ok", warning: "product unlocked" };
+  const profileUnlock = { warning: "profile unlocked" };
+  const { controller, fields, calls, invoked } = createHarness({
+    invokeResults: new Map([
+      ["production_product_unlock", productUnlock],
+      ["production_profile_unlock", profileUnlock],
+    ]),
+  });
+
+  await controller.unlockProductionProfile();
+
+  assert.deepEqual(invoked, ["production_product_unlock", "production_profile_unlock"]);
+  assert.deepEqual(calls.busyActions, ["profile-unlock"]);
+  assert.deepEqual(calls.clearedBusyActions, ["profile-unlock"]);
+  assert.equal(fields.unlockProductionProfile.disabled, false);
+  assert.equal(calls.removedBodyClass, "is-panic-locked");
+  assert.equal(fields.productionProfileWarning.textContent, "profile unlocked");
+  assert.equal(fields.productionProfileStorage.textContent, "profile storage opened");
+  assert.equal(calls.loadRetention.length, 1);
+  assert.equal(calls.loadProfileList, 1);
+  assert.equal(calls.restoreSession.length, 1);
+  assert.equal(calls.refreshTwoProfileSession.length, 1);
+  assert.deepEqual(calls.refreshTwoProfileSession[0], ["alice", "secret", { profileA: "alice", profileB: "bob", passphrase: "room" }]);
+});
+
+test("unlockProductionProfile ignores stale profile input before restoring session", async () => {
+  const { controller, calls, invoked } = createHarness({
+    staleAfterProductUnlock: true,
+    invokeResults: new Map([
+      ["production_product_unlock", { unlocked: true, redacted_reason: "ok" }],
+      ["production_profile_unlock", { warning: "profile unlocked" }],
+    ]),
+  });
+
+  await controller.unlockProductionProfile();
+
+  assert.deepEqual(invoked, ["production_product_unlock", "production_profile_unlock"]);
+  assert.equal(calls.loadRetention.length, 0);
+  assert.equal(calls.loadProfileList, 0);
+  assert.equal(calls.restoreSession.length, 0);
+  assert.equal(calls.refreshTwoProfileSession.length, 0);
+  assert.deepEqual(calls.clearedBusyActions, ["profile-unlock"]);
 });
