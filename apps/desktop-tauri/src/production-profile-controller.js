@@ -373,6 +373,62 @@ export function createProductionProfileController(input) {
     }
   }
 
+  async function emergencyWipeProductionLocalData() {
+    const roomInputBeforeWipe = productionTwoProfileInput();
+    const confirmation = (fields.productionEmergencyWipeConfirmation?.value ?? "").trim();
+    const boundary = productionPanicLockMitigationView();
+    if (confirmation !== boundary.emergencyConfirmation) {
+      setProductionProfileState("Emergency wipe needs confirmation");
+      setText(
+        fields.productionProfileWarning,
+        "Type EMERGENCY WIPE LOCAL DATA to run the separate emergency local wipe.",
+      );
+      setText(fields.productionProfileNextAction, "Next: confirm emergency local wipe.");
+      setText(fields.productionProfileBoundary, boundary.boundary);
+      return null;
+    }
+    clearProductionSensitiveMemoryState();
+    clearProductionSensitiveFields();
+    setProductionBusyAction("emergency-local-data-wipe");
+    document.body.classList.add("is-panic-locked");
+    setProductionProfileState("Emergency local wipe running");
+    setText(fields.productionProfileWarning, "Emergency local wipe is deleting owned local app data.");
+    setText(fields.productionProfileNextAction, t("dataLifecycleDestructiveRunningNext"));
+    setText(fields.productionProfileBoundary, boundary.boundary);
+    await clearClipboardBestEffort();
+    applyProductionActionState();
+    try {
+      const result = await invoke("production_emergency_local_data_wipe", { confirmation });
+      resetProductionProfileView();
+      resetProductionPairingView();
+      resetProductionMessageView();
+      const view = renderProductionDataLifecycleAction(result, "emergency-local-wipe");
+      document.body.classList.add("is-panic-locked");
+      setProductionProfileState(
+        result.full_local_data_wiped ? "Emergency local wipe complete" : "Emergency local wipe incomplete",
+      );
+      setText(fields.productionProfileWarning, `${result.warning} ${view.next}`);
+      setText(fields.productionProfileBoundary, `${view.boundary} ${boundary.boundary}`);
+      applyPostDestructiveLifecycleRebuildGuidance("full-local-wipe", { input: roomInputBeforeWipe });
+      await loadProductionProfileList();
+      return result;
+    } catch (error) {
+      setProductionProfileState("Emergency local wipe failed");
+      setText(fields.productionProfileWarning, redactedUiErrorMessage("profile-recovery-create", error));
+      setText(fields.productionProfileNextAction, t("dataLifecycleFailedNext"));
+      rememberFailureSupportReport(
+        "emergency-local-wipe",
+        "destructive_action_failed",
+        "retry-local-lifecycle-action",
+        "destructive_action_failed",
+      );
+      return null;
+    } finally {
+      clearProductionBusyAction("emergency-local-data-wipe");
+      applyProductionActionState();
+    }
+  }
+
   return {
     renderProductionProductUnlockStatus,
     productionProductUnlockRecoveryView,
@@ -381,6 +437,7 @@ export function createProductionProfileController(input) {
     unlockProductionProfile,
     deleteProductionProfile,
     wipeProductionLocalData,
+    emergencyWipeProductionLocalData,
     lockProductionProfile,
     panicLockProductionProfile,
   };

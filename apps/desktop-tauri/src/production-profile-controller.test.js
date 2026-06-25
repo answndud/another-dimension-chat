@@ -14,6 +14,7 @@ function createHarness(options = {}) {
     unlockProductionProfile: { disabled: false },
     productionProfileDeleteConfirmation: { value: "" },
     productionFullWipeConfirmation: { value: "" },
+    productionEmergencyWipeConfirmation: { value: "" },
   };
   const calls = {
     states: [],
@@ -87,7 +88,10 @@ function createHarness(options = {}) {
       primaryNextAction: "retry with passphrase",
       boundary: "recovery_actions=true",
     }),
-    productionPanicLockMitigationView: () => ({ boundary: "panic_boundary=true" }),
+    productionPanicLockMitigationView: () => ({
+      boundary: "panic_boundary=true",
+      emergencyConfirmation: "EMERGENCY WIPE LOCAL DATA",
+    }),
     setLatestProductionProfileUnlocked: (value) => calls.latestUnlocked.push(value),
     setLatestProductionProductUnlockStatus: (value) => calls.latestStatus.push(value),
     getProductionBusyAction: () => options.busyAction ?? null,
@@ -119,7 +123,7 @@ function createHarness(options = {}) {
     },
     renderProductionDataLifecycleAction: (result, action) => {
       calls.lifecycleRenders.push({ result, action });
-      return { next: `rendered:${action}` };
+      return { next: `rendered:${action}`, boundary: `boundary:${action}` };
     },
     resetProductionProfileView: () => {
       calls.resetProfile += 1;
@@ -351,4 +355,49 @@ test("wipeProductionLocalData resets profile pairing and message views after con
   ]);
   assert.equal(calls.loadProfileList, 1);
   assert.equal(fields.productionProfileWarning.textContent, "wrong passphrase");
+});
+
+test("emergencyWipeProductionLocalData requires emergency confirmation", async () => {
+  const { controller, fields, calls, invoked } = createHarness();
+  fields.productionEmergencyWipeConfirmation.value = "wrong";
+
+  const result = await controller.emergencyWipeProductionLocalData();
+
+  assert.equal(result, null);
+  assert.deepEqual(invoked, []);
+  assert.deepEqual(calls.states, ["Emergency wipe needs confirmation"]);
+  assert.equal(calls.clearMemory, 0);
+  assert.equal(fields.productionProfileWarning.textContent, "Type EMERGENCY WIPE LOCAL DATA to run the separate emergency local wipe.");
+  assert.equal(fields.productionProfileNextAction.textContent, "Next: confirm emergency local wipe.");
+  assert.equal(fields.productionProfileBoundary.textContent, "panic_boundary=true");
+});
+
+test("emergencyWipeProductionLocalData clears sensitive state before emergency wipe", async () => {
+  const wipeResult = { full_local_data_wiped: true, warning: "emergency wiped" };
+  const { controller, fields, calls, invoked } = createHarness({
+    invokeResults: new Map([["production_emergency_local_data_wipe", wipeResult]]),
+  });
+  fields.productionEmergencyWipeConfirmation.value = "EMERGENCY WIPE LOCAL DATA";
+
+  const result = await controller.emergencyWipeProductionLocalData();
+
+  assert.equal(result, wipeResult);
+  assert.deepEqual(invoked, ["production_emergency_local_data_wipe"]);
+  assert.equal(calls.clearMemory, 1);
+  assert.equal(calls.clearFields, 1);
+  assert.equal(calls.clearClipboard, 1);
+  assert.deepEqual(calls.busyActions, ["emergency-local-data-wipe"]);
+  assert.deepEqual(calls.clearedBusyActions, ["emergency-local-data-wipe"]);
+  assert.equal(calls.bodyClass, "is-panic-locked");
+  assert.equal(calls.resetProfile, 1);
+  assert.deepEqual(calls.resetPairing, [undefined]);
+  assert.equal(calls.resetMessage, 1);
+  assert.deepEqual(calls.lifecycleRenders, [{ result: wipeResult, action: "emergency-local-wipe" }]);
+  assert.deepEqual(calls.rebuildGuidance[0], [
+    "full-local-wipe",
+    { input: { profileA: "alice", profileB: "bob", passphrase: "room" } },
+  ]);
+  assert.equal(calls.loadProfileList, 1);
+  assert.equal(fields.productionProfileWarning.textContent, "emergency wiped rendered:emergency-local-wipe");
+  assert.equal(fields.productionProfileBoundary.textContent, "boundary:emergency-local-wipe panic_boundary=true");
 });
