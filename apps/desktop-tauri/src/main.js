@@ -98,6 +98,7 @@ import { createInviteQrController } from "./invite-qr-controller.js";
 import { createDiagnosticsCopyController } from "./diagnostics-copy-controller.js";
 import { createDiagnosticsReportController } from "./diagnostics-report-controller.js";
 import { createDesktopPanelController } from "./desktop-panel-controller.js";
+import { createProductionBusyActionState } from "./production-busy-action-state.js";
 import { createTranscriptController } from "./transcript-controller.js";
 import { combinedTwoProfileTranscriptTsv } from "./transcript-export.js";
 import { transcriptRetentionView } from "./transcript-retention.js";
@@ -698,15 +699,6 @@ let latestProductionMessageImport = null;
 let latestManualEnvelopePanelFailure = null;
 let latestProductionPairingSafety = null;
 let productionBusyAction = null;
-let activeInviteRoomOpenFingerprint = "";
-let activeInviteRoomPrivateRouteCodeFingerprint = "";
-let activeInviteRoomPeerRouteCodeFingerprint = "";
-let activeTwoProfileRoundtripFingerprint = "";
-let activeTwoProfileMessageRoundtripFingerprint = "";
-let activeTwoProfileOnionEnvelopeSendKey = "";
-let activeTwoProfilePeerEndpointRefreshFingerprint = "";
-let activeTwoProfileOutboundCancelFingerprint = "";
-let activeTwoProfileSessionStatusFingerprint = "";
 let latestProductionManualFocusTarget = null;
 let latestProductionCurrentPrimaryActionNode = null;
 let latestChatDeliveryNoticeKey = "";
@@ -729,11 +721,41 @@ const productionPayloadSlots = {
   messageEnvelope: new Map(),
 };
 
-function clearProductionBusyAction(action) {
-  if (productionBusyAction === action) {
-    productionBusyAction = null;
-  }
-}
+const productionBusyActionState = createProductionBusyActionState({
+  getAction: () => productionBusyAction,
+  setAction: (action) => {
+    productionBusyAction = action;
+  },
+  fingerprintForInput: twoProfileSessionStatusFingerprint,
+  realOnionRoundtripActiveForInput,
+});
+const {
+  clearAction: clearProductionBusyAction,
+  setInviteRoomOpenBusy,
+  inviteRoomOpenBusyMatches,
+  clearInviteRoomOpenBusy,
+  setInviteRoomPrivateRouteCodeBusy,
+  clearInviteRoomPrivateRouteCodeBusy,
+  setInviteRoomPeerRouteCodeBusy,
+  clearInviteRoomPeerRouteCodeBusy,
+  setTwoProfileRoundtripBusy,
+  clearTwoProfileRoundtripBusy,
+  setTwoProfileMessageRoundtripBusy,
+  clearTwoProfileMessageRoundtripBusy,
+  twoProfileOnionEnvelopeSendKey,
+  setTwoProfileOnionEnvelopeSendBusy,
+  clearTwoProfileOnionEnvelopeSendBusy,
+  twoProfileOnionEnvelopeSendBusyMatches,
+  setTwoProfilePeerEndpointRefreshBusy,
+  clearTwoProfilePeerEndpointRefreshBusy,
+  setTwoProfileOutboundCancelBusy,
+  clearTwoProfileOutboundCancelBusy,
+  setTwoProfileSessionStatusBusy,
+  clearTwoProfileSessionStatusBusy,
+  matchesInput: productionBusyActionMatchesInput,
+  blocksInput: productionBusyActionBlocksInput,
+  isForInput: productionBusyActionIsForInput,
+} = productionBusyActionState;
 
 function clearProductionSensitiveMemoryState() {
   latestProductionSessionState = null;
@@ -798,204 +820,6 @@ async function writeClipboardWithTtl(value, ttlMs = 15_000) {
   window.setTimeout(() => {
     void clearClipboardBestEffort();
   }, ttlMs);
-}
-
-function setInviteRoomOpenBusy(input) {
-  productionBusyAction = "invite-room-open";
-  activeInviteRoomOpenFingerprint = twoProfileSessionStatusFingerprint(input);
-}
-
-function inviteRoomOpenBusyMatches(input) {
-  return (
-    productionBusyAction === "invite-room-open" &&
-    activeInviteRoomOpenFingerprint === twoProfileSessionStatusFingerprint(input)
-  );
-}
-
-function clearInviteRoomOpenBusy(input) {
-  if (inviteRoomOpenBusyMatches(input)) {
-    activeInviteRoomOpenFingerprint = "";
-    clearProductionBusyAction("invite-room-open");
-  }
-}
-
-function setInviteRoomPrivateRouteCodeBusy(input) {
-  productionBusyAction = "invite-room-private-route-code";
-  activeInviteRoomPrivateRouteCodeFingerprint = twoProfileSessionStatusFingerprint(input);
-}
-
-function clearInviteRoomPrivateRouteCodeBusy(input) {
-  if (
-    productionBusyAction === "invite-room-private-route-code" &&
-    activeInviteRoomPrivateRouteCodeFingerprint === twoProfileSessionStatusFingerprint(input)
-  ) {
-    activeInviteRoomPrivateRouteCodeFingerprint = "";
-    clearProductionBusyAction("invite-room-private-route-code");
-  }
-}
-
-function setInviteRoomPeerRouteCodeBusy(input) {
-  productionBusyAction = "invite-room-peer-route-code";
-  activeInviteRoomPeerRouteCodeFingerprint = twoProfileSessionStatusFingerprint(input);
-}
-
-function clearInviteRoomPeerRouteCodeBusy(input) {
-  if (
-    productionBusyAction === "invite-room-peer-route-code" &&
-    activeInviteRoomPeerRouteCodeFingerprint === twoProfileSessionStatusFingerprint(input)
-  ) {
-    activeInviteRoomPeerRouteCodeFingerprint = "";
-    clearProductionBusyAction("invite-room-peer-route-code");
-  }
-}
-
-function setTwoProfileRoundtripBusy(input) {
-  productionBusyAction = "two-profile-roundtrip";
-  activeTwoProfileRoundtripFingerprint = twoProfileSessionStatusFingerprint(input);
-}
-
-function clearTwoProfileRoundtripBusy(input) {
-  if (
-    productionBusyAction === "two-profile-roundtrip" &&
-    activeTwoProfileRoundtripFingerprint === twoProfileSessionStatusFingerprint(input)
-  ) {
-    activeTwoProfileRoundtripFingerprint = "";
-    clearProductionBusyAction("two-profile-roundtrip");
-  }
-}
-
-function setTwoProfileMessageRoundtripBusy(input) {
-  productionBusyAction = "two-profile-message-roundtrip";
-  activeTwoProfileMessageRoundtripFingerprint = twoProfileSessionStatusFingerprint(input);
-}
-
-function clearTwoProfileMessageRoundtripBusy(input) {
-  if (
-    productionBusyAction === "two-profile-message-roundtrip" &&
-    activeTwoProfileMessageRoundtripFingerprint === twoProfileSessionStatusFingerprint(input)
-  ) {
-    activeTwoProfileMessageRoundtripFingerprint = "";
-    clearProductionBusyAction("two-profile-message-roundtrip");
-  }
-}
-
-function twoProfileOnionEnvelopeSendKey(input, messageNumber) {
-  const normalizedNumber = Number.parseInt(messageNumber, 10) || 0;
-  return `${twoProfileSessionStatusFingerprint(input)}\n${normalizedNumber}`;
-}
-
-function setTwoProfileOnionEnvelopeSendBusy(input, messageNumber) {
-  productionBusyAction = "two-profile-onion-envelope-send";
-  activeTwoProfileOnionEnvelopeSendKey = twoProfileOnionEnvelopeSendKey(input, messageNumber);
-}
-
-function clearTwoProfileOnionEnvelopeSendBusy(input, messageNumber) {
-  if (
-    productionBusyAction === "two-profile-onion-envelope-send" &&
-    activeTwoProfileOnionEnvelopeSendKey === twoProfileOnionEnvelopeSendKey(input, messageNumber)
-  ) {
-    activeTwoProfileOnionEnvelopeSendKey = "";
-    clearProductionBusyAction("two-profile-onion-envelope-send");
-  }
-}
-
-function setTwoProfilePeerEndpointRefreshBusy(input) {
-  productionBusyAction = "two-profile-peer-endpoint-refresh";
-  activeTwoProfilePeerEndpointRefreshFingerprint = twoProfileSessionStatusFingerprint(input);
-}
-
-function clearTwoProfilePeerEndpointRefreshBusy(input) {
-  if (
-    productionBusyAction === "two-profile-peer-endpoint-refresh" &&
-    activeTwoProfilePeerEndpointRefreshFingerprint === twoProfileSessionStatusFingerprint(input)
-  ) {
-    activeTwoProfilePeerEndpointRefreshFingerprint = "";
-    clearProductionBusyAction("two-profile-peer-endpoint-refresh");
-  }
-}
-
-function setTwoProfileOutboundCancelBusy(input) {
-  productionBusyAction = "two-profile-outbound-cancel";
-  activeTwoProfileOutboundCancelFingerprint = twoProfileSessionStatusFingerprint(input);
-}
-
-function clearTwoProfileOutboundCancelBusy(input) {
-  if (
-    productionBusyAction === "two-profile-outbound-cancel" &&
-    activeTwoProfileOutboundCancelFingerprint === twoProfileSessionStatusFingerprint(input)
-  ) {
-    activeTwoProfileOutboundCancelFingerprint = "";
-    clearProductionBusyAction("two-profile-outbound-cancel");
-  }
-}
-
-function setTwoProfileSessionStatusBusy(input) {
-  productionBusyAction = "two-profile-session-status";
-  activeTwoProfileSessionStatusFingerprint = twoProfileSessionStatusFingerprint(input);
-}
-
-function clearTwoProfileSessionStatusBusy(input) {
-  if (
-    productionBusyAction === "two-profile-session-status" &&
-    activeTwoProfileSessionStatusFingerprint === twoProfileSessionStatusFingerprint(input)
-  ) {
-    activeTwoProfileSessionStatusFingerprint = "";
-    clearProductionBusyAction("two-profile-session-status");
-  }
-}
-
-function twoProfileOnionEnvelopeSendBusyMatches(input) {
-  const fingerprint = twoProfileSessionStatusFingerprint(input);
-  return Boolean(
-    productionBusyAction === "two-profile-onion-envelope-send" &&
-      fingerprint &&
-      activeTwoProfileOnionEnvelopeSendKey.startsWith(`${fingerprint}\n`),
-  );
-}
-
-function productionBusyActionMatchesInput(input = productionTwoProfileInput()) {
-  if (productionBusyAction === null) {
-    return false;
-  }
-  if (productionBusyAction === "invite-room-open") {
-    return inviteRoomOpenBusyMatches(input);
-  }
-  if (productionBusyAction === "invite-room-private-route-code") {
-    return activeInviteRoomPrivateRouteCodeFingerprint === twoProfileSessionStatusFingerprint(input);
-  }
-  if (productionBusyAction === "invite-room-peer-route-code") {
-    return activeInviteRoomPeerRouteCodeFingerprint === twoProfileSessionStatusFingerprint(input);
-  }
-  if (productionBusyAction === "two-profile-roundtrip") {
-    return activeTwoProfileRoundtripFingerprint === twoProfileSessionStatusFingerprint(input);
-  }
-  if (productionBusyAction === "two-profile-message-roundtrip") {
-    return activeTwoProfileMessageRoundtripFingerprint === twoProfileSessionStatusFingerprint(input);
-  }
-  if (productionBusyAction === "two-profile-onion-envelope-send") {
-    return twoProfileOnionEnvelopeSendBusyMatches(input);
-  }
-  if (productionBusyAction === "two-profile-peer-endpoint-refresh") {
-    return activeTwoProfilePeerEndpointRefreshFingerprint === twoProfileSessionStatusFingerprint(input);
-  }
-  if (productionBusyAction === "two-profile-outbound-cancel") {
-    return activeTwoProfileOutboundCancelFingerprint === twoProfileSessionStatusFingerprint(input);
-  }
-  if (productionBusyAction === "two-profile-real-onion-roundtrip") {
-    return realOnionRoundtripActiveForInput(input);
-  }
-  if (productionBusyAction === "two-profile-session-status") {
-    return activeTwoProfileSessionStatusFingerprint === twoProfileSessionStatusFingerprint(input);
-  }
-  return true;
-}
-
-function productionBusyActionBlocksInput(input = productionTwoProfileInput()) {
-  return Boolean(productionBusyAction && productionBusyActionMatchesInput(input));
-}
-
-function productionBusyActionIsForInput(action, input = productionTwoProfileInput()) {
-  return productionBusyAction === action && productionBusyActionMatchesInput(input);
 }
 
 function manualNetworkPermissionEnabled() {
