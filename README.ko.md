@@ -1,7 +1,7 @@
-# Another Dimension Chat — Unsigned Public Beta
+# Another Dimension Chat — Source Build Primary
 
 <p>
-  <img src="https://img.shields.io/badge/status-unsigned%20beta-orange" alt="Status">
+  <img src="https://img.shields.io/badge/status-source%20build%20primary-blue" alt="Source build primary">
   <img src="https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
 </p>
@@ -14,8 +14,8 @@
 **Rust**와 **Tauri**로 제작. 현재 테스트 흐름은 pairwise invite room,
 safety material 비교, 로컬 암호화 저장, 수동 sealed-message 교환을 사용.
 
-> **현재 상태:** 서명되지 않은 macOS Apple Silicon 베타. 감사되지 않았고,
-> production-ready가 아니며, 민감한 통신에 사용하면 안 됨.
+> **현재 상태:** source-build-primary macOS Apple Silicon 베타. 감사되지
+> 않았고, production-ready가 아니며, 민감한 통신에 사용하면 안 됨.
 
 ## 지금 제공하는 이점
 
@@ -27,31 +27,36 @@ safety material 비교, 로컬 암호화 저장, 수동 sealed-message 교환을
 | 전달 채널 직접 선택 | sealed message를 원하는 채널로 전달 |
 | 명확한 안전 확인 | room 사용 전 safety material 비교 |
 
-## 다운로드
+## macOS 소스 빌드
+
+기본 설치 경로는 이제 source build입니다.
+
+GitHub Release DMG 없이 macOS에서 실행하려면 소스 빌드 안내를 따르세요.
+
+- [macOS에서 소스 빌드로 설치](INSTALL_FROM_SOURCE_MACOS.md)
+
+짧은 버전:
+
+```sh
+git clone https://github.com/answndud/another-dimension-chat.git
+cd another-dimension-chat
+npm ci --prefix apps/desktop-tauri
+npm --prefix apps/desktop-tauri run tauri:build:beta-onion
+```
+
+빌드된 앱 번들은
+`apps/desktop-tauri/src-tauri/target/release/bundle/macos/Another Dimension Chat.app`
+에 생성됩니다.
+
+GitHub Release DMG가 있더라도, 그것은 legacy unsigned fallback입니다.
+기본 설치 경로는 아닙니다.
+
+## 레거시 다운로드
 
 > [**another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned**](https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned)
 
-Assets에서 **2개 파일** 다운로드:
-
-| 파일 | 용도 |
-|------|------|
-| `*.dmg` | 앱 |
-| `*.dmg.sha256` | 체크섬 검증 |
-
-열기 전에 검증:
-
-```sh
-shasum -a 256 -c *.dmg.sha256
-```
-
-예상 출력:
-
-```text
-another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg: OK
-```
-
-출력이 `OK`여야 진행. macOS에서 차단되면 checksum 검증 후
-System Settings > Privacy & Security에서 허용.
+DMG를 쓰는 경우에는 checksum 검증 후 현재 macOS manual allow 흐름만
+사용하세요.
 
 ## 빠른 시작
 
@@ -86,7 +91,7 @@ System Settings > Privacy & Security에서 허용.
 
 | 플랫폼 | 공개 상태 |
 |--------|-----------|
-| macOS Apple Silicon | unsigned DMG beta |
+| macOS Apple Silicon | source build primary, unsigned DMG fallback |
 | Windows | 공개 앱 없음 |
 | Android / iOS | 공개 앱 없음 |
 
@@ -100,9 +105,9 @@ invite code, payload, key, raw log, private room screenshot 게시 금지.
 
 ## 소스에서 빌드
 
+[macOS에서 소스 빌드로 설치](INSTALL_FROM_SOURCE_MACOS.md)를 먼저 보세요.
+
 ```sh
-git clone https://github.com/answndud/another-dimension-chat.git
-cd another-dimension-chat
 scripts/verify_all.sh   # 가벼운 검증
 scripts/verify_full.sh  # 전체 사전-릴리즈 검증
 ```

@@ -87,6 +87,13 @@ import {
   messageEnvelopeSlotRecoveryHint,
   messageEnvelopeSlotMismatchReason,
 } from "./message-envelope-slots.js";
+import {
+  buildInviteQrSvgDataUrl,
+  canImportInviteQr,
+  decodeInviteQrFile,
+  inviteQrImportAvailability,
+  normalizeInviteQrPayload,
+} from "./invite-qr.js";
 import { combinedTwoProfileTranscriptTsv } from "./transcript-export.js";
 import { transcriptRetentionView } from "./transcript-retention.js";
 import { applyStaticTranslations, normalizeLanguage, translate } from "./i18n.js";
@@ -467,12 +474,18 @@ const fields = {
   createInviteCode: document.querySelector("#create-invite-code"),
   createInviteCodeSettings: document.querySelector("#create-invite-code-settings"),
   createdInviteCodeDisplay: document.querySelector("#created-invite-code-display"),
+  showCreatedInviteQr: document.querySelector("#show-created-invite-qr"),
+  hideInviteQr: document.querySelector("#hide-invite-qr"),
+  inviteQrPanel: document.querySelector("#invite-qr-panel"),
+  inviteQrImage: document.querySelector("#invite-qr-image"),
   createdInviteSummary: document.querySelector("#created-invite-summary"),
   createdInviteLocalProfile: document.querySelector("#created-invite-local-profile"),
   createdInvitePeerLabel: document.querySelector("#created-invite-peer-label"),
   createdInviteManualInstruction: document.querySelector("#created-invite-manual-instruction"),
   copyCreatedInviteCode: document.querySelector("#copy-created-invite-code"),
   receivedInviteCode: document.querySelector("#received-invite-code"),
+  importReceivedInviteQr: document.querySelector("#import-received-invite-qr"),
+  receivedInviteQrFile: document.querySelector("#received-invite-qr-file"),
   createRoomFromReceivedCode: document.querySelector("#create-room-from-received-code"),
   copyInviteCode: document.querySelector("#copy-invite-code"),
   settingsInviteCodeDisplay: document.querySelector("#settings-invite-code-display"),
@@ -3692,6 +3705,7 @@ let savedRoomMetadataSyncInFlight = false;
 let savedRoomMetadataSyncStatus = { key: "", tone: "muted", values: {} };
 let roomDetailOpen = false;
 let currentInviteCodeShareVisible = false;
+let currentInviteQrVisible = false;
 let latestManualInviteRoomRebuildFlow = null;
 
 function setRoomScreen(screen) {
@@ -6017,6 +6031,23 @@ function generateInviteCode() {
   return chars.join("");
 }
 
+function setInviteQrPanel(code, visible) {
+  const normalizedCode = normalizeInviteQrPayload(code);
+  const show = Boolean(visible && normalizedCode);
+  currentInviteQrVisible = show;
+  if (fields.inviteQrPanel) {
+    fields.inviteQrPanel.hidden = !show;
+  }
+  if (fields.inviteQrImage) {
+    fields.inviteQrImage.hidden = !show;
+    fields.inviteQrImage.src = show ? buildInviteQrSvgDataUrl(normalizedCode) : "";
+  }
+}
+
+function closeInviteQrPanel() {
+  setInviteQrPanel("", false);
+}
+
 function renderCurrentInviteCodeDisplay() {
   const code = (fields.productionTwoProfileB?.value ?? "").trim();
   const role = connectionCodeRoleFor(code);
@@ -6054,8 +6085,14 @@ function renderCurrentInviteCodeDisplay() {
   renderConnectionDeviceRole();
   document.body.classList.toggle("has-copied-invite-code", copiedCurrentInviteCode);
   fields.copyInviteCode?.toggleAttribute("disabled", !code);
+  fields.showCreatedInviteQr?.toggleAttribute("disabled", !(code && inviterCode));
   fields.copyCreatedInviteCode?.toggleAttribute("disabled", !(code && inviterCode));
   fields.copyRoomInviteToken?.toggleAttribute("disabled", !(code && inviterCode));
+  if (!inviterCode || !currentInviteQrVisible) {
+    closeInviteQrPanel();
+  } else {
+    setInviteQrPanel(code, true);
+  }
   renderSavedInviteRooms();
 }
 
@@ -6109,14 +6146,65 @@ function renderConnectionDeviceRole() {
 
 function renderReceivedInviteCodeActionState() {
   const code = (fields.receivedInviteCode?.value ?? "").trim();
+  const qrImport = inviteQrImportAvailability();
   if (fields.createRoomFromReceivedCode) {
     fields.createRoomFromReceivedCode.disabled = !code;
     fields.createRoomFromReceivedCode.title = code ? t("roomActionCreate") : t("inviteCodeMissing");
+  }
+  if (fields.importReceivedInviteQr) {
+    fields.importReceivedInviteQr.disabled = !qrImport.supported;
+    fields.importReceivedInviteQr.title = qrImport.supported ? t("importInviteQr") : t("inviteQrImportUnavailable");
   }
   const roomListCode = (fields.roomListInviteCode?.value ?? "").trim();
   if (fields.roomListJoinRoom) {
     fields.roomListJoinRoom.disabled = !roomListCode;
     fields.roomListJoinRoom.title = roomListCode ? t("roomActionCreate") : t("inviteCodeMissing");
+  }
+}
+
+async function showCurrentInviteQr() {
+  const code = normalizeInviteQrPayload(fields.productionTwoProfileB?.value ?? "");
+  if (!code || connectionCodeRoleFor(code) !== "inviter" || !currentInviteCodeShareVisible) {
+    setProductionTwoProfileState("Invite QR unavailable");
+    setText(fields.productionTwoProfileWarning, t("inviteQrUnavailable"));
+    return false;
+  }
+  setInviteQrPanel(code, true);
+  return true;
+}
+
+async function importReceivedInviteQr() {
+  if (!canImportInviteQr()) {
+    setProductionTwoProfileState("Invite QR import unavailable");
+    setText(fields.productionTwoProfileWarning, t("inviteQrImportUnavailable"));
+    return false;
+  }
+  fields.receivedInviteQrFile?.click?.();
+  return true;
+}
+
+async function handleReceivedInviteQrFileChange(event) {
+  const [file] = Array.from(event?.target?.files ?? []);
+  if (!file) {
+    return false;
+  }
+  try {
+    const code = normalizeInviteQrPayload(await decodeInviteQrFile(file));
+    if (fields.receivedInviteCode) {
+      fields.receivedInviteCode.value = code;
+    }
+    renderReceivedInviteCodeActionState();
+    setProductionTwoProfileState("Invite QR imported");
+    setText(fields.productionTwoProfileWarning, t("inviteQrImportReady"));
+    return createRoomFromReceivedInviteCode();
+  } catch {
+    setProductionTwoProfileState("Invite QR import failed");
+    setText(fields.productionTwoProfileWarning, t("inviteQrImportFailed"));
+    return false;
+  } finally {
+    if (fields.receivedInviteQrFile) {
+      fields.receivedInviteQrFile.value = "";
+    }
   }
 }
 
@@ -8074,6 +8162,7 @@ function clearCurrentInviteRoomInput() {
   copiedInviteCode = "";
   latestConnectionCodeRole = "";
   currentInviteCodeShareVisible = false;
+  closeInviteQrPanel();
   if (fields.productionTwoProfileA) {
     fields.productionTwoProfileA.value = "";
   }
@@ -21269,6 +21358,14 @@ if (fields.receivedInviteCode) {
   renderReceivedInviteCodeActionState();
 }
 
+if (fields.importReceivedInviteQr) {
+  fields.importReceivedInviteQr.addEventListener("click", importReceivedInviteQr);
+}
+
+if (fields.receivedInviteQrFile) {
+  fields.receivedInviteQrFile.addEventListener("change", handleReceivedInviteQrFileChange);
+}
+
 if (fields.roomListCreateRoom) {
   fields.roomListCreateRoom.addEventListener("click", createNewInviteRoomFromList);
 }
@@ -21298,6 +21395,14 @@ if (fields.createInviteCode) {
 
 if (fields.createInviteCodeSettings) {
   fields.createInviteCodeSettings.addEventListener("click", createInviteCode);
+}
+
+if (fields.showCreatedInviteQr) {
+  fields.showCreatedInviteQr.addEventListener("click", showCurrentInviteQr);
+}
+
+if (fields.hideInviteQr) {
+  fields.hideInviteQr.addEventListener("click", closeInviteQrPanel);
 }
 
 if (fields.copyInviteCode) {

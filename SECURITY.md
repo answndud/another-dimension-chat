@@ -4,9 +4,10 @@
 
 Another Dimension Chat is not ready for real communication.
 
-The current macOS release is an unsigned experimental public beta. It is not
-signed, not notarized, not audited, not production-ready, and not for sensitive
-communication. It is not a secure messenger release.
+The current macOS release is a source-build-primary experimental public beta
+with an optional unsigned DMG fallback. It is not signed, not notarized, not
+audited, not production-ready, and not for sensitive communication. It is not
+a secure messenger release.
 
 ## Supported Public Build
 
@@ -476,16 +477,19 @@ Beta artifacts must not include local app data, private planning notes, bridge l
 
 Completed field-test reports must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, passphrases, profile names, message text, local app data paths, raw logs, or key material.
 
-## Unsigned OSS Public Beta Boundary
+## Source Build Primary Boundary
 
-The public GitHub DMG path is an unsigned experimental OSS public beta
-distribution path. It is not signed, not notarized, not audited,
-not production-ready, and sensitive communication prohibited.
+The public macOS distribution path is now source build primary, with an
+optional unsigned GitHub DMG convenience path for people who explicitly want
+it. It is not signed, not notarized, not audited, not production-ready, and
+sensitive communication prohibited.
 
 Apple Developer Program, Developer ID, notarization, App Store, and TestFlight
-credentials are not used or required for this v0.1 public beta. Gatekeeper
-warnings are expected for some users. The supported user path is checksum and
-same-release provenance verification followed by the normal macOS Privacy &
+credentials are not used or required for the source-build primary path or the
+unsigned DMG fallback. Gatekeeper warnings are expected for some users who
+choose the DMG fallback. The supported source-build path is clone, build, and
+run locally. If someone chooses the DMG fallback, checksum and same-release
+provenance verification come first, followed by the normal macOS Privacy &
 Security manual allow path. This project does not ask users to disable
 Gatekeeper globally or use terminal quarantine-removal commands.
 
@@ -530,14 +534,13 @@ operator-prepared peer packets as proof of real external onion delivery. No peer
 report is expected or required for this v0.1 claim, and no external delivery
 claim is made.
 
-The current GitHub Release asset set matches the ignored public-release source
-DMG for the current unsigned public beta packet: build
-channel `beta-onion`, commit `e724bd39`, and SHA-256
-`ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13`. The next
-owner action is a clean macOS fresh-install run with a disposable profile.
-After that pass, the useful next evidence is representative redacted usability
-reports. Production-ready, audited, sensitive-use, reliable-delivery, and
-High-Risk-ready claims remain false.
+The current GitHub Release asset set, when present, remains a legacy unsigned
+DMG convenience path. The source-build primary path is the default install
+route. The next owner action is still a clean macOS fresh-install run with a
+disposable profile for any DMG-based field packet. After that pass, the useful
+next evidence is representative redacted usability reports. Production-ready,
+audited, sensitive-use, reliable-delivery, and High-Risk-ready claims remain
+false.
 
 Desktop public beta source freeze candidate means source-only candidate status:
 no DMG rebuild, no upload, and no generated release artifact commit. Final

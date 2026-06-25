@@ -99,7 +99,12 @@ function functionBody(source, name) {
 test("main chat surface keeps invite, message, receive, and retry entry points", () => {
   for (const id of [
     "create-invite-code",
+    "show-created-invite-qr",
     "received-invite-code",
+    "import-received-invite-qr",
+    "received-invite-qr-file",
+    "invite-qr-panel",
+    "invite-qr-image",
     "room-list-create-room",
     "room-list-invite-code",
     "back-to-room-list",
@@ -932,6 +937,16 @@ test("created invite code stays visible after the room becomes ready", () => {
   assert.match(mainJs, /focusCurrentInviteCodeDisplay\(\)/);
   assert.match(stylesCss, /body\.has-inviter-invite-code \.room-invite-token-panel:not\(\[hidden\]\)/);
   assert.doesNotMatch(stylesCss, /body\.has-ready-session #copy-created-invite-code/);
+});
+
+test("invite qr actions stay scoped to the existing invite code flows", () => {
+  assert.match(functionBody(mainJs, "showCurrentInviteQr"), /connectionCodeRoleFor\(code\) !== "inviter"/);
+  assert.match(functionBody(mainJs, "showCurrentInviteQr"), /setInviteQrPanel\(code, true\)/);
+  assert.match(functionBody(mainJs, "importReceivedInviteQr"), /fields\.receivedInviteQrFile\?\.click/);
+  assert.match(functionBody(mainJs, "handleReceivedInviteQrFileChange"), /fields\.receivedInviteCode\.value = code/);
+  assert.match(functionBody(mainJs, "handleReceivedInviteQrFileChange"), /return createRoomFromReceivedInviteCode\(\)/);
+  assert.match(mainJs, /buildInviteQrSvgDataUrl/);
+  assert.match(mainJs, /decodeInviteQrFile/);
 });
 
 test("reopened inviter rooms do not show the invite code share panel", () => {

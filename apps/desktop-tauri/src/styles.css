@@ -4823,6 +4823,11 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
   display: none;
 }
 
+.connection-choice-card #show-created-invite-qr:disabled,
+.connection-choice-card #import-received-invite-qr:disabled {
+  opacity: 0.58;
+}
+
 .connection-choice-card #copy-created-invite-code:disabled,
 .connection-choice-card .created-invite-code-display[hidden] + #copy-created-invite-code {
   display: none;
@@ -4836,6 +4841,40 @@ body.has-ready-session .chat-settings-panel[open] #production-two-profile-direct
 
 .connection-verification-note {
   margin: 0;
+}
+
+.invite-qr-panel {
+  display: grid;
+  gap: 10px;
+  width: min(320px, 100%);
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 18%, var(--panel-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel-bg) 94%, transparent);
+}
+
+.invite-qr-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.invite-qr-panel-header h5 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.invite-qr-image {
+  width: min(280px, 100%);
+  aspect-ratio: 1 / 1;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  justify-self: center;
 }
 
 .chat-empty-state + .chat-transcript-toolbar,
