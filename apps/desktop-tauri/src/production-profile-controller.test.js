@@ -12,6 +12,8 @@ function createHarness(options = {}) {
     productionProfileIdentity: {},
     lockProductionProfile: { disabled: false },
     unlockProductionProfile: { disabled: false },
+    productionProfileDeleteConfirmation: { value: "" },
+    productionFullWipeConfirmation: { value: "" },
   };
   const calls = {
     states: [],
@@ -25,6 +27,12 @@ function createHarness(options = {}) {
     latestUnlocked: [],
     latestStatus: [],
     failureReports: [],
+    preflights: [],
+    lifecycleRenders: [],
+    resetProfile: 0,
+    resetPairing: [],
+    resetMessage: 0,
+    rebuildGuidance: [],
     loadRetention: [],
     loadProfileList: 0,
     restoreSession: [],
@@ -102,6 +110,25 @@ function createHarness(options = {}) {
       calls.applyActionState += 1;
     },
     rememberFailureSupportReport: (...args) => calls.failureReports.push(args),
+    renderDataLifecycleDestructivePreflight: (action, preflightOptions) => {
+      calls.preflights.push({ action, options: preflightOptions });
+      return {
+        warning: `preflight:${action}`,
+        next: `next:${action}`,
+      };
+    },
+    renderProductionDataLifecycleAction: (result, action) => {
+      calls.lifecycleRenders.push({ result, action });
+      return { next: `rendered:${action}` };
+    },
+    resetProductionProfileView: () => {
+      calls.resetProfile += 1;
+    },
+    resetProductionPairingView: (resetOptions) => calls.resetPairing.push(resetOptions),
+    resetProductionMessageView: () => {
+      calls.resetMessage += 1;
+    },
+    applyPostDestructiveLifecycleRebuildGuidance: (...args) => calls.rebuildGuidance.push(args),
     loadProductionMessageRetentionPreference: async (...args) => calls.loadRetention.push(args),
     loadProductionProfileList: async () => {
       calls.loadProfileList += 1;
@@ -258,4 +285,70 @@ test("unlockProductionProfile ignores stale profile input before restoring sessi
   assert.equal(calls.restoreSession.length, 0);
   assert.equal(calls.refreshTwoProfileSession.length, 0);
   assert.deepEqual(calls.clearedBusyActions, ["profile-unlock"]);
+});
+
+test("deleteProductionProfile requires exact profile confirmation", async () => {
+  const { controller, fields, calls, invoked } = createHarness();
+  fields.productionProfileDeleteConfirmation.value = "wrong";
+
+  const result = await controller.deleteProductionProfile();
+
+  assert.equal(result, null);
+  assert.deepEqual(invoked, []);
+  assert.deepEqual(calls.states, ["Profile delete needs confirmation"]);
+  assert.equal(fields.productionProfileWarning.textContent, "preflight:profile-delete");
+  assert.equal(fields.productionProfileNextAction.textContent, "next:profile-delete");
+  assert.deepEqual(calls.preflights[0], {
+    action: "profile-delete",
+    options: { confirmationMatched: false, profile: "alice" },
+  });
+});
+
+test("deleteProductionProfile deletes then rebuilds local profile flow", async () => {
+  const deleteResult = { profile_deleted: true, warning: "profile deleted" };
+  const { controller, fields, calls, invoked } = createHarness({
+    invokeResults: new Map([["production_profile_delete", deleteResult]]),
+  });
+  fields.productionProfileDeleteConfirmation.value = "alice";
+
+  const result = await controller.deleteProductionProfile();
+
+  assert.equal(result, deleteResult);
+  assert.deepEqual(invoked, ["production_profile_delete", "production_product_unlock_status"]);
+  assert.deepEqual(calls.busyActions, ["profile-delete"]);
+  assert.deepEqual(calls.clearedBusyActions, ["profile-delete"]);
+  assert.deepEqual(calls.lifecycleRenders, [{ result: deleteResult, action: "profile-delete" }]);
+  assert.deepEqual(calls.resetPairing, [{ preserveTwoProfileStatus: true }]);
+  assert.equal(calls.resetMessage, 1);
+  assert.deepEqual(calls.rebuildGuidance[0], [
+    "profile-delete",
+    { deletedProfile: "alice", input: { profileA: "alice", profileB: "bob", passphrase: "room" } },
+  ]);
+  assert.equal(calls.loadProfileList, 1);
+  assert.equal(fields.productionProfileWarning.textContent, "wrong passphrase");
+});
+
+test("wipeProductionLocalData resets profile pairing and message views after confirmation", async () => {
+  const wipeResult = { full_local_data_wiped: true, warning: "wiped" };
+  const { controller, fields, calls, invoked } = createHarness({
+    invokeResults: new Map([["production_full_local_data_wipe", wipeResult]]),
+  });
+  fields.productionFullWipeConfirmation.value = "WIPE LOCAL DATA";
+
+  const result = await controller.wipeProductionLocalData();
+
+  assert.equal(result, wipeResult);
+  assert.deepEqual(invoked, ["production_full_local_data_wipe", "production_product_unlock_status"]);
+  assert.deepEqual(calls.busyActions, ["full-local-data-wipe"]);
+  assert.deepEqual(calls.clearedBusyActions, ["full-local-data-wipe"]);
+  assert.equal(calls.resetProfile, 1);
+  assert.deepEqual(calls.resetPairing, [undefined]);
+  assert.equal(calls.resetMessage, 1);
+  assert.deepEqual(calls.lifecycleRenders, [{ result: wipeResult, action: "full-local-wipe" }]);
+  assert.deepEqual(calls.rebuildGuidance[0], [
+    "full-local-wipe",
+    { input: { profileA: "alice", profileB: "bob", passphrase: "room" } },
+  ]);
+  assert.equal(calls.loadProfileList, 1);
+  assert.equal(fields.productionProfileWarning.textContent, "wrong passphrase");
 });
