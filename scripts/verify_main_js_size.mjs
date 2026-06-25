@@ -7,7 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(__dirname, "..");
 const mainJsPath = resolve(rootDir, "apps/desktop-tauri/src/main.js");
 
-const maxMainJsLines = 20619;
+const maxMainJsLines = 20541;
 const mainJs = readFileSync(mainJsPath, "utf8");
 const lineCount = mainJs.endsWith("\n")
   ? mainJs.slice(0, -1).split("\n").length

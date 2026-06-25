@@ -10,11 +10,18 @@ function createHarness(options = {}) {
     productionProfileWarning: {},
     productionProfileStorage: {},
     productionProfileIdentity: {},
+    productionPairingWarning: {},
+    productionPairingNextAction: {},
+    productionPairingSession: {},
+    productionPairingBoundary: {},
+    productionSessionLifecycle: {},
+    productionMessageBoundary: {},
     lockProductionProfile: { disabled: false },
     unlockProductionProfile: { disabled: false },
     productionProfileDeleteConfirmation: { value: "" },
     productionFullWipeConfirmation: { value: "" },
     productionEmergencyWipeConfirmation: { value: "" },
+    productionSessionDeleteConfirmation: { value: "" },
   };
   const calls = {
     states: [],
@@ -39,6 +46,8 @@ function createHarness(options = {}) {
     restoreSession: [],
     refreshTwoProfileSession: [],
     removedBodyClass: "",
+    pairingStates: [],
+    messageStates: [],
   };
   let currentProfileInput = options.profileInput ?? { profile: "alice", passphrase: "secret" };
   const invokeResults = options.invokeResults ?? new Map();
@@ -72,6 +81,8 @@ function createHarness(options = {}) {
     t: (key) => `t:${key}`,
     productionProfileInput: () => currentProfileInput,
     productionTwoProfileInput: () => ({ profileA: "alice", profileB: "bob", passphrase: "room" }),
+    productionPairingInput: () => currentProfileInput,
+    productionPairingInputStillCurrent: () => true,
     productionProfileInputStillCurrent: (input) => options.staleAfterProductUnlock !== true && input === currentProfileInput,
     productionProfileUnlockView: () => ({
       storage: "profile storage opened",
@@ -125,6 +136,10 @@ function createHarness(options = {}) {
       calls.lifecycleRenders.push({ result, action });
       return { next: `rendered:${action}`, boundary: `boundary:${action}` };
     },
+    productionSessionLifecycleView: (result, options) => ({
+      lifecycle: `session:${options.action}`,
+      boundary: `session-boundary:${options.action}`,
+    }),
     resetProductionProfileView: () => {
       calls.resetProfile += 1;
     },
@@ -133,6 +148,11 @@ function createHarness(options = {}) {
       calls.resetMessage += 1;
     },
     applyPostDestructiveLifecycleRebuildGuidance: (...args) => calls.rebuildGuidance.push(args),
+    rememberProductionSessionState: (...args) => {
+      calls.sessionState = args;
+    },
+    setProductionPairingState: (value) => calls.pairingStates.push(value),
+    setProductionMessageState: (value) => calls.messageStates.push(value),
     loadProductionMessageRetentionPreference: async (...args) => calls.loadRetention.push(args),
     loadProductionProfileList: async () => {
       calls.loadProfileList += 1;
@@ -436,4 +456,49 @@ test("prepareProductionDataLifecycle renders prepare flow and clears busy state"
   assert.deepEqual(calls.states, ["Data lifecycle preparing", "Data lifecycle prepared"]);
   assert.equal(fields.productionProfileWarning.textContent, "prepare ok");
   assert.equal(fields.productionProfileNextAction.textContent, "rendered:prepare");
+});
+
+test("deleteProductionSessionLifecycle requires exact confirmation", async () => {
+  const { controller, fields, calls, invoked } = createHarness();
+  fields.productionSessionDeleteConfirmation.value = "wrong";
+
+  const result = await controller.deleteProductionSessionLifecycle();
+
+  assert.equal(result, undefined);
+  assert.deepEqual(invoked, []);
+  assert.deepEqual(calls.pairingStates, ["Session delete needs confirmation"]);
+  assert.equal(fields.productionPairingWarning.textContent, "preflight:session-delete");
+  assert.equal(fields.productionPairingNextAction.textContent, "next:session-delete");
+  assert.equal(fields.productionSessionLifecycle.textContent, undefined);
+  assert.deepEqual(calls.preflights[0], {
+    action: "session-delete",
+    options: { confirmationMatched: false, profile: "alice" },
+  });
+});
+
+test("deleteProductionSessionLifecycle deletes and rebuilds session flow", async () => {
+  const deleteResult = { session_resume_closed: true, warning: "session deleted" };
+  const { controller, fields, calls, invoked } = createHarness({
+    invokeResults: new Map([["production_session_lifecycle_delete", deleteResult]]),
+  });
+  fields.productionSessionDeleteConfirmation.value = "DELETE SESSION";
+
+  const result = await controller.deleteProductionSessionLifecycle();
+
+  assert.equal(result, undefined);
+  assert.deepEqual(invoked, ["production_session_lifecycle_delete"]);
+  assert.deepEqual(calls.busyActions, ["session-lifecycle-delete"]);
+  assert.deepEqual(calls.clearedBusyActions, ["session-lifecycle-delete"]);
+  assert.deepEqual(calls.sessionState, [{ profile: "alice", passphrase: "secret" }, null]);
+  assert.deepEqual(calls.rebuildGuidance[0], [
+    "session-delete",
+    { deletedProfile: "alice", input: { profileA: "alice", profileB: "bob", passphrase: "room" } },
+  ]);
+  assert.deepEqual(calls.pairingStates, ["Session lifecycle deleting", "Session lifecycle deleted"]);
+  assert.equal(fields.productionPairingWarning.textContent, "session deleted");
+  assert.equal(fields.productionPairingSession.textContent, "Local stored session no longer resumable");
+  assert.equal(fields.productionSessionLifecycle.textContent, "session:session-delete");
+  assert.equal(fields.productionPairingBoundary.textContent, "session-boundary:session-delete");
+  assert.equal(fields.productionMessageBoundary.textContent, "session-boundary:session-delete");
+  assert.deepEqual(calls.messageStates, ["Message flow idle"]);
 });
