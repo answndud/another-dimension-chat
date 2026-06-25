@@ -1205,7 +1205,7 @@ test("busy actions only clear the action they started", () => {
 });
 
 test("profile unlock and manual import refresh the room captured at action start", () => {
-  const unlockBody = functionBody(mainJs, "unlockProductionProfile");
+  const unlockBody = functionBody(productionProfileControllerJs, "unlockProductionProfile");
   assert.match(unlockBody, /const twoProfileRefreshInput = productionTwoProfileInput\(\)/);
   assert.match(unlockBody, /refreshTwoProfileSessionAfterProfileUnlock\(profile, passphrase, twoProfileRefreshInput\)/);
 
@@ -1587,10 +1587,10 @@ test("profile unlock and transcript load ignore stale profile inputs", () => {
   assert.match(mainJs, /function productionProfileInputStillCurrent/);
   assert.match(functionBody(mainJs, "productionProfileInputStillCurrent"), /current\.profile === input\.profile/);
 
-  const unlockBody = functionBody(mainJs, "unlockProductionProfile");
-  assert.match(unlockBody, /const input = productionProfileInput\(\)/);
-  assert.match(unlockBody, /if \(!productionProfileInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
-  assert.match(unlockBody, /restoreProductionSessionAfterUnlock\(input\)/);
+  const unlockBody = functionBody(productionProfileControllerJs, "unlockProductionProfile");
+  assert.match(unlockBody, /const inputValue = productionProfileInput\(\)/);
+  assert.match(unlockBody, /if \(!productionProfileInputStillCurrent\(inputValue\)\) \{\s*return;\s*\}/);
+  assert.match(unlockBody, /restoreProductionSessionAfterUnlock\(inputValue\)/);
 
   const restoreBody = functionBody(mainJs, "restoreProductionSessionAfterUnlock");
   assert.match(restoreBody, /const \{ profile, passphrase \} = input/);
@@ -1621,7 +1621,7 @@ test("product unlock lockout shows local-only recovery actions", () => {
   const renderBody = functionBody(productionProfileControllerJs, "renderProductionProductUnlockRecovery");
   assert.match(renderBody, /fields\.productionProfileNextAction/);
 
-  const unlockBody = functionBody(mainJs, "unlockProductionProfile");
+  const unlockBody = functionBody(productionProfileControllerJs, "unlockProductionProfile");
   assert.match(unlockBody, /const productUnlockRecovery = renderProductionProductUnlockRecovery\(productUnlock\)/);
   assert.match(unlockBody, /setText\(fields\.productionProfileBoundary, productUnlockRecovery\.boundary\)/);
 
@@ -2923,7 +2923,7 @@ test("public diagnostics recovery guide keeps support-safe next actions visible"
   assert.match(mainJs, /function rememberFailureSupportReport/);
   assert.match(diagnosticsCopyControllerJs, /function copyRedactedSupportReport/);
   assert.match(diagnosticsCopyControllerJs, /fields\.copyRedactedSupportReport\.addEventListener\("click", copyRedactedSupportReport\)/);
-  assert.match(functionBody(mainJs, "unlockProductionProfile"), /rememberFailureSupportReport\(/);
+  assert.match(functionBody(productionProfileControllerJs, "unlockProductionProfile"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "exportProductionMessageEnvelope"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "importProductionMessageEnvelope"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "deleteProductionProfile"), /rememberFailureSupportReport\(/);

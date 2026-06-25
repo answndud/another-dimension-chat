@@ -7,6 +7,10 @@ export function createProductionProfileController(input) {
     setProductionProfileState,
     redactedUiErrorMessage,
     t,
+    productionProfileInput,
+    productionTwoProfileInput,
+    productionProfileInputStillCurrent,
+    productionProfileUnlockView,
     productionProfileUnlockRecoveryView,
     productionProfileRecoveryActionsView,
     productionPanicLockMitigationView,
@@ -17,7 +21,14 @@ export function createProductionProfileController(input) {
     clearProductionSensitiveMemoryState,
     clearProductionSensitiveFields,
     clearClipboardBestEffort,
+    setProductionBusyAction,
+    clearProductionBusyAction,
     applyProductionActionState,
+    rememberFailureSupportReport,
+    loadProductionMessageRetentionPreference,
+    loadProductionProfileList,
+    restoreProductionSessionAfterUnlock,
+    refreshTwoProfileSessionAfterProfileUnlock,
   } = input;
 
   function renderProductionProductUnlockStatus(result) {
@@ -163,11 +174,105 @@ export function createProductionProfileController(input) {
     }
   }
 
+  async function unlockProductionProfile() {
+    const inputValue = productionProfileInput();
+    const { profile, passphrase } = inputValue;
+    const twoProfileRefreshInput = productionTwoProfileInput();
+    if (!profile || !passphrase) {
+      setProductionProfileState("Profile unlock needs input");
+      setText(fields.productionProfileWarning, "Enter a profile name and passphrase.");
+      setText(fields.productionProfileNextAction, t("profileRecoveryNeedsInputNext"));
+      return;
+    }
+
+    setProductionProfileState("Profile unlock running");
+    setText(fields.productionProfileWarning, "Opening production profile store.");
+    setText(fields.productionProfileStorage, "Waiting for app-data encrypted store");
+    setText(fields.productionProfileIdentity, "Waiting for identity status");
+    setText(fields.productionProfileBoundary, "Waiting for boundary flags");
+    setProductionBusyAction("profile-unlock");
+    applyProductionActionState();
+    if (fields.unlockProductionProfile) {
+      fields.unlockProductionProfile.disabled = true;
+    }
+    try {
+      const productUnlock = await invoke("production_product_unlock", { profile, passphrase });
+      renderProductionProductUnlockStatus(productUnlock);
+      const productUnlockRecovery = renderProductionProductUnlockRecovery(productUnlock);
+      if (productUnlock.unlocked !== true) {
+        setProductionProfileState(productUnlockRecovery.state);
+        setText(fields.productionProfileWarning, productUnlockRecovery.warning);
+        setText(fields.productionProfileStorage, productUnlockRecovery.storage);
+        setText(fields.productionProfileIdentity, productUnlockRecovery.identity);
+        setText(fields.productionProfileBoundary, productUnlockRecovery.boundary);
+        rememberFailureSupportReport(
+          "profile-unlock",
+          productUnlockRecovery.storage?.includes("local_recovery=")
+            ? productUnlockRecovery.storage.split("local_recovery=")[1]?.split(/\s+/)[0]
+            : "profile_unlock_blocked",
+          productUnlockRecovery.next,
+          "profile_unlock_failed",
+        );
+        return;
+      }
+      const result = await invoke("production_profile_unlock", { profile, passphrase });
+      if (!productionProfileInputStillCurrent(inputValue)) {
+        return;
+      }
+      const view = productionProfileUnlockView(result);
+      document.body.classList.remove("is-panic-locked");
+      setProductionProfileState("Profile unlocked");
+      setText(fields.productionProfileWarning, result.warning);
+      setText(fields.productionProfileStorage, view.storage);
+      setText(fields.productionProfileIdentity, view.identity);
+      setText(fields.productionProfileBoundary, view.boundary);
+      await loadProductionMessageRetentionPreference(profile, passphrase, { quiet: true });
+      if (!productionProfileInputStillCurrent(inputValue)) {
+        return;
+      }
+      await loadProductionProfileList();
+      if (!productionProfileInputStillCurrent(inputValue)) {
+        return;
+      }
+      await restoreProductionSessionAfterUnlock(inputValue);
+      if (!productionProfileInputStillCurrent(inputValue)) {
+        return;
+      }
+      await refreshTwoProfileSessionAfterProfileUnlock(profile, passphrase, twoProfileRefreshInput);
+    } catch (error) {
+      if (!productionProfileInputStillCurrent(inputValue)) {
+        return;
+      }
+      const recovery = productionProfileUnlockRecoveryView({ error });
+      const recoveryActions = productionProfileRecoveryActionsView(recovery);
+      setLatestProductionProfileUnlocked(false);
+      setProductionProfileState("Profile unlock failed");
+      setText(fields.productionProfileWarning, recovery.warning);
+      setText(fields.productionProfileStorage, `Failed local_recovery=${recovery.kind}`);
+      setText(fields.productionProfileIdentity, "Not opened; no raw storage error exposed");
+      setText(fields.productionProfileBoundary, `${recovery.boundary} ${recoveryActions.boundary}`);
+      setText(fields.productionProfileNextAction, recoveryActions.primaryNextAction || recovery.nextAction);
+      rememberFailureSupportReport(
+        "profile-unlock",
+        recovery.kind,
+        recoveryActions.primaryNextAction || recovery.nextAction,
+        "profile_unlock_failed",
+      );
+    } finally {
+      clearProductionBusyAction("profile-unlock");
+      if (fields.unlockProductionProfile) {
+        fields.unlockProductionProfile.disabled = false;
+      }
+      applyProductionActionState();
+    }
+  }
+
   return {
     renderProductionProductUnlockStatus,
     productionProductUnlockRecoveryView,
     renderProductionProductUnlockRecovery,
     checkProductionProductUnlockStatus,
+    unlockProductionProfile,
     lockProductionProfile,
     panicLockProductionProfile,
   };
