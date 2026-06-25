@@ -401,3 +401,39 @@ test("emergencyWipeProductionLocalData clears sensitive state before emergency w
   assert.equal(fields.productionProfileWarning.textContent, "emergency wiped rendered:emergency-local-wipe");
   assert.equal(fields.productionProfileBoundary.textContent, "boundary:emergency-local-wipe panic_boundary=true");
 });
+
+test("checkProductionDataLifecycle renders status and clears busy state", async () => {
+  const statusResult = { warning: "status ok" };
+  const { controller, fields, calls, invoked } = createHarness({
+    invokeResults: new Map([["production_data_lifecycle_status", statusResult]]),
+  });
+
+  const result = await controller.checkProductionDataLifecycle();
+
+  assert.equal(result, statusResult);
+  assert.deepEqual(invoked, ["production_data_lifecycle_status"]);
+  assert.deepEqual(calls.busyActions, ["data-lifecycle"]);
+  assert.deepEqual(calls.clearedBusyActions, ["data-lifecycle"]);
+  assert.deepEqual(calls.lifecycleRenders, [{ result: statusResult, action: "status" }]);
+  assert.deepEqual(calls.states, ["Data lifecycle checking", "Data lifecycle checked"]);
+  assert.equal(fields.productionProfileWarning.textContent, "status ok");
+  assert.equal(fields.productionProfileNextAction.textContent, "rendered:status");
+});
+
+test("prepareProductionDataLifecycle renders prepare flow and clears busy state", async () => {
+  const prepareResult = { warning: "prepare ok" };
+  const { controller, fields, calls, invoked } = createHarness({
+    invokeResults: new Map([["production_data_lifecycle_prepare", prepareResult]]),
+  });
+
+  const result = await controller.prepareProductionDataLifecycle();
+
+  assert.equal(result, prepareResult);
+  assert.deepEqual(invoked, ["production_data_lifecycle_prepare"]);
+  assert.deepEqual(calls.busyActions, ["data-lifecycle-prepare"]);
+  assert.deepEqual(calls.clearedBusyActions, ["data-lifecycle-prepare"]);
+  assert.deepEqual(calls.lifecycleRenders, [{ result: prepareResult, action: "prepare" }]);
+  assert.deepEqual(calls.states, ["Data lifecycle preparing", "Data lifecycle prepared"]);
+  assert.equal(fields.productionProfileWarning.textContent, "prepare ok");
+  assert.equal(fields.productionProfileNextAction.textContent, "rendered:prepare");
+});
