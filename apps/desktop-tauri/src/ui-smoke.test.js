@@ -1828,7 +1828,7 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(emergencyWipeBody, /renderProductionDataLifecycleAction\(result, "emergency-local-wipe"\)/);
   assert.match(mainJs, /writeClipboardWithTtl/);
   assert.doesNotMatch(mainJs, /navigator\.clipboard\.writeText\(payload\)/);
-  const sessionDeleteBody = functionBody(mainJs, "deleteProductionSessionLifecycle");
+  const sessionDeleteBody = functionBody(productionProfileControllerJs, "deleteProductionSessionLifecycle");
   assert.match(sessionDeleteBody, /renderDataLifecycleDestructivePreflight\("session-delete"/);
   assert.match(sessionDeleteBody, /confirmation === "DELETE SESSION"/);
   assert.match(sessionDeleteBody, /production_session_lifecycle_delete"[\s\S]*confirmation/);
@@ -1957,7 +1957,7 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
 
   assert.match(functionBody(productionProfileControllerJs, "deleteProductionProfile"), /roomInputBeforeDelete = productionTwoProfileInput\(\)/);
   assert.match(functionBody(productionProfileControllerJs, "deleteProductionProfile"), /applyPostDestructiveLifecycleRebuildGuidance\("profile-delete"/);
-  const sessionDeleteBody = functionBody(mainJs, "deleteProductionSessionLifecycle");
+  const sessionDeleteBody = functionBody(productionProfileControllerJs, "deleteProductionSessionLifecycle");
   assert.match(sessionDeleteBody, /roomInputBeforeDelete = productionTwoProfileInput\(\)/);
   assert.match(sessionDeleteBody, /result\.session_resume_closed/);
   assert.match(sessionDeleteBody, /applyPostDestructiveLifecycleRebuildGuidance\("session-delete"/);
@@ -2928,11 +2928,11 @@ test("public diagnostics recovery guide keeps support-safe next actions visible"
   assert.match(functionBody(mainJs, "importProductionMessageEnvelope"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(productionProfileControllerJs, "deleteProductionProfile"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(productionProfileControllerJs, "wipeProductionLocalData"), /rememberFailureSupportReport\(/);
-  assert.match(functionBody(mainJs, "deleteProductionSessionLifecycle"), /rememberFailureSupportReport\(/);
+  assert.match(functionBody(productionProfileControllerJs, "deleteProductionSessionLifecycle"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "deleteProductionConversation"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "dataLifecycleDestructivePreflightView"), /destructive_scope=/);
   assert.match(functionBody(mainJs, "dataLifecycleDestructivePreflightView"), /confirmation_phrase=/);
-  assert.match(functionBody(mainJs, "deleteProductionSessionLifecycle"), /action: "session-delete"/);
+  assert.match(functionBody(productionProfileControllerJs, "deleteProductionSessionLifecycle"), /action: "session-delete"/);
   assert.match(functionBody(mainJs, "deleteProductionConversation"), /action: "conversation-delete"/);
   assert.match(indexHtml, /data-destructive-scope="conversation-delete"/);
   assert.match(indexHtml, /data-destructive-scope="session-delete"/);
