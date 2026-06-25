@@ -1801,8 +1801,8 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(renderBody, /fields\.productionProfileBoundary/);
   assert.match(renderBody, /fields\.productionProfileNextAction/);
 
-  assert.match(functionBody(mainJs, "checkProductionDataLifecycle"), /renderProductionDataLifecycleAction\(result, "status"\)/);
-  assert.match(functionBody(mainJs, "prepareProductionDataLifecycle"), /renderProductionDataLifecycleAction\(result, "prepare"\)/);
+  assert.match(functionBody(productionProfileControllerJs, "checkProductionDataLifecycle"), /renderProductionDataLifecycleAction\(result, "status"\)/);
+  assert.match(functionBody(productionProfileControllerJs, "prepareProductionDataLifecycle"), /renderProductionDataLifecycleAction\(result, "prepare"\)/);
 
   const deleteBody = functionBody(productionProfileControllerJs, "deleteProductionProfile");
   assert.match(deleteBody, /renderDataLifecycleDestructivePreflight\("profile-delete"/);

@@ -429,6 +429,52 @@ export function createProductionProfileController(input) {
     }
   }
 
+  async function checkProductionDataLifecycle() {
+    setProductionProfileState("Data lifecycle checking");
+    setProductionBusyAction("data-lifecycle");
+    applyProductionActionState();
+    try {
+      const result = await invoke("production_data_lifecycle_status");
+      const view = renderProductionDataLifecycleAction(result, "status");
+      setProductionProfileState("Data lifecycle checked");
+      setText(fields.productionProfileWarning, result.warning);
+      setText(fields.productionProfileNextAction, view.next);
+      return result;
+    } catch (error) {
+      setProductionProfileState("Data lifecycle check failed");
+      setText(fields.productionProfileWarning, redactedUiErrorMessage("profile-delete", error));
+      setText(fields.productionDataLifecycle, "Failed");
+      setText(fields.productionProfileNextAction, t("dataLifecycleFailedNext"));
+      return null;
+    } finally {
+      clearProductionBusyAction("data-lifecycle");
+      applyProductionActionState();
+    }
+  }
+
+  async function prepareProductionDataLifecycle() {
+    setProductionProfileState("Data lifecycle preparing");
+    setProductionBusyAction("data-lifecycle-prepare");
+    applyProductionActionState();
+    try {
+      const result = await invoke("production_data_lifecycle_prepare");
+      const view = renderProductionDataLifecycleAction(result, "prepare");
+      setProductionProfileState("Data lifecycle prepared");
+      setText(fields.productionProfileWarning, result.warning);
+      setText(fields.productionProfileNextAction, view.next);
+      return result;
+    } catch (error) {
+      setProductionProfileState("Data lifecycle prepare failed");
+      setText(fields.productionProfileWarning, redactedUiErrorMessage("local-data-wipe", error));
+      setText(fields.productionDataLifecycle, "Failed");
+      setText(fields.productionProfileNextAction, t("dataLifecycleFailedNext"));
+      return null;
+    } finally {
+      clearProductionBusyAction("data-lifecycle-prepare");
+      applyProductionActionState();
+    }
+  }
+
   return {
     renderProductionProductUnlockStatus,
     productionProductUnlockRecoveryView,
@@ -438,6 +484,8 @@ export function createProductionProfileController(input) {
     deleteProductionProfile,
     wipeProductionLocalData,
     emergencyWipeProductionLocalData,
+    checkProductionDataLifecycle,
+    prepareProductionDataLifecycle,
     lockProductionProfile,
     panicLockProductionProfile,
   };
