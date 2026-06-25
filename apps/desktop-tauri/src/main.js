@@ -790,6 +790,12 @@ const productionProfileController = createProductionProfileController({
   clearProductionBusyAction,
   applyProductionActionState,
   rememberFailureSupportReport,
+  renderDataLifecycleDestructivePreflight,
+  renderProductionDataLifecycleAction,
+  resetProductionProfileView,
+  resetProductionPairingView,
+  resetProductionMessageView,
+  applyPostDestructiveLifecycleRebuildGuidance,
   loadProductionMessageRetentionPreference,
   loadProductionProfileList,
   restoreProductionSessionAfterUnlock,
@@ -801,6 +807,8 @@ const {
   renderProductionProductUnlockRecovery,
   checkProductionProductUnlockStatus,
   unlockProductionProfile,
+  deleteProductionProfile,
+  wipeProductionLocalData,
   lockProductionProfile,
   panicLockProductionProfile,
 } = productionProfileController;
@@ -18274,106 +18282,6 @@ async function prepareProductionDataLifecycle() {
     return null;
   } finally {
     clearProductionBusyAction("data-lifecycle-prepare");
-    applyProductionActionState();
-  }
-}
-
-async function deleteProductionProfile() {
-  const input = productionProfileInput();
-  const roomInputBeforeDelete = productionTwoProfileInput();
-  const confirmation = (fields.productionProfileDeleteConfirmation?.value ?? "").trim();
-  const preflight = renderDataLifecycleDestructivePreflight("profile-delete", {
-    confirmationMatched: Boolean(input.profile && confirmation === input.profile),
-    profile: input.profile,
-  });
-  if (!input.profile || confirmation !== input.profile) {
-    setProductionProfileState("Profile delete needs confirmation");
-    setText(fields.productionProfileWarning, preflight.warning);
-    setText(fields.productionProfileNextAction, preflight.next);
-    return null;
-  }
-  productionBusyAction = "profile-delete";
-  setProductionProfileState("Profile deleting");
-  setText(fields.productionProfileWarning, `${preflight.warning} ${t("dataLifecycleDeleteRunning")}`);
-  setText(fields.productionProfileNextAction, t("dataLifecycleDestructiveRunningNext"));
-  applyProductionActionState();
-  try {
-    const result = await invoke("production_profile_delete", {
-      profile: input.profile,
-      confirmation,
-    });
-    const view = renderProductionDataLifecycleAction(result, "profile-delete");
-    setProductionProfileState(result.profile_deleted ? "Local profile deleted" : "Local profile not found");
-    setText(fields.productionProfileWarning, `${result.warning} ${view.next}`);
-    resetProductionPairingView({ preserveTwoProfileStatus: true });
-    resetProductionMessageView();
-    applyPostDestructiveLifecycleRebuildGuidance("profile-delete", {
-      deletedProfile: input.profile,
-      input: roomInputBeforeDelete,
-    });
-    await loadProductionProfileList();
-    await checkProductionProductUnlockStatus();
-    return result;
-  } catch (error) {
-    setProductionProfileState("Profile delete failed");
-    setText(fields.productionProfileWarning, redactedUiErrorMessage("profile-recovery-status", error));
-    setText(fields.productionProfileNextAction, t("dataLifecycleFailedNext"));
-    rememberFailureSupportReport(
-      "profile-delete",
-      "destructive_action_failed",
-      "retry-local-lifecycle-action",
-      "destructive_action_failed",
-    );
-    return null;
-  } finally {
-    clearProductionBusyAction("profile-delete");
-    applyProductionActionState();
-  }
-}
-
-async function wipeProductionLocalData() {
-  const roomInputBeforeWipe = productionTwoProfileInput();
-  const confirmation = (fields.productionFullWipeConfirmation?.value ?? "").trim();
-  const preflight = renderDataLifecycleDestructivePreflight("full-local-wipe", {
-    confirmationMatched: confirmation === "WIPE LOCAL DATA",
-    profile: productionProfileInput().profile,
-  });
-  if (confirmation !== "WIPE LOCAL DATA") {
-    setProductionProfileState("Local wipe needs confirmation");
-    setText(fields.productionProfileWarning, preflight.warning);
-    setText(fields.productionProfileNextAction, preflight.next);
-    return null;
-  }
-  productionBusyAction = "full-local-data-wipe";
-  setProductionProfileState("Local data wiping");
-  setText(fields.productionProfileWarning, `${preflight.warning} ${t("dataLifecycleWipeRunning")}`);
-  setText(fields.productionProfileNextAction, t("dataLifecycleDestructiveRunningNext"));
-  applyProductionActionState();
-  try {
-    const result = await invoke("production_full_local_data_wipe", { confirmation });
-    resetProductionProfileView();
-    resetProductionPairingView();
-    resetProductionMessageView();
-    const view = renderProductionDataLifecycleAction(result, "full-local-wipe");
-    setProductionProfileState(result.full_local_data_wiped ? "Local app data wiped" : "Local wipe incomplete");
-    setText(fields.productionProfileWarning, `${result.warning} ${view.next}`);
-    applyPostDestructiveLifecycleRebuildGuidance("full-local-wipe", { input: roomInputBeforeWipe });
-    await loadProductionProfileList();
-    await checkProductionProductUnlockStatus();
-    return result;
-  } catch (error) {
-    setProductionProfileState("Local data wipe failed");
-    setText(fields.productionProfileWarning, redactedUiErrorMessage("profile-recovery-unlock", error));
-    setText(fields.productionProfileNextAction, t("dataLifecycleFailedNext"));
-    rememberFailureSupportReport(
-      "full-local-wipe",
-      "destructive_action_failed",
-      "retry-local-lifecycle-action",
-      "destructive_action_failed",
-    );
-    return null;
-  } finally {
-    clearProductionBusyAction("full-local-data-wipe");
     applyProductionActionState();
   }
 }
