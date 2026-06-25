@@ -812,6 +812,7 @@ const {
   emergencyWipeProductionLocalData,
   checkProductionDataLifecycle,
   prepareProductionDataLifecycle,
+  deleteProductionSessionLifecycle,
   lockProductionProfile,
   panicLockProductionProfile,
 } = productionProfileController;
@@ -18651,85 +18652,6 @@ async function checkProductionSessionLifecycle(input = productionPairingInput())
     clearProductionBusyAction("session-lifecycle");
     if (fields.checkProductionSessionLifecycle) {
       fields.checkProductionSessionLifecycle.disabled = false;
-    }
-    applyProductionActionState();
-  }
-}
-
-async function deleteProductionSessionLifecycle(input = productionPairingInput()) {
-  const { profile, passphrase } = input;
-  const roomInputBeforeDelete = productionTwoProfileInput();
-  if (!profile || !passphrase) {
-    setProductionPairingState("Session delete needs profile");
-    setText(fields.productionPairingWarning, "Enter profile and passphrase.");
-    return;
-  }
-  const confirmation = (fields.productionSessionDeleteConfirmation?.value ?? "").trim();
-  const preflight = renderDataLifecycleDestructivePreflight("session-delete", {
-    confirmationMatched: confirmation === "DELETE SESSION",
-    profile,
-  });
-  if (confirmation !== "DELETE SESSION") {
-    setProductionPairingState("Session delete needs confirmation");
-    setText(fields.productionPairingWarning, preflight.warning);
-    setText(fields.productionPairingNextAction, preflight.next);
-    setText(fields.productionSessionLifecycle, preflight.summary);
-    return;
-  }
-
-  setProductionPairingState("Session lifecycle deleting");
-  setText(
-    fields.productionPairingWarning,
-    "Deleting local session lifecycle records only. Message data, backups, and secure deletion claims are handled separately.",
-  );
-  productionBusyAction = "session-lifecycle-delete";
-  applyProductionActionState();
-  if (fields.deleteProductionSessionLifecycle) {
-    fields.deleteProductionSessionLifecycle.disabled = true;
-  }
-  try {
-    const result = await invoke("production_session_lifecycle_delete", {
-      profile,
-      passphrase,
-      confirmation,
-    });
-    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
-      return;
-    }
-    const view = productionSessionLifecycleView(result, { action: "session-delete" });
-    rememberProductionSessionState(input, null);
-    if (result.session_resume_closed) {
-      applyPostDestructiveLifecycleRebuildGuidance("session-delete", {
-        deletedProfile: profile,
-        input: roomInputBeforeDelete,
-      });
-    }
-    setProductionPairingState(
-      result.session_resume_closed ? "Session lifecycle deleted" : "Session lifecycle delete incomplete",
-    );
-    setText(fields.productionPairingWarning, result.warning);
-    setText(fields.productionPairingSession, "Local stored session no longer resumable");
-    setText(fields.productionSessionLifecycle, view.lifecycle);
-    setText(fields.productionPairingBoundary, view.boundary);
-    setProductionMessageState("Message flow idle");
-    setText(fields.productionMessageBoundary, view.boundary);
-  } catch (error) {
-    if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
-      return;
-    }
-    setProductionPairingState("Session lifecycle delete failed");
-    setText(fields.productionPairingWarning, redactedUiErrorMessage("session-delete", error));
-    setText(fields.productionSessionLifecycle, "Failed");
-    rememberFailureSupportReport(
-      "session-delete",
-      "destructive_action_failed",
-      "retry-local-lifecycle-action",
-      "destructive_action_failed",
-    );
-  } finally {
-    clearProductionBusyAction("session-lifecycle-delete");
-    if (fields.deleteProductionSessionLifecycle) {
-      fields.deleteProductionSessionLifecycle.disabled = false;
     }
     applyProductionActionState();
   }
