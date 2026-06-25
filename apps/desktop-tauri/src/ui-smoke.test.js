@@ -1804,14 +1804,14 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(functionBody(mainJs, "checkProductionDataLifecycle"), /renderProductionDataLifecycleAction\(result, "status"\)/);
   assert.match(functionBody(mainJs, "prepareProductionDataLifecycle"), /renderProductionDataLifecycleAction\(result, "prepare"\)/);
 
-  const deleteBody = functionBody(mainJs, "deleteProductionProfile");
+  const deleteBody = functionBody(productionProfileControllerJs, "deleteProductionProfile");
   assert.match(deleteBody, /renderDataLifecycleDestructivePreflight\("profile-delete"/);
-  assert.match(deleteBody, /confirmationMatched: Boolean\(input\.profile && confirmation === input\.profile\)/);
+  assert.match(deleteBody, /confirmationMatched: Boolean\(inputValue\.profile && confirmation === inputValue\.profile\)/);
   assert.match(deleteBody, /dataLifecycleDeleteRunning/);
   assert.match(deleteBody, /renderProductionDataLifecycleAction\(result, "profile-delete"\)/);
   assert.match(deleteBody, /await checkProductionProductUnlockStatus\(\)/);
 
-  const wipeBody = functionBody(mainJs, "wipeProductionLocalData");
+  const wipeBody = functionBody(productionProfileControllerJs, "wipeProductionLocalData");
   assert.match(wipeBody, /renderDataLifecycleDestructivePreflight\("full-local-wipe"/);
   assert.match(wipeBody, /confirmationMatched: confirmation === "WIPE LOCAL DATA"/);
   assert.match(wipeBody, /dataLifecycleWipeRunning/);
@@ -1955,16 +1955,16 @@ test("destructive lifecycle actions clear stale room retry state before rebuild"
   assert.match(i18nJs, /Session resume records were cleared while local message records remain/);
   assert.match(i18nJs, /세션 재개 기록을 정리했지만 로컬 메시지 기록은 남아 있습니다/);
 
-  assert.match(functionBody(mainJs, "deleteProductionProfile"), /roomInputBeforeDelete = productionTwoProfileInput\(\)/);
-  assert.match(functionBody(mainJs, "deleteProductionProfile"), /applyPostDestructiveLifecycleRebuildGuidance\("profile-delete"/);
+  assert.match(functionBody(productionProfileControllerJs, "deleteProductionProfile"), /roomInputBeforeDelete = productionTwoProfileInput\(\)/);
+  assert.match(functionBody(productionProfileControllerJs, "deleteProductionProfile"), /applyPostDestructiveLifecycleRebuildGuidance\("profile-delete"/);
   const sessionDeleteBody = functionBody(mainJs, "deleteProductionSessionLifecycle");
   assert.match(sessionDeleteBody, /roomInputBeforeDelete = productionTwoProfileInput\(\)/);
   assert.match(sessionDeleteBody, /result\.session_resume_closed/);
   assert.match(sessionDeleteBody, /applyPostDestructiveLifecycleRebuildGuidance\("session-delete"/);
   assert.match(sessionDeleteBody, /deletedProfile: profile/);
   assert.match(sessionDeleteBody, /input: roomInputBeforeDelete/);
-  assert.match(functionBody(mainJs, "wipeProductionLocalData"), /roomInputBeforeWipe = productionTwoProfileInput\(\)/);
-  assert.match(functionBody(mainJs, "wipeProductionLocalData"), /applyPostDestructiveLifecycleRebuildGuidance\("full-local-wipe"/);
+  assert.match(functionBody(productionProfileControllerJs, "wipeProductionLocalData"), /roomInputBeforeWipe = productionTwoProfileInput\(\)/);
+  assert.match(functionBody(productionProfileControllerJs, "wipeProductionLocalData"), /applyPostDestructiveLifecycleRebuildGuidance\("full-local-wipe"/);
 });
 
 test("manual invite room rebuild flow stays local-only across setup steps", () => {
@@ -2926,8 +2926,8 @@ test("public diagnostics recovery guide keeps support-safe next actions visible"
   assert.match(functionBody(productionProfileControllerJs, "unlockProductionProfile"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "exportProductionMessageEnvelope"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "importProductionMessageEnvelope"), /rememberFailureSupportReport\(/);
-  assert.match(functionBody(mainJs, "deleteProductionProfile"), /rememberFailureSupportReport\(/);
-  assert.match(functionBody(mainJs, "wipeProductionLocalData"), /rememberFailureSupportReport\(/);
+  assert.match(functionBody(productionProfileControllerJs, "deleteProductionProfile"), /rememberFailureSupportReport\(/);
+  assert.match(functionBody(productionProfileControllerJs, "wipeProductionLocalData"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "deleteProductionSessionLifecycle"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "deleteProductionConversation"), /rememberFailureSupportReport\(/);
   assert.match(functionBody(mainJs, "dataLifecycleDestructivePreflightView"), /destructive_scope=/);
