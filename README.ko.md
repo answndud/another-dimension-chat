@@ -48,15 +48,12 @@ npm --prefix apps/desktop-tauri run tauri:build:beta-onion
 `apps/desktop-tauri/src-tauri/target/release/bundle/macos/Another Dimension Chat.app`
 에 생성됩니다.
 
+재현 가능한 빌드 기준은
+[macOS 재현성 빌드 노트](REPRODUCIBLE_BUILD_MACOS.md)를 보세요.
+
 GitHub Release DMG가 있더라도, 그것은 legacy unsigned fallback입니다.
 기본 설치 경로는 아닙니다.
-
-## 레거시 다운로드
-
-> [**another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned**](https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned)
-
-DMG를 쓰는 경우에는 checksum 검증 후 현재 macOS manual allow 흐름만
-사용하세요.
+fallback 세부 내용은 [SECURITY.md](SECURITY.md)에만 둡니다.
 
 ## 빠른 시작
 

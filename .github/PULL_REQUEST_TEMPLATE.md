@@ -14,9 +14,10 @@ Before opening or merging a public change, confirm:
       production-ready E2EE, sensitive communication safety, reliable
       real-network onion delivery, completed independent review, or external
       two-machine onion evidence.
-- [ ] Public text preserves the source-build primary / unsigned DMG fallback
-      boundary, `not audited`, `not production-ready`, and `sensitive
-      communication prohibited` where release wording is touched.
+- [ ] Public text preserves the source-build primary boundary, keeps the legacy
+      unsigned DMG fallback secondary, and still says `not audited`,
+      `not production-ready`, and `sensitive communication prohibited` where
+      release wording is touched.
 - [ ] Public files do not include bridge lines, onion endpoints, invite codes,
       payloads, safety phrases, profile names, message text, local paths, raw
       logs, crash dumps, passphrases, private keys, key material, private

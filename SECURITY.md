@@ -13,7 +13,7 @@ a secure messenger release.
 
 | Platform | Public status |
 |----------|---------------|
-| macOS Apple Silicon | Unsigned public beta DMG |
+| macOS Apple Silicon | Source-build primary, legacy unsigned DMG fallback |
 | Windows | No public app yet |
 | Android / iOS | No public app yet |
 

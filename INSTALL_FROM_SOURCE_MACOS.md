@@ -38,6 +38,11 @@ to build the app locally instead of downloading a DMG.
    open apps/desktop-tauri/src-tauri/target/release/bundle/macos/Another\ Dimension\ Chat.app
    ```
 
+## Reproducibility
+
+For build-version and toolchain expectations, see
+[Reproducible build notes for macOS](REPRODUCIBLE_BUILD_MACOS.md).
+
 ## What To Expect
 
 - This is a developer-oriented path.

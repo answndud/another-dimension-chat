@@ -49,16 +49,12 @@ npm --prefix apps/desktop-tauri run tauri:build:beta-onion
 The built app bundle is under
 `apps/desktop-tauri/src-tauri/target/release/bundle/macos/Another Dimension Chat.app`.
 
+For reproducible build details, see
+[Reproducible build notes for macOS](REPRODUCIBLE_BUILD_MACOS.md).
+
 GitHub Release DMGs, when present, are optional unsigned convenience artifacts
 for people who explicitly want that path. They are not the primary install
-route.
-
-## Legacy Download
-
-> [**another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned**](https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned)
-
-If you use a GitHub Release DMG, verify the checksum before opening it and
-follow the current macOS manual allow flow only after verification.
+route. Legacy fallback details live in [SECURITY.md](SECURITY.md).
 
 ## Quick Start
 
