@@ -23,6 +23,56 @@ Post only:
 - public diagnostics copied from the app
 - redacted failure class
 
+Allowed public intake fields are:
+
+- app-status
+- app-version
+- build-channel
+- build-commit
+- platform
+- public-diagnostics
+- checksum-result
+- failure-class
+- recovery-next-action
+- desktop-acceptance-status
+- desktop-acceptance-blockers
+- app-launch-network
+- release-class-readiness
+- high-risk-runtime-evidence-source
+- high-risk-runtime-evidence-accepted
+- high-risk-runtime-primary-blocker
+- high-risk-runtime-failure-class
+- engine-sidecar-status-failure-class
+- engine-sidecar-manual-self-test-failure-class
+- engine-sidecar-redacted-runtime-status
+
+Forbidden public intake fields are:
+
+- raw logs
+- crash dumps
+- screenshots
+- onion endpoints
+- endpoints
+- invite codes
+- pairing payloads
+- envelope payloads
+- endpoint payloads
+- message text
+- local paths
+- payloads
+- safety phrases
+- profile names
+- passphrases
+- private keys
+- key material
+- private planning notes
+- support bundles
+
+The intake policy fields are:
+
+- `allowed_public_intake_fields=app-status#app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network#release-class-readiness#high-risk-runtime-evidence-source#high-risk-runtime-evidence-accepted#high-risk-runtime-primary-blocker#high-risk-runtime-failure-class#engine-sidecar-status-failure-class#engine-sidecar-manual-self-test-failure-class#engine-sidecar-redacted-runtime-status`
+- `forbidden_public_intake_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles`
+
 Do not post raw logs, crash dumps, local paths, endpoints, payloads, invite
 codes, safety phrases, message text, passphrases, private keys, key material,
 private planning notes, files from `docs/`, local app data, or screenshots that
@@ -46,8 +96,8 @@ Follow the source build guide first:
 
 ## Legacy DMG Fallback
 
-If you still choose the DMG path, download the DMG and matching `.sha256`
-from the same GitHub Release:
+If you intentionally choose the legacy DMG fallback, download the DMG and
+matching `.sha256` from the same GitHub Release:
 
 <https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned>
 

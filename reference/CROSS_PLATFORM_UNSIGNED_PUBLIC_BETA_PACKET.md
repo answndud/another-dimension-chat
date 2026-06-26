@@ -1,9 +1,11 @@
 # Cross-Platform Unsigned Public Beta Packet
 
 Status: source-ready for cross-platform public beta/RC copy and packet
-coordination. This is not a release upload authorization.
+coordination. This is not a release upload authorization. The packet below is
+historical reference material; the current maintained development baseline is
+source-build-first.
 
-The current public packet is asymmetric by design:
+The historical public packet is asymmetric by design:
 
 - macOS Apple Silicon: unsigned OSS public beta DMG, checksum, provenance,
   install guide, release notes, update-integrity note, and GitHub Release body

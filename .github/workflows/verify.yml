@@ -46,4 +46,4 @@ jobs:
           fi
 
       - name: Verify
-        run: scripts/verify_all.sh
+        run: npm --prefix apps/desktop-tauri run verify:all

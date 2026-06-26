@@ -32,6 +32,7 @@ require_file README.ko.md
 require_file INSTALL_FROM_SOURCE_MACOS.md
 require_file REPRODUCIBLE_BUILD_MACOS.md
 require_file apps/desktop-tauri/package.json
+require_file apps/desktop-tauri/README.md
 require_file SECURITY.md
 
 require_text README.md "Source Build for macOS"
@@ -52,6 +53,14 @@ require_text SUPPORT.md "Source Build First"
 require_text SUPPORT.md "Legacy DMG Fallback"
 require_text SUPPORT.md "room-scoped"
 require_text SUPPORT.md "public diagnostics only"
+require_text SUPPORT.md "allowed_public_intake_fields=app-status#app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network#release-class-readiness#high-risk-runtime-evidence-source#high-risk-runtime-evidence-accepted#high-risk-runtime-primary-blocker#high-risk-runtime-failure-class#engine-sidecar-status-failure-class#engine-sidecar-manual-self-test-failure-class#engine-sidecar-redacted-runtime-status"
+require_text SUPPORT.md "forbidden_public_intake_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles"
+require_text .github/ISSUE_TEMPLATE/public_beta_support.yml "Source-build primary public beta support"
+require_text .github/ISSUE_TEMPLATE/public_beta_support.yml "allowed_public_intake_fields=app-status#app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network#release-class-readiness#high-risk-runtime-evidence-source#high-risk-runtime-evidence-accepted#high-risk-runtime-primary-blocker#high-risk-runtime-failure-class#engine-sidecar-status-failure-class#engine-sidecar-manual-self-test-failure-class#engine-sidecar-redacted-runtime-status"
+require_text .github/ISSUE_TEMPLATE/public_beta_support.yml "forbidden_public_intake_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles"
+require_text apps/desktop-tauri/README.md "source-build-primary"
+require_text apps/desktop-tauri/README.md "source build primary"
+require_text apps/desktop-tauri/README.md "legacy unsigned DMG fallback"
 require_text REPRODUCIBLE_BUILD_MACOS.md "Keep Fixed"
 require_text REPRODUCIBLE_BUILD_MACOS.md "byte-for-byte identical artifacts"
 require_text REPRODUCIBLE_BUILD_MACOS.md "Cargo.lock"

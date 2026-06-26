@@ -74,5 +74,5 @@ For build-version and toolchain expectations, see
 
 - If you are trying to help a non-developer, the source build path is usually
   the wrong path.
-- If you are trying to avoid quarantine warnings on a downloaded DMG, use the
-  legacy download path only after checksum verification.
+- If you intentionally use the legacy DMG fallback, verify the checksum
+  first and treat it as an optional convenience path, not the primary one.
