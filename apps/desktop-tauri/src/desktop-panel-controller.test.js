@@ -95,11 +95,28 @@ test("bindPanelControls wires toggle, close, and utility buttons", () => {
     closeAppSettings: createButton(),
     openDeveloperTools: createButton(),
   };
-  let enabledPrivateDelivery = 0;
   let openedManualTools = 0;
   const controller = createDesktopPanelController({
     document: harness.document,
     fields,
+    setManualNetworkPermission: () => {},
+    productionTwoProfileInput: () => ({ profileA: "alice", profileB: "bob", passphrase: "room" }),
+    twoProfileSessionsReadyForInput: () => true,
+    renderRoomIdentityBar: () => {},
+    renderRoomStatusSummary: () => {},
+    setProductionTwoProfileState: () => {},
+    pendingPrivateRouteFollowup: null,
+    privateRouteFollowupMatchesRoom: () => false,
+    showPrivateRouteRetryFollowupPrompt: () => false,
+    clearPrivateRouteFollowupForRoom: () => {},
+    twoProfileSafetyConfirmedForInput: () => true,
+    twoProfilePeerEndpointState: () => ({ ready: false }),
+    receiveIntentForRoom: () => false,
+    setText: () => {},
+    t: (key) => key,
+    setChatDeliveryNoticeByKey: () => {},
+    refreshRouteReadinessNoticeAfterSessionRefresh: () => {},
+    applyProductionActionState: () => {},
     openChatSettingsPanel: () => {
       harness.chatPanel.open = true;
     },
@@ -108,9 +125,6 @@ test("bindPanelControls wires toggle, close, and utility buttons", () => {
     },
     closeAppSettingsPanel: () => {
       harness.systemPanel.open = false;
-    },
-    enablePrivateDeliveryPermission: () => {
-      enabledPrivateDelivery += 1;
     },
     openManualProductionTools: () => {
       openedManualTools += 1;
@@ -126,9 +140,9 @@ test("bindPanelControls wires toggle, close, and utility buttons", () => {
 
   assert.equal(fields.toggleChatSettings.attrs.get("aria-expanded"), "false");
   assert.equal(fields.toggleChatSettings.focused, true);
-  assert.equal(enabledPrivateDelivery, 1);
   assert.equal(openedManualTools, 1);
   assert.equal(harness.systemSummary.focused, true);
+  assert.equal(fields.openPrivateDeliverySettings.focused, false);
 });
 
 test("Escape and outside pointer close open panels", () => {
@@ -141,6 +155,24 @@ test("Escape and outside pointer close open panels", () => {
   const controller = createDesktopPanelController({
     document: harness.document,
     fields,
+    setManualNetworkPermission: () => {},
+    productionTwoProfileInput: () => ({ profileA: "alice", profileB: "bob", passphrase: "room" }),
+    twoProfileSessionsReadyForInput: () => true,
+    renderRoomIdentityBar: () => {},
+    renderRoomStatusSummary: () => {},
+    setProductionTwoProfileState: () => {},
+    pendingPrivateRouteFollowup: null,
+    privateRouteFollowupMatchesRoom: () => false,
+    showPrivateRouteRetryFollowupPrompt: () => false,
+    clearPrivateRouteFollowupForRoom: () => {},
+    twoProfileSafetyConfirmedForInput: () => true,
+    twoProfilePeerEndpointState: () => ({ ready: false }),
+    receiveIntentForRoom: () => false,
+    setText: () => {},
+    t: (key) => key,
+    setChatDeliveryNoticeByKey: () => {},
+    refreshRouteReadinessNoticeAfterSessionRefresh: () => {},
+    applyProductionActionState: () => {},
     openChatSettingsPanel: () => {},
     closeChatSettingsPanel: () => {
       chatClosed += 1;
@@ -177,6 +209,24 @@ test("toggle listeners keep body state and aria-expanded in sync", () => {
   const controller = createDesktopPanelController({
     document: harness.document,
     fields,
+    setManualNetworkPermission: () => {},
+    productionTwoProfileInput: () => ({ profileA: "alice", profileB: "bob", passphrase: "room" }),
+    twoProfileSessionsReadyForInput: () => true,
+    renderRoomIdentityBar: () => {},
+    renderRoomStatusSummary: () => {},
+    setProductionTwoProfileState: () => {},
+    pendingPrivateRouteFollowup: null,
+    privateRouteFollowupMatchesRoom: () => false,
+    showPrivateRouteRetryFollowupPrompt: () => false,
+    clearPrivateRouteFollowupForRoom: () => {},
+    twoProfileSafetyConfirmedForInput: () => true,
+    twoProfilePeerEndpointState: () => ({ ready: false }),
+    receiveIntentForRoom: () => false,
+    setText: () => {},
+    t: (key) => key,
+    setChatDeliveryNoticeByKey: () => {},
+    refreshRouteReadinessNoticeAfterSessionRefresh: () => {},
+    applyProductionActionState: () => {},
     openChatSettingsPanel: () => {},
     closeChatSettingsPanel: () => {
       chatClosed += 1;
