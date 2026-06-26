@@ -38,6 +38,20 @@ to build the app locally instead of downloading a DMG.
    open apps/desktop-tauri/src-tauri/target/release/bundle/macos/Another\ Dimension\ Chat.app
    ```
 
+## Verification Ladder
+
+If you want to check the checkout before or after building, use the repo-root
+verification scripts in this order:
+
+```sh
+scripts/verify_light.sh  # quick source-build + boundary check
+scripts/verify_warm.sh   # broader shell/toolchain check before larger edits
+scripts/verify_cold.sh   # full pre-release verification only
+```
+
+`npm --prefix apps/desktop-tauri run verify:desktop-boundary` is the same fast
+boundary check as `scripts/verify_light.sh`.
+
 ## Reproducibility
 
 For build-version and toolchain expectations, see

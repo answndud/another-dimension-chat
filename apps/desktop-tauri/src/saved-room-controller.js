@@ -6,6 +6,10 @@ import {
   readSavedInviteRooms,
   roomListStoragePayload,
 } from "./saved-room-storage.js";
+import {
+  refreshCurrentRoomAfterReceiveImport as savedRoomRefreshCurrentRoomAfterReceiveImport,
+  refreshSavedInviteRoomMetadataForFingerprint as savedRoomRefreshSavedInviteRoomMetadataForFingerprint,
+} from "./saved-room-refresh.js";
 
 export function createSavedRoomController(input) {
   const {
@@ -86,17 +90,43 @@ export function createSavedRoomController(input) {
     startProductionTwoProfileOnionReceive,
     stopProductionTwoProfileOnionReceive,
     savedInviteRoomRealOnionRecoveryView,
+    invoke,
     enablePrivateDeliveryPermission,
     fields,
     setChatDeliveryNoticeByKey,
     openPrivateDeliveryBridgeSettings,
     window,
+    savedInviteRoomMetadataFromLocalStores,
+    savedInviteRoomMetadataWithSessionStatus,
+    invokeInviteRoomSessionStatus,
+    rememberTwoProfileSessionStatus,
+    savedInviteRoomHasRetryableOutbound,
+    latestTwoProfileSessionStatusForCurrentInput,
+    connectionCodeRoleFor,
+    allowCurrentRoomRetryableMetadataFallbackOnce,
+    allowCurrentRoomRetryableMetadataFallbackOnceSet,
+    currentRoomConversationMetadata,
+    renderRoomStatusSummary,
+    renderRoomIdentityBar,
+    renderProductionTwoProfileMemory,
   } = input;
 
   function savedInviteRooms() {
     return readSavedInviteRooms(localStoreGet(inviteRoomsStorageKey), localStoreGet(lastInviteRoomStorageKey), {
       normalizeRetryableAction: savedInviteRoomRetryableAction,
     });
+  }
+
+  function savedInviteRoomForRoomFingerprint(roomFingerprint, rooms = savedInviteRooms()) {
+    const fingerprint = String(roomFingerprint ?? "").trim();
+    if (!fingerprint) {
+      return null;
+    }
+    return (
+      (Array.isArray(rooms) ? rooms : []).find(
+        (room) => input.roomFingerprintForRoom(room) === fingerprint,
+      ) ?? null
+    );
   }
 
   async function preparePrivateDeliveryRoute(options = {}) {
@@ -175,6 +205,69 @@ export function createSavedRoomController(input) {
       refreshed ? "success" : "warning",
       input,
     );
+  }
+
+  async function ensurePrivateDeliveryRuntimeReady(input = productionTwoProfileInput()) {
+    const manualNetworkPermission = manualNetworkPermissionEnabled();
+    if (!manualNetworkPermission) {
+      throw new Error("ManualNetworkPermissionMissing");
+    }
+    const backup = await invoke("production_onion_backup_exclusion_prepare");
+    const key = await invoke("production_onion_key_record_prepare", {
+      profile: input.profileA,
+      passphrase: input.passphrase,
+    });
+    const status = await invoke("production_onion_persistent_client_status");
+    const client = status.persistent_client_ready
+      ? status
+      : await invoke("production_onion_persistent_client_start", { manualNetworkPermission });
+    if (!client.persistent_client_ready) {
+      throw new Error(client.next_blocker || "PersistentClientNotReady");
+    }
+    return { backup, key, client };
+  }
+
+  async function refreshSavedInviteRoomMetadataForFingerprint(roomFingerprint, options = {}) {
+    return savedRoomRefreshSavedInviteRoomMetadataForFingerprint({
+      room: savedInviteRoomForRoomFingerprint(roomFingerprint),
+      roomFingerprint,
+      options,
+      savedInviteRoomMetadataFromLocalStores,
+      savedInviteRoomMetadataWithSessionStatus,
+      invokeInviteRoomSessionStatus,
+      rememberTwoProfileSessionStatus,
+      forgetTwoProfileSessionStatusForInput,
+      rememberInviteRoom,
+      renderSavedInviteRooms,
+      savedInviteRoomInput,
+      savedInviteRoomHasRetryableOutbound,
+      latestTwoProfileSessionStatusForCurrentInput,
+      roomFingerprintForRoom: (room) => input.roomFingerprintForRoom(room),
+    });
+  }
+
+  function refreshCurrentRoomAfterReceiveImport(refreshPlan = {}, roomInput = productionTwoProfileInput()) {
+    return savedRoomRefreshCurrentRoomAfterReceiveImport({
+      refreshPlan,
+      roomInput,
+      twoProfileSessionsReadyForInput: input.twoProfileSessionsReadyForInput,
+      rememberCurrentInviteRoomMetadata: input.rememberCurrentInviteRoomMetadata,
+      renderSavedInviteRooms,
+      renderRoomStatusSummary,
+      renderRoomIdentityBar,
+      renderProductionTwoProfileMemory,
+    });
+  }
+
+  function rememberCurrentInviteRoomMetadata() {
+    const code = currentInviteRoomCode();
+    const role = connectionCodeRoleFor(code);
+    if (!code || !role) {
+      return;
+    }
+    const allowRetryableFallback = allowCurrentRoomRetryableMetadataFallbackOnce === true;
+    allowCurrentRoomRetryableMetadataFallbackOnceSet(false);
+    rememberInviteRoom(code, role, currentRoomConversationMetadata({ allowRetryableFallback }));
   }
 
   function rememberInviteRoom(code, role, metadata = {}, options = {}) {
@@ -531,6 +624,10 @@ export function createSavedRoomController(input) {
     removeSavedInviteRoom,
     runSavedInviteRoomListAction,
     preparePrivateDeliveryRoute,
+    ensurePrivateDeliveryRuntimeReady,
+    refreshSavedInviteRoomMetadataForFingerprint,
+    refreshCurrentRoomAfterReceiveImport,
+    rememberCurrentInviteRoomMetadata,
     savedInviteRoomInput,
     savedInviteRooms,
     savedLastInviteRoom,

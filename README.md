@@ -101,18 +101,31 @@ explicit, fail-closed, and not a reliable delivery claim.
 Read [SECURITY.md](SECURITY.md). For support, open a redacted public issue:
 no invite codes, payloads, keys, raw logs, or screenshots of private room data.
 
+## Public Release Checklist
+
+Use this checklist before treating any public build as ready to share:
+
+- Confirm the macOS path is source-build-primary, not a downloaded DMG.
+- Confirm the current beta wording still says not audited, not production-ready, and not for sensitive communication.
+- Confirm public diagnostics stay redacted and room-scoped.
+- Confirm no release note or README text claims signing, notarization, secure messenger readiness, or reliable external delivery.
+
 ## From Source
 
 Follow the macOS install guide for the primary build path:
 
 - [Install from source on macOS](INSTALL_FROM_SOURCE_MACOS.md)
 
-Then run the local verification entrypoints from the repository root:
+Use `verify_light.sh` for quick boundary checks, `verify_warm.sh` before larger desktop changes, and `verify_cold.sh` only for pre-release review:
 
 ```sh
-scripts/verify_all.sh   # light verify
-scripts/verify_full.sh  # full pre-release verify
+scripts/verify_light.sh  # fast boundary check
+scripts/verify_warm.sh    # broader desktop shell check
+scripts/verify_cold.sh    # full pre-release verify
 ```
+
+`npm --prefix apps/desktop-tauri run verify:desktop-boundary` is the same fast
+boundary check as `scripts/verify_light.sh`.
 
 ## Project Docs
 

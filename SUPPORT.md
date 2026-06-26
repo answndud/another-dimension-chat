@@ -7,7 +7,10 @@ prohibited.
 ## Public Support
 
 For install, checksum, launch, and redacted diagnostics questions, use the
-`Unsigned public beta support` issue template.
+`Unsigned public beta support` issue template. Keep the report room-scoped:
+public diagnostics only, no raw logs, no local paths, no invite codes, no
+payloads, no message text, no safety phrases, no passphrases, no keys, and no
+screenshots of private room data.
 
 Post only:
 
@@ -33,9 +36,18 @@ If private vulnerability reporting is unavailable, open a `Security contact
 request` issue with only a minimal public summary. Do not include exploit
 details or sensitive material in public issues.
 
-## Release Downloads
+## Source Build First
 
-Download the DMG and matching `.sha256` from the same GitHub Release:
+The primary macOS install path is source build.
+
+Follow the source build guide first:
+
+- [Install from source on macOS](INSTALL_FROM_SOURCE_MACOS.md)
+
+## Legacy DMG Fallback
+
+If you still choose the DMG path, download the DMG and matching `.sha256`
+from the same GitHub Release:
 
 <https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned>
 

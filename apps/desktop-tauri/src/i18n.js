@@ -105,7 +105,7 @@ const dictionaries = {
     roomReadinessPeerCode: "This room is waiting for the peer delivery code.",
     roomReadinessNeedsAction: "Complete the shown local action before retrying send or receive.",
     roomReadinessCurrent: "This room is open on this device.",
-    roomReadinessResume: "This room has the highest local recovery priority.",
+    roomReadinessResume: "This room is the next saved-room step to review.",
     roomReadinessOpen: "Open this room to review messages or continue setup.",
     roomReadinessNextEnableDelivery: "Allow delivery for this room, then choose the next manual action.",
     roomReadinessNextShareDeliveryCode: "Share the current delivery code with the peer before retrying.",
@@ -119,7 +119,7 @@ const dictionaries = {
     roomReadinessNextPastePeerCode: "Paste the peer delivery code into this room.",
     roomReadinessNextInspectDiagnostics: "Inspect the local diagnostics blocker before retrying.",
     roomReadinessNextUseCurrentRoom: "Use the open room to continue the local manual flow.",
-    roomReadinessNextResumeRoom: "Open this room first because it has the highest local recovery priority.",
+    roomReadinessNextResumeRoom: "Open this room first because it is the next saved-room step to review.",
     roomReadinessNextOpenRoom: "Open this saved room to review the local manual flow.",
     roomReadinessBoundary: "local status only; network_io=false",
     roomVerification: "Verification",
@@ -165,7 +165,7 @@ const dictionaries = {
     localRehearsalNextStopReceive: "Next: stop receive in the other room, then return here.",
     localRehearsalNextWaitReceiveStop: "Next: wait for receive to stop, then reopen this room.",
     localRehearsalNextExchangeMessages: "Next: send a local rehearsal message and import or receive the reply path.",
-    localRehearsalNextRestartResume: "Next: restart the app and reopen this saved room to check recovery.",
+    localRehearsalNextRestartResume: "Next: restart the app and reopen this saved room to check the saved-room flow.",
     localRehearsalNextEnablePrivateDelivery: "Next: enable private delivery for this room before retrying.",
     localRehearsalNextRetryNetwork: "Next: retry the local network step; this still is not external peer evidence.",
     localRehearsalNextRetryDelivery: "Next: retry the saved outbound message from this room.",
@@ -180,7 +180,7 @@ const dictionaries = {
     fieldTestReportCopyFallback: "Could not copy automatically. The report is selected; copy it manually.",
     publicBetaDiagnostics: "Public support diagnostics",
     publicBetaDiagnosticsHint:
-      "Support-safe status, build, broad failure class, next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary only. It must not ask for raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, or screenshots.",
+      "Room-scoped status, build, broad failure class, next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary only. It must not ask for raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, or screenshots.",
     publicRecoveryGuide: "Recovery guide",
     publicRecoveryInstall:
       "Install/checksum failure: stop, verify the same-release .sha256, then follow README or INSTALL_UNSIGNED_MACOS.md.",
@@ -1364,7 +1364,7 @@ const dictionaries = {
     localRehearsalNextStopReceive: "다음: 다른 방의 받기를 멈춘 뒤 이 방으로 돌아오세요.",
     localRehearsalNextWaitReceiveStop: "다음: 받기가 멈출 때까지 기다린 뒤 이 방을 다시 여세요.",
     localRehearsalNextExchangeMessages: "다음: 로컬 리허설 메시지를 보내고 답장 경로를 import하거나 받으세요.",
-    localRehearsalNextRestartResume: "다음: 앱을 재시작하고 저장된 방을 다시 열어 recovery를 확인하세요.",
+    localRehearsalNextRestartResume: "다음: 앱을 재시작하고 저장된 방을 다시 열어 저장된 방 흐름을 확인하세요.",
     localRehearsalNextEnablePrivateDelivery: "다음: 재시도 전에 이 방의 비공개 전송을 켜세요.",
     localRehearsalNextRetryNetwork: "다음: 로컬 네트워크 단계를 재시도하세요. 그래도 외부 peer evidence는 아닙니다.",
     localRehearsalNextRetryDelivery: "다음: 이 방에서 저장된 outbound 메시지를 다시 시도하세요.",
@@ -1379,7 +1379,7 @@ const dictionaries = {
     fieldTestReportCopyFallback: "자동 복사에 실패했습니다. 리포트를 선택해 두었으니 직접 복사하세요.",
     publicBetaDiagnostics: "공개 지원용 진단 정보",
     publicBetaDiagnosticsHint:
-      "지원에 필요한 상태, 빌드, 넓은 실패 분류, 다음 액션, desktop local-private-flow acceptance status/blockers/non-claims, app-launch network boundary만 포함합니다. raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, screenshots는 요구하지 않습니다.",
+      "저장된 방 범위의 상태, 빌드, 넓은 실패 분류, 다음 액션, desktop local-private-flow acceptance status/blockers/non-claims, app-launch network boundary만 포함합니다. raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, screenshots는 요구하지 않습니다.",
     publicRecoveryGuide: "복구 안내",
     publicRecoveryInstall:
       "Install/checksum failure: 중단하고 같은 release의 .sha256을 확인한 뒤 README 또는 INSTALL_UNSIGNED_MACOS.md를 따르세요.",
