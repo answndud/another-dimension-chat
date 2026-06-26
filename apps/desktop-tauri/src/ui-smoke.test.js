@@ -2819,10 +2819,10 @@ test("new invite room setup creates profiles before saving retention preference"
 });
 
 test("private delivery stays explicit before network work starts", () => {
-  assert.match(functionBody(mainJs, "enablePrivateDeliveryPermission"), /setManualNetworkPermission\(true\)/);
-  assert.doesNotMatch(functionBody(mainJs, "enablePrivateDeliveryPermission"), /production_onion_persistent_client_start/);
-  assert.doesNotMatch(functionBody(mainJs, "enablePrivateDeliveryPermission"), /production_onion_service_launch_attempt/);
-  assert.doesNotMatch(functionBody(mainJs, "enablePrivateDeliveryPermission"), /startProductionTwoProfileOnionReceive\(/);
+  assert.match(functionBody(desktopPanelControllerJs, "enablePrivateDeliveryPermission"), /setManualNetworkPermission\(true\)/);
+  assert.doesNotMatch(functionBody(desktopPanelControllerJs, "enablePrivateDeliveryPermission"), /production_onion_persistent_client_start/);
+  assert.doesNotMatch(functionBody(desktopPanelControllerJs, "enablePrivateDeliveryPermission"), /production_onion_service_launch_attempt/);
+  assert.doesNotMatch(functionBody(desktopPanelControllerJs, "enablePrivateDeliveryPermission"), /startProductionTwoProfileOnionReceive\(/);
   const intentBody = functionBody(mainJs, "twoProfileComposerPrimaryIntent");
   assert.ok(intentBody.indexOf("if (input.message)") < intentBody.indexOf("if (!manualNetworkPermission)"));
   const messageBody = functionBody(mainJs, "runProductionTwoProfileMessageRoundtrip");
@@ -3017,7 +3017,7 @@ test("composer and delivery-route controls stay on the chat delivery path", () =
   assert.match(prepareRouteBody, /const input = options\.input \?\? productionTwoProfileInput\(\)/);
   assert.match(prepareRouteBody, /await refreshProductionTwoProfilePeerEndpoints\(input, \{ allowRetryRecovery \}\)/);
 
-  const permissionBody = functionBody(mainJs, "enablePrivateDeliveryPermission");
+  const permissionBody = functionBody(desktopPanelControllerJs, "enablePrivateDeliveryPermission");
   assert.match(permissionBody, /setManualNetworkPermission\(true\)/);
   assert.match(permissionBody, /fields\.preparePrivateRoute\?\.focus/);
   assert.doesNotMatch(permissionBody, /openChatSettingsPanel|openPrivateDeliverySettings/);
