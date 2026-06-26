@@ -2595,8 +2595,8 @@ test("saved local delivery codes must be refreshed before sharing", () => {
   assert.match(functionBody(mainJs, "applyPeerPrivateRouteCode"), /clearInviteRoomPeerRouteCodeBusy\(input\)/);
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /const runtime = await ensurePrivateDeliveryRuntimeReady\(input\);[\s\S]*if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{[\s\S]*return false;/);
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /rememberLocalPrivateRouteCode\(result\.local_onion_endpoint, input, \{ updateUi: false \}\)/);
-  assert.match(functionBody(mainJs, "preparePrivateDeliveryRoute"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
-  assert.match(functionBody(mainJs, "preparePrivateDeliveryRoute"), /const refreshed = await refreshProductionTwoProfilePeerEndpoints\(input, \{ allowRetryRecovery \}\);[\s\S]*if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{[\s\S]*return;/);
+  assert.match(functionBody(savedRoomControllerJs, "preparePrivateDeliveryRoute"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(functionBody(savedRoomControllerJs, "preparePrivateDeliveryRoute"), /const refreshed = await refreshProductionTwoProfilePeerEndpoints\(input, \{ allowRetryRecovery \}\);[\s\S]*if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{[\s\S]*return;/);
   assert.match(functionBody(mainJs, "routeExchangePrimaryActionNode"), /!currentActiveLocalPrivateRouteCode\(input\)/);
   assert.match(mainJs, /function focusPrivateRouteNextAction\([\s\S]*!currentActiveLocalPrivateRouteCode\(input\)/);
   assert.match(functionBody(mainJs, "localPrivateRouteCodeStatusKey"), /privateRouteLocalStatusSaved/);
@@ -3013,7 +3013,7 @@ test("composer and delivery-route controls stay on the chat delivery path", () =
   assert.match(savedMessageBody, /outboundDeliveryState: "sent"/);
   assert.match(savedMessageBody, /outboundRetryable: false/);
 
-  const prepareRouteBody = functionBody(mainJs, "preparePrivateDeliveryRoute");
+  const prepareRouteBody = functionBody(savedRoomControllerJs, "preparePrivateDeliveryRoute");
   assert.match(prepareRouteBody, /const input = options\.input \?\? productionTwoProfileInput\(\)/);
   assert.match(prepareRouteBody, /await refreshProductionTwoProfilePeerEndpoints\(input, \{ allowRetryRecovery \}\)/);
 
