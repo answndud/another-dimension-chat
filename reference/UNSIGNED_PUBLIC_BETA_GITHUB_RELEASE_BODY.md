@@ -1,6 +1,6 @@
 # GitHub Release Body - Unsigned Public Beta
 
-This is an unsigned experimental public beta.
+This is an unsigned experimental public beta. It is the historical release-body reference for the signed-off DMG packet, not the current maintained source-build baseline.
 
 It is not signed, not notarized, not audited, not production-ready, and sensitive communication prohibited.
 
@@ -95,9 +95,9 @@ GitHub Release body, and beta checklist:
 - `support_intake=redacted-diagnostics-only#no-raw-logs#no-crash-dumps#no-private-room-data#no-payloads#no-key-material`
 - `generated_artifact_boundary=do-not-commit-public-release-or-beta-artifacts#no-dmg-rebuild#no-release-upload-or-edit`
 
-This generated DMG packet is aligned to the current public packet source.
+This generated DMG packet is aligned to the historical public packet source.
 Verify it with the same-release checksum and provenance; the matching GitHub
-Release asset set is current.
+Release asset set is current for that historical packet.
 
 </details>
 

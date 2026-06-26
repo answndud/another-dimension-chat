@@ -1,7 +1,8 @@
 # macOS Public Beta Final Source Report
 
 Status: already public macOS unsigned beta; source-side macOS unsigned public
-beta closure is 100%.
+beta closure is 100% for the historical DMG packet. The current maintained
+development baseline is source-build-first.
 
 This is still not production-ready. It is an unsigned experimental public beta,
 not audited, and sensitive communication prohibited. Do not use it for real
@@ -55,7 +56,8 @@ The source tree now has public-facing material for:
 
 This source acceptance does not rebuild the DMG, upload release assets, edit the
 GitHub Release, notarize, sign, audit, create an auto-update channel, or claim
-external onion delivery success.
+external onion delivery success. It is historical reference material, not the
+current source-build release authority.
 
 ## Known Release Drift
 

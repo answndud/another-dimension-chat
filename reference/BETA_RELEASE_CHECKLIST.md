@@ -1,6 +1,6 @@
 # Beta Release Checklist
 
-This checklist covers the internal field-test beta handoff and the unsigned public experimental GitHub DMG beta staging path. It is not a secure-release checklist and does not create a security claim.
+This checklist covers the internal field-test beta handoff and the historical unsigned public experimental GitHub DMG beta staging path. It is not a secure-release checklist and does not create a security claim. The current maintained development baseline is source-build-first; the DMG packet here is reference material, not the current release authority.
 
 ## Scope
 
@@ -215,10 +215,10 @@ must not be promoted to a fresh-install pass.
 
 ## Platform Release Boundary
 
-The current public artifact is the unsigned macOS DMG. Future Windows, Android,
-and iOS public artifacts must each have a matching checksum, public provenance,
-manifest, release notes, update-integrity note, and dependency evidence attached
-to the same GitHub Release as the artifact.
+The historical public artifact in this packet is the unsigned macOS DMG.
+Future Windows, Android, and iOS public artifacts must each have a matching
+checksum, public provenance, manifest, release notes, update-integrity note,
+and dependency evidence attached to the same GitHub Release as the artifact.
 
 Do not describe a Windows installer, Android APK/AAB, iOS build, TestFlight
 build, app-store listing, notarized artifact, signed artifact, or SmartScreen

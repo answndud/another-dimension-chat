@@ -76,6 +76,10 @@ const publicCommunityLaunchCopyReference = readFileSync(
   join(appRoot, "..", "..", "reference", "PUBLIC_COMMUNITY_LAUNCH_COPY.md"),
   "utf8",
 );
+const publicBetaSupportIssueTemplate = readFileSync(
+  join(appRoot, "..", "..", ".github", "ISSUE_TEMPLATE", "public_beta_support.yml"),
+  "utf8",
+);
 const functionBodyCache = new Map();
 
 function functionBody(source, name) {
@@ -2858,6 +2862,15 @@ test("public diagnostics recovery guide keeps room-scoped next actions visible",
   assert.match(i18nJs, /raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, screenshots는 제외됩니다\./);
   assert.match(i18nJs, /공개 지원용 진단 정보를 복사했습니다\./);
   assert.match(i18nJs, /no raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, or screenshots included/);
+  assert.match(publicBetaSupportIssueTemplate, /Source-build primary public beta support/);
+  assert.match(
+    publicBetaSupportIssueTemplate,
+    /allowed_public_intake_fields=app-status#app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network#release-class-readiness#high-risk-runtime-evidence-source#high-risk-runtime-evidence-accepted#high-risk-runtime-primary-blocker#high-risk-runtime-failure-class#engine-sidecar-status-failure-class#engine-sidecar-manual-self-test-failure-class#engine-sidecar-redacted-runtime-status/,
+  );
+  assert.match(
+    publicBetaSupportIssueTemplate,
+    /forbidden_public_intake_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles/,
+  );
   assert.match(stylesCss, /\.public-recovery-guide/);
   assert.match(stylesCss, /\.redacted-support-report-panel/);
   assert.match(actionStateJs, /export function productionRedactedSupportReportView/);
