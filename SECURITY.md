@@ -25,6 +25,17 @@ If private reporting is unavailable, open a minimal public contact request
 without exploit details, private room data, keys, payloads, invite codes, raw
 logs, crash dumps, local paths, or screenshots of private room data.
 
+## Public Release Readiness Checklist
+
+Before any public-facing release note or support response, confirm all of the
+following:
+
+- The build is described as source-build-primary macOS beta, not a signed or notarized release.
+- The wording still keeps `not audited`, `not production-ready`, and `not for sensitive communication`.
+- Public support diagnostics stay redacted and do not include raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, or screenshots.
+- Any macOS DMG is described as a legacy unsigned convenience path, not the primary install route.
+- No copy claims secure messenger readiness, reliable external delivery, or production security.
+
 ## Non-Claims
 
 This beta does not claim:
@@ -59,8 +70,9 @@ storage, transport, pairing, or contact-discovery semantics.
 The later iOS candidate follows the same shape as a thin Swift shell over
 UniFFI or another narrow FFI boundary into the shared Rust core. iOS-specific
 distribution constraints are product constraints, not security claims.
-The public desktop packet is currently the unsigned macOS DMG path. Windows
-is a local desktop build candidate only; before any public Windows artifact, it
+The public desktop path is source-build-primary on macOS, with legacy unsigned
+DMG artifacts kept only as an optional convenience fallback. Windows is a
+local desktop build candidate only; before any public Windows artifact, it
 must keep the same Tauri app-data resolver semantics, encrypted local store,
 local deletion controls, redacted diagnostics, explicit user-action boundary,
 no auto-update channel, and no signing/notarization/store trust claim. The
@@ -536,8 +548,8 @@ claim is made.
 
 The current GitHub Release asset set, when present, remains a legacy unsigned
 DMG convenience path. The source-build primary path is the default install
-route. The next owner action is still a clean macOS fresh-install run with a
-disposable profile for any DMG-based field packet. After that pass, the useful
+route. The next owner action for any DMG-based field packet is still a clean
+macOS fresh-install run with a disposable profile. After that pass, the useful
 next evidence is representative redacted usability reports. Production-ready,
 audited, sensitive-use, reliable-delivery, and High-Risk-ready claims remain
 false.

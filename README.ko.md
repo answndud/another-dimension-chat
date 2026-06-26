@@ -100,14 +100,28 @@ fallback 세부 내용은 [SECURITY.md](SECURITY.md)에만 둡니다.
 [SECURITY.md](SECURITY.md) 참고. 지원은 redacted public issue로 요청:
 invite code, payload, key, raw log, private room screenshot 게시 금지.
 
+## 공개 릴리스 체크리스트
+
+공개 배포 전에 아래 항목을 확인하세요.
+
+- macOS 경로가 source-build-primary인지 확인한다.
+- 다운로드한 DMG가 기본 경로처럼 읽히지 않는지 확인한다.
+- 현재 베타 문구가 `not audited`, `not production-ready`, `not for sensitive communication`을 유지하는지 확인한다.
+- public diagnostics가 redacted이고 room-scoped인지 확인한다.
+- signing, notarization, secure messenger readiness, reliable external delivery를 주장하는 문구가 없는지 확인한다.
+
 ## 소스에서 빌드
 
 [macOS에서 소스 빌드로 설치](INSTALL_FROM_SOURCE_MACOS.md)를 먼저 보세요.
 
 ```sh
-scripts/verify_all.sh   # 가벼운 검증
-scripts/verify_full.sh  # 전체 사전-릴리즈 검증
+scripts/verify_light.sh  # 빠른 경계 검증
+scripts/verify_warm.sh   # 더 넓은 desktop 셸 검증
+scripts/verify_cold.sh   # 사전-릴리즈 전체 검증
 ```
+
+`npm --prefix apps/desktop-tauri run verify:desktop-boundary`는
+`scripts/verify_light.sh`와 같은 빠른 경계 검증입니다.
 
 ## 프로젝트 문서
 

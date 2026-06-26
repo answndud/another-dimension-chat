@@ -15,6 +15,7 @@ function createHarness(options = {}) {
     openedChatSettings: 0,
     setProductionTwoProfileState: [],
     setText: [],
+    invoke: [],
   };
   const controller = createSavedRoomController({
     localStoreGet: (key) => (store.has(key) ? store.get(key) : null),
@@ -74,6 +75,16 @@ function createHarness(options = {}) {
     manualNetworkPermissionEnabled: () => options.manualNetworkPermission !== false,
     twoProfilePeerEndpointState: () => ({ ready: options.peerEndpointReady === true }),
     showPrivateRouteRetryFollowupPrompt: () => false,
+    invoke: async (command, input) => {
+      calls.invoke.push({ command, input });
+      if (command === "production_onion_persistent_client_status") {
+        return { persistent_client_ready: false };
+      }
+      if (command === "production_onion_persistent_client_start") {
+        return { persistent_client_ready: true, next_blocker: "" };
+      }
+      return { ok: true };
+    },
     focusSafetyConfirmation: () => {},
     twoProfileInviteCodeModeActive: () => false,
     focusPrivateRouteNextAction: () => "paste-peer",
@@ -300,4 +311,26 @@ test("preparePrivateDeliveryRoute reports ready route without retry recovery", a
 
   assert.deepEqual(calls.setProductionTwoProfileState, ["Private route ready"]);
   assert.deepEqual(calls.setText, ["privateDeliveryRouteReady"]);
+});
+
+test("ensurePrivateDeliveryRuntimeReady prepares onion runtime with manual permission", async () => {
+  const { controller, calls } = createHarness();
+
+  const runtime = await controller.ensurePrivateDeliveryRuntimeReady({
+    profileA: "alice",
+    profileB: "bob",
+    passphrase: "room",
+  });
+
+  assert.deepEqual(calls.invoke.map((call) => call.command), [
+    "production_onion_backup_exclusion_prepare",
+    "production_onion_key_record_prepare",
+    "production_onion_persistent_client_status",
+    "production_onion_persistent_client_start",
+  ]);
+  assert.deepEqual(runtime, {
+    backup: { ok: true },
+    key: { ok: true },
+    client: { persistent_client_ready: true, next_blocker: "" },
+  });
 });

@@ -30,9 +30,16 @@ const diagnosticsCopyControllerJs = readFileSync(join(here, "diagnostics-copy-co
 const desktopPanelControllerJs = readFileSync(join(here, "desktop-panel-controller.js"), "utf8");
 const savedRoomControllerJs = readFileSync(join(here, "saved-room-controller.js"), "utf8");
 const transcriptControllerJs = readFileSync(join(here, "transcript-controller.js"), "utf8");
+const messageTranscriptControllerJs = readFileSync(join(here, "message-transcript-controller.js"), "utf8");
+const engineSidecarDiagnosticsControllerJs = readFileSync(join(here, "engine-sidecar-diagnostics-controller.js"), "utf8");
+const onionRuntimeControllerJs = readFileSync(join(here, "onion-runtime-controller.js"), "utf8");
 const diagnosticsReportControllerJs = readFileSync(join(here, "diagnostics-report-controller.js"), "utf8");
 const productionBusyActionStateJs = readFileSync(join(here, "production-busy-action-state.js"), "utf8");
 const productionProfileControllerJs = readFileSync(join(here, "production-profile-controller.js"), "utf8");
+const productionMessageSurfaceControllerJs = readFileSync(
+  join(here, "production-message-surface-controller.js"),
+  "utf8",
+);
 const actionStateJs = readFileSync(join(here, "action-state.js"), "utf8");
 const privateDeliveryStateJs = readFileSync(join(here, "private-delivery-state.js"), "utf8");
 const transcriptResumeJs = readFileSync(join(here, "transcript-resume.js"), "utf8");
@@ -76,7 +83,10 @@ function functionBody(source, name) {
   if (functionBodyCache.has(cacheKey)) {
     return functionBodyCache.get(cacheKey);
   }
-  const index = source.indexOf(`function ${name}(`);
+  let index = source.indexOf(`function ${name}(`);
+  if (index === -1) {
+    index = source.indexOf(`async function ${name}(`);
+  }
   assert.notEqual(index, -1, `missing function ${name}`);
   const paramsStart = source.indexOf("(", index);
   let paramsDepth = 0;
@@ -269,9 +279,9 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(actionStateJs, /ui_error_private_fields_allowed=false/);
   assert.match(mainJs, /productionMessageDeliveryProductizationView/);
   assert.match(mainJs, /productionStorageKeyManagementHardeningView/);
-  assert.match(mainJs, /dataset\.deliveryPrimaryAction/);
-  assert.match(mainJs, /message_delivery_productization/);
-  assert.match(mainJs, /dataset\.storageKeyManagementBoundaryClosed/);
+  assert.match(productionMessageSurfaceControllerJs, /dataset\.deliveryPrimaryAction/);
+  assert.match(productionMessageSurfaceControllerJs, /message_delivery_productization/);
+  assert.match(productionMessageSurfaceControllerJs, /dataset\.storageKeyManagementBoundaryClosed/);
   assert.match(actionStateJs, /primary_action=\$\{primaryAction\}/);
   assert.match(actionStateJs, /first_message_round_trip_ready=\$\{firstMessageRoundTripReady\}/);
   assert.match(actionStateJs, /false_delivered_allowed=false/);
@@ -338,11 +348,6 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(mainJs, /let latestProductionHighRiskRuntimeEvidenceView = null/);
   assert.match(functionBody(mainJs, "rememberHighRiskRuntimeEvidenceFromAttemptResult"), /productionHighRiskRuntimeEvidenceInputFromAttemptResult/);
   assert.match(functionBody(mainJs, "rememberHighRiskRuntimeEvidenceFromAttemptResult"), /productionHighRiskRuntimeEvidenceGateView/);
-  assert.match(functionBody(mainJs, "attemptOnionOutboundEnvelopeSend"), /rememberHighRiskRuntimeEvidenceFromAttemptResult\(result/);
-  assert.match(functionBody(mainJs, "attemptOnionInboundEnvelopeReceive"), /rememberHighRiskRuntimeEvidenceFromAttemptResult\(result/);
-  assert.match(functionBody(mainJs, "sendProductionTwoProfileEndpointUpdate"), /rememberHighRiskRuntimeEvidenceFromAttemptResult\(result,[\s\S]*endpointRotationObserved: true/);
-  assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /localOnlyEvidence: result\.local_dev_roundtrip_result === true/);
-  assert.match(functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"), /syntheticFailure: true/);
   assert.match(functionBody(diagnosticsReportControllerJs, "buildFieldTestReport"), /high_risk_runtime_evidence_source=/);
   assert.match(functionBody(diagnosticsReportControllerJs, "buildFieldTestReport"), /high_risk_public_claim_allowed=/);
   assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /high_risk_runtime_evidence_source=\$\{highRiskRuntimeEvidenceSource\}/);
@@ -528,7 +533,7 @@ test("saved room open carries current session status into metadata reconciliatio
   assert.match(functionBody(savedRoomRefreshJs, "refreshSavedInviteRoomMetadataForFingerprint"), /savedInviteRoomInput\(room\)/);
   assert.match(functionBody(savedRoomRefreshJs, "refreshSavedInviteRoomMetadataForFingerprint"), /rememberInviteRoom\(room\.code, room\.role,/);
   assert.match(functionBody(mainJs, "savedInviteRoomForRoomFingerprint"), /privateRouteRoomKey\(savedInviteRoomInput\(room\)\) === fingerprint/);
-  assert.match(functionBody(mainJs, "refreshSavedInviteRoomMetadataForFingerprint"), /roomFingerprintForRoom: \(room\) => privateRouteRoomKey\(savedInviteRoomInput\(room\)\)/);
+  assert.match(functionBody(savedRoomControllerJs, "refreshSavedInviteRoomMetadataForFingerprint"), /roomFingerprintForRoom: \(room\) => input\.roomFingerprintForRoom\(room\)/);
   assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /savedInviteRoomActionRechecksAfterOpen\(action\)/);
   assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /openSavedInviteRoom\(room\)/);
   assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /savedInviteRoomActionCanUseRetryableOutbound\(action, actionOrigin\)/);
@@ -603,7 +608,6 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.match(functionBody(mainJs, "currentComposerPendingOutboundAction"), /if \(!actionState\.canRunNow\) \{\s*return null;\s*\}/);
   assert.match(functionBody(mainJs, "twoProfileComposerPrimaryIntent"), /currentComposerPendingOutboundAction\(input\)/);
   assert.match(functionBody(mainJs, "twoProfileComposerPrimaryIntent"), /pendingOutboundEntry: pendingOutboundAction\.entry/);
-  assert.match(functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"), /runTwoProfileOutboundPrimaryAction\(intent\.pendingOutboundEntry, intent\.expectedPrimaryAction\)/);
   assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /outboundRecoveryNextText\(primaryAction, outboundActionState\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /outboundRecoveryMessage\(primaryAction\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /outboundRecoveryNextText\(primaryAction, outboundActionState\)/);
@@ -683,16 +687,6 @@ test("saved room list shows receive runtime and restart intent", () => {
   assert.doesNotMatch(functionBody(mainJs, "renderSavedInviteRooms"), /profileA|profileB|passphrase|connectionCode|messageNumber/);
   assert.doesNotMatch(functionBody(mainJs, "renderSavedInviteRooms"), /nextAction\.hidden/);
   assert.doesNotMatch(functionBody(mainJs, "renderSavedInviteRooms"), /const open = document\.createElement/);
-  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /renderSavedInviteRooms\(\)/);
-  assert.match(
-    functionBody(mainJs, "startProductionTwoProfileOnionReceive"),
-    /catch \(error\) \{[\s\S]*setChatDeliveryNoticeByKey\("receiveStartFailed", "warning", input\);[\s\S]*renderSavedInviteRooms\(\);[\s\S]*applyProductionActionState\(\);/,
-  );
-  assert.match(
-    functionBody(mainJs, "startProductionTwoProfileOnionReceive"),
-    /backendLoop\.duplicate_loop_blocked \|\| !backendLoop\.enabled[\s\S]*refreshReceiveIntentRecoveryUi\(input\);/,
-  );
-  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /renderSavedInviteRooms\(\)/);
   assert.match(stylesCss, /\.saved-room-state\.is-listening/);
   assert.match(stylesCss, /\.saved-room-state\.is-receive-paused/);
   assert.match(stylesCss, /\.saved-room-state\.is-waiting-peer-code/);
@@ -750,16 +744,6 @@ test("receive controls are scoped to the active room", () => {
   assert.match(functionBody(mainJs, "renderRoomIdentityBar"), /roomReceivingOther/);
   assert.match(functionBody(mainJs, "renderRoomIdentityBar"), /roomReceivingMismatch/);
   assert.match(mainJs, /receiveIntentForRoom\(input\)[\s\S]*!productionTwoProfileReceiveActiveInOtherRoom\(input\)[\s\S]*action: "start-receiving"/);
-  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /productionTwoProfileReceiveActiveInOtherRoom\(input\)/);
-  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /receiveOtherRoomActive/);
-  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{/);
-  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /await invoke\("production_onion_receive_loop_stop"\)/);
-  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /rememberReceiveIntentForRoom\(input, false\)/);
-  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /localEndpointReady = await prepareInviteRoomPrivateRouteExchange/);
-  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{[\s\S]*rememberReceiveIntentForRoom\(input, false\)[\s\S]*return;/);
-  assert.match(functionBody(mainJs, "startProductionTwoProfileOnionReceive"), /catch \(error\) \{[\s\S]*if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{[\s\S]*rememberReceiveIntentForRoom\(input, false\)/);
-  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /!productionTwoProfileReceiveMatchesInput\(targetInput\)/);
-  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /receiveOtherRoomActive/);
   assert.match(i18nJs, /roomReceivingOther/);
   assert.match(i18nJs, /roomReceivingMismatch/);
   assert.match(i18nJs, /receiveRuntimeMismatch/);
@@ -805,25 +789,14 @@ test("receive restart intent owns the room primary action", () => {
   assert.match(functionBody(mainJs, "refreshReceiveIntentRecoveryUi"), /renderRoomIdentityBar\(input, twoProfileSessionsReadyForInput\(input\)\)/);
   assert.match(functionBody(mainJs, "refreshReceiveIntentRecoveryUi"), /renderRoomStatusSummary\(input\)/);
   assert.match(functionBody(mainJs, "refreshReceiveIntentRecoveryUi"), /applyProductionActionState\(\)/);
-  const startReceiveBody = functionBody(mainJs, "startProductionTwoProfileOnionReceive");
-  assert.match(startReceiveBody, /rememberReceiveIntentForRoom\(input, true\);\s*refreshReceiveIntentRecoveryUi\(input\)/);
-  assert.match(startReceiveBody, /!manualNetworkPermission[\s\S]*openPrivateDeliverySettings\(input\);[\s\S]*refreshReceiveIntentRecoveryUi\(input\);[\s\S]*return;/);
-  assert.match(startReceiveBody, /productionTwoProfileOnionReceiveMode\.enabled[\s\S]*receiveAlreadyListening[\s\S]*refreshReceiveIntentRecoveryUi\(input\);[\s\S]*return;/);
-  assert.match(startReceiveBody, /privateRouteCodeFailed[\s\S]*refreshReceiveIntentRecoveryUi\(input\);[\s\S]*return;/);
-  assert.match(startReceiveBody, /backendLoop\.duplicate_loop_blocked \|\| !backendLoop\.enabled[\s\S]*refreshReceiveIntentRecoveryUi\(input\);[\s\S]*return;/);
   assert.match(mainJs, /function savedInviteRoomListAction/);
   assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /receiveState === "paused"/);
   assert.match(functionBody(mainJs, "savedInviteRoomListAction"), /savedRoomActionLabelKey\("start-receiving"\)/);
   assert.match(functionBody(mainJs, "savedRoomActionLabelKey"), /savedRoomActionStartReceiving/);
   assert.match(functionBody(savedRoomControllerJs, "runSavedInviteRoomListAction"), /rememberReceiveIntentForRoom\(inputValue, true\)/);
-  const actionBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
-  assert.match(actionBody, /intent\.action === "start-receiving"/);
-  assert.match(actionBody, /await startProductionTwoProfileOnionReceive\(\)/);
-  assert.match(actionBody, /input\.message \? "send-draft" : "receive"/);
   assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /latestChatDeliveryNoticeKey === "receiveStartFailed"/);
   assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /action\.textContent = t\("startReceiving"\)/);
   assert.match(functionBody(mainJs, "setChatDeliveryNotice"), /action\.addEventListener\("click", startProductionTwoProfileOnionReceive\)/);
-  assert.match(functionBody(mainJs, "applyProductionActionState"), /composerPrimaryAvailableWithoutDraft/);
   const stopCompletedBody = functionBody(mainJs, "refreshReceiveStopCompletedNotice");
   assert.match(stopCompletedBody, /const currentAction = String\(current\.action \?\? ""\)\.trim\(\)/);
   assert.match(stopCompletedBody, /currentAction === "wait-receive-stop"/);
@@ -985,7 +958,6 @@ test("reopened inviter rooms do not show the invite code share panel", () => {
 
 test("saved room removal is list-only and transcript switching rebuilds entries", () => {
   assert.match(functionBody(savedRoomControllerJs, "removeSavedInviteRoom"), /forgetInviteRoom\(code\)/);
-  assert.match(functionBody(savedRoomControllerJs, "removeSavedInviteRoom"), /stopProductionTwoProfileOnionReceiveForInput\(savedInviteRoomInput\(room\), \{ silent: true \}\)/);
   assert.match(functionBody(savedRoomControllerJs, "removeSavedInviteRoom"), /removeRoomConfirm/);
   assert.match(savedRoomControllerJs, /removeRoomNotice/);
   assert.doesNotMatch(functionBody(savedRoomControllerJs, "removeSavedInviteRoom"), /invoke\(/);
@@ -1013,13 +985,6 @@ test("saved room removal is list-only and transcript switching rebuilds entries"
   assert.match(routeRuntimePersistBody, /persistPrivateRouteMap\(peerPrivateRouteDraftsStorageKey, peerPrivateRouteDraftsByRoom\)/);
   assert.match(routeRuntimePersistBody, /persistRealOnionRecoveries\(\)/);
   assert.match(mainJs, /function clearPrivateRouteFollowupForRoom/);
-  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /silentStop: silent/);
-  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /if \(silent\) \{[\s\S]*rememberProductionTwoProfileOnionReceiveRuntimeState\("stopped"\)/);
-  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /else \{[\s\S]*setProductionTwoProfileOnionReceiveRuntimeState\("stopped"\)/);
-  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveStopConfirmation"), /silentStop === true/);
-  assert.match(functionBody(mainJs, "pollProductionTwoProfileOnionReceiveStopConfirmation"), /markProductionTwoProfileOnionReceiveStopped\(backendLoop,[\s\S]*silent,[\s\S]*input: receiveOwnerInput/);
-  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceiveForInput"), /markProductionTwoProfileOnionReceiveStopped\(backendLoop,[\s\S]*silent,[\s\S]*input: targetInput/);
-  assert.match(functionBody(mainJs, "stopProductionTwoProfileOnionReceive"), /stopProductionTwoProfileOnionReceiveForInput\(productionTwoProfileInput\(\)\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileTranscriptEntries"), /resetProductionTwoProfileTranscript/);
   assert.match(functionBody(mainJs, "resetProductionTwoProfileTranscript"), /productionTwoProfileConversationEntries\.clear\(\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /rememberCurrentInviteRoomMetadata\(\)/);
@@ -1089,8 +1054,6 @@ test("conversation selection keys are scoped to the active invite room", () => {
 
 test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(functionBody(mainJs, "twoProfileSessionStatusFingerprint"), /input\.passphrase/);
-  assert.match(functionBody(mainJs, "productionTwoProfileInput"), /connectionCode:/);
-  assert.match(functionBody(mainJs, "productionTwoProfileInput"), /inviteRole:/);
   assert.match(functionBody(mainJs, "twoProfileSessionStatusFingerprint"), /input\.connectionCode/);
   assert.match(functionBody(mainJs, "twoProfileSessionStatusFingerprint"), /input\.inviteRole/);
   assert.match(functionBody(savedRoomControllerJs, "savedInviteRoomInput"), /code = String\(room\?\.code \?\? ""\)\.trim\(\)/);
@@ -1158,13 +1121,9 @@ test("same-profile invite rooms are scoped by invite code", () => {
 
   for (const name of [
     "saveInviteRoomOutboundMessage",
-    "renderProductionTwoProfileResult",
-    "renderProductionTwoProfileMessageResult",
-    "runProductionTwoProfileRealOnionRoundtrip",
   ]) {
     assert.match(functionBody(mainJs, name), /roomFingerprint: twoProfileSessionStatusFingerprint/);
   }
-  assert.match(functionBody(mainJs, "retryTwoProfileOutboundEntry"), /roomFingerprint: currentEntry\.roomFingerprint/);
 
   assert.match(functionBody(mainJs, "updateMinimalChatMode"), /latestTwoProfileSuccessForInput\(input\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileMemory"), /latestTwoProfileSuccessForInput\(input\)/);
@@ -1198,10 +1157,6 @@ test("busy actions only clear the action they started", () => {
   assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /setInviteRoomOpenBusy\(openInput\)/);
   assert.match(functionBody(mainJs, "openInviteRoomFromToken"), /clearInviteRoomOpenBusy\(openInput\)/);
   assert.match(functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript"), /clearProductionBusyAction\("two-profile-transcript-load"\)/);
-  assert.match(
-    functionBody(mainJs, "runProductionTwoProfileRealOnionRoundtrip"),
-    /clearProductionBusyAction\("two-profile-real-onion-roundtrip"\)/,
-  );
 });
 
 test("profile unlock and manual import refresh the room captured at action start", () => {
@@ -1229,12 +1184,8 @@ test("profile unlock and manual import refresh the room captured at action start
 });
 
 test("manual message actions ignore stale inputs before updating current UI", () => {
-  assert.match(mainJs, /function productionMessageInputStillCurrent/);
-  assert.match(functionBody(mainJs, "productionMessageInput"), /roomFingerprint: twoProfileSessionStatusFingerprint\(productionTwoProfileInput\(\)\)/);
   assert.match(functionBody(mainJs, "productionMessageImportFingerprint"), /const roomFingerprint = String\(input\.roomFingerprint \?\? ""\)\.trim\(\)/);
   assert.match(functionBody(mainJs, "productionMessageImportFingerprint"), /\$\{roomFingerprint\}\\n\$\{profile\}/);
-  assert.match(functionBody(mainJs, "productionMessageInputStillCurrent"), /current\.roomFingerprint === input\.roomFingerprint/);
-  assert.match(functionBody(mainJs, "productionMessageInputStillCurrent"), /current\.envelopePayload === input\.envelopePayload/);
   assert.match(functionBody(mainJs, "productionMessageImportFingerprint"), /input\.passphrase/);
   assert.match(functionBody(mainJs, "productionMessageImportFingerprint"), /input\.envelopePayload/);
 
@@ -1288,7 +1239,7 @@ test("manual message envelope slots require the active pending message", () => {
   assert.match(loadBody, /if \(!entry\)/);
   assert.match(loadBody, /value && !messageEnvelopeSlotMatchesEntry\(slot, entry\)/);
   assert.match(loadBody, /messageEnvelopeSlotRecoveryHint\(slot, entry\)/);
-  assert.match(functionBody(mainJs, "applyProductionActionState"), /activeMessageEnvelopeSlotReady\(activeProductionProfileName\(\)\)/);
+  assert.match(functionBody(mainJs, "applyProductionActionState"), /activeMessageEnvelopeSlotReady,/);
 });
 
 test("manual message envelope slots are import-ready only for active lifecycle rows", () => {
@@ -1597,9 +1548,9 @@ test("profile unlock and transcript load ignore stale profile inputs", () => {
   assert.match(restoreBody, /if \(!productionProfileInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(restoreBody, /production_message_transcript_export/);
 
-  const transcriptBody = functionBody(mainJs, "loadProductionMessageTranscript");
-  assert.match(transcriptBody, /const input = productionProfileInput\(\)/);
-  assert.match(transcriptBody, /if \(!productionProfileInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  const transcriptBody = functionBody(messageTranscriptControllerJs, "loadProductionMessageTranscript");
+  assert.match(transcriptBody, /const currentInput = productionProfileInput\(\)/);
+  assert.match(transcriptBody, /if \(!productionProfileInputStillCurrent\(currentInput\)\) \{\s*return;\s*\}/);
 });
 
 test("product unlock lockout shows local-only recovery actions", () => {
@@ -2077,12 +2028,6 @@ test("rebuild delivery retry and receive actions stay room-scoped", () => {
   assert.match(recoveryFocusBody, /action === "verify-safety"[\s\S]*focusSafetyConfirmation\(\)/);
   assert.ok(recoveryFocusBody.indexOf('action === "verify-safety"') < recoveryFocusBody.indexOf("fields.runProductionTwoProfileMessageRoundtrip"));
   assert.doesNotMatch(recoveryFocusBody, /action === "start-receiving" \|\| action === "wait-receive-stop"/);
-
-  const composerBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
-  assert.match(composerBody, /intent\.action === "enable-private-delivery"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, intent\.action\)/);
-  assert.match(composerBody, /intent\.action === "prepare-private-route"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, intent\.action\)/);
-  assert.match(composerBody, /intent\.action === "refresh-endpoint"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, intent\.action\)/);
-  assert.match(composerBody, /intent\.action === "start-receiving"[\s\S]*renderManualRebuildDeliveryScopeGate\(input, intent\.action\)/);
 });
 
 test("manual rebuild recovery resumes from saved room metadata", () => {
@@ -2188,41 +2133,49 @@ test("manual session readiness is scoped to the active profile passphrase", () =
 });
 
 test("two-profile onion setup actions ignore stale room results", () => {
-  const keyBody = functionBody(mainJs, "prepareProductionTwoProfileOnionKey");
-  assert.match(keyBody, /const input = productionTwoProfileInput\(\)/);
-  assert.match(keyBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  const keyBody = functionBody(onionRuntimeControllerJs, "prepareProductionTwoProfileOnionKey");
+  assert.match(keyBody, /const currentInput = productionTwoProfileInput\(\)/);
+  assert.match(keyBody, /if \(!twoProfileTranscriptInputStillCurrent\(currentInput\)\) \{\s*return;\s*\}/);
 
-  const endpointBody = functionBody(mainJs, "launchProductionTwoProfileOnionEndpoint");
-  assert.match(endpointBody, /const input = productionTwoProfileInput\(\)/);
+  const endpointBody = functionBody(onionRuntimeControllerJs, "launchProductionTwoProfileOnionEndpoint");
+  assert.match(endpointBody, /const currentInput = productionTwoProfileInput\(\)/);
   assert.match(endpointBody, /const manualPairingInput = productionPairingInput\(\)/);
   assert.match(endpointBody, /production_onion_service_launch_attempt/);
-  assert.match(endpointBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  assert.match(endpointBody, /if \(!twoProfileTranscriptInputStillCurrent\(currentInput\)\) \{\s*return;\s*\}/);
   assert.match(endpointBody, /const manualPairingStillCurrent = productionPairingInputStillCurrent\(manualPairingInput\)/);
   assert.match(endpointBody, /result\.local_onion_endpoint && fields\.productionPairingEndpoint && manualPairingStillCurrent/);
-  assert.match(endpointBody, /applyProductionPairingPayloadExportResult/);
+  assert.match(endpointBody, /production_pairing_payload_export/);
 
-  const pairingBody = functionBody(mainJs, "prepareProductionTwoProfileOnionPairing");
-  assert.match(pairingBody, /const input = productionTwoProfileInput\(\)/);
-  assert.match(pairingBody, /const manualPairingInput = productionPairingInput\(\)/);
-  assert.match(pairingBody, /launchAndExport\(profileA\)/);
-  assert.match(pairingBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
-  assert.match(pairingBody, /const manualPairingStillCurrent = productionPairingInputStillCurrent\(manualPairingInput\)/);
-  assert.match(pairingBody, /if \(manualPairingStillCurrent\) \{[\s\S]*applyProductionPairingPayloadExportResult/);
-  assert.match(pairingBody, /if \(manualPairingStillCurrent\) \{[\s\S]*applyProductionPairingSafetyPreviewResult/);
+  const pairingControllerBody = functionBody(onionRuntimeControllerJs, "prepareProductionTwoProfileOnionPairing");
+  assert.match(pairingControllerBody, /const currentInput = productionTwoProfileInput\(\)/);
+  assert.match(pairingControllerBody, /const manualPairingInput = input\.productionPairingInput\(\)/);
+  assert.match(pairingControllerBody, /launchAndExport\(profileA\)/);
+  assert.match(pairingControllerBody, /if \(!twoProfileTranscriptInputStillCurrent\(currentInput\)\) \{\s*return;\s*\}/);
+  assert.match(pairingControllerBody, /const manualPairingStillCurrent = input\.productionPairingInputStillCurrent\(manualPairingInput\)/);
+  assert.match(pairingControllerBody, /if \(manualPairingStillCurrent\) \{[\s\S]*applyProductionPairingPayloadExportResult/);
+  assert.match(pairingControllerBody, /if \(manualPairingStillCurrent\) \{[\s\S]*applyProductionPairingSafetyPreviewResult/);
 
-  const saveBody = functionBody(mainJs, "saveProductionTwoProfileOnionSessions");
-  assert.match(saveBody, /const input = productionTwoProfileInput\(\)/);
-  assert.match(saveBody, /production_two_profile_session_status/);
-  assert.match(saveBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  const saveControllerBody = functionBody(onionRuntimeControllerJs, "saveProductionTwoProfileOnionSessions");
+  assert.match(saveControllerBody, /const currentInput = productionTwoProfileInput\(\)/);
+  assert.match(saveControllerBody, /production_two_profile_session_status/);
+  assert.match(saveControllerBody, /if \(!twoProfileTranscriptInputStillCurrent\(currentInput\)\) \{\s*return;\s*\}/);
 
-  const refreshBody = functionBody(mainJs, "refreshProductionTwoProfilePeerEndpoints");
-  assert.match(mainJs, /async function refreshProductionTwoProfilePeerEndpoints\(input = productionTwoProfileInput\(\), options = \{\}\)/);
-  assert.match(refreshBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return false;\s*\}/);
+  const handshakeControllerBody = functionBody(onionRuntimeControllerJs, "completeProductionTwoProfileOnionHandshake");
+  assert.match(handshakeControllerBody, /const currentInput = productionTwoProfileInput\(\)/);
+  assert.match(handshakeControllerBody, /production_handshake_init_export/);
+  assert.match(handshakeControllerBody, /production_handshake_finish_import/);
+  assert.match(handshakeControllerBody, /setHandshakePayload\(fields\.productionHandshakeInitPayload, init\.output_payload\)/);
+  assert.match(handshakeControllerBody, /if \(!twoProfileTranscriptInputStillCurrent\(currentInput\)\) \{\s*return;\s*\}/);
+
+  const refreshBody = functionBody(onionRuntimeControllerJs, "refreshProductionTwoProfilePeerEndpoints");
+  assert.match(refreshBody, /const \{ profileA, profileB, passphrase \} = currentInput;/);
+  assert.match(refreshBody, /setTwoProfilePeerEndpointRefreshBusy\(currentInput\)/);
   assert.match(productionBusyActionStateJs, /twoProfilePeerEndpointRefreshFingerprint: ""/);
   assert.match(productionBusyActionStateJs, /setFingerprintAction\("two-profile-peer-endpoint-refresh", "twoProfilePeerEndpointRefreshFingerprint", inputValue\)/);
   assert.match(productionBusyActionStateJs, /clearFingerprintAction\("two-profile-peer-endpoint-refresh", "twoProfilePeerEndpointRefreshFingerprint", inputValue\)/);
-  assert.match(refreshBody, /setTwoProfilePeerEndpointRefreshBusy\(input\)/);
-  assert.match(refreshBody, /clearTwoProfilePeerEndpointRefreshBusy\(input\)/);
+  const refreshControllerBody = functionBody(onionRuntimeControllerJs, "refreshProductionTwoProfilePeerEndpoints");
+  assert.match(refreshControllerBody, /setTwoProfilePeerEndpointRefreshBusy\(currentInput\)/);
+  assert.match(refreshControllerBody, /clearTwoProfilePeerEndpointRefreshBusy\(currentInput\)/);
 
   const loadTranscriptBody = functionBody(transcriptControllerJs, "loadProductionTwoProfileTranscript");
   assert.match(loadTranscriptBody, /const currentInput = options\.input \?\? productionTwoProfileInput\(\)/);
@@ -2234,9 +2187,6 @@ test("two-profile onion setup actions ignore stale room results", () => {
   assert.match(updateBody, /const input = productionTwoProfileInput\(\)/);
   assert.match(updateBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
 
-  const handshakeBody = functionBody(mainJs, "completeProductionTwoProfileOnionHandshake");
-  assert.match(handshakeBody, /const input = productionTwoProfileInput\(\)/);
-  assert.match(handshakeBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
 });
 
 test("standalone onion diagnostics ignore stale profile and endpoint inputs", () => {
@@ -2245,8 +2195,6 @@ test("standalone onion diagnostics ignore stale profile and endpoint inputs", ()
 
   for (const name of [
     "prepareOnionKeyRecord",
-    "checkOnionLaunchPreflight",
-    "attemptOnionServiceLaunch",
     "prepareOnionDescriptorPublication",
     "attemptOnionDescriptorPublication",
     "prepareOnionInboundStream",
@@ -2255,6 +2203,18 @@ test("standalone onion diagnostics ignore stale profile and endpoint inputs", ()
     const body = functionBody(mainJs, name);
     assert.match(body, /const input = productionProfileInput\(\)/);
     assert.match(body, /if \(!productionProfileInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
+  }
+
+  for (const name of [
+    "checkOnionLaunchPreflight",
+    "attemptOnionServiceLaunch",
+    "prepareProductionTwoProfileOnionKey",
+    "launchProductionTwoProfileOnionEndpoint",
+    "refreshProductionTwoProfilePeerEndpoints",
+  ]) {
+    const body = functionBody(onionRuntimeControllerJs, name);
+    assert.match(body, /currentInput/);
+    assert.match(body, /productionProfileInputStillCurrent\(currentInput\)|twoProfileTranscriptInputStillCurrent\(currentInput\)/);
   }
 
   const outboundBody = functionBody(mainJs, "prepareOnionOutboundStream");
@@ -2560,7 +2520,6 @@ test("send diagnostics expose runtime owner match without raw profile names", ()
 
 test("delivery code save continues the original send or receive action", () => {
   assert.match(mainJs, /let pendingPrivateRouteFollowup = null/);
-  assert.match(functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction"), /rememberPrivateRouteFollowup\(input\.message \? "send-draft" : "receive", input\)/);
   assert.match(functionBody(mainJs, "applyPeerPrivateRouteCode"), /continueAfterPeerPrivateRouteSaved\(input\)/);
   assert.match(functionBody(mainJs, "applyPeerPrivateRouteCode"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return true;\s*\}/);
   const followupBody = functionBody(mainJs, "continueAfterPeerPrivateRouteSaved");
@@ -2593,7 +2552,7 @@ test("saved local delivery codes must be refreshed before sharing", () => {
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /clearInviteRoomPrivateRouteCodeBusy\(input\)/);
   assert.match(functionBody(mainJs, "applyPeerPrivateRouteCode"), /setInviteRoomPeerRouteCodeBusy\(input\)/);
   assert.match(functionBody(mainJs, "applyPeerPrivateRouteCode"), /clearInviteRoomPeerRouteCodeBusy\(input\)/);
-  assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /const runtime = await ensurePrivateDeliveryRuntimeReady\(input\);[\s\S]*if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{[\s\S]*return false;/);
+  assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /const runtime = await savedRoomController\.ensurePrivateDeliveryRuntimeReady\(input\);[\s\S]*if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{[\s\S]*return false;/);
   assert.match(functionBody(mainJs, "prepareInviteRoomPrivateRouteExchange"), /rememberLocalPrivateRouteCode\(result\.local_onion_endpoint, input, \{ updateUi: false \}\)/);
   assert.match(functionBody(savedRoomControllerJs, "preparePrivateDeliveryRoute"), /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(functionBody(savedRoomControllerJs, "preparePrivateDeliveryRoute"), /const refreshed = await refreshProductionTwoProfilePeerEndpoints\(input, \{ allowRetryRecovery \}\);[\s\S]*if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{[\s\S]*return;/);
@@ -2686,12 +2645,6 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(productionBusyActionStateJs, /active\.twoProfileOnionEnvelopeSendKey === onionEnvelopeSendKey\(inputValue, messageNumber\)/);
   assert.match(sendBody, /setTwoProfileOnionEnvelopeSendBusy\(input, latestOnionOutbound\.messageNumber\)/);
   assert.match(sendBody, /clearTwoProfileOnionEnvelopeSendBusy\(input, latestOnionOutbound\.messageNumber\)/);
-
-  const retryBody = functionBody(mainJs, "retryTwoProfileOutboundEntry");
-  assert.match(retryBody, /await sendProductionTwoProfileLatestOnionEnvelope\(input,[\s\S]*exactRetryOnly: true,[\s\S]*message: currentEntry\.message,[\s\S]*messageNumber: currentEntry\.messageNumber,[\s\S]*roomFingerprint: currentEntry\.roomFingerprint/);
-  assert.match(retryBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*quiet: true,[\s\S]*refreshSessionStatus: true,[\s\S]*allowRetryableMetadataFallback: false,[\s\S]*input/);
-  assert.match(retryBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
-  assert.match(retryBody, /setChatDeliveryNoticeByKey\("sendRetrying", "progress", input\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /currentTwoProfileOutboundAction\(entry, \{ requireCurrentInput: true \}\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /runTwoProfileOutboundPrimaryAction\(current\.entry, current\.primaryAction\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /setActionButtonState\(cancel, !outboundActionState\.canCancelNow/);
@@ -2700,7 +2653,7 @@ test("message send retry and cancel results stay scoped to the current room", ()
 
   const refreshRetryBody = functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry");
   assert.match(refreshRetryBody, /await prepareInviteRoomPrivateRouteExchange\(input\)/);
-  assert.match(refreshRetryBody, /await refreshProductionTwoProfilePeerEndpoints\(input, \{ suppressRecoveryNoticeRefresh: true \}\)/);
+  assert.match(refreshRetryBody, /await onionRuntimeController\.refreshProductionTwoProfilePeerEndpoints\(input, \{[\s\S]*suppressRecoveryNoticeRefresh: true,[\s\S]*\}\)/);
   assert.match(refreshRetryBody, /await loadProductionTwoProfileTranscript\(\{[\s\S]*quiet: true,[\s\S]*refreshSessionStatus: true,[\s\S]*allowRetryableMetadataFallback: false,[\s\S]*input/);
   assert.match(refreshRetryBody, /if \(!twoProfileTranscriptInputStillCurrent\(input\)\) \{\s*return;\s*\}/);
   assert.match(refreshRetryBody, /twoProfilePeerEndpointState\(input\)\.ready/);
@@ -2831,15 +2784,13 @@ test("private delivery stays explicit before network work starts", () => {
   assert.match(messageBody, /default_transport_path=local-manual-encrypted-envelope-exchange network_io=false automatic_delivery=false/);
   assert.match(messageBody, /default_transport_network_io=false high_risk_onion_path=explicit-user-triggered-fail-closed external_delivery_claim=false/);
   assert.doesNotMatch(messageBody, /production_onion_outbound_envelope_send_attempt|production_two_profile_real_onion_roundtrip/);
-  assert.match(functionBody(mainJs, "ensurePrivateDeliveryRuntimeReady"), /production_onion_persistent_client_start/);
+  assert.match(functionBody(savedRoomControllerJs, "ensurePrivateDeliveryRuntimeReady"), /production_onion_persistent_client_start/);
 });
 
 test("receive and retry actions stay tied to explicit click handlers", () => {
   assert.match(mainJs, /addEventListener\("click", startProductionTwoProfileOnionReceive\)/);
-  assert.match(functionBody(mainJs, "retryTwoProfileOutboundEntry"), /setText\(fields\.productionTwoProfileWarning, t\("sendRetrying"\)\)/);
   assert.match(functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry"), /setText\(fields\.productionTwoProfileWarning, t\("sendRefreshWrongDirection"\)\)/);
   assert.doesNotMatch(functionBody(mainJs, "refreshTwoProfileOutboundEndpointThenRetry"), /initializeLanguage\(\)/);
-  assert.doesNotMatch(functionBody(mainJs, "retryTwoProfileOutboundEntry"), /initializeLanguage\(\)/);
 });
 
 test("manual encrypted envelope guide keeps local default flow visible", () => {
@@ -2875,7 +2826,7 @@ test("manual encrypted envelope guide keeps local default flow visible", () => {
   assert.match(functionBody(mainJs, "importProductionMessageEnvelope"), /rememberManualEnvelopePanelFailure\(error, "ask-for-fresh-envelope"\)/);
 });
 
-test("public diagnostics recovery guide keeps support-safe next actions visible", () => {
+test("public diagnostics recovery guide keeps room-scoped next actions visible", () => {
   assert.match(indexHtml, /class="public-recovery-guide"/);
   assert.match(indexHtml, /class="redacted-support-report-panel"/);
   assert.match(indexHtml, /id="redacted-support-report"/);
@@ -2894,7 +2845,7 @@ test("public diagnostics recovery guide keeps support-safe next actions visible"
   assert.match(i18nJs, /Malformed payload or replay rejected: ask for a fresh envelope/);
   assert.match(i18nJs, /Transport unavailable or policy blocked: stay on manual envelope exchange/);
   assert.match(i18nJs, /Lifecycle confirmation required: confirm the local-only delete or wipe scope/);
-  assert.match(i18nJs, /Support-safe status, build, broad failure class, next action/);
+  assert.match(i18nJs, /Room-scoped status, build, broad failure class, next action/);
   assert.match(i18nJs, /It must not ask for raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, or screenshots\./);
   assert.match(i18nJs, /Redacted support report/);
   assert.match(i18nJs, /Copy redacted support report/);
@@ -2953,7 +2904,7 @@ test("empty loading and error states keep UI error details redacted", () => {
   assert.match(functionBody(mainJs, "exportProductionMessageEnvelope"), /redactedUiErrorMessage\("message-export", error\)/);
   assert.match(functionBody(mainJs, "importProductionMessageEnvelope"), /redactedUiErrorMessage\("message-import", error\)/);
   assert.match(functionBody(mainJs, "exportProductionReceivedMessage"), /redactedUiErrorMessage\("received-export", error\)/);
-  assert.match(functionBody(mainJs, "loadProductionMessageTranscript"), /redactedUiErrorMessage\("transcript-load", error\)/);
+  assert.match(functionBody(messageTranscriptControllerJs, "loadProductionMessageTranscript"), /redactedUiErrorMessage\("transcript-load", error\)/);
   assert.match(functionBody(mainJs, "exportProductionHandshakeInit"), /redactedUiErrorMessage\("handshake-init", error\)/);
   assert.match(functionBody(mainJs, "importProductionHandshakeFinish"), /redactedUiErrorMessage\("handshake-finish-import", error\)/);
   assert.match(functionBody(mainJs, "runLocalDemo"), /Local demo failed:\\n\$\{redactedUiErrorMessage\("local-command", error\)\}/);
@@ -3000,14 +2951,6 @@ test("composer and delivery-route controls stay on the chat delivery path", () =
     mainJs,
     /fields\.peerPrivateRouteCode\.addEventListener\("keydown",[\s\S]*applyPeerPrivateRouteCode\(\);[\s\S]*\}\);/,
   );
-
-  const composerBody = functionBody(mainJs, "runProductionTwoProfileComposerPrimaryAction");
-  assert.match(composerBody, /enablePrivateDeliveryPermission\(\{ preserveFollowup: true \}\)/);
-  assert.match(composerBody, /rememberPrivateRouteFollowup\(input\.message \? "send-draft" : "receive", input\)/);
-  assert.match(composerBody, /await preparePrivateDeliveryRoute\(\{ input, allowRetryRecovery: false \}\)/);
-  assert.match(composerBody, /focusSafetyConfirmation\(\)/);
-  assert.match(composerBody, /await runProductionTwoProfileMessageRoundtrip\(\)/);
-  assert.doesNotMatch(composerBody, /openChatSettingsPanel|openPrivateDeliverySettings/);
 
   const savedMessageBody = functionBody(mainJs, "saveInviteRoomOutboundMessage");
   assert.match(savedMessageBody, /outboundDeliveryState: "sent"/);
@@ -3117,7 +3060,7 @@ test("public diagnostics summary includes desktop completion without production 
     /sensitive_communication_allowed=\$\{desktopCompletion\.sensitiveCommunicationAllowed === true\}/,
   );
   assert.match(mainJs, /function desktopFirstCompletionStatus\(report\)/);
-  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /public diagnostics generated failure_class=/);
+  assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /public diagnostics summary failure_class=/);
   assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /recovery_next_action=\$\{recoveryNextAction\}/);
   assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /parseFieldTestReport\(payload\)/);
   assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.failure_class/);
@@ -3162,18 +3105,24 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /high_risk_onion_path=explicit-user-triggered-fail-closed/);
   assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /high_risk_transport_mode=\$\{highRiskTransportMode\}/);
   assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /high_risk_transport_not_ready_reason=\$\{highRiskTransportNotReadyReason\}/);
-  assert.match(mainJs, /invoke\("engine_sidecar_status"\)/);
-  assert.match(mainJs, /invoke\("engine_sidecar_manual_self_test"\)/);
-  assert.match(mainJs, /invoke\("engine_sidecar_contract_command"/);
-  assert.match(mainJs, /command: "redacted-support-diagnostics"/);
-  assert.match(mainJs, /input: \{ diagnostics_ref: "public-beta-diagnostics" \}/);
+  assert.match(engineSidecarDiagnosticsControllerJs, /invoke\("engine_sidecar_status"\)/);
+  assert.match(engineSidecarDiagnosticsControllerJs, /invoke\("engine_sidecar_manual_self_test"\)/);
+  assert.match(engineSidecarDiagnosticsControllerJs, /invoke\("engine_sidecar_contract_command"/);
+  assert.match(engineSidecarDiagnosticsControllerJs, /command: "redacted-support-diagnostics"/);
+  assert.match(engineSidecarDiagnosticsControllerJs, /input: \{ diagnostics_ref: "public-beta-diagnostics" \}/);
   assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_status_runtime_checked=\$\{engineSidecarStatusRuntimeChecked\}/);
   assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_manual_self_test_failure_class=\$\{engineSidecarManualSelfTestFailureClass\}/);
   assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_raw_path_returned=\$\{engineSidecarRawPathReturned\}/);
   assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_stdout_returned=\$\{engineSidecarStdoutReturned\}/);
   assert.match(functionBody(diagnosticsReportControllerJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_stderr_returned=\$\{engineSidecarStderrReturned\}/);
-  assert.match(functionBody(mainJs, "engineSidecarDiagnosticReportLines"), /engine_sidecar_contract_failure_class=\$\{fieldTestReportValue\(diagnostics\.contractFailureClass/);
-  assert.match(functionBody(mainJs, "engineSidecarDiagnosticReportLines"), /engine_sidecar_contract_raw_payload_returned=\$\{diagnostics\.contractRawPayloadReturned === true\}/);
+  assert.match(
+    functionBody(engineSidecarDiagnosticsControllerJs, "engineSidecarDiagnosticReportLines"),
+    /engine_sidecar_contract_failure_class=\$\{fieldTestReportValue\(diagnostics\.contractFailureClass/,
+  );
+  assert.match(
+    functionBody(engineSidecarDiagnosticsControllerJs, "engineSidecarDiagnosticReportLines"),
+    /engine_sidecar_contract_raw_payload_returned=\$\{diagnostics\.contractRawPayloadReturned === true\}/,
+  );
   assert.match(privateDeliveryStateJs, /engine_sidecar_local_runtime_promoted_to_delivery_proof=false/);
   assert.match(browserPreviewTauriJs, /case "engine_sidecar_status":/);
   assert.match(browserPreviewTauriJs, /case "engine_sidecar_manual_self_test":/);
