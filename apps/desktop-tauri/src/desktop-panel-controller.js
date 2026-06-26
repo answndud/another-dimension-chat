@@ -2,7 +2,7 @@ export function createDesktopPanelController(input) {
   const {
     document,
     fields,
-    setManualNetworkPermission,
+    setManualNetworkPermission = () => {},
     productionTwoProfileInput,
     twoProfileSessionsReadyForInput,
     renderRoomIdentityBar,
@@ -15,6 +15,16 @@ export function createDesktopPanelController(input) {
     twoProfileSafetyConfirmedForInput,
     twoProfilePeerEndpointState,
     receiveIntentForRoom,
+    manualNetworkPermissionEnabled,
+    openPrivateDeliverySettings,
+    focusSafetyConfirmation,
+    twoProfileInviteCodeModeActive,
+    focusPrivateRouteNextAction,
+    applyPeerPrivateRouteCode,
+    prepareInviteRoomPrivateRouteExchange,
+    twoProfileTranscriptInputStillCurrent,
+    refreshProductionTwoProfilePeerEndpoints,
+    showLatestRetryableOutboundNotice,
     setText,
     t,
     setChatDeliveryNoticeByKey,
@@ -168,5 +178,83 @@ export function createDesktopPanelController(input) {
     applyProductionActionState();
   }
 
-  return { bindPanelControls };
+  async function preparePrivateDeliveryRoute(options = {}) {
+    const forceRefresh = options.forceRefresh === true;
+    const input = options.input ?? productionTwoProfileInput();
+    const allowRetryRecovery = options.allowRetryRecovery !== false;
+    if (!input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
+      openChatSettingsPanel(fields.productionTwoProfileB);
+      setProductionTwoProfileState("Private route needs room");
+      setText(fields.productionTwoProfileWarning, t("refreshAddressNeedsRoom"));
+      return;
+    }
+    if (!twoProfileSessionsReadyForInput(input)) {
+      setProductionTwoProfileState("Private route needs ready room");
+      setText(fields.productionTwoProfileWarning, t("refreshAddressNeedsReadyRoom"));
+      return;
+    }
+    if (!twoProfileSafetyConfirmedForInput(input)) {
+      setProductionTwoProfileState("Verification required");
+      setText(fields.productionTwoProfileWarning, t("sendLockedUntilVerified"));
+      focusSafetyConfirmation();
+      return;
+    }
+    if (!manualNetworkPermissionEnabled()) {
+      openPrivateDeliverySettings(input);
+      return;
+    }
+    if (twoProfilePeerEndpointState(input).ready && !forceRefresh) {
+      if (allowRetryRecovery && showPrivateRouteRetryFollowupPrompt(input)) {
+        return;
+      }
+      setProductionTwoProfileState("Private route ready");
+      setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteReady"));
+      setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
+      return;
+    }
+
+    if (twoProfileInviteCodeModeActive()) {
+      const nextRouteAction = focusPrivateRouteNextAction(input, { forceRefresh });
+      if (nextRouteAction === "paste-peer") {
+        setProductionTwoProfileState("Peer delivery code needed");
+        setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
+        setChatDeliveryNoticeByKey("peerPrivateRouteCodeMissing", "muted", input);
+        if (allowRetryRecovery) {
+          showPrivateRouteRetryFollowupPrompt(input);
+        }
+        return;
+      }
+      if (nextRouteAction === "apply-peer") {
+        await applyPeerPrivateRouteCode({ allowRetryRecovery });
+        return;
+      }
+      const localRouteCreated = await prepareInviteRoomPrivateRouteExchange(input, { allowRetryRecovery });
+      if (!twoProfileTranscriptInputStillCurrent(input)) {
+        return;
+      }
+      if (localRouteCreated && (fields.peerPrivateRouteCode?.value ?? "").trim()) {
+        await applyPeerPrivateRouteCode({ allowRetryRecovery });
+      }
+      return;
+    }
+
+    setChatDeliveryNoticeByKey("privateDeliveryRoutePreparing", "progress", input);
+    const refreshed = await refreshProductionTwoProfilePeerEndpoints(input, { allowRetryRecovery });
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
+    if (allowRetryRecovery && refreshed && showPrivateRouteRetryFollowupPrompt(input, { clear: true })) {
+      return;
+    }
+    if (allowRetryRecovery && refreshed && showLatestRetryableOutboundNotice(input, { allowAutomatic: false })) {
+      return;
+    }
+    setChatDeliveryNoticeByKey(
+      refreshed ? "privateDeliveryRouteReady" : "chatNoticeRefreshAddress",
+      refreshed ? "success" : "warning",
+      input,
+    );
+  }
+
+  return { bindPanelControls, enablePrivateDeliveryPermission, preparePrivateDeliveryRoute };
 }

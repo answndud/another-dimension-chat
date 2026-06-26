@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createSavedRoomController } from "./saved-room-controller.js";
 
-function createHarness() {
+function createHarness(options = {}) {
   const store = new Map();
   const calls = {
     renderSavedInviteRooms: 0,
@@ -12,6 +12,9 @@ function createHarness() {
     clearChatDeliveryNoticeForInput: [],
     clearPrivateRouteRuntimeStateForInput: [],
     persistPrivateRouteRuntimeState: 0,
+    openedChatSettings: 0,
+    setProductionTwoProfileState: [],
+    setText: [],
   };
   const controller = createSavedRoomController({
     localStoreGet: (key) => (store.has(key) ? store.get(key) : null),
@@ -48,6 +51,38 @@ function createHarness() {
     persistPrivateRouteRuntimeState: () => {
       calls.persistPrivateRouteRuntimeState += 1;
     },
+    openChatSettingsPanel: () => {
+      calls.openedChatSettings += 1;
+    },
+    setProductionTwoProfileState: (value) => {
+      calls.setProductionTwoProfileState.push(value);
+    },
+    setText: (node, value) => {
+      if (node) {
+        node.textContent = value;
+      }
+      calls.setText.push(value);
+    },
+    t: (key) => key,
+    fields: {
+      productionTwoProfileB: {},
+      productionTwoProfileWarning: {},
+      peerPrivateRouteCode: { value: "" },
+    },
+    twoProfileSessionsReadyForInput: () => options.sessionsReady !== false,
+    twoProfileSafetyConfirmedForInput: () => options.safetyConfirmed !== false,
+    manualNetworkPermissionEnabled: () => options.manualNetworkPermission !== false,
+    twoProfilePeerEndpointState: () => ({ ready: options.peerEndpointReady === true }),
+    showPrivateRouteRetryFollowupPrompt: () => false,
+    focusSafetyConfirmation: () => {},
+    twoProfileInviteCodeModeActive: () => false,
+    focusPrivateRouteNextAction: () => "paste-peer",
+    applyPeerPrivateRouteCode: async () => true,
+    prepareInviteRoomPrivateRouteExchange: async () => true,
+    twoProfileTranscriptInputStillCurrent: () => true,
+    refreshProductionTwoProfilePeerEndpoints: async () => ({ ready: false }),
+    showLatestRetryableOutboundNotice: () => false,
+    setChatDeliveryNoticeByKey: () => {},
   });
   return { controller, store, calls };
 }
@@ -243,4 +278,26 @@ test("openSavedInviteRoom restores code and role into the active room input", as
   assert.equal(fields.productionTwoProfileB.dataset.inviteCodeRole, "inviter");
   assert.equal(currentInviteCodeShareVisible, false);
   assert.equal(latestCreatedInviteCode, "room-x");
+});
+
+test("preparePrivateDeliveryRoute needs a complete room before opening settings", async () => {
+  const { controller, calls } = createHarness();
+
+  await controller.preparePrivateDeliveryRoute({ input: { profileA: "", profileB: "", passphrase: "" } });
+
+  assert.equal(calls.openedChatSettings, 1);
+  assert.deepEqual(calls.setProductionTwoProfileState, ["Private route needs room"]);
+  assert.deepEqual(calls.setText, ["refreshAddressNeedsRoom"]);
+});
+
+test("preparePrivateDeliveryRoute reports ready route without retry recovery", async () => {
+  const { controller, calls } = createHarness({ peerEndpointReady: true });
+
+  await controller.preparePrivateDeliveryRoute({
+    input: { profileA: "alice", profileB: "bob", passphrase: "room" },
+    allowRetryRecovery: false,
+  });
+
+  assert.deepEqual(calls.setProductionTwoProfileState, ["Private route ready"]);
+  assert.deepEqual(calls.setText, ["privateDeliveryRouteReady"]);
 });
