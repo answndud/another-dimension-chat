@@ -2555,14 +2555,18 @@ fn local_demo_runs_complete_flow() {
 #[test]
 #[cfg(feature = "dev-insecure")]
 fn local_loop_demo_runs_multiple_messages() {
-    let output = run(&[
-        "demo",
-        "local-loop",
-        "--message",
-        "first local loop message",
-        "--message",
-        "second local loop message",
-    ]);
+    let workspace = TestWorkspace::new("local-loop-demo");
+    let output = run_with_home(
+        &workspace.home,
+        &[
+            "demo",
+            "local-loop",
+            "--message",
+            "first local loop message",
+            "--message",
+            "second local loop message",
+        ],
+    );
     let out = stdout(&output);
     let error = stderr(&output);
 
@@ -2585,7 +2589,8 @@ fn local_loop_demo_runs_multiple_messages() {
 #[test]
 #[cfg(feature = "dev-insecure")]
 fn local_loop_demo_requires_messages() {
-    let output = run(&["demo", "local-loop"]);
+    let workspace = TestWorkspace::new("local-loop-demo-missing");
+    let output = run_with_home(&workspace.home, &["demo", "local-loop"]);
     let error = stderr(&output);
 
     assert!(!output.status.success());
