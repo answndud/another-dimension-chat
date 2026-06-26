@@ -105,7 +105,7 @@ test("refreshPublicBetaDiagnostics updates the public diagnostics payload and su
 
   assert.equal(typeof payload, "string");
   assert.equal(fields.publicBetaDiagnostics.value, payload);
-  assert.match(fields.publicBetaDiagnosticsSummary.textContent, /public diagnostics generated/);
+  assert.match(fields.publicBetaDiagnosticsSummary.textContent, /public diagnostics summary/);
   assert.match(fields.publicBetaDiagnosticsSummary.textContent, /failure_class=/);
   assert.match(fields.publicBetaDiagnosticsSummary.textContent, /recovery_next_action=/);
 });
