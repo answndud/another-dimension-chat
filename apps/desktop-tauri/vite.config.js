@@ -103,6 +103,15 @@ function gitShortCommit() {
   }
 }
 
+function failOnImportWarnings(warning, defaultHandler) {
+  if (warning?.code === "MISSING_EXPORT" || warning?.code === "UNRESOLVED_IMPORT") {
+    throw new Error(
+      `Build failed: ${warning.code}${warning.id ? ` in ${warning.id}` : ""}${warning.source ? ` from ${warning.source}` : ""}`,
+    );
+  }
+  defaultHandler(warning);
+}
+
 export default defineConfig({
   clearScreen: false,
   cacheDir: previewPeer ? `node_modules/.vite-${previewPeer}` : "node_modules/.vite",
@@ -115,5 +124,10 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    rollupOptions: {
+      onwarn(warning, defaultHandler) {
+        failOnImportWarnings(warning, defaultHandler);
+      },
+    },
   },
 });

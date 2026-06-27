@@ -16,7 +16,7 @@ run_step() {
 
 cd "$ROOT_DIR"
 
-run_step "light verification" scripts/verify_light.sh
+run_step "warm verification" scripts/verify_warm.sh
 run_step "runtime-focused verification" scripts/verify_engine_runtime_focused.sh
 run_step "default tests" cargo test --workspace
 run_step "dev-insecure tests" cargo test --workspace --features dev-insecure

@@ -44,13 +44,16 @@ If you want to check the checkout before or after building, use the repo-root
 verification scripts in this order:
 
 ```sh
-scripts/verify_light.sh  # quick source-build + boundary check
-scripts/verify_warm.sh   # broader shell/toolchain check before larger edits
-scripts/verify_cold.sh   # full pre-release verification only
+scripts/verify_light.sh  # source-build boundaries + all desktop JavaScript tests
+scripts/verify_warm.sh   # light + rustfmt + desktop Tauri cargo check
+scripts/verify_cold.sh   # warm + runtime/workspace tests + clippy; pre-release only
 ```
 
-`npm --prefix apps/desktop-tauri run verify:desktop-boundary` is the same fast
-boundary check as `scripts/verify_light.sh`.
+`scripts/verify_all.sh` is a compatibility alias for light and
+`scripts/verify_full.sh` is a compatibility alias for cold. The optional
+`smoke_dev_cli.sh` and `smoke_tauri_two_profile.sh` flows are manual acceptance
+checks for prototype and production two-profile resume behavior; they are not
+part of default verification.
 
 ## Reproducibility
 

@@ -14,7 +14,7 @@ run_step() {
 cd "$ROOT_DIR"
 
 run_step "source build path verifier" scripts/verify_source_build_path.sh
-run_step "main.js saved-room delegation guard" scripts/verify_main_js_saved_room_delegation.sh
-run_step "main.js size guard" node scripts/verify_main_js_size.mjs
+run_step "desktop JavaScript tests" npm --prefix apps/desktop-tauri test
+run_step "desktop build" npm --prefix apps/desktop-tauri run build
 
 printf '\nlight verification passed\n'

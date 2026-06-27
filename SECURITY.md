@@ -575,12 +575,19 @@ for an external success claim, or requests to use the beta for sensitive
 communication. There is no external two-machine success claim, no production
 readiness claim, and sensitive communication prohibited remains in force.
 
-Current maintained local verification entrypoints are:
+Current maintained local verification ladder:
 
 ```bash
-scripts/verify_all.sh
-scripts/verify_full.sh
+scripts/verify_light.sh  # source-build boundaries + all desktop JavaScript tests
+scripts/verify_warm.sh   # light + rustfmt + desktop Tauri cargo check
+scripts/verify_cold.sh   # warm + runtime/workspace tests + clippy; pre-release only
 ```
+
+`scripts/verify_all.sh` is a compatibility alias for light and
+`scripts/verify_full.sh` is a compatibility alias for cold. The optional
+`smoke_dev_cli.sh` prototype pairing/message/replay/expiry flow and
+`smoke_tauri_two_profile.sh` production profile/pairing/session/transcript-resume
+flow are manual acceptance checks, not default verification.
 
 Release packaging/upload is outside the current development baseline unless a
 separate task explicitly restores and validates packaging commands.

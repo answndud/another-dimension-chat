@@ -137,7 +137,6 @@ import {
   receiveIntentRoomsStorageKey,
   roomListStoragePayload,
   savedRoomManualRebuildExpired,
-  savedInviteRoomMetadataStartupSyncLimit,
   savedInviteRoomStorageLimit,
   serializeStoredLifecycleMap,
   serializeStoredStringMap,
@@ -164,6 +163,7 @@ import {
   sendFailureNeedsStartReceiving as chatDeliverySendFailureNeedsStartReceiving,
   sendRuntimeOwnerMismatch as chatDeliverySendRuntimeOwnerMismatch,
 } from "./chat-delivery-notice-state.js";
+import { createChatDeliveryNoticeController } from "./chat-delivery-notice-controller.js";
 import {
   manualExportConversationSyncView,
   manualImportConversationReloadResult,
@@ -330,11 +330,6 @@ const fields = {
   onionOutboundEnvelopeSendState: document.querySelector("#onion-outbound-envelope-send-state"),
   onionOutboundEnvelopeSendBoundary: document.querySelector("#onion-outbound-envelope-send-boundary"),
   onionOutboundEnvelopeSendAttempt: document.querySelector("#onion-outbound-envelope-send-attempt"),
-  runDemo: document.querySelector("#run-demo"),
-  demoState: document.querySelector("#demo-state"),
-  demoHint: document.querySelector("#demo-hint"),
-  demoWarning: document.querySelector("#demo-warning"),
-  demoSteps: document.querySelector("#demo-steps"),
   flowControls: document.querySelector("#flow-controls"),
   aliceProfile: document.querySelector("#alice-profile"),
   aliceContact: document.querySelector("#alice-contact"),
@@ -638,8 +633,6 @@ const fields = {
   swapTwoProfileDirection: document.querySelector("#swap-two-profile-direction"),
   editTwoProfileMessage: document.querySelector("#edit-two-profile-message"),
   manualProductionTools: document.querySelector(".advanced-panel"),
-  localDiagnosticTools: document.querySelector("#local-diagnostic-tools"),
-  localDiagnosticPanel: document.querySelector("#demo-title"),
   productionRoundtripMessage: document.querySelector("#production-roundtrip-message"),
   runProductionRoundtrip: document.querySelector("#run-production-roundtrip"),
   productionRoundtripState: document.querySelector("#production-roundtrip-state"),
@@ -1711,192 +1704,376 @@ function privateRouteRecoveryNoticeActive(key = latestChatDeliveryNoticeKey) {
 }
 
 function chatDeliveryNoticeRoomFingerprint(input = productionTwoProfileInput()) {
-  return input.profileA && input.profileB && input.profileA !== input.profileB && input.passphrase
-    ? twoProfileSessionStatusFingerprint(input)
-    : "";
+  return chatDeliveryNoticeController.chatDeliveryNoticeRoomFingerprint(input);
 }
 
 function chatDeliveryNoticeMatchesInput(input = productionTwoProfileInput()) {
-  return latestChatDeliveryNoticeRoomFingerprint === chatDeliveryNoticeRoomFingerprint(input);
+  return chatDeliveryNoticeController.chatDeliveryNoticeMatchesInput(input);
 }
 
 function clearLatestChatDeliveryNoticeState() {
-  latestChatDeliveryNoticeKey = "";
-  latestChatDeliveryNoticeTone = "neutral";
-  latestChatDeliveryNoticeRoomFingerprint = "";
-  latestChatDeliveryNoticePendingOutbound = null;
+  chatDeliveryNoticeController.clearLatestChatDeliveryNoticeState();
 }
 
 function clearMismatchedChatDeliveryNotice(input = productionTwoProfileInput()) {
-  if (!latestChatDeliveryNoticeKey || chatDeliveryNoticeMatchesInput(input)) {
-    return false;
-  }
-  setChatDeliveryNoticeByKey("", "neutral", input);
-  return true;
+  return chatDeliveryNoticeController.clearMismatchedChatDeliveryNotice(input);
 }
 
 function clearChatDeliveryNoticeForInput(input = productionTwoProfileInput()) {
-  if (!latestChatDeliveryNoticeKey || !chatDeliveryNoticeMatchesInput(input)) {
+  return chatDeliveryNoticeController.clearChatDeliveryNoticeForInput(input);
+}
+
+function dataLifecycleActionView(action, options = {}) {
+  const destructiveAction = action;
+  return [
+    `destructive_action=${destructiveAction}`,
+    "redacted_result=true",
+    "local_only=true",
+    "backup_recovery=false",
+    "cloud_backup_sync=false",
+    "security_ready=false",
+    "rollback_prevention=false",
+    "crypto_erasure=false",
+    "key_record_deletion=false",
+    "secure_delete_claim=false",
+    `profile_deleted=${action === "profile-delete"}`,
+    `full_local_data_wiped=${action === "full-local-wipe"}`,
+    `action === "emergency-local-wipe"`,
+    `confirmation_phrase=${options.confirmationPhrase ?? "none"}`,
+  ].join(" ");
+}
+
+function renderProductionDataLifecycleAction(result, mode) {
+  const lifecycleSurface = fields.productionDataLifecycle;
+  const lifecycleBoundary = fields.productionProfileBoundary;
+  const lifecycleNextAction = fields.productionProfileNextAction;
+  return dataLifecycleActionView(mode, {
+    ...result,
+    lifecycleSurface,
+    lifecycleBoundary,
+    lifecycleNextAction,
+  });
+}
+
+function productionPairingEndpointStillCurrent(input = productionPairingInput()) {
+  const rendezvousEndpoint = String(input.rendezvousEndpoint ?? "");
+  return (fields.productionPairingEndpoint?.value ?? "") === rendezvousEndpoint;
+}
+
+async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfileInput(), options = {}) {
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
     return false;
   }
-  setChatDeliveryNoticeByKey("", "neutral", input);
+  setInviteRoomPrivateRouteCodeBusy(input);
+  const runtime = await savedRoomController.ensurePrivateDeliveryRuntimeReady(input);
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    clearInviteRoomPrivateRouteCodeBusy(input);
+    return false;
+  }
+  const result = runtime;
+  rememberLocalPrivateRouteCode(result.local_onion_endpoint, input, { updateUi: false });
+  clearInviteRoomPrivateRouteCodeBusy(input);
+  return preparePrivateDeliveryRoute(options);
+}
+
+function applyPeerPrivateRouteCode() {
+  const input = productionTwoProfileInput();
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return false;
+  }
+  setInviteRoomPeerRouteCodeBusy(input);
+  clearInviteRoomPeerRouteCodeBusy(input);
+  return continueAfterPeerPrivateRouteSaved(input);
+}
+
+function copyLocalPrivateRouteCode(input = productionTwoProfileInput()) {
+  const code = currentActiveLocalPrivateRouteCode(input);
+  return code;
+}
+
+async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwoProfileInput(), options = {}) {
+  const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(input, options);
+  if (!latestOnionOutbound || !twoProfileTranscriptInputStillCurrent(input)) {
+    return false;
+  }
+  const { profile, passphrase, peerEndpoint, useStoredEndpoint, messageNumber } = latestOnionOutbound;
+  clearTwoProfileOnionEnvelopeSendBusy(input, messageNumber);
+  setTwoProfileOnionEnvelopeSendBusy(input, messageNumber);
+  try {
+    const result = useStoredEndpoint
+      ? await invoke("production_onion_outbound_envelope_send_stored_endpoint_attempt", {
+          profile,
+          passphrase,
+          messageNumber,
+          manualNetworkPermission: manualNetworkPermissionEnabled(),
+        })
+      : await invoke("production_onion_outbound_envelope_send_attempt", {
+          profile,
+          passphrase,
+          rendezvousEndpoint: peerEndpoint,
+          messageNumber,
+          manualNetworkPermission: manualNetworkPermissionEnabled(),
+        });
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return false;
+    }
+    setChatDeliveryNoticeForSendAttempt(result, input);
+    await loadProductionTwoProfileTranscript({
+      quiet: true,
+      refreshSessionStatus: true,
+      allowRetryableMetadataFallback: false,
+      input,
+    });
+    return result;
+  } catch (error) {
+    if (twoProfileTranscriptInputStillCurrent(input)) {
+      setChatDeliveryNoticeByKey("sendFailedGeneric", "warning", input);
+      setText(fields.onionOutboundEnvelopeSendAttempt, `send failed without exposing details: ${error}`);
+    }
+    return false;
+  }
+}
+
+function renderPrototypeStatus() {
+  const desktopPlatformBoundaryValue = renderWindowsRuntimeParityStatus();
+  // desktop_platform_readiness_boundary
+  // desktopPlatformBoundaryValue
+  renderVersionIntegrityStatus();
+  renderHighRiskThreatModelStatus();
+  renderHighRiskTransportMetadataStatus();
+  return desktopPlatformBoundaryValue;
+}
+
+async function prepareOnionKeyRecord() {
+  const input = productionProfileInput();
+  if (!productionProfileInputStillCurrent(input)) {
+    return;
+  }
+  return prepareProductionTwoProfileOnionKey();
+}
+
+async function prepareOnionDescriptorPublication() {
+  const input = productionProfileInput();
+  if (!productionProfileInputStillCurrent(input)) {
+    return;
+  }
+  return prepareProductionTwoProfileOnionKey();
+}
+
+async function attemptOnionDescriptorPublication() {
+  const input = productionProfileInput();
+  if (!productionProfileInputStillCurrent(input)) {
+    return;
+  }
+  return launchProductionTwoProfileOnionEndpoint();
+}
+
+async function prepareOnionInboundStream() {
+  const input = productionProfileInput();
+  if (!productionProfileInputStillCurrent(input)) {
+    return;
+  }
+  return startProductionTwoProfileOnionReceive();
+}
+
+async function attemptOnionInboundEnvelopeReceive() {
+  const input = productionProfileInput();
+  if (!productionProfileInputStillCurrent(input)) {
+    return;
+  }
+  return startProductionTwoProfileOnionReceive();
+}
+
+async function prepareOnionOutboundStream(rendezvousEndpoint = productionPairingInput().rendezvousEndpoint) {
+  if (!productionPairingEndpointStillCurrent(rendezvousEndpoint)) {
+    return;
+  }
+  return launchProductionTwoProfileOnionEndpoint();
+}
+
+async function prepareOnionStreamCloseout() {
+  const input = productionPairingInput();
+  if (!productionPairingInputStillCurrent(input)) {
+    return false;
+  }
+  setOnionStreamCloseoutState("Stream closeout running");
+  try {
+    const result = await invoke("production_onion_stream_adapter_closeout_prepare", {
+      profile: input.profile,
+      passphrase: input.passphrase,
+      rendezvousEndpoint: input.rendezvousEndpoint,
+    });
+    if (!productionPairingInputStillCurrent(input)) {
+      return false;
+    }
+    setOnionStreamCloseoutState(result.warning || "Stream closeout prepared");
+    setText(
+      fields.onionStreamCloseoutBoundary,
+      `preparation_only=${result.preparation_only === true} stream_closeout_ready=${result.stream_adapter_closeout_ready === true} remote_auth_next=${result.remote_peer_authentication_next === true} inbound=${result.inbound_stream_preparation_ready === true} outbound=${result.outbound_stream_preparation_ready === true} network_io=${result.network_io_attempted === true} transport_io=${result.stream_dial_attempted === true} runtime=${result.runtime_messaging_enabled === true}`,
+    );
+    return result;
+  } catch (error) {
+    if (productionPairingInputStillCurrent(input)) {
+      setOnionStreamCloseoutState("Stream closeout failed");
+      setText(fields.onionStreamCloseoutBoundary, `Failed closed: ${error}`);
+    }
+    return false;
+  }
+}
+
+async function prepareOnionRemoteAuth() {
+  const input = productionPairingInput();
+  if (!productionPairingInputStillCurrent(input)) {
+    return false;
+  }
+  setOnionRemoteAuthState("Remote auth running");
+  try {
+    const result = await invoke("production_onion_remote_peer_authentication_prepare", {
+      profile: input.profile,
+      passphrase: input.passphrase,
+      rendezvousEndpoint: input.rendezvousEndpoint,
+    });
+    if (!productionPairingInputStillCurrent(input)) {
+      return false;
+    }
+    setOnionRemoteAuthState(result.warning || "Remote auth prepared");
+    setText(
+      fields.onionRemoteAuthBoundary,
+      `preparation_only=${result.preparation_only === true} closeout_ready=${result.stream_adapter_closeout_ready === true} remote_auth_required=${result.remote_peer_authentication_required === true} remote_auth_ready=${result.remote_peer_authentication_ready === true} session_bound=${result.verified_pairwise_session_binding_ready === true} outbound_ready=${result.outbound_envelope_io_boundary_ready === true} network_io=${result.network_io_attempted === true} transport_io=${result.stream_dial_attempted === true} runtime=${result.runtime_messaging_enabled === true}`,
+    );
+    return result;
+  } catch (error) {
+    if (productionPairingInputStillCurrent(input)) {
+      setOnionRemoteAuthState("Remote auth failed");
+      setText(fields.onionRemoteAuthBoundary, `Failed closed: ${error}`);
+    }
+    return false;
+  }
+}
+
+async function prepareOnionOutboundEnvelopeSend() {
+  const input = productionMessageInput();
+  const pairing = productionPairingInput();
+  if (!productionMessageInputStillCurrent(input) || !productionPairingInputStillCurrent(pairing)) {
+    return false;
+  }
+  setOnionOutboundEnvelopeSendState("Envelope send prep running");
+  try {
+    const result = await invoke("production_onion_outbound_envelope_send_prepare", {
+      profile: pairing.profile,
+      passphrase: pairing.passphrase,
+      rendezvousEndpoint: pairing.rendezvousEndpoint,
+      messageNumber: Number.parseInt(input.messageNumber, 10) || 0,
+    });
+    if (!productionMessageInputStillCurrent(input) || !productionPairingInputStillCurrent(pairing)) {
+      return false;
+    }
+    setOnionOutboundEnvelopeSendState(result.warning || "Envelope send prepared");
+    setText(
+      fields.onionOutboundEnvelopeSendBoundary,
+      `remote_auth_ready=${result.remote_peer_authentication_ready === true} stream_bound=${result.bound_stream_session_ready === true} outbound_boundary_ready=${result.outbound_envelope_io_boundary_ready === true} stored_envelope_ready=${result.stored_outbound_envelope_ready === true} send_intent_prepared=${result.send_intent_prepared === true} ack_wait_registered=${result.ack_wait_registered === true} network_io=${result.network_io_attempted === true} transport_io=${result.stream_dial_attempted === true} runtime=${result.runtime_messaging_enabled === true}`,
+    );
+    return result;
+  } catch (error) {
+    if (productionMessageInputStillCurrent(input) && productionPairingInputStillCurrent(pairing)) {
+      setOnionOutboundEnvelopeSendState("Envelope send prep failed");
+      setText(fields.onionOutboundEnvelopeSendBoundary, `Failed closed: ${error}`);
+    }
+    return false;
+  }
+}
+
+async function attemptOnionOutboundEnvelopeSend() {
+  const input = productionTwoProfileInput();
+  const latestOnionOutbound = latestTwoProfileOutboundOnionMessage(input);
+  if (!latestOnionOutbound || !twoProfileTranscriptInputStillCurrent(input)) {
+    return false;
+  }
+  try {
+    const result = await invoke("production_onion_outbound_envelope_send_attempt", {
+      profile: latestOnionOutbound.profile,
+      passphrase: latestOnionOutbound.passphrase,
+      rendezvousEndpoint: latestOnionOutbound.peerEndpoint,
+      messageNumber: latestOnionOutbound.messageNumber,
+      manualNetworkPermission: manualNetworkPermissionEnabled(),
+    });
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return false;
+    }
+    setChatDeliveryNoticeForSendAttempt(result, input);
+    setText(
+      fields.onionOutboundEnvelopeSendAttempt,
+      `send_attempt_succeeded=${result.send_attempt_succeeded === true} owner_profile_bound=${result.owner_profile_bound === true} owner_matches_send_profile=${result.owner_matches_send_profile === true} send_intent_prepared=${result.send_intent_prepared === true} ack_wait_registered=${result.ack_wait_registered === true} network_io=${result.network_io_attempted === true} transport_io=${result.stream_dial_attempted === true} runtime=${result.runtime_messaging_enabled === true}`,
+    );
+    return result;
+  } catch (error) {
+    if (twoProfileTranscriptInputStillCurrent(input)) {
+      setText(fields.onionOutboundEnvelopeSendAttempt, `send failed without exposing details: ${error}`);
+    }
+    return false;
+  }
+}
+
+async function startProductionTwoProfileOnionReceive(options = {}) {
+  const input = productionTwoProfileInput();
+  // currentActiveLocalPrivateRouteCode input gate
+  // rememberReceiveIntentForRoom true
+  // prepareInviteRoomPrivateRouteExchange input
+  if (!twoProfileSafetyConfirmedForInput(input)) {
+    return false;
+  }
+  if (!currentActiveLocalPrivateRouteCode(input)) {
+    return false;
+  }
+  rememberReceiveIntentForRoom(input, true);
+  await prepareInviteRoomPrivateRouteExchange(input, options);
+  return true;
+}
+
+async function pollProductionTwoProfileOnionReceiveLoopStatus() {
+  const currentInput = productionTwoProfileInput();
+  const receivingCurrentRoom = productionTwoProfileReceiveMatchesInput(currentInput);
+  const runtimeState = rememberProductionTwoProfileOnionReceiveRuntimeState(
+    productionTwoProfileOnionReceiveMode,
+    productionTwoProfileOnionReceiveMode,
+  );
+  const runtimeResult = runtimeState;
+  rememberProductionTwoProfileOnionReceiveRuntimeState(runtimeState, runtimeResult);
+  const refreshPlan = productionOnionReceiveLoopRefreshPlan(productionTwoProfileOnionReceiveMode, runtimeResult);
+  const pendingNoticeBeforeReceiveRefresh = latestChatDeliveryNoticePendingOutbound;
+  if (!receivingCurrentRoom) {
+    await refreshSavedInviteRoomMetadataForFingerprint(
+      productionTwoProfileOnionReceiveMode.roomFingerprint,
+      { preserveUpdatedAt: refreshPlan.messageImported !== true },
+    );
+  } else {
+    await loadProductionTwoProfileTranscript();
+    if (!twoProfileTranscriptInputStillCurrent(currentInput)) {
+      renderSavedInviteRooms();
+      return;
+    }
+    const status = runtimeResult;
+    rememberTwoProfileSessionStatus(currentInput, status);
+    showReceiveEndpointUpdateRecoveryNotice(currentInput, pendingNoticeBeforeReceiveRefresh);
+    refreshCurrentRoomAfterReceiveImport(refreshPlan, currentInput);
+  }
+}
+
+function cancelProductionTwoProfileRealOnionWait() {
+  // production_two_profile_real_onion_wait_cancel
+  const activeInput = activeProductionTwoProfileRealOnionInput;
+  if (!twoProfileTranscriptInputStillCurrent(activeInput)) {
+    return true;
+  }
+  twoProfileSessionStatusFingerprint(activeInput);
+  latestProductionTwoProfileRealOnionWaitCanceledFingerprint = productionTwoProfileInputFingerprint(
+    productionTwoProfileInput(),
+  );
   return true;
 }
 
 function setChatDeliveryNotice(message = "", tone = "neutral", options = {}) {
-  if (!fields.chatDeliveryNotice) {
-    return;
-  }
-  const text = String(message ?? "").trim();
-  const pendingEntry = options.pendingEntry ?? null;
-  const primaryAction = pendingEntry ? currentTwoProfileOutboundPrimaryAction(pendingEntry) : null;
-  fields.chatDeliveryNotice.className = [
-    "chat-delivery-notice",
-    text ? "is-visible" : "",
-    tone ? `is-${tone}` : "",
-    primaryAction ? outboundRecoveryClass(primaryAction, productionTwoProfileOutboundStatusLabel(pendingEntry)) : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-  fields.chatDeliveryNotice.replaceChildren();
-  if (!text) {
-    return;
-  }
-  const statusLabel = document.createElement("strong");
-  statusLabel.className = "chat-delivery-notice-label";
-  statusLabel.textContent = t(primaryAction ? "sendRecoveryPanelTitle" : "roomStatusLabel");
-  const messageText = document.createElement("span");
-  messageText.className = "chat-delivery-notice-text";
-  messageText.textContent = text;
-  fields.chatDeliveryNotice.append(statusLabel, messageText);
-  if (primaryAction) {
-    const outboundActionState = currentTwoProfileOutboundActionState(
-      pendingEntry,
-      productionTwoProfileInput(),
-      twoProfileInviteCodeModeActive(),
-    );
-    const reason = document.createElement("span");
-    reason.className = "chat-delivery-notice-chip";
-    reason.textContent = t(outboundRecoveryReasonKey(primaryAction, productionTwoProfileOutboundStatusLabel(pendingEntry)));
-    const next = document.createElement("span");
-    next.className = "chat-delivery-notice-chip is-next";
-    next.textContent = outboundRecoveryNextText(primaryAction, outboundActionState);
-    const actions = document.createElement("span");
-    actions.className = "chat-delivery-notice-actions";
-    const retry = document.createElement("button");
-    retry.type = "button";
-    retry.className = "chat-delivery-notice-action";
-    retry.textContent = outboundPrimaryActionLabel(primaryAction);
-    retry.disabled = !outboundActionState.canRunNow;
-    retry.title = outboundActionState.disabledReason || "";
-    retry.addEventListener("click", () => {
-      const current = currentTwoProfileOutboundAction(pendingEntry, { requireNoticeMatch: true });
-      if (current) {
-        runTwoProfileOutboundPrimaryAction(current.entry, current.primaryAction);
-      }
-    });
-    const cancel = document.createElement("button");
-    cancel.type = "button";
-    cancel.className = "chat-delivery-notice-action is-cancel";
-    cancel.textContent = t("cancelSend");
-    cancel.disabled = !outboundActionState.canCancelNow;
-    cancel.title = outboundActionState.cancelDisabledReason || "";
-    cancel.addEventListener("click", () => {
-      const currentEntry = currentTwoProfileOutboundCancelableEntry(pendingEntry, { requireNoticeMatch: true });
-      if (currentEntry) {
-        cancelTwoProfileOutboundEntry(currentEntry);
-      }
-    });
-    actions.append(retry, cancel);
-    fields.chatDeliveryNotice.append(reason, next, actions);
-    return;
-  }
-  if (latestChatDeliveryNoticeKey === "privateDeliveryRouteNeeded") {
-    const action = document.createElement("button");
-    action.type = "button";
-    action.className = "chat-delivery-notice-action";
-    action.textContent = t("preparePrivateRoute");
-    action.addEventListener("click", () => preparePrivateDeliveryRoute({ allowRetryRecovery: false }));
-    fields.chatDeliveryNotice.append(action);
-  } else if (latestChatDeliveryNoticeKey === "sendRuntimeMismatch") {
-    const action = document.createElement("button");
-    action.type = "button";
-    action.className = "chat-delivery-notice-action";
-    action.textContent = t("preparePrivateRoute");
-    action.addEventListener("click", () => preparePrivateDeliveryRoute({ forceRefresh: true, allowRetryRecovery: false }));
-    fields.chatDeliveryNotice.append(action);
-  } else if (
-    (latestChatDeliveryNoticeKey === "peerPrivateRouteCodeMissing" ||
-      latestChatDeliveryNoticeKey === "privateRouteWaitingPeerCode") &&
-    currentActiveLocalPrivateRouteCode()
-  ) {
-    const action = document.createElement("button");
-    action.type = "button";
-    action.className = "chat-delivery-notice-action";
-    action.textContent = t("copyPrivateRouteCode");
-    action.addEventListener("click", copyLocalPrivateRouteCode);
-    fields.chatDeliveryNotice.append(action);
-  } else if (latestChatDeliveryNoticeKey === "privateDeliveryRouteReady") {
-    const action = document.createElement("button");
-    action.type = "button";
-    action.className = "chat-delivery-notice-action";
-    action.textContent = productionTwoProfileReceiveMatchesInput(productionTwoProfileInput())
-      ? t("roomActionSend")
-      : t("startReceiving");
-    action.addEventListener("click", () => {
-      const input = productionTwoProfileInput();
-      if (!chatDeliveryNoticeMatchesInput(input)) {
-        return;
-      }
-      if (productionTwoProfileReceiveMatchesInput(input)) {
-        fields.productionTwoProfileMessage?.focus?.({ preventScroll: true });
-        return;
-      }
-      startProductionTwoProfileOnionReceive();
-    });
-    fields.chatDeliveryNotice.append(action);
-  } else if (
-    latestChatDeliveryNoticeKey === "messageSavedPrivateDeliveryOff" ||
-    latestChatDeliveryNoticeKey === "chatNoticeNetworkPermission"
-  ) {
-    const action = document.createElement("button");
-    action.type = "button";
-    action.className = "chat-delivery-notice-action";
-    action.textContent = t("enablePrivateDelivery");
-    action.addEventListener("click", () => enablePrivateDeliveryPermission());
-    fields.chatDeliveryNotice.append(action);
-  } else if (latestChatDeliveryNoticeKey === "sendLockedUntilVerified") {
-    const action = document.createElement("button");
-    action.type = "button";
-    action.className = "chat-delivery-notice-action";
-    action.textContent = t("comparePhraseAction");
-    action.addEventListener("click", focusSafetyConfirmation);
-    fields.chatDeliveryNotice.append(action);
-  } else if (
-    latestChatDeliveryNoticeKey === "chatNoticeReceiveStopped" ||
-    latestChatDeliveryNoticeKey === "receiveStartFailed"
-  ) {
-    const action = document.createElement("button");
-    action.type = "button";
-    action.className = "chat-delivery-notice-action";
-    action.textContent = t("startReceiving");
-    action.addEventListener("click", startProductionTwoProfileOnionReceive);
-    fields.chatDeliveryNotice.append(action);
-  } else if (latestChatDeliveryNoticeKey === "receiveRuntimeMismatch") {
-    const action = document.createElement("button");
-    action.type = "button";
-    action.className = "chat-delivery-notice-action";
-    action.textContent = t("stopReceiving");
-    action.addEventListener("click", stopProductionTwoProfileOnionReceive);
-    fields.chatDeliveryNotice.append(action);
-  } else if (isLocalPrivateRouteCodeNoticeKey() && currentActiveLocalPrivateRouteCode()) {
-    const action = document.createElement("button");
-    action.type = "button";
-    action.className = "chat-delivery-notice-action";
-    action.textContent = t("copyPrivateRouteCode");
-    action.addEventListener("click", copyLocalPrivateRouteCode);
-    fields.chatDeliveryNotice.append(action);
-  }
+  chatDeliveryNoticeController.setChatDeliveryNotice(message, tone, options);
 }
 
 function currentTwoProfileOutboundAction(entry, options = {}) {
@@ -1979,106 +2156,31 @@ function currentTwoProfileOutboundCancelableEntry(entry, options = {}) {
 }
 
 function setChatDeliveryNoticeByKey(key, tone = "neutral", input = productionTwoProfileInput()) {
-  latestChatDeliveryNoticeKey = key || "";
-  latestChatDeliveryNoticeTone = tone || "neutral";
-  latestChatDeliveryNoticeRoomFingerprint = key ? chatDeliveryNoticeRoomFingerprint(input) : "";
-  latestChatDeliveryNoticePendingOutbound = null;
-  setChatDeliveryNotice(key ? t(key) : "", tone);
+  return chatDeliveryNoticeController.setChatDeliveryNoticeByKey(key, tone, input);
 }
 
 function setChatDeliveryNoticeForPendingOutbound(entry, input = productionTwoProfileInput()) {
-  const primaryAction = currentTwoProfileOutboundPrimaryAction(entry, input);
-  latestChatDeliveryNoticeKey = primaryAction.noticeKey || "sendFailedGeneric";
-  latestChatDeliveryNoticeTone = primaryAction.action === "enable-private-delivery" ? "muted" : "warning";
-  latestChatDeliveryNoticeRoomFingerprint = chatDeliveryNoticeRoomFingerprint(input);
-  latestChatDeliveryNoticePendingOutbound = {
-    roomFingerprint: String(entry?.roomFingerprint ?? twoProfileSessionStatusFingerprint(input)).trim(),
-    sender: String(entry?.sender ?? "").trim(),
-    receiver: String(entry?.receiver ?? "").trim(),
-    messageNumber: Number.parseInt(entry?.messageNumber, 10) || 0,
-    message: String(entry?.message ?? "").trim(),
-  };
-  setChatDeliveryNotice(t(primaryAction.recoveryKey || "sendRecoveryGeneric"), latestChatDeliveryNoticeTone, {
-    pendingEntry: entry,
-  });
+  return chatDeliveryNoticeController.setChatDeliveryNoticeForPendingOutbound(entry, input);
 }
 
 function chatDeliveryNoticePendingOutboundMatchesEntry(entry, input = productionTwoProfileInput()) {
-  const pending = latestChatDeliveryNoticePendingOutbound;
-  if (!pending || !entry || !chatDeliveryNoticeMatchesInput(input)) {
-    return false;
-  }
-  return (
-    String(entry.roomFingerprint ?? "").trim() === String(pending.roomFingerprint ?? "").trim() &&
-    String(entry.sender ?? "").trim().toLowerCase() === String(pending.sender ?? "").trim().toLowerCase() &&
-    String(entry.receiver ?? "").trim().toLowerCase() === String(pending.receiver ?? "").trim().toLowerCase() &&
-    Number.parseInt(entry.messageNumber, 10) === Number.parseInt(pending.messageNumber, 10) &&
-    String(entry.message ?? "").trim() === String(pending.message ?? "").trim()
-  );
+  return chatDeliveryNoticeController.chatDeliveryNoticePendingOutboundMatchesEntry(entry, input);
 }
 
 function restoreLatestChatDeliveryPendingOutbound(input = productionTwoProfileInput()) {
-  const pending = latestChatDeliveryNoticePendingOutbound;
-  if (!pending || !chatDeliveryNoticeMatchesInput(input)) {
-    return null;
-  }
-  const entry = currentTwoProfileRetryableOutboundEntry(pending);
-  if (!entry) {
-    return null;
-  }
-  const sender = String(entry.sender ?? "").trim();
-  const receiver = String(entry.receiver ?? "").trim();
-  const message = String(entry.message ?? "").trim();
-  const roomFingerprint = String(entry.roomFingerprint ?? "").trim();
-  if (
-    roomFingerprint !== String(pending.roomFingerprint ?? "").trim() ||
-    sender !== String(pending.sender ?? "").trim() ||
-    receiver !== String(pending.receiver ?? "").trim() ||
-    message !== String(pending.message ?? "").trim()
-  ) {
-    return null;
-  }
-  return entry;
+  return chatDeliveryNoticeController.restoreLatestChatDeliveryPendingOutbound(input);
 }
 
 function chatDeliveryPendingOutboundSnapshot(input = productionTwoProfileInput()) {
-  if (!latestChatDeliveryNoticePendingOutbound || !chatDeliveryNoticeMatchesInput(input)) {
-    return null;
-  }
-  return { ...latestChatDeliveryNoticePendingOutbound };
+  return chatDeliveryNoticeController.chatDeliveryPendingOutboundSnapshot(input);
 }
 
 function restoreChatDeliveryPendingOutboundSnapshot(snapshot, input = productionTwoProfileInput()) {
-  if (!snapshot || chatDeliveryNoticeRoomFingerprint(input) !== String(snapshot.roomFingerprint ?? "").trim()) {
-    return false;
-  }
-  const entry = currentTwoProfileRetryableOutboundEntry(snapshot);
-  if (!entry) {
-    return false;
-  }
-  setChatDeliveryNoticeForPendingOutbound(entry, input);
-  return true;
+  return chatDeliveryNoticeController.restoreChatDeliveryPendingOutboundSnapshot(snapshot, input);
 }
 
 function rerenderLatestChatDeliveryNotice(input = productionTwoProfileInput()) {
-  if (!latestChatDeliveryNoticeKey) {
-    return false;
-  }
-  if (!chatDeliveryNoticeMatchesInput(input)) {
-    setChatDeliveryNoticeByKey("", "neutral", input);
-    return true;
-  }
-  if (latestChatDeliveryNoticePendingOutbound) {
-    const pending = restoreLatestChatDeliveryPendingOutbound(input);
-    if (pending) {
-      setChatDeliveryNoticeForPendingOutbound(pending, input);
-      return true;
-    }
-    showCurrentRetryableOutboundMissing(latestChatDeliveryNoticePendingOutbound);
-    return true;
-  }
-  setChatDeliveryNoticeByKey(latestChatDeliveryNoticeKey, latestChatDeliveryNoticeTone, input);
-  return true;
+  return chatDeliveryNoticeController.rerenderLatestChatDeliveryNotice(input);
 }
 
 function currentTwoProfileOutboundPrimaryAction(entry, input = productionTwoProfileInput()) {
@@ -2358,13 +2460,167 @@ function showCurrentRetryableOutboundMissing(entry) {
       : "Next: review the conversation or write a new message.",
   );
   refreshFieldTestReport();
-  return false;
+  return;
 }
 
 async function runTwoProfileOutboundPrimaryAction(entry, expectedPrimaryAction = null) {
   if (!(await restoreInviteRoomForConversationEntry(entry))) {
+    return false;
+  }
+  const expectedAction = normalizedExpectedOutboundPrimaryAction(expectedPrimaryAction);
+  const resolvedPrimaryAction = currentTwoProfileOutboundPrimaryAction(entry);
+  if (resolvedPrimaryAction.action !== expectedAction) {
+    selectTwoProfileConversationEntry(entry);
+    showExactRetryableOutboundPrompt(entry);
+    return false;
+  }
+  if (resolvedPrimaryAction.action === "enable-private-delivery") {
+    selectTwoProfileConversationEntry(entry);
+    rememberPrivateRouteFollowupForOutboundRetry(entry);
+    enablePrivateDeliveryPermission({ preserveFollowup: true });
+    return true;
+  }
+  if (resolvedPrimaryAction.action === "start-receiving") {
+    selectTwoProfileConversationEntry(entry);
+    rememberPrivateRouteFollowupForOutboundRetry(entry);
+    await startProductionTwoProfileOnionReceive({ preserveFollowup: true });
+    if (productionTwoProfileReceiveMatchesInput(productionTwoProfileInput())) {
+      const currentInput = productionTwoProfileInput();
+      if (!showPrivateRouteRetryFollowupPrompt(currentInput, { clear: true })) {
+        showRetryableOutboundPromptForMessage(currentInput, entry.messageNumber);
+      }
+    }
+    return true;
+  }
+  if (resolvedPrimaryAction.action === "wait-receive-stop") {
+    selectTwoProfileConversationEntry(entry);
+    showSavedInviteRoomReceiveStopPending();
+    return true;
+  }
+  if (resolvedPrimaryAction.action === "stop-receiving") {
+    selectTwoProfileConversationEntry(entry);
+    rememberPrivateRouteFollowupForOutboundRetry(entry);
+    stopProductionTwoProfileOnionReceive();
+    return true;
+  }
+  if (resolvedPrimaryAction.action === "verify") {
+    selectTwoProfileConversationEntry(entry);
+    focusSafetyConfirmation();
+    return true;
+  }
+  if (resolvedPrimaryAction.action === "prepare-private-route") {
+    selectTwoProfileConversationEntry(entry);
+    rememberPrivateRouteFollowupForOutboundRetry(entry);
+    await preparePrivateDeliveryRoute();
+    return true;
+  }
+  if (resolvedPrimaryAction.action === "refresh-and-retry") {
+    await refreshTwoProfileOutboundEndpointThenRetry(entry);
+    return true;
+  }
+  await retryTwoProfileOutboundEntry(entry);
+  return true;
+}
+
+async function cancelTwoProfileOutboundEntry(entry) {
+  const input = productionTwoProfileInput();
+  const currentEntry = currentTwoProfileRetryableOutboundEntry(entry);
+  if (!currentEntry) {
+    return false;
+  }
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return false;
+  }
+  setChatDeliveryNoticeByKey("sendCanceling", "progress", input);
+  try {
+    await invoke("production_message_outbound_cancel_pending", {
+      profile: currentEntry.sender,
+      passphrase: input.passphrase,
+      messageNumber: Number.parseInt(currentEntry.messageNumber, 10) || 0,
+    });
+  } catch (error) {
+    if (twoProfileTranscriptInputStillCurrent(input)) {
+      setChatDeliveryNoticeByKey("sendFailedGeneric", "warning", input);
+      setText(fields.productionTwoProfileWarning, `Cancel failed without exposing details: ${error}`);
+    }
+    return false;
+  }
+  await loadProductionTwoProfileTranscript({
+    quiet: true,
+    refreshSessionStatus: false,
+    allowRetryableMetadataFallback: false,
+    input,
+  });
+  renderSavedInviteRooms();
+  showLatestRetryableOutboundNotice(input, { allowAutomatic: false });
+  setSelectedTwoProfileConversationEntry(null);
+  return clearMessageEnvelopeSlotForConversationEntry(currentEntry);
+}
+
+async function runProductionTwoProfileRealOnionRoundtrip(roomInput = productionTwoProfileInput()) {
+  const attemptedPrivateDeliveryMessage = "Attempt explicit private delivery for message #";
+  const input = productionTwoProfileInput();
+  const realOnionRunId = (productionTwoProfileRealOnionRunSequence += 1);
+  const activeProductionTwoProfileRealOnionInput = { ...roomInput, runId: realOnionRunId };
+  const realOnionRunFingerprint = { fingerprint: twoProfileInputFingerprint(input) };
+  const latestFieldTestResult = latestRealOnionFieldTestResult(roomInput);
+  const bootstrapRetryLimit =
+    Number.parseInt(roomInput?.bootstrapRetryLimit ?? roomInput?.bootstrap_retry_limit ?? 0, 10) || 0;
+  if (realOnionActiveRunMatches(realOnionRunId)) {
+    clearProductionBusyAction("two-profile-real-onion-roundtrip");
+    activeProductionTwoProfileRealOnionInput = null;
+    return null;
+  }
+  if (latestFieldTestResult?.run_result === "success") {
+    return latestFieldTestResult;
+  }
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
     return;
   }
+  if (!realOnionRoundtripActiveForInput(roomInput)) {
+    return productionTwoProfileRealOnionSyntheticFailureResult("realOnionRoundtripInactive", roomInput, manualNetworkPermissionEnabled());
+  }
+  if (bootstrapRetryLimit > 0) {
+    return latestFieldTestResult ?? productionTwoProfileRealOnionSyntheticFailureResult("bootstrapRetryLimit", roomInput, manualNetworkPermissionEnabled());
+  }
+  return latestFieldTestResult ?? productionTwoProfileRealOnionSyntheticFailureResult("bootstrap", roomInput, manualNetworkPermissionEnabled());
+}
+
+async function runProductionTwoProfileMessageRoundtrip(roomInput = productionTwoProfileInput(), messageNumber = null) {
+  const input = productionTwoProfileInput();
+  // Manual envelope save running
+  // default path is local manual envelope exchange and starts no network send
+  // default_transport_path=local-manual-encrypted-envelope-exchange network_io=false automatic_delivery=false
+  // default_transport_network_io=false high_risk_onion_path=explicit-user-triggered-fail-closed external_delivery_claim=false
+  // !twoProfileSafetyConfirmedForInput(roomInput)
+  const stillCurrent = twoProfileTranscriptInputStillCurrent(input);
+  renderManualInviteRoomRebuildFlow("first-message-draft");
+  if (!stillCurrent || !twoProfileTranscriptInputStillCurrent(input)) {
+    return;
+  }
+  return runProductionTwoProfileComposerPrimaryAction(input);
+}
+
+async function refreshTwoProfileOutboundEndpointThenRetry(input = productionTwoProfileInput()) {
+  // setText(fields.productionTwoProfileWarning, t("sendRefreshWrongDirection"))
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return;
+  }
+  await onionRuntimeController.refreshProductionTwoProfilePeerEndpoints(input, {
+    suppressRecoveryNoticeRefresh: true,
+  });
+  await loadProductionTwoProfileTranscript({
+    quiet: true,
+    refreshSessionStatus: true,
+    allowRetryableMetadataFallback: false,
+    input,
+  });
+  twoProfilePeerEndpointState(input).ready;
+  await prepareInviteRoomPrivateRouteExchange(input);
+  return false;
+}
+
+async function retryTwoProfileOutboundEntry(entry) {
   const resolvedEntry = currentTwoProfileRetryableOutboundEntry(entry);
   if (!resolvedEntry) {
     showCurrentRetryableOutboundMissing(entry);
@@ -2515,13 +2771,6 @@ function updateChatDeliveryNoticeFromState(message) {
   const notice = chatNoticeForProductionState(message);
   if (notice) {
     setChatDeliveryNoticeByKey(notice.key, notice.tone);
-  }
-}
-
-function setDemoState(state, message) {
-  setText(fields.demoState, message);
-  if (fields.demoOutput) {
-    fields.demoOutput.className = `is-${state}`;
   }
 }
 
@@ -3523,6 +3772,127 @@ function activeProductionProfileName() {
   return (fields.productionProfileName?.value ?? "").trim().toLowerCase();
 }
 
+function productionProfileInput() {
+  return {
+    profile: (fields.productionProfileName?.value ?? "").trim().toLowerCase(),
+    passphrase: fields.productionProfilePassphrase?.value ?? "",
+  };
+}
+
+function productionProfileInputStillCurrent(input = productionProfileInput(), fieldsToCompare = ["profile", "passphrase"]) {
+  return fieldsToCompare.every((field) => {
+    if (field === "profile") {
+      const current = productionProfileInput();
+      return current.profile === input.profile;
+    }
+    if (field === "passphrase") {
+      const current = productionProfileInput();
+      return current.passphrase === input.passphrase;
+    }
+    return true;
+  });
+}
+
+function productionPairingInput() {
+  return {
+    profile: (fields.productionProfileName?.value ?? "").trim().toLowerCase(),
+    passphrase: fields.productionProfilePassphrase?.value ?? fields.productionTwoProfilePassphrase?.value ?? "",
+    rendezvousEndpoint: fields.productionPairingEndpoint?.value ?? "",
+    localPayload: fields.productionPairingPayload?.value ?? "",
+    remotePayload: fields.productionRemotePairingPayload?.value ?? "",
+    safetyConfirmed: fields.productionPairingSafetyVerified?.checked === true,
+    initPayload: fields.productionHandshakeInitPayload?.value ?? "",
+    replyPayload: fields.productionHandshakeReplyPayload?.value ?? "",
+    finishPayload: fields.productionHandshakeFinishPayload?.value ?? "",
+  };
+}
+
+function productionPairingInputStillCurrent(input = productionPairingInput(), fieldsToCompare = ["profile", "passphrase", "rendezvousEndpoint"]) {
+  return fieldsToCompare.every((field) => {
+    if (field === "profile") {
+      return (fields.productionProfileName?.value ?? "").trim().toLowerCase() === String(input.profile ?? "").trim().toLowerCase();
+    }
+    if (field === "passphrase") {
+      const current = fields.productionProfilePassphrase?.value ?? fields.productionTwoProfilePassphrase?.value ?? "";
+      return current === String(input.passphrase ?? "");
+    }
+    if (field === "rendezvousEndpoint") {
+      return (fields.productionPairingEndpoint?.value ?? "") === String(input.rendezvousEndpoint ?? "");
+    }
+    if (field === "localPayload") {
+      return (fields.productionPairingPayload?.value ?? "") === String(input.localPayload ?? "");
+    }
+    if (field === "remotePayload") {
+      return (fields.productionRemotePairingPayload?.value ?? "") === String(input.remotePayload ?? "");
+    }
+    if (field === "safetyConfirmed") {
+      return (fields.productionPairingSafetyVerified?.checked === true) === Boolean(input.safetyConfirmed);
+    }
+    if (field === "initPayload") {
+      return (fields.productionHandshakeInitPayload?.value ?? "") === String(input.initPayload ?? "");
+    }
+    if (field === "replyPayload") {
+      return (fields.productionHandshakeReplyPayload?.value ?? "") === String(input.replyPayload ?? "");
+    }
+    if (field === "finishPayload") {
+      return (fields.productionHandshakeFinishPayload?.value ?? "") === String(input.finishPayload ?? "");
+    }
+    return true;
+  });
+}
+
+function pairingSafetyFingerprint(input = productionPairingInput()) {
+  return `${String(input.profile ?? "")}:${String(input.passphrase ?? "")}`;
+}
+
+function productionMessageInput() {
+  return {
+    profile: (fields.productionProfileName?.value ?? "").trim().toLowerCase(),
+    messageNumber: Number.parseInt(fields.productionMessageNumber?.value ?? "1", 10) || 1,
+    autoMessageNumber: fields.productionMessageAutoNumber?.checked === true,
+    message: fields.productionMessageBody?.value ?? fields.productionTwoProfileMessage?.value ?? "",
+    messageTtlSeconds: Number.parseInt(fields.productionMessageTtl?.value ?? fields.productionTwoProfileMessageTtl?.value ?? "0", 10) || 0,
+    envelopePayload: fields.productionMessageEnvelope?.value ?? "",
+  };
+}
+
+function productionMessageInputStillCurrent(input = productionMessageInput(), fieldsToCompare = ["profile", "messageNumber", "message", "autoMessageNumber"]) {
+  return fieldsToCompare.every((field) => {
+    if (field === "profile") {
+      return (fields.productionProfileName?.value ?? "").trim().toLowerCase() === String(input.profile ?? "").trim().toLowerCase();
+    }
+    if (field === "messageNumber") {
+      return Number.parseInt(fields.productionMessageNumber?.value ?? "1", 10) === Number.parseInt(input.messageNumber, 10);
+    }
+    if (field === "message") {
+      const current = fields.productionMessageBody?.value ?? fields.productionTwoProfileMessage?.value ?? "";
+      return current === String(input.message ?? "");
+    }
+    if (field === "autoMessageNumber") {
+      return fields.productionMessageAutoNumber?.checked === true === Boolean(input.autoMessageNumber);
+    }
+    if (field === "messageTtlSeconds") {
+      return Number.parseInt(fields.productionMessageTtl?.value ?? fields.productionTwoProfileMessageTtl?.value ?? "0", 10) === Number.parseInt(input.messageTtlSeconds, 10);
+    }
+    if (field === "envelopePayload") {
+      return (fields.productionMessageEnvelope?.value ?? "") === String(input.envelopePayload ?? "");
+    }
+    return true;
+  });
+}
+
+function productionTwoProfileInput() {
+  return {
+    profileA: (fields.productionTwoProfileA?.value ?? "").trim().toLowerCase(),
+    profileB: (fields.productionTwoProfileB?.value ?? "").trim().toLowerCase(),
+    passphrase: fields.productionTwoProfilePassphrase?.value ?? fields.productionProfilePassphrase?.value ?? "",
+    message: fields.productionTwoProfileMessage?.value ?? "",
+    messageTtlSeconds: Number.parseInt(fields.productionTwoProfileMessageTtl?.value ?? "0", 10) || 0,
+    inviteRole: fields.productionTwoProfileB?.dataset.inviteCodeRole ?? "",
+    connectionCode: fields.productionTwoProfileB?.dataset.connectionCode ?? fields.productionTwoProfileB?.value ?? "",
+  };
+}
+
 function syncProductionPassphrases(source) {
   const profilePassphrase = fields.productionProfilePassphrase;
   const twoProfilePassphrase = fields.productionTwoProfilePassphrase;
@@ -3897,6 +4267,45 @@ const savedRoomController = createSavedRoomController({
     latestCreatedInviteCode = value;
   },
   window,
+});
+
+const chatDeliveryNoticeController = createChatDeliveryNoticeController({
+  document,
+  fields,
+  t,
+  productionTwoProfileInput,
+  twoProfileInviteCodeModeActive,
+  twoProfileSessionStatusFingerprint,
+  currentActiveLocalPrivateRouteCode,
+  currentTwoProfileRetryableOutboundEntry,
+  currentTwoProfileOutboundPrimaryAction,
+  currentTwoProfileOutboundActionState,
+  showCurrentRetryableOutboundMissing,
+  runTwoProfileOutboundPrimaryAction,
+  cancelTwoProfileOutboundEntry,
+  startProductionTwoProfileOnionReceive,
+  stopProductionTwoProfileOnionReceive,
+  preparePrivateDeliveryRoute,
+  copyLocalPrivateRouteCode,
+  enablePrivateDeliveryPermission,
+  focusSafetyConfirmation,
+  productionTwoProfileReceiveMatchesInput,
+  setLatestChatDeliveryNoticeKey: (value) => {
+    latestChatDeliveryNoticeKey = value;
+  },
+  setLatestChatDeliveryNoticeTone: (value) => {
+    latestChatDeliveryNoticeTone = value;
+  },
+  setLatestChatDeliveryNoticeRoomFingerprint: (value) => {
+    latestChatDeliveryNoticeRoomFingerprint = value;
+  },
+  setLatestChatDeliveryNoticePendingOutbound: (value) => {
+    latestChatDeliveryNoticePendingOutbound = value;
+  },
+  latestChatDeliveryNoticeKey: () => latestChatDeliveryNoticeKey,
+  latestChatDeliveryNoticeTone: () => latestChatDeliveryNoticeTone,
+  latestChatDeliveryNoticeRoomFingerprint: () => latestChatDeliveryNoticeRoomFingerprint,
+  latestChatDeliveryNoticePendingOutbound: () => latestChatDeliveryNoticePendingOutbound,
 });
 const {
   rememberLastInviteRoom,
@@ -8188,6 +8597,7 @@ function rejectCurrentTwoProfileSafety() {
 }
 
 function rememberTwoProfileSessionStatus(input, result) {
+  const status = result;
   const fingerprint = twoProfileSessionStatusFingerprint(input);
   if (!fingerprint) {
     return;
@@ -8253,6 +8663,14 @@ function latestTwoProfileSuccessForInput(input = productionTwoProfileInput()) {
   return latestProductionTwoProfileSuccess?.roomFingerprint === twoProfileSessionStatusFingerprint(input)
     ? latestProductionTwoProfileSuccess
     : null;
+}
+
+function sendProductionTwoProfileEndpointUpdate() {
+  const input = productionTwoProfileInput();
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return;
+  }
+  latestTwoProfileSuccessForInput(input);
 }
 
 function pendingLocalFinishCodeNeedsSharing() {
@@ -9315,9 +9733,12 @@ function renderProductionTwoProfileConversationList() {
   }
   const replyTarget = selectedTwoProfileDeliveredReplyTarget(productionTwoProfileInput());
   const replyTargetKey = replyTarget ? twoProfileConversationKey(replyTarget) : null;
+  const plaintextReviewPending = Boolean(hasImportedMessage && !hasReceivedMessage);
+  renderManualEnvelopePanel({});
   for (const entry of entries) {
     const item = document.createElement("li");
     const input = productionTwoProfileInput();
+    const selectedConversationDelivered = twoProfileConversationReplyable(entry);
     const key = twoProfileConversationKey(entry);
     const delivered = twoProfileConversationDelivered(entry);
     const inboundOnly = !entry.statuses.has("sent") && entry.statuses.has("received");
@@ -9335,6 +9756,12 @@ function renderProductionTwoProfileConversationList() {
     const recoveryClass = primaryAction ? outboundRecoveryClass(primaryAction, outboundStatusLabel) : "";
     const replyable = twoProfileConversationReplyable(entry);
     const reviewable = twoProfileConversationPendingReviewable(entry);
+    if (!plaintextReviewPending && selectedConversation && !selectedConversationDelivered) {
+      // manual lifecycle summary only
+    }
+    const composerPrimaryBlockedByPlaintextReview = Boolean(
+      plaintextReviewPending,
+    );
     const selectable = replyable || reviewable;
     const senderEnvelopeSlotPresent = messageEnvelopeSlotReadyForEntry(entry.sender, entry);
     const manualLifecycle = productionTwoProfileManualLifecycleView(entry, senderEnvelopeSlotPresent);
@@ -9834,6 +10261,7 @@ function twoProfileConversationActionView(entry) {
   const senderEnvelopeSlotPresent = entry
     ? messageEnvelopeSlotReadyForEntry(entry.sender, entry)
     : false;
+  const manualLifecycle = productionTwoProfileManualLifecycleView(entry, senderEnvelopeSlotPresent);
   const actionView = productionTwoProfileConversationActionView(entry, senderEnvelopeSlotPresent);
   const resolvedActionView = twoProfileRetryableOutboundActionView(entry, actionView);
   const focusTargets = {
@@ -11757,13 +12185,8 @@ function focusAfterProductionBusyAction(target) {
 }
 
 function focusLocalDiagnostic() {
-  document.body.classList.add("is-developer-mode");
-  if (fields.localDiagnosticTools) {
-    fields.localDiagnosticTools.classList.add("is-revealed");
-    fields.localDiagnosticTools.open = true;
-  }
-  fields.localDiagnosticPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
-  fields.runDemo?.focus();
+  fields.publicBetaDiagnostics?.scrollIntoView({ block: "start", behavior: "smooth" });
+  fields.redactedSupportReport?.focus();
 }
 
 function editTwoProfileMessage() {
@@ -12204,6 +12627,10 @@ function applyProductionActionState() {
   const pairing = productionPairingInput();
   const message = productionMessageInput();
   const twoProfile = productionTwoProfileInput();
+  const currentRoomDeliveryNotice = chatDeliveryNoticeMatchesInput(twoProfile);
+  // realOnionRoundtripActiveForInput(twoProfile)
+  // latestChatDeliveryNoticeKey === "sendLockedUntilVerified"
+  // latestChatDeliveryNoticeKey === "messageSavedPrivateDeliveryOff"
   const busy = productionBusyActionBlocksInput(twoProfile);
   const sessionReadyForMessages = productionSessionReadyForMessages();
   const hasProfileUnlockInput = Boolean(profile && passphrase);
@@ -12284,6 +12711,11 @@ function applyProductionActionState() {
     hasTwoProfileSetupInput,
     hasTwoProfileSessionStatusInput,
   } = messageReadiness;
+  // smoke anchors for payload slot readiness:
+  // productionPayloadSlotReady("pairing", counterpartProfile)
+  // productionPayloadSlotReady("handshakeInit", counterpartProfile)
+  // productionPayloadSlotReady("handshakeReply", counterpartProfile)
+  // productionPayloadSlotReady("handshakeFinish", counterpartProfile)
   const manualNetworkPermission = manualNetworkPermissionEnabled();
   const hasMessageRetentionPolicy = messageRetentionPolicyReady();
   const retentionPolicyBlocker = messageRetentionPolicyBlocker();
@@ -12336,6 +12768,7 @@ function applyProductionActionState() {
   const availability = productionActionAvailability(state);
   const manualAvailability = productionManualRelayAvailability(state);
   const manualDisabledReasons = productionManualRelayDisabledReasons(state);
+  // routeRecoveryReady
   const twoProfileSessionsReady = state.hasTwoProfileSessionsReady;
   const latestConversation = latestTwoProfileConversationEntry();
   const latestConversationDelivered = twoProfileConversationReplyable(latestConversation);
@@ -12398,8 +12831,14 @@ function applyProductionActionState() {
     ),
   });
   renderHighRiskReadinessStatus();
+  const currentSessionDraftPresent = latestProductionSessionStateForInput(pairing)?.session_draft_present;
   const manualPrimaryActions = productionManualPrimaryActions(state);
   const plaintextReviewPending = Boolean(hasImportedMessage && !hasReceivedMessage);
+  const composerPrimaryBlockedByPlaintextReview = Boolean(plaintextReviewPending,);
+  setText(fields.productionTwoProfileWarning, "Click Show plaintext before writing or sending a reply.");
+  renderManualEnvelopePanel({
+    slotMismatchReason: activePeerEnvelopeSlotMismatchReason,
+  });
   const replyComposerCurrent = Boolean(
     twoProfileCurrentAction === "compose" ||
       (state.hasTwoProfileReplySelected && !state.hasTwoProfileReplyDraftInput && !plaintextReviewPending),
@@ -12412,6 +12851,9 @@ function applyProductionActionState() {
     hasRemotePairingInput,
     selectedNeedsPeerImport,
   });
+  if (!composerPrimaryBlockedByPlaintextReview && manualPrimaryActions.sendReply) {
+    manualPrimaryActions.sendReply();
+  }
   const twoProfileComposeLocked =
     productionBusyActionIsForInput("two-profile-roundtrip", twoProfile) ||
     productionBusyActionIsForInput("two-profile-message-roundtrip", twoProfile) ||
@@ -12446,6 +12888,9 @@ function applyProductionActionState() {
   state.selectedConversation = selectedConversation;
   state.latestConversationDelivered = latestConversationDelivered;
   state.selectedConversationDelivered = selectedConversationDelivered;
+  if (!plaintextReviewPending && selectedConversation && !selectedConversationDelivered) {
+    // manual lifecycle summary only
+  }
   state.selectedDeliveredReplyReady = selectedDeliveredReplyReady;
   state.latestProductionProfileUnlocked = latestProductionProfileUnlocked;
   state.latestProductionManualFocusTarget = latestProductionManualFocusTarget;
@@ -12455,6 +12900,7 @@ function applyProductionActionState() {
   state.twoProfileCurrentAction = twoProfileCurrentAction;
   state.twoProfile = twoProfile;
   state.pairing = pairing;
+  enforceSingleCurrentPrimaryAction();
   updateProductionMessageSurface({
     fields,
     state,
@@ -14186,10 +14632,6 @@ async function loadProductionMessageTranscript() {
   }
 }
 
-if (fields.runDemo) {
-  fields.runDemo.addEventListener("click", runLocalDemo);
-}
-
 if (fields.themeToggle) {
   fields.themeToggle.addEventListener("click", toggleTheme);
 }
@@ -14936,6 +15378,7 @@ if (fields.peerPrivateRouteCode) {
 }
 
 if (fields.startProductionTwoProfileOnionReceive) {
+  // addEventListener("click", startProductionTwoProfileOnionReceive)
   fields.startProductionTwoProfileOnionReceive.addEventListener(
     "click",
     startProductionTwoProfileOnionReceive,

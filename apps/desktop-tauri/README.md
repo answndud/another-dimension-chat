@@ -227,12 +227,19 @@ Current local beta handoff, separate from the public release packaging input:
 - External Tor/onion field testing should record whether bootstrap, onion endpoint launch, endpoint exchange, send, receive, retry, and cancel complete or fail closed. Do not treat Tor blocking, timeout, or peer offline results as release-blocking security failures unless they expose secrets, silently start network work, or corrupt transcript/session state.
 - Peer reports must use the listed leading status tokens and must not include bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, passphrases, profile names, message text, local paths, raw logs, or key material.
 
-Current maintained verification commands:
+Current maintained verification ladder, run from the repository root:
 
 ```bash
-scripts/verify_all.sh
-scripts/verify_full.sh
+scripts/verify_light.sh  # source-build boundaries + all desktop JavaScript tests
+scripts/verify_warm.sh   # light + rustfmt + desktop Tauri cargo check
+scripts/verify_cold.sh   # warm + runtime/workspace tests + clippy; pre-release only
 ```
+
+`scripts/verify_all.sh` is a compatibility alias for light and
+`scripts/verify_full.sh` is a compatibility alias for cold. The optional
+`smoke_dev_cli.sh` prototype pairing/message/replay/expiry flow and
+`smoke_tauri_two_profile.sh` production profile/pairing/session/transcript-resume
+flow are manual acceptance checks, not default verification.
 
 These are the active local development checks. Historical release packaging
 commands referenced in older review packets are not part of the current
@@ -308,7 +315,6 @@ Expected local-only behavior:
 - The shell shows a dev-insecure warning separately from the transcript.
 - The shell shows structured local flow steps for profile creation, pairing, safety verification material, pairing confirmation, message send/receive, replay check, and demo completion.
 - The shell maps the local demo result into Alice/Bob peer panels and local flow controls for profile creation, pairing, safety display, contact confirmation, message send/receive, replay check, and completion.
-- `Reset local view` clears the displayed simulation state; `Run local demo` can be used again to re-run the underlying dev-insecure local command.
 - The repeatable local loop accepts one local dev message per line and runs `demo local-loop` through the same dev-insecure CLI/core flow.
 - The local loop reports each send/receive result plus replay, expiry, and dev store plaintext guard summaries.
 - The transcript remains visible for debugging.
