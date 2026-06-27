@@ -115,13 +115,15 @@ invite code, payload, key, raw log, private room screenshot 게시 금지.
 [macOS에서 소스 빌드로 설치](INSTALL_FROM_SOURCE_MACOS.md)를 먼저 보세요.
 
 ```sh
-scripts/verify_light.sh  # 빠른 경계 검증
-scripts/verify_warm.sh   # 더 넓은 desktop 셸 검증
-scripts/verify_cold.sh   # 사전-릴리즈 전체 검증
+scripts/verify_light.sh  # source-build 경계 + 모든 desktop JavaScript 테스트
+scripts/verify_warm.sh   # light + rustfmt + desktop Tauri cargo check
+scripts/verify_cold.sh   # warm + runtime/workspace 테스트 + clippy; 사전 릴리즈 전용
 ```
 
-`npm --prefix apps/desktop-tauri run verify:desktop-boundary`는
-`scripts/verify_light.sh`와 같은 빠른 경계 검증입니다.
+`scripts/verify_all.sh`은 light, `scripts/verify_full.sh`은 cold의 호환
+alias입니다. CLI smoke는 기본 검증이 아닌 수동 acceptance입니다.
+`smoke_dev_cli.sh`는 prototype pairing/message/replay/expiry를,
+`smoke_tauri_two_profile.sh`는 production profile/pairing/session/transcript resume를 확인합니다.
 
 ## 프로젝트 문서
 

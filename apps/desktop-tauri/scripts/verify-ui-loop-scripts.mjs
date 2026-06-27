@@ -5,7 +5,7 @@ const appRoot = resolve(new URL("..", import.meta.url).pathname);
 const packageJson = JSON.parse(readFileSync(resolve(appRoot, "package.json"), "utf8"));
 const scripts = packageJson.scripts || {};
 
-const uiOnlyScripts = ["dev", "dev:ui", "dev:ui:peer-a", "dev:ui:peer-b", "build", "test:state", "test:ui-fast"];
+const uiOnlyScripts = ["dev", "dev:ui", "dev:ui:peer-a", "dev:ui:peer-b", "build", "test", "test:state", "test:ui-fast"];
 const nativeMarkers = /\b(?:tauri|cargo|with-cargo-target|engine:prepare-sidecar)\b|src-tauri/u;
 
 function fail(message) {
@@ -19,8 +19,10 @@ for (const name of uiOnlyScripts) {
   if (nativeMarkers.test(command)) fail(`ui-only-script-calls-native-${name}`);
 }
 
-if (scripts["test:ui-fast"] !== "npm run test:state") {
-  fail("test-ui-fast-must-alias-state-tests");
+for (const alias of ["test:state", "test:ui-fast"]) {
+  if (scripts[alias] !== "npm test") {
+    fail(`${alias}-must-alias-all-js-tests`);
+  }
 }
 
 const nativeShell = scripts["test:native-shell"] || "";
