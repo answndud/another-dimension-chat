@@ -116,16 +116,19 @@ Follow the macOS install guide for the primary build path:
 
 - [Install from source on macOS](INSTALL_FROM_SOURCE_MACOS.md)
 
-Use `verify_light.sh` for quick boundary checks, `verify_warm.sh` before larger desktop changes, and `verify_cold.sh` only for pre-release review:
+Use the three-level verification ladder:
 
 ```sh
-scripts/verify_light.sh  # fast boundary check
-scripts/verify_warm.sh    # broader desktop shell check
-scripts/verify_cold.sh    # full pre-release verify
+scripts/verify_light.sh  # source-build boundaries + all desktop JavaScript tests
+scripts/verify_warm.sh   # light + rustfmt + desktop Tauri cargo check
+scripts/verify_cold.sh   # warm + runtime/workspace tests + clippy; pre-release only
 ```
 
-`npm --prefix apps/desktop-tauri run verify:desktop-boundary` is the same fast
-boundary check as `scripts/verify_light.sh`.
+`scripts/verify_all.sh` is a compatibility alias for light;
+`scripts/verify_full.sh` is a compatibility alias for cold. The CLI smoke
+scripts are manual acceptance checks, not default verification:
+`smoke_dev_cli.sh` covers prototype pairing/message/replay/expiry, while
+`smoke_tauri_two_profile.sh` covers production profile/pairing/session/transcript resume.
 
 ## Project Docs
 

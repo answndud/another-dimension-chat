@@ -16,8 +16,8 @@ run_step() {
 
 cd "$ROOT_DIR"
 
+run_step "light verification" scripts/verify_light.sh
 run_step "rustfmt" cargo fmt --all -- --check
 run_step "desktop tauri shell cargo check" cargo check --manifest-path apps/desktop-tauri/src-tauri/Cargo.toml
-run_step "desktop tauri scaffold contract" scripts/verify_tauri_scaffold.sh
 
 printf '\nwarm verification passed\n'
