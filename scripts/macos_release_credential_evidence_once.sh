@@ -256,5 +256,5 @@ dmg_rebuild_authorized=false
 production_ready_claim_allowed=false
 audited_claim_allowed=false
 sensitive_communication_allowed=false
-next_required_phase=Phase-A100-1-External-Security-Review-Packet-Freeze
+next_required_phase=Phase-A100-2-External-Review-Execution-And-Finding-Closure
 STATUS

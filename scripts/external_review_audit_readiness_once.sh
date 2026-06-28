@@ -31,6 +31,14 @@ SCOPE_DOWN="reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
 TRACKER_VALIDATOR="scripts/validate_audit_finding_tracker.mjs"
 
 must_contain "$DOC" "external_review_audit_readiness_gate_reviewed=true"
+must_contain "$DOC" "a100_1_external_security_review_packet_frozen=true"
+must_contain "$DOC" "review_packet_synced_to_latest_source_gates=true"
+must_contain "$DOC" "review_packet_includes_c100_5_onion_boundary=true"
+must_contain "$DOC" "review_packet_includes_target_standard_matrix=true"
+must_contain "$DOC" "review_packet_includes_deployment_blocker_plan=true"
+must_contain "$DOC" "review_packet_finding_tracker_synced=true"
+must_contain "$DOC" "private_docs_excluded_from_review_packet=true"
+must_contain "$DOC" "generated_release_artifacts_excluded_from_review_packet=true"
 must_contain "$DOC" "d100_4_external_evidence_intake_execution_reviewed=true"
 must_contain "$DOC" "external_review_intake_runbook_available=true"
 must_contain "$DOC" "external_review_intake_operator_ready=true"
@@ -60,10 +68,20 @@ must_contain "$DOC" "next_required_phase=RB-7 signed notarized macOS stable arti
 
 must_contain "$RUNBOOK" "external_review_intake_runbook_available=true"
 must_contain "$RUNBOOK" "external_review_intake_operator_ready=true"
+must_contain "$RUNBOOK" "a100_1_external_security_review_packet_frozen=true"
+must_contain "$RUNBOOK" "review_packet_synced_to_latest_source_gates=true"
+must_contain "$RUNBOOK" "review_packet_includes_c100_5_onion_boundary=true"
+must_contain "$RUNBOOK" "review_packet_includes_target_standard_matrix=true"
+must_contain "$RUNBOOK" "review_packet_includes_deployment_blocker_plan=true"
+must_contain "$RUNBOOK" "review_packet_finding_tracker_synced=true"
+must_contain "$RUNBOOK" "private_docs_excluded_from_review_packet=true"
+must_contain "$RUNBOOK" "generated_release_artifacts_excluded_from_review_packet=true"
 must_contain "$RUNBOOK" "audit_finding_tracker_schema_machine_checkable=true"
 must_contain "$RUNBOOK" "sensitive_finding_private_route_required=true"
 must_contain "$TRACKER" "Status: tracker available; no external audit findings have been received or"
 must_contain "$TRACKER" "audit_finding_tracker_ready=true"
+must_contain "$TRACKER" "a100_1_external_security_review_packet_frozen=true"
+must_contain "$TRACKER" "review_packet_finding_tracker_synced=true"
 must_contain "$TRACKER" "audit_finding_tracker_schema_machine_checkable=true"
 must_contain "$TRACKER" "audit_finding_counts_machine_checked=true"
 must_contain "$TRACKER" "sensitive_finding_private_route_required=true"
@@ -81,11 +99,17 @@ for required in \
   "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
   "reference/AUDIT_FINDING_TRACKER.md" \
   "reference/INDEPENDENT_REVIEW_PACKET.md" \
+  "reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md" \
+  "reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md" \
+  "reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md" \
+  "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md" \
   "reference/PUBLIC_THREAT_MODEL.md" \
   "reference/PRODUCTION_READINESS_CLAIM_GATE.md" \
   "reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md" \
   "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md" \
   "reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md" \
+  "reference/TRANSPORT_EXPERIMENT_RUNBOOK.md" \
+  "reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md" \
   "reference/MACOS_PRODUCTION_UX_ONBOARDING.md" \
   "reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md" \
   "reference/PUBLIC_INTAKE_POLICY.md"; do
@@ -101,6 +125,9 @@ must_contain "SECURITY.md" "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md"
 must_contain "SECURITY.md" "reference/AUDIT_FINDING_TRACKER.md"
 must_contain "SECURITY.md" "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_7_external_review_audit_readiness_gate_reviewed=true"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "a100_1_external_security_review_packet_frozen=true"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "review_packet_synced_to_latest_source_gates=true"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "review_packet_finding_tracker_synced=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "rb_6_external_review_release_class_scope_down_reviewed=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "external_review_completed=false"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "audit_completed=false"
@@ -131,6 +158,14 @@ scripts/external_review_release_class_scope_down_once.sh >/dev/null
 cat <<'STATUS'
 status=external-review-audit-readiness-ready
 external_review_audit_readiness_gate_reviewed=true
+a100_1_external_security_review_packet_frozen=true
+review_packet_synced_to_latest_source_gates=true
+review_packet_includes_c100_5_onion_boundary=true
+review_packet_includes_target_standard_matrix=true
+review_packet_includes_deployment_blocker_plan=true
+review_packet_finding_tracker_synced=true
+private_docs_excluded_from_review_packet=true
+generated_release_artifacts_excluded_from_review_packet=true
 d100_4_external_evidence_intake_execution_reviewed=true
 external_review_intake_runbook_available=true
 external_review_intake_operator_ready=true

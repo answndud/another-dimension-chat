@@ -64,7 +64,7 @@ must_contain "$DOC" "automatic_network_on_launch_allowed=false"
 must_contain "$DOC" "external_delivery_claim_allowed=false"
 must_contain "$DOC" "sensitive_communication_allowed=false"
 must_contain "$DOC" "security_ready_claimed=false"
-must_contain "$DOC" "next_required_phase=Phase A100-1 - External Security Review Packet Freeze"
+must_contain "$DOC" "next_required_phase=Phase A100-2 - External Review Execution And Finding Closure"
 
 must_contain "$UX_DOC" "reference/MACOS_USABILITY_RECOVERY_CLOSURE.md"
 must_contain "$UX_DOC" "supported_owner_observed_usability_rehearsal_ready=true"
@@ -134,5 +134,5 @@ automatic_network_on_launch_allowed=false
 external_delivery_claim_allowed=false
 sensitive_communication_allowed=false
 security_ready_claimed=false
-next_required_phase=Phase-A100-1-External-Security-Review-Packet-Freeze
+next_required_phase=Phase-A100-2-External-Review-Execution-And-Finding-Closure
 STATUS

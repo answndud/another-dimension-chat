@@ -166,5 +166,5 @@ release_upload_authorized=false
 dmg_rebuild_authorized=false
 production_distribution_ready=false
 production_ready_claim_allowed=false
-next_required_phase=A100-1-External-Security-Review-Packet-Freeze
+next_required_phase=A100-2-External-Review-Execution-And-Finding-Closure
 STATUS

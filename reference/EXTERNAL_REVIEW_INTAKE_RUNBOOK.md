@@ -8,8 +8,11 @@ communication.
 ## Operator Steps
 
 1. Freeze reviewer inputs from `reference/INDEPENDENT_REVIEW_PACKET.md`,
-   `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`, and
-   `reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md`.
+   `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`,
+   `reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md`,
+   `reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md`,
+   `reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md`, and
+   `reference/AUDIT_FINDING_TRACKER.md`.
 2. Give reviewers only public-safe source, reference, and release-material
    inputs. Do not provide private planning notes, local app data, invite codes,
    payloads, endpoints, logs, paths, screenshots of private room data,
@@ -41,6 +44,14 @@ communication.
 
 - external_review_intake_runbook_available=true
 - external_review_intake_operator_ready=true
+- a100_1_external_security_review_packet_frozen=true
+- review_packet_synced_to_latest_source_gates=true
+- review_packet_includes_c100_5_onion_boundary=true
+- review_packet_includes_target_standard_matrix=true
+- review_packet_includes_deployment_blocker_plan=true
+- review_packet_finding_tracker_synced=true
+- private_docs_excluded_from_review_packet=true
+- generated_release_artifacts_excluded_from_review_packet=true
 - audit_finding_tracker_schema_machine_checkable=true
 - audit_finding_counts_machine_checked=true
 - sensitive_finding_private_route_required=true

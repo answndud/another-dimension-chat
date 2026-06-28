@@ -87,4 +87,4 @@ guide, and support copy, then verified on representative supported systems.
 - generated_release_artifacts_staged=false
 - signed_notarized_release_ready=false
 - sensitive_communication_allowed=false
-- next_required_phase=Phase A100-1 - External Security Review Packet Freeze
+- next_required_phase=Phase A100-2 - External Review Execution And Finding Closure

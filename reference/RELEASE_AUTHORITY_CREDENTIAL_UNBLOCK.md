@@ -225,4 +225,4 @@ separate explicit phases. They do not inherit macOS release authority.
 - android_runtime_implementation_authorized=false
 - ios_runtime_implementation_authorized=false
 - stable_release_scope_down_until_credentials=true
-- next_required_phase=Phase A100-1 - External Security Review Packet Freeze
+- next_required_phase=Phase A100-2 - External Review Execution And Finding Closure

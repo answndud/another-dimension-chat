@@ -38,7 +38,7 @@ Current public wording must remain:
 | 11 | M100-6 Representative macOS Usability Evidence | closed by owner waiver | Active-queue representative usability evidence blocker is closed by explicit owner waiver; real accepted usability evidence remains required before stable, public macOS 100%, production, or TARGET_STANDARD 100 claims. |
 | 12 | M100-7 macOS Update And Rollback-Safe Release Channel | closed by owner waiver | Manual same-release update policy and signed update manifest candidate verification are source-ready; active blocker is closed by explicit owner waiver while product signed update readiness and rollback prevention remain holds. |
 | 13 | M100-8 macOS Stable Release Gate And Public Copy Upgrade | closed by owner waiver | Stable gate is reviewed as hold; active blocker is closed by explicit owner waiver while stable release, public copy upgrade, and production claims remain blocked. |
-| 14 | A100-1 External Security Review Packet Freeze | source packet gate | Independent review packet remains frozen and public-safe. |
+| 14 | A100-1 External Security Review Packet Freeze | closed by source packet freeze | Independent review packet is frozen, public-safe, synced to latest source gates, and linked to the finding tracker; real external review completion remains false for A100-2. |
 | 15 | A100-2 External Review Execution And Finding Closure | external review hold | Named reviewer or audit completes; findings are fixed, held, or waived with public-safe signoff. |
 | 16 | F100-1 External Two-Machine Field Evidence Program | external field hold | Repeated real two-machine/different-network reports are accepted by validators. |
 | 17 | O100-1 Operations, Incident, And Vulnerability Readiness | source gate with operations hold | Support, vulnerability intake, incident severity, dependency advisory, emergency release, and user notification paths are rehearsed. |
@@ -158,6 +158,14 @@ Current public wording must remain:
 - external_delivery_success_claim_allowed=false
 - reliable_external_delivery_claim_allowed=false
 - repeated_external_onion_evidence_claim_allowed=false
+- a100_1_external_security_review_packet_frozen=true
+- review_packet_synced_to_latest_source_gates=true
+- review_packet_includes_c100_5_onion_boundary=true
+- review_packet_includes_target_standard_matrix=true
+- review_packet_includes_deployment_blocker_plan=true
+- review_packet_finding_tracker_synced=true
+- private_docs_excluded_from_review_packet=true
+- generated_release_artifacts_excluded_from_review_packet=true
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
 - macos_release_credential_evidence_collector_available=true
@@ -208,4 +216,4 @@ Current public wording must remain:
 - public_claim_ahead_of_evidence=false
 - docs_private_uncommitted=true
 - agents_md_stage_allowed=false
-- next_required_phase=Phase A100-1 - External Security Review Packet Freeze
+- next_required_phase=Phase A100-2 - External Review Execution And Finding Closure
