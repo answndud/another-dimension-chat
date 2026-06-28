@@ -212,6 +212,110 @@ export function productionHighRiskTransportMetadataBoundaryView() {
   };
 }
 
+export function productionHighRiskRuntimeEvidenceGateView(input = {}) {
+  const allowedFailureClasses = new Set([
+    "none",
+    "bridge_config_missing",
+    "bootstrap_timeout",
+    "peer_unreachable",
+    "stale_endpoint",
+    "receive_owner_mismatch",
+  ]);
+  const evidenceSource = String(input.evidenceSource ?? "absent");
+  const explicitUserAction = input.explicitUserAction === true;
+  const onionOnly = input.onionOnly === true;
+  const directFallbackAttempted = input.directFallbackAttempted === true;
+  const appLaunchBootstrapAttempted = input.appLaunchBootstrapAttempted === true;
+  const roomOpenNetworkAttempted = input.roomOpenNetworkAttempted === true;
+  const endpointRotationObserved = input.endpointRotationObserved === true;
+  const redactedRuntimeEventRecorded = input.redactedRuntimeEventRecorded === true;
+  const failureClass = allowedFailureClasses.has(String(input.failureClass ?? "none"))
+    ? String(input.failureClass ?? "none")
+    : "unknown_redacted";
+  const clipboardTtlMs = Number.isFinite(Number(input.clipboardTtlMs))
+    ? Math.max(0, Number(input.clipboardTtlMs))
+    : 0;
+  const clipboardExpiryReady = clipboardTtlMs > 0 && clipboardTtlMs <= 30000;
+  const emergencyControlsReachable = input.emergencyControlsReachable === true;
+  const localOnlyEvidence = input.localOnlyEvidence === true || evidenceSource === "local-fixture";
+  const fabricatedEvidence = input.fabricatedEvidence === true || evidenceSource === "fabricated";
+  const forbiddenFieldsPresent = input.forbiddenFieldsPresent === true;
+  const accepted =
+    evidenceSource === "runtime-report" &&
+    explicitUserAction &&
+    onionOnly &&
+    !directFallbackAttempted &&
+    !appLaunchBootstrapAttempted &&
+    !roomOpenNetworkAttempted &&
+    endpointRotationObserved &&
+    redactedRuntimeEventRecorded &&
+    clipboardExpiryReady &&
+    emergencyControlsReachable &&
+    !localOnlyEvidence &&
+    !fabricatedEvidence &&
+    !forbiddenFieldsPresent;
+  const blockers = [];
+  if (evidenceSource !== "runtime-report") blockers.push("runtime-report-missing");
+  if (!explicitUserAction) blockers.push("explicit-user-action-missing");
+  if (!onionOnly) blockers.push("onion-only-not-proven");
+  if (directFallbackAttempted) blockers.push("direct-fallback-attempted");
+  if (appLaunchBootstrapAttempted) blockers.push("app-launch-bootstrap-attempted");
+  if (roomOpenNetworkAttempted) blockers.push("room-open-network-attempted");
+  if (!endpointRotationObserved) blockers.push("endpoint-rotation-missing");
+  if (!redactedRuntimeEventRecorded) blockers.push("redacted-runtime-event-missing");
+  if (!clipboardExpiryReady) blockers.push("clipboard-expiry-missing");
+  if (!emergencyControlsReachable) blockers.push("emergency-controls-missing");
+  if (localOnlyEvidence) blockers.push("local-only-evidence");
+  if (fabricatedEvidence) blockers.push("fabricated-evidence");
+  if (forbiddenFieldsPresent) blockers.push("forbidden-field-present");
+  const primaryBlocker = blockers[0] ?? "none";
+  const nextAction = accepted ? "keep-public-claim-closed" : "collect-real-redacted-runtime-report";
+  const summary = [
+    `high_risk_runtime_evidence_source=${evidenceSource}`,
+    `high_risk_runtime_evidence_accepted=${accepted}`,
+    `high_risk_transport_runtime_evidence_present=${accepted}`,
+    `primary_blocker=${primaryBlocker}`,
+    `blockers=${blockers.join("#") || "none"}`,
+    `next_action=${nextAction}`,
+    `explicit_user_action=${explicitUserAction}`,
+    `onion_only=${onionOnly}`,
+    `direct_fallback_attempted=${directFallbackAttempted}`,
+    `app_launch_bootstrap_attempted=${appLaunchBootstrapAttempted}`,
+    `room_open_network_attempted=${roomOpenNetworkAttempted}`,
+    `endpoint_rotation_observed=${endpointRotationObserved}`,
+    `redacted_runtime_event_recorded=${redactedRuntimeEventRecorded}`,
+    `runtime_failure_class=${failureClass}`,
+    `clipboard_ttl_ms=${clipboardTtlMs}`,
+    `clipboard_expiry_ready=${clipboardExpiryReady}`,
+    `emergency_controls_reachable=${emergencyControlsReachable}`,
+    `local_only_evidence=${localOnlyEvidence}`,
+    `local_only_evidence_promoted=false`,
+    `fabricated_evidence=${fabricatedEvidence}`,
+    `fabricated_evidence_promoted=false`,
+    `forbidden_fields_present=${forbiddenFieldsPresent}`,
+    "runtime_event_identifiers_redacted=true",
+    "endpoint_value_recorded=false",
+    "descriptor_recorded=false",
+    "local_path_recorded=false",
+    "payload_recorded=false",
+    "key_material_recorded=false",
+    "high_risk_public_claim_allowed=false",
+    "high_risk_ready_claim_allowed=false",
+  ].join(" ");
+  return {
+    accepted,
+    runtimeEvidencePresent: accepted,
+    primaryBlocker,
+    blockers,
+    nextAction,
+    failureClass,
+    highRiskPublicClaimAllowed: false,
+    highRiskReadyClaimAllowed: false,
+    summary,
+    boundary: `${summary} evidence_contract=runtime-report#explicit-user-action#onion-only#no-direct-fallback#endpoint-rotation#redacted-runtime-event#clipboard-expiry#emergency-controls`,
+  };
+}
+
 export function productionHighRiskReadinessGateView(input = {}) {
   const threatMatrixAccepted = input.threatMatrixAccepted === true;
   const pairwiseSafetyVerified = input.pairwiseSafetyVerified === true;
@@ -250,9 +354,11 @@ export function productionHighRiskReadinessGateView(input = {}) {
       : missing[0] ?? ["unknown", "review-high-risk-checklist"];
   const reasonCodes = status === "limited" ? [primary[0]] : missing.map(([code]) => code);
   const nextActions = status === "limited" ? [primary[1]] : missing.map(([, action]) => action);
-  const highRiskReadyClaimAllowed = status === "ready";
+  const highRiskOperationalReady = status === "ready";
+  const highRiskReadyClaimAllowed = false;
   const summary = [
     `high_risk_readiness=${status}`,
+    `high_risk_operational_ready=${highRiskOperationalReady}`,
     `primary_reason_code=${primary[0]}`,
     `next_action=${primary[1]}`,
     `reason_codes=${reasonCodes.join("#") || "none"}`,
@@ -268,19 +374,21 @@ export function productionHighRiskReadinessGateView(input = {}) {
     `diagnostics_redacted=${diagnosticsRedacted}`,
     `release_integrity_available=${releaseIntegrityAvailable}`,
     `high_risk_ready_claim_allowed=${highRiskReadyClaimAllowed}`,
-    `public_support_high_risk_claim_allowed=${highRiskReadyClaimAllowed}`,
-    `release_high_risk_claim_allowed=${highRiskReadyClaimAllowed}`,
+    "high_risk_public_claim_allowed=false",
+    "public_support_high_risk_claim_allowed=false",
+    "release_high_risk_claim_allowed=false",
     "unmet_conditions_hidden=false",
   ].join(" ");
   return {
     status,
+    highRiskOperationalReady,
     primaryReasonCode: primary[0],
     nextAction: primary[1],
     reasonCodes,
     nextActions,
     highRiskReadyClaimAllowed,
-    publicSupportHighRiskClaimAllowed: highRiskReadyClaimAllowed,
-    releaseHighRiskClaimAllowed: highRiskReadyClaimAllowed,
+    publicSupportHighRiskClaimAllowed: false,
+    releaseHighRiskClaimAllowed: false,
     unmetConditionsHidden: false,
     summary,
     boundary: `${summary} status_values=ready#limited#not_ready`,

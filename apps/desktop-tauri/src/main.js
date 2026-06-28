@@ -11,6 +11,7 @@ import {
   productionHandshakePayloadView,
   productionHighRiskThreatModelBoundaryView,
   productionHighRiskReadinessGateView,
+  productionHighRiskRuntimeEvidenceGateView,
   productionHighRiskTransportMetadataBoundaryView,
   productionManualMessageCheckView,
   productionManualTransferStepLabel,
@@ -3387,20 +3388,27 @@ function renderHighRiskThreatModelStatus() {
 
 function renderHighRiskTransportMetadataStatus() {
   const view = productionHighRiskTransportMetadataBoundaryView();
+  const runtimeEvidence = productionHighRiskRuntimeEvidenceGateView();
   setText(
     fields.highRiskTransportMetadataStatus,
     [
       "High-Risk transport: mitigated=onion-only-explicit-action#no-direct-fallback#no-dns-ip-endpoint#redacted-runtime-events",
       `status=${view.status}`,
       `not_ready_reason=${view.notReadyReason}`,
+      `runtime_evidence=${runtimeEvidence.runtimeEvidencePresent}`,
+      `runtime_evidence_source=absent`,
+      `public_claim_allowed=${runtimeEvidence.highRiskPublicClaimAllowed}`,
       "not_protected=global-traffic-correlation-complete-defense",
     ].join(" / "),
   );
   fields.highRiskTransportMetadataStatus?.setAttribute("data-transport-status", view.status);
   fields.highRiskTransportMetadataStatus?.setAttribute("data-not-ready-reason", view.notReadyReason);
+  fields.highRiskTransportMetadataStatus?.setAttribute("data-runtime-evidence-present", "false");
+  fields.highRiskTransportMetadataStatus?.setAttribute("data-runtime-evidence-source", "absent");
+  fields.highRiskTransportMetadataStatus?.setAttribute("data-high-risk-public-claim-allowed", "false");
   fields.highRiskTransportMetadataStatus?.setAttribute("data-direct-fallback", "false");
   fields.highRiskTransportMetadataStatus?.setAttribute("data-app-launch-bootstrap", "false");
-  return view;
+  return { ...view, runtimeEvidence };
 }
 
 function renderHighRiskReadinessStatus() {
@@ -3426,6 +3434,7 @@ function renderHighRiskReadinessStatus() {
       `primary_blocker=${view.primaryReasonCode}`,
       `next=${view.nextAction}`,
       `ready_claim_allowed=${view.highRiskReadyClaimAllowed}`,
+      `operational_ready=${view.highRiskOperationalReady}`,
       "unmet_hidden=false",
     ].join(" / "),
   );
@@ -3433,6 +3442,10 @@ function renderHighRiskReadinessStatus() {
   fields.highRiskReadinessStatus?.setAttribute(
     "data-high-risk-ready-claim-allowed",
     view.highRiskReadyClaimAllowed ? "true" : "false",
+  );
+  fields.highRiskReadinessStatus?.setAttribute(
+    "data-high-risk-operational-ready",
+    view.highRiskOperationalReady ? "true" : "false",
   );
   fields.highRiskReadinessStatus?.setAttribute("data-primary-reason-code", view.primaryReasonCode);
   fields.highRiskReadinessStatus?.setAttribute("data-next-action", view.nextAction);
