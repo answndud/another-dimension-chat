@@ -4318,6 +4318,8 @@ function reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries, option
   const preferredMessageNumber = Number.parseInt(existingRoom?.retryableOutboundMessageNumber ?? 0, 10) || 0;
   if (preferredMessageNumber > 0) {
     metadata = savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries ?? [], preferredMessageNumber);
+  } else if (options.allowRetryableFallback === false) {
+    metadata = inviteRoomMetadataWithoutRetryableOutbound(metadata);
   }
   if (options.sessionStatus) {
     metadata = savedInviteRoomMetadataWithSessionStatus(metadata, input, options.sessionStatus);
@@ -7025,6 +7027,7 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
       quiet: true,
       refreshSessionStatus: true,
       suppressRouteReadinessNoticeRefresh: true,
+      allowRetryableMetadataFallback: false,
       input,
     });
     if (!showRetryableOutboundPromptForMessage(input, messageNumber)) {
@@ -14698,6 +14701,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
         quiet: true,
         refreshSessionStatus: true,
         suppressRouteReadinessNoticeRefresh: true,
+        allowRetryableMetadataFallback: false,
         input,
       });
       if (!showRetryableOutboundPromptForMessage(input, latestCandidate.messageNumber)) {
@@ -14820,6 +14824,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       quiet: true,
       refreshSessionStatus: false,
       suppressRouteReadinessNoticeRefresh: result.send_attempt_succeeded !== true,
+      allowRetryableMetadataFallback: false,
       input,
     });
     if (result.send_attempt_succeeded) {
@@ -14854,6 +14859,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
         quiet: true,
         refreshSessionStatus: true,
         suppressRouteReadinessNoticeRefresh: true,
+        allowRetryableMetadataFallback: false,
         input,
       });
       if (!showRetryableOutboundPromptForMessage(input, latestOnionOutbound.messageNumber)) {
@@ -14990,7 +14996,12 @@ async function retryTwoProfileOutboundEntry(entry) {
   if (!twoProfileTranscriptInputStillCurrent(input)) {
     return;
   }
-  await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
+  await loadProductionTwoProfileTranscript({
+    quiet: true,
+    refreshSessionStatus: true,
+    allowRetryableMetadataFallback: false,
+    input,
+  });
 }
 
 async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
@@ -15018,7 +15029,12 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
         if (!twoProfileTranscriptInputStillCurrent(input)) {
           return;
         }
-        await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
+        await loadProductionTwoProfileTranscript({
+          quiet: true,
+          refreshSessionStatus: true,
+          allowRetryableMetadataFallback: false,
+          input,
+        });
         return;
       }
       if (nextRouteAction === "apply-peer") {
@@ -15059,7 +15075,12 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
   if (refreshed) {
     await retryTwoProfileOutboundEntry(currentEntry);
   } else {
-    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
+    await loadProductionTwoProfileTranscript({
+      quiet: true,
+      refreshSessionStatus: true,
+      allowRetryableMetadataFallback: false,
+      input,
+    });
   }
 }
 
@@ -15100,7 +15121,12 @@ async function cancelTwoProfileOutboundEntry(entry) {
     setSelectedTwoProfileConversationEntry(null);
     setText(fields.productionTwoProfileWarning, t("sendCanceledNotice"));
     setChatDeliveryNoticeByKey("sendCanceledNotice", "success", input);
-    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
+    await loadProductionTwoProfileTranscript({
+      quiet: true,
+      refreshSessionStatus: false,
+      allowRetryableMetadataFallback: false,
+      input,
+    });
     showLatestRetryableOutboundNotice(input, { allowAutomatic: false });
   } catch (error) {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
@@ -16787,6 +16813,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
     reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries, {
       input: transcriptInput,
       sessionStatus,
+      allowRetryableFallback: options.allowRetryableMetadataFallback,
     });
     if (
       options.suppressRouteReadinessNoticeRefresh !== true &&
