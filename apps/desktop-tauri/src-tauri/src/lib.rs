@@ -3013,9 +3013,11 @@ fn production_pairing_session_draft_save(
         remote_payload,
         safety_confirmed,
     )
-    .map_err(|_| {
-        "production pairing session draft save failed without exposing profile, path, or key details"
-            .to_string()
+    .map_err(|error| {
+        pass_through_pairwise_error(
+            error,
+            "production pairing session draft save failed without exposing profile, path, or key details",
+        )
     })
 }
 
@@ -3046,9 +3048,11 @@ fn production_pairing_safety_preview(
     local_payload: String,
     remote_payload: String,
 ) -> Result<ProductionPairingSafetyPreviewResult, String> {
-    run_production_pairing_safety_preview(local_payload, remote_payload).map_err(|_| {
-        "production pairing safety preview failed without exposing payload or transcript details"
-            .to_string()
+    run_production_pairing_safety_preview(local_payload, remote_payload).map_err(|error| {
+        pass_through_pairwise_error(
+            error,
+            "production pairing safety preview failed without exposing payload or transcript details",
+        )
     })
 }
 
@@ -8468,22 +8472,37 @@ fn run_production_pairing_session_draft_save(
     safety_confirmed: bool,
 ) -> Result<ProductionPairingSessionDraftResult, String> {
     use another_dimension_core::production::{
+        production_pairwise_invite_import_decision,
+        production_pairwise_safety_verification_decision,
         production_pairing_session_save_draft, production_pairing_session_status,
     };
-    use another_dimension_pairing::PairingPayload;
     use another_dimension_storage::production::ProfilePassphrase;
 
     if !safety_confirmed {
-        return Err("safety number verification is required before saving session draft".to_string());
+        let decision = production_pairwise_safety_verification_decision(true, false, false, false);
+        return Err(format!(
+            "pairwise_safety_verification={}; next_action={}; generic_error=false",
+            decision.state().as_str(),
+            decision.next_action()
+        ));
     }
 
     let profile = sanitize_production_profile(profile)?;
     let passphrase = ProfilePassphrase::new(passphrase.trim())
         .map_err(|_| "invalid production profile passphrase")?;
-    let local_payload = PairingPayload::decode(&sanitize_pairing_payload(local_payload)?)
-        .map_err(|_| "invalid local pairing payload")?;
-    let remote_payload = PairingPayload::decode(&sanitize_pairing_payload(remote_payload)?)
-        .map_err(|_| "invalid remote pairing payload")?;
+    let local_payload = decode_pairwise_import_payload(local_payload)?;
+    let remote_payload = decode_pairwise_import_payload(remote_payload)?;
+    let import_decision = production_pairwise_invite_import_decision(
+        true,
+        true,
+        false,
+        false,
+        local_payload.owner_profile == profile,
+        false,
+    );
+    if let Some(kind) = import_decision.failure_kind() {
+        return Err(pairwise_invite_import_failure_error(kind));
+    }
     let store_path = production_profile_store_path(app_data_root, &profile)?;
 
     let save = production_pairing_session_save_draft(
@@ -8493,7 +8512,7 @@ fn run_production_pairing_session_draft_save(
         &local_payload,
         &remote_payload,
     )
-    .map_err(|_| "session draft save failed")?;
+    .map_err(redacted_pairwise_session_error)?;
     let status = production_pairing_session_status(&store_path, profile, &passphrase)
         .map_err(|_| "session draft status failed")?;
 
@@ -8569,14 +8588,12 @@ fn run_production_pairing_safety_preview(
     remote_payload: String,
 ) -> Result<ProductionPairingSafetyPreviewResult, String> {
     use another_dimension_crypto::derive_production_safety_material;
-    use another_dimension_pairing::{transcript, PairingPayload};
+    use another_dimension_pairing::transcript;
 
-    let local_payload = PairingPayload::decode(&sanitize_pairing_payload(local_payload)?)
-        .map_err(|_| "invalid local pairing payload")?;
-    let remote_payload = PairingPayload::decode(&sanitize_pairing_payload(remote_payload)?)
-        .map_err(|_| "invalid remote pairing payload")?;
+    let local_payload = decode_pairwise_import_payload(local_payload)?;
+    let remote_payload = decode_pairwise_import_payload(remote_payload)?;
     let safety_transcript =
-        transcript(&local_payload, &remote_payload).map_err(|_| "safety transcript failed")?;
+        transcript(&local_payload, &remote_payload).map_err(redacted_pairwise_pairing_error)?;
     let safety = derive_production_safety_material(&safety_transcript);
 
     Ok(ProductionPairingSafetyPreviewResult {
@@ -8609,6 +8626,95 @@ fn sanitize_pairing_payload(payload: String) -> Result<String, String> {
         return Err("pairing payload must be a single ADPAIR2 value".to_string());
     }
     Ok(payload.to_string())
+}
+
+fn pass_through_pairwise_error(error: String, fallback: &'static str) -> String {
+    if error.starts_with("pairwise_invite_import_failure=")
+        || error.starts_with("pairwise_safety_verification=")
+    {
+        error
+    } else {
+        fallback.to_string()
+    }
+}
+
+fn pairwise_invite_import_failure_error(
+    kind: another_dimension_core::production::ProductionPairwiseInviteImportFailureKind,
+) -> String {
+    format!(
+        "pairwise_invite_import_failure={}; next_action={}; generic_error=false",
+        kind.as_str(),
+        kind.next_action()
+    )
+}
+
+fn redacted_pairwise_pairing_error(error: another_dimension_pairing::PairingError) -> String {
+    use another_dimension_core::production::ProductionPairwiseInviteImportFailureKind;
+    use another_dimension_pairing::PairingError;
+
+    let kind = match error {
+        PairingError::InvalidPayload | PairingError::PayloadTooLarge | PairingError::ExpiredPayload => {
+            ProductionPairwiseInviteImportFailureKind::Malformed
+        }
+        PairingError::RandomnessUnavailable | PairingError::ClockUnavailable => {
+            ProductionPairwiseInviteImportFailureKind::Unsupported
+        }
+    };
+    pairwise_invite_import_failure_error(kind)
+}
+
+fn redacted_pairwise_session_error(
+    error: another_dimension_core::production::ProductionSessionError,
+) -> String {
+    use another_dimension_core::production::{
+        ProductionPairwiseInviteImportFailureKind, ProductionSessionError,
+    };
+
+    let kind = match error {
+        ProductionSessionError::Pairing(error) => {
+            return redacted_pairwise_pairing_error(error);
+        }
+        ProductionSessionError::NonProductionPairingPayload => {
+            ProductionPairwiseInviteImportFailureKind::Unsupported
+        }
+        ProductionSessionError::LocalPairingPayloadMismatch
+        | ProductionSessionError::SamePairwiseIdentity
+        | ProductionSessionError::SameRendezvousEndpoint
+        | ProductionSessionError::NoiseStaticKeyMismatch
+        | ProductionSessionError::EndpointScopeMismatch => {
+            ProductionPairwiseInviteImportFailureKind::IdentityMismatch
+        }
+        ProductionSessionError::SessionDraftMissing => {
+            ProductionPairwiseInviteImportFailureKind::Duplicate
+        }
+        ProductionSessionError::UnexpectedEnvelope => {
+            ProductionPairwiseInviteImportFailureKind::Malformed
+        }
+        ProductionSessionError::Crypto(_)
+        | ProductionSessionError::Identity(_)
+        | ProductionSessionError::Protocol(_)
+        | ProductionSessionError::Storage(_)
+        | ProductionSessionError::EndpointLifecycle(_)
+        | ProductionSessionError::ProfileMarkerMissing
+        | ProductionSessionError::IdentityPrivateKeyMissing
+        | ProductionSessionError::NoiseStaticPrivateKeyMissing
+        | ProductionSessionError::InvalidRendezvousEndpoint => {
+            ProductionPairwiseInviteImportFailureKind::Unsupported
+        }
+    };
+    pairwise_invite_import_failure_error(kind)
+}
+
+fn decode_pairwise_import_payload(
+    payload: String,
+) -> Result<another_dimension_pairing::PairingPayload, String> {
+    let payload = sanitize_pairing_payload(payload).map_err(|_| {
+        pairwise_invite_import_failure_error(
+            another_dimension_core::production::ProductionPairwiseInviteImportFailureKind::Malformed,
+        )
+    })?;
+    another_dimension_pairing::PairingPayload::decode(&payload)
+        .map_err(redacted_pairwise_pairing_error)
 }
 
 fn run_production_session_state_check(
@@ -16844,6 +16950,35 @@ replay check: no replayed messages after message 2
         );
         assert!(sanitize_pairing_payload("ADPAIR1|abc|sig".to_string()).is_err());
         assert!(sanitize_pairing_payload("ADPAIR2|abc|sig\nADPAIR2|x|y".to_string()).is_err());
+    }
+
+    #[test]
+    fn production_pairing_failures_return_redacted_pairwise_failure_codes() {
+        let malformed = match run_production_pairing_safety_preview(
+            "not-adpair".to_string(),
+            "not-adpair".to_string(),
+        ) {
+            Ok(_) => panic!("malformed safety preview should fail"),
+            Err(error) => error,
+        };
+        assert!(malformed.contains("pairwise_invite_import_failure=malformed"));
+        assert!(malformed.contains("generic_error=false"));
+        assert!(!malformed.contains("not-adpair"));
+
+        let safety_required = match run_production_pairing_session_draft_save(
+            std::env::temp_dir(),
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "ignored-local".to_string(),
+            "ignored-remote".to_string(),
+            false,
+        ) {
+            Ok(_) => panic!("safety confirmation should be required"),
+            Err(error) => error,
+        };
+        assert!(safety_required.contains("pairwise_safety_verification=compare"));
+        assert!(safety_required.contains("generic_error=false"));
+        assert!(!safety_required.contains("ignored-local"));
     }
 
     #[test]
