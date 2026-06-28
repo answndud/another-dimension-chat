@@ -235,6 +235,161 @@ export function productionPairwiseInviteGuidanceView(input = {}) {
   };
 }
 
+export function productionPairwiseInviteCreateView(input = {}) {
+  const role = input.role === "inviter" ? "inviter" : input.role === "joiner" ? "joiner" : "inviter";
+  const payload = String(input.payload ?? input.code ?? input.connectionCode ?? "").trim();
+  const profiles = productionInviteCodeProfiles(payload, role);
+  const intendedPeerLabel = role === "inviter" ? "joiner device" : "inviter device";
+  const manualSendInstruction =
+    role === "inviter"
+      ? "Send this invite code to the intended peer over an existing channel."
+      : "Paste the received invite code, then compare the safety phrase before messaging.";
+  return {
+    role,
+    localProfile: profiles.localProfile,
+    intendedPeerLabel,
+    intendedPeerProfile: profiles.peerProfile,
+    payload,
+    manualSendInstruction,
+    boundary: [
+      "pairwise_invite_create=true",
+      `role=${role}`,
+      "accountless=true",
+      "local_profile_visible=true",
+      "intended_peer_label_visible=true",
+      "manual_send_instruction_visible=true",
+      "payload_visible_to_user=true",
+      "payload_in_diagnostics=false",
+      "central_contact_discovery=false",
+      "central_message_server=false",
+    ].join(" "),
+  };
+}
+
+const pairwiseInviteImportFailureCopy = {
+  malformed: {
+    message: "Invite payload could not be read. Ask for a fresh invite and paste only that value.",
+    nextAction: "Ask for a fresh invite payload.",
+  },
+  duplicate: {
+    message: "This invite is already pending. Continue the existing pending pairing.",
+    nextAction: "Open the existing pending pairing.",
+  },
+  already_paired: {
+    message: "This peer is already paired. Open the existing room or rebuild with a fresh invite.",
+    nextAction: "Open the existing room.",
+  },
+  identity_mismatch: {
+    message: "The invite identity does not match this room. Stop and rebuild with a fresh invite.",
+    nextAction: "Stop and rebuild with a fresh invite.",
+  },
+  unsupported: {
+    message: "This invite format is not supported by this build.",
+    nextAction: "Update or ask for a supported invite.",
+  },
+  revoked_re_pair_required: {
+    message: "This room was revoked. Discard the old session and re-pair with a fresh invite.",
+    nextAction: "Re-pair with a fresh invite.",
+  },
+};
+
+function normalizedPairwiseInviteImportFailureKind(value) {
+  const text = String(value?.failure_kind ?? value?.failureKind ?? value?.kind ?? value?.error ?? value ?? "")
+    .trim()
+    .toLowerCase();
+  if (text.includes("revoked_re_pair_required") || text.includes("revoked re-pair")) {
+    return "revoked_re_pair_required";
+  }
+  if (text.includes("already_paired") || text.includes("contactalreadyactive") || text.includes("already paired")) {
+    return "already_paired";
+  }
+  if (text.includes("duplicate") || text.includes("pairingalreadypending") || text.includes("already pending")) {
+    return "duplicate";
+  }
+  if (
+    text.includes("identity_mismatch") ||
+    text.includes("localpairingpayloadmismatch") ||
+    text.includes("samepairwiseidentity") ||
+    text.includes("samerendezvousendpoint") ||
+    text.includes("noise static") ||
+    text.includes("mismatch")
+  ) {
+    return "identity_mismatch";
+  }
+  if (text.includes("unsupported") || text.includes("nonproductionpairingpayload")) {
+    return "unsupported";
+  }
+  return "malformed";
+}
+
+export function productionPairwiseInviteImportFailureView(input = {}) {
+  const kind = normalizedPairwiseInviteImportFailureKind(input);
+  const copy = pairwiseInviteImportFailureCopy[kind] ?? pairwiseInviteImportFailureCopy.malformed;
+  return {
+    kind,
+    message: copy.message,
+    nextAction: copy.nextAction,
+    boundary: [
+      "pairwise_invite_import=true",
+      `failure=${kind}`,
+      "malformed_split=true",
+      "duplicate_split=true",
+      "already_paired_split=true",
+      "identity_mismatch_split=true",
+      "unsupported_split=true",
+      "revoked_re_pair_required_split=true",
+      "generic_error=false",
+      "payload_returned=false",
+      "path_returned=false",
+      "key_material=false",
+    ].join(" "),
+  };
+}
+
+export function productionPairwiseSafetyVerificationFlowView(input = {}) {
+  const failureKind = input.failure_kind || input.failureKind || input.kind || "";
+  const transcriptPresent = Boolean(
+    input.safetyTranscriptBound ||
+      input.safety_transcript_bound ||
+      input.safetyNumber ||
+      input.safetyPhrase,
+  );
+  const markedMismatch = Boolean(input.markedMismatch) || normalizedPairwiseInviteImportFailureKind(failureKind) === "identity_mismatch";
+  const revoked = Boolean(input.revokedRePairRequired) || normalizedPairwiseInviteImportFailureKind(failureKind) === "revoked_re_pair_required";
+  const confirmedMatch = Boolean(input.confirmedMatch || input.safetyConfirmed) && transcriptPresent && !markedMismatch && !revoked;
+  const state = revoked
+    ? "revoked_re_pair_required"
+    : markedMismatch
+      ? "marked_mismatch"
+      : confirmedMatch
+        ? "confirmed_match"
+        : "compare";
+  const rePairRequired = state === "marked_mismatch" || state === "revoked_re_pair_required";
+  const nextAction =
+    state === "confirmed_match"
+      ? "Save the pairwise session draft."
+      : rePairRequired
+        ? "Rebuild with a fresh invite before trusting this peer."
+        : "Compare the safety number and phrase out-of-band.";
+  return {
+    state,
+    nextAction,
+    compareRequired: state !== "confirmed_match",
+    confirmMatchAllowed: transcriptPresent && !rePairRequired,
+    rePairRequired,
+    boundary: [
+      "pairwise_safety_verification=true",
+      `state=${state}`,
+      `compare_required=${state !== "confirmed_match"}`,
+      `confirm_match_allowed=${transcriptPresent && !rePairRequired}`,
+      `re_pair_required=${rePairRequired}`,
+      "generic_error=false",
+      "safety_transcript_returned=false",
+      "payloads_returned=false",
+    ].join(" "),
+  };
+}
+
 export function productionTwoProfileCurrentAction(state) {
   const input = state?.input ?? {};
   if (state?.busy) {

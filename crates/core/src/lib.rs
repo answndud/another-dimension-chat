@@ -3480,6 +3480,82 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionPairwiseInviteImportFailureKind {
+        Malformed,
+        Duplicate,
+        AlreadyPaired,
+        IdentityMismatch,
+        Unsupported,
+        RevokedRePairRequired,
+    }
+
+    impl ProductionPairwiseInviteImportFailureKind {
+        pub fn as_str(self) -> &'static str {
+            match self {
+                Self::Malformed => "malformed",
+                Self::Duplicate => "duplicate",
+                Self::AlreadyPaired => "already_paired",
+                Self::IdentityMismatch => "identity_mismatch",
+                Self::Unsupported => "unsupported",
+                Self::RevokedRePairRequired => "revoked_re_pair_required",
+            }
+        }
+
+        pub fn next_action(self) -> &'static str {
+            match self {
+                Self::Malformed => "ask_peer_for_fresh_invite_payload",
+                Self::Duplicate => "continue_existing_pending_pairing",
+                Self::AlreadyPaired => "open_existing_pairwise_session",
+                Self::IdentityMismatch => "stop_and_compare_safety_then_rebuild",
+                Self::Unsupported => "upgrade_or_use_supported_invite_payload",
+                Self::RevokedRePairRequired => "discard_old_session_and_re_pair",
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairwiseInviteImportDecision {
+        accepted: bool,
+        failure_kind: Option<ProductionPairwiseInviteImportFailureKind>,
+        duplicate_contact: bool,
+        already_paired: bool,
+        identity_mismatch: bool,
+        revoked_re_pair_required: bool,
+        generic_error: bool,
+        next_action: &'static str,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionPairwiseSafetyVerificationState {
+        Compare,
+        ConfirmedMatch,
+        MarkedMismatch,
+        RevokedRePairRequired,
+    }
+
+    impl ProductionPairwiseSafetyVerificationState {
+        pub fn as_str(self) -> &'static str {
+            match self {
+                Self::Compare => "compare",
+                Self::ConfirmedMatch => "confirmed_match",
+                Self::MarkedMismatch => "marked_mismatch",
+                Self::RevokedRePairRequired => "revoked_re_pair_required",
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionPairwiseSafetyVerificationDecision {
+        state: ProductionPairwiseSafetyVerificationState,
+        compare_required: bool,
+        confirm_match_allowed: bool,
+        mismatch_blocks_trust: bool,
+        re_pair_required: bool,
+        generic_error: bool,
+        next_action: &'static str,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionSupplyChainIntegrityBoundarySummary {
         policies: &'static [&'static str],
         manual_github_release_download_required: bool,
@@ -6836,6 +6912,70 @@ pub mod production {
 
         pub fn reason(self) -> &'static str {
             self.reason
+        }
+    }
+
+    impl ProductionPairwiseInviteImportDecision {
+        pub fn accepted(self) -> bool {
+            self.accepted
+        }
+
+        pub fn failure_kind(self) -> Option<ProductionPairwiseInviteImportFailureKind> {
+            self.failure_kind
+        }
+
+        pub fn duplicate_contact(self) -> bool {
+            self.duplicate_contact
+        }
+
+        pub fn already_paired(self) -> bool {
+            self.already_paired
+        }
+
+        pub fn identity_mismatch(self) -> bool {
+            self.identity_mismatch
+        }
+
+        pub fn revoked_re_pair_required(self) -> bool {
+            self.revoked_re_pair_required
+        }
+
+        pub fn generic_error(self) -> bool {
+            self.generic_error
+        }
+
+        pub fn next_action(self) -> &'static str {
+            self.next_action
+        }
+    }
+
+    impl ProductionPairwiseSafetyVerificationDecision {
+        pub fn state(self) -> ProductionPairwiseSafetyVerificationState {
+            self.state
+        }
+
+        pub fn compare_required(self) -> bool {
+            self.compare_required
+        }
+
+        pub fn confirm_match_allowed(self) -> bool {
+            self.confirm_match_allowed
+        }
+
+        pub fn mismatch_blocks_trust(self) -> bool {
+            self.mismatch_blocks_trust
+        }
+
+        pub fn re_pair_required(self) -> bool {
+            self.re_pair_required
+        }
+
+        pub fn generic_error(self) -> bool {
+            self.generic_error
+        }
+
+        pub fn next_action(self) -> &'static str {
+            self.next_action
         }
     }
 
@@ -18744,6 +18884,97 @@ pub mod production {
         }
     }
 
+    pub fn production_pairwise_invite_import_decision(
+        payload_decodable: bool,
+        supported_payload: bool,
+        duplicate_contact: bool,
+        already_paired: bool,
+        identity_matches_expected: bool,
+        revoked_re_pair_required: bool,
+    ) -> ProductionPairwiseInviteImportDecision {
+        let failure_kind = if !payload_decodable {
+            Some(ProductionPairwiseInviteImportFailureKind::Malformed)
+        } else if !supported_payload {
+            Some(ProductionPairwiseInviteImportFailureKind::Unsupported)
+        } else if revoked_re_pair_required {
+            Some(ProductionPairwiseInviteImportFailureKind::RevokedRePairRequired)
+        } else if already_paired {
+            Some(ProductionPairwiseInviteImportFailureKind::AlreadyPaired)
+        } else if duplicate_contact {
+            Some(ProductionPairwiseInviteImportFailureKind::Duplicate)
+        } else if !identity_matches_expected {
+            Some(ProductionPairwiseInviteImportFailureKind::IdentityMismatch)
+        } else {
+            None
+        };
+        ProductionPairwiseInviteImportDecision {
+            accepted: failure_kind.is_none(),
+            failure_kind,
+            duplicate_contact: failure_kind
+                == Some(ProductionPairwiseInviteImportFailureKind::Duplicate),
+            already_paired: failure_kind
+                == Some(ProductionPairwiseInviteImportFailureKind::AlreadyPaired),
+            identity_mismatch: failure_kind
+                == Some(ProductionPairwiseInviteImportFailureKind::IdentityMismatch),
+            revoked_re_pair_required: failure_kind
+                == Some(ProductionPairwiseInviteImportFailureKind::RevokedRePairRequired),
+            generic_error: false,
+            next_action: failure_kind
+                .map(ProductionPairwiseInviteImportFailureKind::next_action)
+                .unwrap_or("compare_safety_transcript_before_trust"),
+        }
+    }
+
+    pub fn production_pairwise_safety_verification_decision(
+        safety_transcript_present: bool,
+        confirmed_match: bool,
+        marked_mismatch: bool,
+        revoked_re_pair_required: bool,
+    ) -> ProductionPairwiseSafetyVerificationDecision {
+        let state = if revoked_re_pair_required {
+            ProductionPairwiseSafetyVerificationState::RevokedRePairRequired
+        } else if marked_mismatch {
+            ProductionPairwiseSafetyVerificationState::MarkedMismatch
+        } else if safety_transcript_present && confirmed_match {
+            ProductionPairwiseSafetyVerificationState::ConfirmedMatch
+        } else {
+            ProductionPairwiseSafetyVerificationState::Compare
+        };
+        let re_pair_required = matches!(
+            state,
+            ProductionPairwiseSafetyVerificationState::MarkedMismatch
+                | ProductionPairwiseSafetyVerificationState::RevokedRePairRequired
+        );
+        ProductionPairwiseSafetyVerificationDecision {
+            state,
+            compare_required: !matches!(
+                state,
+                ProductionPairwiseSafetyVerificationState::ConfirmedMatch
+            ),
+            confirm_match_allowed: safety_transcript_present && !re_pair_required,
+            mismatch_blocks_trust: matches!(
+                state,
+                ProductionPairwiseSafetyVerificationState::MarkedMismatch
+            ),
+            re_pair_required,
+            generic_error: false,
+            next_action: match state {
+                ProductionPairwiseSafetyVerificationState::Compare => {
+                    "compare_safety_number_and_phrase"
+                }
+                ProductionPairwiseSafetyVerificationState::ConfirmedMatch => {
+                    "save_pairwise_session_draft"
+                }
+                ProductionPairwiseSafetyVerificationState::MarkedMismatch => {
+                    "stop_and_rebuild_with_fresh_invite"
+                }
+                ProductionPairwiseSafetyVerificationState::RevokedRePairRequired => {
+                    "discard_old_session_and_re_pair"
+                }
+            },
+        }
+    }
+
     pub fn production_supply_chain_integrity_boundary_summary(
     ) -> ProductionSupplyChainIntegrityBoundarySummary {
         let manual_github_release_download_required = true;
@@ -25085,6 +25316,104 @@ pub mod production {
                     assert_eq!(blocked.reason(), "terminal_state_cannot_be_promoted");
                 }
             }
+        }
+
+        #[test]
+        fn production_pairwise_invite_import_decision_keeps_failure_kinds_explicit() {
+            let malformed =
+                production_pairwise_invite_import_decision(false, true, false, false, true, false);
+            let unsupported =
+                production_pairwise_invite_import_decision(true, false, false, false, true, false);
+            let duplicate =
+                production_pairwise_invite_import_decision(true, true, true, false, true, false);
+            let already_paired =
+                production_pairwise_invite_import_decision(true, true, false, true, true, false);
+            let mismatch =
+                production_pairwise_invite_import_decision(true, true, false, false, false, false);
+            let revoked =
+                production_pairwise_invite_import_decision(true, true, false, false, true, true);
+            let accepted =
+                production_pairwise_invite_import_decision(true, true, false, false, true, false);
+
+            assert_eq!(
+                malformed.failure_kind(),
+                Some(ProductionPairwiseInviteImportFailureKind::Malformed)
+            );
+            assert_eq!(
+                unsupported.failure_kind(),
+                Some(ProductionPairwiseInviteImportFailureKind::Unsupported)
+            );
+            assert_eq!(
+                duplicate.failure_kind(),
+                Some(ProductionPairwiseInviteImportFailureKind::Duplicate)
+            );
+            assert!(duplicate.duplicate_contact());
+            assert_eq!(
+                already_paired.failure_kind(),
+                Some(ProductionPairwiseInviteImportFailureKind::AlreadyPaired)
+            );
+            assert!(already_paired.already_paired());
+            assert_eq!(
+                mismatch.failure_kind(),
+                Some(ProductionPairwiseInviteImportFailureKind::IdentityMismatch)
+            );
+            assert!(mismatch.identity_mismatch());
+            assert_eq!(
+                revoked.failure_kind(),
+                Some(ProductionPairwiseInviteImportFailureKind::RevokedRePairRequired)
+            );
+            assert!(revoked.revoked_re_pair_required());
+            for decision in [
+                malformed,
+                unsupported,
+                duplicate,
+                already_paired,
+                mismatch,
+                revoked,
+            ] {
+                assert!(!decision.accepted());
+                assert!(!decision.generic_error());
+                assert_ne!(decision.next_action(), "generic_error");
+            }
+            assert!(accepted.accepted());
+            assert_eq!(accepted.failure_kind(), None);
+        }
+
+        #[test]
+        fn production_pairwise_safety_verification_decision_blocks_mismatch_and_revoked_sessions() {
+            let compare =
+                production_pairwise_safety_verification_decision(true, false, false, false);
+            let confirmed =
+                production_pairwise_safety_verification_decision(true, true, false, false);
+            let mismatch =
+                production_pairwise_safety_verification_decision(true, false, true, false);
+            let revoked =
+                production_pairwise_safety_verification_decision(true, false, false, true);
+
+            assert_eq!(
+                compare.state(),
+                ProductionPairwiseSafetyVerificationState::Compare
+            );
+            assert!(compare.compare_required());
+            assert!(compare.confirm_match_allowed());
+            assert_eq!(
+                confirmed.state(),
+                ProductionPairwiseSafetyVerificationState::ConfirmedMatch
+            );
+            assert_eq!(confirmed.next_action(), "save_pairwise_session_draft");
+            assert_eq!(
+                mismatch.state(),
+                ProductionPairwiseSafetyVerificationState::MarkedMismatch
+            );
+            assert!(mismatch.mismatch_blocks_trust());
+            assert!(mismatch.re_pair_required());
+            assert_eq!(
+                revoked.state(),
+                ProductionPairwiseSafetyVerificationState::RevokedRePairRequired
+            );
+            assert!(revoked.re_pair_required());
+            assert!(!mismatch.generic_error());
+            assert!(!revoked.generic_error());
         }
 
         #[test]
