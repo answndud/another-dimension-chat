@@ -18,14 +18,34 @@ The unsigned public beta release packet must publish this gap explicitly:
 - `public_user_safety_signoff_claimed=false`
 - `review_packet_inputs_public_safe=true`
 - `reviewer_packet_freeze_ready=true`
+- `a100_1_external_security_review_packet_frozen=true`
+- `review_packet_synced_to_latest_source_gates=true`
+- `review_packet_includes_c100_5_onion_boundary=true`
+- `review_packet_includes_target_standard_matrix=true`
+- `review_packet_includes_deployment_blocker_plan=true`
+- `review_packet_finding_tracker_synced=true`
 - `known_review_gaps_published=true`
 - `public_safe_review_commands_required=true`
+- `private_docs_excluded_from_review_packet=true`
+- `generated_release_artifacts_excluded_from_review_packet=true`
 - `private_reporting_boundary=private-vulnerability-reporting-or-minimal-public-contact-request`
 - `minimal_public_contact_request_allowed=true`
 - `fabricated_review_or_peer_evidence_allowed=false`
 
 These fields mean the project has prepared review inputs only. They do not mean
 the project has passed review.
+
+## A100-1 Packet Freeze
+
+A100-1 freezes the reviewer packet as a public-safe source bundle for current
+source gates. It includes the latest deployment blocker plan, TARGET_STANDARD
+evidence matrix, active queue closure map, audit finding tracker, field
+evidence boundary, and C100-5 advanced onion/Tor non-claim boundary.
+
+The freeze excludes private `docs/` planning notes, local app data, generated
+release artifacts, beta artifacts, raw logs, endpoints, invite/pairing/envelope
+payloads, screenshots of private room data, passphrases, private keys, and key
+material. It is not a reviewer result, audit result, or signoff.
 
 ## Private Reporting Boundary
 
@@ -128,6 +148,9 @@ Review the unsigned experimental public beta boundary:
 - `reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md`: current
   PLAN active queue source/hold gate map, with all stable, production, audit,
   reliability, platform-artifact, and sensitive-use claims kept false.
+- `reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md`: ordered 100%
+  blocker resolution queue, including A100-1 packet freeze and later A100-2
+  external review execution.
 - `reference/DEPLOYMENT_READINESS_GAP_REGISTER.md`: reconciled deployment
   gap register separating source-solved supported scopes from remaining
   external blockers.
@@ -163,6 +186,9 @@ Review the unsigned experimental public beta boundary:
   envelope default path, separate explicit fail-closed onion/Tor advanced path,
   no-central-server boundaries, evidence order, and unresolved reliable
   external delivery review questions.
+- `reference/TRANSPORT_EXPERIMENT_RUNBOOK.md`: C100-5 advanced onion/Tor
+  experiment boundary, active-queue waiver, fail-closed status vocabulary, and
+  reliable external onion delivery non-claims.
 - `reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md`: RB-3 supported
   default local/manual courier envelope exchange scope, while automatic network
   delivery, central message server delivery, reliable external delivery,

@@ -203,5 +203,5 @@ external_onion_delivery_verified=false
 external_review_completed=false
 audit_completed=false
 security_ready_claimed=false
-next_required_phase=Phase-A100-1-External-Security-Review-Packet-Freeze
+next_required_phase=Phase-A100-2-External-Review-Execution-And-Finding-Closure
 STATUS

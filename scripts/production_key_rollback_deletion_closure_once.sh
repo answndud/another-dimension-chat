@@ -74,7 +74,7 @@ must_contain "$DOC" "cloud_backup_sync_enabled=false"
 must_contain "$DOC" "production_key_management_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
 must_contain "$DOC" "sensitive_communication_allowed=false"
-must_contain "$DOC" "next_required_phase=Phase A100-1 - External Security Review Packet Freeze"
+must_contain "$DOC" "next_required_phase=Phase A100-2 - External Review Execution And Finding Closure"
 
 must_contain "$CORE" "SUPPORTED_LOCAL_KEY_LIFECYCLE_SCOPE"
 must_contain "$CORE" "SUPPORTED_ROLLBACK_DETECTION_SCOPE"
@@ -166,5 +166,5 @@ cloud_backup_sync_enabled=false
 production_key_management_ready=false
 security_ready_claimed=false
 sensitive_communication_allowed=false
-next_required_phase=Phase-A100-1-External-Security-Review-Packet-Freeze
+next_required_phase=Phase-A100-2-External-Review-Execution-And-Finding-Closure
 STATUS
