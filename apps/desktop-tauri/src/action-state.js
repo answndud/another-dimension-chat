@@ -305,6 +305,7 @@ export function productionHighRiskRuntimeEvidenceGateView(input = {}) {
   return {
     accepted,
     runtimeEvidencePresent: accepted,
+    evidenceSource,
     primaryBlocker,
     blockers,
     nextAction,
@@ -313,6 +314,96 @@ export function productionHighRiskRuntimeEvidenceGateView(input = {}) {
     highRiskReadyClaimAllowed: false,
     summary,
     boundary: `${summary} evidence_contract=runtime-report#explicit-user-action#onion-only#no-direct-fallback#endpoint-rotation#redacted-runtime-event#clipboard-expiry#emergency-controls`,
+  };
+}
+
+function productionHighRiskRuntimeFailureClass(result = {}, fallback = "none") {
+  const text = [
+    fallback,
+    result.failureClass,
+    result.failure_kind,
+    result.next_blocker,
+    ...(Array.isArray(result.blockers) ? result.blockers : []),
+    ...(Array.isArray(result.event_summary) ? result.event_summary : []),
+  ]
+    .join(" ")
+    .toLowerCase();
+  if (text.includes("bridge") && (text.includes("config") || text.includes("missing"))) {
+    return "bridge_config_missing";
+  }
+  if (text.includes("bootstrap") || text.includes("timeout") || text.includes("cancel")) {
+    return "bootstrap_timeout";
+  }
+  if (text.includes("stale") || text.includes("endpoint") || text.includes("refresh")) {
+    return "stale_endpoint";
+  }
+  if (text.includes("owner") || text.includes("mismatch")) {
+    return "receive_owner_mismatch";
+  }
+  if (text.includes("peer") || text.includes("offline") || text.includes("unreachable")) {
+    return "peer_unreachable";
+  }
+  return "none";
+}
+
+export function productionHighRiskRuntimeEvidenceInputFromAttemptResult(result = {}, options = {}) {
+  const started =
+    result.send_attempt_started === true ||
+    result.receive_attempt_started === true ||
+    result.launch_attempt_started === true ||
+    result.publish_attempt_started === true ||
+    result.client_attempt_started === true ||
+    result.client_bootstrap_started === true ||
+    result.network_io_attempted === true ||
+    result.stream_dial_attempted === true ||
+    result.stream_accept_attempted === true ||
+    result.stream_read_write_attempted === true ||
+    result.stream_send_attempted === true;
+  const explicitUserAction =
+    options.explicitUserAction === true ||
+    (result.manual_network_permission_enabled === true && started && options.staleInput !== true);
+  const localOnlyEvidence = options.localOnlyEvidence === true || result.local_dev_roundtrip_result === true;
+  const fabricatedEvidence = options.fabricatedEvidence === true || options.syntheticFailure === true;
+  const forbiddenFieldsPresent =
+    result.raw_endpoint_returned === true ||
+    result.raw_path_returned === true ||
+    result.onion_secret_returned === true ||
+    result.descriptor_body_returned === true ||
+    result.envelope_payload_returned === true ||
+    result.key_material_exposed === true ||
+    result.peer_proof_returned === true ||
+    result.session_transcript_returned === true;
+  const evidenceSource = localOnlyEvidence
+    ? "local-fixture"
+    : fabricatedEvidence
+      ? "fabricated"
+      : started && options.staleInput !== true
+        ? "runtime-report"
+        : "absent";
+  return {
+    evidenceSource,
+    explicitUserAction,
+    onionOnly: options.onionOnly !== false,
+    directFallbackAttempted: result.direct_fallback_attempted === true,
+    appLaunchBootstrapAttempted: options.appLaunchBootstrapAttempted === true,
+    roomOpenNetworkAttempted: options.roomOpenNetworkAttempted === true,
+    endpointRotationObserved:
+      options.endpointRotationObserved === true ||
+      result.endpoint_update_applied === true ||
+      result.stale_endpoint_status_cleared === true ||
+      result.peer_endpoint_refresh_recommended === true,
+    redactedRuntimeEventRecorded:
+      options.redactedRuntimeEventRecorded === true ||
+      result.redacted_send_result_event_recorded === true ||
+      result.redacted_receive_result_event_recorded === true ||
+      result.redacted_launch_result_event_recorded === true ||
+      result.redacted_publish_result_event_recorded === true,
+    failureClass: productionHighRiskRuntimeFailureClass(result, options.failureClass),
+    clipboardTtlMs: options.clipboardTtlMs ?? 15000,
+    emergencyControlsReachable: options.emergencyControlsReachable === true,
+    localOnlyEvidence,
+    fabricatedEvidence,
+    forbiddenFieldsPresent,
   };
 }
 

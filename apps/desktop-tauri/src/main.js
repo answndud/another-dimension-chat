@@ -11,6 +11,7 @@ import {
   productionHandshakePayloadView,
   productionHighRiskThreatModelBoundaryView,
   productionHighRiskReadinessGateView,
+  productionHighRiskRuntimeEvidenceInputFromAttemptResult,
   productionHighRiskRuntimeEvidenceGateView,
   productionHighRiskTransportMetadataBoundaryView,
   productionManualMessageCheckView,
@@ -529,6 +530,7 @@ let latestProductionTwoProfileOnionEndpoints = null;
 const latestProductionTwoProfileRealOnionResultsByRoom = new Map();
 const latestProductionTwoProfileRealOnionRecoveriesByRoom = new Map();
 let latestProductionOnionBridgeConfigStatus = null;
+let latestProductionHighRiskRuntimeEvidenceView = null;
 const latestProductionTwoProfileRealOnionWaitCanceledFingerprints = new Set();
 let activeProductionTwoProfileRealOnionInput = null;
 let productionTwoProfileRealOnionRunSequence = 0;
@@ -608,6 +610,7 @@ function clearProductionSensitiveMemoryState() {
   latestProductionTwoProfileRealOnionResultsByRoom.clear();
   latestProductionTwoProfileRealOnionRecoveriesByRoom.clear();
   latestProductionTwoProfileRealOnionWaitCanceledFingerprints.clear();
+  latestProductionHighRiskRuntimeEvidenceView = null;
   latestProductionMessageImport = null;
   latestProductionPairingSafety = null;
   latestProductionManualFocusTarget = null;
@@ -3388,7 +3391,7 @@ function renderHighRiskThreatModelStatus() {
 
 function renderHighRiskTransportMetadataStatus() {
   const view = productionHighRiskTransportMetadataBoundaryView();
-  const runtimeEvidence = productionHighRiskRuntimeEvidenceGateView();
+  const runtimeEvidence = latestProductionHighRiskRuntimeEvidenceView ?? productionHighRiskRuntimeEvidenceGateView();
   setText(
     fields.highRiskTransportMetadataStatus,
     [
@@ -3396,19 +3399,50 @@ function renderHighRiskTransportMetadataStatus() {
       `status=${view.status}`,
       `not_ready_reason=${view.notReadyReason}`,
       `runtime_evidence=${runtimeEvidence.runtimeEvidencePresent}`,
-      `runtime_evidence_source=absent`,
+      `runtime_evidence_source=${runtimeEvidence.evidenceSource ?? "absent"}`,
+      `runtime_evidence_accepted=${runtimeEvidence.accepted}`,
+      `runtime_failure_class=${runtimeEvidence.failureClass ?? "none"}`,
+      `runtime_primary_blocker=${runtimeEvidence.primaryBlocker ?? "none"}`,
       `public_claim_allowed=${runtimeEvidence.highRiskPublicClaimAllowed}`,
       "not_protected=global-traffic-correlation-complete-defense",
     ].join(" / "),
   );
   fields.highRiskTransportMetadataStatus?.setAttribute("data-transport-status", view.status);
   fields.highRiskTransportMetadataStatus?.setAttribute("data-not-ready-reason", view.notReadyReason);
-  fields.highRiskTransportMetadataStatus?.setAttribute("data-runtime-evidence-present", "false");
-  fields.highRiskTransportMetadataStatus?.setAttribute("data-runtime-evidence-source", "absent");
+  fields.highRiskTransportMetadataStatus?.setAttribute(
+    "data-runtime-evidence-present",
+    runtimeEvidence.runtimeEvidencePresent ? "true" : "false",
+  );
+  fields.highRiskTransportMetadataStatus?.setAttribute(
+    "data-runtime-evidence-accepted",
+    runtimeEvidence.accepted ? "true" : "false",
+  );
+  fields.highRiskTransportMetadataStatus?.setAttribute(
+    "data-runtime-evidence-source",
+    runtimeEvidence.evidenceSource ?? "absent",
+  );
+  fields.highRiskTransportMetadataStatus?.setAttribute(
+    "data-runtime-failure-class",
+    runtimeEvidence.failureClass ?? "none",
+  );
+  fields.highRiskTransportMetadataStatus?.setAttribute(
+    "data-runtime-primary-blocker",
+    runtimeEvidence.primaryBlocker ?? "none",
+  );
   fields.highRiskTransportMetadataStatus?.setAttribute("data-high-risk-public-claim-allowed", "false");
   fields.highRiskTransportMetadataStatus?.setAttribute("data-direct-fallback", "false");
   fields.highRiskTransportMetadataStatus?.setAttribute("data-app-launch-bootstrap", "false");
   return { ...view, runtimeEvidence };
+}
+
+function rememberHighRiskRuntimeEvidenceFromAttemptResult(result, options = {}) {
+  const input = productionHighRiskRuntimeEvidenceInputFromAttemptResult(result, {
+    emergencyControlsReachable: true,
+    ...options,
+  });
+  latestProductionHighRiskRuntimeEvidenceView = productionHighRiskRuntimeEvidenceGateView(input);
+  renderHighRiskTransportMetadataStatus();
+  return latestProductionHighRiskRuntimeEvidenceView;
 }
 
 function renderHighRiskReadinessStatus() {
@@ -7672,6 +7706,8 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const realOnionExternalPeerDeliveryConfirmed =
     realOnionResultConfirmsExternalPeerDelivery(realOnionResult);
   const realOnionWaitCancelled = realOnionWaitCanceledForInput(input);
+  const highRiskRuntimeEvidence =
+    latestProductionHighRiskRuntimeEvidenceView ?? productionHighRiskRuntimeEvidenceGateView();
   const deliveryNoticeCurrentRoom = latestChatDeliveryNoticeKey
     ? chatDeliveryNoticeMatchesInput(input)
     : false;
@@ -7772,6 +7808,13 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
     `real_onion_network_io=${realOnionResult?.network_io_attempted === true}`,
     `real_onion_transport_io=${realOnionResult?.transport_io_opened === true}`,
     `real_onion_runtime=${realOnionResult?.runtime_messaging_enabled === true}`,
+    `high_risk_runtime_evidence_source=${fieldTestReportValue(highRiskRuntimeEvidence.evidenceSource, "absent")}`,
+    `high_risk_runtime_evidence_accepted=${highRiskRuntimeEvidence.accepted === true}`,
+    `high_risk_runtime_evidence_present=${highRiskRuntimeEvidence.runtimeEvidencePresent === true}`,
+    `high_risk_runtime_primary_blocker=${fieldTestReportValue(highRiskRuntimeEvidence.primaryBlocker, "none")}`,
+    `high_risk_runtime_failure_class=${fieldTestReportValue(highRiskRuntimeEvidence.failureClass, "none")}`,
+    `high_risk_public_claim_allowed=${highRiskRuntimeEvidence.highRiskPublicClaimAllowed === true}`,
+    `high_risk_ready_claim_allowed=${highRiskRuntimeEvidence.highRiskReadyClaimAllowed === true}`,
     `delivery_notice_current_room=${deliveryNoticeCurrentRoom}`,
     `delivery_notice_key=${fieldTestReportValue(deliveryNoticeKey, "none")}`,
     `delivery_notice_tone=${fieldTestReportValue(deliveryNoticeTone, "neutral")}`,
@@ -7920,6 +7963,22 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
     publicDiagnostics.high_risk_transport_not_ready_reason,
     "runtime-network-disabled-until-explicit-user-action",
   );
+  const highRiskRuntimeEvidenceSource = fieldTestReportValue(
+    publicDiagnostics.high_risk_runtime_evidence_source,
+    "absent",
+  );
+  const highRiskRuntimeEvidenceAccepted = fieldTestReportValue(
+    publicDiagnostics.high_risk_runtime_evidence_accepted,
+    "false",
+  );
+  const highRiskRuntimePrimaryBlocker = fieldTestReportValue(
+    publicDiagnostics.high_risk_runtime_primary_blocker,
+    "none",
+  );
+  const highRiskRuntimeFailureClass = fieldTestReportValue(
+    publicDiagnostics.high_risk_runtime_failure_class,
+    "none",
+  );
   const allowedPublicIntakeFields = String(publicDiagnostics.allowed_public_intake_fields ?? "unknown").trim() || "unknown";
   const forbiddenPublicIntakeFields = String(publicDiagnostics.forbidden_public_intake_fields ?? "unknown").trim() || "unknown";
   const excludedFields = String(publicDiagnostics.excluded_fields ?? "unknown").trim() || "unknown";
@@ -7942,7 +8001,7 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
     excludedFields.includes("passphrases") &&
     excludedFields.includes("key_material");
   if (fields.publicBetaDiagnosticsSummary) {
-    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} public_intake_policy_fields_aligned=${publicIntakePolicyFieldsAligned} allowed_public_intake_fields=${allowedPublicIntakeFields} forbidden_public_intake_fields=${forbiddenPublicIntakeFields} excluded_fields=${excludedFields} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} local_manual_e2ee_runtime_boundary=${localManualE2eeBoundary} supported_local_manual_e2ee_ready=${supportedLocalManualE2eeReady} supported_local_manual_e2ee_scope=${supportedLocalManualE2eeScope} production_e2ee_ready=${productionE2eeReady} supported_local_key_lifecycle_ready=${supportedLocalKeyLifecycleReady} supported_local_key_lifecycle_scope=${supportedLocalKeyLifecycleScope} supported_rollback_detection_ready=${supportedRollbackDetectionReady} supported_rollback_detection_scope=${supportedRollbackDetectionScope} supported_local_deletion_scope_ready=${supportedLocalDeletionScopeReady} supported_local_deletion_scope=${supportedLocalDeletionScope} production_key_management_ready=${productionKeyManagementReady} rollback_prevention_claimed=${rollbackPreventionClaimed} secure_deletion_claim_allowed=${secureDeletionClaimAllowed} default_transport_path=${defaultTransportPath} supported_default_transport_ready=${supportedDefaultTransportReady} supported_default_transport_scope=${supportedDefaultTransportScope} default_transport_network_io=${defaultTransportNetworkIo} production_transport_ready=${productionTransportReady} reliable_external_delivery_claim_allowed=${reliableExternalDeliveryClaimAllowed} supported_owner_observed_usability_rehearsal_ready=${supportedOwnerObservedUsabilityRehearsalReady} supported_usability_recovery_scope=${supportedUsabilityRecoveryScope} critical_desktop_task_script_ready=${criticalDesktopTaskScriptReady} recovery_vocabulary_aligned=${recoveryVocabularyAligned} usability_study_completed=${usabilityStudyCompleted} production_wording_ready=${productionWordingReady} high_risk_onion_path=explicit-user-triggered-fail-closed high_risk_transport_mode=${highRiskTransportMode} high_risk_transport_ready=${highRiskTransportReady} high_risk_transport_not_ready_reason=${highRiskTransportNotReadyReason} high_risk_transport_direct_fallback=false high_risk_transport_dns_endpoint=false high_risk_transport_ip_endpoint=false high_risk_transport_app_launch_bootstrap=false release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
+    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} public_intake_policy_fields_aligned=${publicIntakePolicyFieldsAligned} allowed_public_intake_fields=${allowedPublicIntakeFields} forbidden_public_intake_fields=${forbiddenPublicIntakeFields} excluded_fields=${excludedFields} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} local_manual_e2ee_runtime_boundary=${localManualE2eeBoundary} supported_local_manual_e2ee_ready=${supportedLocalManualE2eeReady} supported_local_manual_e2ee_scope=${supportedLocalManualE2eeScope} production_e2ee_ready=${productionE2eeReady} supported_local_key_lifecycle_ready=${supportedLocalKeyLifecycleReady} supported_local_key_lifecycle_scope=${supportedLocalKeyLifecycleScope} supported_rollback_detection_ready=${supportedRollbackDetectionReady} supported_rollback_detection_scope=${supportedRollbackDetectionScope} supported_local_deletion_scope_ready=${supportedLocalDeletionScopeReady} supported_local_deletion_scope=${supportedLocalDeletionScope} production_key_management_ready=${productionKeyManagementReady} rollback_prevention_claimed=${rollbackPreventionClaimed} secure_deletion_claim_allowed=${secureDeletionClaimAllowed} default_transport_path=${defaultTransportPath} supported_default_transport_ready=${supportedDefaultTransportReady} supported_default_transport_scope=${supportedDefaultTransportScope} default_transport_network_io=${defaultTransportNetworkIo} production_transport_ready=${productionTransportReady} reliable_external_delivery_claim_allowed=${reliableExternalDeliveryClaimAllowed} supported_owner_observed_usability_rehearsal_ready=${supportedOwnerObservedUsabilityRehearsalReady} supported_usability_recovery_scope=${supportedUsabilityRecoveryScope} critical_desktop_task_script_ready=${criticalDesktopTaskScriptReady} recovery_vocabulary_aligned=${recoveryVocabularyAligned} usability_study_completed=${usabilityStudyCompleted} production_wording_ready=${productionWordingReady} high_risk_onion_path=explicit-user-triggered-fail-closed high_risk_transport_mode=${highRiskTransportMode} high_risk_transport_ready=${highRiskTransportReady} high_risk_transport_not_ready_reason=${highRiskTransportNotReadyReason} high_risk_runtime_evidence_source=${highRiskRuntimeEvidenceSource} high_risk_runtime_evidence_accepted=${highRiskRuntimeEvidenceAccepted} high_risk_runtime_primary_blocker=${highRiskRuntimePrimaryBlocker} high_risk_runtime_failure_class=${highRiskRuntimeFailureClass} high_risk_transport_direct_fallback=false high_risk_transport_dns_endpoint=false high_risk_transport_ip_endpoint=false high_risk_transport_app_launch_bootstrap=false high_risk_public_claim_allowed=false high_risk_ready_claim_allowed=false release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
   }
   return payload;
 }
@@ -16171,6 +16230,9 @@ async function sendProductionTwoProfileEndpointUpdate() {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
+    rememberHighRiskRuntimeEvidenceFromAttemptResult(result, {
+      endpointRotationObserved: true,
+    });
     rememberTwoProfileSessionStatus(input, status);
     renderProductionTwoProfileSessionStatusResult(status);
     const userView = localizedTwoProfileUserView(productionTwoProfileSendAttemptUserView(result, updateMessageNumber));
@@ -16637,6 +16699,7 @@ async function attemptOnionInboundEnvelopeReceive() {
     if (!productionProfileInputStillCurrent(input)) {
       return;
     }
+    rememberHighRiskRuntimeEvidenceFromAttemptResult(result);
     setOnionInboundStreamState(
       result.receive_attempt_succeeded
         ? "Envelope receive attempt read"
@@ -16917,6 +16980,9 @@ async function attemptOnionOutboundEnvelopeSend() {
     if (!productionMessageInputStillCurrent(input) || !productionPairingEndpointStillCurrent(rendezvousEndpoint)) {
       return;
     }
+    rememberHighRiskRuntimeEvidenceFromAttemptResult(result, {
+      endpointRotationObserved: false,
+    });
     setOnionOutboundEnvelopeSendState(
       result.send_attempt_succeeded
         ? "Envelope send attempt wrote"
@@ -17048,6 +17114,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
+    rememberHighRiskRuntimeEvidenceFromAttemptResult(result);
     setOnionOutboundEnvelopeSendState(
       result.send_attempt_succeeded
         ? "Envelope send attempt wrote"
@@ -18302,6 +18369,9 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
+    rememberHighRiskRuntimeEvidenceFromAttemptResult(result, {
+      localOnlyEvidence: result.local_dev_roundtrip_result === true,
+    });
     const view = productionTwoProfileRealOnionResultView(result);
     const userView = localizedTwoProfileUserView(productionTwoProfileRealOnionUserView(result));
     const realOnionRecovery = productionTwoProfileRealOnionRecoveryPlan(result);
@@ -18365,6 +18435,9 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return;
     }
+    rememberHighRiskRuntimeEvidenceFromAttemptResult(syntheticFailure, {
+      syntheticFailure: true,
+    });
     const syntheticRecovery = productionTwoProfileRealOnionRecoveryPlan(syntheticFailure);
     const syntheticNoticeKey = realOnionRecoveryNoticeKey(syntheticRecovery);
     setProductionTwoProfileState("Private delivery failed");
