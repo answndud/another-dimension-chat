@@ -21,7 +21,11 @@ The public desktop artifact is currently the unsigned macOS DMG path. Windows
 is a local desktop build candidate only; before any public Windows artifact, it
 must keep the same Tauri app-data resolver semantics, encrypted local store,
 local deletion controls, redacted diagnostics, explicit user-action boundary,
-no auto-update channel, and no signing/notarization/store trust claim.
+no auto-update channel, and no signing/notarization/store trust claim. The
+Windows public artifact source gate now defines manifest/checksum/provenance,
+package-structure, and runtime-result-to-manifest binding, but that source gate
+is not a public Windows artifact, installer, runtime pass, signing decision,
+upload authorization, production claim, or High-Risk public claim.
 
 The shared core boundary means Rust owns profile identity, pairing payload and
 safety transcript logic, message orchestration, protocol envelopes and replay,
@@ -443,11 +447,14 @@ before it can be documented as a public artifact.
 
 Windows desktop readiness source audit status is local build candidate only.
 There is no public Windows artifact, no Windows installer, no public artifact
-upload, and no production-ready claim. Windows remains blocked on WebView2
-runtime smoke, app-data path review, path separator review, redacted diagnostics
-review, and explicit user action review. Signing, Microsoft Store approval, and
-SmartScreen reputation are distribution concerns, not a security boundary, and
-sensitive communication prohibited remains in force.
+upload, and no production-ready claim. Windows source gates now cover the
+candidate app-data/shared-storage boundary, package-structure validation,
+manifest/checksum/provenance consistency, and runtime-result manifest binding,
+but Windows public artifact consistency still requires real Windows runtime
+evidence, a release artifact, signing decision, upload authorization, and public
+copy review. Signing, Microsoft Store approval, and SmartScreen reputation are
+distribution concerns, not a security boundary, and sensitive communication
+prohibited remains in force.
 
 Windows local usable criteria are source-defined before artifact work: WebView2
 rendering, Tauri app-data storage roots, encrypted profile stores, local
