@@ -631,8 +631,44 @@ printf '%s\n' "$final_acceptance_output" | grep -Fq -- "macos_public_artifact_co
   echo "FAIL final acceptance missing macOS artifact blocker" >&2
   exit 1
 }
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_public_artifact_candidate_source_gate_ready=true" || {
+  echo "FAIL final acceptance missing Windows source gate readiness marker" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_artifact_manifest_package_structure_verified=true" || {
+  echo "FAIL final acceptance missing Windows package-structure source verification marker" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_runtime_result_manifest_binding_verified=true" || {
+  echo "FAIL final acceptance missing Windows runtime-result manifest binding marker" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_runtime_evidence_contract_verified=true" || {
+  echo "FAIL final acceptance missing Windows runtime evidence contract marker" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_public_artifact_real_runtime_evidence_present=false" || {
+  echo "FAIL final acceptance missing Windows real runtime evidence blocker" >&2
+  exit 1
+}
 printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_public_artifact_consistency_verified=false" || {
   echo "FAIL final acceptance missing Windows artifact blocker" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_artifact_release_upload_authorized=false" || {
+  echo "FAIL final acceptance missing Windows release upload hold" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "missing_windows_public_artifact_conditions=real_windows_runtime_result#release_artifact#signing_decision#upload_authorization#public_copy_review" || {
+  echo "FAIL final acceptance missing Windows public artifact condition list" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_production_claim_allowed=false" || {
+  echo "FAIL final acceptance missing Windows production claim hold" >&2
+  exit 1
+}
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "high_risk_public_claim_allowed=false" || {
+  echo "FAIL final acceptance missing high-risk public claim hold" >&2
   exit 1
 }
 printf '%s\n' "$final_acceptance_output" | grep -Fq -- "emergency_advisory_path_ready=false" || {
