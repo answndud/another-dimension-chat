@@ -50,6 +50,16 @@ require_same_file() {
   fi
 }
 
+track_reference_copy() {
+  local source="$1"
+  local copied="$2"
+  local label="$3"
+  if ! cmp -s "$source" "$copied"; then
+    reference_copies_status="source-may-be-newer"
+    echo "existing_release_output_source_newer_file=$label"
+  fi
+}
+
 check_existing_release_output() {
   local release_dir="$ROOT_DIR/apps/desktop-tauri/public-release/unsigned-public-beta"
   if [ ! -d "$release_dir" ]; then
@@ -111,15 +121,17 @@ check_existing_release_output() {
     exit 1
   fi
 
-  require_same_file "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" "$release_dir/INSTALL_UNSIGNED_MACOS.md"
-  require_same_file "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "$release_dir/RELEASE_NOTES.md"
-  require_same_file "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "$release_dir/GITHUB_RELEASE_BODY.md"
-  require_same_file "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "$release_dir/UPDATE_INTEGRITY.md"
-  require_same_file "$ROOT_DIR/reference/SUPPLY_CHAIN_BASELINE.md" "$release_dir/SUPPLY_CHAIN_BASELINE.md"
-  require_same_file "$ROOT_DIR/reference/DEPENDENCY_INVENTORY.md" "$release_dir/DEPENDENCY_INVENTORY.md"
-  require_same_file "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "$release_dir/PUBLIC_THREAT_MODEL.md"
-  require_same_file "$ROOT_DIR/reference/PRIVACY_MODEL_COMPARISON.md" "$release_dir/PRIVACY_MODEL_COMPARISON.md"
-  require_same_file "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "$release_dir/INDEPENDENT_REVIEW_PACKET.md"
+  local reference_copies_status
+  reference_copies_status="current"
+  track_reference_copy "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" "$release_dir/INSTALL_UNSIGNED_MACOS.md" "INSTALL_UNSIGNED_MACOS.md"
+  track_reference_copy "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "$release_dir/RELEASE_NOTES.md" "RELEASE_NOTES.md"
+  track_reference_copy "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "$release_dir/GITHUB_RELEASE_BODY.md" "GITHUB_RELEASE_BODY.md"
+  track_reference_copy "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "$release_dir/UPDATE_INTEGRITY.md" "UPDATE_INTEGRITY.md"
+  track_reference_copy "$ROOT_DIR/reference/SUPPLY_CHAIN_BASELINE.md" "$release_dir/SUPPLY_CHAIN_BASELINE.md" "SUPPLY_CHAIN_BASELINE.md"
+  track_reference_copy "$ROOT_DIR/reference/DEPENDENCY_INVENTORY.md" "$release_dir/DEPENDENCY_INVENTORY.md" "DEPENDENCY_INVENTORY.md"
+  track_reference_copy "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md" "$release_dir/PUBLIC_THREAT_MODEL.md" "PUBLIC_THREAT_MODEL.md"
+  track_reference_copy "$ROOT_DIR/reference/PRIVACY_MODEL_COMPARISON.md" "$release_dir/PRIVACY_MODEL_COMPARISON.md" "PRIVACY_MODEL_COMPARISON.md"
+  track_reference_copy "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "$release_dir/INDEPENDENT_REVIEW_PACKET.md" "INDEPENDENT_REVIEW_PACKET.md"
   require_text "$release_dir/PUBLIC_INTAKE_POLICY.md" "Public Intake Policy"
   require_text "$release_dir/PUBLIC_INTAKE_POLICY.md" "Forbidden Public Intake"
   require_text "$release_dir/PUBLIC_INTAKE_POLICY.md" "Public Diagnostics Boundary"
@@ -133,8 +145,8 @@ check_existing_release_output() {
   require_text "$release_dir/PUBLIC_INTAKE_POLICY.md" "invite codes"
   require_text "$release_dir/PUBLIC_INTAKE_POLICY.md" "message text"
   require_text "$release_dir/PUBLIC_INTAKE_POLICY.md" "local paths"
-  require_same_file "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md" "$release_dir/REPOSITORY_GOVERNANCE.md"
-  require_same_file "$ROOT_DIR/reference/COMPONENT_BOUNDARIES.md" "$release_dir/COMPONENT_BOUNDARIES.md"
+  track_reference_copy "$ROOT_DIR/reference/REPOSITORY_GOVERNANCE.md" "$release_dir/REPOSITORY_GOVERNANCE.md" "REPOSITORY_GOVERNANCE.md"
+  track_reference_copy "$ROOT_DIR/reference/COMPONENT_BOUNDARIES.md" "$release_dir/COMPONENT_BOUNDARIES.md" "COMPONENT_BOUNDARIES.md"
 
   local lockfile_hashes
   lockfile_hashes="$(mktemp)"
@@ -153,10 +165,20 @@ check_existing_release_output() {
   rm -f "$lockfile_hashes"
 
   echo "existing_release_output_file_list=manifest-allowlist-only"
-  echo "existing_release_output_reference_copies=strict-except-public-intake"
+  if [ "$reference_copies_status" = "current" ]; then
+    echo "existing_release_output_reference_copies=current"
+  else
+    echo "existing_release_output_reference_copies=source-may-be-newer"
+  fi
   echo "existing_release_output_public_intake=baseline-present-source-may-be-newer"
   echo "existing_release_output_lockfiles=current"
-  echo "existing_release_output_status=current"
+  if [ "$reference_copies_status" = "current" ]; then
+    echo "existing_release_output_status=current"
+  else
+    echo "existing_release_output_status=stale"
+    echo "existing_release_output_stale_reason=source-reference-copy-differs-from-held-packet"
+    echo "existing_release_output_next_owner_action=rebuild-or-republish-unsigned-public-beta-packet"
+  fi
 }
 
 check_macos_public_beta_final_sources() {

@@ -30,6 +30,7 @@ reject_text() {
 
 PUBLIC_CLAIM_FILES=(
   "$ROOT_DIR/README.md"
+  "$ROOT_DIR/README.ko.md"
   "$ROOT_DIR/SECURITY.md"
   "$ROOT_DIR/reference/PUBLIC_THREAT_MODEL.md"
   "$ROOT_DIR/reference/PRIVACY_MODEL_COMPARISON.md"
@@ -102,11 +103,12 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_default_transport_boundary_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_beta_gap_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_claim_acceptance_once.sh"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_status=current"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_status=stale"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_file_list=manifest-allowlist-only"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_reference_copies=strict-except-public-intake"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_reference_copies=source-may-be-newer"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_public_intake=baseline-present-source-may-be-newer"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_lockfiles=current"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_next_owner_action=rebuild-or-republish-unsigned-public-beta-packet"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output file list differs from MANIFEST allowlist"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output dependency lockfile evidence is stale"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "If any after-upload confirmation fails"
@@ -219,7 +221,15 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
 require_text "$ROOT_DIR/README.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/README.md" 'pinned public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`'
-require_text "$ROOT_DIR/README.md" 'commit `e8954df9`, and SHA-256 `7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a`'
+require_text "$ROOT_DIR/README.md" 'artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#v0.1.0-beta-onion-unsigned#macos-aarch64'
+require_text "$ROOT_DIR/README.md" "artifact_current_head_aligned=false"
+require_text "$ROOT_DIR/README.md" "public_artifact_stale=true"
+require_text "$ROOT_DIR/README.md" "public_artifact_state=stale"
+require_text "$ROOT_DIR/README.md" "next_owner_action=rebuild-or-republish-unsigned-public-beta-packet"
+require_text "$ROOT_DIR/README.md" "The stale packet is not latest-source app evidence."
+require_text "$ROOT_DIR/README.ko.md" 'artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#v0.1.0-beta-onion-unsigned#macos-aarch64'
+require_text "$ROOT_DIR/README.ko.md" "public_artifact_stale=true"
+require_text "$ROOT_DIR/README.ko.md" "이 stale packet은 최신 source app evidence가 아닙니다."
 require_text "$ROOT_DIR/README.md" "This is not a packaging readiness, audit readiness, or release go signal."
 require_file "$ROOT_DIR/scripts/desktop_beta_acceptance_matrix_once.sh"
 require_file "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh"
@@ -369,7 +379,7 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
       echo "FAIL release readiness preflight missing exact file-list freshness" >&2
       exit 1
     }
-    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_reference_copies=strict-except-public-intake" || {
+    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_reference_copies=source-may-be-newer" || {
       echo "FAIL release readiness preflight missing reference-copy freshness" >&2
       exit 1
     }
@@ -379,6 +389,14 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     }
     printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_lockfiles=current" || {
       echo "FAIL release readiness preflight missing lockfile freshness" >&2
+      exit 1
+    }
+    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_status=stale" || {
+      echo "FAIL release readiness preflight missing stale held-packet status" >&2
+      exit 1
+    }
+    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_next_owner_action=rebuild-or-republish-unsigned-public-beta-packet" || {
+      echo "FAIL release readiness preflight missing stale packet owner action" >&2
       exit 1
     }
   fi
