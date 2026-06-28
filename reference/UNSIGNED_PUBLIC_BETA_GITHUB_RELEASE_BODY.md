@@ -74,10 +74,20 @@ Do not use terminal quarantine-removal commands as an install step.
 These values must stay identical across the install guide, release notes,
 GitHub Release body, and beta checklist:
 
-- `artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#macos-aarch64`
+- `artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#v0.1.0-beta-onion-unsigned#macos-aarch64`
+- `artifact_identity_fields=artifact#artifact_sha256#build_channel#build_commit#release_tag#platform`
+- `artifact_current_head_aligned=false`
+- `public_artifact_stale=true`
+- `public_artifact_state=stale`
+- `next_owner_action=rebuild-or-republish-unsigned-public-beta-packet`
 - `trust_model=same-github-release-assets#same-release-sha256#manual-privacy-security-allow-after-checksum#no-auto-update`
 - `support_intake=redacted-diagnostics-only#no-raw-logs#no-crash-dumps#no-private-room-data#no-payloads#no-key-material`
 - `generated_artifact_boundary=do-not-commit-public-release-or-beta-artifacts#no-dmg-rebuild#no-release-upload-or-edit`
+
+This published DMG is a held/stale public packet relative to current source
+HEAD. Verify it with the same-release checksum and provenance, but do not treat
+it as latest-source app evidence until the unsigned public beta packet is
+rebuilt or republished.
 
 ## Install
 
