@@ -54,6 +54,21 @@ Release authority:
 - Upload is an explicit owner action only; source gates must not upload or edit
   the GitHub Release by default.
 
+Artifact identity gate:
+
+- `artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#v0.1.0-beta-onion-unsigned#macos-aarch64`
+- `artifact_identity_fields=artifact#artifact_sha256#build_channel#build_commit#release_tag#platform`
+- The artifact filename, SHA-256, build channel, build commit, release tag, and
+  platform are read from the same provenance file when the generated packet is
+  present.
+- If the provenance `build_commit` differs from the current repository HEAD,
+  the source gates must emit `artifact_current_head_aligned=false`,
+  `public_artifact_stale=true`, `public_artifact_state=stale`, and
+  `next_owner_action=rebuild-or-republish-unsigned-public-beta-packet`.
+- A stale public artifact is a held release packet, not current app evidence.
+  It must not be promoted to latest source evidence without rebuilding or
+  republishing the unsigned public beta packet.
+
 Forbidden public claims:
 
 - production-ready
