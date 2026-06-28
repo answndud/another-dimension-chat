@@ -6,6 +6,9 @@ RELEASE_DIR="$ROOT_DIR/apps/desktop-tauri/public-release/unsigned-public-beta"
 RELEASE_DMG="another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg"
 RELEASE_PROVENANCE="$RELEASE_DMG.provenance.json"
 EXPECTED_DMG_SHA="7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a"
+RELEASE_TAG="v0.1.0-beta-onion-unsigned"
+ARTIFACT_IDENTITY_FIELDS="artifact#artifact_sha256#build_channel#build_commit#release_tag#platform"
+PUBLIC_ARTIFACT_STALE_ACTION="rebuild-or-republish-unsigned-public-beta-packet"
 
 fail() {
   echo "FAIL macos unsigned public release packet: $*" >&2
@@ -28,6 +31,86 @@ reject_text() {
   if grep -Fq -- "$forbidden" "$file"; then
     fail "forbidden text in $file: $forbidden"
   fi
+}
+
+json_string_value() {
+  local file="$1"
+  local key="$2"
+  sed -nE "s/^[[:space:]]*\"$key\"[[:space:]]*:[[:space:]]*\"([^\"]*)\"[,[:space:]]*$/\1/p" "$file" | head -n 1
+}
+
+emit_artifact_identity_status() {
+  local provenance="$RELEASE_DIR/$RELEASE_PROVENANCE"
+  local current_head
+  current_head="$(git -C "$ROOT_DIR" rev-parse --short=8 HEAD)"
+
+  if [ ! -f "$provenance" ]; then
+    cat <<STATUS
+artifact_packet_present=false
+artifact_identity=absent
+artifact_identity_fields=$ARTIFACT_IDENTITY_FIELDS
+artifact_build_commit=absent
+artifact_release_tag=absent
+current_head_short=$current_head
+artifact_current_head_aligned=false
+public_artifact_stale=false
+public_artifact_state=absent
+stale_public_artifact_promoted_to_current=false
+next_owner_action=generate-unsigned-public-beta-packet-before-public-use
+STATUS
+    return
+  fi
+
+  local artifact artifact_sha build_channel build_commit release_tag platform
+  artifact="$(json_string_value "$provenance" "artifact")"
+  artifact_sha="$(json_string_value "$provenance" "artifact_sha256")"
+  build_channel="$(json_string_value "$provenance" "build_channel")"
+  build_commit="$(json_string_value "$provenance" "build_commit")"
+  release_tag="$(json_string_value "$provenance" "release_tag")"
+  platform="$(json_string_value "$provenance" "platform")"
+
+  [ -n "$artifact" ] || fail "missing provenance artifact"
+  [ -n "$artifact_sha" ] || fail "missing provenance artifact_sha256"
+  [ -n "$build_channel" ] || fail "missing provenance build_channel"
+  [ -n "$build_commit" ] || fail "missing provenance build_commit"
+  [ -n "$release_tag" ] || fail "missing provenance release_tag"
+  [ -n "$platform" ] || fail "missing provenance platform"
+
+  [ "$artifact" = "$RELEASE_DMG" ] || fail "provenance artifact mismatch: $artifact"
+  [ "$artifact_sha" = "$EXPECTED_DMG_SHA" ] || fail "provenance artifact_sha256 mismatch: $artifact_sha"
+  [ "$release_tag" = "$RELEASE_TAG" ] || fail "provenance release_tag mismatch: $release_tag"
+
+  local artifact_identity aligned stale state next_action
+  artifact_identity="$artifact#$artifact_sha#$build_channel#$build_commit#$release_tag#$platform"
+  if [ "$build_commit" = "$current_head" ]; then
+    aligned=true
+    stale=false
+    state=current
+    next_action=none
+  else
+    aligned=false
+    stale=true
+    state=stale
+    next_action="$PUBLIC_ARTIFACT_STALE_ACTION"
+  fi
+
+  cat <<STATUS
+artifact_packet_present=true
+artifact_identity=$artifact_identity
+artifact_identity_fields=$ARTIFACT_IDENTITY_FIELDS
+artifact_filename=$artifact
+artifact_sha256=$artifact_sha
+artifact_build_channel=$build_channel
+artifact_build_commit=$build_commit
+artifact_release_tag=$release_tag
+artifact_platform=$platform
+current_head_short=$current_head
+artifact_current_head_aligned=$aligned
+public_artifact_stale=$stale
+public_artifact_state=$state
+stale_public_artifact_promoted_to_current=false
+next_owner_action=$next_action
+STATUS
 }
 
 require_ignored_path() {
@@ -73,6 +156,11 @@ require_release_policy_sources() {
   require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "Do not disable Gatekeeper globally"
   require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "explicit owner action only"
   require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "Forbidden public claims"
+  require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "artifact_identity="
+  require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "artifact_identity_fields=$ARTIFACT_IDENTITY_FIELDS"
+  require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "artifact_current_head_aligned=false"
+  require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "public_artifact_stale=true"
+  require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "next_owner_action=$PUBLIC_ARTIFACT_STALE_ACTION"
 
   for file in \
     "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" \
@@ -194,6 +282,7 @@ require_release_policy_sources
 require_upload_hold
 require_generator_policy
 require_generated_packet_if_present
+emit_artifact_identity_status
 
 cat <<'STATUS'
 macos_unsigned_public_release_packet=ready
