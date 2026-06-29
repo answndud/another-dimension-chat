@@ -48,11 +48,11 @@
     "legacy:tauri:build:manual-onion": "VITE_AD_BUILD_CHANNEL=beta-onion node scripts/with-cargo-target.mjs tauri build --features manual-onion-client-attempt -- --no-default-features",
     "legacy:tauri:build:manual-onion-bridge": "VITE_AD_BUILD_CHANNEL=beta-onion-bridge node scripts/with-cargo-target.mjs tauri build --features manual-onion-bridge-client -- --no-default-features",
     "tauri:build:full": "npm run legacy:tauri:build:embedded-runtime",
-    "tauri:build:beta-onion": "npm run engine:prepare-sidecar:release:manual && VITE_AD_BUILD_CHANNEL=beta-onion node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json",
-    "tauri:build:windows-nsis:beta-onion": "npm run engine:prepare-sidecar:release:manual && VITE_AD_BUILD_CHANNEL=beta-onion node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json --bundles nsis",
-    "tauri:build:windows-nsis:shell": "npm run engine:prepare-sidecar:release:manual && node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json --features public-shell --bundles nsis -- --no-default-features",
-    "tauri:build:windows-nsis:manual-e2ee": "npm run engine:prepare-sidecar:release:manual && VITE_AD_BUILD_CHANNEL=windows-manual-e2ee node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json --bundles nsis",
-    "tauri:build:beta-onion-bridge": "npm run engine:prepare-sidecar:release:manual && VITE_AD_BUILD_CHANNEL=beta-onion-bridge node scripts/with-cargo-target.mjs tauri build --config src-tauri/tauri.sidecar.conf.json"
+    "tauri:build:beta-onion": "VITE_AD_BUILD_CHANNEL=beta-onion node scripts/prepare-engine-sidecar.mjs --release --manual-e2ee-runtime --tauri-build -- tauri build --config src-tauri/tauri.sidecar.conf.json",
+    "tauri:build:windows-nsis:beta-onion": "VITE_AD_BUILD_CHANNEL=beta-onion node scripts/prepare-engine-sidecar.mjs --release --manual-e2ee-runtime --tauri-build -- tauri build --config src-tauri/tauri.sidecar.conf.json --bundles nsis",
+    "tauri:build:windows-nsis:shell": "node scripts/prepare-engine-sidecar.mjs --release --manual-e2ee-runtime --tauri-build -- tauri build --config src-tauri/tauri.sidecar.conf.json --features public-shell --bundles nsis -- --no-default-features",
+    "tauri:build:windows-nsis:manual-e2ee": "VITE_AD_BUILD_CHANNEL=windows-manual-e2ee node scripts/prepare-engine-sidecar.mjs --release --manual-e2ee-runtime --tauri-build -- tauri build --config src-tauri/tauri.sidecar.conf.json --bundles nsis",
+    "tauri:build:beta-onion-bridge": "VITE_AD_BUILD_CHANNEL=beta-onion-bridge node scripts/prepare-engine-sidecar.mjs --release --manual-e2ee-runtime --tauri-build -- tauri build --config src-tauri/tauri.sidecar.conf.json"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0"
