@@ -118,16 +118,14 @@ Follow the macOS install guide for the primary build path:
 
 - [Install from source on macOS](INSTALL_FROM_SOURCE_MACOS.md)
 
-Use the three-level verification ladder:
+Use the lightweight and full verification entrypoints:
 
 ```sh
 scripts/verify_light.sh  # source-build boundaries + all desktop JavaScript tests
-scripts/verify_warm.sh   # light + rustfmt + desktop Tauri cargo check
-scripts/verify_cold.sh   # warm + runtime/workspace tests + clippy; pre-release only
+scripts/verify_full.sh   # light + rustfmt + desktop Tauri cargo check + runtime/workspace tests + clippy; pre-release only
 ```
 
-`scripts/verify_all.sh` is a compatibility alias for light;
-`scripts/verify_full.sh` is a compatibility alias for cold. The CLI smoke
+`scripts/verify_all.sh` is a compatibility alias for light. The CLI smoke
 scripts are manual acceptance checks, not default verification:
 `smoke_dev_cli.sh` covers prototype pairing/message/replay/expiry, while
 `smoke_tauri_two_profile.sh` covers production profile/pairing/session/transcript resume.

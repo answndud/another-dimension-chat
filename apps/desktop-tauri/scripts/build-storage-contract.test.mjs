@@ -35,6 +35,11 @@ function assertFileContains(path, text) {
   assert.match(body, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }
 
+function assertFileDoesNotContain(path, text) {
+  const body = readFileSync(resolve(repoRoot, path), "utf8");
+  assert.doesNotMatch(body, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+}
+
 test("release profiles are pinned for public build targets", () => {
   assertProfileSettings("Cargo.toml", [
     "[profile.release]",
@@ -58,6 +63,11 @@ test("public shell cargo tree excludes legacy runtime graph", () => {
   assertFileContains("apps/desktop-tauri/src-tauri/tauri.conf.json", '"targets": ["app"]');
   assertFileContains("apps/desktop-tauri/package.json", "node scripts/clean-generated.mjs && node scripts/with-cargo-target.mjs tauri build");
   assertFileContains("apps/desktop-tauri/package.json", "node scripts/clean-generated.mjs && VITE_AD_BUILD_CHANNEL=beta-onion node scripts/prepare-engine-sidecar.mjs --release --manual-e2ee-runtime --tauri-build -- tauri build --config src-tauri/tauri.sidecar.conf.json");
+  assertFileDoesNotContain("apps/desktop-tauri/package.json", "verify:warm");
+  assertFileDoesNotContain("apps/desktop-tauri/package.json", "verify:cold");
+  assertFileDoesNotContain("apps/desktop-tauri/package.json", "legacy:tauri");
+  assertFileDoesNotContain("scripts/build_cache_env.sh", ".build-cache");
+  assertFileDoesNotContain("scripts/build_cache_env.sh", "Library/Caches/another-dimension");
 
   const result = runCargoTree([
     "tree",

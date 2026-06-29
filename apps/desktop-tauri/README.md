@@ -166,7 +166,7 @@ cd apps/desktop-tauri
 npm run tauri:dev:beta-onion-bridge
 ```
 
-The default and beta-onion Tauri commands are sidecar-first public-shell builds. Legacy embedded runtime commands remain under `legacy:tauri:*` for compatibility work only. They do not start Tor, launch an onion service, publish descriptors, receive, or send on app startup. Network work still requires the in-app manual network permission and an explicit user action.
+The default and beta-onion Tauri commands are sidecar-first public-shell builds. Older embedded-runtime flows are not part of the normal build path. They do not start Tor, launch an onion service, publish descriptors, receive, or send on app startup. Network work still requires the in-app manual network permission and an explicit user action.
 
 Run two isolated local peer shells from separate terminals when testing one computer as two devices:
 
