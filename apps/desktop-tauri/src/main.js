@@ -1710,7 +1710,7 @@ function clearChatDeliveryNoticeForInput(input = productionTwoProfileInput()) {
 
 function dataLifecycleActionView(action, options = {}) {
   const destructiveAction = action;
-  return [
+  const summary = [
     `destructive_action=${destructiveAction}`,
     "redacted_result=true",
     "local_only=true",
@@ -1726,18 +1726,31 @@ function dataLifecycleActionView(action, options = {}) {
     `action === "emergency-local-wipe"`,
     `confirmation_phrase=${options.confirmationPhrase ?? "none"}`,
   ].join(" ");
+  const storageStatus = options.profile_storage_budget_status ?? options.app_storage_budget_status;
+  const storage = storageStatus === "at-cap"
+    ? t("storageBudgetAtCap")
+    : storageStatus === "cleanup-recommended"
+      ? t("storageBudgetCleanupRecommended")
+      : storageStatus === "within-limit"
+        ? t("storageBudgetNormal")
+        : t("storageBudgetHiddenWhileLocked");
+  const next =
+    storageStatus === "at-cap" || storageStatus === "cleanup-recommended"
+      ? t("dataLifecycleWipeConfirmNext")
+      : action === "prepare"
+        ? t("dataLifecyclePreparedNext")
+        : action === "status"
+          ? t("dataLifecycleStatusNext")
+          : t("dataLifecycleDestructiveRunningNext");
+  return { summary, storage, next };
 }
 
 function renderProductionDataLifecycleAction(result, mode) {
-  const lifecycleSurface = fields.productionDataLifecycle;
-  const lifecycleBoundary = fields.productionProfileBoundary;
-  const lifecycleNextAction = fields.productionProfileNextAction;
-  return dataLifecycleActionView(mode, {
-    ...result,
-    lifecycleSurface,
-    lifecycleBoundary,
-    lifecycleNextAction,
-  });
+  const view = dataLifecycleActionView(mode, result ?? {});
+  setText(fields.productionDataLifecycle, view.summary);
+  setText(fields.productionProfileStorage, view.storage);
+  setText(fields.productionProfileNextAction, view.next);
+  return view;
 }
 
 function productionPairingEndpointStillCurrent(input = productionPairingInput()) {
