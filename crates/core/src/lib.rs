@@ -15532,6 +15532,9 @@ pub mod production {
                 .get(&production_pending_handshake_initiator_state_record_id())?
                 .is_some();
             store.delete(&production_pending_handshake_initiator_state_record_id())?;
+            if pending_handshake_state_present {
+                reclaim_deleted_storage_if_needed(&store)?;
+            }
             return Ok(ProductionPairingSessionDeleteSummary {
                 storage_opened: true,
                 session_draft_loaded: false,
@@ -15577,6 +15580,7 @@ pub mod production {
         store.delete(&production_session_transport_state_record_id(
             &draft.channel_id,
         ))?;
+        reclaim_deleted_storage_if_needed(&store)?;
         let after = load_latest_session_draft(&store, &profile)?;
         let session_dek_records_deleted = replay_window_present || session_transport_state_present;
         let session_key_records_deleted =
@@ -17481,6 +17485,7 @@ pub mod production {
             .is_some_and(|received| received.is_expired_at(observed_at_ms))
         {
             store.delete(&received_record_id)?;
+            reclaim_deleted_storage_if_needed(&store)?;
             received = None;
             expired_received_message_purged = true;
         }
@@ -17547,6 +17552,7 @@ pub mod production {
         let observed_at_ms = production_now_ms();
         if received.is_expired_at(observed_at_ms) {
             store.delete(&received_record_id)?;
+            reclaim_deleted_storage_if_needed(&store)?;
             return Err(ProductionSessionError::UnexpectedEnvelope);
         }
         Ok(ProductionMessageReceivedExport {
@@ -17673,6 +17679,9 @@ pub mod production {
                 if entry.direction == "sent" { 0 } else { 1 },
             )
         });
+        if expired_messages_purged > 0 {
+            reclaim_deleted_storage_if_needed(&store)?;
+        }
         Ok(ProductionMessageTranscriptExport {
             storage_opened: true,
             runtime_material_reconstructable: true,
@@ -17830,6 +17839,9 @@ pub mod production {
         let crypto_erasure_performed = conversation_dek_deleted
             && message_key_records_deleted
             && conversation_records_deleted > 0;
+        if conversation_records_deleted > 0 {
+            reclaim_deleted_storage_if_needed(&store)?;
+        }
 
         Ok(ProductionConversationDeleteSummary {
             storage_opened: true,
@@ -24591,7 +24603,14 @@ pub mod production {
             message_number,
             MessageType::Data,
         ))?;
+        reclaim_deleted_storage_if_needed(store)?;
         Ok(true)
+    }
+
+    fn reclaim_deleted_storage_if_needed(
+        store: &SqlCipherRecordStore,
+    ) -> Result<bool, ProductionSessionError> {
+        store.reclaim_deleted_pages_if_needed().map_err(Into::into)
     }
 
     fn update_outbound_delivery_state(
@@ -24662,6 +24681,7 @@ pub mod production {
                 message_number,
                 MessageType::Data,
             ))?;
+            reclaim_deleted_storage_if_needed(&store)?;
         }
         Ok(())
     }
@@ -31153,6 +31173,46 @@ pub mod production {
         }
 
         #[test]
+        fn production_expired_message_reclaims_storage_pages_after_delete_helpers() {
+            let (dir, store) = production_test_store("expired-message-reclaim");
+            let store_path = dir.join("store.db");
+            let scope = EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile"));
+            let mut record_ids = Vec::new();
+
+            for index in 0_u16..32 {
+                let record_id =
+                    EncryptedRecordId::new(format!("expired_{index:04}")).expect("record id");
+                let mut body = vec![0_u8; 8192];
+                let last = body.len() - 1;
+                body[0] = index as u8;
+                body[last] = (index / 2) as u8;
+                let record = EncryptedRecord::new(
+                    ProductionRecordKind::MessageEnvelope,
+                    scope.clone(),
+                    vec![index as u8; 12],
+                    body,
+                )
+                .expect("record");
+                store.put(&record_id, &record).expect("put");
+                record_ids.push(record_id);
+            }
+
+            let before_delete = measure_storage_budget(&store_path).expect("measure before delete");
+            for record_id in &record_ids {
+                store.delete(record_id).expect("delete");
+            }
+            let after_delete = measure_storage_budget(&store_path).expect("measure after delete");
+            assert!(after_delete.total_bytes() >= before_delete.total_bytes());
+            assert!(store
+                .reclaim_deleted_pages_if_needed()
+                .expect("reclaim deleted pages"));
+            drop(store);
+            let after_reclaim = measure_storage_budget(&store_path).expect("measure after reclaim");
+            assert!(after_reclaim.total_bytes() < after_delete.total_bytes());
+            let _ = std::fs::remove_dir_all(dir);
+        }
+
+        #[test]
         fn production_profile_passphrase_rekey_changes_unlock_secret_without_runtime() {
             let dir = std::env::temp_dir().join(format!(
                 "another-dimension-production-profile-rekey-{}-{:?}",
@@ -33139,6 +33199,8 @@ pub mod production {
                 Err(ProductionSessionError::UnexpectedEnvelope)
             ));
 
+            let outbound_budget_before_delete =
+                measure_storage_budget(outbound_store).expect("measure outbound budget before delete");
             let conversation_delete = production_conversation_delete(
                 outbound_store,
                 outbound_profile.clone(),
@@ -33162,6 +33224,11 @@ pub mod production {
                 production_message_transcript_export(outbound_store, outbound_profile, &passphrase)
                     .expect("empty transcript after conversation delete");
             assert!(empty_transcript.entries().is_empty());
+            let outbound_budget_after_delete =
+                measure_storage_budget(outbound_store).expect("measure outbound budget after delete");
+            assert!(
+                outbound_budget_after_delete.total_bytes() <= outbound_budget_before_delete.total_bytes()
+            );
 
             let lifecycle_before_delete = production_pairing_session_lifecycle_status(
                 &alice_store,
@@ -33182,6 +33249,8 @@ pub mod production {
             assert!(!lifecycle_before_delete.transport_io_opened());
             assert!(!lifecycle_before_delete.runtime_messaging_enabled());
 
+            let alice_budget_before_delete =
+                measure_storage_budget(&alice_store).expect("measure alice budget before delete");
             let lifecycle_delete =
                 production_pairing_session_delete(&alice_store, alice.clone(), &passphrase)
                     .expect("session lifecycle delete");
@@ -33200,6 +33269,11 @@ pub mod production {
             assert!(!lifecycle_delete.key_material_exposed());
             assert!(!lifecycle_delete.transport_io_opened());
             assert!(!lifecycle_delete.runtime_messaging_enabled());
+            let alice_budget_after_delete =
+                measure_storage_budget(&alice_store).expect("measure alice budget after delete");
+            assert!(
+                alice_budget_after_delete.total_bytes() <= alice_budget_before_delete.total_bytes()
+            );
 
             let lifecycle_after_delete = production_pairing_session_lifecycle_status(
                 &alice_store,
