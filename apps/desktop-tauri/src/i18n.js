@@ -944,6 +944,13 @@ const dictionaries = {
     checkBothSessions: "Check both sessions",
     productionProfile: "Local profile",
     persistentLocalStore: "Persistent local store",
+    storageBudgetNormal: "Storage budget normal; no cleanup needed now.",
+    storageBudgetCleanupRecommended:
+      "Storage cleanup recommended; delete conversation data or wipe local app data soon.",
+    storageBudgetAtCap:
+      "Storage cap reached; delete conversation data or wipe local app data before more writes.",
+    storageBudgetHiddenWhileLocked:
+      "Profile storage budget stays hidden while locked. Unlock to check encrypted local store status.",
     deviceNickname: "This device nickname",
     resetRandomNickname: "Reset random nickname",
     unlockProfile: "Unlock profile",
@@ -2121,6 +2128,13 @@ const dictionaries = {
     checkBothSessions: "양쪽 세션 확인",
     productionProfile: "로컬 프로필",
     persistentLocalStore: "암호화 로컬 저장소",
+    storageBudgetNormal: "저장공간 예산은 정상입니다. 지금은 정리가 필요하지 않습니다.",
+    storageBudgetCleanupRecommended:
+      "저장공간 정리를 권장합니다. 곧 대화 삭제 또는 전체 로컬 데이터 삭제를 사용하세요.",
+    storageBudgetAtCap:
+      "저장공간 상한에 도달했습니다. 추가 쓰기 전에 대화 데이터 삭제 또는 전체 로컬 데이터 삭제를 실행하세요.",
+    storageBudgetHiddenWhileLocked:
+      "잠금 상태에서는 프로필 저장공간 예산을 숨깁니다. 암호화된 로컬 저장소 상태는 잠금 해제 후 확인하세요.",
     deviceNickname: "이 기기 닉네임",
     resetRandomNickname: "무작위 닉네임 재설정",
     unlockProfile: "프로필 열기",

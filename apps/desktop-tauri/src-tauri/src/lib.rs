@@ -76,6 +76,94 @@ fn production_app_cache_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf
         .map_err(|_| "failed to resolve app cache directory".to_string())
 }
 
+const PRODUCTION_APP_DATA_BUDGET_CAP_BYTES: u64 = 256 * 1024 * 1024;
+
+#[derive(Clone, Copy)]
+enum ProductionAppStorageBudgetStatus {
+    WithinLimit,
+    CleanupRecommended,
+    AtCap,
+}
+
+impl ProductionAppStorageBudgetStatus {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::WithinLimit => "within-limit",
+            Self::CleanupRecommended => "cleanup-recommended",
+            Self::AtCap => "at-cap",
+        }
+    }
+}
+
+fn owned_app_storage_budget_status(
+    app_data_root: &std::path::Path,
+    app_cache_root: &std::path::Path,
+) -> Result<ProductionAppStorageBudgetStatus, String> {
+    let total_bytes = owned_app_storage_bytes(app_data_root, app_cache_root)?;
+    let cleanup_threshold = PRODUCTION_APP_DATA_BUDGET_CAP_BYTES.saturating_mul(4) / 5;
+    Ok(if total_bytes >= PRODUCTION_APP_DATA_BUDGET_CAP_BYTES {
+        ProductionAppStorageBudgetStatus::AtCap
+    } else if total_bytes >= cleanup_threshold {
+        ProductionAppStorageBudgetStatus::CleanupRecommended
+    } else {
+        ProductionAppStorageBudgetStatus::WithinLimit
+    })
+}
+
+fn owned_app_storage_bytes(
+    app_data_root: &std::path::Path,
+    app_cache_root: &std::path::Path,
+) -> Result<u64, String> {
+    let owned_paths = [
+        app_data_root.join("profiles"),
+        app_data_root.join("transport"),
+        app_data_root.join(DATA_LIFECYCLE_DIR),
+        app_cache_root.join("transport"),
+    ];
+    let mut total_bytes = 0_u64;
+    for path in owned_paths {
+        total_bytes = total_bytes
+            .checked_add(owned_path_bytes(&path)?)
+            .ok_or_else(|| "owned app data budget overflow".to_string())?;
+    }
+    Ok(total_bytes)
+}
+
+fn owned_path_bytes(path: &std::path::Path) -> Result<u64, String> {
+    if !path.exists() {
+        return Ok(0);
+    }
+    let metadata = std::fs::symlink_metadata(path).map_err(|_| "failed to inspect owned path")?;
+    if metadata.is_file() {
+        return Ok(metadata.len());
+    }
+    if !metadata.is_dir() {
+        return Ok(0);
+    }
+    let mut total_bytes = 0_u64;
+    for entry in std::fs::read_dir(path).map_err(|_| "failed to read owned directory")? {
+        let entry = entry.map_err(|_| "failed to read owned directory entry")?;
+        total_bytes = total_bytes
+            .checked_add(owned_path_bytes(&entry.path())?)
+            .ok_or_else(|| "owned app data budget overflow".to_string())?;
+    }
+    Ok(total_bytes)
+}
+
+fn profile_storage_budget_status_tag(
+    status: another_dimension_core::production::ProductionStorageBudgetStatusKind,
+) -> &'static str {
+    match status {
+        another_dimension_core::production::ProductionStorageBudgetStatusKind::WithinLimit => {
+            "within-limit"
+        }
+        another_dimension_core::production::ProductionStorageBudgetStatusKind::CleanupRecommended => {
+            "cleanup-recommended"
+        }
+        another_dimension_core::production::ProductionStorageBudgetStatusKind::AtCap => "at-cap",
+    }
+}
+
 #[cfg(debug_assertions)]
 fn dev_rendezvous_dir() -> Option<std::path::PathBuf> {
     if let Ok(path) = std::env::var("ANOTHER_DIMENSION_DEV_RENDEZVOUS_DIR") {
@@ -954,6 +1042,9 @@ pub struct ProductionProfileUnlockResult {
     identity_created: bool,
     identity_private_key_present: bool,
     identity_public_key_derivable: bool,
+    profile_storage_budget_status: &'static str,
+    profile_storage_cleanup_recommended: bool,
+    profile_storage_at_cap: bool,
     store_path_returned: bool,
     passphrase_retained: bool,
     key_material_exposed: bool,
@@ -1212,6 +1303,9 @@ pub struct ProductionDataLifecycleResult {
     profile_count: usize,
     profiles_present: bool,
     transport_data_present: bool,
+    app_storage_budget_status: &'static str,
+    app_storage_cleanup_recommended: bool,
+    app_storage_at_cap: bool,
     lifecycle_marker_present: bool,
     lifecycle_marker_written: bool,
     backup_exclusion_checked: bool,
@@ -4296,6 +4390,7 @@ fn run_production_profile_unlock(
     passphrase: String,
 ) -> Result<ProductionProfileUnlockResult, String> {
     use another_dimension_core::production::{
+        production_storage_budget_status,
         production_profile_identity_init, production_profile_identity_status,
         production_profile_init, production_profile_status,
     };
@@ -4322,6 +4417,8 @@ fn run_production_profile_unlock(
     };
     let profile_status = production_profile_status(&store_path, profile.clone(), &passphrase)
         .map_err(|_| "profile status failed")?;
+    let storage_budget_status =
+        production_storage_budget_status(&store_path).map_err(|_| "storage budget status failed")?;
     let profile_storage_opened = profile_status.storage_opened();
     let profile_marker_present = profile_status.profile_marker_present();
     let profile_key_material_exposed = profile_status.key_material_exposed();
@@ -4357,6 +4454,16 @@ fn run_production_profile_unlock(
         identity_created,
         identity_private_key_present,
         identity_public_key_derivable,
+        profile_storage_budget_status: profile_storage_budget_status_tag(storage_budget_status.status()),
+        profile_storage_cleanup_recommended: matches!(
+            storage_budget_status.status(),
+            another_dimension_core::production::ProductionStorageBudgetStatusKind::CleanupRecommended
+                | another_dimension_core::production::ProductionStorageBudgetStatusKind::AtCap
+        ),
+        profile_storage_at_cap: matches!(
+            storage_budget_status.status(),
+            another_dimension_core::production::ProductionStorageBudgetStatusKind::AtCap
+        ),
         store_path_returned: false,
         passphrase_retained: false,
         key_material_exposed: profile_key_material_exposed || identity_key_material_exposed,
@@ -9143,6 +9250,8 @@ fn run_production_data_lifecycle_status(
 ) -> Result<ProductionDataLifecycleResult, String> {
     let app_data_root = app_data_root.as_ref();
     let app_cache_root = app_cache_root.as_ref();
+    let app_storage_budget_status =
+        owned_app_storage_budget_status(app_data_root, app_cache_root)?;
     let lifecycle_dir = app_data_root.join(DATA_LIFECYCLE_DIR);
     let lifecycle_marker = lifecycle_dir.join(DATA_LIFECYCLE_MARKER);
     let migration_marker = lifecycle_dir.join(DATA_LIFECYCLE_MIGRATION_MARKER);
@@ -9221,6 +9330,13 @@ fn run_production_data_lifecycle_status(
         profile_count,
         profiles_present: profile_count > 0,
         transport_data_present,
+        app_storage_budget_status: app_storage_budget_status.as_str(),
+        app_storage_cleanup_recommended: matches!(
+            app_storage_budget_status,
+            ProductionAppStorageBudgetStatus::CleanupRecommended
+                | ProductionAppStorageBudgetStatus::AtCap
+        ),
+        app_storage_at_cap: matches!(app_storage_budget_status, ProductionAppStorageBudgetStatus::AtCap),
         lifecycle_marker_present: lifecycle_marker.exists(),
         lifecycle_marker_written,
         backup_exclusion_checked,
@@ -9279,6 +9395,8 @@ fn run_production_full_local_data_wipe(
     let transport_removed = remove_owned_file_or_dir(&app_data_root.join("transport"))?;
     let _lifecycle_removed = remove_owned_file_or_dir(&app_data_root.join(DATA_LIFECYCLE_DIR))?;
     let cache_removed = remove_owned_file_or_dir(&app_cache_root.join("transport"))?;
+    let app_storage_budget_status =
+        owned_app_storage_budget_status(app_data_root, app_cache_root)?;
 
     Ok(ProductionDataLifecycleResult {
         warning: "owned local profile, transport, lifecycle, and transport-cache data removed; secure deletion from media is not claimed",
@@ -9286,6 +9404,13 @@ fn run_production_full_local_data_wipe(
         profiles_present: app_data_root.join("profiles").exists(),
         transport_data_present: app_data_root.join("transport").exists()
             || app_cache_root.join("transport").exists(),
+        app_storage_budget_status: app_storage_budget_status.as_str(),
+        app_storage_cleanup_recommended: matches!(
+            app_storage_budget_status,
+            ProductionAppStorageBudgetStatus::CleanupRecommended
+                | ProductionAppStorageBudgetStatus::AtCap
+        ),
+        app_storage_at_cap: matches!(app_storage_budget_status, ProductionAppStorageBudgetStatus::AtCap),
         lifecycle_marker_present: false,
         lifecycle_marker_written: false,
         backup_exclusion_checked: false,
@@ -16909,6 +17034,9 @@ replay check: no replayed messages after message 2
         assert!(result.identity_created);
         assert!(result.identity_private_key_present);
         assert!(result.identity_public_key_derivable);
+        assert_eq!(result.profile_storage_budget_status, "within-limit");
+        assert!(!result.profile_storage_cleanup_recommended);
+        assert!(!result.profile_storage_at_cap);
         assert!(!result.store_path_returned);
         assert!(!result.passphrase_retained);
         assert!(!result.key_material_exposed);
@@ -16973,6 +17101,28 @@ replay check: no replayed messages after message 2
         assert!(!serialized.contains("/tmp"));
         assert!(!serialized.contains("profiles"));
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn production_storage_budget_status_is_redacted_in_data_lifecycle_results() {
+        let root = unique_production_roundtrip_dir().expect("temp root");
+        let cache = unique_production_roundtrip_dir().expect("temp cache");
+        std::fs::create_dir_all(root.join("transport")).expect("create transport dir");
+        std::fs::File::create(root.join("transport").join("budget.bin"))
+            .expect("create budget file")
+            .set_len((crate::PRODUCTION_APP_DATA_BUDGET_CAP_BYTES / 5) * 4)
+            .expect("set budget file len");
+
+        let result = run_production_data_lifecycle_status(&root, &cache, false)
+            .expect("data lifecycle status");
+        assert_eq!(result.app_storage_budget_status, "cleanup-recommended");
+        assert!(result.app_storage_cleanup_recommended);
+        assert!(!result.app_storage_at_cap);
+        assert!(!result.store_path_returned);
+        assert!(!result.key_material_exposed);
+
+        let _ = std::fs::remove_dir_all(root);
+        let _ = std::fs::remove_dir_all(cache);
     }
 
     #[test]
