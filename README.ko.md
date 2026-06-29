@@ -50,6 +50,21 @@ npm --prefix apps/desktop-tauri run tauri:build:beta-onion
 이 source build 경로는 app 번들 전용이며, 다운로드한 GitHub Release DMG에
 의존하지 않습니다.
 
+이 경로의 저장공간 계약은 다음과 같습니다.
+
+- clean build 도중에는 Rust/Tauri 임시 공간이 500MB를 넘을 수 있지만,
+  그 임시 target 데이터는 checkout 밖에서만 만들어지고 빌드 종료 후
+  삭제됩니다.
+- 빌드가 끝난 뒤 저장소 checkout 자체는 500MB 이하를 유지해야 하며,
+  영구적인 `target/`, `src-tauri/target/`, `.build-cache/`가 남지 않아야
+  합니다.
+- 런타임 앱 소유 데이터 예산은 checkout과 별개입니다. 현재 로컬 runtime
+  목표는 앱 데이터 총합 256MB이며, 프로필별 암호화 저장소 쓰기는 128MB로
+  제한됩니다.
+- 전역 Rust toolchain, Cargo registry/cache, 공유 npm dependency 다운로드는
+  다른 프로젝트와 공유되는 머신 단위 개발 비용이므로 checkout 500MB
+  예산에 포함하지 않습니다.
+
 재현 가능한 빌드 기준은
 [macOS 재현성 빌드 노트](REPRODUCIBLE_BUILD_MACOS.md)를 보세요.
 
