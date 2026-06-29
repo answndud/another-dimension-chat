@@ -24,12 +24,13 @@ pub mod production {
     use another_dimension_storage::production::{
         production_emergency_local_wipe_decision, production_message_storage_boundary_summary,
         production_storage_migration_redaction_boundary_summary, protection_for,
-        require_encrypted_record_allowed, require_persistence_allowed, EncryptedRecord,
+        require_encrypted_record_allowed, require_persistence_allowed, measure_storage_budget,
+        EncryptedRecord,
         EncryptedRecordId, EncryptedRecordScope, LocalProfileRecoveryFailureKind,
         LockedProfileStore, ProductionRecordKind, ProductionStorageError,
         ProductionStoragePolicyError, ProfilePassphrase, ProfileStoreUnlockFailureKind,
         ReplayRollbackProtection, SqlCipherRecordStore, StorageBackendKind, StorageProtection,
-        UnlockFactor, UnlockMode, UnlockRequest,
+        UnlockFactor, UnlockMode, UnlockRequest, PRODUCTION_PROFILE_STORAGE_CAP_BYTES,
     };
     use another_dimension_transport::{
         high_risk_onion_runtime_evidence_summary,
@@ -14916,6 +14917,78 @@ pub mod production {
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
+        })
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionStorageBudgetStatusKind {
+        WithinLimit,
+        CleanupRecommended,
+        AtCap,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionStorageBudgetStatus {
+        database_bytes: u64,
+        wal_bytes: u64,
+        shm_bytes: u64,
+        journal_bytes: u64,
+        total_bytes: u64,
+        cap_bytes: u64,
+        status: ProductionStorageBudgetStatusKind,
+    }
+
+    impl ProductionStorageBudgetStatus {
+        pub fn database_bytes(self) -> u64 {
+            self.database_bytes
+        }
+
+        pub fn wal_bytes(self) -> u64 {
+            self.wal_bytes
+        }
+
+        pub fn shm_bytes(self) -> u64 {
+            self.shm_bytes
+        }
+
+        pub fn journal_bytes(self) -> u64 {
+            self.journal_bytes
+        }
+
+        pub fn total_bytes(self) -> u64 {
+            self.total_bytes
+        }
+
+        pub fn cap_bytes(self) -> u64 {
+            self.cap_bytes
+        }
+
+        pub fn status(self) -> ProductionStorageBudgetStatusKind {
+            self.status
+        }
+    }
+
+    pub fn production_storage_budget_status(
+        store_path: impl AsRef<std::path::Path>,
+    ) -> Result<ProductionStorageBudgetStatus, ProductionSessionError> {
+        let measurement = measure_storage_budget(store_path.as_ref())?;
+        let cap_bytes = PRODUCTION_PROFILE_STORAGE_CAP_BYTES;
+        let cleanup_threshold = cap_bytes.saturating_mul(4) / 5;
+        let status = if measurement.total_bytes() >= cap_bytes {
+            ProductionStorageBudgetStatusKind::AtCap
+        } else if measurement.total_bytes() >= cleanup_threshold {
+            ProductionStorageBudgetStatusKind::CleanupRecommended
+        } else {
+            ProductionStorageBudgetStatusKind::WithinLimit
+        };
+        Ok(ProductionStorageBudgetStatus {
+            database_bytes: measurement.database_bytes(),
+            wal_bytes: measurement.wal_bytes(),
+            shm_bytes: measurement.shm_bytes(),
+            journal_bytes: measurement.journal_bytes(),
+            total_bytes: measurement.total_bytes(),
+            cap_bytes,
+            status,
         })
     }
 
@@ -31035,6 +31108,46 @@ pub mod production {
             assert!(!present.key_material_exposed());
             assert!(!present.transport_io_opened());
             assert!(!present.runtime_messaging_enabled());
+
+            let _ = std::fs::remove_dir_all(dir);
+        }
+
+        #[test]
+        fn production_storage_budget_status_reports_database_and_sqlite_sidecars() {
+            let dir = std::env::temp_dir().join(format!(
+                "another-dimension-production-storage-budget-{}-{:?}",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+            if dir.exists() {
+                std::fs::remove_dir_all(&dir).expect("remove stale dir");
+            }
+            std::fs::create_dir_all(&dir).expect("create dir");
+            let store_path = dir.join("profile.db");
+            std::fs::write(&store_path, vec![1_u8; 13]).expect("write db");
+            std::fs::write(format!("{}-wal", store_path.display()), vec![2_u8; 7])
+                .expect("write wal");
+            std::fs::write(format!("{}-shm", store_path.display()), vec![3_u8; 5])
+                .expect("write shm");
+            std::fs::write(format!("{}-journal", store_path.display()), vec![4_u8; 3])
+                .expect("write journal");
+
+            let status = production_storage_budget_status(&store_path)
+                .expect("storage budget status");
+
+            assert_eq!(status.database_bytes(), 13);
+            assert_eq!(status.wal_bytes(), 7);
+            assert_eq!(status.shm_bytes(), 5);
+            assert_eq!(status.journal_bytes(), 3);
+            assert_eq!(status.total_bytes(), 28);
+            assert_eq!(
+                status.cap_bytes(),
+                another_dimension_storage::production::PRODUCTION_PROFILE_STORAGE_CAP_BYTES
+            );
+            assert_eq!(
+                status.status(),
+                ProductionStorageBudgetStatusKind::WithinLimit
+            );
 
             let _ = std::fs::remove_dir_all(dir);
         }
