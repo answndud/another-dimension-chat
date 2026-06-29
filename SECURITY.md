@@ -5,15 +5,15 @@
 Another Dimension Chat is not ready for real communication.
 
 The current macOS release is a source-build-primary experimental public beta
-with an optional unsigned DMG fallback. It is not signed, not notarized, not
-audited, not production-ready, and not for sensitive communication. It is not
-a secure messenger release.
+with a legacy unsigned DMG fallback for explicit optional use. It is not
+signed, not notarized, not audited, not production-ready, and not for
+sensitive communication. It is not a secure messenger release.
 
 ## Supported Public Build
 
 | Platform | Public status |
 |----------|---------------|
-| macOS Apple Silicon | Source-build primary, legacy unsigned DMG fallback |
+| macOS Apple Silicon | source-build-primary, legacy unsigned DMG fallback |
 | Windows | No public app yet |
 | Android / iOS | No public app yet |
 
@@ -491,10 +491,10 @@ Completed field-test reports must not include bridge lines, onion endpoints, inv
 
 ## Source Build Primary Boundary
 
-The public macOS distribution path is now source build primary, with an
-optional unsigned GitHub DMG convenience path for people who explicitly want
-it. It is not signed, not notarized, not audited, not production-ready, and
-sensitive communication prohibited.
+The public macOS distribution path is source-build-primary, with a legacy
+unsigned GitHub DMG convenience path for people who explicitly want it. It is
+not signed, not notarized, not audited, not production-ready, and sensitive
+communication prohibited.
 
 Apple Developer Program, Developer ID, notarization, App Store, and TestFlight
 credentials are not used or required for the source-build primary path or the

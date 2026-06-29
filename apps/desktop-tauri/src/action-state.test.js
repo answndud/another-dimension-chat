@@ -129,7 +129,7 @@ test("invite identity boundary stays accountless and redacted", () => {
   assert.match(boundary, /pairwise_profiles_derived=true/);
   assert.match(boundary, /invite_code_sensitive=true/);
   assert.match(boundary, /invite_code_in_diagnostics=false/);
-  assert.match(boundary, /qr_required=false/);
+  assert.match(boundary, /qr_supported=false/);
   assert.doesNotMatch(boundary, /ABCD-2345|inviter-abcd|joiner-abcd/);
 });
 

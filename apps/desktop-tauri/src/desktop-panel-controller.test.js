@@ -27,6 +27,7 @@ function createPanel() {
     open: false,
     listeners: new Map(),
     insideTarget: null,
+    scrollIntoView() {},
     addEventListener(type, handler) {
       this.listeners.set(type, handler);
     },
@@ -40,6 +41,7 @@ function createDocumentHarness() {
   const chatPanel = createPanel();
   const systemPanel = createPanel();
   const systemSummary = createButton();
+  const developerDetails = createPanel();
   const body = {
     classes: new Set(),
     classList: {
@@ -58,6 +60,7 @@ function createDocumentHarness() {
     chatPanel,
     systemPanel,
     systemSummary,
+    developerDetails,
     keydownListeners,
     pointerdownListeners,
     document: {
@@ -71,6 +74,9 @@ function createDocumentHarness() {
         }
         if (selector === ".system-settings-panel > summary") {
           return systemSummary;
+        }
+        if (selector === ".boundary-details") {
+          return developerDetails;
         }
         return null;
       },
@@ -93,6 +99,7 @@ test("bindPanelControls wires toggle, close, and utility buttons", () => {
     closeChatSettings: createButton(),
     openPrivateDeliverySettings: createButton(),
     closeAppSettings: createButton(),
+    openPublicBetaDetails: createButton(),
     openDeveloperTools: createButton(),
   };
   let openedManualTools = 0;
@@ -135,7 +142,8 @@ test("bindPanelControls wires toggle, close, and utility buttons", () => {
   fields.toggleChatSettings.listeners.get("click")();
   fields.closeChatSettings.listeners.get("click")();
   fields.openPrivateDeliverySettings.listeners.get("click")();
-  fields.closeAppSettings.listeners.get("click")();
+  fields.closeAppSettings.listeners.get("click")({ preventDefault() {} });
+  fields.openPublicBetaDetails.listeners.get("click")();
   fields.openDeveloperTools.listeners.get("click")();
 
   assert.equal(fields.toggleChatSettings.attrs.get("aria-expanded"), "false");
@@ -143,6 +151,7 @@ test("bindPanelControls wires toggle, close, and utility buttons", () => {
   assert.equal(openedManualTools, 1);
   assert.equal(harness.systemSummary.focused, true);
   assert.equal(fields.openPrivateDeliverySettings.focused, false);
+  assert.equal(harness.developerDetails.open, true);
 });
 
 test("Escape and outside pointer close open panels", () => {

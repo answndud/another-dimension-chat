@@ -48,6 +48,8 @@ npm --prefix apps/desktop-tauri run tauri:build:beta-onion
 
 The built app bundle is under
 `apps/desktop-tauri/src-tauri/target/release/bundle/macos/Another Dimension Chat.app`.
+This source-build path is app-bundle only; it does not rely on a downloadable
+GitHub Release DMG.
 
 For reproducible build details, see
 [Reproducible build notes for macOS](REPRODUCIBLE_BUILD_MACOS.md).

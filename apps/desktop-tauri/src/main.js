@@ -86,14 +86,6 @@ import {
   messageEnvelopeSlotPayload,
   messageEnvelopeSlotRecoveryHint,
 } from "./message-envelope-slots.js";
-import {
-  buildInviteQrSvgDataUrl,
-  canImportInviteQr,
-  decodeInviteQrFile,
-  inviteQrImportAvailability,
-  normalizeInviteQrPayload,
-} from "./invite-qr.js";
-import { createInviteQrController } from "./invite-qr-controller.js";
 import { createDiagnosticsCopyController } from "./diagnostics-copy-controller.js";
 import { createDiagnosticsReportController } from "./diagnostics-report-controller.js";
 import { createDesktopPanelController } from "./desktop-panel-controller.js";
@@ -343,8 +335,7 @@ const fields = {
   simulationReplay: document.querySelector("#simulation-replay"),
   productionProfileSelector: document.querySelector("#production-profile-selector"),
   productionProfileName: document.querySelector("#production-profile-name"),
-  useAliceProductionProfile: document.querySelector("#use-alice-production-profile"),
-  useBobProductionProfile: document.querySelector("#use-bob-production-profile"),
+  resetRandomProductionProfile: document.querySelector("#reset-random-production-profile"),
   productionProfilePassphrase: document.querySelector("#production-profile-passphrase"),
   unlockProductionProfile: document.querySelector("#unlock-production-profile"),
   lockProductionProfile: document.querySelector("#lock-production-profile"),
@@ -479,22 +470,17 @@ const fields = {
   closeChatSettings: document.querySelector("#close-chat-settings"),
   openPrivateDeliverySettings: document.querySelector("#open-private-delivery-settings"),
   closeAppSettings: document.querySelector("#close-app-settings"),
+  openPublicBetaDetails: document.querySelector("#open-public-beta-details"),
   openDeveloperTools: document.querySelector("#open-developer-tools"),
   createInviteCode: document.querySelector("#create-invite-code"),
   createInviteCodeSettings: document.querySelector("#create-invite-code-settings"),
   createdInviteCodeDisplay: document.querySelector("#created-invite-code-display"),
-  showCreatedInviteQr: document.querySelector("#show-created-invite-qr"),
-  hideInviteQr: document.querySelector("#hide-invite-qr"),
-  inviteQrPanel: document.querySelector("#invite-qr-panel"),
-  inviteQrImage: document.querySelector("#invite-qr-image"),
   createdInviteSummary: document.querySelector("#created-invite-summary"),
   createdInviteLocalProfile: document.querySelector("#created-invite-local-profile"),
   createdInvitePeerLabel: document.querySelector("#created-invite-peer-label"),
   createdInviteManualInstruction: document.querySelector("#created-invite-manual-instruction"),
   copyCreatedInviteCode: document.querySelector("#copy-created-invite-code"),
   receivedInviteCode: document.querySelector("#received-invite-code"),
-  importReceivedInviteQr: document.querySelector("#import-received-invite-qr"),
-  receivedInviteQrFile: document.querySelector("#received-invite-qr-file"),
   createRoomFromReceivedCode: document.querySelector("#create-room-from-received-code"),
   copyInviteCode: document.querySelector("#copy-invite-code"),
   settingsInviteCodeDisplay: document.querySelector("#settings-invite-code-display"),
@@ -650,7 +636,6 @@ const fields = {
   loopReplay: document.querySelector("#loop-replay"),
   loopExpiry: document.querySelector("#loop-expiry"),
   loopStorage: document.querySelector("#loop-storage"),
-  demoOutput: document.querySelector("#demo-output"),
 };
 
 let latestSimulation = null;
@@ -3120,6 +3105,7 @@ function closeAppSettingsPanel() {
   const panel = document.querySelector(".system-settings-panel");
   if (panel) {
     panel.open = false;
+    panel.removeAttribute("open");
   }
   document.body.classList.remove("is-app-settings-open");
 }
@@ -3772,7 +3758,55 @@ function activeProductionProfileName() {
   return (fields.productionProfileName?.value ?? "").trim().toLowerCase();
 }
 
+function normalizeInviteCode(value) {
+  return String(value ?? "").trim();
+}
+
+function generateRandomNickname() {
+  const alphabet = "abcdefghijklmnopqrstuvwxyz";
+  const bytes = new Uint8Array(16);
+  if (!window.crypto?.getRandomValues) {
+    return `anon-${Date.now().toString(36).slice(-8)}`;
+  }
+  window.crypto.getRandomValues(bytes);
+  let left = "";
+  let right = "";
+  for (let index = 0; index < 3; index += 1) {
+    left += alphabet[bytes[index] % alphabet.length];
+  }
+  for (let index = 3; index < 9; index += 1) {
+    right += alphabet[bytes[index] % alphabet.length];
+  }
+  return `${left}-${right}`;
+}
+
+function applyRandomProductionProfileName(options = {}) {
+  if (!fields.productionProfileName) {
+    return "";
+  }
+  const nextName = generateRandomNickname();
+  fields.productionProfileName.value = nextName;
+  if (fields.productionProfileSelector && options.keepSelector !== true) {
+    fields.productionProfileSelector.value = "";
+  }
+  clearStaleManualRemotePayloadInputs();
+  if (options.announce !== false) {
+    setText(fields.productionProfileWarning, `Random nickname ready: ${nextName}`);
+    setText(fields.productionProfileNextAction, t("nextEnterProfilePassphrase"));
+  }
+  applyProductionActionState();
+  return nextName;
+}
+
+function ensureProductionProfileName() {
+  if (activeProductionProfileName()) {
+    return activeProductionProfileName();
+  }
+  return applyRandomProductionProfileName({ announce: false });
+}
+
 function productionProfileInput() {
+  ensureProductionProfileName();
   return {
     profile: (fields.productionProfileName?.value ?? "").trim().toLowerCase(),
     passphrase: fields.productionProfilePassphrase?.value ?? "",
@@ -6155,14 +6189,8 @@ function renderCurrentInviteCodeDisplay() {
   renderConnectionDeviceRole();
   document.body.classList.toggle("has-copied-invite-code", copiedCurrentInviteCode);
   fields.copyInviteCode?.toggleAttribute("disabled", !code);
-  fields.showCreatedInviteQr?.toggleAttribute("disabled", !(code && inviterCode));
   fields.copyCreatedInviteCode?.toggleAttribute("disabled", !(code && inviterCode));
   fields.copyRoomInviteToken?.toggleAttribute("disabled", !(code && inviterCode));
-  if (!inviterCode || !inviteQrController.isInviteQrVisible()) {
-    inviteQrController.closeInviteQrPanel();
-  } else {
-    inviteQrController.setInviteQrPanel(code, true);
-  }
   renderSavedInviteRooms();
 }
 
@@ -6215,37 +6243,17 @@ function renderConnectionDeviceRole() {
 }
 
 function renderReceivedInviteCodeActionState() {
-  const code = (fields.receivedInviteCode?.value ?? "").trim();
-  const qrImport = inviteQrImportAvailability();
+  const code = normalizeInviteCode(fields.receivedInviteCode?.value);
   if (fields.createRoomFromReceivedCode) {
     fields.createRoomFromReceivedCode.disabled = !code;
     fields.createRoomFromReceivedCode.title = code ? t("roomActionCreate") : t("inviteCodeMissing");
   }
-  if (fields.importReceivedInviteQr) {
-    fields.importReceivedInviteQr.disabled = !qrImport.supported;
-    fields.importReceivedInviteQr.title = qrImport.supported ? t("importInviteQr") : t("inviteQrImportUnavailable");
-  }
-  const roomListCode = (fields.roomListInviteCode?.value ?? "").trim();
+  const roomListCode = normalizeInviteCode(fields.roomListInviteCode?.value);
   if (fields.roomListJoinRoom) {
     fields.roomListJoinRoom.disabled = !roomListCode;
     fields.roomListJoinRoom.title = roomListCode ? t("roomActionCreate") : t("inviteCodeMissing");
   }
 }
-
-const inviteQrController = createInviteQrController({
-  fields,
-  t,
-  normalizeInviteQrPayload,
-  buildInviteQrSvgDataUrl,
-  canImportInviteQr,
-  decodeInviteQrFile,
-  connectionCodeRoleFor,
-  getCurrentInviteCodeShareVisible: () => currentInviteCodeShareVisible,
-  setProductionTwoProfileState,
-  setText,
-  renderReceivedInviteCodeActionState,
-  createRoomFromReceivedInviteCode,
-});
 
 const diagnosticsReportController = createDiagnosticsReportController({
   fields,
@@ -7734,7 +7742,6 @@ function clearCurrentInviteRoomInput() {
     fields.receivedInviteCode.value = "";
   }
   restorePrivateRouteExchangeForRoom(productionTwoProfileInput());
-  inviteQrController.closeInviteQrPanel();
   renderCurrentInviteCodeDisplay();
   renderProductionTwoProfileDirection(productionTwoProfileInput());
   updateMinimalChatMode(productionTwoProfileInput(), false);
@@ -12834,26 +12841,10 @@ function applyProductionActionState() {
   const currentSessionDraftPresent = latestProductionSessionStateForInput(pairing)?.session_draft_present;
   const manualPrimaryActions = productionManualPrimaryActions(state);
   const plaintextReviewPending = Boolean(hasImportedMessage && !hasReceivedMessage);
-  const composerPrimaryBlockedByPlaintextReview = Boolean(plaintextReviewPending,);
-  setText(fields.productionTwoProfileWarning, "Click Show plaintext before writing or sending a reply.");
-  renderManualEnvelopePanel({
-    slotMismatchReason: activePeerEnvelopeSlotMismatchReason,
-  });
   const replyComposerCurrent = Boolean(
     twoProfileCurrentAction === "compose" ||
       (state.hasTwoProfileReplySelected && !state.hasTwoProfileReplyDraftInput && !plaintextReviewPending),
   );
-  const manualCurrentActions = productionManualRelayCurrentActions(manualAvailability, {
-    hasFinishImportInput,
-    hasHandshakeFinishInput,
-    hasHandshakeReplyInput,
-    hasInboundEnvelopeInput,
-    hasRemotePairingInput,
-    selectedNeedsPeerImport,
-  });
-  if (!composerPrimaryBlockedByPlaintextReview && manualPrimaryActions.sendReply) {
-    manualPrimaryActions.sendReply();
-  }
   const twoProfileComposeLocked =
     productionBusyActionIsForInput("two-profile-roundtrip", twoProfile) ||
     productionBusyActionIsForInput("two-profile-message-roundtrip", twoProfile) ||
@@ -14689,7 +14680,6 @@ if (fields.createInviteCode) {
 if (fields.createInviteCodeSettings) {
   fields.createInviteCodeSettings.addEventListener("click", createInviteCode);
 }
-inviteQrController.bindInviteQrControls();
 
 if (fields.copyInviteCode) {
   fields.copyInviteCode.addEventListener("click", () => {
@@ -14799,20 +14789,16 @@ if (fields.productionProfileSelector) {
       resetProductionMessageView();
       applyTwoProfilePairFromProfile(selectedProfile);
       applyProductionActionState();
+      return;
     }
+    applyRandomProductionProfileName();
   });
 }
 
-if (fields.useAliceProductionProfile) {
-  fields.useAliceProductionProfile.addEventListener("click", () =>
-    applyProductionProfilePreset("alice"),
-  );
-}
-
-if (fields.useBobProductionProfile) {
-  fields.useBobProductionProfile.addEventListener("click", () =>
-    applyProductionProfilePreset("bob"),
-  );
+if (fields.resetRandomProductionProfile) {
+  fields.resetRandomProductionProfile.addEventListener("click", () => {
+    applyRandomProductionProfileName();
+  });
 }
 
 for (const input of [
@@ -15487,6 +15473,7 @@ resetProductionMessageView();
 resetProductionTwoProfileView();
 resetProductionRoundtripView();
 resetLoopView();
+ensureProductionProfileName();
 loadProductionProfileList();
 renderSavedInviteRooms();
 showRoomList();

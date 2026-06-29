@@ -52,12 +52,15 @@ test("first launch states the public beta security non-claims", () => {
     [
       'class="public-beta-warning"',
       "without a central trusted server",
-      "not notarized",
-      "not audited",
-      "not production-ready",
-      "sensitive communication prohibited",
+      'id="open-public-beta-details"',
+      "See security and beta details",
     ],
     "first-launch warning",
+  );
+  assertIncludesAll(
+    indexHtml,
+    ["not notarized", "not audited", "not production-ready", "sensitive communication prohibited"],
+    "developer details warning copy",
   );
 });
 
@@ -65,13 +68,30 @@ test("first launch explains manual delivery and explicit network permission", ()
   assertIncludesAll(
     indexHtml,
     [
-      "Default exchange is manual encrypted envelopes.",
-      "Network and onion delivery stay off on launch",
-      "manual permission plus an explicit delivery action",
       "no network I/O, no automatic delivery, and no external delivery claim",
     ],
     "manual delivery boundary",
   );
+  assertIncludesAll(
+    indexHtml,
+    [
+      "Default exchange is manual encrypted envelopes.",
+      "Network and onion delivery stay off on launch",
+      "manual permission plus an explicit delivery action",
+    ],
+    "developer details manual delivery boundary",
+  );
+});
+
+test("invite flow is invite-code only without QR controls", () => {
+  assertIncludesAll(
+    indexHtml,
+    ['id="create-invite-code"', 'id="received-invite-code"', 'id="create-room-from-received-code"'],
+    "invite code only surface",
+  );
+  for (const absent of ["show-created-invite-qr", "import-received-invite-qr", "invite-qr-panel"]) {
+    assert.equal(indexHtml.includes(absent), false, `invite code only surface must remove ${absent}`);
+  }
 });
 
 test("safety confirmation remains visible before message actions", () => {

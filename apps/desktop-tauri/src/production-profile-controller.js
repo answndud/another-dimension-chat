@@ -198,7 +198,7 @@ export function createProductionProfileController(input) {
     const twoProfileRefreshInput = productionTwoProfileInput();
     if (!profile || !passphrase) {
       setProductionProfileState("Profile unlock needs input");
-      setText(fields.productionProfileWarning, "Enter a profile name and passphrase.");
+      setText(fields.productionProfileWarning, "Keep the random nickname and enter a passphrase.");
       setText(fields.productionProfileNextAction, t("profileRecoveryNeedsInputNext"));
       return;
     }

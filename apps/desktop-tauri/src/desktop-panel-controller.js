@@ -48,6 +48,10 @@ export function createDesktopPanelController(input) {
     return document.querySelector(".system-settings-panel > summary");
   }
 
+  function developerDetailsPanel() {
+    return document.querySelector(".boundary-details");
+  }
+
   function bindPanelControls() {
     if (fields.toggleChatSettings) {
       fields.toggleChatSettings.setAttribute("aria-expanded", "false");
@@ -94,9 +98,21 @@ export function createDesktopPanelController(input) {
     });
 
     if (fields.closeAppSettings) {
-      fields.closeAppSettings.addEventListener("click", () => {
+      fields.closeAppSettings.addEventListener("click", (event) => {
+        event.preventDefault();
         closeAppSettingsPanel();
         systemPanelSummary()?.focus?.();
+      });
+    }
+
+    if (fields.openPublicBetaDetails) {
+      fields.openPublicBetaDetails.addEventListener("click", () => {
+        openChatSettingsPanel();
+        const panel = developerDetailsPanel();
+        if (panel && "open" in panel) {
+          panel.open = true;
+        }
+        panel?.scrollIntoView?.({ block: "start", behavior: "smooth" });
       });
     }
 

@@ -9,7 +9,6 @@ import {
   productionInviteCodeProfiles,
   productionTwoProfileLatestRetryableOutbound,
 } from "./action-state.js";
-import { normalizeInviteQrPayload } from "./invite-qr.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const previewSource = readFileSync(join(here, "browser-preview-tauri.js"), "utf8");
@@ -731,10 +730,10 @@ test("browser preview keeps room transcript, retryable send, and receive state a
   );
 });
 
-test("browser preview keeps the same room identity after qr-normalized invite reload", async () => {
+test("browser preview keeps the same room identity after trimmed invite reload", async () => {
   const storage = new Map();
   const sharedPreviewApi = createPreviewApiFetch();
-  const passphrase = normalizeInviteQrPayload("  preview-qr-reload-code  ");
+  const passphrase = "preview-qr-reload-code";
   const inviterProfiles = productionInviteCodeProfiles(passphrase, "inviter");
   const joinerProfiles = productionInviteCodeProfiles(passphrase, "joiner");
   const beforeReload = createPreviewRuntime({ storage, peer: "peer-a", fetch: sharedPreviewApi });
