@@ -51,6 +51,21 @@ The built app bundle is under
 This source-build path is app-bundle only; it does not rely on a downloadable
 GitHub Release DMG.
 
+Storage contract for this path:
+
+- Clean builds may use more than 500MB of temporary Rust/Tauri space while the
+  build is running, but that temporary target data lives outside the checkout
+  and is deleted after the build exits.
+- The repository checkout itself is expected to stay under 500MB after the
+  build finishes, without persistent `target/`, `src-tauri/target/`, or
+  `.build-cache/` directories left behind.
+- Runtime app-owned data is a separate budget from the checkout. The current
+  local runtime target is 256MB total app data, with per-profile encrypted
+  store writes capped at 128MB.
+- Global Rust toolchains, Cargo registry/cache data, and shared npm dependency
+  downloads are machine-level development costs, not part of the checkout
+  500MB budget.
+
 For reproducible build details, see
 [Reproducible build notes for macOS](REPRODUCIBLE_BUILD_MACOS.md).
 

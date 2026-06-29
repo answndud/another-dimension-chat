@@ -38,6 +38,20 @@ to build the app locally instead of downloading a DMG.
    open apps/desktop-tauri/src-tauri/target/release/bundle/macos/Another\ Dimension\ Chat.app
    ```
 
+## Storage Expectations
+
+- The source-build command may use more than 500MB of temporary build space
+  while it is running. That temporary Rust/Tauri target data is created
+  outside the repository checkout and is removed when the build command exits.
+- After the build completes, the repository checkout is expected to stay under
+  500MB and not retain persistent `target/`, `src-tauri/target/`, or
+  `.build-cache/` directories.
+- Runtime local app data is a different budget from the repository checkout.
+  The current runtime target is 256MB total app-owned data, with each
+  encrypted profile store capped at 128MB.
+- Global Rust toolchains, Cargo registry/cache directories, and shared npm
+  dependency downloads are not counted toward the repository checkout budget.
+
 ## Verification Ladder
 
 If you want to check the checkout before or after building, use the repo-root
