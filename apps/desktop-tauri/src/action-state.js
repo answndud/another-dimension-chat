@@ -82,8 +82,7 @@ export function productionInviteIdentityBoundaryView(input = {}) {
     `pairwise_profiles_derived=${pairwiseProfilesDerived}`,
     "invite_code_sensitive=true",
     "invite_code_in_diagnostics=false",
-    "qr_required=false",
-    "qr_optional_future=true",
+    "qr_supported=false",
     `room_present=${hasRoom}`,
   ].join(" ");
 }
@@ -3232,9 +3231,11 @@ export function productionManualNextActions(state) {
 
   const profile = hasProfileUnlockInput
     ? "Next: unlock profile."
-    : "Next: enter profile and passphrase.";
+    : "Next: keep the random nickname or reset it, then enter passphrase.";
 
-  let pairing = hasProfileUnlockInput ? "Next: click Unlock profile." : "Next: enter profile and passphrase.";
+  let pairing = hasProfileUnlockInput
+    ? "Next: click Unlock profile."
+    : "Next: keep the random nickname or reset it, then enter passphrase.";
   if (hasPairingInput) {
     pairing = "Next: click Export pairing.";
   }

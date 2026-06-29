@@ -47,6 +47,8 @@ npm --prefix apps/desktop-tauri run tauri:build:beta-onion
 빌드된 앱 번들은
 `apps/desktop-tauri/src-tauri/target/release/bundle/macos/Another Dimension Chat.app`
 에 생성됩니다.
+이 source build 경로는 app 번들 전용이며, 다운로드한 GitHub Release DMG에
+의존하지 않습니다.
 
 재현 가능한 빌드 기준은
 [macOS 재현성 빌드 노트](REPRODUCIBLE_BUILD_MACOS.md)를 보세요.
