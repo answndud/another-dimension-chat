@@ -108,7 +108,6 @@ message relay, cloud backup, or push notification service.
 |----------|---------------|
 | macOS Apple Silicon | Source build primary, unsigned DMG fallback |
 | Windows | No public app yet |
-| Android / iOS | No public app yet |
 
 ## Before Using
 

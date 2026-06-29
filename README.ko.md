@@ -107,7 +107,6 @@ fallback 세부 내용은 [SECURITY.md](SECURITY.md)에만 둡니다.
 |--------|-----------|
 | macOS Apple Silicon | source build primary, unsigned DMG fallback |
 | Windows | 공개 앱 없음 |
-| Android / iOS | 공개 앱 없음 |
 
 ## 중요
 
