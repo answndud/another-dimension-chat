@@ -479,6 +479,7 @@ export function createProductionProfileController(input) {
       const view = renderProductionDataLifecycleAction(result, "status");
       setProductionProfileState("Data lifecycle checked");
       setText(fields.productionProfileWarning, result.warning);
+      setText(fields.productionProfileNextAction, view.next);
       return result;
     } catch (error) {
       setProductionProfileState("Data lifecycle check failed");
@@ -501,6 +502,7 @@ export function createProductionProfileController(input) {
       const view = renderProductionDataLifecycleAction(result, "prepare");
       setProductionProfileState("Data lifecycle prepared");
       setText(fields.productionProfileWarning, result.warning);
+      setText(fields.productionProfileNextAction, view.next);
       return result;
     } catch (error) {
       setProductionProfileState("Data lifecycle prepare failed");

@@ -2,10 +2,19 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SKIP_BUILD="${AD_VERIFY_SOURCE_BUILD_SKIP_BUILD:-0}"
 
 fail() {
   printf 'verify_source_build_path failed: %s\n' "$1" >&2
   exit 1
+}
+
+run_step() {
+  local name="$1"
+  shift
+
+  printf '\n==> %s\n' "$name"
+  "$@"
 }
 
 require_file() {
@@ -77,5 +86,13 @@ forbidden_text INSTALL_FROM_SOURCE_MACOS.md "not signed, not notarized"
 forbidden_text SECURITY.md "public desktop packet is currently the unsigned macOS DMG path"
 forbidden_text SECURITY.md "The public desktop packet is currently the unsigned macOS DMG path"
 forbidden_text SUPPORT.md "Release Downloads"
+
+run_step "desktop build-storage contract" npm --prefix apps/desktop-tauri run test:build-storage-contract
+run_step "checkout storage budget" npm --prefix apps/desktop-tauri run check:storage-budget
+
+if [ "$SKIP_BUILD" != "1" ]; then
+  run_step "desktop source build" npm --prefix apps/desktop-tauri run tauri:build:beta-onion
+  run_step "post-build storage budget" npm --prefix apps/desktop-tauri run check:storage-budget
+fi
 
 printf 'verify_source_build_path passed\n'
