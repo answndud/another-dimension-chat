@@ -49,6 +49,26 @@ export function createProductionProfileController(input) {
     checkProductionSessionState,
   } = input;
 
+  function localizedStorageBudgetStatus(result, options = {}) {
+    const locked = options.locked === true;
+    if (locked) {
+      return t("storageBudgetHiddenWhileLocked");
+    }
+    const status = String(
+      result?.profile_storage_budget_status ?? result?.app_storage_budget_status ?? "",
+    ).trim();
+    if (status === "at-cap") {
+      return t("storageBudgetAtCap");
+    }
+    if (status === "cleanup-recommended") {
+      return t("storageBudgetCleanupRecommended");
+    }
+    if (status === "within-limit") {
+      return t("storageBudgetNormal");
+    }
+    return t("storageBudgetHiddenWhileLocked");
+  }
+
   function renderProductionProductUnlockStatus(result) {
     setLatestProductionProductUnlockStatus(result ?? null);
     const unlocked = result?.unlocked === true;
@@ -159,7 +179,7 @@ export function createProductionProfileController(input) {
       const view = renderProductionProductUnlockRecovery(result, { lockedByUser: true });
       setProductionProfileState(view.state);
       setText(fields.productionProfileWarning, view.warning);
-      setText(fields.productionProfileStorage, view.storage);
+      setText(fields.productionProfileStorage, `${view.storage} | ${localizedStorageBudgetStatus(null, { locked: true })}`);
       setText(fields.productionProfileIdentity, view.identity);
       return result;
     } catch (error) {
@@ -176,7 +196,10 @@ export function createProductionProfileController(input) {
     document.body.classList.add("is-panic-locked");
     setProductionProfileState("Panic lock active");
     setText(fields.productionProfileWarning, "Private views hidden and local memory state cleared.");
-    setText(fields.productionProfileStorage, "Locked locally; reopen with profile passphrase.");
+    setText(
+      fields.productionProfileStorage,
+      `Locked locally; reopen with profile passphrase. | ${localizedStorageBudgetStatus(null, { locked: true })}`,
+    );
     setText(fields.productionProfileIdentity, "Hidden after panic lock");
     setText(fields.productionProfileBoundary, boundary.boundary);
     await clearClipboardBestEffort();
@@ -220,7 +243,10 @@ export function createProductionProfileController(input) {
       if (productUnlock.unlocked !== true) {
         setProductionProfileState(productUnlockRecovery.state);
         setText(fields.productionProfileWarning, productUnlockRecovery.warning);
-        setText(fields.productionProfileStorage, productUnlockRecovery.storage);
+        setText(
+          fields.productionProfileStorage,
+          `${productUnlockRecovery.storage} | ${localizedStorageBudgetStatus(null, { locked: true })}`,
+        );
         setText(fields.productionProfileIdentity, productUnlockRecovery.identity);
         setText(fields.productionProfileBoundary, productUnlockRecovery.boundary);
         rememberFailureSupportReport(
@@ -241,7 +267,7 @@ export function createProductionProfileController(input) {
       document.body.classList.remove("is-panic-locked");
       setProductionProfileState("Profile unlocked");
       setText(fields.productionProfileWarning, result.warning);
-      setText(fields.productionProfileStorage, view.storage);
+      setText(fields.productionProfileStorage, `${view.storage} | ${localizedStorageBudgetStatus(result)}`);
       setText(fields.productionProfileIdentity, view.identity);
       setText(fields.productionProfileBoundary, view.boundary);
       await loadProductionMessageRetentionPreference(profile, passphrase, { quiet: true });
@@ -266,7 +292,10 @@ export function createProductionProfileController(input) {
       setLatestProductionProfileUnlocked(false);
       setProductionProfileState("Profile unlock failed");
       setText(fields.productionProfileWarning, recovery.warning);
-      setText(fields.productionProfileStorage, `Failed local_recovery=${recovery.kind}`);
+      setText(
+        fields.productionProfileStorage,
+        `Failed local_recovery=${recovery.kind} | ${localizedStorageBudgetStatus(null, { locked: true })}`,
+      );
       setText(fields.productionProfileIdentity, "Not opened; no raw storage error exposed");
       setText(fields.productionProfileBoundary, `${recovery.boundary} ${recoveryActions.boundary}`);
       setText(fields.productionProfileNextAction, recoveryActions.primaryNextAction || recovery.nextAction);
@@ -450,7 +479,6 @@ export function createProductionProfileController(input) {
       const view = renderProductionDataLifecycleAction(result, "status");
       setProductionProfileState("Data lifecycle checked");
       setText(fields.productionProfileWarning, result.warning);
-      setText(fields.productionProfileNextAction, view.next);
       return result;
     } catch (error) {
       setProductionProfileState("Data lifecycle check failed");
@@ -473,7 +501,6 @@ export function createProductionProfileController(input) {
       const view = renderProductionDataLifecycleAction(result, "prepare");
       setProductionProfileState("Data lifecycle prepared");
       setText(fields.productionProfileWarning, result.warning);
-      setText(fields.productionProfileNextAction, view.next);
       return result;
     } catch (error) {
       setProductionProfileState("Data lifecycle prepare failed");

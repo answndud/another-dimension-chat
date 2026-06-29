@@ -140,6 +140,7 @@ function createHarness(options = {}) {
     },
     renderProductionDataLifecycleAction: (result, action) => {
       calls.lifecycleRenders.push({ result, action });
+      fields.productionProfileStorage.textContent = result?.app_storage_budget_status ?? "";
       return { next: `rendered:${action}`, boundary: `boundary:${action}` };
     },
     productionSessionLifecycleView: (result, options) => ({
@@ -262,7 +263,10 @@ test("lockProductionProfile renders manual lock recovery result", async () => {
   assert.equal(returned, result);
   assert.deepEqual(calls.states, ["Profile locked"]);
   assert.equal(fields.productionProfileWarning.textContent, "locked by user");
-  assert.equal(fields.productionProfileStorage.textContent, "Locked reason=locked local_recovery=unlock-with-passphrase");
+  assert.equal(
+    fields.productionProfileStorage.textContent,
+    "Locked reason=locked local_recovery=unlock-with-passphrase | t:storageBudgetHiddenWhileLocked",
+  );
   assert.equal(fields.productionProfileIdentity.textContent, "Locked locally");
 });
 
@@ -282,11 +286,12 @@ test("panicLockProductionProfile clears sensitive UI before best-effort runtime 
   assert.equal(fields.productionProfileWarning.textContent, "Private views hidden and local memory state cleared.");
   assert.match(fields.productionProfileBoundary.textContent, /passphrase_first=false/);
   assert.match(fields.productionProfileBoundary.textContent, /store_path_returned=false/);
+  assert.match(fields.productionProfileStorage.textContent, /t:storageBudgetHiddenWhileLocked/);
 });
 
 test("unlockProductionProfile runs profile unlock then restores only while input is current", async () => {
   const productUnlock = { unlocked: true, redacted_reason: "ok", warning: "product unlocked" };
-  const profileUnlock = { warning: "profile unlocked" };
+  const profileUnlock = { warning: "profile unlocked", profile_storage_budget_status: "within-limit" };
   const { controller, fields, calls, invoked } = createHarness({
     invokeResults: new Map([
       ["production_product_unlock", productUnlock],
@@ -302,7 +307,7 @@ test("unlockProductionProfile runs profile unlock then restores only while input
   assert.equal(fields.unlockProductionProfile.disabled, false);
   assert.equal(calls.removedBodyClass, "is-panic-locked");
   assert.equal(fields.productionProfileWarning.textContent, "profile unlocked");
-  assert.equal(fields.productionProfileStorage.textContent, "profile storage opened");
+  assert.equal(fields.productionProfileStorage.textContent, "profile storage opened | t:storageBudgetNormal");
   assert.equal(calls.loadRetention.length, 1);
   assert.equal(calls.loadProfileList, 1);
   assert.equal(calls.restoreSession.length, 1);
@@ -441,7 +446,7 @@ test("emergencyWipeProductionLocalData clears sensitive state before emergency w
 });
 
 test("checkProductionDataLifecycle renders status and clears busy state", async () => {
-  const statusResult = { warning: "status ok" };
+  const statusResult = { warning: "status ok", app_storage_budget_status: "cleanup-recommended" };
   const { controller, fields, calls, invoked } = createHarness({
     invokeResults: new Map([["production_data_lifecycle_status", statusResult]]),
   });
@@ -456,10 +461,11 @@ test("checkProductionDataLifecycle renders status and clears busy state", async 
   assert.deepEqual(calls.states, ["Data lifecycle checking", "Data lifecycle checked"]);
   assert.equal(fields.productionProfileWarning.textContent, "status ok");
   assert.equal(fields.productionProfileNextAction.textContent, "rendered:status");
+  assert.equal(fields.productionProfileStorage.textContent, "cleanup-recommended");
 });
 
 test("prepareProductionDataLifecycle renders prepare flow and clears busy state", async () => {
-  const prepareResult = { warning: "prepare ok" };
+  const prepareResult = { warning: "prepare ok", app_storage_budget_status: "within-limit" };
   const { controller, fields, calls, invoked } = createHarness({
     invokeResults: new Map([["production_data_lifecycle_prepare", prepareResult]]),
   });
@@ -474,6 +480,7 @@ test("prepareProductionDataLifecycle renders prepare flow and clears busy state"
   assert.deepEqual(calls.states, ["Data lifecycle preparing", "Data lifecycle prepared"]);
   assert.equal(fields.productionProfileWarning.textContent, "prepare ok");
   assert.equal(fields.productionProfileNextAction.textContent, "rendered:prepare");
+  assert.equal(fields.productionProfileStorage.textContent, "within-limit");
 });
 
 test("deleteProductionSessionLifecycle requires exact confirmation", async () => {
