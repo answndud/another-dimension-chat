@@ -496,6 +496,23 @@ unsigned GitHub DMG convenience path for people who explicitly want it. It is
 not signed, not notarized, not audited, not production-ready, and sensitive
 communication prohibited.
 
+The storage boundary for this public source-build path is split into checkout
+space and runtime app-owned space:
+
+- Clean source builds may use more than 500MB of temporary Rust/Tauri build
+  space while the build is running, but that temporary target data must live
+  outside the repository checkout and be removed after the build exits.
+- After the build finishes, the repository checkout itself is expected to stay
+  under 500MB without persistent `target/`, `apps/desktop-tauri/src-tauri/target/`,
+  or `.build-cache/` directories left behind.
+- Runtime local app-owned data is a separate budget from the checkout. The
+  current desktop runtime target is 256MB total app-owned data, with each
+  encrypted profile store capped at 128MB and write attempts fail-closed when
+  that per-profile cap is reached.
+- Global Rust toolchains, Cargo registry/cache directories, and shared npm
+  dependency downloads are developer-machine costs and are not counted toward
+  the repository checkout budget.
+
 Apple Developer Program, Developer ID, notarization, App Store, and TestFlight
 credentials are not used or required for the source-build primary path or the
 unsigned DMG fallback. Gatekeeper warnings are expected for some users who
