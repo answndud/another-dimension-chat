@@ -17,83 +17,6 @@
           <h2 id="public-beta-warning-title" data-i18n="publicBetaWarningTitle">
             Private 1:1 chat without a central trusted server
           </h2>
-          <p data-i18n="publicBetaWarningBody">
-            Use this unsigned experimental public beta for pairwise invites, mandatory safety comparison, encrypted manual envelope exchange, local data ownership, and redacted support diagnostics. It is not notarized, not audited, not production-ready, and sensitive communication prohibited.
-          </p>
-          <p data-i18n="publicBetaNetworkBody">
-            Default exchange is manual encrypted envelopes. Network and onion delivery stay off on launch and require manual permission plus an explicit delivery action.
-          </p>
-          <ul class="public-beta-gate" aria-label="Public beta use boundary" data-i18n-aria-label="publicBetaGateLabel">
-            <li data-i18n="publicBetaChecksumBody">
-              Download updates from the same GitHub Release and verify the matching .sha256 before opening the app.
-            </li>
-            <li data-i18n="publicBetaInstallBody">
-              If macOS blocks the unsigned app, use Privacy & Security manual allow only after the checksum matches.
-            </li>
-            <li data-i18n="publicBetaNoUpdateBody">
-              High-Risk Mode has a defined threat model, onion-only advanced transport, local-at-rest hardening, and redacted support. There is no auto-update, signing, notarization, completed review, full censorship-resistance claim, external onion delivery claim, Briar/Cwtch-equivalence claim, compromised-device-safe claim, coercion-safe claim, or secure messenger readiness claim.
-            </li>
-          </ul>
-          <p
-            id="version-integrity-status"
-            class="version-integrity-status"
-            data-i18n="versionIntegrityStatusInitial"
-          >
-            current_version=unknown release_authority=same-github-release-assets checksum_verification=matching-sha256-before-open auto_update_ready=false rollback_prevention_claimed=false
-          </p>
-          <p
-            id="windows-runtime-parity-status"
-            class="version-integrity-status"
-            data-i18n="windowsRuntimeParityStatusInitial"
-          >
-            platform_scope=desktop-public-shell windows_distribution=local-build-candidate-only windows_artifact_candidate=windows-shell-nsis-exe-installer-candidate runtime_path=desktop-sidecar-public-shell full_runtime_compiled=false beta_onion_path=manual-explicit-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false
-          </p>
-          <p
-            id="high-risk-threat-model-status"
-            class="version-integrity-status"
-            data-i18n="highRiskThreatModelStatusInitial"
-          >
-            High-Risk threat model: protected=none / mitigated=remote_passive_observer,remote_active_attacker,malicious_peer,local_at_rest_attacker,supply_chain_update_attacker / not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation / claims: audited=false briar_cwtch_equivalent=false compromised_endpoint_safe=false coercion_safe=false global_correlation_safe=false
-          </p>
-          <p
-            id="high-risk-transport-metadata-status"
-            class="version-integrity-status"
-            data-i18n="highRiskTransportMetadataStatusInitial"
-          >
-            High-Risk transport: mitigated=onion-only-explicit-action#no-direct-fallback#no-dns-ip-endpoint#redacted-runtime-events / status=not-ready / not_ready_reason=runtime-network-disabled-until-explicit-user-action / not_protected=global-traffic-correlation-complete-defense
-          </p>
-          <p
-            id="high-risk-readiness-status"
-            class="version-integrity-status high-risk-readiness-status"
-            data-readiness="not_ready"
-            data-i18n="highRiskReadinessStatusInitial"
-          >
-            High-Risk Mode status=not_ready / primary_blocker=safety-not-verified / next=verify-safety-number / ready_claim_allowed=false / unmet_hidden=false
-          </p>
-          <ol
-            class="first-run-checklist"
-            aria-label="First-run local desktop flow"
-            data-i18n-aria-label="firstRunChecklistLabel"
-          >
-            <li data-first-run-step="profile" data-step-status="current" aria-current="step" data-i18n="firstRunProfileStep">
-              Create, unlock, or reopen your local profile before room actions.
-            </li>
-            <li data-first-run-step="room" data-step-status="pending" data-i18n="firstRunRoomStep">
-              Create a pairwise invite room or paste the invite code you received.
-            </li>
-            <li data-first-run-step="safety" data-step-status="pending" data-i18n="firstRunVerifyStep">
-              Compare the mandatory safety phrase, then write a message.
-            </li>
-            <li data-first-run-step="message" data-step-status="pending" data-i18n="firstRunManualMessageStep">
-              Export/import the manual encrypted envelope, then reply, retry, or cancel locally.
-            </li>
-            <li data-first-run-step="diagnostics" data-step-status="pending" data-i18n="firstRunDiagnosticsStep">
-              Copy public diagnostics only after redaction; blocked actions show the reason and next recovery action.
-            </li>
-            <li data-first-run-step="localDelete" data-step-status="pending" data-i18n="firstRunLocalDeleteStep">
-              Delete local data on this device only after the manual flow is done.
-            </li>
-          </ol>
           <p
             id="first-run-primary-next-action"
             class="first-run-primary-next-action"
@@ -101,6 +24,14 @@
           >
             Next: create or unlock your local profile.
           </p>
+          <button
+            id="open-public-beta-details"
+            type="button"
+            class="flow-control is-secondary"
+            data-i18n="openPublicBetaDetails"
+          >
+            See security and beta details
+          </button>
         </section>
         <details class="system-settings-panel" role="dialog" aria-modal="true" aria-labelledby="app-settings-title">
           <summary id="app-settings-title" data-i18n="systemPanel" data-i18n-title="systemPanel" title="Settings">Settings</summary>
@@ -196,6 +127,85 @@
           </section>
         <details class="boundary-details">
           <summary data-i18n="boundaryDetails">Developer details</summary>
+          <div class="developer-details-intro">
+            <p data-i18n="publicBetaWarningBody">
+              Use this unsigned experimental public beta for pairwise invites, mandatory safety comparison, encrypted manual envelope exchange, local data ownership, and redacted support diagnostics. It is not notarized, not audited, not production-ready, and sensitive communication prohibited.
+            </p>
+            <p data-i18n="publicBetaNetworkBody">
+              Default exchange is manual encrypted envelopes. Network and onion delivery stay off on launch and require manual permission plus an explicit delivery action.
+            </p>
+            <ul class="public-beta-gate" aria-label="Public beta use boundary" data-i18n-aria-label="publicBetaGateLabel">
+              <li data-i18n="publicBetaChecksumBody">
+                Download updates from the same GitHub Release and verify the matching .sha256 before opening the app.
+              </li>
+              <li data-i18n="publicBetaInstallBody">
+                If macOS blocks the unsigned app, use Privacy & Security manual allow only after the checksum matches.
+              </li>
+              <li data-i18n="publicBetaNoUpdateBody">
+                High-Risk Mode has a defined threat model, onion-only advanced transport, local-at-rest hardening, and redacted support. There is no auto-update, signing, notarization, completed review, full censorship-resistance claim, external onion delivery claim, Briar/Cwtch-equivalence claim, compromised-device-safe claim, coercion-safe claim, or secure messenger readiness claim.
+              </li>
+            </ul>
+            <p
+              id="version-integrity-status"
+              class="version-integrity-status"
+              data-i18n="versionIntegrityStatusInitial"
+            >
+              current_version=unknown release_authority=same-github-release-assets checksum_verification=matching-sha256-before-open auto_update_ready=false rollback_prevention_claimed=false
+            </p>
+            <p
+              id="windows-runtime-parity-status"
+              class="version-integrity-status"
+              data-i18n="windowsRuntimeParityStatusInitial"
+            >
+              platform_scope=desktop-public-shell windows_distribution=local-build-candidate-only windows_artifact_candidate=windows-shell-nsis-exe-installer-candidate runtime_path=desktop-sidecar-public-shell full_runtime_compiled=false beta_onion_path=manual-explicit-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false
+            </p>
+            <p
+              id="high-risk-threat-model-status"
+              class="version-integrity-status"
+              data-i18n="highRiskThreatModelStatusInitial"
+            >
+              High-Risk threat model: protected=none / mitigated=remote_passive_observer,remote_active_attacker,malicious_peer,local_at_rest_attacker,supply_chain_update_attacker / not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation / claims: audited=false briar_cwtch_equivalent=false compromised_endpoint_safe=false coercion_safe=false global_correlation_safe=false
+            </p>
+            <p
+              id="high-risk-transport-metadata-status"
+              class="version-integrity-status"
+              data-i18n="highRiskTransportMetadataStatusInitial"
+            >
+              High-Risk transport: mitigated=onion-only-explicit-action#no-direct-fallback#no-dns-ip-endpoint#redacted-runtime-events / status=not-ready / not_ready_reason=runtime-network-disabled-until-explicit-user-action / not_protected=global-traffic-correlation-complete-defense
+            </p>
+            <p
+              id="high-risk-readiness-status"
+              class="version-integrity-status high-risk-readiness-status"
+              data-readiness="not_ready"
+              data-i18n="highRiskReadinessStatusInitial"
+            >
+              High-Risk Mode status=not_ready / primary_blocker=safety-not-verified / next=verify-safety-number / ready_claim_allowed=false / unmet_hidden=false
+            </p>
+            <ol
+              class="first-run-checklist"
+              aria-label="First-run local desktop flow"
+              data-i18n-aria-label="firstRunChecklistLabel"
+            >
+              <li data-first-run-step="profile" data-step-status="current" aria-current="step" data-i18n="firstRunProfileStep">
+                Create, unlock, or reopen your local profile before room actions.
+              </li>
+              <li data-first-run-step="room" data-step-status="pending" data-i18n="firstRunRoomStep">
+                Create a pairwise invite room or paste the invite code you received.
+              </li>
+              <li data-first-run-step="safety" data-step-status="pending" data-i18n="firstRunVerifyStep">
+                Compare the mandatory safety phrase, then write a message.
+              </li>
+              <li data-first-run-step="message" data-step-status="pending" data-i18n="firstRunManualMessageStep">
+                Export/import the manual encrypted envelope, then reply, retry, or cancel locally.
+              </li>
+              <li data-first-run-step="diagnostics" data-step-status="pending" data-i18n="firstRunDiagnosticsStep">
+                Copy public diagnostics only after redaction; blocked actions show the reason and next recovery action.
+              </li>
+              <li data-first-run-step="localDelete" data-step-status="pending" data-i18n="firstRunLocalDeleteStep">
+                Delete local data on this device only after the manual flow is done.
+              </li>
+            </ol>
+          </div>
           <dl id="status-list" class="status-list">
             <div>
               <dt data-i18n="releaseClaim">Release claim</dt>
@@ -831,9 +841,6 @@
                     aria-label="Created invite code"
                     data-i18n-aria-label="createdInviteCode"
                   ></textarea>
-                  <button id="show-created-invite-qr" type="button" class="flow-control is-secondary" data-i18n="showInviteQr">
-                    Show invite QR
-                  </button>
                   <button id="copy-created-invite-code" type="button" class="flow-control is-secondary" data-i18n="copyInviteCode">
                     Copy invite code
                   </button>
@@ -869,10 +876,6 @@
                     data-i18n-placeholder="connectionCodePlaceholder"
                     placeholder="Paste invite code"
                   />
-                  <button id="import-received-invite-qr" type="button" class="flow-control is-secondary" data-i18n="importInviteQr">
-                    Import invite QR
-                  </button>
-                  <input id="received-invite-qr-file" type="file" accept="image/*" hidden />
                   <button id="create-room-from-received-code" type="button" class="flow-control is-secondary" data-i18n="createConnection">
                     Join room
                   </button>
@@ -881,15 +884,6 @@
                   </span>
                 </article>
               </div>
-              <section id="invite-qr-panel" class="invite-qr-panel" hidden aria-labelledby="invite-qr-title">
-                <div class="invite-qr-panel-header">
-                  <h5 id="invite-qr-title" data-i18n="inviteQrTitle">Invite QR</h5>
-                  <button id="hide-invite-qr" type="button" class="flow-control is-secondary" data-i18n="hideInviteQr">
-                    Hide QR
-                  </button>
-                </div>
-                <img id="invite-qr-image" class="invite-qr-image" alt="Invite code QR" />
-              </section>
             </section>
             <section id="room-invite-token-panel" class="room-invite-token-panel" aria-label="Room invite token">
               <label class="loop-label" for="room-invite-token-display" data-i18n="currentInviteCode">
@@ -1152,15 +1146,12 @@
                   <p class="eyebrow" data-i18n="productionProfile">Production profile</p>
                   <h3 id="production-profile-title" data-i18n="persistentLocalStore">Persistent local store</h3>
                 </div>
-                <label class="loop-label" for="production-profile-name" data-i18n="profiles">Profile</label>
+                <label class="loop-label" for="production-profile-name" data-i18n="deviceNickname">This device nickname</label>
                 <select id="production-profile-selector"></select>
-                <input id="production-profile-name" type="text" value="alice" autocomplete="off" />
-                <div class="loop-actions" aria-label="Manual profile presets">
-                  <button id="use-alice-production-profile" type="button" class="flow-control is-secondary" data-i18n="useAlice">
-                    Use Alice
-                  </button>
-                  <button id="use-bob-production-profile" type="button" class="flow-control is-secondary" data-i18n="useBob">
-                    Use Bob
+                <input id="production-profile-name" type="text" autocomplete="off" readonly />
+                <div class="loop-actions" aria-label="Device nickname actions">
+                  <button id="reset-random-production-profile" type="button" class="flow-control is-secondary" data-i18n="resetRandomNickname">
+                    Reset random nickname
                   </button>
                 </div>
                 <label class="loop-label" for="production-profile-passphrase" data-i18n="passphrase">Passphrase</label>
@@ -1185,7 +1176,7 @@
                   Profile locked
                 </p>
                 <p id="production-profile-next-action" class="demo-hint" data-i18n="nextEnterProfilePassphrase">
-                  Next: enter profile and passphrase.
+                  Next: keep the random nickname or reset it, then enter passphrase.
                 </p>
                 <p id="production-profile-warning" class="demo-warning" data-i18n="productionProfileLockedWarning">
                   Production profile has not been unlocked yet.
@@ -1597,7 +1588,6 @@ second local loop message</textarea>
               </div>
             </dl>
           </section>
-          <pre id="demo-output" class="is-idle" data-i18n="demoNotRun">Demo has not run yet.</pre>
           </details>
         </section>
       </section>
