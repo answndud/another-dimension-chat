@@ -7,6 +7,7 @@
 node_modules/
 apps/desktop-tauri/node_modules/
 apps/desktop-tauri/dist/
+apps/desktop-tauri/.vite/
 apps/desktop-tauri/beta-artifacts/
 apps/desktop-tauri/public-release/
 apps/desktop-tauri/screenshot-candidates/

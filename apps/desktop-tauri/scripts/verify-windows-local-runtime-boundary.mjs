@@ -97,7 +97,7 @@ requireText("apps/desktop-tauri/package.json", '"engine:prepare-sidecar:release"
 requireText("apps/desktop-tauri/package.json", '"engine:prepare-sidecar:release:manual"');
 requireText("apps/desktop-tauri/package.json", '"engine:prepare-sidecar:release:full"');
 requireText("apps/desktop-tauri/package.json", "prepare-engine-sidecar.mjs");
-requireText("apps/desktop-tauri/src-tauri/tauri.conf.json", '"targets": "all"');
+requireText("apps/desktop-tauri/src-tauri/tauri.conf.json", '"targets": ["app"]');
 requireText("apps/desktop-tauri/src-tauri/tauri.sidecar.conf.json", '"externalBin"');
 requireText("apps/desktop-tauri/src-tauri/tauri.sidecar.conf.json", "binaries/another-dimension-engine");
 requireText("apps/desktop-tauri/scripts/prepare-engine-sidecar.mjs", "another-dimension-engine-");
