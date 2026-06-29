@@ -8,6 +8,7 @@ The current macOS release is a source-build-primary experimental public beta
 with a legacy unsigned DMG fallback for explicit optional use. It is not
 signed, not notarized, not audited, not production-ready, and not for
 sensitive communication. It is not a secure messenger release.
+The public v0.1 repository surface is macOS desktop only.
 
 ## Supported Public Build
 
@@ -15,7 +16,6 @@ sensitive communication. It is not a secure messenger release.
 |----------|---------------|
 | macOS Apple Silicon | source-build-primary, legacy unsigned DMG fallback |
 | Windows | No public app yet |
-| Android / iOS | No public app yet |
 
 ## Report A Vulnerability
 
@@ -60,16 +60,11 @@ default manual encrypted-envelope flow. It is not a reliable delivery claim.
 The current public repository contains a Rust/Tauri prototype and a local desktop beta candidate. It is useful for testing development flow, local encrypted-store boundaries, invite-room recovery, explicit user-mediated private-delivery actions, and fail-closed advanced onion/Tor attempt behavior, but it does not provide production-grade confidentiality, anonymity, metadata resistance, endpoint protection, or user safety.
 
 For the v0.1 unsigned public beta, the product surface is the desktop Tauri
-beta shell. Android is only the next mobile client candidate after the shared
-Rust core/API boundary remains platform-neutral; iOS follows after the same
-boundary is preserved. Mobile clients are not part of this public beta, and
-the platform split is not a security-readiness or production-readiness claim.
-The Android candidate is a thin Kotlin shell over UniFFI or another narrow FFI
-boundary into the shared Rust core. It must not define independent protocol,
-storage, transport, pairing, or contact-discovery semantics.
-The later iOS candidate follows the same shape as a thin Swift shell over
-UniFFI or another narrow FFI boundary into the shared Rust core. iOS-specific
-distribution constraints are product constraints, not security claims.
+shell on macOS only. The shared Rust core remains platform-neutral, but mobile
+clients are not part of the current public repository surface or public beta
+scope. Future wrappers, if they return later, must stay thin shells over the
+shared Rust core and must not define independent protocol, storage, transport,
+pairing, or contact-discovery semantics.
 The public desktop path is source-build-primary on macOS, with legacy unsigned
 DMG artifacts kept only as an optional convenience fallback. Windows is a
 local desktop build candidate only; before any public Windows artifact, it
@@ -121,16 +116,6 @@ build candidate only. Windows public artifact execution is tracked in
 schema in `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md`; there is still no
 public Windows artifact, installer, signing, upload, or Windows production
 claim.
-RB-11 Android implementation authorization is tracked in
-`reference/ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md`: Android remains
-a source shell over the shared-core boundary only, with no APK, AAB, Play Store
-distribution, runtime messaging, cloud backup, FCM, or Android public artifact
-claim.
-RB-12 iOS implementation authorization is tracked in
-`reference/IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md`: iOS remains a
-source shell over the shared-core boundary only, with no IPA, TestFlight/App
-Store distribution, runtime messaging, iCloud backup, APNs, or iOS public
-artifact claim.
 RB-13 cross-platform target-standard final closure is tracked in
 `reference/CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md`: the next release
 class is `signed-public-beta-or-rc`, platform claims are aligned to actual
@@ -459,14 +444,10 @@ This project does not currently claim:
 - Public Windows installer readiness. Windows is currently a local build
   candidate only and does not add DPAPI-only unlock, auto-update, store approval,
   or a platform signing trust boundary.
-- Android app readiness. Android is currently only a shared-core shell
-  candidate and does not add Google-account identity, Play Services, Firebase
-  Cloud Messaging, Play Store trust, Android Keystore-only unlock, cloud backup,
-  or wrapper-specific protocol/storage/transport semantics.
-- iOS app readiness. iOS is currently only a shared-core shell candidate and
-  does not add Apple-account identity, iCloud, APNs, App Store/TestFlight trust,
-  Developer ID, notarization, iOS Keychain-only unlock, cloud backup, or
-  wrapper-specific protocol/storage/transport semantics.
+- Mobile app readiness. Mobile wrappers are not part of the current public
+  repository surface and do not add store trust, push messaging, cloud backup,
+  platform keystore-only unlock, or wrapper-specific protocol/storage/transport
+  semantics.
 - External audit, independent review, reviewer signoff, or public user safety signoff.
 - Protection against device compromise.
 - Protection against coercion.
@@ -613,11 +594,11 @@ The generated public release folder is `apps/desktop-tauri/public-release/unsign
 
 Public users must verify the DMG checksum before using the normal macOS Privacy & Security manual allow path. This project does not ask users to bypass macOS protections with terminal quarantine removal commands. There is no auto-update channel; every update is a manual GitHub Release download with a matching `.sha256` file.
 
-Future public Windows, Android, and iOS artifacts must use the same manual
-GitHub Release download, same-release checksum, public provenance, manifest, and
-no-auto-update boundary. Platform signing, notarization, app-store approval,
-Play Store approval, TestFlight, Developer ID, SmartScreen reputation, or mobile
-store review is not a trusted security boundary for v0.1.
+Future public artifacts must use the same manual GitHub Release download,
+same-release checksum, public provenance, manifest, and no-auto-update
+boundary. Platform signing, notarization, app-store approval, Developer ID,
+SmartScreen reputation, or store review is not a trusted security boundary for
+v0.1.
 
 The unsigned release upload set includes public provenance JSON, `GITHUB_RELEASE_BODY.md`, `UPDATE_INTEGRITY.md`, `SUPPLY_CHAIN_BASELINE.md`, `DEPENDENCY_INVENTORY.md`, and `DEPENDENCY_LOCKFILES.sha256` as review evidence. The release script regenerates the public provenance for the public DMG name, records the source provenance SHA-256, records the same-GitHub-Release-assets authority, records that the source branch is not release authority for a downloaded DMG, records exactly three lockfile evidence entries (`Cargo.lock`, `apps/desktop-tauri/src-tauri/Cargo.lock`, and `apps/desktop-tauri/package-lock.json`), records the public threat model and independent review packet, marks `independent_review_complete=false`, marks `public_review_gap_published=true`, marks `reviewer_signoff_claimed=false`, marks `public_user_safety_signoff_claimed=false`, records public-safe review input, known-review-gap, public-safe command, private-reporting boundary, minimal public contact request, fabricated-review/peer-evidence-forbidden flags, records the backup/migration non-claim boundary, and checks the GitHub Release body non-claims before declaring the upload set ready. These files are not an audit, SBOM, live dependency scan, vulnerability triage signoff, reproducible-build proof, malware review, signing substitute, notarization substitute, external review result, reviewer signoff, public user safety signoff, fabricated external review evidence, cloud backup/sync feature, backup recovery feature, rollback-prevention proof, secure-deletion proof, or secure messenger claim.
 
