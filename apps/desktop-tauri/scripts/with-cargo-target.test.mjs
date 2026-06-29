@@ -9,11 +9,13 @@ import {
   rmSync,
   writeFileSync,
   chmodSync,
+  utimesSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import { reapStaleCargoTargets } from "./with-cargo-target.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(scriptDir, "..");
@@ -102,6 +104,11 @@ function captureAndRestorePath(path) {
     }
     rmSync(path, { recursive: true, force: true });
   };
+}
+
+function touchOld(path, ageMs = 25 * 60 * 60 * 1000) {
+  const old = new Date(Date.now() - ageMs);
+  utimesSync(path, old, old);
 }
 
 function makeChildScriptSource(mode) {
@@ -281,4 +288,178 @@ process.exit(0);
     restoreSidecar();
     rmSync(sandbox, { recursive: true, force: true });
   }
+});
+
+test("prepare-engine-sidecar compiles engine once and tauri compiles shell once", async () => {
+  const sandbox = makeTempDir("ad-with-cargo-target-sidecar-count-");
+  const fakeBinDir = join(sandbox, "bin");
+  mkdirSync(fakeBinDir, { recursive: true });
+  const invocationLog = join(sandbox, "invocations.jsonl");
+  const engineTargetFile = join(sandbox, "engine-target.txt");
+  const shellTargetFile = join(sandbox, "shell-target.txt");
+  const cacheRoot = join(sandbox, "cache");
+  mkdirSync(cacheRoot, { recursive: true });
+
+  const executableSuffix = process.platform === "win32" ? ".exe" : "";
+  const sidecarName = `another-dimension-engine-${targetTriple()}${executableSuffix}`;
+  const sidecarPath = join(repoRoot, "apps/desktop-tauri/src-tauri/binaries", sidecarName);
+  const restoreSidecar = captureAndRestorePath(sidecarPath);
+
+  writeExecutableScript(
+    fakeBinDir,
+    process.platform === "win32" ? "cargo.cmd" : "cargo",
+    `#!/usr/bin/env node
+const { appendFileSync, mkdirSync, writeFileSync } = require("node:fs");
+const { dirname, join } = require("node:path");
+
+const args = process.argv.slice(2);
+const targetDir = process.env.CARGO_TARGET_DIR;
+if (!targetDir) {
+  throw new Error("missing CARGO_TARGET_DIR");
+}
+
+appendFileSync(${JSON.stringify(invocationLog)}, JSON.stringify({ bin: "cargo", args }) + "\\n", "utf8");
+const isEngineBuild = args.includes("-p") && args.includes("another-dimension-engine");
+const targetFile = isEngineBuild ? ${JSON.stringify(engineTargetFile)} : ${JSON.stringify(shellTargetFile)};
+writeFileSync(targetFile, targetDir, "utf8");
+
+if (isEngineBuild) {
+  const binaryPath = join(
+    targetDir,
+    "release",
+    ${JSON.stringify(`another-dimension-engine${executableSuffix}`)},
+  );
+  mkdirSync(dirname(binaryPath), { recursive: true });
+  writeFileSync(binaryPath, "fake-engine", "utf8");
+}
+
+process.exit(0);
+`,
+  );
+
+  writeExecutableScript(
+    fakeBinDir,
+    process.platform === "win32" ? "tauri.cmd" : "tauri",
+    `#!/usr/bin/env node
+const { appendFileSync } = require("node:fs");
+const { spawnSync } = require("node:child_process");
+
+const args = process.argv.slice(2);
+appendFileSync(${JSON.stringify(invocationLog)}, JSON.stringify({ bin: "tauri", args }) + "\\n", "utf8");
+
+const result = spawnSync(
+  "cargo",
+  [
+    "build",
+    "--manifest-path",
+    "apps/desktop-tauri/src-tauri/Cargo.toml",
+    "--no-default-features",
+    "--features",
+    "public-shell",
+  ],
+  {
+    cwd: ${JSON.stringify(repoRoot)},
+    env: process.env,
+    shell: false,
+    stdio: "inherit",
+  },
+);
+
+process.exit(result.status ?? 1);
+`,
+  );
+
+  const originalPath = process.env.PATH || "";
+  const env = {
+    AD_BUILD_CACHE_DIR: cacheRoot,
+    PATH: `${fakeBinDir}${process.platform === "win32" ? ";" : ":"}${originalPath}`,
+  };
+
+  const result = await runNode(
+    [
+      join("scripts", "prepare-engine-sidecar.mjs"),
+      "--release",
+      "--manual-e2ee-runtime",
+      "--tauri-build",
+      "--",
+      "tauri",
+      "build",
+      "--config",
+      "src-tauri/tauri.sidecar.conf.json",
+    ],
+    { env },
+  );
+
+  try {
+    assert.equal(result.code, 0);
+    assert.equal(result.signal, null);
+    const invocations = readFileSync(invocationLog, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    const cargoInvocations = invocations.filter((entry) => entry.bin === "cargo");
+    const tauriInvocations = invocations.filter((entry) => entry.bin === "tauri");
+
+    assert.equal(cargoInvocations.length, 2);
+    assert.equal(tauriInvocations.length, 1);
+    assert.match(cargoInvocations[0].args.join(" "), /another-dimension-engine/);
+    assert.match(cargoInvocations[1].args.join(" "), /--manifest-path apps\/desktop-tauri\/src-tauri\/Cargo\.toml/);
+    assert.equal(readFileSync(engineTargetFile, "utf8"), readFileSync(shellTargetFile, "utf8"));
+    assert.equal(existsSync(readFileSync(engineTargetFile, "utf8")), false);
+    assert.deepEqual(readdirSync(cacheRoot), []);
+    assert.match(result.stdout, /engine_sidecar_prepared=true/);
+  } finally {
+    restoreSidecar();
+    rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test("stale project-tagged temp targets are reaped", async () => {
+  const sandbox = makeTempDir("ad-with-cargo-target-reap-temp-");
+  const cacheRoot = join(sandbox, "cache");
+  mkdirSync(cacheRoot, { recursive: true });
+
+  const staleTemp = join(cacheRoot, "another-dimension-cargo-target-1111111111111-old");
+  const freshTemp = join(cacheRoot, "another-dimension-cargo-target-9999999999999-new");
+  const otherProject = join(cacheRoot, "other-project-target-1111111111111-old");
+  mkdirSync(staleTemp, { recursive: true });
+  mkdirSync(freshTemp, { recursive: true });
+  mkdirSync(otherProject, { recursive: true });
+  touchOld(staleTemp);
+  touchOld(otherProject);
+
+  reapStaleCargoTargets({ cacheRoot, repoRoot });
+
+  assert.equal(existsSync(staleTemp), false);
+  assert.equal(existsSync(freshTemp), true);
+  assert.equal(existsSync(otherProject), true);
+
+  rmSync(sandbox, { recursive: true, force: true });
+});
+
+test("allowlisted checkout targets preserve live pid markers", async () => {
+  const sandbox = makeTempDir("ad-with-cargo-target-reap-checkout-");
+  const repoSandbox = join(sandbox, "repo");
+  const cacheRoot = join(sandbox, "cache");
+  mkdirSync(repoSandbox, { recursive: true });
+  mkdirSync(cacheRoot, { recursive: true });
+
+  const preservedTarget = join(repoSandbox, "target");
+  const staleTarget = join(repoSandbox, "apps/desktop-tauri/src-tauri/target");
+  mkdirSync(preservedTarget, { recursive: true });
+  mkdirSync(staleTarget, { recursive: true });
+  writeFileSync(
+    join(preservedTarget, ".another-dimension-cargo-target.json"),
+    JSON.stringify({ pid: process.pid, createdAt: Date.now() - 26 * 60 * 60 * 1000 }),
+    "utf8",
+  );
+  touchOld(preservedTarget);
+  touchOld(staleTarget);
+
+  reapStaleCargoTargets({ repoRoot: repoSandbox, cacheRoot });
+
+  assert.equal(existsSync(preservedTarget), true);
+  assert.equal(existsSync(staleTarget), false);
+
+  rmSync(sandbox, { recursive: true, force: true });
 });
