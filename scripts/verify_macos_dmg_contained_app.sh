@@ -33,7 +33,7 @@ esac
 if [ -n "$EXPECTED_APP" ]; then
   [ -d "$EXPECTED_APP" ] || fail "expected app bundle does not point to a directory: $EXPECTED_APP"
   case "$EXPECTED_APP" in
-    "$ROOT"/apps/desktop-tauri/public-release/*|"$ROOT"/apps/desktop-tauri/beta-artifacts/*|"$ROOT"/.build-cache/*|"$ROOT"/target/*|"$ROOT"/apps/desktop-tauri/src-tauri/target/*) ;;
+    "$ROOT"/apps/desktop-tauri/public-release/*|"$ROOT"/apps/desktop-tauri/beta-artifacts/*|"$ROOT"/target/*|"$ROOT"/apps/desktop-tauri/src-tauri/target/*) ;;
     "$ROOT"/*) fail "expected app bundle must be generated output, not tracked source: $EXPECTED_APP" ;;
   esac
   EXPECTED_APP_NAME="$(basename "$EXPECTED_APP")"

@@ -118,12 +118,10 @@ invite code, payload, key, raw log, private room screenshot 게시 금지.
 
 ```sh
 scripts/verify_light.sh  # source-build 경계 + 모든 desktop JavaScript 테스트
-scripts/verify_warm.sh   # light + rustfmt + desktop Tauri cargo check
-scripts/verify_cold.sh   # warm + runtime/workspace 테스트 + clippy; 사전 릴리즈 전용
+scripts/verify_full.sh   # light + rustfmt + desktop Tauri cargo check + runtime/workspace 테스트 + clippy; 사전 릴리즈 전용
 ```
 
-`scripts/verify_all.sh`은 light, `scripts/verify_full.sh`은 cold의 호환
-alias입니다. CLI smoke는 기본 검증이 아닌 수동 acceptance입니다.
+`scripts/verify_all.sh`은 light의 호환 alias입니다. CLI smoke는 기본 검증이 아닌 수동 acceptance입니다.
 `smoke_dev_cli.sh`는 prototype pairing/message/replay/expiry를,
 `smoke_tauri_two_profile.sh`는 production profile/pairing/session/transcript resume를 확인합니다.
 
