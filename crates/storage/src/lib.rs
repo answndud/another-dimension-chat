@@ -36,9 +36,10 @@ pub mod production {
     };
     use another_dimension_protocol::{decode_hex, encode_hex, ReplayWindow};
     use rusqlite::{params, Connection, OptionalExtension};
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
     pub const PRODUCTION_SCHEMA_VERSION: i64 = 1;
+    pub const PRODUCTION_PROFILE_STORAGE_CAP_BYTES: u64 = 128 * 1024 * 1024;
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum ProductionRecordKind {
@@ -841,6 +842,10 @@ pub mod production {
     pub enum ProductionStorageError {
         Policy(ProductionStoragePolicyError),
         Database(String),
+        StorageBudgetExceeded {
+            current_bytes: u64,
+            cap_bytes: u64,
+        },
         InvalidRecord,
         UnlockFailed,
     }
@@ -996,6 +1001,9 @@ pub mod production {
             ProductionStorageError::UnlockFailed => ProfileStoreUnlockFailureKind::WrongPassphrase,
             ProductionStorageError::InvalidRecord => ProfileStoreUnlockFailureKind::MigrationNeeded,
             ProductionStorageError::Database(_) => ProfileStoreUnlockFailureKind::CorruptStore,
+            ProductionStorageError::StorageBudgetExceeded { .. } => {
+                ProfileStoreUnlockFailureKind::CorruptStore
+            }
             ProductionStorageError::Policy(ProductionStoragePolicyError::InvalidPassphrase)
             | ProductionStorageError::Policy(ProductionStoragePolicyError::UnlockPolicyViolation) => {
                 ProfileStoreUnlockFailureKind::UnsupportedUnlockFactor
@@ -1349,6 +1357,7 @@ pub mod production {
     }
 
     pub struct SqlCipherRecordStore {
+        path: PathBuf,
         connection: Connection,
     }
 
@@ -1384,7 +1393,8 @@ pub mod production {
             path: impl AsRef<Path>,
             key: &StorageDatabaseKey,
         ) -> Result<Self, ProductionStorageError> {
-            let connection = Connection::open(path)?;
+            let path = path.as_ref().to_path_buf();
+            let connection = Connection::open(&path)?;
             connection.pragma_update(None, "key", key.expose_for_sqlcipher())?;
             verify_sqlcipher_key(&connection)?;
             apply_forward_only_schema_version(&connection)?;
@@ -1394,7 +1404,7 @@ pub mod production {
                     encoded_record TEXT NOT NULL
                 ) STRICT;",
             )?;
-            Ok(Self { connection })
+            Ok(Self { path, connection })
         }
 
         pub fn schema_version(&self) -> Result<i64, ProductionStorageError> {
@@ -1432,11 +1442,13 @@ pub mod production {
             record: &EncryptedRecord,
         ) -> Result<(), ProductionStorageError> {
             require_encrypted_record_allowed(record.kind)?;
+            let encoded_record = record.encode();
+            self.ensure_storage_budget_within_limit(encoded_record.len() as u64)?;
             self.connection.execute(
                 "INSERT INTO encrypted_records (record_id, encoded_record)
                  VALUES (?1, ?2)
                  ON CONFLICT(record_id) DO UPDATE SET encoded_record = excluded.encoded_record",
-                params![record_id.as_str(), record.encode()],
+                params![record_id.as_str(), encoded_record],
             )?;
             Ok(())
         }
@@ -1635,6 +1647,118 @@ pub mod production {
         ) -> Result<(), ProductionStorageError> {
             self.delete(record_id)
         }
+
+        pub fn storage_budget_measurement(
+            &self,
+        ) -> Result<StorageBudgetMeasurement, ProductionStorageError> {
+            measure_storage_budget(&self.path)
+        }
+
+        fn ensure_storage_budget_within_limit(
+            &self,
+            projected_write_bytes: u64,
+        ) -> Result<(), ProductionStorageError> {
+            let current = self.storage_budget_measurement()?;
+            let page_size = self.page_size_bytes()?;
+            if storage_budget_would_exceed_limit(
+                current.total_bytes,
+                projected_write_bytes,
+                page_size,
+                PRODUCTION_PROFILE_STORAGE_CAP_BYTES,
+            ) {
+                return Err(ProductionStorageError::StorageBudgetExceeded {
+                    current_bytes: current.total_bytes,
+                    cap_bytes: PRODUCTION_PROFILE_STORAGE_CAP_BYTES,
+                });
+            }
+            Ok(())
+        }
+
+        fn page_size_bytes(&self) -> Result<u64, ProductionStorageError> {
+            let page_size = self
+                .connection
+                .pragma_query_value(None, "page_size", |row| row.get::<_, i64>(0))
+                .map_err(ProductionStorageError::from)?;
+            u64::try_from(page_size).map_err(|_| ProductionStorageError::InvalidRecord)
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct StorageBudgetMeasurement {
+        database_bytes: u64,
+        wal_bytes: u64,
+        shm_bytes: u64,
+        journal_bytes: u64,
+        total_bytes: u64,
+    }
+
+    impl StorageBudgetMeasurement {
+        pub fn database_bytes(self) -> u64 {
+            self.database_bytes
+        }
+
+        pub fn wal_bytes(self) -> u64 {
+            self.wal_bytes
+        }
+
+        pub fn shm_bytes(self) -> u64 {
+            self.shm_bytes
+        }
+
+        pub fn journal_bytes(self) -> u64 {
+            self.journal_bytes
+        }
+
+        pub fn total_bytes(self) -> u64 {
+            self.total_bytes
+        }
+    }
+
+    pub fn measure_storage_budget(
+        path: impl AsRef<Path>,
+    ) -> Result<StorageBudgetMeasurement, ProductionStorageError> {
+        let path = path.as_ref();
+        let database_bytes = file_length_or_zero(path)?;
+        let wal_bytes = file_length_or_zero(&sqlite_sidecar_path(path, "-wal"))?;
+        let shm_bytes = file_length_or_zero(&sqlite_sidecar_path(path, "-shm"))?;
+        let journal_bytes = file_length_or_zero(&sqlite_sidecar_path(path, "-journal"))?;
+        let total_bytes = database_bytes
+            .saturating_add(wal_bytes)
+            .saturating_add(shm_bytes)
+            .saturating_add(journal_bytes);
+        Ok(StorageBudgetMeasurement {
+            database_bytes,
+            wal_bytes,
+            shm_bytes,
+            journal_bytes,
+            total_bytes,
+        })
+    }
+
+    pub fn storage_budget_would_exceed_limit(
+        current_bytes: u64,
+        projected_write_bytes: u64,
+        page_size_bytes: u64,
+        cap_bytes: u64,
+    ) -> bool {
+        current_bytes
+            .saturating_add(projected_write_bytes)
+            .saturating_add(page_size_bytes)
+            > cap_bytes
+    }
+
+    fn file_length_or_zero(path: &Path) -> Result<u64, ProductionStorageError> {
+        match path.metadata() {
+            Ok(metadata) => Ok(metadata.len()),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(0),
+            Err(error) => Err(ProductionStorageError::Database(error.to_string())),
+        }
+    }
+
+    fn sqlite_sidecar_path(path: &Path, suffix: &str) -> PathBuf {
+        let mut value = path.as_os_str().to_os_string();
+        value.push(suffix);
+        PathBuf::from(value)
     }
 
     fn verify_sqlcipher_key(connection: &Connection) -> Result<(), ProductionStorageError> {
@@ -2298,6 +2422,40 @@ pub mod production {
             let database_bytes = std::fs::read(&path).expect("read database");
             assert!(!contains_bytes(&database_bytes, b"sealed-body-for-test"));
             assert!(!contains_bytes(&database_bytes, b"ADREC1"));
+        }
+
+        #[test]
+        fn storage_budget_measurement_counts_database_and_sqlite_sidecars() {
+            let (_dir, path) = unique_test_database_path("budget-measurement");
+            std::fs::write(&path, vec![1_u8; 11]).expect("write db");
+            std::fs::write(format!("{}-wal", path.display()), vec![2_u8; 7]).expect("write wal");
+            std::fs::write(format!("{}-shm", path.display()), vec![3_u8; 5]).expect("write shm");
+            std::fs::write(format!("{}-journal", path.display()), vec![4_u8; 3])
+                .expect("write journal");
+
+            let measurement = measure_storage_budget(&path).expect("measure storage");
+            assert_eq!(measurement.database_bytes(), 11);
+            assert_eq!(measurement.wal_bytes(), 7);
+            assert_eq!(measurement.shm_bytes(), 5);
+            assert_eq!(measurement.journal_bytes(), 3);
+            assert_eq!(measurement.total_bytes(), 26);
+        }
+
+        #[test]
+        fn storage_budget_guard_is_fail_closed_at_the_cap_boundary() {
+            assert!(!storage_budget_would_exceed_limit(0, 1, 4096, 128 * 1024 * 1024));
+            assert!(storage_budget_would_exceed_limit(
+                128 * 1024 * 1024 - 1,
+                1,
+                4096,
+                128 * 1024 * 1024
+            ));
+            assert!(storage_budget_would_exceed_limit(
+                128 * 1024 * 1024 - 4096,
+                1,
+                4096,
+                128 * 1024 * 1024
+            ));
         }
 
         #[test]
