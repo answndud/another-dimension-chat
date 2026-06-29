@@ -40,6 +40,7 @@ pub mod production {
 
     pub const PRODUCTION_SCHEMA_VERSION: i64 = 1;
     pub const PRODUCTION_PROFILE_STORAGE_CAP_BYTES: u64 = 128 * 1024 * 1024;
+    const PRODUCTION_PROFILE_STORAGE_RECLAIM_FREELIST_THRESHOLD_PAGES: u64 = 8;
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum ProductionRecordKind {
@@ -1397,6 +1398,10 @@ pub mod production {
             let connection = Connection::open(&path)?;
             connection.pragma_update(None, "key", key.expose_for_sqlcipher())?;
             verify_sqlcipher_key(&connection)?;
+            connection.execute_batch(
+                "PRAGMA journal_mode = WAL;
+                 PRAGMA auto_vacuum = INCREMENTAL;",
+            )?;
             apply_forward_only_schema_version(&connection)?;
             connection.execute_batch(
                 "CREATE TABLE IF NOT EXISTS encrypted_records (
@@ -1654,6 +1659,26 @@ pub mod production {
             measure_storage_budget(&self.path)
         }
 
+        pub fn reclaim_deleted_pages_if_needed(
+            &self,
+        ) -> Result<bool, ProductionStorageError> {
+            let freelist_pages = self.freelist_page_count()?;
+            if freelist_pages < PRODUCTION_PROFILE_STORAGE_RECLAIM_FREELIST_THRESHOLD_PAGES {
+                return Ok(false);
+            }
+            let auto_vacuum_mode = self.auto_vacuum_mode()?;
+            self.connection.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")?;
+            match auto_vacuum_mode {
+                SqliteAutoVacuumMode::Incremental => self.connection.execute_batch(&format!(
+                    "PRAGMA incremental_vacuum({freelist_pages});"
+                ))?,
+                SqliteAutoVacuumMode::None | SqliteAutoVacuumMode::Full => {
+                    self.connection.execute_batch("VACUUM;")?;
+                }
+            }
+            Ok(true)
+        }
+
         fn ensure_storage_budget_within_limit(
             &self,
             projected_write_bytes: u64,
@@ -1677,10 +1702,40 @@ pub mod production {
         fn page_size_bytes(&self) -> Result<u64, ProductionStorageError> {
             let page_size = self
                 .connection
-                .pragma_query_value(None, "page_size", |row| row.get::<_, i64>(0))
+                .pragma_query_value(None, "page_size", |row| row.get::<_, String>(0))
                 .map_err(ProductionStorageError::from)?;
-            u64::try_from(page_size).map_err(|_| ProductionStorageError::InvalidRecord)
+            page_size
+                .parse::<u64>()
+                .map_err(|_| ProductionStorageError::InvalidRecord)
         }
+
+        fn freelist_page_count(&self) -> Result<u64, ProductionStorageError> {
+            let freelist_pages = self
+                .connection
+                .pragma_query_value(None, "freelist_count", |row| row.get::<_, i64>(0))
+                .map_err(ProductionStorageError::from)?;
+            u64::try_from(freelist_pages).map_err(|_| ProductionStorageError::InvalidRecord)
+        }
+
+        fn auto_vacuum_mode(&self) -> Result<SqliteAutoVacuumMode, ProductionStorageError> {
+            let mode = self
+                .connection
+                .pragma_query_value(None, "auto_vacuum", |row| row.get::<_, i64>(0))
+                .map_err(ProductionStorageError::from)?;
+            match mode {
+                0 => Ok(SqliteAutoVacuumMode::None),
+                1 => Ok(SqliteAutoVacuumMode::Full),
+                2 => Ok(SqliteAutoVacuumMode::Incremental),
+                _ => Err(ProductionStorageError::InvalidRecord),
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    enum SqliteAutoVacuumMode {
+        None,
+        Full,
+        Incremental,
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -3015,6 +3070,50 @@ pub mod production {
 
             assert_eq!(store.get(&record_id).expect("get missing"), None);
             assert_eq!(store.load_replay_window(&record_id).expect("load"), None);
+        }
+
+        #[test]
+        fn production_compaction_reclaims_deleted_pages_after_bulk_delete() {
+            let (_dir, path) = unique_test_database_path("reclaim-deleted-pages");
+            let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let scope = EncryptedRecordScope::profile(ProfileName::new("alice").expect("profile"));
+            let mut record_ids = Vec::new();
+
+            for index in 0_u16..32 {
+                let record_id =
+                    EncryptedRecordId::new(format!("reclaim_{index:04}")).expect("record id");
+                let mut body = vec![0_u8; 8192];
+                let last = body.len() - 1;
+                body[0] = index as u8;
+                body[last] = (index / 2) as u8;
+                let record = EncryptedRecord::new(
+                    ProductionRecordKind::MessageEnvelope,
+                    scope.clone(),
+                    vec![index as u8; 12],
+                    body,
+                )
+                .expect("record");
+                store.put(&record_id, &record).expect("put");
+                record_ids.push(record_id);
+            }
+
+            let before_delete = measure_storage_budget(&path).expect("measure before delete");
+            for record_id in &record_ids {
+                store.delete(record_id).expect("delete");
+            }
+            let after_delete = measure_storage_budget(&path).expect("measure after delete");
+            assert!(after_delete.total_bytes() >= before_delete.total_bytes());
+
+            assert!(store
+                .reclaim_deleted_pages_if_needed()
+                .expect("reclaim deleted pages"));
+            drop(store);
+
+            let after_reclaim = measure_storage_budget(&path).expect("measure after reclaim");
+            assert!(after_reclaim.total_bytes() < after_delete.total_bytes());
+            assert_eq!(after_reclaim.database_bytes(), after_reclaim.total_bytes());
         }
 
         #[test]
