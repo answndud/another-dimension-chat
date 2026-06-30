@@ -4,6 +4,39 @@
 
 ## Archive
 
+## 2026-06-30 - P130.2 DONE archive cleanup and limit recheck
+- 요약: DONE의 오래된 follow-up 문장을 현재 완료 상태로 바꾸고 archive 최근 20개 제한을 유지했다.
+- 변경: `docs/DONE.md`에서 P130.1 follow-up을 제거하고 완료 상태를 반영했다.
+- 검증: `rg -c '^## 2026-|^## 2025-' docs/DONE.md`, `sed -n '1,120p' docs/DONE.md`, `git diff --check`
+- 후속: 없음.
+
+## 2026-06-30 - P130.1 private guide verification command drift cleanup
+- 요약: 유지할 가치가 있는 private guide와 index 문서에서 삭제된 verification command 참조를 현재 entrypoint로 치환했다.
+- 변경: `docs/product/legacy/DEVELOPER_WORKFLOW.md`, `docs/technical-guide/09-release-security-and-non-claims.md`, `docs/technical-guide/10-how-to-read-the-codebase.md`, `docs/blog/README.md`, `docs/blog/00_source_reference_map.md`, `docs/blog/10-verification-scripts와-quality-gate.md`, `docs/blog/11-ai-agent를-개발-시스템에-넣은-방법.md`, `docs/blog/13-면접-qna와-5분-데모-스크립트.md`, `docs/blog/14-면접-학습-master-guide.md`를 `verify_light.sh`/`verify_full.sh` 기준으로 갱신했다.
+- 검증: `rg -n "verify_all\\.sh|verify_warm\\.sh|verify_cold\\.sh|verify_default_boundary\\.sh|build_cache_env\\.sh" docs --glob '*.md'`, `git diff --check`
+- 후속: 없음.
+
+## 2026-06-30 - P129.2 storage budget metric consolidation
+- 요약: storage budget의 structure metric 정의와 limit 체크를 한 선언형 목록으로 묶었다.
+- 변경: `apps/desktop-tauri/scripts/storage-budget.mjs`에서 metric별 prefix, report key, limit을 하나의 목록으로 관리하고 report/검사를 그 목록으로 생성하게 했다.
+- 변경: `apps/desktop-tauri/scripts/storage-budget.test.mjs`의 fixture와 기대값을 새 집계에 맞게 유지했다.
+- 검증: `node --test apps/desktop-tauri/scripts/storage-budget.test.mjs`, `npm --prefix apps/desktop-tauri run check:storage-budget`, `git diff --check`
+- 후속: P130.1에서 private guide의 삭제된 verification command 참조를 현재 entrypoint로 치환한다.
+
+## 2026-06-30 - P129.1 structure budget metric correction
+- 요약: frontend/script 구조 budget을 실제 repo surface에 맞게 조정했다.
+- 변경: `apps/desktop-tauri/scripts/storage-budget.mjs`에서 frontend cap을 40으로 올리고 `scripts/`와 `apps/desktop-tauri/scripts/`를 합산해 script surface를 20 cap으로 검사하도록 바꿨다.
+- 변경: `apps/desktop-tauri/scripts/storage-budget.test.mjs`, `README.md`, `README.ko.md`를 새 계약에 맞게 갱신했다.
+- 검증: `node --test apps/desktop-tauri/scripts/storage-budget.test.mjs`, `npm --prefix apps/desktop-tauri run check:storage-budget`, `git diff --check`
+- 후속: P129.2에서 storage budget metric 정의의 반복을 선언형 목록으로 더 압축한다.
+
+## 2026-06-30 - P128.1 cleanup runner for failed Tauri builds
+- 요약: Tauri build alias를 공통 cleanup runner로 묶어 성공, 실패, SIGTERM 종료 뒤 checkout 산출물이 남지 않게 했다.
+- 변경: `apps/desktop-tauri/scripts/run-clean-build.mjs`와 `apps/desktop-tauri/scripts/run-clean-build.test.mjs`를 추가하고 `apps/desktop-tauri/package.json`의 build alias를 runner로 교체했다.
+- 변경: `apps/desktop-tauri/scripts/build-storage-contract.test.mjs`를 새 alias 문자열에 맞게 갱신했다.
+- 검증: `node --test apps/desktop-tauri/scripts/run-clean-build.test.mjs`, `node --test apps/desktop-tauri/scripts/build-storage-contract.test.mjs`, `npm --prefix apps/desktop-tauri run check:storage-budget`, `git diff --check`
+- 후속: P129.1에서 frontend/script 구조 budget 지표를 실제 repo surface에 맞춘다.
+
 ## 2026-06-30 - P127.5 storage structure budget static verification
 - 요약: checkout 500MB 검사에 tracked file/directory 상한을 붙이고 실패 보고를 구조 중심으로 바꿨다.
 - 변경: `apps/desktop-tauri/scripts/storage-budget.mjs`에 tracked file 180개, tracked directory 45개, frontend src 32개, reference 4개, scripts 4개 상한과 상위 10개 directory 요약을 추가했다.
@@ -95,33 +128,3 @@
 - 변경: `apps/desktop-tauri/README.md`와 `SECURITY.md`의 source-build-primary 문구를 일관되게 맞췄다.
 - 검증: `bash scripts/verify_source_build_path.sh`, `git diff --check`.
 - 후속: P122.2에서 문서화된 source build 절차를 한 번만 재현 확인한다.
-
-## 2026-06-29 - demo-output no-op cleanup
-- 요약: unused `demo-output` 잔재를 코드/문서에서 제거했다.
-- 변경: `main.js`의 dead DOM lookup을 지우고 `index.html`의 `demo-output` pre와 `i18n.js`의 `demoNotRun` 문자열을 삭제했다.
-- 검증: `git diff --check`, `node --check apps/desktop-tauri/src/main.js`, `npm --prefix apps/desktop-tauri test`.
-- 후속: P121.3의 실제 desktop acceptance loop는 runtime 허용 시 진행한다.
-
-## 2026-06-27 - P121.1/P121.2 visible surface and build drift gate closure
-- 요약: 공개 UX의 `run-demo` no-op surface를 제거하고 build drift를 실패로 만들었다.
-- 변경: desktop demo section과 i18n/README 연결을 삭제하고 Vite build가 `MISSING_EXPORT`/`UNRESOLVED_IMPORT`를 throw하도록 바꿨다. light에 desktop build를 추가했다.
-- 검증: `node --check apps/desktop-tauri/src/main.js`, `npm --prefix apps/desktop-tauri test`, `npm --prefix apps/desktop-tauri run build`, `bash scripts/verify_light.sh`.
-- 후속: P121.3에서 실제 desktop acceptance loop를 한 번 확인한다.
-
-## 2026-06-27 - P120 desktop runtime release blocker closure
-- 요약: `main.js`의 실제 런타임 회귀와 diagnostics/return-value 불일치를 정리했다.
-- 변경: clipboard/local storage 성공 반환을 복구하고, send/receive/retry/cancel 경로의 undefined/no-op transport stub와 잘못된 diagnostics 비교를 정리했다.
-- 검증: `node --check apps/desktop-tauri/src/main.js`, `npm --prefix apps/desktop-tauri test`, `npm --prefix apps/desktop-tauri run build`, `bash scripts/verify_light.sh`.
-- 후속: P121에서 남은 visible UX surface와 build gate를 닫는다.
-
-## 2026-06-27 - P119.3 maintained verification documentation alignment
-- 요약: 여섯 maintained 문서의 light/warm/cold 의미와 all/full 호환 alias를 통일했다.
-- 변경: 두 CLI smoke를 기본 검증이 아닌 prototype/production 수동 acceptance로 명시했다.
-- 검증: source-build verifier, 문서별 7개 진입점 확인, `git diff --check`.
-- 후속: active phase 없음.
-
-## 2026-06-27 - P119.2 verification ladder consolidation
-- 요약: 755줄 scaffold 문자열 verifier와 호출 없는 중복 desktop shell verifier를 삭제했다.
-- 변경: warm이 light를, cold가 warm을 포함하도록 검증 계층을 단일화했고 CI는 light를 유지했다.
-- 검증: light 241개 통과, warm/cold shell syntax, 삭제 파일 참조 없음, `git diff --check`.
-- 후속: P119.3에서 maintained 문서의 ladder와 smoke 역할을 통일한다.
