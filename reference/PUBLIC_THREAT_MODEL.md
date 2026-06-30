@@ -3,14 +3,15 @@
 Another Dimension Chat is not a secure messenger release today.
 
 This document is the public-safe threat model for the unsigned experimental
-public beta. It describes the intended direction and the current beta boundary.
-It does not claim that the current build is safe for sensitive communication.
+public beta. It describes the intended direction and the current beta
+boundary. It does not claim that the current build is safe for sensitive
+communication.
 
 ## Product Direction
 
 The long-term product direction is a high-risk 1:1 messenger with no central
-trusted server for identity, contact discovery, message relay, push delivery, or
-cloud backup.
+trusted server for identity, contact discovery, message relay, push delivery,
+or cloud backup.
 
 The v0.1 unsigned public beta is narrower:
 
@@ -24,15 +25,9 @@ The v0.1 unsigned public beta is narrower:
 - explicit onion/Tor attempt paths after manual user action
 - redacted diagnostics and public release artifact verification
 
-The public gap map for the intended Korean Briar/Cwtch-style privacy direction
-is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`.
-
-That comparison is a gap map, not a claim that the current beta is
-Briar/Cwtch-equivalent.
-
 ## Assets
 
-The project is designed to eventually protect:
+The project is designed to protect:
 
 - pairwise identity material
 - pairing payloads and safety material
@@ -42,10 +37,11 @@ The project is designed to eventually protect:
 - onion/transport configuration and runtime state
 - diagnostic and recovery data
 
-The current public beta must still treat all of these as sensitive. Diagnostics,
-release artifacts, reports, and public docs must not include bridge lines, onion
-endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases,
-profile names, message text, local paths, passphrases, raw logs, or key material.
+The current public beta must still treat all of these as sensitive.
+Diagnostics, release artifacts, reports, and public docs must not include bridge
+lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads,
+safety phrases, profile names, message text, local paths, passphrases, raw
+logs, or key material.
 
 ## Current Defenses
 
@@ -64,16 +60,7 @@ Current implementation evidence includes:
 - public support diagnostics redaction boundary
 - manual GitHub Release download with SHA-256 verification
 - dependency lockfile hash baseline for reviewers
-- public threat-model and independent-review packet publication
-- explicit public review gap with no completed-review or reviewer-signoff claim
-- explicit no-public-user-safety-signoff and no-fabricated-review/peer-evidence
-  boundary
-- local-copy public support diagnostics limited to app status, build identity,
-  broad failure class, recovery next action, desktop local-private-flow acceptance status/blockers/non-claims, and app-launch network boundary
-- public issue and security intake policy that requires redacted diagnostics or
-  minimal private-contact requests instead of raw sensitive material
-- private vulnerability reporting or a minimal public contact request for
-  sensitive security reports
+- public threat-model review input and explicit review-gap handling
 
 These are implementation guardrails, not a secure messenger claim.
 
@@ -100,11 +87,7 @@ This beta does not claim:
 - secure deletion from storage media
 - dependency audit, SBOM, reproducible build, signing, notarization, or auto-update
 - completed independent review, reviewer signoff, or public user safety signoff
-- fabricated independent-review evidence or fabricated external peer evidence
 - crash upload, telemetry, raw log export, or safe publication of private logs
-- safe public posting of endpoints, payloads, safety phrases, messages, paths,
-  passphrases, private keys, key material, crash dumps, screenshots of private
-  room data, or private planning notes
 
 ## Non-Goals
 
@@ -130,13 +113,13 @@ v0.1 does not include:
 The unsigned public beta is for development and review only.
 
 It is an unsigned experimental public beta, not notarized, not audited,
-not production-ready, and sensitive communication prohibited.
+not production-ready, and sensitive communication is prohibited.
 
 External onion delivery is outside the v0.1 public product claim. Same-machine
 local rehearsal can exercise development flow, but it is not external peer
 evidence and must not be presented as such. No peer report is expected or
 required for this v0.1 claim, and no external delivery claim is made.
 
-macOS may require the user to manually allow the app in Privacy & Security. The
-project does not ask users to bypass macOS protections with terminal quarantine
-removal commands.
+macOS may require the user to manually allow the app in Privacy & Security.
+The project does not ask users to bypass macOS protections with terminal
+quarantine-removal commands.
