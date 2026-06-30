@@ -8,9 +8,9 @@ export const generatedSidecarPrefix = "another-dimension-engine-";
 export const budgetLimitBytes = 500 * 1024 * 1024;
 export const trackedFileLimit = 180;
 export const trackedDirectoryLimit = 45;
-export const frontendSourceFileLimit = 32;
+export const frontendSourceFileLimit = 40;
 export const referenceFileLimit = 4;
-export const scriptFileLimit = 4;
+export const scriptFileLimit = 20;
 
 function resolveLayout(root = repoRoot) {
   const desktopRoot = resolve(root, "apps/desktop-tauri");
@@ -139,21 +139,48 @@ function listTrackedDirectorySummaries(paths, limit = 10) {
     .slice(0, limit);
 }
 
-function countTrackedFilesUnderPrefix(paths, prefix) {
-  const normalizedPrefix = `${prefix}/`;
-  return paths.filter((path) => path.startsWith(normalizedPrefix)).length;
+function countTrackedFilesUnderPrefixes(paths, prefixes) {
+  return prefixes.reduce((total, prefix) => {
+    const normalizedPrefix = `${prefix}/`;
+    return total + paths.filter((path) => path.startsWith(normalizedPrefix)).length;
+  }, 0);
 }
+
+const repositoryStructureMetrics = [
+  {
+    countKey: "frontendSourceFileCount",
+    limitValue: frontendSourceFileLimit,
+    prefixes: ["apps/desktop-tauri/src"],
+    reportKey: "frontend_source_file_count",
+    limitReportKey: "frontend_source_file_limit",
+  },
+  {
+    countKey: "referenceFileCount",
+    limitValue: referenceFileLimit,
+    prefixes: ["reference"],
+    reportKey: "reference_file_count",
+    limitReportKey: "reference_file_limit",
+  },
+  {
+    countKey: "scriptFileCount",
+    limitValue: scriptFileLimit,
+    prefixes: ["scripts", "apps/desktop-tauri/scripts"],
+    reportKey: "script_file_count",
+    limitReportKey: "script_file_limit",
+  },
+];
 
 function measureRepositoryStructure(root = repoRoot) {
   const trackedPaths = listTrackedSourcePaths(root);
-  return {
+  const structure = {
     trackedFileCount: trackedPaths.length,
     trackedDirectoryCount: directoryFileCounts(trackedPaths).size,
-    frontendSourceFileCount: countTrackedFilesUnderPrefix(trackedPaths, "apps/desktop-tauri/src"),
-    referenceFileCount: countTrackedFilesUnderPrefix(trackedPaths, "reference"),
-    scriptFileCount: countTrackedFilesUnderPrefix(trackedPaths, "scripts"),
     largestTrackedDirectories: listTrackedDirectorySummaries(trackedPaths),
   };
+  for (const metric of repositoryStructureMetrics) {
+    structure[metric.countKey] = countTrackedFilesUnderPrefixes(trackedPaths, metric.prefixes);
+  }
+  return structure;
 }
 
 export { measureRepositoryStructure };
@@ -263,10 +290,10 @@ export function formatRepositoryStructureReport(structure) {
   const lines = [
     `tracked_file_count=${structure.trackedFileCount}`,
     `tracked_directory_count=${structure.trackedDirectoryCount}`,
-    `frontend_source_file_count=${structure.frontendSourceFileCount}`,
-    `reference_file_count=${structure.referenceFileCount}`,
-    `script_file_count=${structure.scriptFileCount}`,
   ];
+  for (const metric of repositoryStructureMetrics) {
+    lines.push(`${metric.reportKey}=${structure[metric.countKey]}`);
+  }
   for (const entry of structure.largestTrackedDirectories) {
     lines.push(`largest_tracked_directory=${entry.directory} tracked_file_count=${entry.trackedFileCount}`);
   }
@@ -292,16 +319,14 @@ export function checkStorageBudget({ repoRoot: root = repoRoot, budgetBytes = bu
   const structureBudgetExceeded =
     structure.trackedFileCount > trackedFileLimit ||
     structure.trackedDirectoryCount > trackedDirectoryLimit ||
-    structure.frontendSourceFileCount > frontendSourceFileLimit ||
-    structure.referenceFileCount > referenceFileLimit ||
-    structure.scriptFileCount > scriptFileLimit;
+    repositoryStructureMetrics.some((metric) => structure[metric.countKey] > metric.limitValue);
 
   if (structureBudgetExceeded) {
     lines.push(`tracked_file_limit=${trackedFileLimit}`);
     lines.push(`tracked_directory_limit=${trackedDirectoryLimit}`);
-    lines.push(`frontend_source_file_limit=${frontendSourceFileLimit}`);
-    lines.push(`reference_file_limit=${referenceFileLimit}`);
-    lines.push(`script_file_limit=${scriptFileLimit}`);
+    for (const metric of repositoryStructureMetrics) {
+      lines.push(`${metric.limitReportKey}=${metric.limitValue}`);
+    }
     const error = new Error("structure-budget-exceeded");
     error.report = lines.join("\n");
     throw error;

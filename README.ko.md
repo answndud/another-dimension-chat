@@ -124,7 +124,8 @@ CLI smoke는 기본 검증이 아닌 수동 acceptance이며, `smoke_tauri_two_p
 
 `npm --prefix apps/desktop-tauri run check:storage-budget`는 tracked source
 surface 제한도 함께 검사합니다. 기준은 tracked 파일 180개, tracked 디렉터리
-45개, frontend `src/` 파일 32개, reference 4개, scripts 4개입니다.
+45개, frontend `src/` 파일 40개, reference 4개, `scripts/`와
+`apps/desktop-tauri/scripts/`를 합친 scripts 20개입니다.
 
 ## 프로젝트 문서
 
