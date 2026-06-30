@@ -59,15 +59,13 @@ verification scripts in this order:
 
 ```sh
 scripts/verify_light.sh  # source-build boundaries + all desktop JavaScript tests
-scripts/verify_warm.sh   # light + rustfmt + desktop Tauri cargo check
-scripts/verify_cold.sh   # warm + runtime/workspace tests + clippy; pre-release only
+scripts/verify_full.sh   # light + rustfmt + desktop Tauri cargo check + runtime/workspace tests + clippy; pre-release only
 ```
 
-`scripts/verify_all.sh` is a compatibility alias for light and
-`scripts/verify_full.sh` is a compatibility alias for cold. The optional
-`smoke_dev_cli.sh` and `smoke_tauri_two_profile.sh` flows are manual acceptance
-checks for prototype and production two-profile resume behavior; they are not
-part of default verification.
+`scripts/verify_light.sh` and `scripts/verify_full.sh` are the canonical
+entrypoints. The optional `smoke_tauri_two_profile.sh` flow is a manual
+acceptance check for production two-profile resume behavior; it is not part
+of default verification.
 
 ## Reproducibility
 

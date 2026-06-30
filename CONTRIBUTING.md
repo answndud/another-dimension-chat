@@ -81,15 +81,13 @@ Use the three-level local verification ladder:
 
 ```bash
 scripts/verify_light.sh  # source-build boundaries + all desktop JavaScript tests
-scripts/verify_warm.sh   # light + rustfmt + desktop Tauri cargo check
-scripts/verify_cold.sh   # warm + runtime/workspace tests + clippy; pre-release only
+scripts/verify_full.sh   # light + rustfmt + desktop Tauri cargo check + runtime/workspace tests + clippy; pre-release only
 ```
 
-`scripts/verify_all.sh` remains a compatibility alias for light and
-`scripts/verify_full.sh` remains a compatibility alias for cold. The optional
-`smoke_dev_cli.sh` prototype pairing/message/replay/expiry flow and
-`smoke_tauri_two_profile.sh` production profile/pairing/session/transcript-resume
-flow are manual acceptance checks, not default verification.
+`scripts/verify_light.sh` and `scripts/verify_full.sh` are the canonical
+entrypoints. The optional `smoke_tauri_two_profile.sh` production
+profile/pairing/session/transcript-resume flow is a manual acceptance check,
+not default verification.
 
 Older release packaging or evidence-generation scripts referenced in historical
 documents are not part of the current development baseline unless they are
