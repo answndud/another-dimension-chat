@@ -116,7 +116,7 @@ body:
         diagnostic_version=2
         diagnostic_scope=public-support
         public_intake_policy_version=public-intake-v1
-        public_intake_policy_alignment=app-diagnostics#github-issue-template#reference-policy
+        public_intake_policy_alignment=app-diagnostics#github-issue-template#security-policy
         public_intake_policy_fields_aligned=true
         app_version=0.1.0
         build_channel=beta-onion

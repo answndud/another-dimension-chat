@@ -197,7 +197,7 @@ export const PUBLIC_SUPPORT_DIAGNOSTICS_FORBIDDEN_FIELDS = Object.freeze([
 
 export const PUBLIC_SUPPORT_DIAGNOSTICS_POLICY_VERSION = "public-intake-v1";
 export const PUBLIC_SUPPORT_DIAGNOSTICS_POLICY_ALIGNMENT =
-  "app-diagnostics#github-issue-template#reference-policy";
+  "app-diagnostics#github-issue-template#security-policy";
 
 export function publicSupportDiagnosticsAllowedFieldsValue() {
   return PUBLIC_SUPPORT_DIAGNOSTICS_ALLOWED_FIELDS.join("#");
