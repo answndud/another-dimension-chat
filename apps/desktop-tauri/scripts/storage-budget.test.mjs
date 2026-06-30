@@ -95,18 +95,20 @@ test("measureRepositoryStructure counts tracked source surface and directory fan
   mkdirSync(join(repoRoot, "apps/desktop-tauri/src"), { recursive: true });
   mkdirSync(join(repoRoot, "reference"), { recursive: true });
   mkdirSync(join(repoRoot, "scripts"), { recursive: true });
+  mkdirSync(join(repoRoot, "apps/desktop-tauri/scripts"), { recursive: true });
   mkdirSync(join(repoRoot, "crates/core/src"), { recursive: true });
   writeFileSync(join(repoRoot, "apps/desktop-tauri/src/main.js"), "ui", "utf8");
   writeFileSync(join(repoRoot, "apps/desktop-tauri/src/panel.js"), "ui", "utf8");
   writeFileSync(join(repoRoot, "reference/decision.md"), "ref", "utf8");
   writeFileSync(join(repoRoot, "scripts/check.mjs"), "script", "utf8");
+  writeFileSync(join(repoRoot, "apps/desktop-tauri/scripts/check.mjs"), "desktop-script", "utf8");
   writeFileSync(join(repoRoot, "crates/core/src/lib.rs"), "core", "utf8");
 
   const structure = measureRepositoryStructure(root);
-  assert.equal(structure.trackedFileCount, 5);
+  assert.equal(structure.trackedFileCount, 6);
   assert.equal(structure.frontendSourceFileCount, 2);
   assert.equal(structure.referenceFileCount, 1);
-  assert.equal(structure.scriptFileCount, 1);
+  assert.equal(structure.scriptFileCount, 2);
   assert.ok(structure.trackedDirectoryCount >= 4);
   assert.ok(structure.largestTrackedDirectories.length > 0);
 
@@ -147,6 +149,7 @@ test("checkStorageBudget fails when tracked structure exceeds the configured cap
   mkdirSync(join(repoRoot, "apps/desktop-tauri/src"), { recursive: true });
   mkdirSync(join(repoRoot, "reference"), { recursive: true });
   mkdirSync(join(repoRoot, "scripts"), { recursive: true });
+  mkdirSync(join(repoRoot, "apps/desktop-tauri/scripts"), { recursive: true });
   for (let index = 0; index < 46; index += 1) {
     mkdirSync(join(repoRoot, `feature-${String(index).padStart(2, "0")}`), { recursive: true });
     writeFileSync(join(repoRoot, `feature-${String(index).padStart(2, "0")}/file.txt`), "x", "utf8");
@@ -154,18 +157,19 @@ test("checkStorageBudget fails when tracked structure exceeds the configured cap
   writeFileSync(join(repoRoot, "apps/desktop-tauri/src/main.js"), "ui", "utf8");
   writeFileSync(join(repoRoot, "reference/decision.md"), "ref", "utf8");
   writeFileSync(join(repoRoot, "scripts/check.mjs"), "script", "utf8");
+  writeFileSync(join(repoRoot, "apps/desktop-tauri/scripts/check.mjs"), "desktop-script", "utf8");
 
   try {
     checkStorageBudget({ repoRoot: root, budgetBytes: 1024 * 1024 * 1024 });
     assert.fail("expected structure budget failure");
   } catch (error) {
     assert.match(String(error), /structure-budget-exceeded/);
-    assert.match(error.report ?? "", /tracked_file_count=49/);
-    assert.match(error.report ?? "", /tracked_directory_count=51/);
+    assert.match(error.report ?? "", /tracked_file_count=50/);
+    assert.match(error.report ?? "", /tracked_directory_count=52/);
     assert.match(error.report ?? "", /tracked_directory_limit=45/);
     assert.match(error.report ?? "", /frontend_source_file_count=1/);
     assert.match(error.report ?? "", /reference_file_count=1/);
-    assert.match(error.report ?? "", /script_file_count=1/);
+    assert.match(error.report ?? "", /script_file_count=2/);
     assert.equal((error.report.match(/^largest_tracked_directory=/gm) ?? []).length, 10);
   }
 
