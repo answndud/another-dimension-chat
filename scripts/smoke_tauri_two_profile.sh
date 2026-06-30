@@ -3,8 +3,10 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# shellcheck source=build_cache_env.sh
-source "$ROOT_DIR/scripts/build_cache_env.sh"
+CARGO_TARGET_DIR="$(mktemp -d "${TMPDIR:-/tmp}/another-dimension-cargo-target.XXXXXX")"
+trap 'rm -rf "$CARGO_TARGET_DIR"' EXIT
+mkdir -p "$CARGO_TARGET_DIR"
+export CARGO_TARGET_DIR
 
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/another-dimension-tauri-two-profile.XXXXXX")"
 PASSPHRASE="phase-seven-local-passphrase"
@@ -59,7 +61,6 @@ require_file_matches() {
   fi
 }
 
-export CARGO_TARGET_DIR
 cd "$ROOT_DIR"
 
 cargo build -q -p another-dimension

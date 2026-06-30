@@ -154,13 +154,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "another-dimension-mobile"
-version = "0.1.0"
-dependencies = [
- "another-dimension-core",
-]
-
-[[package]]
 name = "another-dimension-pairing"
 version = "0.1.0"
 dependencies = [

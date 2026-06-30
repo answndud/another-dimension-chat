@@ -843,10 +843,7 @@ pub mod production {
     pub enum ProductionStorageError {
         Policy(ProductionStoragePolicyError),
         Database(String),
-        StorageBudgetExceeded {
-            current_bytes: u64,
-            cap_bytes: u64,
-        },
+        StorageBudgetExceeded { current_bytes: u64, cap_bytes: u64 },
         InvalidRecord,
         UnlockFailed,
     }
@@ -1659,19 +1656,18 @@ pub mod production {
             measure_storage_budget(&self.path)
         }
 
-        pub fn reclaim_deleted_pages_if_needed(
-            &self,
-        ) -> Result<bool, ProductionStorageError> {
+        pub fn reclaim_deleted_pages_if_needed(&self) -> Result<bool, ProductionStorageError> {
             let freelist_pages = self.freelist_page_count()?;
             if freelist_pages < PRODUCTION_PROFILE_STORAGE_RECLAIM_FREELIST_THRESHOLD_PAGES {
                 return Ok(false);
             }
             let auto_vacuum_mode = self.auto_vacuum_mode()?;
-            self.connection.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")?;
+            self.connection
+                .execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")?;
             match auto_vacuum_mode {
-                SqliteAutoVacuumMode::Incremental => self.connection.execute_batch(&format!(
-                    "PRAGMA incremental_vacuum({freelist_pages});"
-                ))?,
+                SqliteAutoVacuumMode::Incremental => self
+                    .connection
+                    .execute_batch(&format!("PRAGMA incremental_vacuum({freelist_pages});"))?,
                 SqliteAutoVacuumMode::None | SqliteAutoVacuumMode::Full => {
                     self.connection.execute_batch("VACUUM;")?;
                 }
@@ -2498,7 +2494,12 @@ pub mod production {
 
         #[test]
         fn storage_budget_guard_is_fail_closed_at_the_cap_boundary() {
-            assert!(!storage_budget_would_exceed_limit(0, 1, 4096, 128 * 1024 * 1024));
+            assert!(!storage_budget_would_exceed_limit(
+                0,
+                1,
+                4096,
+                128 * 1024 * 1024
+            ));
             assert!(storage_budget_would_exceed_limit(
                 128 * 1024 * 1024 - 1,
                 1,

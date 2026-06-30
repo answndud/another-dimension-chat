@@ -66,8 +66,8 @@ test("public shell cargo tree excludes legacy runtime graph", () => {
   assertFileDoesNotContain("apps/desktop-tauri/package.json", "verify:warm");
   assertFileDoesNotContain("apps/desktop-tauri/package.json", "verify:cold");
   assertFileDoesNotContain("apps/desktop-tauri/package.json", "legacy:tauri");
-  assertFileDoesNotContain("scripts/build_cache_env.sh", ".build-cache");
-  assertFileDoesNotContain("scripts/build_cache_env.sh", "Library/Caches/another-dimension");
+  assertFileDoesNotContain("scripts/smoke_tauri_two_profile.sh", ".build-cache");
+  assertFileDoesNotContain("scripts/smoke_tauri_two_profile.sh", "Library/Caches/another-dimension");
 
   const result = runCargoTree([
     "tree",

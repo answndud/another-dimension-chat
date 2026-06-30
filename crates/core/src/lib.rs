@@ -22,10 +22,10 @@ pub mod production {
         ReplayWindow,
     };
     use another_dimension_storage::production::{
-        production_emergency_local_wipe_decision, production_message_storage_boundary_summary,
+        measure_storage_budget, production_emergency_local_wipe_decision,
+        production_message_storage_boundary_summary,
         production_storage_migration_redaction_boundary_summary, protection_for,
-        require_encrypted_record_allowed, require_persistence_allowed, measure_storage_budget,
-        EncryptedRecord,
+        require_encrypted_record_allowed, require_persistence_allowed, EncryptedRecord,
         EncryptedRecordId, EncryptedRecordScope, LocalProfileRecoveryFailureKind,
         LockedProfileStore, ProductionRecordKind, ProductionStorageError,
         ProductionStoragePolicyError, ProfilePassphrase, ProfileStoreUnlockFailureKind,
@@ -31152,8 +31152,8 @@ pub mod production {
             std::fs::write(format!("{}-journal", store_path.display()), vec![4_u8; 3])
                 .expect("write journal");
 
-            let status = production_storage_budget_status(&store_path)
-                .expect("storage budget status");
+            let status =
+                production_storage_budget_status(&store_path).expect("storage budget status");
 
             assert_eq!(status.database_bytes(), 13);
             assert_eq!(status.wal_bytes(), 7);
@@ -33199,8 +33199,8 @@ pub mod production {
                 Err(ProductionSessionError::UnexpectedEnvelope)
             ));
 
-            let outbound_budget_before_delete =
-                measure_storage_budget(outbound_store).expect("measure outbound budget before delete");
+            let outbound_budget_before_delete = measure_storage_budget(outbound_store)
+                .expect("measure outbound budget before delete");
             let conversation_delete = production_conversation_delete(
                 outbound_store,
                 outbound_profile.clone(),
@@ -33224,10 +33224,11 @@ pub mod production {
                 production_message_transcript_export(outbound_store, outbound_profile, &passphrase)
                     .expect("empty transcript after conversation delete");
             assert!(empty_transcript.entries().is_empty());
-            let outbound_budget_after_delete =
-                measure_storage_budget(outbound_store).expect("measure outbound budget after delete");
+            let outbound_budget_after_delete = measure_storage_budget(outbound_store)
+                .expect("measure outbound budget after delete");
             assert!(
-                outbound_budget_after_delete.total_bytes() <= outbound_budget_before_delete.total_bytes()
+                outbound_budget_after_delete.total_bytes()
+                    <= outbound_budget_before_delete.total_bytes()
             );
 
             let lifecycle_before_delete = production_pairing_session_lifecycle_status(
