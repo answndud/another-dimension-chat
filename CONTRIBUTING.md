@@ -67,8 +67,8 @@ not include:
 - files from `docs/`
 - local app data
 
-Use `reference/PUBLIC_INTAKE_POLICY.md` for public support reports and
-`SECURITY.md` for sensitive security reports.
+Use `SECURITY.md` for public support redaction rules and sensitive security
+reports.
 
 ## License
 
@@ -112,5 +112,5 @@ Every public release update must keep:
 - Do not fabricate peer reports or external evidence.
 - Do not add broad verification loops as release evidence.
 - Prefer small public changes that preserve existing boundaries.
-- Keep `README.md`, `SECURITY.md`, and `reference/` aligned when public claims
-  or release files change.
+- Keep `README.md` and `SECURITY.md` aligned when public claims or release
+  files change.

@@ -84,23 +84,6 @@ fallback 세부 내용은 [SECURITY.md](SECURITY.md)에만 둡니다.
 중앙 계정, 검색 가능한 username, contact discovery 서비스, 메시지 릴레이,
 클라우드 백업, 푸시 알림 서비스는 없음.
 
-## 스크린샷
-
-<table>
-<tr>
-  <td><img src="reference/screenshots/macos-public-beta-first-run-desktop.png" width="320" alt="로컬 프로필 생성"></td>
-  <td><img src="reference/screenshots/macos-public-beta-room-flow-desktop.png" width="320" alt="페어와이즈 룸 생성"></td>
-  <td><img src="reference/screenshots/macos-public-beta-manual-envelope-desktop.png" width="320" alt="sealed message 내보내기"></td>
-</tr>
-<tr>
-  <td align="center">로컬 프로필 생성</td>
-  <td align="center">초대 코드 공유</td>
-  <td align="center">sealed message 내보내기</td>
-</tr>
-</table>
-
-[더 많은 스크린샷](reference/screenshots/)
-
 ## 플랫폼
 
 | 플랫폼 | 공개 상태 |

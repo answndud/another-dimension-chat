@@ -85,23 +85,6 @@ route. Legacy fallback details live in [SECURITY.md](SECURITY.md).
 There is no central account, searchable username, contact discovery service,
 message relay, cloud backup, or push notification service.
 
-## Screenshots
-
-<table>
-<tr>
-  <td><img src="reference/screenshots/macos-public-beta-first-run-desktop.png" width="320" alt="Create a local profile"></td>
-  <td><img src="reference/screenshots/macos-public-beta-room-flow-desktop.png" width="320" alt="Create a pairwise room"></td>
-  <td><img src="reference/screenshots/macos-public-beta-manual-envelope-desktop.png" width="320" alt="Export a sealed message"></td>
-</tr>
-<tr>
-  <td align="center">Create a local profile</td>
-  <td align="center">Share one invite code</td>
-  <td align="center">Export a sealed message</td>
-</tr>
-</table>
-
-[More screenshots](reference/screenshots/)
-
 ## Platforms
 
 | Platform | Public status |
