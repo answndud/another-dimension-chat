@@ -122,6 +122,10 @@ scripts/verify_full.sh   # light + rustfmt + desktop Tauri cargo check + runtime
 CLI smoke는 기본 검증이 아닌 수동 acceptance이며, `smoke_tauri_two_profile.sh`
 는 production profile/pairing/session/transcript resume를 확인합니다.
 
+`npm --prefix apps/desktop-tauri run check:storage-budget`는 tracked source
+surface 제한도 함께 검사합니다. 기준은 tracked 파일 180개, tracked 디렉터리
+45개, frontend `src/` 파일 32개, reference 4개, scripts 4개입니다.
+
 ## 프로젝트 문서
 
 | 필요 | 시작 문서 |
