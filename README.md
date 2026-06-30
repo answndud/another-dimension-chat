@@ -127,6 +127,10 @@ entrypoints. The CLI smoke script is a manual acceptance check, not default
 verification: `smoke_tauri_two_profile.sh` covers production
 profile/pairing/session/transcript resume.
 
+`npm --prefix apps/desktop-tauri run check:storage-budget` also enforces the
+tracked source surface limits: 180 tracked files, 45 tracked directories, 32
+frontend `src/` files, 4 reference files, and 4 scripts.
+
 ## Project Docs
 
 | Need | Start here |
