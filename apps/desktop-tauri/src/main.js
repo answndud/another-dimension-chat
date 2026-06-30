@@ -86,26 +86,41 @@ import {
   messageEnvelopeSlotPayload,
   messageEnvelopeSlotRecoveryHint,
 } from "./message-envelope-slots.js";
-import { createDiagnosticsCopyController } from "./diagnostics-copy-controller.js";
-import { createDiagnosticsReportController } from "./diagnostics-report-controller.js";
-import { createDesktopPanelController } from "./desktop-panel-controller.js";
-import { createEngineSidecarDiagnosticsController } from "./engine-sidecar-diagnostics-controller.js";
-import { createMessageTranscriptController } from "./message-transcript-controller.js";
+import {
+  createDiagnosticsCopyController,
+  createDiagnosticsReportController,
+  createDesktopPanelController,
+  createEngineSidecarDiagnosticsController,
+} from "./diagnostics.js";
+import {
+  createMessageTranscriptController,
+  createTranscriptController,
+  combinedTwoProfileTranscriptTsv,
+  currentRoomConversationMetadata as transcriptCurrentRoomConversationMetadata,
+  manualExportConversationSyncView,
+  manualImportConversationReloadResult,
+  reconcileCurrentInviteRoomMetadataFromTranscriptEntries as transcriptReconcileCurrentInviteRoomMetadataFromTranscriptEntries,
+  savedInviteRoomMetadataSyncCandidates as transcriptSavedInviteRoomMetadataSyncCandidates,
+  transcriptLoadUiState,
+  transcriptLoadWarnings,
+  transcriptResumeWarningText,
+  transcriptRetentionView,
+} from "./transcript.js";
 import { createOnionRuntimeController } from "./onion-runtime-controller.js";
-import { createProductionActionStateController } from "./production-action-state-controller.js";
-import { createProductionPairingMessageReadiness } from "./production-pairing-message-readiness.js";
-import { createProductionMessageReadiness } from "./production-message-readiness.js";
+import {
+  createProductionActionStateController,
+  createProductionBusyActionState,
+  createProductionMessageReadiness,
+  createProductionPairingMessageReadiness,
+  createProductionSelectedConversationState,
+} from "./production.js";
 import { updateProductionMessageSurface } from "./production-message-surface-controller.js";
-import { createProductionSelectedConversationState } from "./production-selected-conversation-state.js";
-import { createProductionBusyActionState } from "./production-busy-action-state.js";
 import { createProductionProfileController } from "./production-profile-controller.js";
-import { createTranscriptController } from "./transcript-controller.js";
-import { combinedTwoProfileTranscriptTsv } from "./transcript-export.js";
-import { transcriptRetentionView } from "./transcript-retention.js";
 import { applyStaticTranslations, normalizeLanguage, translate } from "./i18n.js";
 import * as privateDeliveryState from "./private-delivery-state.js";
 import {
   connectionCodeRoleStorageKey,
+  createSavedRoomController,
   inviteRoomMetadataValue,
   inviteRoomMetadataWithoutManualRebuild,
   inviteRoomUpdatedAtValue,
@@ -132,77 +147,46 @@ import {
   savedInviteRoomStorageLimit,
   serializeStoredLifecycleMap,
   serializeStoredStringMap,
-} from "./saved-room-storage.js";
-import { createSavedRoomController } from "./saved-room-controller.js";
-import {
   savedInviteRoomActionRechecksAfterOpen,
   savedInviteRoomManualRebuildRecoveryCandidate,
   savedInviteRoomRecheckedRouteReadinessAction,
-} from "./saved-room-recovery.js";
+  refreshCurrentRoomAfterReceiveImport as savedRoomRefreshCurrentRoomAfterReceiveImport,
+  refreshSavedInviteRoomMetadataForFingerprint as savedRoomRefreshSavedInviteRoomMetadataForFingerprint,
+  savedInviteRoomMetadataFromLocalStores as savedRoomRefreshSavedInviteRoomMetadataFromLocalStores,
+  syncSavedInviteRoomMetadataFromLocalStores as savedRoomSyncSavedInviteRoomMetadataFromLocalStores,
+  selectSavedInviteRoomResumeRoom,
+  savedInviteRoomResumePriorityValue,
+  savedRoomActionLabelKeyValue,
+  savedInviteRoomReadinessBlockerKeyValue,
+  savedInviteRoomReadinessNextDetailKeyValue,
+  savedInviteRoomReadinessReviewValue,
+  savedInviteRoomReadinessSummaryKeyValue,
+  savedInviteRoomImmediateListAction,
+  savedInviteRoomRecoveryListAction,
+  savedInviteRoomRetryableListAction,
+  savedInviteRoomBaseStateView,
+  savedInviteRoomNormalizedRecoveryView,
+  savedInviteRoomResumeStateView,
+  savedInviteRoomListItemContext,
+  savedInviteRoomListItemDisplayState,
+  savedInviteRoomListItemDerivedState,
+  savedInviteRoomListItemViewRoom,
+  savedInviteRoomRecoveryCandidates,
+} from "./saved-room.js";
 import {
-  currentRoomConversationMetadata as transcriptCurrentRoomConversationMetadata,
-  reconcileCurrentInviteRoomMetadataFromTranscriptEntries as transcriptReconcileCurrentInviteRoomMetadataFromTranscriptEntries,
-  savedInviteRoomMetadataSyncCandidates as transcriptSavedInviteRoomMetadataSyncCandidates,
-  transcriptResumeWarningText,
-} from "./transcript-resume.js";
-import {
+  createChatDeliveryNoticeController,
+  inviteModeEndpointRefreshAction,
   localizedSendAttemptMessage as chatDeliveryLocalizedSendAttemptMessage,
   localizedSendFailureMessage as chatDeliveryLocalizedSendFailureMessage,
+  outboundEntryMatchesCurrentDirection,
+  resolveOutboundEntryForAction,
   sendAttemptFailureText as chatDeliverySendAttemptFailureText,
   sendFailureNeedsEndpointRefresh as chatDeliverySendFailureNeedsEndpointRefresh,
   sendFailureNeedsNetworkRetry as chatDeliverySendFailureNeedsNetworkRetry,
   sendFailureNeedsRouteSetup as chatDeliverySendFailureNeedsRouteSetup,
   sendFailureNeedsStartReceiving as chatDeliverySendFailureNeedsStartReceiving,
   sendRuntimeOwnerMismatch as chatDeliverySendRuntimeOwnerMismatch,
-} from "./chat-delivery-notice-state.js";
-import { createChatDeliveryNoticeController } from "./chat-delivery-notice-controller.js";
-import {
-  manualExportConversationSyncView,
-  manualImportConversationReloadResult,
-} from "./chat-transcript-sync-state.js";
-import {
-  inviteModeEndpointRefreshAction,
-  outboundEntryMatchesCurrentDirection,
-} from "./chat-outbound-action-state.js";
-import { resolveOutboundEntryForAction } from "./chat-outbound-runner-state.js";
-import {
-  transcriptLoadUiState,
-  transcriptLoadWarnings,
-} from "./chat-transcript-load-state.js";
-import {
-  refreshCurrentRoomAfterReceiveImport as savedRoomRefreshCurrentRoomAfterReceiveImport,
-  refreshSavedInviteRoomMetadataForFingerprint as savedRoomRefreshSavedInviteRoomMetadataForFingerprint,
-  savedInviteRoomMetadataFromLocalStores as savedRoomRefreshSavedInviteRoomMetadataFromLocalStores,
-  syncSavedInviteRoomMetadataFromLocalStores as savedRoomSyncSavedInviteRoomMetadataFromLocalStores,
-} from "./saved-room-refresh.js";
-import { selectSavedInviteRoomResumeRoom } from "./saved-room-resume-state.js";
-import {
-  savedInviteRoomResumePriorityValue,
-  savedRoomActionLabelKeyValue,
-} from "./saved-room-priority-state.js";
-import {
-  savedInviteRoomReadinessBlockerKeyValue,
-  savedInviteRoomReadinessNextDetailKeyValue,
-  savedInviteRoomReadinessReviewValue,
-  savedInviteRoomReadinessSummaryKeyValue,
-} from "./saved-room-readiness-state.js";
-import {
-  savedInviteRoomImmediateListAction,
-  savedInviteRoomRecoveryListAction,
-  savedInviteRoomRetryableListAction,
-} from "./saved-room-list-action-state.js";
-import {
-  savedInviteRoomBaseStateView,
-  savedInviteRoomNormalizedRecoveryView,
-  savedInviteRoomResumeStateView,
-} from "./saved-room-state-view.js";
-import {
-  savedInviteRoomListItemContext,
-  savedInviteRoomListItemDisplayState,
-  savedInviteRoomListItemDerivedState,
-  savedInviteRoomListItemViewRoom,
-  savedInviteRoomRecoveryCandidates,
-} from "./saved-room-list-item-state.js";
+} from "./chat-delivery.js";
 import {
   manualEnvelopeFailureClassForError as manualEnvelopePanelFailureClassForError,
   manualEnvelopePanelItems,

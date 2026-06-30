@@ -106,15 +106,16 @@ test("public intake field set is shared by app diagnostics issue template and re
     join(repoRoot, ".github/ISSUE_TEMPLATE/public_beta_support.yml"),
     "utf8",
   );
-  const policy = readFileSync(join(repoRoot, "reference/PUBLIC_INTAKE_POLICY.md"), "utf8");
+  const policy = readFileSync(join(repoRoot, "SECURITY.md"), "utf8");
   const diagnostics = publicBetaDiagnosticsReport("app_version=0.1.0\nbuild_channel=beta-onion", {
     includeCopyBoundary: true,
   });
 
-  for (const text of [issueTemplate, policy, diagnostics]) {
+  assert.ok(policy.includes("Public support requests should stay redacted"));
+  for (const text of [issueTemplate, diagnostics]) {
     assert.ok(text.includes(`allowed_public_intake_fields=${allowed}`));
     assert.ok(text.includes(`forbidden_public_intake_fields=${forbidden}`));
-    assert.ok(text.includes("public_intake_policy_alignment=app-diagnostics#github-issue-template#reference-policy"));
+    assert.ok(text.includes("public_intake_policy_alignment=app-diagnostics#github-issue-template#security-policy"));
   }
   assert.match(diagnostics, /public_intake_policy_version=public-intake-v1/);
   assert.match(diagnostics, /public_intake_policy_fields_aligned=true/);
@@ -485,7 +486,7 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /diagnostic_version=2/);
   assert.match(diagnostics, /diagnostic_scope=public-support/);
   assert.match(diagnostics, /public_intake_policy_version=public-intake-v1/);
-  assert.match(diagnostics, /public_intake_policy_alignment=app-diagnostics#github-issue-template#reference-policy/);
+  assert.match(diagnostics, /public_intake_policy_alignment=app-diagnostics#github-issue-template#security-policy/);
   assert.match(diagnostics, /public_intake_policy_fields_aligned=true/);
   assert.match(diagnostics, /payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only/);
   assert.match(diagnostics, /diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only/);

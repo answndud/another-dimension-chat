@@ -5,6 +5,148 @@ import {
   productionTwoProfileRealOnionRecoveryPlan,
 } from "./action-state.js";
 
+export function createDiagnosticsCopyController(input) {
+  const {
+    fields,
+    t,
+    updateEngineSidecarDiagnostics,
+    refreshFieldTestReport,
+    refreshPublicBetaDiagnostics,
+    renderRedactedSupportReport,
+    fieldTestReportCopyPayload,
+    writeClipboardWithTtl,
+    setProductionTwoProfileState,
+    setText,
+    renderFieldTestReportComparison,
+  } = input;
+
+  function selectFieldTestReportCopyPayload(payload) {
+    if (!fields.fieldTestReport) {
+      return false;
+    }
+    fields.fieldTestReport.value = payload;
+    fields.fieldTestReport.focus?.();
+    fields.fieldTestReport.select?.();
+    return true;
+  }
+
+  function selectPublicBetaDiagnosticsPayload(payload) {
+    if (!fields.publicBetaDiagnostics) {
+      return false;
+    }
+    fields.publicBetaDiagnostics.value = payload;
+    fields.publicBetaDiagnostics.focus?.();
+    fields.publicBetaDiagnostics.select?.();
+    return true;
+  }
+
+  function selectRedactedSupportReportPayload(payload) {
+    if (!fields.redactedSupportReport) {
+      return false;
+    }
+    fields.redactedSupportReport.value = payload;
+    fields.redactedSupportReport.focus?.();
+    fields.redactedSupportReport.select?.();
+    return true;
+  }
+
+  async function refreshFieldTestReportWithRuntimeDiagnostics() {
+    await updateEngineSidecarDiagnostics();
+    return refreshFieldTestReport();
+  }
+
+  async function refreshPublicBetaDiagnosticsWithRuntimeDiagnostics() {
+    await updateEngineSidecarDiagnostics();
+    return refreshPublicBetaDiagnostics();
+  }
+
+  async function copyPublicBetaDiagnostics() {
+    await updateEngineSidecarDiagnostics();
+    const payload = refreshPublicBetaDiagnostics();
+    if (!payload) {
+      return false;
+    }
+    try {
+      await writeClipboardWithTtl(payload);
+      setProductionTwoProfileState("Public diagnostics copied");
+      setText(fields.productionTwoProfileWarning, t("publicBetaDiagnosticsCopied"));
+      return true;
+    } catch {
+      selectPublicBetaDiagnosticsPayload(payload);
+      setProductionTwoProfileState("Public diagnostics selected");
+      setText(fields.productionTwoProfileWarning, t("publicBetaDiagnosticsCopyFallback"));
+      return false;
+    }
+  }
+
+  async function copyRedactedSupportReport() {
+    const payload = fields.redactedSupportReport?.value || renderRedactedSupportReport().payload;
+    if (!payload) {
+      return false;
+    }
+    try {
+      await writeClipboardWithTtl(payload);
+      setProductionTwoProfileState("Redacted support report copied");
+      setText(fields.productionTwoProfileWarning, t("redactedSupportReportCopied"));
+      return true;
+    } catch {
+      selectRedactedSupportReportPayload(payload);
+      setProductionTwoProfileState("Redacted support report selected");
+      setText(fields.productionTwoProfileWarning, t("redactedSupportReportCopyFallback"));
+      return false;
+    }
+  }
+
+  async function copyFieldTestReport() {
+    const report = refreshFieldTestReport();
+    if (!report) {
+      return false;
+    }
+    const payload = fieldTestReportCopyPayload(report);
+    try {
+      await writeClipboardWithTtl(payload);
+      setProductionTwoProfileState("Field test report copied");
+      setText(fields.productionTwoProfileWarning, t("fieldTestReportCopied"));
+      return true;
+    } catch {
+      selectFieldTestReportCopyPayload(payload);
+      setProductionTwoProfileState("Field test report selected");
+      setText(fields.productionTwoProfileWarning, t("fieldTestReportCopyFallback"));
+      return false;
+    }
+  }
+
+  function bindDiagnosticsCopyControls() {
+    if (fields.refreshFieldTestReport) {
+      fields.refreshFieldTestReport.addEventListener("click", refreshFieldTestReportWithRuntimeDiagnostics);
+    }
+    if (fields.copyFieldTestReport) {
+      fields.copyFieldTestReport.addEventListener("click", copyFieldTestReport);
+    }
+    if (fields.refreshPublicBetaDiagnostics) {
+      fields.refreshPublicBetaDiagnostics.addEventListener("click", refreshPublicBetaDiagnosticsWithRuntimeDiagnostics);
+    }
+    if (fields.copyPublicBetaDiagnostics) {
+      fields.copyPublicBetaDiagnostics.addEventListener("click", copyPublicBetaDiagnostics);
+    }
+    if (fields.copyRedactedSupportReport) {
+      fields.copyRedactedSupportReport.addEventListener("click", copyRedactedSupportReport);
+    }
+    if (fields.peerFieldTestReport) {
+      fields.peerFieldTestReport.addEventListener("input", renderFieldTestReportComparison);
+    }
+  }
+
+  return {
+    bindDiagnosticsCopyControls,
+    copyFieldTestReport,
+    copyPublicBetaDiagnostics,
+    copyRedactedSupportReport,
+    refreshFieldTestReportWithRuntimeDiagnostics,
+    refreshPublicBetaDiagnosticsWithRuntimeDiagnostics,
+  };
+}
+
 function fieldTestReportValue(value, fallback = "unknown") {
   const text = String(value ?? "").trim();
   return text.length > 0 ? text : fallback;
@@ -392,7 +534,7 @@ export function createDiagnosticsReportController(input) {
       publicDiagnostics.diagnostics_copy_boundary === "redacted-status-build-failure-class-recovery-action-only";
     const publicIntakePolicyFieldsAligned =
       publicDiagnostics.public_intake_policy_fields_aligned === "true" &&
-      publicIntakePolicyAlignment === "app-diagnostics#github-issue-template#reference-policy" &&
+      publicIntakePolicyAlignment === "app-diagnostics#github-issue-template#security-policy" &&
       allowedPublicIntakeFields.includes("failure-class") &&
       allowedPublicIntakeFields.includes("recovery-next-action") &&
       forbiddenPublicIntakeFields.includes("raw-logs") &&
@@ -413,4 +555,455 @@ export function createDiagnosticsReportController(input) {
   }
 
   return { buildFieldTestReport, refreshPublicBetaDiagnostics };
+}
+
+function engineSidecarFieldTestValue(value, fallback = "unknown") {
+  const text = String(value ?? "").trim();
+  return text.length > 0 ? text : fallback;
+}
+
+function engineSidecarDiagnosticsFallback(failureClass = "not-run") {
+  return {
+    statusRuntimeChecked: false,
+    statusFailureClass: failureClass,
+    statusContractValid: false,
+    statusRedactedDiagnosticsOnly: false,
+    statusRuntimeMode: "unknown",
+    manualSelfTestRuntimeChecked: false,
+    manualSelfTestFailureClass: failureClass,
+    manualSelfTestContractValid: false,
+    manualSelfTestPassed: false,
+    manualSelfTestRuntimeAvailable: false,
+    rawPathReturned: false,
+    stdoutReturned: false,
+    stderrReturned: false,
+    appLaunchNetworkAllowed: false,
+    roomOpenNetworkAllowed: false,
+    localRuntimePromotedToDeliveryProof: false,
+    contractRuntimeChecked: false,
+    contractCommand: "redacted-support-diagnostics",
+    contractStatus: "unknown",
+    contractFailureClass: failureClass,
+    contractRecoveryAction: "retry-with-redacted-contract-input",
+    contractSchemaValid: false,
+    contractRejected: false,
+    contractRawPayloadReturned: false,
+    contractRuntimeActionPerformed: false,
+    contractStateMutated: false,
+  };
+}
+
+function engineSidecarContractDiagnosticsFromProbe(contractProbe = {}) {
+  const contractSchemaValid =
+    contractProbe.schema_valid === true &&
+    contractProbe.protocol_valid === true &&
+    contractProbe.contract_version_valid === true &&
+    contractProbe.command_valid === true &&
+    contractProbe.input_schema_valid === true &&
+    contractProbe.output_schema_valid === true;
+  return {
+    contractRuntimeChecked: contractProbe.attempted === true,
+    contractCommand: engineSidecarFieldTestValue(contractProbe.command, "redacted-support-diagnostics"),
+    contractStatus: engineSidecarFieldTestValue(contractProbe.status, "unknown"),
+    contractFailureClass: engineSidecarFieldTestValue(contractProbe.failure_class, "unknown"),
+    contractRecoveryAction: engineSidecarFieldTestValue(contractProbe.recovery_action, "unknown"),
+    contractSchemaValid,
+    contractRejected: contractProbe.status === "rejected",
+    contractRawPayloadReturned: contractProbe.raw_payload_returned === true,
+    contractRuntimeActionPerformed: contractProbe.runtime_action_performed === true,
+    contractStateMutated: contractProbe.state_mutated === true,
+  };
+}
+
+function engineSidecarDiagnosticsFromProbes(statusProbe = {}, manualSelfTestProbe = {}, contractProbe = {}) {
+  const manualSelfTestPassed =
+    manualSelfTestProbe.failure_class === "none" &&
+    manualSelfTestProbe.pairing_payload_roundtrip === true &&
+    manualSelfTestProbe.safety_transcript_bound === true &&
+    manualSelfTestProbe.noise_handshake_roundtrip === true &&
+    manualSelfTestProbe.envelope_roundtrip === true &&
+    manualSelfTestProbe.replay_duplicate_rejected === true &&
+    manualSelfTestProbe.plaintext_returned !== true &&
+    manualSelfTestProbe.key_material_exposed !== true &&
+    manualSelfTestProbe.passphrase_exposed !== true;
+  return {
+    statusRuntimeChecked: statusProbe.attempted === true,
+    statusFailureClass: engineSidecarFieldTestValue(statusProbe.failure_class, "unknown"),
+    statusContractValid:
+      statusProbe.schema_valid === true &&
+      statusProbe.protocol_valid === true &&
+      statusProbe.contract_version_valid === true,
+    statusRedactedDiagnosticsOnly: statusProbe.redacted_diagnostics_only === true,
+    statusRuntimeMode: engineSidecarFieldTestValue(statusProbe.runtime_mode, "unknown"),
+    manualSelfTestRuntimeChecked: manualSelfTestProbe.attempted === true,
+    manualSelfTestFailureClass: engineSidecarFieldTestValue(manualSelfTestProbe.failure_class, "unknown"),
+    manualSelfTestContractValid:
+      manualSelfTestProbe.schema_valid === true &&
+      manualSelfTestProbe.protocol_valid === true &&
+      manualSelfTestProbe.contract_version_valid === true,
+    manualSelfTestPassed,
+    manualSelfTestRuntimeAvailable: manualSelfTestProbe.manual_e2ee_runtime_available === true,
+    rawPathReturned:
+      statusProbe.raw_local_path_returned === true ||
+      statusProbe.sidecar_path_returned === true ||
+      manualSelfTestProbe.sidecar_path_returned === true,
+    stdoutReturned: statusProbe.stdout_returned === true || manualSelfTestProbe.stdout_returned === true,
+    stderrReturned: statusProbe.stderr_returned === true || manualSelfTestProbe.stderr_returned === true,
+    appLaunchNetworkAllowed:
+      statusProbe.app_launch_network_allowed === true || manualSelfTestProbe.app_launch_network_allowed === true,
+    roomOpenNetworkAllowed:
+      statusProbe.room_open_network_allowed === true || manualSelfTestProbe.room_open_network_allowed === true,
+    localRuntimePromotedToDeliveryProof: false,
+    ...engineSidecarContractDiagnosticsFromProbe(contractProbe),
+  };
+}
+
+export function createEngineSidecarDiagnosticsController(input) {
+  let latestEngineSidecarDiagnostics = engineSidecarDiagnosticsFallback();
+
+  async function updateEngineSidecarDiagnostics() {
+    if (!input.hasTauriRuntimeBridge()) {
+      latestEngineSidecarDiagnostics = engineSidecarDiagnosticsFallback("tauri-unavailable");
+      return latestEngineSidecarDiagnostics;
+    }
+    try {
+      const [statusProbe, manualSelfTestProbe, contractProbe] = await Promise.all([
+        input.invoke("engine_sidecar_status"),
+        input.invoke("engine_sidecar_manual_self_test"),
+        input.invoke("engine_sidecar_contract_command", {
+          command: "redacted-support-diagnostics",
+          input: { diagnostics_ref: "public-beta-diagnostics" },
+        }),
+      ]);
+      latestEngineSidecarDiagnostics = engineSidecarDiagnosticsFromProbes(statusProbe, manualSelfTestProbe, contractProbe);
+    } catch {
+      latestEngineSidecarDiagnostics = engineSidecarDiagnosticsFallback("sidecar-command-unavailable");
+    }
+    return latestEngineSidecarDiagnostics;
+  }
+
+  function engineSidecarDiagnosticReportLines(diagnostics = latestEngineSidecarDiagnostics) {
+    return [
+      `engine_sidecar_status_runtime_checked=${diagnostics.statusRuntimeChecked === true}`,
+      `engine_sidecar_status_failure_class=${engineSidecarFieldTestValue(diagnostics.statusFailureClass, "unknown")}`,
+      `engine_sidecar_status_contract_valid=${diagnostics.statusContractValid === true}`,
+      `engine_sidecar_status_redacted_diagnostics_only=${diagnostics.statusRedactedDiagnosticsOnly === true}`,
+      `engine_sidecar_status_runtime_mode=${engineSidecarFieldTestValue(diagnostics.statusRuntimeMode, "unknown")}`,
+      `engine_sidecar_manual_self_test_runtime_checked=${diagnostics.manualSelfTestRuntimeChecked === true}`,
+      `engine_sidecar_manual_self_test_failure_class=${engineSidecarFieldTestValue(
+        diagnostics.manualSelfTestFailureClass,
+        "unknown",
+      )}`,
+      `engine_sidecar_manual_self_test_contract_valid=${diagnostics.manualSelfTestContractValid === true}`,
+      `engine_sidecar_manual_self_test_passed=${diagnostics.manualSelfTestPassed === true}`,
+      `engine_sidecar_manual_self_test_runtime_available=${diagnostics.manualSelfTestRuntimeAvailable === true}`,
+      `engine_sidecar_raw_path_returned=${diagnostics.rawPathReturned === true}`,
+      `engine_sidecar_stdout_returned=${diagnostics.stdoutReturned === true}`,
+      `engine_sidecar_stderr_returned=${diagnostics.stderrReturned === true}`,
+      `engine_sidecar_app_launch_network_allowed=${diagnostics.appLaunchNetworkAllowed === true}`,
+      `engine_sidecar_room_open_network_allowed=${diagnostics.roomOpenNetworkAllowed === true}`,
+      `engine_sidecar_local_runtime_promoted_to_delivery_proof=${
+        diagnostics.localRuntimePromotedToDeliveryProof === true
+      }`,
+      `engine_sidecar_contract_runtime_checked=${diagnostics.contractRuntimeChecked === true}`,
+      `engine_sidecar_contract_command=${engineSidecarFieldTestValue(
+        diagnostics.contractCommand,
+        "redacted-support-diagnostics",
+      )}`,
+      `engine_sidecar_contract_status=${engineSidecarFieldTestValue(diagnostics.contractStatus, "unknown")}`,
+      `engine_sidecar_contract_failure_class=${engineSidecarFieldTestValue(diagnostics.contractFailureClass, "unknown")}`,
+      `engine_sidecar_contract_recovery_action=${engineSidecarFieldTestValue(
+        diagnostics.contractRecoveryAction,
+        "unknown",
+      )}`,
+      `engine_sidecar_contract_schema_valid=${diagnostics.contractSchemaValid === true}`,
+      `engine_sidecar_contract_rejected=${diagnostics.contractRejected === true}`,
+      `engine_sidecar_contract_raw_payload_returned=${diagnostics.contractRawPayloadReturned === true}`,
+      `engine_sidecar_contract_runtime_action_performed=${diagnostics.contractRuntimeActionPerformed === true}`,
+      `engine_sidecar_contract_state_mutated=${diagnostics.contractStateMutated === true}`,
+    ];
+  }
+
+  return {
+    updateEngineSidecarDiagnostics,
+    engineSidecarDiagnosticReportLines,
+    getLatestEngineSidecarDiagnostics: () => latestEngineSidecarDiagnostics,
+  };
+}
+
+export function createDesktopPanelController(input) {
+  const {
+    document,
+    fields,
+    setManualNetworkPermission = () => {},
+    productionTwoProfileInput,
+    twoProfileSessionsReadyForInput,
+    renderRoomIdentityBar,
+    renderRoomStatusSummary,
+    setProductionTwoProfileState,
+    pendingPrivateRouteFollowup,
+    privateRouteFollowupMatchesRoom,
+    showPrivateRouteRetryFollowupPrompt,
+    clearPrivateRouteFollowupForRoom,
+    twoProfileSafetyConfirmedForInput,
+    twoProfilePeerEndpointState,
+    receiveIntentForRoom,
+    manualNetworkPermissionEnabled,
+    openPrivateDeliverySettings,
+    focusSafetyConfirmation,
+    twoProfileInviteCodeModeActive,
+    focusPrivateRouteNextAction,
+    applyPeerPrivateRouteCode,
+    prepareInviteRoomPrivateRouteExchange,
+    twoProfileTranscriptInputStillCurrent,
+    refreshProductionTwoProfilePeerEndpoints,
+    showLatestRetryableOutboundNotice,
+    setText,
+    t,
+    setChatDeliveryNoticeByKey,
+    refreshRouteReadinessNoticeAfterSessionRefresh,
+    applyProductionActionState,
+    openChatSettingsPanel,
+    closeChatSettingsPanel,
+    closeAppSettingsPanel,
+    openManualProductionTools,
+  } = input;
+
+  function chatPanel() {
+    return document.querySelector(".chat-settings-panel");
+  }
+
+  function systemPanel() {
+    return document.querySelector(".system-settings-panel");
+  }
+
+  function systemPanelSummary() {
+    return document.querySelector(".system-settings-panel > summary");
+  }
+
+  function developerDetailsPanel() {
+    return document.querySelector(".boundary-details");
+  }
+
+  function bindPanelControls() {
+    if (fields.toggleChatSettings) {
+      fields.toggleChatSettings.setAttribute("aria-expanded", "false");
+      fields.toggleChatSettings.addEventListener("click", () => {
+        const panel = chatPanel();
+        const appPanel = systemPanel();
+        if (!panel) {
+          return;
+        }
+        if (panel.open) {
+          closeChatSettingsPanel();
+        } else {
+          openChatSettingsPanel();
+        }
+        if (panel.open && appPanel) {
+          appPanel.open = false;
+        }
+      });
+    }
+
+    if (fields.closeChatSettings) {
+      fields.closeChatSettings.addEventListener("click", () => {
+        closeChatSettingsPanel();
+        fields.toggleChatSettings?.focus?.();
+      });
+    }
+
+    if (fields.openPrivateDeliverySettings) {
+      fields.openPrivateDeliverySettings.addEventListener("click", () => enablePrivateDeliveryPermission());
+    }
+
+    chatPanel()?.addEventListener("toggle", (event) => {
+      const open = Boolean(event.currentTarget.open);
+      document.body.classList.toggle("is-chat-settings-open", open);
+      fields.toggleChatSettings?.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    systemPanel()?.addEventListener("toggle", (event) => {
+      const open = Boolean(event.currentTarget.open);
+      document.body.classList.toggle("is-app-settings-open", open);
+      if (open) {
+        closeChatSettingsPanel();
+      }
+    });
+
+    if (fields.closeAppSettings) {
+      fields.closeAppSettings.addEventListener("click", (event) => {
+        event.preventDefault();
+        closeAppSettingsPanel();
+        systemPanelSummary()?.focus?.();
+      });
+    }
+
+    if (fields.openPublicBetaDetails) {
+      fields.openPublicBetaDetails.addEventListener("click", () => {
+        openChatSettingsPanel();
+        const panel = developerDetailsPanel();
+        if (panel && "open" in panel) {
+          panel.open = true;
+        }
+        panel?.scrollIntoView?.({ block: "start", behavior: "smooth" });
+      });
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      if (chatPanel()?.open) {
+        closeChatSettingsPanel();
+        fields.toggleChatSettings?.focus?.();
+      }
+      if (systemPanel()?.open) {
+        closeAppSettingsPanel();
+        systemPanelSummary()?.focus?.();
+      }
+    });
+
+    document.addEventListener("pointerdown", (event) => {
+      const target = event.target;
+      const currentChatPanel = chatPanel();
+      if (currentChatPanel?.open) {
+        if (currentChatPanel.contains(target) || fields.toggleChatSettings?.contains?.(target)) {
+          return;
+        }
+        closeChatSettingsPanel();
+      }
+      const currentSystemPanel = systemPanel();
+      const summary = systemPanelSummary();
+      if (currentSystemPanel?.open) {
+        if (currentSystemPanel.contains(target) || summary?.contains?.(target)) {
+          return;
+        }
+        closeAppSettingsPanel();
+      }
+    });
+
+    if (fields.openDeveloperTools) {
+      fields.openDeveloperTools.addEventListener("click", () => {
+        closeAppSettingsPanel();
+        openManualProductionTools();
+      });
+    }
+  }
+
+  function enablePrivateDeliveryPermission(options = {}) {
+    setManualNetworkPermission(true);
+    if (options.preserveFollowup !== true) {
+      clearPrivateRouteFollowupForRoom(productionTwoProfileInput());
+    }
+    document.querySelector(".network-permission-toggle")?.classList.remove("is-attention");
+    const input = productionTwoProfileInput();
+    const sessionsReady = twoProfileSessionsReadyForInput(input);
+    renderRoomIdentityBar(input, sessionsReady);
+    renderRoomStatusSummary(input, sessionsReady);
+    setProductionTwoProfileState("Private delivery permission enabled");
+    const preservedRetryFollowup =
+      options.preserveFollowup === true &&
+      pendingPrivateRouteFollowup?.action === "retry-outbound" &&
+      privateRouteFollowupMatchesRoom(input);
+    if (preservedRetryFollowup) {
+      if (showPrivateRouteRetryFollowupPrompt(input)) {
+        return;
+      }
+      clearPrivateRouteFollowupForRoom(input);
+    }
+    if (sessionsReady && twoProfileSafetyConfirmedForInput(input) && !twoProfilePeerEndpointState(input).ready) {
+      setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteNeeded"));
+      setChatDeliveryNoticeByKey("privateDeliveryRouteNeeded", "muted", input);
+      fields.preparePrivateRoute?.focus?.({ preventScroll: true });
+    } else if (sessionsReady && twoProfileSafetyConfirmedForInput(input) && receiveIntentForRoom(input)) {
+      setText(fields.productionTwoProfileWarning, t("chatNoticeReceiveStopped"));
+      setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted", input);
+      fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
+    } else {
+      setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteReady"));
+      setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
+    }
+    refreshRouteReadinessNoticeAfterSessionRefresh(input, { allowRetryRecovery: false });
+    applyProductionActionState();
+  }
+
+  async function preparePrivateDeliveryRoute(options = {}) {
+    const forceRefresh = options.forceRefresh === true;
+    const input = options.input ?? productionTwoProfileInput();
+    const allowRetryRecovery = options.allowRetryRecovery !== false;
+    if (!input.profileA || !input.profileB || input.profileA === input.profileB || !input.passphrase) {
+      openChatSettingsPanel(fields.productionTwoProfileB);
+      setProductionTwoProfileState("Private route needs room");
+      setText(fields.productionTwoProfileWarning, t("refreshAddressNeedsRoom"));
+      return;
+    }
+    if (!twoProfileSessionsReadyForInput(input)) {
+      setProductionTwoProfileState("Private route needs ready room");
+      setText(fields.productionTwoProfileWarning, t("refreshAddressNeedsReadyRoom"));
+      return;
+    }
+    if (!twoProfileSafetyConfirmedForInput(input)) {
+      setProductionTwoProfileState("Verification required");
+      setText(fields.productionTwoProfileWarning, t("sendLockedUntilVerified"));
+      focusSafetyConfirmation();
+      return;
+    }
+    if (!manualNetworkPermissionEnabled()) {
+      openPrivateDeliverySettings(input);
+      return;
+    }
+    if (twoProfilePeerEndpointState(input).ready && !forceRefresh) {
+      if (allowRetryRecovery && showPrivateRouteRetryFollowupPrompt(input)) {
+        return;
+      }
+      setProductionTwoProfileState("Private route ready");
+      setText(fields.productionTwoProfileWarning, t("privateDeliveryRouteReady"));
+      setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
+      return;
+    }
+
+    if (twoProfileInviteCodeModeActive()) {
+      const nextRouteAction = focusPrivateRouteNextAction(input, { forceRefresh });
+      if (nextRouteAction === "paste-peer") {
+        setProductionTwoProfileState("Peer delivery code needed");
+        setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeMissing"));
+        setChatDeliveryNoticeByKey("peerPrivateRouteCodeMissing", "muted", input);
+        if (allowRetryRecovery) {
+          showPrivateRouteRetryFollowupPrompt(input);
+        }
+        return;
+      }
+      if (nextRouteAction === "apply-peer") {
+        await applyPeerPrivateRouteCode({ allowRetryRecovery });
+        return;
+      }
+      const localRouteCreated = await prepareInviteRoomPrivateRouteExchange(input, { allowRetryRecovery });
+      if (!twoProfileTranscriptInputStillCurrent(input)) {
+        return;
+      }
+      if (localRouteCreated && (fields.peerPrivateRouteCode?.value ?? "").trim()) {
+        await applyPeerPrivateRouteCode({ allowRetryRecovery });
+      }
+      return;
+    }
+
+    setChatDeliveryNoticeByKey("privateDeliveryRoutePreparing", "progress", input);
+    const refreshed = await refreshProductionTwoProfilePeerEndpoints(input, { allowRetryRecovery });
+    if (!twoProfileTranscriptInputStillCurrent(input)) {
+      return;
+    }
+    if (allowRetryRecovery && refreshed && showPrivateRouteRetryFollowupPrompt(input, { clear: true })) {
+      return;
+    }
+    if (allowRetryRecovery && refreshed && showLatestRetryableOutboundNotice(input, { allowAutomatic: false })) {
+      return;
+    }
+    setChatDeliveryNoticeByKey(
+      refreshed ? "privateDeliveryRouteReady" : "chatNoticeRefreshAddress",
+      refreshed ? "success" : "warning",
+      input,
+    );
+  }
+
+  return { bindPanelControls, enablePrivateDeliveryPermission, preparePrivateDeliveryRoute };
 }
