@@ -30,29 +30,25 @@ exchange.
 
 ## Install on macOS
 
-The default install path is the GitHub Release unsigned DMG for macOS Apple
-Silicon (M1 or newer). Intel Macs are not supported by the current build.
+For Macs with an Apple chip (M1 or newer). Intel Macs are not supported.
 
-1. Open [GitHub Releases](https://github.com/answndud/another-dimension-chat/releases)
-   and select the latest prerelease.
-2. Download the `.dmg` and `SHA256SUMS.txt` assets from that same release into
-   one directory.
-3. In Terminal, change to that directory and verify the download:
+### [Download for macOS](https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-beta-onion-unsigned/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg)
 
-   ```sh
-   shasum -a 256 -c SHA256SUMS.txt
-   ```
+1. Click **Download for macOS** above.
+2. Open the downloaded file.
+3. Drag **Another Dimension Chat** into the **Applications** folder.
+4. Open the app from Applications.
 
-4. Open the DMG and drag `Another Dimension Chat.app` into `/Applications`.
-5. Launch the app. Because the build is unsigned and not notarized, macOS may
-   block the first launch. Open **System Settings > Privacy & Security**, find
-   the blocked app message, and choose **Open Anyway**.
+macOS may block the first launch because this beta does not have an Apple
+Developer ID signature. If that happens, open **System Settings > Privacy &
+Security**, scroll down, and click **Open Anyway**.
 
-For troubleshooting and uninstall instructions, see
+For optional download verification, troubleshooting, and uninstall steps, see
 [Install the unsigned DMG on macOS](INSTALL_UNSIGNED_DMG_MACOS.md).
 
-If you want to run the app on macOS from source instead, follow the source
-build guide:
+## For Developers
+
+To build the macOS app from source, follow the source build guide:
 
 - [Install from source on macOS](INSTALL_FROM_SOURCE_MACOS.md)
 

@@ -29,15 +29,27 @@ safety material 비교, 로컬 암호화 저장, 수동 sealed-message 교환을
 
 ## macOS 설치
 
-기본 설치 경로는 GitHub Release의 macOS Apple Silicon unsigned DMG입니다.
+Apple 칩이 탑재된 Mac(M1 이상)에서 사용할 수 있습니다. Intel Mac은 아직
+지원하지 않습니다.
 
-DMG와 checksum을 같은 release에서 내려받아 검증한 뒤 `/Applications`로
-드래그 설치하세요. 첫 실행이 차단되면 Privacy & Security의 공식 `Open
-Anyway` 경로를 사용하세요.
+### [macOS용 앱 다운로드](https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-beta-onion-unsigned/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg)
 
-- [unsigned DMG로 macOS 설치](INSTALL_UNSIGNED_DMG_MACOS.md)
+1. 위의 **macOS용 앱 다운로드**를 클릭합니다.
+2. 다운로드된 파일을 엽니다.
+3. **Another Dimension Chat**을 **Applications(응용 프로그램)** 폴더로
+   드래그합니다.
+4. Applications 폴더에서 앱을 실행합니다.
 
-macOS에서 소스 빌드로 실행하려면 아래 안내를 따르세요.
+이 베타는 Apple Developer ID로 서명되지 않아 첫 실행이 차단될 수 있습니다.
+그럴 때는 **시스템 설정 > 개인정보 보호 및 보안**을 열고 아래로 스크롤한
+다음 **확인 없이 열기(Open Anyway)**를 클릭하세요.
+
+선택적인 다운로드 검증, 문제 해결, 삭제 방법은
+[unsigned DMG로 macOS 설치](INSTALL_UNSIGNED_DMG_MACOS.md)를 참고하세요.
+
+## 개발자용
+
+macOS 앱을 소스에서 직접 빌드하려면 아래 안내를 따르세요.
 
 - [macOS에서 소스 빌드로 설치](INSTALL_FROM_SOURCE_MACOS.md)
 
