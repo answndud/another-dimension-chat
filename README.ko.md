@@ -1,7 +1,7 @@
-# Another Dimension Chat — Source Build Primary
+# Another Dimension Chat — Unsigned DMG Primary
 
 <p>
-  <img src="https://img.shields.io/badge/status-source%20build%20primary-blue" alt="Source build primary">
+  <img src="https://img.shields.io/badge/status-unsigned%20DMG%20primary-blue" alt="Unsigned DMG primary">
   <img src="https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
 </p>
@@ -14,7 +14,7 @@
 **Rust**와 **Tauri**로 제작. 현재 테스트 흐름은 pairwise invite room,
 safety material 비교, 로컬 암호화 저장, 수동 sealed-message 교환을 사용.
 
-> **현재 상태:** source-build-primary macOS Apple Silicon 베타. 감사되지
+> **현재 상태:** unsigned DMG primary macOS Apple Silicon 베타. 감사되지
 > 않았고, production-ready가 아니며, 민감한 통신에 사용하면 안 됨.
 
 ## 지금 제공하는 이점
@@ -27,11 +27,17 @@ safety material 비교, 로컬 암호화 저장, 수동 sealed-message 교환을
 | 전달 채널 직접 선택 | sealed message를 원하는 채널로 전달 |
 | 명확한 안전 확인 | room 사용 전 safety material 비교 |
 
-## macOS 소스 빌드
+## macOS 설치
 
-기본 설치 경로는 이제 source build입니다.
+기본 설치 경로는 GitHub Release의 macOS Apple Silicon unsigned DMG입니다.
 
-GitHub Release DMG 없이 macOS에서 실행하려면 소스 빌드 안내를 따르세요.
+DMG와 checksum을 같은 release에서 내려받아 검증한 뒤 `/Applications`로
+드래그 설치하세요. 첫 실행이 차단되면 Privacy & Security의 공식 `Open
+Anyway` 경로를 사용하세요.
+
+- [unsigned DMG로 macOS 설치](INSTALL_UNSIGNED_DMG_MACOS.md)
+
+macOS에서 소스 빌드로 실행하려면 아래 안내를 따르세요.
 
 - [macOS에서 소스 빌드로 설치](INSTALL_FROM_SOURCE_MACOS.md)
 
@@ -68,9 +74,8 @@ npm --prefix apps/desktop-tauri run tauri:build:beta-onion
 재현 가능한 빌드 기준은
 [macOS 재현성 빌드 노트](REPRODUCIBLE_BUILD_MACOS.md)를 보세요.
 
-GitHub Release DMG가 있더라도, 그것은 legacy unsigned fallback입니다.
-기본 설치 경로는 아닙니다.
-fallback 세부 내용은 [SECURITY.md](SECURITY.md)에만 둡니다.
+GitHub Release DMG는 macOS의 기본 설치 경로입니다. 소스 빌드는 대체
+경로입니다. fallback 세부 내용은 [SECURITY.md](SECURITY.md)에만 둡니다.
 
 ## 빠른 시작
 
@@ -88,7 +93,7 @@ fallback 세부 내용은 [SECURITY.md](SECURITY.md)에만 둡니다.
 
 | 플랫폼 | 공개 상태 |
 |--------|-----------|
-| macOS Apple Silicon | source build primary, unsigned DMG fallback |
+| macOS Apple Silicon | unsigned DMG primary, source build alternate |
 | Windows | 공개 앱 없음 |
 
 ## 중요
@@ -103,15 +108,15 @@ invite code, payload, key, raw log, private room screenshot 게시 금지.
 
 공개 배포 전에 아래 항목을 확인하세요.
 
-- macOS 경로가 source-build-primary인지 확인한다.
-- 다운로드한 DMG가 기본 경로처럼 읽히지 않는지 확인한다.
+- macOS 경로가 unsigned DMG primary인지 확인한다.
+- 다운로드한 DMG와 checksum이 같은 release asset인지 확인한다.
 - 현재 베타 문구가 `not audited`, `not production-ready`, `not for sensitive communication`을 유지하는지 확인한다.
 - public diagnostics가 redacted이고 room-scoped인지 확인한다.
 - signing, notarization, secure messenger readiness, reliable external delivery를 주장하는 문구가 없는지 확인한다.
 
 ## 소스에서 빌드
 
-[macOS에서 소스 빌드로 설치](INSTALL_FROM_SOURCE_MACOS.md)를 먼저 보세요.
+macOS source build 대체 경로는 [macOS에서 소스 빌드로 설치](INSTALL_FROM_SOURCE_MACOS.md)를 보세요.
 
 ```sh
 scripts/verify_light.sh  # source-build 경계 + 모든 desktop JavaScript 테스트
