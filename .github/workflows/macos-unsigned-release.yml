@@ -1,0 +1,223 @@
+name: macOS Unsigned Release Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to validate, for example v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-unsigned-release-candidate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos-unsigned-release-candidate:
+    name: Build unsigned macOS DMG candidate
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    env:
+      CARGO_INCREMENTAL: "1"
+      CARGO_TARGET_DIR: ${{ github.workspace }}/.build-cache/cargo-target
+      VITE_AD_BUILD_CHANNEL: beta-onion
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Verify release tag points at current commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_tag="${{ inputs.release_tag }}"
+          expected_commit="${GITHUB_SHA}"
+          actual_commit="$(git rev-list -n 1 "$release_tag")"
+          if [ "$actual_commit" != "$expected_commit" ]; then
+            echo "release tag does not match current commit" >&2
+            exit 1
+          fi
+          version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
+          if [ "$release_tag" != "v${version}" ]; then
+            echo "release tag does not match app version" >&2
+            exit 1
+          fi
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust registry, git, and target output
+        id: rust-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            .build-cache/cargo-target/
+          key: macos-tauri-cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'apps/desktop-tauri/src-tauri/Cargo.toml', 'crates/**/Cargo.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            macos-tauri-cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'apps/desktop-tauri/src-tauri/Cargo.toml', 'crates/**/Cargo.toml') }}-
+            macos-tauri-cargo-${{ runner.os }}-
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/desktop-tauri/package-lock.json
+
+      - name: Install desktop dependencies
+        run: npm ci --prefix apps/desktop-tauri --prefer-offline
+
+      - name: Check source and public release boundaries
+        run: |
+          npm --prefix apps/desktop-tauri run verify:light
+          scripts/verify_source_build_path.sh
+
+      - name: Build unsigned DMG candidate
+        working-directory: apps/desktop-tauri
+        run: npm run tauri:build:macos-dmg:beta-onion
+
+      - name: Prepare ignored macOS release packet
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
+          source_dmg="$(
+            for search_dir in \
+              .build-cache/cargo-target/release/bundle/dmg \
+              apps/desktop-tauri/src-tauri/target/release/bundle/dmg
+            do
+              if [ -d "$search_dir" ]; then
+                find "$search_dir" -maxdepth 1 -type f -name '*.dmg'
+              fi
+            done | sort | head -n 1
+          )"
+          if [ -z "$source_dmg" ]; then
+            echo "missing DMG output" >&2
+            exit 1
+          fi
+
+          candidate_dir="$PWD/apps/desktop-tauri/beta-artifacts/macos-unsigned-public-beta-candidate"
+          packet_dir="$PWD/apps/desktop-tauri/public-release/macos-unsigned-public-beta"
+          mkdir -p "$candidate_dir" "$packet_dir"
+
+          AD_MACOS_RELEASE_SOURCE_DIR="$(dirname "$source_dmg")" \
+          AD_MACOS_RELEASE_OUT_DIR="$packet_dir" \
+          AD_MACOS_RELEASE_VERSION="$version" \
+          AD_MACOS_RELEASE_COMMIT="$GITHUB_SHA" \
+          AD_MACOS_RELEASE_TAG="${{ inputs.release_tag }}" \
+          AD_MACOS_RELEASE_BUILD_CHANNEL=beta-onion \
+          AD_MACOS_RELEASE_ARCH=arm64 \
+            node apps/desktop-tauri/scripts/prepare-macos-release.mjs
+
+          node apps/desktop-tauri/scripts/verify-macos-dmg.mjs \
+            "$packet_dir"
+
+      - name: Upload macOS candidate packet
+        uses: actions/upload-artifact@v6
+        with:
+          name: another-dimension-chat-macos-unsigned-public-beta-candidate
+          path: apps/desktop-tauri/public-release/macos-unsigned-public-beta/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Save Rust registry, git, and target output
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            .build-cache/cargo-target/
+          key: ${{ steps.rust-cache.outputs.cache-primary-key }}
+
+  publish-macos-unsigned-release:
+    name: Publish immutable prerelease
+    runs-on: macos-14
+    timeout-minutes: 20
+    needs: macos-unsigned-release-candidate
+    environment: macos-unsigned-release
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download candidate packet
+        uses: actions/download-artifact@v5
+        with:
+          name: another-dimension-chat-macos-unsigned-public-beta-candidate
+          path: public-release/macos-unsigned-public-beta
+
+      - name: Verify immutable prerelease inputs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_tag="${{ inputs.release_tag }}"
+          if gh release view "$release_tag" >/dev/null 2>&1; then
+            echo "release already exists for tag" >&2
+            exit 1
+          fi
+
+          checksum_file="public-release/macos-unsigned-public-beta/SHA256SUMS.txt"
+          dmg_file="$(find public-release/macos-unsigned-public-beta -maxdepth 1 -type f -name '*.dmg' | sort | head -n 1)"
+          if [ -z "$dmg_file" ]; then
+            echo "missing dmg packet" >&2
+            exit 1
+          fi
+
+          expected_name="$(basename "$dmg_file")"
+          (cd public-release/macos-unsigned-public-beta && shasum -a 256 -c SHA256SUMS.txt)
+          if ! grep -Fq "$expected_name" "$checksum_file"; then
+            echo "checksum manifest mismatch" >&2
+            exit 1
+          fi
+
+          if git ls-files 'apps/desktop-tauri/public-release/*' 'apps/desktop-tauri/beta-artifacts/*' | grep -q .; then
+            echo "generated release paths are tracked" >&2
+            exit 1
+          fi
+
+      - name: Create prerelease and upload assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_tag="${{ inputs.release_tag }}"
+          body_file="$(mktemp)"
+          cat >"$body_file" <<EOF
+Unsigned macOS Apple Silicon prerelease.
+
+Release tag: ${release_tag}
+Commit: ${GITHUB_SHA}
+Runner: macos-14
+Architecture: arm64
+App version: $(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')
+
+Not Developer ID signed.
+Not notarized.
+Not audited.
+Use the checksum file to verify the download.
+EOF
+
+          gh release create "$release_tag" \
+            --prerelease \
+            --title "$release_tag" \
+            --notes-file "$body_file" \
+            public-release/macos-unsigned-public-beta/*

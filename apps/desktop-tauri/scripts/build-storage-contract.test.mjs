@@ -60,9 +60,11 @@ test("release profiles are pinned for public build targets", () => {
 });
 
 test("public shell cargo tree excludes legacy runtime graph", () => {
-  assertFileContains("apps/desktop-tauri/src-tauri/tauri.conf.json", '"targets": ["app"]');
+  assertFileContains("apps/desktop-tauri/src-tauri/tauri.conf.json", '"targets": ["dmg"]');
   assertFileContains("apps/desktop-tauri/package.json", "node scripts/run-clean-build.mjs node scripts/with-cargo-target.mjs tauri build");
   assertFileContains("apps/desktop-tauri/package.json", "VITE_AD_BUILD_CHANNEL=beta-onion node scripts/run-clean-build.mjs node scripts/prepare-engine-sidecar.mjs --release --manual-e2ee-runtime --tauri-build -- tauri build --config src-tauri/tauri.sidecar.conf.json");
+  assertFileContains("apps/desktop-tauri/package.json", "tauri:build:macos-dmg:beta-onion");
+  assertFileContains("apps/desktop-tauri/package.json", "--bundles dmg");
   assertFileDoesNotContain("apps/desktop-tauri/package.json", "verify:warm");
   assertFileDoesNotContain("apps/desktop-tauri/package.json", "verify:cold");
   assertFileDoesNotContain("apps/desktop-tauri/package.json", "legacy:tauri");

@@ -22,6 +22,13 @@ Use the source-build command from the install guide:
 npm --prefix apps/desktop-tauri run tauri:build:beta-onion
 ```
 
+For the unsigned DMG candidate workflow, the release job uses the same source
+inputs and then packages the resulting DMG with:
+
+```sh
+npm --prefix apps/desktop-tauri run tauri:build:macos-dmg:beta-onion
+```
+
 ## What This Does Not Guarantee
 
 - It does not guarantee byte-for-byte identical artifacts across every machine.

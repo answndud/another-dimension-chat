@@ -1,8 +1,8 @@
 # Support
 
-Another Dimension Chat is an unsigned experimental public beta. It is not
-notarized, not audited, not production-ready, and sensitive communication
-prohibited.
+Another Dimension Chat is an unsigned experimental public beta. The primary
+macOS install path is the unsigned DMG. It is not notarized, not audited, not
+production-ready, and sensitive communication prohibited.
 
 ## Public Support
 
@@ -86,9 +86,17 @@ If private vulnerability reporting is unavailable, open a `Security contact
 request` issue with only a minimal public summary. Do not include exploit
 details or sensitive material in public issues.
 
-## Source Build First
+## Unsigned DMG Primary
 
-The primary macOS install path is source build.
+The primary macOS install path is the unsigned DMG.
+
+Follow the unsigned DMG guide first:
+
+- [Install the unsigned DMG on macOS](INSTALL_UNSIGNED_DMG_MACOS.md)
+
+## Source Build Alternate
+
+Use source build only if you intentionally want the alternate path.
 
 Follow the source build guide first:
 

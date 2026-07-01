@@ -23,7 +23,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app"],
+    "targets": ["dmg"],
     "resources": [],
     "macOS": {
       "minimumSystemVersion": "12.0",

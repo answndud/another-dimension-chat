@@ -1,7 +1,7 @@
-# Another Dimension Chat — Source Build Primary
+# Another Dimension Chat — Unsigned DMG Primary
 
 <p>
-  <img src="https://img.shields.io/badge/status-source%20build%20primary-blue" alt="Source build primary">
+  <img src="https://img.shields.io/badge/status-unsigned%20DMG%20primary-blue" alt="Unsigned DMG primary">
   <img src="https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
 </p>
@@ -15,7 +15,7 @@ Built with **Rust** and **Tauri**. Current testing uses pairwise invite rooms,
 safety material comparison, local encrypted storage, and manual sealed-message
 exchange.
 
-> **Current status:** source-build-primary macOS Apple Silicon beta. Not
+> **Current status:** unsigned DMG primary macOS Apple Silicon beta. Not
 > audited, not production-ready, and not for sensitive communication.
 
 ## What You Get Today
@@ -28,12 +28,31 @@ exchange.
 | User-chosen delivery | Move sealed messages through any channel you choose |
 | Clear safety step | Compare safety material before using the room |
 
-## Source Build for macOS
+## Install on macOS
 
-The default install path is now source build.
+The default install path is the GitHub Release unsigned DMG for macOS Apple
+Silicon (M1 or newer). Intel Macs are not supported by the current build.
 
-If you want to run the app on macOS without relying on a GitHub Release DMG,
-follow the source build guide:
+1. Open [GitHub Releases](https://github.com/answndud/another-dimension-chat/releases)
+   and select the latest prerelease.
+2. Download the `.dmg` and `SHA256SUMS.txt` assets from that same release into
+   one directory.
+3. In Terminal, change to that directory and verify the download:
+
+   ```sh
+   shasum -a 256 -c SHA256SUMS.txt
+   ```
+
+4. Open the DMG and drag `Another Dimension Chat.app` into `/Applications`.
+5. Launch the app. Because the build is unsigned and not notarized, macOS may
+   block the first launch. Open **System Settings > Privacy & Security**, find
+   the blocked app message, and choose **Open Anyway**.
+
+For troubleshooting and uninstall instructions, see
+[Install the unsigned DMG on macOS](INSTALL_UNSIGNED_DMG_MACOS.md).
+
+If you want to run the app on macOS from source instead, follow the source
+build guide:
 
 - [Install from source on macOS](INSTALL_FROM_SOURCE_MACOS.md)
 
@@ -69,9 +88,8 @@ Storage contract for this path:
 For reproducible build details, see
 [Reproducible build notes for macOS](REPRODUCIBLE_BUILD_MACOS.md).
 
-GitHub Release DMGs, when present, are optional unsigned convenience artifacts
-for people who explicitly want that path. They are not the primary install
-route. Legacy fallback details live in [SECURITY.md](SECURITY.md).
+Source build remains the alternate path. Legacy fallback details live in
+[SECURITY.md](SECURITY.md).
 
 ## Quick Start
 
@@ -89,7 +107,7 @@ message relay, cloud backup, or push notification service.
 
 | Platform | Public status |
 |----------|---------------|
-| macOS Apple Silicon | Source build primary, unsigned DMG fallback |
+| macOS Apple Silicon | Unsigned DMG primary, source build alternate |
 | Windows | No public app yet |
 
 ## Before Using
@@ -104,14 +122,15 @@ no invite codes, payloads, keys, raw logs, or screenshots of private room data.
 
 Use this checklist before treating any public build as ready to share:
 
-- Confirm the macOS path is source-build-primary, not a downloaded DMG.
+- Confirm the macOS path is unsigned DMG primary and the checksum matches the
+  release asset.
 - Confirm the current beta wording still says not audited, not production-ready, and not for sensitive communication.
 - Confirm public diagnostics stay redacted and room-scoped.
 - Confirm no release note or README text claims signing, notarization, secure messenger readiness, or reliable external delivery.
 
 ## From Source
 
-Follow the macOS install guide for the primary build path:
+Use the macOS source build guide for the alternate path:
 
 - [Install from source on macOS](INSTALL_FROM_SOURCE_MACOS.md)
 

@@ -4,17 +4,18 @@
 
 Another Dimension Chat is not ready for real communication.
 
-The current macOS release is a source-build-primary experimental public beta
-with a legacy unsigned DMG fallback for explicit optional use. It is not
-signed, not notarized, not audited, not production-ready, and not for
-sensitive communication. It is not a secure messenger release.
+The current macOS release is an unsigned DMG primary experimental public beta
+with a source-build alternate path and a legacy unsigned DMG fallback for
+explicit optional use. It is not signed, not notarized, not audited, not
+production-ready, and not for sensitive communication. It is not a secure
+messenger release.
 The public v0.1 repository surface is macOS desktop only.
 
 ## Supported Public Build
 
 | Platform | Public status |
 |----------|---------------|
-| macOS Apple Silicon | source-build-primary, legacy unsigned DMG fallback |
+| macOS Apple Silicon | unsigned DMG primary, source-build alternate, legacy unsigned DMG fallback |
 | Windows | No public app yet |
 
 ## Public Release Readiness Checklist
@@ -22,10 +23,10 @@ The public v0.1 repository surface is macOS desktop only.
 Before any public-facing release note or support response, confirm all of the
 following:
 
-- The build is described as source-build-primary macOS beta, not a signed or notarized release.
+- The build is described as unsigned DMG primary macOS beta, not a signed or notarized release.
 - The wording still keeps `not audited`, `not production-ready`, and `not for sensitive communication`.
 - Public support diagnostics stay redacted and do not include raw logs, local paths, invite codes, payloads, message bodies, safety phrases, passphrases, keys, or screenshots of private room data.
-- Any macOS DMG is described as a legacy unsigned convenience path, not the primary install route.
+- Any macOS DMG is described as the primary install route, but it remains unsigned, not notarized, and not a security proof.
 - No copy claims secure messenger readiness, reliable external delivery, or production security.
 
 ## Non-Claims
@@ -56,10 +57,10 @@ These are review aids, not security claims.
 
 ## Source Build Boundary
 
-The public macOS distribution path is source-build-primary, with a legacy
-unsigned GitHub DMG convenience path for people who explicitly want it. It is
-not signed, not notarized, not audited, not production-ready, and sensitive
-communication is prohibited.
+The public macOS distribution path is an unsigned GitHub DMG for normal
+installers, with a source-build alternate path and a legacy unsigned GitHub DMG
+convenience path for explicit fallback use. It is not signed, not notarized,
+not audited, not production-ready, and sensitive communication is prohibited.
 
 The storage boundary for this public source-build path is split into checkout
 space and runtime app-owned space:

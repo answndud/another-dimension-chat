@@ -4,6 +4,61 @@
 
 ## Archive
 
+## 2026-06-30 - P130.3 acceptance capture pending
+- 요약: fresh-account 설치 acceptance는 외부 macOS 계정과 공개 prerelease asset이 필요해 이번 세션에서는 실행하지 못했다.
+- 변경: `docs/PLAN.md`에 필요한 acceptance 입력과 메모를 남겼다.
+- 검증: 없음.
+- 후속: fresh-account macOS 계정에서 download, checksum, install, Open Anyway, two-profile messaging, restart recovery를 기록한다.
+- 기록 형식: macOS version, chip, release tag, commit, DMG checksum, download/checksum/install/open-anyway/pairing-message-roundtrip/restart-recovery/uninstall-boundary pass-fail만 남긴다.
+
+## 2026-06-30 - P130.2 DMG install and support intake guide alignment
+- 요약: DMG 설치 안내를 checksum-first GUI 절차로 정리하고 지원 템플릿/contract 검사를 DMG-primary에 맞췄다.
+- 변경: `INSTALL_UNSIGNED_DMG_MACOS.md`, `.github/ISSUE_TEMPLATE/public_beta_support.yml`, `scripts/verify_source_build_path.sh`를 갱신했다.
+- 검증: `bash -n scripts/verify_source_build_path.sh`, `git diff --check`
+- 후속: P130.3에서 fresh-account acceptance 결과를 기록한다.
+
+## 2026-06-30 - P130.1 unsigned DMG primary docs transition
+- 요약: 공개 README, SECURITY, SUPPORT를 unsigned DMG primary로 전환하고 macOS 설치 가이드를 추가했다.
+- 변경: `README.md`, `README.ko.md`, `SECURITY.md`, `SUPPORT.md`, `INSTALL_UNSIGNED_DMG_MACOS.md`, `apps/desktop-tauri/README.md`, `scripts/verify_source_build_path.sh`를 갱신했다.
+- 검증: `bash -n scripts/verify_source_build_path.sh`, `git diff --check`
+- 후속: P130.2에서 설치·checksum 안내와 support intake 문구를 더 다듬는다.
+
+## 2026-06-30 - P129.3 release provenance and tracked-output guard
+- 요약: release body에 provenance를 남기고 checkout에 release 산출물이 tracked되지 않도록 workflow와 source-build verifier를 잠갔다.
+- 변경: `.github/workflows/macos-unsigned-release.yml`, `scripts/verify_source_build_path.sh`를 갱신했다.
+- 검증: `bash -n scripts/verify_source_build_path.sh`, `git diff --check`
+- 후속: P130.1에서 공개 문서를 DMG-primary 설치 경로로 전환한다.
+
+## 2026-06-30 - P129.2 immutable macOS prerelease publish gate
+- 요약: 승인 게이트 뒤에서만 prerelease를 만들고 checksum을 다시 검증한 뒤 upload하도록 workflow를 확장했다.
+- 변경: `.github/workflows/macos-unsigned-release.yml`를 갱신했다.
+- 검증: workflow syntax와 checksum check 흐름을 repo 기준으로 점검했다.
+- 후속: P129.3에서 provenance 기록과 tracked release 산출물 부재 검사를 고정한다.
+
+## 2026-06-30 - P129.1 macOS unsigned release candidate workflow
+- 요약: Apple Silicon macOS runner에서 unsigned DMG 빌드와 release packet 준비까지만 수행하는 workflow를 추가했다.
+- 변경: `.github/workflows/macos-unsigned-release.yml`와 `REPRODUCIBLE_BUILD_MACOS.md`를 갱신했다.
+- 검증: workflow YAML과 shell command 경로를 repo 기준으로 재확인했다.
+- 후속: P129.2에서 승인 게이트와 immutable prerelease 업로드를 붙인다.
+
+## 2026-06-30 - P128.3 macOS DMG verifier
+- 요약: DMG 마운트 구조와 arm64 실행 파일 검사를 추가하고 light verification에 연결했다.
+- 변경: `apps/desktop-tauri/scripts/verify-macos-dmg.mjs`, `apps/desktop-tauri/scripts/verify-macos-dmg.test.mjs`, `apps/desktop-tauri/package.json`, `scripts/verify_light.sh`를 갱신했다.
+- 검증: `node --test apps/desktop-tauri/scripts/verify-macos-dmg.test.mjs`, `git diff --check`
+- 후속: P129.1에서 Apple Silicon runner release job을 추가한다.
+
+## 2026-06-30 - P128.2 macOS DMG release packet generator
+- 요약: DMG 1개를 찾아 고정 파일명, SHA-256 manifest, release metadata 패킷으로 묶는 생성기를 추가했다.
+- 변경: `apps/desktop-tauri/scripts/prepare-macos-release.mjs`, `apps/desktop-tauri/scripts/prepare-macos-release.test.mjs`, `apps/desktop-tauri/package.json`를 추가·갱신했다.
+- 검증: `node --test apps/desktop-tauri/scripts/prepare-macos-release.test.mjs`, `git diff --check`
+- 후속: P128.3에서 실제 DMG 구조와 arm64 실행 파일 검사를 추가한다.
+
+## 2026-06-30 - P128.1 macOS DMG target switch
+- 요약: public macOS bundle target을 `dmg`로 전환하고 DMG 전용 build alias를 추가했다.
+- 변경: `apps/desktop-tauri/src-tauri/tauri.conf.json`, `apps/desktop-tauri/package.json`, `apps/desktop-tauri/scripts/build-storage-contract.test.mjs`를 갱신했다.
+- 검증: `npm --prefix apps/desktop-tauri run test:build-storage-contract`, `git diff --check`
+- 후속: P128.2에서 DMG release packet 생성기를 추가한다.
+
 ## 2026-06-30 - P130.2 DONE archive cleanup and limit recheck
 - 요약: DONE의 오래된 follow-up 문장을 현재 완료 상태로 바꾸고 archive 최근 20개 제한을 유지했다.
 - 변경: `docs/DONE.md`에서 P130.1 follow-up을 제거하고 완료 상태를 반영했다.

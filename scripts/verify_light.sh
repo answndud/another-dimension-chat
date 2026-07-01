@@ -15,5 +15,6 @@ cd "$ROOT_DIR"
 
 run_step "source build path verifier (static only)" env AD_VERIFY_SOURCE_BUILD_SKIP_BUILD=1 scripts/verify_source_build_path.sh
 run_step "desktop JavaScript tests" npm --prefix apps/desktop-tauri test
+run_step "macOS DMG verifier tests" node --test apps/desktop-tauri/scripts/verify-macos-dmg.test.mjs
 
 printf '\nlight verification passed\n'
