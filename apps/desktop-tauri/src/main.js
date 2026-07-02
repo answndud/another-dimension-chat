@@ -1698,6 +1698,9 @@ function currentTwoProfileOutboundAction(entry, options = {}) {
   if (options.requireNoticeMatch === true && !chatDeliveryNoticePendingOutboundMatchesEntry(entry, input)) {
     return null;
   }
+  if (options.requireCurrentInput === true && !twoProfileConversationEntryMatchesCurrentInput(entry, input)) {
+    return null;
+  }
   const currentEntry = currentTwoProfileRetryableOutboundEntry(entry);
   if (!currentEntry) {
     return null;
@@ -1722,6 +1725,9 @@ function currentTwoProfileOutboundCancelableEntry(entry, options = {}) {
     return null;
   }
   if (options.requireNoticeMatch === true && !chatDeliveryNoticePendingOutboundMatchesEntry(entry, input)) {
+    return null;
+  }
+  if (options.requireCurrentInput === true && !twoProfileConversationEntryMatchesCurrentInput(entry, input)) {
     return null;
   }
   const currentEntry = currentTwoProfileRetryableOutboundEntry(entry);
@@ -1958,6 +1964,15 @@ function currentTwoProfileRetryableOutboundEntry(entry) {
     ? productionTwoProfileConversationEntries.get(twoProfileConversationKey(entry)) ?? null
     : null;
   return currentEntry && twoProfileConversationOutboundRetryable(currentEntry) ? currentEntry : null;
+}
+
+function twoProfileConversationEntryMatchesCurrentInput(entry, input = productionTwoProfileInput()) {
+  return Boolean(
+    entry &&
+      String(entry.roomFingerprint ?? "").trim() === twoProfileSessionStatusFingerprint(input) &&
+      String(entry.sender ?? "").trim().toLowerCase() === String(input.profileA ?? "").trim().toLowerCase() &&
+      String(entry.receiver ?? "").trim().toLowerCase() === String(input.profileB ?? "").trim().toLowerCase(),
+  );
 }
 
 function currentTwoProfileRetryableOutboundEntryForMessage(input = productionTwoProfileInput(), messageNumber = null) {
@@ -8141,7 +8156,7 @@ function renderProductionTwoProfileConversationList() {
       retry.textContent = outboundPrimaryActionLabel(primaryAction);
       retry.addEventListener("click", (event) => {
         event.stopPropagation();
-        const current = currentTwoProfileOutboundAction(entry);
+        const current = currentTwoProfileOutboundAction(entry, { requireCurrentInput: true });
         if (current) {
           runTwoProfileOutboundPrimaryAction(current.entry, current.primaryAction);
         }
@@ -8154,7 +8169,7 @@ function renderProductionTwoProfileConversationList() {
       cancel.textContent = t("cancelSend");
       cancel.addEventListener("click", (event) => {
         event.stopPropagation();
-        const currentEntry = currentTwoProfileOutboundCancelableEntry(entry);
+        const currentEntry = currentTwoProfileOutboundCancelableEntry(entry, { requireCurrentInput: true });
         if (currentEntry) {
           cancelTwoProfileOutboundEntry(currentEntry);
         }
