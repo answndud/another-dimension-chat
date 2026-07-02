@@ -6456,6 +6456,7 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
     setChatDeliveryNoticeByKey(routeReadiness.noticeKey, "warning", input);
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
     showLatestRetryableOutboundNotice(input);
+    refreshFieldTestReport();
     return;
   }
   if (latestOnionOutbound) {
@@ -13927,6 +13928,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       }
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
       showLatestRetryableOutboundNotice(input);
+      refreshFieldTestReport();
       return;
     }
     setProductionTwoProfileState("Private delivery needs message");
@@ -13937,6 +13939,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
         : routeReadiness.disabledReason,
     );
     setChatDeliveryNoticeByKey(routeReadiness.peerEndpointState.ready ? "sendFailedGeneric" : routeReadiness.noticeKey, "warning", input);
+    refreshFieldTestReport();
     return;
   }
   if (!routeReadiness.ready) {
@@ -13957,6 +13960,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
     }
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
     showLatestRetryableOutboundNotice(input);
+    refreshFieldTestReport();
     return;
   }
 
@@ -14030,6 +14034,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
     if (!result.send_attempt_succeeded) {
       showLatestRetryableOutboundNotice(input);
     }
+    refreshFieldTestReport();
   } catch (error) {
     const failureKind = outboundSendFailureKindFromError(error);
     try {
@@ -14052,6 +14057,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
     try {
       await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
       showLatestRetryableOutboundNotice(input);
+      refreshFieldTestReport();
     } catch {
       applyProductionActionState();
     }
