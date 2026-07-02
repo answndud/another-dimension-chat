@@ -2045,9 +2045,13 @@ async function runTwoProfileOutboundPrimaryAction(entry) {
   }
   if (resolvedPrimaryAction.action === "start-receiving") {
     selectTwoProfileOutboundActionDirection(resolvedEntry, "retry");
-    await startProductionTwoProfileOnionReceive();
+    rememberPrivateRouteFollowupForOutboundRetry(resolvedEntry);
+    await startProductionTwoProfileOnionReceive({ preserveFollowup: true });
     if (productionTwoProfileReceiveMatchesInput(productionTwoProfileInput())) {
-      showExactRetryableOutboundPrompt(resolvedEntry, productionTwoProfileInput());
+      const currentInput = productionTwoProfileInput();
+      if (!showPrivateRouteRetryFollowupPrompt(currentInput, { clear: true })) {
+        showRetryableOutboundPromptForMessage(currentInput, resolvedEntry.messageNumber);
+      }
     }
     return;
   }
@@ -9115,6 +9119,21 @@ function retryableOutboundEntryForPrivateRouteFollowup(followup, input = product
   );
 }
 
+function showPrivateRouteRetryFollowupPrompt(input = productionTwoProfileInput(), options = {}) {
+  if (pendingPrivateRouteFollowup?.action !== "retry-outbound" || !privateRouteFollowupMatchesRoom(input)) {
+    return false;
+  }
+  const pending = retryableOutboundEntryForPrivateRouteFollowup(pendingPrivateRouteFollowup, input);
+  if (!pending) {
+    return false;
+  }
+  const shown = showExactRetryableOutboundPrompt(pending, input);
+  if (shown && options.clear === true) {
+    clearPrivateRouteFollowup();
+  }
+  return shown;
+}
+
 function messageTtlOptionsFromControls() {
   const values = new Set();
   for (const control of [fields.productionMessageTtl, fields.productionTwoProfileMessageTtl]) {
@@ -13417,6 +13436,9 @@ async function preparePrivateDeliveryRoute(options = {}) {
   if (!twoProfileTranscriptInputStillCurrent(input)) {
     return;
   }
+  if (refreshed && showPrivateRouteRetryFollowupPrompt(input, { clear: true })) {
+    return;
+  }
   if (refreshed && showLatestRetryableOutboundNotice(input)) {
     return;
   }
@@ -14709,7 +14731,7 @@ async function cancelTwoProfileOutboundEntry(entry) {
   }
 }
 
-async function startProductionTwoProfileOnionReceive() {
+async function startProductionTwoProfileOnionReceive(options = {}) {
   const input = productionTwoProfileInput();
   const { profileA, profileB, passphrase } = input;
   const manualNetworkPermission = manualNetworkPermissionEnabled();
@@ -14746,7 +14768,9 @@ async function startProductionTwoProfileOnionReceive() {
     setChatDeliveryNoticeByKey("receiveOtherRoomActive", "warning", input);
     return;
   }
-  clearPrivateRouteFollowupForRoom(input);
+  if (options.preserveFollowup !== true) {
+    clearPrivateRouteFollowupForRoom(input);
+  }
   rememberReceiveIntentForRoom(input, true);
   if (!manualNetworkPermission) {
     setChatDeliveryNoticeByKey("chatNoticeNetworkPermission", "warning", input);
