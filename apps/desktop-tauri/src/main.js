@@ -3401,7 +3401,7 @@ function savedInviteRoomHasRetryableOutbound(room) {
 function retryableOutboundEntryForSavedRoomAction(room, input = productionTwoProfileInput(), options = {}) {
   const actionOrigin = String(options.actionOrigin ?? "").trim();
   if (actionOrigin !== "retryable-outbound") {
-    return latestVisibleTwoProfileRetryableOutboundEntry(input);
+    return null;
   }
   const messageNumber = Number.parseInt(room?.retryableOutboundMessageNumber ?? 0, 10) || 0;
   if (messageNumber <= 0) {
