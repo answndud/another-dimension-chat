@@ -501,6 +501,7 @@ let latestProductionManualFocusTarget = null;
 let latestChatDeliveryNoticeKey = "";
 let latestChatDeliveryNoticeTone = "neutral";
 let latestChatDeliveryNoticeRoomFingerprint = "";
+let latestChatDeliveryNoticePendingOutbound = null;
 let twoProfileAutoResumeTimer = null;
 let latestTwoProfileAutoResumeFingerprint = null;
 let selectedTwoProfileConversationKey = null;
@@ -1453,11 +1454,7 @@ function applyLanguage(language) {
   renderMessageTtlControlOptions();
   renderProductionTwoProfileFlow(productionTwoProfileInput());
   renderProductionTwoProfileDirection(productionTwoProfileInput());
-  if (latestChatDeliveryNoticeKey && chatDeliveryNoticeMatchesInput(productionTwoProfileInput())) {
-    setChatDeliveryNoticeByKey(latestChatDeliveryNoticeKey, latestChatDeliveryNoticeTone);
-  } else if (latestChatDeliveryNoticeKey) {
-    setChatDeliveryNoticeByKey("", "neutral");
-  }
+  rerenderLatestChatDeliveryNotice(productionTwoProfileInput());
   applyProductionActionState();
 }
 
@@ -1517,6 +1514,13 @@ function chatDeliveryNoticeRoomFingerprint(input = productionTwoProfileInput()) 
 
 function chatDeliveryNoticeMatchesInput(input = productionTwoProfileInput()) {
   return latestChatDeliveryNoticeRoomFingerprint === chatDeliveryNoticeRoomFingerprint(input);
+}
+
+function clearLatestChatDeliveryNoticeState() {
+  latestChatDeliveryNoticeKey = "";
+  latestChatDeliveryNoticeTone = "neutral";
+  latestChatDeliveryNoticeRoomFingerprint = "";
+  latestChatDeliveryNoticePendingOutbound = null;
 }
 
 function clearMismatchedChatDeliveryNotice(input = productionTwoProfileInput()) {
@@ -1729,6 +1733,7 @@ function setChatDeliveryNoticeByKey(key, tone = "neutral", input = productionTwo
   latestChatDeliveryNoticeKey = key || "";
   latestChatDeliveryNoticeTone = tone || "neutral";
   latestChatDeliveryNoticeRoomFingerprint = key ? chatDeliveryNoticeRoomFingerprint(input) : "";
+  latestChatDeliveryNoticePendingOutbound = null;
   setChatDeliveryNotice(key ? t(key) : "", tone);
 }
 
@@ -1737,9 +1742,61 @@ function setChatDeliveryNoticeForPendingOutbound(entry, input = productionTwoPro
   latestChatDeliveryNoticeKey = primaryAction.noticeKey || "sendFailedGeneric";
   latestChatDeliveryNoticeTone = primaryAction.action === "enable-private-delivery" ? "muted" : "warning";
   latestChatDeliveryNoticeRoomFingerprint = chatDeliveryNoticeRoomFingerprint(input);
+  latestChatDeliveryNoticePendingOutbound = {
+    roomFingerprint: String(entry?.roomFingerprint ?? twoProfileSessionStatusFingerprint(input)).trim(),
+    sender: String(entry?.sender ?? "").trim(),
+    receiver: String(entry?.receiver ?? "").trim(),
+    messageNumber: Number.parseInt(entry?.messageNumber, 10) || 0,
+    message: String(entry?.message ?? "").trim(),
+  };
   setChatDeliveryNotice(t(primaryAction.recoveryKey || "sendRecoveryGeneric"), latestChatDeliveryNoticeTone, {
     pendingEntry: entry,
   });
+}
+
+function restoreLatestChatDeliveryPendingOutbound(input = productionTwoProfileInput()) {
+  const pending = latestChatDeliveryNoticePendingOutbound;
+  if (!pending || !chatDeliveryNoticeMatchesInput(input)) {
+    return null;
+  }
+  const entry = currentTwoProfileRetryableOutboundEntry(pending);
+  if (!entry) {
+    return null;
+  }
+  const sender = String(entry.sender ?? "").trim();
+  const receiver = String(entry.receiver ?? "").trim();
+  const message = String(entry.message ?? "").trim();
+  const roomFingerprint = String(entry.roomFingerprint ?? "").trim();
+  if (
+    roomFingerprint !== String(pending.roomFingerprint ?? "").trim() ||
+    sender !== String(pending.sender ?? "").trim() ||
+    receiver !== String(pending.receiver ?? "").trim() ||
+    message !== String(pending.message ?? "").trim()
+  ) {
+    return null;
+  }
+  return entry;
+}
+
+function rerenderLatestChatDeliveryNotice(input = productionTwoProfileInput()) {
+  if (!latestChatDeliveryNoticeKey) {
+    return false;
+  }
+  if (!chatDeliveryNoticeMatchesInput(input)) {
+    setChatDeliveryNoticeByKey("", "neutral", input);
+    return true;
+  }
+  if (latestChatDeliveryNoticePendingOutbound) {
+    const pending = restoreLatestChatDeliveryPendingOutbound(input);
+    if (pending) {
+      setChatDeliveryNoticeForPendingOutbound(pending, input);
+      return true;
+    }
+    showCurrentRetryableOutboundMissing(latestChatDeliveryNoticePendingOutbound);
+    return true;
+  }
+  setChatDeliveryNoticeByKey(latestChatDeliveryNoticeKey, latestChatDeliveryNoticeTone, input);
+  return true;
 }
 
 function currentTwoProfileOutboundPrimaryAction(entry, input = productionTwoProfileInput()) {
@@ -1923,6 +1980,7 @@ function showCurrentRetryableOutboundMissing(entry) {
       ? "선택한 전송 대기 메시지는 더 이상 없습니다. 대화를 확인하거나 새 메시지를 작성하세요."
       : "The selected pending send is no longer available. Review the conversation or write a new message.",
   );
+  clearLatestChatDeliveryNoticeState();
   setChatDeliveryNotice(
     currentLanguage === "ko"
       ? "선택한 전송 대기 메시지는 더 이상 없습니다."
@@ -3574,6 +3632,7 @@ async function handleSavedInviteRoomMissingPendingAction(action) {
   renderSavedInviteRooms();
   setProductionTwoProfileState("No pending send");
   setText(fields.productionTwoProfileWarning, savedInviteRoomMissingPendingMessage(action));
+  clearLatestChatDeliveryNoticeState();
   setChatDeliveryNotice(savedInviteRoomMissingPendingMessage(action), "muted");
   setProductionFollowupActions(
     true,
@@ -3735,6 +3794,7 @@ function showSavedInviteRoomExpiredRealOnionAction() {
   applyProductionActionState();
   setProductionTwoProfileState("Private delivery recovery expired");
   setText(fields.productionTwoProfileWarning, message);
+  clearLatestChatDeliveryNoticeState();
   setChatDeliveryNotice(message, "muted");
   setProductionFollowupActions(
     true,
