@@ -3590,6 +3590,65 @@ function showSavedInviteRoomReceiveStopPending() {
   return true;
 }
 
+function savedInviteRoomMatches(left, right) {
+  return Boolean(left && right && left.code === right.code && left.role === right.role);
+}
+
+function refreshReceiveStopCompletedNotice(input = productionTwoProfileInput()) {
+  if (latestChatDeliveryNoticeKey !== "receiveStopPending" || !chatDeliveryNoticeMatchesInput(input)) {
+    return false;
+  }
+  const current = currentSavedInviteRoomView(input);
+  if (current.action?.action === "wait-receive-stop") {
+    return false;
+  }
+  const resumeRoom = savedInviteRoomResumeRoom();
+  const resumeAction = resumeRoom
+    ? savedInviteRoomListItemView(resumeRoom, {
+        currentCode: currentInviteRoomCode(),
+        resumeRoom,
+      }).nextAction
+    : null;
+  setProductionTwoProfileState("Message listening stopped");
+  setText(fields.productionTwoProfileWarning, t("receiveStopped"));
+  setChatDeliveryNoticeByKey("chatNoticeReceiveStopped", "muted", input);
+  if (current.action?.action === "start-receiving") {
+    setProductionFollowupActions(
+      true,
+      currentLanguage === "ko"
+        ? "다음: 이 채팅방에서 메시지 받기를 다시 시작하세요."
+        : "Next: start receiving again in this room.",
+    );
+    fields.startProductionTwoProfileOnionReceive?.focus?.({ preventScroll: true });
+    return true;
+  }
+  if (resumeAction && !savedInviteRoomMatches(resumeRoom, current.room)) {
+    setProductionFollowupActions(
+      true,
+      currentLanguage === "ko"
+        ? `다음: 저장된 방 목록에서 추천된 방을 열고 '${t(resumeAction.labelKey)}' 작업을 진행하세요.`
+        : `Next: open the recommended saved room and run '${t(resumeAction.labelKey)}'.`,
+    );
+    return true;
+  }
+  if (current.action) {
+    setProductionFollowupActions(
+      true,
+      currentLanguage === "ko"
+        ? `다음: 현재 채팅방에서 '${t(current.action.labelKey)}' 작업을 진행하세요.`
+        : `Next: run '${t(current.action.labelKey)}' in this room.`,
+    );
+    return true;
+  }
+  setProductionFollowupActions(
+    true,
+    currentLanguage === "ko"
+      ? "다음: 대화를 확인하거나 새 메시지를 작성하세요."
+      : "Next: review the conversation or write a new message.",
+  );
+  return true;
+}
+
 async function openSavedInviteRoomReceiveOwnerBeforeSwitch(targetRoom) {
   const targetInput = savedInviteRoomInput(targetRoom);
   if (!productionTwoProfileReceiveActiveInOtherRoom(targetInput)) {
@@ -14597,11 +14656,14 @@ async function pollProductionTwoProfileOnionReceiveStopConfirmation() {
     };
     receiveStopStateChanged = true;
     if (!silent) {
+      setText(fields.productionTwoProfileWarning, t("receiveStopFailed"));
+      setChatDeliveryNoticeByKey("receiveStopFailed", "warning", productionTwoProfileInput());
       setText(fields.productionTwoProfileBoundary, `Backend receive loop stop confirmation failed without returning secrets. ${error}`);
     }
   } finally {
     if (receiveStopStateChanged) {
       renderSavedInviteRooms();
+      refreshReceiveStopCompletedNotice(productionTwoProfileInput());
     }
     applyProductionActionState();
   }
@@ -14673,6 +14735,7 @@ function stopProductionTwoProfileOnionReceiveForInput(input, options) {
           setText(fields.productionTwoProfileWarning, t("receiveStopped"));
         }
         renderSavedInviteRooms();
+        refreshReceiveStopCompletedNotice(productionTwoProfileInput());
       }
     })
     .catch((error) => {
