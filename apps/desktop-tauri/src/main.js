@@ -3508,46 +3508,46 @@ function savedInviteRoomListAction(room, options = {}) {
   if (savedInviteRoomHasRetryableOutbound(room)) {
     const action = savedInviteRoomRetryableAction(room.retryableOutboundAction);
     if (action === "enable-private-delivery") {
-      return { action, labelKey: "enablePrivateDelivery" };
+      return { action, labelKey: "enablePrivateDelivery", origin: "retryable-outbound" };
     }
     if (action === "prepare-private-route") {
-      return { action, labelKey: "preparePrivateRoute" };
+      return { action, labelKey: "preparePrivateRoute", origin: "retryable-outbound" };
     }
     if (action === "refresh-and-retry") {
-      return { action, labelKey: "refreshAndRetry" };
+      return { action, labelKey: "refreshAndRetry", origin: "retryable-outbound" };
     }
     if (action === "start-receiving") {
-      return { action, labelKey: "startReceiving" };
+      return { action, labelKey: "startReceiving", origin: "retryable-outbound" };
     }
     if (action === "retry-network") {
-      return { action, labelKey: "retryNetwork" };
+      return { action, labelKey: "retryNetwork", origin: "retryable-outbound" };
     }
-    return { action: "retry", labelKey: "retrySend" };
+    return { action: "retry", labelKey: "retrySend", origin: "retryable-outbound" };
   }
   const hasRealOnionRecoveryView = Object.prototype.hasOwnProperty.call(options, "realOnionRecoveryView");
   const realOnionRecovery = hasRealOnionRecoveryView
     ? options.realOnionRecoveryView
     : savedInviteRoomRealOnionRecoveryView(room);
   if (realOnionRecovery) {
-    return { action: realOnionRecovery.action, labelKey: realOnionRecovery.labelKey };
+    return { action: realOnionRecovery.action, labelKey: realOnionRecovery.labelKey, origin: "real-onion-recovery" };
   }
   const receiveState = options.receiveState ?? savedInviteRoomReceiveState(room);
   if (receiveState === "stopping") {
-    return { action: "wait-receive-stop", labelKey: "receiveStopPending" };
+    return { action: "wait-receive-stop", labelKey: "receiveStopPending", origin: "receive-state" };
   }
   if (receiveState === "paused") {
-    return { action: "start-receiving", labelKey: "startReceiving" };
+    return { action: "start-receiving", labelKey: "startReceiving", origin: "receive-state" };
   }
   const waitingPeerCode = options.waitingPeerCode ?? savedInviteRoomWaitingForPeerCode(room);
   if (waitingPeerCode) {
-    return { action: "paste-peer-code", labelKey: "roomActionPastePeerCode" };
+    return { action: "paste-peer-code", labelKey: "roomActionPastePeerCode", origin: "peer-code" };
   }
   const hasRouteReadinessView = Object.prototype.hasOwnProperty.call(options, "routeReadinessView");
   const routeReadinessView = hasRouteReadinessView
     ? options.routeReadinessView
     : savedInviteRoomRouteReadinessView(room);
   if (routeReadinessView) {
-    return { action: routeReadinessView.action, labelKey: routeReadinessView.labelKey };
+    return { action: routeReadinessView.action, labelKey: routeReadinessView.labelKey, origin: "route-readiness" };
   }
   return null;
 }
@@ -3832,20 +3832,33 @@ function showSavedInviteRoomActionNowReady() {
   return true;
 }
 
-async function runSavedInviteRoomListAction(room, action) {
-  if (action === "start-receiving" && await openSavedInviteRoomReceiveOwnerBeforeSwitch(room)) {
+async function runSavedInviteRoomListAction(room, action, options = {}) {
+  const actionOrigin = String(options.actionOrigin ?? "").trim();
+  if (
+    action === "start-receiving" &&
+    actionOrigin !== "retryable-outbound" &&
+    await openSavedInviteRoomReceiveOwnerBeforeSwitch(room)
+  ) {
     return true;
   }
   const opened = await openSavedInviteRoom(room);
   if (!opened) {
     return false;
   }
+  if (
+    actionOrigin === "retryable-outbound" &&
+    savedInviteRoomRetryableAction(action) &&
+    !latestVisibleTwoProfileRetryableOutboundEntry(productionTwoProfileInput())
+  ) {
+    await handleSavedInviteRoomMissingPendingAction(action);
+    return true;
+  }
   if (savedInviteRoomActionRechecksAfterOpen(action)) {
     const current = currentSavedInviteRoomView(productionTwoProfileInput());
     const currentRoom = current.room;
     const currentAction = current.action;
     if (currentAction && currentAction !== action) {
-      return runSavedInviteRoomListAction(currentRoom, currentAction);
+      return runSavedInviteRoomListAction(currentRoom, currentAction, { actionOrigin: current.actionOrigin });
     }
     if (!currentAction) {
       return String(action ?? "").startsWith("real-onion-")
@@ -4255,6 +4268,7 @@ function currentSavedInviteRoomView(input = productionTwoProfileInput()) {
     room: currentRoom,
     view,
     action: view?.nextAction?.action ?? "",
+    actionOrigin: view?.nextAction?.origin ?? "",
   };
 }
 
@@ -4314,7 +4328,7 @@ function renderSavedInviteRooms() {
     nextAction.textContent = view.nextAction ? t(view.nextAction.labelKey) : "";
     nextAction.addEventListener("click", () => {
       if (view.nextAction) {
-        runSavedInviteRoomListAction(room, view.nextAction.action);
+        runSavedInviteRoomListAction(room, view.nextAction.action, { actionOrigin: view.nextAction.origin });
       }
     });
     const remove = document.createElement("button");
