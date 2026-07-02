@@ -8430,6 +8430,66 @@ function clearStaleTwoProfileConversationSelection() {
   return true;
 }
 
+function twoProfileConversationEntryMatchesOutbound(entry, input = productionTwoProfileInput(), messageNumber = null) {
+  const normalizedNumber = Number.parseInt(messageNumber, 10);
+  return Boolean(
+    entry &&
+      String(entry.roomFingerprint ?? "").trim() === twoProfileSessionStatusFingerprint(input) &&
+      String(entry.sender ?? "").trim().toLowerCase() === String(input.profileA ?? "").trim().toLowerCase() &&
+      String(entry.receiver ?? "").trim().toLowerCase() === String(input.profileB ?? "").trim().toLowerCase() &&
+      Number.isInteger(normalizedNumber) &&
+      normalizedNumber > 0 &&
+      Number.parseInt(entry.messageNumber, 10) === normalizedNumber,
+  );
+}
+
+function clearMessageEnvelopeSlotForConversationEntry(entry) {
+  if (!entry) {
+    return false;
+  }
+  const slot = messageEnvelopeSlotRecord(entry.sender, entry.roomFingerprint);
+  if (!messageEnvelopeSlotMatchesEntry(slot, entry)) {
+    return false;
+  }
+  const key = messageEnvelopeSlotKey(entry.sender, entry.roomFingerprint);
+  const payload = messageEnvelopeSlotPayload(slot);
+  if (!key) {
+    return false;
+  }
+  productionPayloadSlots.messageEnvelope.delete(key);
+  clearMessageEnvelopeFieldsForPayload(payload);
+  return true;
+}
+
+function clearCompletedExternalSendUiState(input = productionTwoProfileInput(), messageNumber = null) {
+  let changed = clearPrivateRouteFollowupForRoom(input);
+  const sentEntry =
+    [...productionTwoProfileConversationEntries.values()].find((entry) =>
+      twoProfileConversationEntryMatchesOutbound(entry, input, messageNumber),
+    ) ?? null;
+  if (!sentEntry || twoProfileConversationOutboundRetryable(sentEntry)) {
+    if (changed) {
+      applyProductionActionState();
+    }
+    return changed;
+  }
+  changed = clearMessageEnvelopeSlotForConversationEntry(sentEntry) || changed;
+  const selectedEntry = selectedTwoProfileConversationEntry();
+  if (
+    selectedEntry &&
+    !twoProfileConversationOutboundRetryable(selectedEntry) &&
+    twoProfileConversationEntryMatchesOutbound(selectedEntry, input, messageNumber)
+  ) {
+    selectedTwoProfileConversationKey = null;
+    changed = true;
+  }
+  if (changed) {
+    renderProductionTwoProfileConversationList();
+    applyProductionActionState();
+  }
+  return changed;
+}
+
 function renderProductionTwoProfileTranscriptEntries(entries, input = productionTwoProfileInput()) {
   resetProductionTwoProfileTranscript({ preserveSelection: true });
   const orderedEntries = [...(entries ?? [])].sort((left, right) =>
@@ -14031,7 +14091,9 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
     }
     await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
-    if (!result.send_attempt_succeeded) {
+    if (result.send_attempt_succeeded) {
+      clearCompletedExternalSendUiState(input, latestOnionOutbound.messageNumber);
+    } else {
       showLatestRetryableOutboundNotice(input);
     }
     refreshFieldTestReport();
