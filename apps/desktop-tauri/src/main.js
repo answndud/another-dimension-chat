@@ -8717,17 +8717,15 @@ function clearMessageEnvelopeSlotForConversationEntry(entry) {
 }
 
 function clearCompletedExternalSendUiState(input = productionTwoProfileInput(), messageNumber = null) {
-  let changed = clearPrivateRouteFollowupForRoom(input);
+  let changed = false;
   const sentEntry =
     [...productionTwoProfileConversationEntries.values()].find((entry) =>
       twoProfileConversationEntryMatchesOutbound(entry, input, messageNumber),
     ) ?? null;
   if (!sentEntry || twoProfileConversationOutboundRetryable(sentEntry)) {
-    if (changed) {
-      applyProductionActionState();
-    }
-    return changed;
+    return false;
   }
+  changed = clearPrivateRouteFollowupForRoom(input);
   changed = clearMessageEnvelopeSlotForConversationEntry(sentEntry) || changed;
   const selectedEntry = selectedTwoProfileConversationEntry();
   if (
