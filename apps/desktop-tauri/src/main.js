@@ -8056,8 +8056,26 @@ function latestTwoProfileRetryableOutboundEntry(input = productionTwoProfileInpu
   );
 }
 
+function selectedTwoProfileRetryableOutboundEntry(input = productionTwoProfileInput()) {
+  const selectedEntry = selectedTwoProfileConversationEntry();
+  const sender = String(selectedEntry?.sender ?? "").trim().toLowerCase();
+  const receiver = String(selectedEntry?.receiver ?? "").trim().toLowerCase();
+  const profileA = String(input.profileA ?? "").trim().toLowerCase();
+  const profileB = String(input.profileB ?? "").trim().toLowerCase();
+  if (
+    !selectedEntry ||
+    !twoProfileConversationOutboundRetryable(selectedEntry) ||
+    String(selectedEntry.roomFingerprint ?? "").trim() !== twoProfileSessionStatusFingerprint(input) ||
+    sender !== profileA ||
+    receiver !== profileB
+  ) {
+    return null;
+  }
+  return selectedEntry;
+}
+
 function latestVisibleTwoProfileRetryableOutboundEntry(input = productionTwoProfileInput()) {
-  return latestTwoProfileRetryableOutboundEntry(input);
+  return selectedTwoProfileRetryableOutboundEntry(input) ?? latestTwoProfileRetryableOutboundEntry(input);
 }
 
 function latestTwoProfileDeliveredConversationEntry() {
