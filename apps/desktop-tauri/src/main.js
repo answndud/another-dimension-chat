@@ -1695,6 +1695,9 @@ function currentTwoProfileOutboundAction(entry, options = {}) {
   if (options.requireNoticeMatch === true && !chatDeliveryNoticeMatchesInput(input)) {
     return null;
   }
+  if (options.requireNoticeMatch === true && !chatDeliveryNoticePendingOutboundMatchesEntry(entry, input)) {
+    return null;
+  }
   const currentEntry = currentTwoProfileRetryableOutboundEntry(entry);
   if (!currentEntry) {
     return null;
@@ -1716,6 +1719,9 @@ function currentTwoProfileOutboundAction(entry, options = {}) {
 function currentTwoProfileOutboundCancelableEntry(entry, options = {}) {
   const input = productionTwoProfileInput();
   if (options.requireNoticeMatch === true && !chatDeliveryNoticeMatchesInput(input)) {
+    return null;
+  }
+  if (options.requireNoticeMatch === true && !chatDeliveryNoticePendingOutboundMatchesEntry(entry, input)) {
     return null;
   }
   const currentEntry = currentTwoProfileRetryableOutboundEntry(entry);
@@ -1753,6 +1759,20 @@ function setChatDeliveryNoticeForPendingOutbound(entry, input = productionTwoPro
   setChatDeliveryNotice(t(primaryAction.recoveryKey || "sendRecoveryGeneric"), latestChatDeliveryNoticeTone, {
     pendingEntry: entry,
   });
+}
+
+function chatDeliveryNoticePendingOutboundMatchesEntry(entry, input = productionTwoProfileInput()) {
+  const pending = latestChatDeliveryNoticePendingOutbound;
+  if (!pending || !entry || !chatDeliveryNoticeMatchesInput(input)) {
+    return false;
+  }
+  return (
+    String(entry.roomFingerprint ?? "").trim() === String(pending.roomFingerprint ?? "").trim() &&
+    String(entry.sender ?? "").trim().toLowerCase() === String(pending.sender ?? "").trim().toLowerCase() &&
+    String(entry.receiver ?? "").trim().toLowerCase() === String(pending.receiver ?? "").trim().toLowerCase() &&
+    Number.parseInt(entry.messageNumber, 10) === Number.parseInt(pending.messageNumber, 10) &&
+    String(entry.message ?? "").trim() === String(pending.message ?? "").trim()
+  );
 }
 
 function restoreLatestChatDeliveryPendingOutbound(input = productionTwoProfileInput()) {
