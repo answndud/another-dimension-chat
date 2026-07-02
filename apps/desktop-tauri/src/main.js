@@ -3995,7 +3995,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     const current = currentSavedInviteRoomView(productionTwoProfileInput());
     const currentRoom = current.room;
     const currentAction = current.action;
-    if (currentAction && currentAction !== action) {
+    if (currentAction && (currentAction !== action || current.actionOrigin !== actionOrigin)) {
       return runSavedInviteRoomListAction(currentRoom, currentAction, { actionOrigin: current.actionOrigin });
     }
     if (!currentAction) {
