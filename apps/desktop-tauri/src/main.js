@@ -12973,7 +12973,7 @@ async function saveProductionTwoProfileOnionSessions() {
   }
 }
 
-async function refreshProductionTwoProfilePeerEndpoints(input = productionTwoProfileInput()) {
+async function refreshProductionTwoProfilePeerEndpoints(input = productionTwoProfileInput(), options = {}) {
   const { profileA, profileB, passphrase } = input;
   const roomInput = twoProfileRoomIdentityInput(input);
   const manualNetworkPermission = manualNetworkPermissionEnabled();
@@ -13080,7 +13080,11 @@ async function refreshProductionTwoProfilePeerEndpoints(input = productionTwoPro
     if (fields.refreshProductionTwoProfilePeerEndpoints) {
       fields.refreshProductionTwoProfilePeerEndpoints.disabled = false;
     }
-    if (refreshSucceeded && twoProfileTranscriptInputStillCurrent(input)) {
+    if (
+      refreshSucceeded &&
+      options.suppressRecoveryNoticeRefresh !== true &&
+      twoProfileTranscriptInputStillCurrent(input)
+    ) {
       refreshRouteReadinessNoticeAfterSessionRefresh(input);
     }
     applyProductionActionState();
@@ -14505,7 +14509,7 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
     await retryTwoProfileOutboundEntry(currentEntry);
     return;
   }
-  const refreshed = await refreshProductionTwoProfilePeerEndpoints(input);
+  const refreshed = await refreshProductionTwoProfilePeerEndpoints(input, { suppressRecoveryNoticeRefresh: true });
   if (!twoProfileTranscriptInputStillCurrent(input)) {
     return;
   }
