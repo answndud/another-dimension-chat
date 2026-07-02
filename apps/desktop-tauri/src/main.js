@@ -4096,6 +4096,17 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     return true;
   }
   if (action === "start-receiving") {
+    if (actionOrigin === "retryable-outbound") {
+      const pending = retryableOutboundEntryForSavedRoomAction(room, productionTwoProfileInput(), { actionOrigin });
+      if (pending) {
+        selectTwoProfileConversationEntry(pending);
+        showRetryableTwoProfileOutboundNotice(pending);
+        await runTwoProfileOutboundPrimaryAction(pending);
+      } else {
+        await handleSavedInviteRoomMissingPendingAction(action);
+      }
+      return true;
+    }
     await startProductionTwoProfileOnionReceive();
     return true;
   }
