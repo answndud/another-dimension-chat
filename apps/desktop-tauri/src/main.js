@@ -4090,6 +4090,11 @@ function reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries, option
   }
   const input = options.input ?? productionTwoProfileInput();
   let metadata = productionInviteRoomConversationMetadata(entries ?? []);
+  const existingRoom = savedInviteRoomForRoomFingerprint(privateRouteRoomKey(input));
+  const preferredMessageNumber = Number.parseInt(existingRoom?.retryableOutboundMessageNumber ?? 0, 10) || 0;
+  if (preferredMessageNumber > 0) {
+    metadata = savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries ?? [], preferredMessageNumber);
+  }
   if (options.sessionStatus) {
     metadata = savedInviteRoomMetadataWithSessionStatus(metadata, input, options.sessionStatus);
   }
