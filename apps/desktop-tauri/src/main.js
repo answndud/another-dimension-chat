@@ -1940,6 +1940,20 @@ function currentTwoProfileRetryableOutboundEntry(entry) {
   return currentEntry && twoProfileConversationOutboundRetryable(currentEntry) ? currentEntry : null;
 }
 
+function currentTwoProfileRetryableOutboundEntryForMessage(input = productionTwoProfileInput(), messageNumber = null) {
+  const normalizedNumber = Number.parseInt(messageNumber, 10);
+  if (!Number.isInteger(normalizedNumber) || normalizedNumber < 1) {
+    return null;
+  }
+  return (
+    [...productionTwoProfileConversationEntries.values()].find(
+      (entry) =>
+        twoProfileConversationEntryMatchesOutbound(entry, input, normalizedNumber) &&
+        twoProfileConversationOutboundRetryable(entry),
+    ) ?? null
+  );
+}
+
 function rememberPrivateRouteFollowupForOutboundRetry(entry, input = productionTwoProfileInput()) {
   if (!entry) {
     return false;
@@ -1968,6 +1982,11 @@ function showExactRetryableOutboundPrompt(entry, input = productionTwoProfileInp
   applyProductionActionState();
   refreshFieldTestReport();
   return true;
+}
+
+function showRetryableOutboundPromptForMessage(input = productionTwoProfileInput(), messageNumber = null) {
+  const entry = currentTwoProfileRetryableOutboundEntryForMessage(input, messageNumber);
+  return entry ? showExactRetryableOutboundPrompt(entry, input) : false;
 }
 
 function showCurrentRetryableOutboundMissing(entry) {
@@ -6660,7 +6679,9 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
       suppressRouteReadinessNoticeRefresh: true,
       input,
     });
-    showLatestRetryableOutboundNotice(input);
+    if (!showRetryableOutboundPromptForMessage(input, messageNumber)) {
+      showLatestRetryableOutboundNotice(input);
+    }
     refreshFieldTestReport();
     return;
   }
@@ -14273,7 +14294,9 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
         suppressRouteReadinessNoticeRefresh: true,
         input,
       });
-      showLatestRetryableOutboundNotice(input);
+      if (!showRetryableOutboundPromptForMessage(input, latestCandidate.messageNumber)) {
+        showLatestRetryableOutboundNotice(input);
+      }
       refreshFieldTestReport();
       return;
     }
@@ -14314,7 +14337,9 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       suppressRouteReadinessNoticeRefresh: true,
       input,
     });
-    showLatestRetryableOutboundNotice(input);
+    if (!showRetryableOutboundPromptForMessage(input, latestOnionOutbound.messageNumber)) {
+      showLatestRetryableOutboundNotice(input);
+    }
     refreshFieldTestReport();
     return;
   }
@@ -14394,7 +14419,9 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
     if (result.send_attempt_succeeded) {
       clearCompletedExternalSendUiState(input, latestOnionOutbound.messageNumber);
     } else {
-      showLatestRetryableOutboundNotice(input);
+      if (!showRetryableOutboundPromptForMessage(input, latestOnionOutbound.messageNumber)) {
+        showLatestRetryableOutboundNotice(input);
+      }
     }
     refreshFieldTestReport();
   } catch (error) {
@@ -14423,7 +14450,9 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
         suppressRouteReadinessNoticeRefresh: true,
         input,
       });
-      showLatestRetryableOutboundNotice(input);
+      if (!showRetryableOutboundPromptForMessage(input, latestOnionOutbound.messageNumber)) {
+        showLatestRetryableOutboundNotice(input);
+      }
       refreshFieldTestReport();
     } catch {
       applyProductionActionState();
