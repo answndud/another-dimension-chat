@@ -6590,7 +6590,12 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
     setProductionTwoProfileState("Private delivery not ready");
     setText(fields.productionTwoProfileWarning, routeReadiness.disabledReason);
     setChatDeliveryNoticeByKey(routeReadiness.noticeKey, "warning", input);
-    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
+    await loadProductionTwoProfileTranscript({
+      quiet: true,
+      refreshSessionStatus: true,
+      suppressRouteReadinessNoticeRefresh: true,
+      input,
+    });
     showLatestRetryableOutboundNotice(input);
     refreshFieldTestReport();
     return;
@@ -13206,7 +13211,12 @@ async function applyPeerPrivateRouteCode() {
     setText(fields.productionTwoProfileWarning, t("peerPrivateRouteCodeSaved"));
     setChatDeliveryNoticeByKey("privateDeliveryRouteReady", "success", input);
     hidePrivateRouteExchangeIfReady(input);
-    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
+    await loadProductionTwoProfileTranscript({
+      quiet: true,
+      refreshSessionStatus: false,
+      suppressRouteReadinessNoticeRefresh: true,
+      input,
+    });
     if (!twoProfileTranscriptInputStillCurrent(input)) {
       return true;
     }
@@ -14188,7 +14198,12 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       if (!twoProfileTranscriptInputStillCurrent(input)) {
         return;
       }
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
+      await loadProductionTwoProfileTranscript({
+        quiet: true,
+        refreshSessionStatus: true,
+        suppressRouteReadinessNoticeRefresh: true,
+        input,
+      });
       showLatestRetryableOutboundNotice(input);
       refreshFieldTestReport();
       return;
@@ -14220,7 +14235,12 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
     if (routeReadiness.nextAction === "enable-private-delivery") {
       openPrivateDeliverySettings(input);
     }
-    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
+    await loadProductionTwoProfileTranscript({
+      quiet: true,
+      refreshSessionStatus: true,
+      suppressRouteReadinessNoticeRefresh: true,
+      input,
+    });
     showLatestRetryableOutboundNotice(input);
     refreshFieldTestReport();
     return;
@@ -14292,7 +14312,12 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       rememberTwoProfileSessionStatus(input, status);
       renderRoomIdentityBar(input, twoProfileSessionsReadyForInput(input));
     }
-    await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: false, input });
+    await loadProductionTwoProfileTranscript({
+      quiet: true,
+      refreshSessionStatus: false,
+      suppressRouteReadinessNoticeRefresh: result.send_attempt_succeeded !== true,
+      input,
+    });
     if (result.send_attempt_succeeded) {
       clearCompletedExternalSendUiState(input, latestOnionOutbound.messageNumber);
     } else {
@@ -14319,7 +14344,12 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
     setChatDeliveryNoticeForOutboundFailureKind(failureKind, input);
     setText(fields.productionTwoProfileBoundary, localizedTwoProfileUserViewText("Failed before or during bounded onion send attempt."));
     try {
-      await loadProductionTwoProfileTranscript({ quiet: true, refreshSessionStatus: true, input });
+      await loadProductionTwoProfileTranscript({
+        quiet: true,
+        refreshSessionStatus: true,
+        suppressRouteReadinessNoticeRefresh: true,
+        input,
+      });
       showLatestRetryableOutboundNotice(input);
       refreshFieldTestReport();
     } catch {
@@ -16236,7 +16266,10 @@ async function loadProductionTwoProfileTranscript(options = {}) {
       input: transcriptInput,
       sessionStatus,
     });
-    if (!refreshRouteReadinessNoticeAfterSessionRefresh(transcriptInput)) {
+    if (
+      options.suppressRouteReadinessNoticeRefresh !== true &&
+      !refreshRouteReadinessNoticeAfterSessionRefresh(transcriptInput)
+    ) {
       clearStaleSendRecoveryNotice(transcriptInput);
     }
     const resumeWarning = appendStaleMessageEnvelopeSlotsPruned(
