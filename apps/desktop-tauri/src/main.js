@@ -502,6 +502,7 @@ let latestChatDeliveryNoticeKey = "";
 let latestChatDeliveryNoticeTone = "neutral";
 let latestChatDeliveryNoticeRoomFingerprint = "";
 let latestChatDeliveryNoticePendingOutbound = null;
+let latestClearedRetryableSelection = null;
 let twoProfileAutoResumeTimer = null;
 let latestTwoProfileAutoResumeFingerprint = null;
 let selectedTwoProfileConversationKey = null;
@@ -5626,7 +5627,7 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const receivedRows = entries.filter((entry) => entry.statuses?.has("received")).length;
   const failedRows = entries.filter((entry) => entry.outboundDeliveryState === "failed").length;
   const canceledRows = entries.filter((entry) => entry.outboundDeliveryState === "canceled").length;
-  const retryableOutbound = latestVisibleTwoProfileRetryableOutboundEntry(input);
+  const retryableOutbound = automaticVisibleTwoProfileRetryableOutboundEntry(input);
   const outboundFailureClass = retryableOutbound
     ? productionTwoProfileOutboundStatusLabel(retryableOutbound)
     : "none";
@@ -8164,6 +8165,21 @@ function latestVisibleTwoProfileRetryableOutboundEntry(input = productionTwoProf
   return selectedTwoProfileRetryableOutboundEntry(input) ?? latestTwoProfileRetryableOutboundEntry(input);
 }
 
+function clearedRetryableSelectionMatchesInput(input = productionTwoProfileInput()) {
+  return Boolean(
+    latestClearedRetryableSelection &&
+      String(latestClearedRetryableSelection.roomFingerprint ?? "").trim() === twoProfileSessionStatusFingerprint(input),
+  );
+}
+
+function automaticVisibleTwoProfileRetryableOutboundEntry(input = productionTwoProfileInput()) {
+  const selected = selectedTwoProfileRetryableOutboundEntry(input);
+  if (selected) {
+    return selected;
+  }
+  return clearedRetryableSelectionMatchesInput(input) ? null : latestTwoProfileRetryableOutboundEntry(input);
+}
+
 function latestTwoProfileDeliveredConversationEntry() {
   const entries = [...productionTwoProfileConversationEntries.values()]
     .filter((entry) => twoProfileConversationReplyable(entry))
@@ -8204,6 +8220,7 @@ function setSelectedTwoProfileConversationEntry(entry, options = {}) {
     selectedTwoProfileConversationKey = null;
     return false;
   }
+  latestClearedRetryableSelection = null;
   selectedTwoProfileConversationKey = twoProfileConversationKey(entry);
   if (options.render !== false) {
     renderProductionTwoProfileConversationList();
@@ -8468,7 +8485,16 @@ function showLatestRetryableOutboundNotice(input = productionTwoProfileInput()) 
   if (!twoProfileSessionsReadyForInput(input)) {
     return false;
   }
-  const entry = latestVisibleTwoProfileRetryableOutboundEntry(input);
+  if (latestChatDeliveryNoticePendingOutbound && chatDeliveryNoticeMatchesInput(input)) {
+    const pending = restoreLatestChatDeliveryPendingOutbound(input);
+    if (pending) {
+      setChatDeliveryNoticeForPendingOutbound(pending, input);
+      return true;
+    }
+    showCurrentRetryableOutboundMissing(latestChatDeliveryNoticePendingOutbound);
+    return true;
+  }
+  const entry = automaticVisibleTwoProfileRetryableOutboundEntry(input);
   if (!entry) {
     return false;
   }
@@ -8618,6 +8644,13 @@ function clearCompletedExternalSendUiState(input = productionTwoProfileInput(), 
     !twoProfileConversationOutboundRetryable(selectedEntry) &&
     twoProfileConversationEntryMatchesOutbound(selectedEntry, input, messageNumber)
   ) {
+    latestClearedRetryableSelection = {
+      roomFingerprint: String(selectedEntry.roomFingerprint ?? twoProfileSessionStatusFingerprint(input)).trim(),
+      sender: String(selectedEntry.sender ?? "").trim(),
+      receiver: String(selectedEntry.receiver ?? "").trim(),
+      messageNumber: Number.parseInt(selectedEntry.messageNumber, 10) || 0,
+      message: String(selectedEntry.message ?? "").trim(),
+    };
     selectedTwoProfileConversationKey = null;
     changed = true;
   }
@@ -8629,6 +8662,16 @@ function clearCompletedExternalSendUiState(input = productionTwoProfileInput(), 
 }
 
 function renderProductionTwoProfileTranscriptEntries(entries, input = productionTwoProfileInput()) {
+  const selectedBeforeRefresh = selectedTwoProfileConversationEntry();
+  const selectedRetryableBeforeRefresh = twoProfileConversationOutboundRetryable(selectedBeforeRefresh)
+    ? {
+        roomFingerprint: String(selectedBeforeRefresh.roomFingerprint ?? twoProfileSessionStatusFingerprint(input)).trim(),
+        sender: String(selectedBeforeRefresh.sender ?? "").trim(),
+        receiver: String(selectedBeforeRefresh.receiver ?? "").trim(),
+        messageNumber: Number.parseInt(selectedBeforeRefresh.messageNumber, 10) || 0,
+        message: String(selectedBeforeRefresh.message ?? "").trim(),
+      }
+    : null;
   resetProductionTwoProfileTranscript({ preserveSelection: true });
   const orderedEntries = [...(entries ?? [])].sort((left, right) =>
     productionTwoProfileConversationCompare(
@@ -8665,7 +8708,9 @@ function renderProductionTwoProfileTranscriptEntries(entries, input = production
       input,
     );
   }
-  clearStaleTwoProfileConversationSelection();
+  if (clearStaleTwoProfileConversationSelection() && selectedRetryableBeforeRefresh) {
+    latestClearedRetryableSelection = selectedRetryableBeforeRefresh;
+  }
   const prunedEnvelopeSlots = pruneStaleMessageEnvelopeSlots();
   if (prunedEnvelopeSlots > 0) {
     renderProductionTwoProfileConversationList();
@@ -10342,7 +10387,7 @@ function autoSelectLatestDeliveredReply(options = {}) {
 function autoSelectTwoProfileResumeTarget(sessionStatus) {
   const target = productionTwoProfileResumeTarget({
     sessionsReady: Boolean(sessionStatus?.both_ready_for_message_envelope),
-    hasRetryableOutbound: Boolean(latestTwoProfileRetryableOutboundEntry()),
+    hasRetryableOutbound: Boolean(automaticVisibleTwoProfileRetryableOutboundEntry()),
     hasPendingConversation: Boolean(latestTwoProfilePendingConversationEntry()),
     hasDeliveredConversation: Boolean(latestTwoProfileDeliveredConversationEntry()),
     hasMessageDraft: Boolean(productionTwoProfileInput().message),
@@ -10358,7 +10403,7 @@ function autoSelectTwoProfileResumeTarget(sessionStatus) {
 
 function twoProfileResumeWarningForTarget(target, baseWarning, staleMessageEnvelopeSlotsPruned = 0, expiredMessagesPurged = 0) {
   if (target === "retry-send") {
-    const entry = selectedTwoProfileConversationEntry() ?? latestTwoProfileRetryableOutboundEntry();
+    const entry = automaticVisibleTwoProfileRetryableOutboundEntry();
     showRetryableTwoProfileOutboundNotice(entry);
     return retryableTwoProfileOutboundWarning(entry);
   }
@@ -10866,7 +10911,7 @@ function applyProductionActionState() {
   const receivingCurrentRoom = productionTwoProfileReceiveMatchesInput(twoProfile);
   const receivingOtherRoom = productionTwoProfileReceiveActiveInOtherRoom(twoProfile);
   const receivingRuntimeMismatch = productionTwoProfileReceiveRuntimeMismatched(twoProfile);
-  const retryableOutboundConversation = latestTwoProfileRetryableOutboundEntry(twoProfile);
+  const retryableOutboundConversation = automaticVisibleTwoProfileRetryableOutboundEntry(twoProfile);
   clearMismatchedChatDeliveryNotice(twoProfile);
   clearMismatchedPrivateRouteFollowup(twoProfile);
   const currentRoomDeliveryNotice = chatDeliveryNoticeMatchesInput(twoProfile);
