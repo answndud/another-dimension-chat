@@ -14896,6 +14896,7 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
         await loadProductionTwoProfileTranscript({
           quiet: true,
           refreshSessionStatus: refreshPlan.endpointUpdated === true,
+          suppressRouteReadinessNoticeRefresh: refreshPlan.endpointUpdated === true,
           input: currentInput,
         });
         if (!twoProfileTranscriptInputStillCurrent(currentInput)) {
