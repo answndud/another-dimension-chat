@@ -1948,6 +1948,7 @@ function rememberPrivateRouteFollowupForOutboundRetry(entry, input = productionT
     sender: entry.sender,
     receiver: entry.receiver,
     messageNumber: entry.messageNumber,
+    message: entry.message,
   });
   return true;
 }
@@ -8909,6 +8910,7 @@ function rememberPrivateRouteFollowup(action, input = productionTwoProfileInput(
     retrySender: String(options.sender ?? input.profileA ?? "").trim(),
     retryReceiver: String(options.receiver ?? input.profileB ?? "").trim(),
     retryMessageNumber: Number.isInteger(retryMessageNumber) && retryMessageNumber > 0 ? retryMessageNumber : null,
+    retryMessage: String(options.message ?? "").trim(),
   };
 }
 
@@ -9002,15 +9004,17 @@ function retryableOutboundEntryForPrivateRouteFollowup(followup, input = product
     return null;
   }
   const roomFingerprint = twoProfileSessionStatusFingerprint(input);
-  const sender = String(followup?.retrySender ?? input.profileA ?? "").trim();
-  const receiver = String(followup?.retryReceiver ?? input.profileB ?? "").trim();
+  const sender = String(followup?.retrySender ?? input.profileA ?? "").trim().toLowerCase();
+  const receiver = String(followup?.retryReceiver ?? input.profileB ?? "").trim().toLowerCase();
+  const message = String(followup?.retryMessage ?? "").trim();
   return (
     [...productionTwoProfileConversationEntries.values()].find(
       (entry) =>
         String(entry?.roomFingerprint ?? "").trim() === roomFingerprint &&
-        String(entry?.sender ?? "").trim() === sender &&
-        String(entry?.receiver ?? "").trim() === receiver &&
+        String(entry?.sender ?? "").trim().toLowerCase() === sender &&
+        String(entry?.receiver ?? "").trim().toLowerCase() === receiver &&
         Number.parseInt(entry?.messageNumber, 10) === messageNumber &&
+        (!message || String(entry?.message ?? "").trim() === message) &&
         twoProfileConversationOutboundRetryable(entry),
     ) ?? null
   );
@@ -14471,8 +14475,14 @@ async function refreshTwoProfileOutboundEndpointThenRetry(entry) {
         return;
       }
       if (nextRouteAction === "apply-peer") {
+        const retryFollowup = pendingPrivateRouteFollowup?.action === "retry-outbound"
+          ? pendingPrivateRouteFollowup
+          : null;
         const applied = await applyPeerPrivateRouteCode();
         if (!twoProfileTranscriptInputStillCurrent(input)) {
+          return;
+        }
+        if (retryFollowup && !privateRouteFollowupMatchesRoom(input)) {
           return;
         }
         if (applied && twoProfilePeerEndpointState(input).ready) {
