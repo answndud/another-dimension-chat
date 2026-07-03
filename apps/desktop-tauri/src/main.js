@@ -5067,11 +5067,11 @@ function fieldTestReportNextActionValue(parsed) {
     }
     return fieldTestReceiveAwareRecoveryAction(parsed.room_list_next_action, parsed);
   }
-  if (parsed.outbound_recovery_action && parsed.outbound_recovery_action !== "none") {
-    return fieldTestReceiveAwareRecoveryAction(parsed.outbound_recovery_action, parsed);
-  }
   if (routeReadinessAction) {
     return routeReadinessAction;
+  }
+  if (parsed.outbound_recovery_action && parsed.outbound_recovery_action !== "none") {
+    return fieldTestReceiveAwareRecoveryAction(parsed.outbound_recovery_action, parsed);
   }
   if (parsed.real_onion_recovery_action && parsed.real_onion_recovery_action !== "none") {
     return parsed.real_onion_recovery_action;
@@ -5409,16 +5409,16 @@ function fieldTestNextActionKey(report, peerReport = "") {
     return "fieldTestNextVerifySafety";
   }
   const roomListAction = fieldTestReportValue(parsed.room_list_next_action, "none");
-  const roomListOrigin = fieldTestReportValue(parsed.room_list_next_origin, "none");
   const outboundAction = fieldTestReportValue(parsed.outbound_recovery_action, "none");
   const routeReadinessAction = fieldTestReportValue(fieldTestRouteReadinessRecoveryAction(parsed), "none");
-  const roomListBlockedByRouteReadiness =
-    roomListOrigin !== "retryable-outbound" && routeReadinessAction !== "none";
-  const currentRecoveryAction = roomListAction !== "none" && !roomListBlockedByRouteReadiness
-    ? roomListAction
-    : outboundAction !== "none"
-      ? outboundAction
-      : routeReadinessAction;
+  let currentRecoveryAction = "none";
+  if (routeReadinessAction !== "none") {
+    currentRecoveryAction = routeReadinessAction;
+  } else if (roomListAction !== "none") {
+    currentRecoveryAction = roomListAction;
+  } else if (outboundAction !== "none") {
+    currentRecoveryAction = outboundAction;
+  }
   const recoveryActionNextKey = fieldTestRecoveryActionNextKey(currentRecoveryAction);
   if (recoveryActionNextKey) {
     return recoveryActionNextKey;
