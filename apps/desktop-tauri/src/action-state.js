@@ -692,7 +692,7 @@ export function productionInviteRoomConversationMetadata(entries) {
   const retryableOutboundEntries = sortedEntries.filter(
     (entry) =>
       entry?.kind !== "received" &&
-      !(entry?.statuses?.has?.("received") && !entry?.statuses?.has?.("sent")) &&
+      !entry?.statuses?.has?.("received") &&
       entry?.outboundRetryable === true &&
       entry?.outboundDeliveryState !== "canceled" &&
       entry?.outboundDeliveryState !== "sent",
