@@ -5605,6 +5605,16 @@ function realOnionActiveRunMatches(runId) {
   return Boolean(activeProductionTwoProfileRealOnionInput?.runId === runId);
 }
 
+function currentRealOnionSyntheticFailureBridgeStatus() {
+  const status = latestProductionOnionBridgeConfigStatus ?? null;
+  return {
+    bridge_capable_build: status?.bridge_capable_build === true,
+    bridge_configured_for_bootstrap: status?.bridge_configured_for_bootstrap === true,
+    bridge_config_state: String(status?.bridge_config_state ?? "unknown"),
+    bridge_config_next_action: String(status?.bridge_config_next_action ?? "unknown"),
+  };
+}
+
 function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manualNetworkPermission) {
   const detail = String(error ?? "").toLowerCase();
   let nextBlocker = "RealOnionRoundtripCommandError";
@@ -5628,6 +5638,7 @@ function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manua
     nextBlocker = "ReceiveAttemptFailed";
     blocker = "ReceiveAttemptFailed";
   }
+  const bridgeStatus = currentRealOnionSyntheticFailureBridgeStatus();
   return {
     manual_client_attempt_feature_compiled: true,
     manual_network_permission_enabled: manualNetworkPermission === true,
@@ -5635,8 +5646,7 @@ function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manua
     receiver_profile: String(input?.profileB ?? ""),
     next_blocker: nextBlocker,
     blockers: [blocker],
-    bridge_capable_build: false,
-    bridge_configured_for_bootstrap: false,
+    ...bridgeStatus,
     local_endpoint_returned: false,
     peer_endpoint_returned: false,
     envelope_payload_returned: false,
