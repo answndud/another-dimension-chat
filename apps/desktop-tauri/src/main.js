@@ -3163,26 +3163,40 @@ function forgetLastInviteRoom(code) {
   forgetInviteRoom(trimmedCode);
 }
 
+function normalizedSavedRoomRetryableMessageNumber(count, value) {
+  return count > 0 ? Number.parseInt(value ?? 0, 10) || 0 : 0;
+}
+
+function normalizedSavedRoomRetryableAction(count, value) {
+  return count > 0 ? savedInviteRoomRetryableAction(value) : "";
+}
+
 function savedInviteRooms() {
   let rooms = [];
   try {
     const parsed = JSON.parse(localStoreGet(inviteRoomsStorageKey) ?? "[]");
     if (Array.isArray(parsed)) {
       rooms = parsed
-        .map((room) => ({
-          code: String(room?.code ?? "").trim(),
-          role: room?.role === "inviter" ? "inviter" : room?.role === "joiner" ? "joiner" : "",
-          updatedAt: Number(room?.updatedAt ?? 0),
-          lastMessagePreview: String(room?.lastMessagePreview ?? "").trim(),
-          lastMessageAt: Number(room?.lastMessageAt ?? 0),
-          messageCount: Math.max(0, Number.parseInt(room?.messageCount ?? 0, 10) || 0),
-          retryableOutboundCount: Math.max(0, Number.parseInt(room?.retryableOutboundCount ?? 0, 10) || 0),
-          retryableOutboundMessageNumber: Number.parseInt(room?.retryableOutboundMessageNumber ?? 0, 10) || 0,
-          retryableOutboundAction:
-            Math.max(0, Number.parseInt(room?.retryableOutboundCount ?? 0, 10) || 0) > 0
-              ? savedInviteRoomRetryableAction(room?.retryableOutboundAction)
-              : "",
-        }))
+        .map((room) => {
+          const retryableOutboundCount = Math.max(0, Number.parseInt(room?.retryableOutboundCount ?? 0, 10) || 0);
+          return {
+            code: String(room?.code ?? "").trim(),
+            role: room?.role === "inviter" ? "inviter" : room?.role === "joiner" ? "joiner" : "",
+            updatedAt: Number(room?.updatedAt ?? 0),
+            lastMessagePreview: String(room?.lastMessagePreview ?? "").trim(),
+            lastMessageAt: Number(room?.lastMessageAt ?? 0),
+            messageCount: Math.max(0, Number.parseInt(room?.messageCount ?? 0, 10) || 0),
+            retryableOutboundCount,
+            retryableOutboundMessageNumber: normalizedSavedRoomRetryableMessageNumber(
+              retryableOutboundCount,
+              room?.retryableOutboundMessageNumber,
+            ),
+            retryableOutboundAction: normalizedSavedRoomRetryableAction(
+              retryableOutboundCount,
+              room?.retryableOutboundAction,
+            ),
+          };
+        })
         .filter((room) => room.code && room.role);
     }
   } catch {
@@ -3212,20 +3226,26 @@ function savedInviteRooms() {
 }
 
 function roomListStoragePayload(rooms) {
-  return rooms.slice(0, savedInviteRoomStorageLimit).map((room) => ({
-    code: room.code,
-    role: room.role,
-    updatedAt: Number(room.updatedAt ?? 0),
-    lastMessagePreview: String(room.lastMessagePreview ?? "").trim(),
-    lastMessageAt: Number(room.lastMessageAt ?? 0),
-    messageCount: Math.max(0, Number.parseInt(room.messageCount ?? 0, 10) || 0),
-    retryableOutboundCount: Math.max(0, Number.parseInt(room.retryableOutboundCount ?? 0, 10) || 0),
-    retryableOutboundMessageNumber: Number.parseInt(room.retryableOutboundMessageNumber ?? 0, 10) || 0,
-    retryableOutboundAction:
-      Math.max(0, Number.parseInt(room.retryableOutboundCount ?? 0, 10) || 0) > 0
-        ? savedInviteRoomRetryableAction(room.retryableOutboundAction)
-        : "",
-  }));
+  return rooms.slice(0, savedInviteRoomStorageLimit).map((room) => {
+    const retryableOutboundCount = Math.max(0, Number.parseInt(room.retryableOutboundCount ?? 0, 10) || 0);
+    return {
+      code: room.code,
+      role: room.role,
+      updatedAt: Number(room.updatedAt ?? 0),
+      lastMessagePreview: String(room.lastMessagePreview ?? "").trim(),
+      lastMessageAt: Number(room.lastMessageAt ?? 0),
+      messageCount: Math.max(0, Number.parseInt(room.messageCount ?? 0, 10) || 0),
+      retryableOutboundCount,
+      retryableOutboundMessageNumber: normalizedSavedRoomRetryableMessageNumber(
+        retryableOutboundCount,
+        room.retryableOutboundMessageNumber,
+      ),
+      retryableOutboundAction: normalizedSavedRoomRetryableAction(
+        retryableOutboundCount,
+        room.retryableOutboundAction,
+      ),
+    };
+  });
 }
 
 function inviteRoomMetadataValue(metadata, existing, key) {
@@ -3266,12 +3286,14 @@ function rememberInviteRoom(code, role, metadata = {}, options = {}) {
       Number.parseInt(inviteRoomMetadataValue(metadata, existing, "messageCount") ?? 0, 10) || 0,
     ),
     retryableOutboundCount,
-    retryableOutboundMessageNumber:
-      Number.parseInt(inviteRoomMetadataValue(metadata, existing, "retryableOutboundMessageNumber") ?? 0, 10) || 0,
-    retryableOutboundAction:
-      retryableOutboundCount > 0
-        ? savedInviteRoomRetryableAction(inviteRoomMetadataValue(metadata, existing, "retryableOutboundAction"))
-        : "",
+    retryableOutboundMessageNumber: normalizedSavedRoomRetryableMessageNumber(
+      retryableOutboundCount,
+      inviteRoomMetadataValue(metadata, existing, "retryableOutboundMessageNumber"),
+    ),
+    retryableOutboundAction: normalizedSavedRoomRetryableAction(
+      retryableOutboundCount,
+      inviteRoomMetadataValue(metadata, existing, "retryableOutboundAction"),
+    ),
   });
   localStoreSet(inviteRoomsStorageKey, JSON.stringify(roomListStoragePayload(rooms)));
   if (options.render !== false) {
