@@ -13402,7 +13402,7 @@ async function applyPeerPrivateRouteCode() {
     if (await continueAfterPeerPrivateRouteSaved(input)) {
       return true;
     }
-    showLatestRetryableOutboundNotice(input);
+    showLatestRetryableOutboundNotice(input, { allowAutomatic: false });
     return true;
   } catch (error) {
     if (!twoProfileTranscriptInputStillCurrent(input)) {
@@ -13509,7 +13509,7 @@ async function preparePrivateDeliveryRoute(options = {}) {
   if (refreshed && showPrivateRouteRetryFollowupPrompt(input, { clear: true })) {
     return;
   }
-  if (refreshed && showLatestRetryableOutboundNotice(input)) {
+  if (refreshed && showLatestRetryableOutboundNotice(input, { allowAutomatic: false })) {
     return;
   }
   setChatDeliveryNoticeByKey(
