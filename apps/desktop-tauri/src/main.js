@@ -4014,7 +4014,7 @@ function savedInviteRoomRecheckedRouteReadinessAction(action, actionOrigin, curr
 }
 
 function savedInviteRoomPreservesOpenActionOrigin(actionOrigin) {
-  return new Set(["receive-state", "peer-code"]).has(String(actionOrigin ?? "").trim());
+  return new Set(["receive-state", "peer-code", "real-onion-recovery"]).has(String(actionOrigin ?? "").trim());
 }
 
 async function runSavedInviteRoomListAction(room, action, options = {}) {
@@ -4052,7 +4052,7 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
           return runSavedInviteRoomListAction(currentRoom, routeRecheck.action, { actionOrigin: "route-readiness" });
         }
       } else if (savedInviteRoomPreservesOpenActionOrigin(actionOrigin)) {
-        // Preserve explicit receive/peer-code intent after transcript metadata refresh.
+        // Preserve explicit non-send intent after transcript metadata refresh.
       } else {
         return runSavedInviteRoomListAction(currentRoom, currentAction, { actionOrigin: current.actionOrigin });
       }
