@@ -1805,6 +1805,25 @@ function restoreLatestChatDeliveryPendingOutbound(input = productionTwoProfileIn
   return entry;
 }
 
+function chatDeliveryPendingOutboundSnapshot(input = productionTwoProfileInput()) {
+  if (!latestChatDeliveryNoticePendingOutbound || !chatDeliveryNoticeMatchesInput(input)) {
+    return null;
+  }
+  return { ...latestChatDeliveryNoticePendingOutbound };
+}
+
+function restoreChatDeliveryPendingOutboundSnapshot(snapshot, input = productionTwoProfileInput()) {
+  if (!snapshot || chatDeliveryNoticeRoomFingerprint(input) !== String(snapshot.roomFingerprint ?? "").trim()) {
+    return false;
+  }
+  const entry = currentTwoProfileRetryableOutboundEntry(snapshot);
+  if (!entry) {
+    return false;
+  }
+  setChatDeliveryNoticeForPendingOutbound(entry, input);
+  return true;
+}
+
 function rerenderLatestChatDeliveryNotice(input = productionTwoProfileInput()) {
   if (!latestChatDeliveryNoticeKey) {
     return false;
@@ -15847,6 +15866,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       : previousRealOnionRecovery.action === "bootstrap-cancelled"
       ? 2
       : 1;
+  const previousPendingNotice = chatDeliveryPendingOutboundSnapshot(input);
   latestProductionTwoProfileRealOnionWaitCanceledFingerprints.delete(twoProfileSessionStatusFingerprint(roomInput));
   setProductionTwoProfileState("Private delivery running");
   setText(fields.productionTwoProfileWarning, t("chatNoticeSending"));
@@ -15915,6 +15935,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       if (!twoProfileTranscriptInputStillCurrent(input)) {
         return;
       }
+      restoreChatDeliveryPendingOutboundSnapshot(previousPendingNotice, input);
     }
     if (view.complete) {
       if (fields.productionTwoProfileMessage) {
@@ -15965,6 +15986,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
       "warning",
       input,
     );
+    restoreChatDeliveryPendingOutboundSnapshot(previousPendingNotice, input);
   } finally {
     if (realOnionActiveRunMatches(realOnionRunId)) {
       clearProductionBusyAction("two-profile-real-onion-roundtrip");
