@@ -6956,6 +6956,9 @@ function confirmCurrentTwoProfileSafety() {
   }
   setProductionTwoProfileState("Verification confirmed");
   applyProductionActionState();
+  if (showPrivateRouteRetryFollowupPrompt(input)) {
+    return;
+  }
   setText(fields.productionTwoProfileWarning, t("messageInputUnlocked"));
   refreshRouteReadinessNoticeAfterSessionRefresh(input);
   fields.productionTwoProfileMessage?.focus();
