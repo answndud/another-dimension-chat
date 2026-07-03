@@ -15128,7 +15128,9 @@ async function pollProductionTwoProfileOnionReceiveLoopStatus() {
             renderProductionTwoProfileSessionStatusResult(status);
             renderRoomIdentityBar(currentInput, twoProfileSessionsReadyForInput(currentInput));
             if (!refreshPlan.messageImported) {
-              showLatestRetryableOutboundNotice(currentInput);
+              if (!showPrivateRouteRetryFollowupPrompt(currentInput, { clear: true })) {
+                showLatestRetryableOutboundNotice(currentInput, { allowAutomatic: false });
+              }
             }
           }
         }
