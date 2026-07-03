@@ -4574,12 +4574,30 @@ function savedInviteRoomListItemView(room, context = {}) {
   };
 }
 
+function savedInviteRoomWithoutRetryableOutbound(room) {
+  return {
+    ...room,
+    retryableOutboundCount: 0,
+    retryableOutboundMessageNumber: 0,
+    retryableOutboundAction: "",
+  };
+}
+
 function currentSavedInviteRoomView(input = productionTwoProfileInput()) {
   const currentRoom = savedInviteRoomForRoomFingerprint(privateRouteRoomKey(input));
   if (!currentRoom) {
     return { room: null, view: null, action: "" };
   }
-  const view = savedInviteRoomListItemView(currentRoom, { currentCode: currentInviteRoomCode() });
+  let view = savedInviteRoomListItemView(currentRoom, { currentCode: currentInviteRoomCode() });
+  if (
+    view?.nextAction?.origin === "retryable-outbound" &&
+    productionTwoProfileConversationEntries.size > 0 &&
+    !retryableOutboundEntryForSavedRoomAction(currentRoom, input, { actionOrigin: "retryable-outbound" })
+  ) {
+    view = savedInviteRoomListItemView(savedInviteRoomWithoutRetryableOutbound(currentRoom), {
+      currentCode: currentInviteRoomCode(),
+    });
+  }
   return {
     room: currentRoom,
     view,
