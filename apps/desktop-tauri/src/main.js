@@ -3417,7 +3417,10 @@ function savedInviteRoomWaitingForPeerCode(room) {
 }
 
 function savedInviteRoomHasRetryableOutbound(room) {
-  return Number.parseInt(room?.retryableOutboundCount ?? 0, 10) > 0;
+  return (
+    Number.parseInt(room?.retryableOutboundCount ?? 0, 10) > 0 &&
+    Number.parseInt(room?.retryableOutboundMessageNumber ?? 0, 10) > 0
+  );
 }
 
 function retryableOutboundEntryForSavedRoomAction(room, input = productionTwoProfileInput(), options = {}) {
