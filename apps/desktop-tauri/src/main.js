@@ -6751,7 +6751,7 @@ async function completeInviteRoomOutboundDelivery(input, messageNumber) {
       input,
     });
     if (!showRetryableOutboundPromptForMessage(input, messageNumber)) {
-      showLatestRetryableOutboundNotice(input);
+      showCurrentRetryableOutboundMissing(null);
     }
     refreshFieldTestReport();
     return;
@@ -14387,7 +14387,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
         input,
       });
       if (!showRetryableOutboundPromptForMessage(input, latestCandidate.messageNumber)) {
-        showLatestRetryableOutboundNotice(input);
+        showCurrentRetryableOutboundMissing(null);
       }
       refreshFieldTestReport();
       return;
@@ -14430,7 +14430,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       input,
     });
     if (!showRetryableOutboundPromptForMessage(input, latestOnionOutbound.messageNumber)) {
-      showLatestRetryableOutboundNotice(input);
+      showCurrentRetryableOutboundMissing(null);
     }
     refreshFieldTestReport();
     return;
@@ -14512,7 +14512,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
       clearCompletedExternalSendUiState(input, latestOnionOutbound.messageNumber);
     } else {
       if (!showRetryableOutboundPromptForMessage(input, latestOnionOutbound.messageNumber)) {
-        showLatestRetryableOutboundNotice(input);
+        showCurrentRetryableOutboundMissing(null);
       }
     }
     refreshFieldTestReport();
@@ -14543,7 +14543,7 @@ async function sendProductionTwoProfileLatestOnionEnvelope(input = productionTwo
         input,
       });
       if (!showRetryableOutboundPromptForMessage(input, latestOnionOutbound.messageNumber)) {
-        showLatestRetryableOutboundNotice(input);
+        showCurrentRetryableOutboundMissing(null);
       }
       refreshFieldTestReport();
     } catch {
