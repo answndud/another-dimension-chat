@@ -5615,6 +5615,37 @@ function currentRealOnionSyntheticFailureBridgeStatus() {
   };
 }
 
+function syntheticRealOnionFailureNumber(text, patterns = []) {
+  for (const pattern of patterns) {
+    const match = String(text ?? "").match(pattern);
+    const value = Number.parseInt(match?.[1] ?? "", 10);
+    if (Number.isInteger(value) && value > 0) {
+      return value;
+    }
+  }
+  return 0;
+}
+
+function syntheticRealOnionFailureBootstrapStats(detail, input = {}) {
+  const retryLimit =
+    syntheticRealOnionFailureNumber(detail, [
+      /\bretry_limit=(\d+)/i,
+      /\bbootstrap_retry_limit=(\d+)/i,
+    ]) ||
+    Math.max(0, Number.parseInt(input?.bootstrapRetryLimit ?? input?.bootstrap_retry_limit ?? 0, 10) || 0);
+  return {
+    bootstrap_retry_limit: retryLimit,
+    profile_a_bootstrap_attempts: syntheticRealOnionFailureNumber(detail, [
+      /\battempts_a=(\d+)/i,
+      /\bprofile_a_bootstrap_attempts=(\d+)/i,
+    ]),
+    profile_b_bootstrap_attempts: syntheticRealOnionFailureNumber(detail, [
+      /\battempts_b=(\d+)/i,
+      /\bprofile_b_bootstrap_attempts=(\d+)/i,
+    ]),
+  };
+}
+
 function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manualNetworkPermission) {
   const detail = String(error ?? "").toLowerCase();
   let nextBlocker = "RealOnionRoundtripCommandError";
@@ -5660,6 +5691,7 @@ function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manua
     blocker = "ReceiveAttemptFailed";
   }
   const bridgeStatus = currentRealOnionSyntheticFailureBridgeStatus();
+  const bootstrapStats = syntheticRealOnionFailureBootstrapStats(detail, input);
   return {
     manual_client_attempt_feature_compiled: true,
     manual_network_permission_enabled: manualNetworkPermission === true,
@@ -5668,6 +5700,7 @@ function productionTwoProfileRealOnionSyntheticFailureResult(error, input, manua
     next_blocker: nextBlocker,
     blockers: [blocker],
     ...bridgeStatus,
+    ...bootstrapStats,
     local_endpoint_returned: false,
     peer_endpoint_returned: false,
     envelope_payload_returned: false,
@@ -15845,7 +15878,7 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
   } catch (error) {
     const syntheticFailure = productionTwoProfileRealOnionSyntheticFailureResult(
       error,
-      { profileA, profileB },
+      { profileA, profileB, bootstrapRetryLimit },
       manualNetworkPermission,
     );
     rememberRealOnionFieldTestResult(roomInput, syntheticFailure);
