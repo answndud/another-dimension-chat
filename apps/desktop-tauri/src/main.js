@@ -4583,6 +4583,24 @@ function savedInviteRoomWithoutRetryableOutbound(room) {
   };
 }
 
+function clearSavedInviteRoomRetryableOutbound(room) {
+  if (!savedInviteRoomHasRetryableOutbound(room)) {
+    return false;
+  }
+  rememberInviteRoom(
+    room.code,
+    room.role,
+    {
+      retryableOutboundCount: 0,
+      retryableOutboundMessageNumber: 0,
+      retryableOutboundAction: "",
+      updatedAt: Number(room.updatedAt ?? 0),
+    },
+    { render: false },
+  );
+  return true;
+}
+
 function currentSavedInviteRoomView(input = productionTwoProfileInput()) {
   const currentRoom = savedInviteRoomForRoomFingerprint(privateRouteRoomKey(input));
   if (!currentRoom) {
@@ -4594,6 +4612,7 @@ function currentSavedInviteRoomView(input = productionTwoProfileInput()) {
     productionTwoProfileConversationEntries.size > 0 &&
     !retryableOutboundEntryForSavedRoomAction(currentRoom, input, { actionOrigin: "retryable-outbound" })
   ) {
+    clearSavedInviteRoomRetryableOutbound(currentRoom);
     view = savedInviteRoomListItemView(savedInviteRoomWithoutRetryableOutbound(currentRoom), {
       currentCode: currentInviteRoomCode(),
     });
