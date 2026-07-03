@@ -6006,12 +6006,12 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const bridgeConfigState = realOnionResult
     ? realOnionResult.bridge_configured_for_bootstrap === true
       ? "configured"
-      : bridgeStatus?.bridge_config_state
+      : realOnionResult.bridge_config_state ?? bridgeStatus?.bridge_config_state
     : bridgeStatus?.bridge_config_state;
   const bridgeConfigNextAction = realOnionResult
     ? realOnionResult.bridge_configured_for_bootstrap === true
       ? "retry-network"
-      : bridgeStatus?.bridge_config_next_action
+      : realOnionResult.bridge_config_next_action ?? bridgeStatus?.bridge_config_next_action
     : bridgeStatus?.bridge_config_next_action;
   const realOnionBlockers = Array.isArray(realOnionResult?.blockers)
     ? realOnionResult.blockers.join("#")
