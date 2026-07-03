@@ -4282,25 +4282,13 @@ async function savedInviteRoomMetadataFromLocalStores(room) {
   return metadata;
 }
 
-function savedInviteRoomRetryableActionPriority(action) {
-  switch (savedInviteRoomRetryableAction(action)) {
-    case "retry":
-      return 6;
-    case "retry-network":
-      return 5;
-    case "refresh-and-retry":
-      return 4;
-    case "start-receiving":
-      return 3;
-    case "prepare-private-route":
-      return 2;
-    case "verify-safety":
-      return 2;
-    case "enable-private-delivery":
-      return 1;
-    default:
-      return 0;
-  }
+function inviteRoomMetadataWithoutRetryableOutbound(metadata) {
+  return {
+    ...metadata,
+    retryableOutboundCount: 0,
+    retryableOutboundMessageNumber: 0,
+    retryableOutboundAction: "",
+  };
 }
 
 function savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries, preferredMessageNumber) {
@@ -4319,7 +4307,7 @@ function savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries,
       )
   );
   if (delivered) {
-    return metadata;
+    return inviteRoomMetadataWithoutRetryableOutbound(metadata);
   }
   const preferred = (entries ?? []).find((entry) =>
     entry?.kind !== "received" &&
@@ -4332,15 +4320,9 @@ function savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries,
       entry?.outboundDeliveryState !== "sent"
   );
   if (!preferred) {
-    return metadata;
+    return inviteRoomMetadataWithoutRetryableOutbound(metadata);
   }
   const preferredAction = productionTwoProfileOutboundPrimaryAction(preferred).action;
-  if (
-    savedInviteRoomRetryableActionPriority(metadata.retryableOutboundAction) >
-      savedInviteRoomRetryableActionPriority(preferredAction)
-  ) {
-    return metadata;
-  }
   return {
     ...metadata,
     retryableOutboundMessageNumber: preferredMessageNumber,
@@ -4575,12 +4557,7 @@ function savedInviteRoomListItemView(room, context = {}) {
 }
 
 function savedInviteRoomWithoutRetryableOutbound(room) {
-  return {
-    ...room,
-    retryableOutboundCount: 0,
-    retryableOutboundMessageNumber: 0,
-    retryableOutboundAction: "",
-  };
+  return inviteRoomMetadataWithoutRetryableOutbound(room);
 }
 
 function clearSavedInviteRoomRetryableOutbound(room) {
