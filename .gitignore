@@ -37,6 +37,8 @@ apps/mobile/ios/public-release/
 
 # Private planning and security docs
 /docs/
+docs/
+PLAN.md
 
 # Local prototype/dev data
 /.another-dimension-prototype/
