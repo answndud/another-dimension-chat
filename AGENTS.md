@@ -21,11 +21,11 @@
 ## 작업 상태 문서
 
 - 장기/다단계 작업을 이어받을 때만 `docs/PLAN.md`를 읽는다. 단일 코드 수정이나 명확한 질문 답변을 문서 갱신 작업으로 확장하지 않는다.
-- 과거 완료 맥락이 실제로 필요할 때만 `docs/DONE.md`를 읽는다.
-- `docs/PLAN.md`에는 현재 active 작업, 범위 변경, 우선순위 변경, blocker, 검증 결과, 다음 액션처럼 다음 세션이 알아야 할 내용만 기록한다.
-- 완료된 작업은 `docs/DONE.md`에 5줄 이하로 append한 뒤 `docs/PLAN.md`의 Active에서 제거한다.
-- `docs/PLAN.md`는 현재와 미래만 담고, 완료 이력은 남기지 않는다.
-- `docs/PROGRESS.md`는 상시 상태 문서로 사용하지 않는다.
+- 작업 상태 문서는 `docs/PLAN.md` 하나만 사용한다.
+- `docs/PLAN.md`에는 현재 goal, observable finish state, 남은 executable slice, blocker, 정확한 검증 명령, 필요하면 짧은 backlog만 기록한다.
+- 완료된 slice나 phase는 `docs/PLAN.md`에서 제거하고, 다음 실행할 일을 위에서부터 바로 시작할 수 있게 다시 정렬한다.
+- 과거 완료 이력은 별도 `docs/DONE.md`로 관리하지 않는다. 정말 필요하면 git history나 관련 source/doc context로 확인한다.
+- `docs/PROGRESS.md` 같은 상시 상태 문서는 사용하지 않는다.
 
 ## 저장소 용량 관리
 
