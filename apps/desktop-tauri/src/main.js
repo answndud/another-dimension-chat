@@ -5276,6 +5276,22 @@ function fieldTestReportTriageState(report) {
   };
 }
 
+const FIELD_TEST_REPORT_HARD_COMPARE_KEYS = Object.freeze([
+  "appVersion",
+  "buildChannel",
+  "buildCommit",
+  "room",
+  "safety",
+  "delivery",
+]);
+
+const FIELD_TEST_REPORT_LOCAL_STATE_COMPARE_KEYS = Object.freeze([
+  "route",
+  "receive",
+  "next",
+  "blocker",
+]);
+
 function fieldTestReportComparison(localReport, peerReport) {
   if (!String(peerReport ?? "").trim()) {
     return "";
@@ -5283,13 +5299,13 @@ function fieldTestReportComparison(localReport, peerReport) {
   const local = fieldTestReportTriageState(localReport);
   const peer = fieldTestReportTriageState(peerReport);
   const mismatches = [];
-  for (const key of ["appVersion", "buildChannel", "buildCommit", "room", "safety", "delivery"]) {
+  for (const key of FIELD_TEST_REPORT_HARD_COMPARE_KEYS) {
     if (local[key] !== peer[key]) {
       mismatches.push(`${key}:${fieldTestReportValue(local[key], "none")}!=${fieldTestReportValue(peer[key], "none")}`);
     }
   }
   const localStateDiffs = [];
-  for (const key of ["route", "receive", "next", "blocker"]) {
+  for (const key of FIELD_TEST_REPORT_LOCAL_STATE_COMPARE_KEYS) {
     if (local[key] !== peer[key]) {
       localStateDiffs.push(`${key}:${fieldTestReportValue(local[key], "none")}!=${fieldTestReportValue(peer[key], "none")}`);
     }
