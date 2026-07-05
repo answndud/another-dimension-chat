@@ -12056,7 +12056,10 @@ function applyProductionActionState() {
     allowMissingMessage: true,
     latestOnionOutbound: null,
   });
-  const realOnionRouteBlocked = !realOnionRunAction.ready && !realOnionRouteReadiness.ready;
+  const realOnionRunBypassesRouteReadiness =
+    realOnionRunAction.opensNetworkSettings === true ||
+    realOnionRunAction.inspectDiagnostics === true;
+  const realOnionRouteBlocked = !realOnionRunBypassesRouteReadiness && !realOnionRouteReadiness.ready;
   const realOnionCancelWaitReady =
     realOnionRoundtripActive ||
     (realOnionRecovery.action === "retry-bootstrap" &&
