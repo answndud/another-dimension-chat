@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "status": "source-boundary-callable-ffi-authorization-hold",
+  "callable_ffi_authorization_hold_active": true,
+  "owner_authorization_for_callable_ffi": false,
+  "explicit_callable_ffi_implementation_request": false,
+  "callable_ffi_may_start": false,
+  "generated_binding_may_start": false,
+  "native_runtime_messaging_may_start": false,
+  "network_delivery_may_start": false,
+  "release_packaging_may_start": false,
+  "blocked_without_authorization": [
+    "udl_file_creation",
+    "uniffi_scaffolding",
+    "extern_c_symbols",
+    "jni_bridge",
+    "swift_ffi_bridge",
+    "kotlin_native_binding",
+    "callable_shared_core_status_ffi",
+    "callable_profile_unlock_ffi",
+    "callable_invite_ffi",
+    "callable_pairing_ffi",
+    "callable_envelope_ffi",
+    "callable_transcript_ffi",
+    "callable_lifecycle_ffi",
+    "native_runtime_messaging",
+    "native_network_delivery",
+    "release_packaging"
+  ],
+  "allowed_while_hold_active": [
+    "source_boundary_docs",
+    "static_verifiers",
+    "read_only_status_adapter_source",
+    "blocked_command_adapter_source",
+    "operator_handoff_docs"
+  ],
+  "next_phase_required_inputs": [
+    "explicit_owner_authorization_for_native_binding",
+    "explicit_callable_ffi_implementation_request"
+  ]
+}

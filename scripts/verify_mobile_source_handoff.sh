@@ -17,6 +17,7 @@ scripts/verify_mobile_memory_ownership.sh
 scripts/verify_mobile_diagnostics_payload_review.sh
 scripts/verify_mobile_adapter_parity.sh
 scripts/verify_mobile_binding_prerequisite_closure.sh
+scripts/verify_mobile_callable_ffi_authorization_hold.sh
 scripts/verify_mobile_binding_gate.sh
 scripts/verify_android_shell_boundary.sh
 scripts/verify_ios_shell_boundary.sh
