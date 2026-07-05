@@ -2473,9 +2473,20 @@ function realOnionRecoveryRunAction(recovery) {
   if (recovery?.action === "prepare-network-or-bridge") {
     return {
       ready: true,
-      labelKey: "retryNetwork",
+      labelKey: recovery?.reason === "network-or-bridge-different-network"
+        ? "fieldTestNextDifferentNetwork"
+        : "retryNetwork",
       noticeKey: realOnionRecoveryNoticeKey(recovery) || "fieldTestNextRetryNetwork",
       opensNetworkSettings: false,
+    };
+  }
+  if (recovery?.action === "inspect-diagnostics") {
+    return {
+      ready: true,
+      labelKey: "fieldTestNextInspectDiagnostics",
+      noticeKey: "fieldTestNextInspectDiagnostics",
+      opensNetworkSettings: false,
+      inspectDiagnostics: true,
     };
   }
   if (recovery?.action === "retry-private-delivery") {
@@ -3553,6 +3564,14 @@ function savedInviteRoomRealOnionRecoveryView(room) {
       state: { key: "setup-delivery", label: t(runAction.labelKey) },
     };
   }
+  if (runAction.inspectDiagnostics) {
+    return {
+      action: "real-onion-inspect-diagnostics",
+      labelKey: runAction.labelKey,
+      recovery,
+      state: { key: "inspect-diagnostics", label: t(runAction.labelKey) },
+    };
+  }
   if (runAction.labelKey === "retryNetwork") {
     return {
       action: "real-onion-retry",
@@ -4308,6 +4327,17 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
       await runProductionTwoProfileRealOnionRoundtrip();
       return true;
     }
+    return true;
+  }
+  if (action === "real-onion-inspect-diagnostics") {
+    const input = productionTwoProfileInput();
+    const recoveryView = savedInviteRoomRealOnionRecoveryView(room);
+    if (recoveryView?.action !== action) {
+      return showSavedInviteRoomExpiredRealOnionAction();
+    }
+    setText(fields.productionTwoProfileWarning, t("fieldTestNextInspectDiagnostics"));
+    setChatDeliveryNoticeByKey("fieldTestNextInspectDiagnostics", "warning", input);
+    focusLocalDiagnostic();
     return true;
   }
   if (action === "real-onion-retry") {
@@ -16036,6 +16066,14 @@ async function runProductionTwoProfileRealOnionRoundtrip() {
   const previousRealOnionResult = latestRealOnionFieldTestResult(roomInput);
   const previousRealOnionRecovery = latestRealOnionRecoveryForInput(roomInput);
   const previousRealOnionRunAction = realOnionRecoveryRunAction(previousRealOnionRecovery);
+  if (previousRealOnionRunAction.inspectDiagnostics) {
+    setProductionTwoProfileState("Private delivery needs review");
+    setText(fields.productionTwoProfileWarning, t(previousRealOnionRunAction.noticeKey));
+    setChatDeliveryNoticeByKey(previousRealOnionRunAction.noticeKey, "warning", input);
+    focusLocalDiagnostic();
+    refreshFieldTestReport();
+    return;
+  }
   if (previousRealOnionRunAction.opensNetworkSettings) {
     openPrivateDeliveryBridgeSettings(previousRealOnionRecovery, input);
     if (previousRealOnionResult) {
