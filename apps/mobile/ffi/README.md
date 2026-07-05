@@ -160,6 +160,33 @@ security-ready claimed false.
 - network delivery may start false
 - release packaging may start false
 
+## FFI Error Mapping Table Boundary
+
+The mobile FFI error mapping table is source-level only. It finalizes the
+current shared error vocabulary for a future binding layer, but it does not
+create callable FFI, generated bindings, native runtime messaging, native
+network delivery, or release packaging.
+
+Every mapped error returns the same command result shape on Kotlin and Swift:
+`SharedCoreCommandResult(status, failure_class, recovery_next_action)`.
+
+| failure_class | status | ffi_result_kind | recovery_next_action |
+| --- | --- | --- | --- |
+| locked_profile | blocked | blocked | enter passphrase |
+| malformed_payload | blocked | rejected_input | show redacted parse failure |
+| replay_rejected | blocked | rejected_state | show redacted replay rejection |
+| policy_blocked | blocked | blocked | explicit user action required |
+| transport_unavailable | blocked | unavailable | manual transport action required |
+| unsupported_mobile_surface | blocked | unsupported | use desktop source boundary |
+| lifecycle_confirmation_required | blocked | confirmation_required | confirm lifecycle intent before any shared Rust core binding for local_data_lifecycle |
+| ffi_unavailable | blocked | unavailable | connect shared Rust core binding |
+
+The table blocks raw exception bridges, platform-specific error taxonomies,
+panic string exposure, private payloads in errors, and callable FFI
+implementation in this phase.
+
+This error mapping boundary does not create callable FFI.
+
 Allowed API groups mirror the shared core wrapper boundary:
 
 - `shared_core_status_surface`
