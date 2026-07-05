@@ -56,6 +56,7 @@ require_text "$CONTRACT" '"ffi_error_mapping_table_finalized": true'
 require_text "$CONTRACT" '"canonical_serialization_test_vectors_finalized": true'
 require_text "$CONTRACT" '"memory_ownership_release_contract_finalized": true'
 require_text "$CONTRACT" '"redacted_diagnostics_payload_reviewed": true'
+require_text "$CONTRACT" '"android_ios_adapter_parity_verified": true'
 require_text "$CONTRACT" '"callable_ffi_may_start": false'
 require_text "$CONTRACT" '"generated_binding_may_start": false'
 require_text "$CONTRACT" '"wrapper_neutral": true'
@@ -148,6 +149,7 @@ require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "FFI Error Mapping Table Boun
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Canonical Serialization Test Vector Boundary"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Memory Ownership Release Contract Boundary"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Redacted Diagnostics Payload Review Boundary"
+require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "Android/iOS Adapter Parity Gate"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "status_and_redacted_diagnostics_read_only_adapter"
 require_text "$ROOT_DIR/apps/mobile/ffi/README.md" "shared_core_mobile_api_contract.json"
 require_text "$ROOT_DIR/crates/core/src/lib.rs" "production_mobile_shared_core_api_freeze_boundary_summary"
