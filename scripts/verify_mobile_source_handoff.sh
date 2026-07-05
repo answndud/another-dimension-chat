@@ -19,6 +19,7 @@ scripts/verify_mobile_adapter_parity.sh
 scripts/verify_mobile_binding_prerequisite_closure.sh
 scripts/verify_mobile_callable_ffi_authorization_hold.sh
 scripts/verify_mobile_source_boundary_cleanup.sh
+scripts/verify_mobile_authorization_hold_regression_matrix.sh
 scripts/verify_mobile_binding_gate.sh
 scripts/verify_android_shell_boundary.sh
 scripts/verify_ios_shell_boundary.sh
