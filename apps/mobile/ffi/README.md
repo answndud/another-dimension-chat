@@ -187,6 +187,37 @@ implementation in this phase.
 
 This error mapping boundary does not create callable FFI.
 
+## Canonical Serialization Test Vector Boundary
+
+The mobile canonical serialization vectors are source-level only. They define
+deterministic UTF-8 JSON object examples for future FFI/Kotlin/Swift parity, but
+they do not create callable FFI, generated bindings, native runtime messaging,
+native network delivery, or release packaging.
+
+The vector file is `serialization_vectors.json`.
+
+The canonical status DTO key order is sorted lexicographically:
+`backup_exclusion_state`, `diagnostics_redaction_state`,
+`install_update_integrity_state`, `local_data_lifecycle_state`,
+`mobile_command_surface`, `platform`, `profile_lock_state`,
+`public_non_claims`, `runtime_command_surface`, `schema_version`.
+
+The canonical command result key order is sorted lexicographically:
+`failure_class`, `recovery_next_action`, `status`.
+
+The source vectors cover `shared_core_status_surface`,
+`redacted_support_diagnostics`, `blocked_command_result`,
+`lifecycle_confirmation_required_result`, and `reject_unknown_fields_vector`.
+
+Unknown fields must be rejected by any future parser. String enums must remain
+strings, status label arrays must stay bounded, and schema version must be
+explicit.
+The schema version must be explicit.
+
+Serialization contract enum names:
+`deterministic_utf8_json_object`, `explicit_schema_version`, `sorted_keys`,
+`string_enums`, `bounded_status_label_arrays`, `reject_unknown_fields`.
+
 Allowed API groups mirror the shared core wrapper boundary:
 
 - `shared_core_status_surface`

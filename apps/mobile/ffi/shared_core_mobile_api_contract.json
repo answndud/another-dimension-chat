@@ -226,5 +226,14 @@
     "panic_string_exposure": true,
     "private_payload_in_error": true,
     "callable_ffi_implemented": false
-  }
+  },
+  "canonical_serialization_test_vectors_finalized": true,
+  "canonical_serialization_vectors_file": "apps/mobile/ffi/serialization_vectors.json",
+  "canonical_serialization_vectors": [
+    "shared_core_status_surface",
+    "redacted_support_diagnostics",
+    "blocked_command_result",
+    "lifecycle_confirmation_required_result",
+    "reject_unknown_fields_vector"
+  ]
 }
