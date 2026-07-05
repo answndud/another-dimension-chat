@@ -82,6 +82,7 @@ for script in \
   verify_mobile_memory_ownership.sh \
   verify_mobile_diagnostics_payload_review.sh \
   verify_mobile_adapter_parity.sh \
+  verify_mobile_binding_prerequisite_closure.sh \
   verify_mobile_binding_gate.sh \
   verify_android_shell_boundary.sh \
   verify_ios_shell_boundary.sh \

@@ -321,6 +321,36 @@ Shared shell boundaries:
 Allowed platform differences are limited to platform label, app-private versus
 app-container storage wording, and cloud backup versus iCloud backup wording.
 
+## Binding Prerequisite Closure Handoff
+
+The binding prerequisite closure handoff is source-level only. It verifies that
+the readiness prerequisites are recorded before any callable FFI implementation
+can be considered. It does not create callable FFI, generated bindings, native
+runtime messaging, native network delivery, background delivery, push
+notification delivery, release packaging, store distribution, mobile readiness
+claims, or security-ready claims.
+
+The closure file is `binding_prerequisite_closure.json`.
+
+Verified prerequisites:
+
+- FFI error mapping table finalized
+- canonical serialization test vectors finalized
+- memory ownership release contract finalized
+- redacted diagnostics payload reviewed
+- Android/iOS adapter parity verified
+- source handoff verifier passing
+
+Remaining blocker: explicit owner authorization for native binding.
+
+Required before any next callable FFI phase: explicit owner authorization for
+native binding and explicit callable FFI implementation request.
+
+Without owner authorization, generated bindings, callable FFI, native runtime
+messaging, native network delivery, background delivery, push notification
+delivery, release packaging, store distribution, mobile readiness claim, and
+security-ready claim remain blocked.
+
 Allowed API groups mirror the shared core wrapper boundary:
 
 - `shared_core_status_surface`

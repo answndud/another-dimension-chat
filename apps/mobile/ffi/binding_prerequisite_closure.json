@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "status": "source-boundary-binding-prerequisite-closure",
+  "binding_prerequisite_closure_verified": true,
+  "owner_authorization_for_callable_ffi": false,
+  "callable_ffi_may_start": false,
+  "generated_binding_may_start": false,
+  "native_runtime_messaging_may_start": false,
+  "network_delivery_may_start": false,
+  "release_packaging_may_start": false,
+  "verified_prerequisites": [
+    "ffi_error_mapping_table_finalized",
+    "canonical_serialization_test_vectors_finalized",
+    "memory_ownership_release_contract_finalized",
+    "redacted_diagnostics_payload_reviewed",
+    "android_ios_adapter_parity_verified",
+    "source_handoff_verifier_passing"
+  ],
+  "remaining_blocker": "explicit_owner_authorization_for_native_binding",
+  "required_before_next_phase": [
+    "explicit_owner_authorization_for_native_binding",
+    "explicit_callable_ffi_implementation_request"
+  ],
+  "blocked_without_owner_authorization": [
+    "generated_bindings",
+    "callable_ffi",
+    "native_runtime_messaging",
+    "native_network_delivery",
+    "background_delivery",
+    "push_notification_delivery",
+    "release_packaging",
+    "store_distribution",
+    "mobile_readiness_claim",
+    "security_ready_claim"
+  ]
+}
