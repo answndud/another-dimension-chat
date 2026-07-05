@@ -62,6 +62,36 @@ This gate keeps binding generation implemented false, callable FFI implemented
 false, generated bindings claimed false, mobile readiness claimed false, and
 security-ready claimed false.
 
+## Source Boundary Cleanup Summary
+
+`source_boundary_cleanup.json` is the canonical cleanup record for repeated
+false and blocked mobile source-boundary wording. It keeps verifier output and
+README language aligned after the callable FFI authorization hold.
+
+Canonical false state:
+
+- binding generation implemented false
+- callable FFI implemented false
+- generated bindings claimed false
+- owner authorization for callable FFI false
+- explicit callable FFI implementation request false
+- callable FFI may start false
+- generated binding may start false
+- native runtime messaging may start false
+- network delivery may start false
+- release packaging may start false
+- mobile readiness claimed false
+- security-ready claimed false
+
+Canonical blocked state: generated bindings, callable FFI, native runtime
+messaging, native network delivery, background delivery, push notification
+delivery, release packaging, store distribution, mobile readiness claim, and
+security-ready claim remain blocked.
+
+Canonical allowed state while blocked: source boundary docs, static verifiers,
+read-only status adapter source, blocked command adapter source, and operator
+handoff docs.
+
 ## Read-Only Native Status Adapter Boundary
 
 Android and iOS now carry a source-only read-only adapter path for the first
@@ -107,7 +137,8 @@ scaffold state. It aggregates the targeted source-boundary verifiers for the
 read-only status adapter, blocked command adapter, shell presentation,
 redacted diagnostics copy, local lifecycle confirmation, no-network launch
 boundary, Android shell boundary, iOS shell boundary, binding gate, and mobile
-skeleton boundary.
+skeleton boundary. It also includes the callable FFI authorization hold and
+source boundary cleanup verifiers.
 
 This handoff verifier is not a release build, not generated binding validation,
 not APK/AAB/IPA packaging, not store distribution, not runtime messaging

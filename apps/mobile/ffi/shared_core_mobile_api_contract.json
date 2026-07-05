@@ -273,6 +273,8 @@
   "binding_prerequisite_closure_file": "apps/mobile/ffi/binding_prerequisite_closure.json",
   "callable_ffi_authorization_hold_active": true,
   "callable_ffi_authorization_hold_file": "apps/mobile/ffi/callable_ffi_authorization_hold.json",
+  "source_boundary_cleanup_verified": true,
+  "source_boundary_cleanup_file": "apps/mobile/ffi/source_boundary_cleanup.json",
   "callable_ffi_authorization_hold_blocks": [
     "udl_file_creation",
     "uniffi_scaffolding",
