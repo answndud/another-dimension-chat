@@ -3508,6 +3508,19 @@ function savedInviteRoomRetryableState(room) {
   return { key: "retry-send", label: t("roomStateRetrySend") };
 }
 
+function savedInviteRoomWithoutLoadedStaleRetryable(room) {
+  if (!savedInviteRoomHasRetryableOutbound(room) || productionTwoProfileConversationEntries.size === 0) {
+    return room;
+  }
+  const input = savedInviteRoomInput(room);
+  if (!twoProfileTranscriptInputStillCurrent(input)) {
+    return room;
+  }
+  return retryableOutboundEntryForSavedRoomAction(room, input, { actionOrigin: "retryable-outbound" })
+    ? room
+    : savedInviteRoomWithoutRetryableOutbound(room);
+}
+
 function savedInviteRoomRealOnionRecoveryView(room) {
   const input = savedInviteRoomInput(room);
   const recovery = latestRealOnionRecoveryForInput(input);
@@ -3605,24 +3618,25 @@ function savedInviteRoomRouteReadinessView(room) {
 }
 
 function savedInviteRoomResumePriority(room) {
-  if (savedInviteRoomHasRetryableOutbound(room)) {
+  const viewRoom = savedInviteRoomWithoutLoadedStaleRetryable(room);
+  if (savedInviteRoomHasRetryableOutbound(viewRoom)) {
     return 30;
   }
-  if (savedInviteRoomRealOnionRecoveryView(room)) {
+  if (savedInviteRoomRealOnionRecoveryView(viewRoom)) {
     return 25;
   }
-  const receiveState = savedInviteRoomReceiveState(room);
+  const receiveState = savedInviteRoomReceiveState(viewRoom);
   if (receiveState === "stopping") {
     return 22;
   }
   if (receiveState === "paused") {
     return 20;
   }
-  const routeReadinessView = savedInviteRoomRouteReadinessView(room);
+  const routeReadinessView = savedInviteRoomRouteReadinessView(viewRoom);
   if (routeReadinessView?.action === "wait-receive-stop") {
     return 19;
   }
-  if (savedInviteRoomWaitingForPeerCode(room)) {
+  if (savedInviteRoomWaitingForPeerCode(viewRoom)) {
     return 18;
   }
   if (routeReadinessView) {
@@ -4597,30 +4611,31 @@ function currentInviteRoomCode() {
 }
 
 function savedInviteRoomListItemView(room, context = {}) {
+  const viewRoom = savedInviteRoomWithoutLoadedStaleRetryable(room);
   const currentCode = context.currentCode ?? currentInviteRoomCode();
   const resumeRoom = context.resumeRoom ?? null;
-  const receiveState = savedInviteRoomReceiveState(room);
-  const waitingPeerCode = savedInviteRoomWaitingForPeerCode(room);
-  const realOnionRecoveryView = savedInviteRoomHasRetryableOutbound(room)
+  const receiveState = savedInviteRoomReceiveState(viewRoom);
+  const waitingPeerCode = savedInviteRoomWaitingForPeerCode(viewRoom);
+  const realOnionRecoveryView = savedInviteRoomHasRetryableOutbound(viewRoom)
     ? null
-    : savedInviteRoomRealOnionRecoveryView(room);
-  const routeReadinessView = savedInviteRoomHasRetryableOutbound(room) || realOnionRecoveryView
+    : savedInviteRoomRealOnionRecoveryView(viewRoom);
+  const routeReadinessView = savedInviteRoomHasRetryableOutbound(viewRoom) || realOnionRecoveryView
     ? null
-    : savedInviteRoomRouteReadinessView(room);
-  const resumeRecommended = Boolean(resumeRoom && room.code === resumeRoom.code && room.role === resumeRoom.role);
+    : savedInviteRoomRouteReadinessView(viewRoom);
+  const resumeRecommended = Boolean(resumeRoom && viewRoom.code === resumeRoom.code && viewRoom.role === resumeRoom.role);
   return {
-    current: room.code === currentCode,
-    hasRetryableSend: savedInviteRoomHasRetryableOutbound(room),
-    nextAction: savedInviteRoomListAction(room, {
+    current: viewRoom.code === currentCode,
+    hasRetryableSend: savedInviteRoomHasRetryableOutbound(viewRoom),
+    nextAction: savedInviteRoomListAction(viewRoom, {
       realOnionRecoveryView,
       receiveState,
       routeReadinessView,
       waitingPeerCode,
     }),
-    preview: savedInviteRoomPreview(room),
+    preview: savedInviteRoomPreview(viewRoom),
     receiveState,
     resumeRecommended,
-    state: savedInviteRoomState(room, {
+    state: savedInviteRoomState(viewRoom, {
       realOnionRecoveryView,
       receiveState,
       resumeRecommended,
