@@ -6253,18 +6253,19 @@ function buildFieldTestReport(input = productionTwoProfileInput()) {
   const bridgeCapableBuild =
     realOnionResult?.bridge_capable_build === true || bridgeStatus?.bridge_capable_build === true;
   const bridgeConfiguredForBootstrap =
-    realOnionResult?.bridge_configured_for_bootstrap === true ||
-    bridgeStatus?.bridge_configured_for_bootstrap === true;
-  const bridgeConfigState = realOnionResult
-    ? realOnionResult.bridge_configured_for_bootstrap === true
+    bridgeStatus
+      ? bridgeStatus.bridge_configured_for_bootstrap === true
+      : realOnionResult?.bridge_configured_for_bootstrap === true;
+  const bridgeConfigState = bridgeStatus
+    ? bridgeStatus.bridge_config_state
+    : realOnionResult?.bridge_configured_for_bootstrap === true
       ? "configured"
-      : realOnionResult.bridge_config_state ?? bridgeStatus?.bridge_config_state
-    : bridgeStatus?.bridge_config_state;
-  const bridgeConfigNextAction = realOnionResult
-    ? realOnionResult.bridge_configured_for_bootstrap === true
+      : realOnionResult?.bridge_config_state;
+  const bridgeConfigNextAction = bridgeStatus
+    ? bridgeStatus.bridge_config_next_action
+    : realOnionResult?.bridge_configured_for_bootstrap === true
       ? "retry-network"
-      : realOnionResult.bridge_config_next_action ?? bridgeStatus?.bridge_config_next_action
-    : bridgeStatus?.bridge_config_next_action;
+      : realOnionResult?.bridge_config_next_action;
   const realOnionBlockers = Array.isArray(realOnionResult?.blockers)
     ? realOnionResult.blockers.join("#")
     : "none";
