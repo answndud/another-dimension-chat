@@ -60,6 +60,8 @@ require_text "$CONTRACT" '"callable_ffi_authorization_hold_active": true'
 require_text "$CONTRACT" '"callable_ffi_authorization_hold_file": "apps/mobile/ffi/callable_ffi_authorization_hold.json"'
 require_text "$CONTRACT" '"source_boundary_cleanup_verified": true'
 require_text "$CONTRACT" '"source_boundary_cleanup_file": "apps/mobile/ffi/source_boundary_cleanup.json"'
+require_text "$CONTRACT" '"authorization_hold_regression_matrix_verified": true'
+require_text "$CONTRACT" '"authorization_hold_regression_matrix_file": "apps/mobile/ffi/authorization_hold_regression_matrix.json"'
 require_text "$CONTRACT" '"owner_authorization_for_callable_ffi": false'
 require_text "$CONTRACT" '"explicit_callable_ffi_implementation_request": false'
 
@@ -112,6 +114,7 @@ require_text "$FFI_README" "Binding Prerequisite Closure Handoff"
 require_text "$FFI_README" "Callable FFI Authorization Hold"
 require_text "$FFI_README" "The callable FFI authorization hold is active"
 require_text "$FFI_README" "Source Boundary Cleanup Summary"
+require_text "$FFI_README" "Authorization Hold Regression Matrix"
 
 require_text "$HANDOFF" "status=mobile-source-handoff-verified"
 require_text "$HANDOFF" "generated_bindings=false"
