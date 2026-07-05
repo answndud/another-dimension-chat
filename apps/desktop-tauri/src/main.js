@@ -4328,7 +4328,7 @@ function reconcileCurrentInviteRoomMetadataFromTranscriptEntries(entries, option
   return true;
 }
 
-async function savedInviteRoomMetadataFromLocalStores(room) {
+async function savedInviteRoomMetadataFromLocalStores(room, options = {}) {
   const input = savedInviteRoomInput(room);
   const { profileA, profileB, passphrase } = input;
   if (!profileA || !profileB || profileA === profileB || !passphrase) {
@@ -4346,6 +4346,8 @@ async function savedInviteRoomMetadataFromLocalStores(room) {
   const preferredMessageNumber = Number.parseInt(room?.retryableOutboundMessageNumber ?? 0, 10) || 0;
   if (preferredMessageNumber > 0) {
     metadata = savedInviteRoomMetadataWithPreferredRetryable(metadata, input, entries, preferredMessageNumber);
+  } else if (options.allowRetryableFallback !== true) {
+    metadata = inviteRoomMetadataWithoutRetryableOutbound(metadata);
   }
   return metadata;
 }
