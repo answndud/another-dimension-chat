@@ -6095,7 +6095,7 @@ function fieldTestRetryableOutboundEntry(input, currentSavedRoom) {
       actionOrigin: currentSavedRoom.actionOrigin,
     });
   }
-  if (currentSavedRoom?.actionOrigin === "route-readiness") {
+  if (currentSavedRoom?.room) {
     return null;
   }
   return automaticVisibleTwoProfileRetryableOutboundEntry(input);
@@ -6105,12 +6105,12 @@ function fieldTestRoomListNextAction(currentSavedRoom, outboundRecoveryAction, r
   if (currentSavedRoom?.actionOrigin === "retryable-outbound") {
     return retryableOutbound ? outboundRecoveryAction : "none";
   }
-  if (currentSavedRoom?.actionOrigin === "route-readiness") {
+  if (currentSavedRoom?.action) {
     return currentSavedRoom?.action ?? "none";
   }
   return outboundRecoveryAction !== "none"
     ? outboundRecoveryAction
-    : currentSavedRoom?.action;
+    : "none";
 }
 
 function buildFieldTestReport(input = productionTwoProfileInput()) {
