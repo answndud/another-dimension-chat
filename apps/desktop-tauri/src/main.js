@@ -8039,7 +8039,7 @@ function latestTwoProfileOutboundDeliveryCandidate(input = productionTwoProfileI
           twoProfileConversationOutboundRetryable(entry),
       ) ?? null
     : null;
-  if (targetRequested && options.exactRetryOnly === true && !targetEntry) {
+  if (targetRequested && !targetEntry) {
     return null;
   }
   const retryableEntry = targetEntry ?? (targetRequested ? null : automaticVisibleTwoProfileRetryableOutboundEntry(input));
@@ -8048,6 +8048,7 @@ function latestTwoProfileOutboundDeliveryCandidate(input = productionTwoProfileI
         profileA: retryableEntry.sender,
         profileB: retryableEntry.receiver,
         messageNumber: retryableEntry.messageNumber,
+        roomFingerprint: retryableEntry.roomFingerprint,
       }
     : latestProductionTwoProfileSuccess;
   if (
@@ -8088,9 +8089,11 @@ function twoProfileConversationEntryForOutboundCandidate(candidate) {
   }
   const sender = String(candidate.profileA ?? "").trim().toLowerCase();
   const receiver = String(candidate.profileB ?? "").trim().toLowerCase();
+  const roomFingerprint = String(candidate.roomFingerprint ?? "").trim();
   return (
     [...productionTwoProfileConversationEntries.values()].find(
       (entry) =>
+        (!roomFingerprint || String(entry.roomFingerprint ?? "").trim() === roomFingerprint) &&
         entry.sender === sender &&
         entry.receiver === receiver &&
         Number.parseInt(entry.messageNumber, 10) === messageNumber,
