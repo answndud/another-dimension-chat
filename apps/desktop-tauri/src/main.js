@@ -4066,6 +4066,35 @@ function showSavedInviteRoomActionNowReady() {
   return true;
 }
 
+function showSavedInviteRoomRealOnionNeedsMessage(input = productionTwoProfileInput()) {
+  const hasRetentionPolicy = messageRetentionPolicyReady();
+  const messageReady = Boolean(input.message && input.messageTtlSeconds);
+  if (messageReady) {
+    return false;
+  }
+  const message = hasRetentionPolicy && !input.message
+    ? t("writeMessageBeforeSending")
+    : messageTtlInputBlocker();
+  rememberCurrentInviteRoomMetadata();
+  renderSavedInviteRooms();
+  setProductionTwoProfileState("Private delivery needs message");
+  setText(fields.productionTwoProfileWarning, message);
+  setText(fields.productionTwoProfileMessageState, t("messageNotSent"));
+  setText(fields.productionTwoProfileBoundary, "Private delivery was not started because no message is ready.");
+  clearLatestChatDeliveryNoticeState();
+  setChatDeliveryNotice(message, "muted");
+  setProductionFollowupActions(
+    true,
+    currentLanguage === "ko"
+      ? "다음: 메시지를 작성한 뒤 비공개 전송을 다시 시도하세요."
+      : "Next: write a message, then retry private delivery.",
+  );
+  (hasRetentionPolicy ? fields.productionTwoProfileMessage : fields.productionTwoProfileMessageTtl)
+    ?.focus?.({ preventScroll: true });
+  refreshFieldTestReport();
+  return true;
+}
+
 function savedInviteRoomRecheckedRouteReadinessAction(action, actionOrigin, currentRoom) {
   if (actionOrigin !== "route-readiness") {
     return null;
@@ -4352,6 +4381,10 @@ async function runSavedInviteRoomListAction(room, action, options = {}) {
     });
     if (!routeReadiness.ready) {
       showRealOnionRouteReadinessBlock(routeReadiness, input);
+      applyProductionActionState();
+      return true;
+    }
+    if (showSavedInviteRoomRealOnionNeedsMessage(input)) {
       applyProductionActionState();
       return true;
     }
