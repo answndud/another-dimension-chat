@@ -111,6 +111,38 @@ Expected matrix output:
 - forbidden iOS source patterns absent
 - forbidden claim patterns absent
 
+## Owner Authorization Transition Runbook
+
+`owner_authorization_transition_runbook.json` records the source-level sequence
+required before any later phase may turn owner authorization for callable FFI
+from false to true. The current state remains authorization false implementation
+blocked.
+
+Required transition inputs:
+
+- explicit owner authorization for native binding
+- explicit callable FFI implementation request
+- named first callable FFI scope
+- accepted memory release contract
+- accepted serialization vectors
+- accepted error mapping table
+- accepted diagnostics redaction boundary
+- accepted Android/iOS adapter parity
+- accepted authorization hold regression matrix
+
+Required transition order: record owner authorization, record explicit callable
+FFI implementation request, name first callable FFI scope, update authorization
+hold contract, update shared core mobile API contract, update regression matrix
+for allowed first scope, add minimal callable FFI verifier, and run source
+handoff verifier before implementation.
+
+Rollback checks: owner authorization for callable FFI can return false, explicit
+callable FFI implementation request can return false, callable FFI may start can
+return false, generated binding may start can return false, source handoff
+returns to blocked state, no generated artifacts after rollback, no release
+packaging after rollback, and no mobile readiness or security-ready claim after
+rollback.
+
 ## Read-Only Native Status Adapter Boundary
 
 Android and iOS now carry a source-only read-only adapter path for the first
@@ -157,7 +189,8 @@ read-only status adapter, blocked command adapter, shell presentation,
 redacted diagnostics copy, local lifecycle confirmation, no-network launch
 boundary, Android shell boundary, iOS shell boundary, binding gate, and mobile
 skeleton boundary. It also includes the callable FFI authorization hold, source
-boundary cleanup, and authorization hold regression matrix verifiers.
+boundary cleanup, authorization hold regression matrix, and owner authorization
+transition runbook verifiers.
 
 This handoff verifier is not a release build, not generated binding validation,
 not APK/AAB/IPA packaging, not store distribution, not runtime messaging
