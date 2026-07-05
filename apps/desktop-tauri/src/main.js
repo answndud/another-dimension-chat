@@ -4635,6 +4635,7 @@ function savedInviteRoomListItemView(room, context = {}) {
     preview: savedInviteRoomPreview(viewRoom),
     receiveState,
     resumeRecommended,
+    room: viewRoom,
     state: savedInviteRoomState(viewRoom, {
       realOnionRecoveryView,
       receiveState,
@@ -4750,7 +4751,7 @@ function renderSavedInviteRooms() {
     nextAction.textContent = view.nextAction ? t(view.nextAction.labelKey) : "";
     nextAction.addEventListener("click", () => {
       if (view.nextAction) {
-        runSavedInviteRoomListAction(room, view.nextAction.action, { actionOrigin: view.nextAction.origin });
+        runSavedInviteRoomListAction(view.room ?? room, view.nextAction.action, { actionOrigin: view.nextAction.origin });
       }
     });
     const remove = document.createElement("button");
