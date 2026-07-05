@@ -5273,11 +5273,21 @@ function fieldTestReportsAligned(localReport, peerReport) {
 }
 
 function fieldTestActionRequiresLocalRecovery(key) {
-  return Boolean(key) && ![
-    "fieldTestNextPastePeerReport",
-    "fieldTestNextCompareMismatch",
-    "fieldTestNextComplete",
-  ].includes(key);
+  return new Set([
+    "fieldTestNextDifferentNetwork",
+    "fieldTestNextEnablePrivateDelivery",
+    "fieldTestNextInspectDiagnostics",
+    "fieldTestNextOpenRoom",
+    "fieldTestNextPrepareNetworkOrBridge",
+    "fieldTestNextRefreshBridge",
+    "fieldTestNextRefreshBridgeTransport",
+    "fieldTestNextRetryDelivery",
+    "fieldTestNextRetryNetwork",
+    "fieldTestNextSetupRoute",
+    "fieldTestNextStartReceive",
+    "fieldTestNextVerifySafety",
+    "fieldTestNextWaitReceiveStop",
+  ]).has(key);
 }
 
 function fieldTestPeerLocalStateNextActionKey(localReport, peerReport) {
