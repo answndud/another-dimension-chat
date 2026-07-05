@@ -55,6 +55,9 @@ require_text "$CONTRACT" '"redacted_diagnostics_payload_reviewed": true'
 require_text "$CONTRACT" '"android_ios_adapter_parity_verified"'
 require_text "$CONTRACT" '"android_ios_adapter_parity_verified": true'
 require_text "$CONTRACT" '"source_handoff_verifier_passing"'
+require_text "$CONTRACT" '"binding_prerequisite_closure_verified": true'
+require_text "$CONTRACT" '"owner_authorization_for_callable_ffi": false'
+require_text "$CONTRACT" '"explicit_callable_ffi_implementation_request": false'
 
 for blocked in \
   unlock_callable_ffi \
@@ -101,6 +104,7 @@ require_text "$FFI_README" "network delivery may start false"
 require_text "$FFI_README" "release packaging may start false"
 require_text "$FFI_README" "mobile readiness claimed false"
 require_text "$FFI_README" "security-ready claimed false"
+require_text "$FFI_README" "Binding Prerequisite Closure Handoff"
 
 require_text "$HANDOFF" "status=mobile-source-handoff-verified"
 require_text "$HANDOFF" "generated_bindings=false"
