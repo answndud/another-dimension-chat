@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "status": "source-boundary-diagnostics-payload-review",
+  "redacted_diagnostics_payload_reviewed": true,
+  "callable_ffi_implemented": false,
+  "generated_bindings_claimed": false,
+  "allowed_fields": [
+    "status",
+    "build",
+    "failure_class",
+    "recovery_next_action",
+    "app_launch_network_boundary",
+    "diagnostics_redaction_state",
+    "schema_version",
+    "platform",
+    "public_non_claims"
+  ],
+  "allowed_channels": [
+    "in_app_redacted_text_view",
+    "explicit_user_initiated_copy",
+    "minimal_private_security_contact_request"
+  ],
+  "required_boundaries": [
+    "diagnostics_copy_boundary=user_initiated_local_clipboard_only",
+    "diagnostics_payload=redacted_status_support_only",
+    "private_payload_prefill=false",
+    "native_network_upload=false",
+    "crash_upload=false",
+    "background_diagnostics_upload=false"
+  ],
+  "forbidden_payload_fields": [
+    "bridge_lines",
+    "onion_endpoints",
+    "invite_codes",
+    "pairing_payloads",
+    "envelope_payloads",
+    "safety_phrases",
+    "profile_names",
+    "message_text",
+    "local_paths",
+    "raw_logs",
+    "crash_dumps",
+    "screenshots_with_private_room_data",
+    "passphrases",
+    "private_keys",
+    "key_material",
+    "support_bundles",
+    "android_logcat",
+    "ios_sysdiagnose",
+    "telemetry_uploads",
+    "share_sheet_private_data_prefill"
+  ]
+}
