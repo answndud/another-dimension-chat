@@ -351,6 +351,41 @@ messaging, native network delivery, background delivery, push notification
 delivery, release packaging, store distribution, mobile readiness claim, and
 security-ready claim remain blocked.
 
+## Callable FFI Authorization Hold
+
+The callable FFI authorization hold is active. It is source-boundary only and is
+recorded in `callable_ffi_authorization_hold.json`.
+
+Blocked while the hold is active:
+
+- `.udl` file creation
+- UniFFI scaffolding
+- extern C symbols
+- JNI bridge
+- Swift FFI bridge
+- Kotlin native binding
+- callable shared-core status FFI
+- callable profile unlock FFI
+- callable invite FFI
+- callable pairing FFI
+- callable envelope FFI
+- callable transcript FFI
+- callable lifecycle FFI
+- native runtime messaging
+- native network delivery
+- release packaging
+
+Allowed while the hold is active: source boundary docs, static verifiers,
+read-only status adapter source, blocked command adapter source, and operator
+handoff docs.
+
+The hold remains active until explicit owner authorization for native binding
+and an explicit callable FFI implementation request are both present. Until
+then, callable FFI may start false, generated binding may start false, native
+runtime messaging may start false, network delivery may start false, release
+packaging may start false, mobile readiness claimed false, and security-ready
+claimed false.
+
 Allowed API groups mirror the shared core wrapper boundary:
 
 - `shared_core_status_surface`
