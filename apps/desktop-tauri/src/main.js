@@ -5230,6 +5230,17 @@ function fieldTestReportStandaloneOutboundRecoveryAction(parsed) {
     : "";
 }
 
+function fieldTestReportRoomListAction(parsed) {
+  const action = fieldTestReportValue(parsed.room_list_next_action, "none");
+  if (action === "none") {
+    return "";
+  }
+  const origin = fieldTestReportValue(parsed.room_list_next_origin, "none");
+  return savedInviteRoomRetryOnlyAction(action) && origin !== "retryable-outbound"
+    ? ""
+    : action;
+}
+
 function fieldTestReportOutboundFailureClass(parsed) {
   const failureClass = fieldTestReportValue(parsed.outbound_failure_class, "none");
   if (failureClass === "none") {
@@ -5293,11 +5304,12 @@ function fieldTestReportNextActionValue(parsed) {
     return "verify";
   }
   const routeReadinessAction = fieldTestRouteReadinessRecoveryAction(parsed);
-  if (parsed.room_list_next_action && parsed.room_list_next_action !== "none") {
+  const roomListAction = fieldTestReportRoomListAction(parsed);
+  if (roomListAction) {
     if (parsed.room_list_next_origin !== "retryable-outbound" && routeReadinessAction) {
       return routeReadinessAction;
     }
-    return fieldTestReceiveAwareRecoveryAction(parsed.room_list_next_action, parsed);
+    return fieldTestReceiveAwareRecoveryAction(roomListAction, parsed);
   }
   if (routeReadinessAction) {
     return routeReadinessAction;
@@ -5684,7 +5696,7 @@ function fieldTestNextActionKey(report, peerReport = "") {
   if (parsed.safety_confirmed !== "true") {
     return "fieldTestNextVerifySafety";
   }
-  const roomListAction = fieldTestReportValue(parsed.room_list_next_action, "none");
+  const roomListAction = fieldTestReportValue(fieldTestReportRoomListAction(parsed), "none");
   const outboundAction = fieldTestReportValue(fieldTestReportStandaloneOutboundRecoveryAction(parsed), "none");
   const routeReadinessAction = fieldTestReportValue(fieldTestRouteReadinessRecoveryAction(parsed), "none");
   let currentRecoveryAction = "none";
