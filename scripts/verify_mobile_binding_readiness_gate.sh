@@ -53,6 +53,7 @@ require_text "$CONTRACT" '"ffi_error_mapping_table_finalized": true'
 require_text "$CONTRACT" '"redacted_diagnostics_payload_reviewed"'
 require_text "$CONTRACT" '"redacted_diagnostics_payload_reviewed": true'
 require_text "$CONTRACT" '"android_ios_adapter_parity_verified"'
+require_text "$CONTRACT" '"android_ios_adapter_parity_verified": true'
 require_text "$CONTRACT" '"source_handoff_verifier_passing"'
 
 for blocked in \

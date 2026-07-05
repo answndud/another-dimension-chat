@@ -15,6 +15,7 @@ scripts/verify_mobile_ffi_error_mapping.sh
 scripts/verify_mobile_serialization_vectors.sh
 scripts/verify_mobile_memory_ownership.sh
 scripts/verify_mobile_diagnostics_payload_review.sh
+scripts/verify_mobile_adapter_parity.sh
 scripts/verify_mobile_binding_gate.sh
 scripts/verify_android_shell_boundary.sh
 scripts/verify_ios_shell_boundary.sh
