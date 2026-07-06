@@ -22,6 +22,14 @@ RB-1 supported local/manual E2EE claim closure is recorded in
 automatic network messaging, remote acknowledgement, and external delivery
 claims remain false.
 
+RB-2 supported key/rollback/deletion claim closure is recorded in
+`reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md`. It allows only
+passphrase-first SQLCipher-backed local profile store access, marker-only
+rollback detection, and explicit local logical delete / owned app-data wipe
+wording. Complete `production_key_management_ready`, app key wrapping, rollback
+prevention, secure media deletion, backup recovery, security-ready, and
+sensitive-use claims remain false.
+
 ## Gate Decision
 
 Decision: hold.
@@ -36,7 +44,7 @@ field evidence, and a separate owner release decision.
 | Area | Current result | Stable impact |
 | --- | --- | --- |
 | Protocol/session lifecycle | Supported local/manual envelope message-content scope is ready; broad `production_e2ee_ready=false`. | Hold production-ready and security-ready claims. |
-| Key/storage lifecycle | Review input exists; `production_key_management_ready=false`. | Hold sensitive-use and security-ready claims. |
+| Key/storage lifecycle | Supported local key/deletion scope exists; broad `production_key_management_ready=false`. | Hold sensitive-use and security-ready claims. |
 | Default transport | Local manual envelope default exists; `production_transport_ready=false`. | Hold reliable external delivery claims. |
 | macOS UX/onboarding | Source-side UX gate exists; `usability_study_completed=false`. | Hold production wording removal. |
 | macOS distribution | Distribution gate exists; `stable_signed_notarized_artifact_available=false`. | Hold stable release publication. |
@@ -81,7 +89,9 @@ preflight after the blockers below are resolved.
 - No repeated real macOS two-machine field evidence exists.
 - Broad production E2EE readiness remains false; only supported local/manual
   envelope message-content scope is ready.
-- Production key-management readiness remains false.
+- Broad production key-management readiness remains false; only supported local
+  key lifecycle, marker-only rollback detection, and local deletion/wipe scopes
+  are ready.
 - Production transport readiness remains false.
 - Production distribution readiness remains false.
 - Production field evidence readiness remains false.
@@ -101,8 +111,18 @@ preflight after the blockers below are resolved.
 - rb_1_local_manual_e2ee_claim_closure_reviewed=true
 - supported_local_manual_e2ee_ready=true
 - supported_local_manual_e2ee_scope=1:1-local-manual-envelope-message-content-only
+- rb_2_key_rollback_deletion_claim_closure_reviewed=true
+- supported_local_key_lifecycle_ready=true
+- supported_local_key_lifecycle_scope=passphrase-first-sqlcipher-local-profile-store-only
+- supported_rollback_detection_ready=true
+- supported_rollback_detection_scope=marker-only-detection-user-visible-reset-required
+- supported_local_deletion_scope_ready=true
+- supported_local_deletion_scope=local-logical-delete-and-owned-app-data-wipe-only
 - production_e2ee_ready=false
 - production_key_management_ready=false
+- app_key_wrapping_ready=false
+- rollback_prevention_claimed=false
+- secure_deletion_claim_allowed=false
 - production_transport_ready=false
 - production_distribution_ready=false
 - production_field_evidence_ready=false
