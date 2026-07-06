@@ -159,6 +159,27 @@ check_existing_release_output() {
   echo "existing_release_output_status=current"
 }
 
+check_macos_public_beta_final_sources() {
+  require_text "$ROOT_DIR/README.md" "reference/RELEASE_PAGE_UPDATE_POLICY.json"
+  require_text "$ROOT_DIR/README.md" "reference/MACOS_FRESH_INSTALL_REHEARSAL.md"
+  require_text "$ROOT_DIR/README.md" "reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md"
+  require_text "$ROOT_DIR/reference/RELEASE_PAGE_UPDATE_POLICY.json" "hold body-only edit until proposed live body matches actual live assets"
+  require_text "$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL.md" "Redacted Diagnostics Copy"
+  require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "already public macOS unsigned beta"
+  require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "still not production-ready"
+  require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "Known Release Drift"
+  require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "release page edit"
+  require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "screenshot publication"
+  require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "Windows parity"
+  require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "Android scope"
+  require_text "$ROOT_DIR/scripts/macos_release_page_update_gate_once.sh" "release_page_update_gate=ok"
+  require_text "$ROOT_DIR/scripts/macos_fresh_install_rehearsal_once.sh" "macos-fresh-install-rehearsal-source-ready"
+
+  echo "macos_public_beta_final_report=ready"
+  echo "macos_release_page_update_gate=source-linked"
+  echo "macos_fresh_install_rehearsal=source-linked"
+}
+
 echo "preflight=public-release-readiness"
 echo "scope=source-only-no-dmg-required-no-generated-artifacts"
 echo "artifact_generation=false"
@@ -179,6 +200,7 @@ run_step desktop-real-user-test-prep "$ROOT_DIR/scripts/desktop_real_user_test_p
 run_step desktop-default-transport-boundary "$ROOT_DIR/scripts/desktop_default_transport_boundary_once.sh"
 run_step public-beta-gap "$ROOT_DIR/scripts/public_beta_gap_acceptance_once.sh"
 run_step public-claim-acceptance env PUBLIC_RELEASE_PREFLIGHT_CHILD=1 "$ROOT_DIR/scripts/public_claim_acceptance_once.sh"
+run_step macos-public-beta-final-sources check_macos_public_beta_final_sources
 run_step existing-release-output check_existing_release_output
 
 echo "status=public-release-readiness-source-preflight-ready"
