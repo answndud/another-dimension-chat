@@ -56,10 +56,11 @@
     "confirm forbidden claims remain absent"
   ],
   "current_known_drift": {
-    "live_assets_missing_from_source_body_expectation": [
+    "live_body_matches_live_assets": true,
+    "source_upload_set_extras_not_live": [
       "COMPONENT_BOUNDARIES.md",
       "OPERATOR_FINAL_HANDOFF.md"
     ],
-    "decision": "hold body-only edit until proposed live body matches actual live assets or a separately approved asset upload fixes the asset set"
+    "decision": "no live release update needed while source upload-set extras remain held without explicit upload approval"
   }
 }

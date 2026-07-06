@@ -163,7 +163,7 @@ check_macos_public_beta_final_sources() {
   require_text "$ROOT_DIR/README.md" "reference/RELEASE_PAGE_UPDATE_POLICY.json"
   require_text "$ROOT_DIR/README.md" "reference/MACOS_FRESH_INSTALL_REHEARSAL.md"
   require_text "$ROOT_DIR/README.md" "reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md"
-  require_text "$ROOT_DIR/reference/RELEASE_PAGE_UPDATE_POLICY.json" "hold body-only edit until proposed live body matches actual live assets"
+  require_text "$ROOT_DIR/reference/RELEASE_PAGE_UPDATE_POLICY.json" "no live release update needed while source upload-set extras remain held"
   require_text "$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL.md" "Redacted Diagnostics Copy"
   require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "already public macOS unsigned beta"
   require_text "$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md" "still not production-ready"
