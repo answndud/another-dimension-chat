@@ -34,6 +34,12 @@ Default-build production code now includes narrow decision boundaries for pairin
 
 The public cross-component replacement inventory is tracked in `reference/COMPONENT_BOUNDARIES.md`. It is a boundary map for future work, not a production-readiness statement.
 
+The production readiness claim gate is tracked in
+`reference/PRODUCTION_READINESS_CLAIM_GATE.md`. Beta and non-claim wording must
+remain until that gate and the later stable release phases are complete.
+Signing and notarization are distribution ergonomics, not a messenger security
+trust boundary.
+
 The public privacy-model comparison is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`. It maps the intended Korean Briar/Cwtch-style direction to current public beta gaps and LINDDUN categories; it is not a claim that the current beta has reached that level.
 
 The public threat model is tracked in `reference/PUBLIC_THREAT_MODEL.md`, and the independent review packet is tracked in `reference/INDEPENDENT_REVIEW_PACKET.md`. These are review inputs, not evidence that a review has been completed. The public beta upload set explicitly records the current review gap, private-reporting boundary, public-safe review-command boundary, and fabricated-review/peer-evidence-forbidden boundary; it does not claim reviewer signoff or public user safety signoff.
