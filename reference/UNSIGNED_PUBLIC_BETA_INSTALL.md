@@ -4,6 +4,10 @@ This build is an unsigned experimental public beta of Another Dimension Chat.
 
 It is not notarized, not audited, not production-ready, and sensitive communication prohibited.
 
+This guide is for macOS Apple Silicon users installing the unsigned DMG from
+the GitHub Release. The safe order is download, verify, open, then use the
+normal macOS Privacy & Security manual allow path if Gatekeeper blocks the app.
+
 ## Files
 
 Download these files from the GitHub Release:
@@ -36,7 +40,8 @@ browser, GitHub source archives, or files from a different release.
 
 ## Verify The Download
 
-Put the `.dmg` and `.sha256` in the same folder, then run:
+Put the `.dmg` and `.sha256` in the same folder. Use the `.sha256` attached to
+the same GitHub Release as the DMG, then run:
 
 ```bash
 shasum -a 256 -c another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256
@@ -69,6 +74,39 @@ Use only the normal macOS manual allow path:
 Do not use terminal quarantine-removal commands as an install step.
 
 Do not use this app for sensitive communication.
+
+## Troubleshooting
+
+### Checksum mismatch
+
+Stop and do not open the DMG. Delete the local `.dmg` and `.sha256`, then
+download both files again from the same GitHub Release. Do not mix a DMG from
+one release with a checksum copied from a branch view, source archive, README
+copy, chat message, or another release.
+
+### DMG looks damaged
+
+Do not bypass the warning. First rerun the checksum command above. If the
+checksum does not print `OK`, delete the files and download the DMG and
+`.sha256` again from the same GitHub Release. If the checksum prints `OK`,
+eject the DMG, mount it again, and use the normal macOS Privacy & Security
+manual allow path.
+
+### App cannot be opened
+
+This is expected for some unsigned/not notarized builds. Confirm the checksum
+first, try to open the app once, then open System Settings > Privacy & Security
+and allow the blocked app there. Do not use terminal quarantine-removal commands
+to force-open the app.
+
+### Privacy & Security allow button is missing
+
+The allow button may appear only after you try to open the blocked app once.
+Confirm the checksum, try opening Another Dimension Chat from the mounted DMG,
+then return to System Settings > Privacy & Security. If the button still does
+not appear, stop and report the broad failure class with redacted diagnostics
+only. Do not post local paths, raw logs, invite codes, endpoints, payloads,
+message text, passphrases, private keys, or key material.
 
 ## Manual Updates Only
 
