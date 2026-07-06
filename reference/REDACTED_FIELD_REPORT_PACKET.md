@@ -9,6 +9,16 @@ Use this packet for real macOS field reports only after removing private data.
 Public reports should use the app's public support diagnostics and the broad
 failure classes from `reference/PUBLIC_INTAKE_POLICY.md`.
 
+Validate redacted reports with:
+
+```sh
+node scripts/validate_redacted_field_reports.mjs docs/redacted-field-reports
+```
+
+The validator can mark a report set as an evidence candidate, but it never
+opens production field evidence readiness by itself. A maintainer must still
+review the source of the reports and update the stable gate explicitly.
+
 ## Allowed Report Fields
 
 - `app_version`
@@ -20,6 +30,17 @@ failure classes from `reference/PUBLIC_INTAKE_POLICY.md`.
 - `flow_scope`
 - `network_condition_class`
 - `run_count`
+- `clean_install_checksum_status`
+- `first_launch_warning_status`
+- `profile_create_unlock_status`
+- `invite_verify_status`
+- `manual_envelope_round_trip_status`
+- `retry_cancel_recovery_status`
+- `restart_resume_status`
+- `offline_online_transition_status`
+- `failed_delivery_recovery_status`
+- `delete_wipe_lifecycle_status`
+- `public_diagnostics_copy_status`
 - `required_flow_status`
 - `failure_class`
 - `recovery_next_action`
@@ -47,6 +68,17 @@ install_path_reached=download|checksum|mount|copy|manual-allow|first-launch
 flow_scope=same-machine|local-two-instance|two-machine-same-network|two-machine-different-network
 network_condition_class=offline|same-lan|different-networks|transient-failure|not-applicable
 run_count=
+clean_install_checksum_status=pass|fail|partial|not-run
+first_launch_warning_status=pass|fail|partial|not-run
+profile_create_unlock_status=pass|fail|partial|not-run
+invite_verify_status=pass|fail|partial|not-run
+manual_envelope_round_trip_status=pass|fail|partial|not-run
+retry_cancel_recovery_status=pass|fail|partial|not-run
+restart_resume_status=pass|fail|partial|not-run
+offline_online_transition_status=pass|fail|partial|not-run
+failed_delivery_recovery_status=pass|fail|partial|not-run
+delete_wipe_lifecycle_status=pass|fail|partial|not-run
+public_diagnostics_copy_status=pass|fail|partial|not-run
 required_flow_status=pass|fail|partial
 failure_class=checksum-install-failure|macos-manual-allow|profile-locked|malformed-payload|replay-rejected|transport-unavailable|policy-blocked|lifecycle-confirmation-required|desktop-state-drift|unknown-redacted
 recovery_next_action=
@@ -64,6 +96,7 @@ non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-p
 ## Current Packet Flags
 
 - redacted_field_report_packet_available=true
+- redacted_field_report_validator_available=true
 - accepted_production_field_reports=0
 - local_two_instance_rehearsal_completed=false
 - macos_two_machine_real_user_flow_repeated=false
