@@ -97,6 +97,8 @@ not raw errors or local paths:
 
 - `checksum-install-failure`: stop, verify the same-release `.sha256`, then
   follow `README.md` or `INSTALL_UNSIGNED_MACOS.md`.
+- `macos-manual-allow`: checksum passed, then use the normal macOS Privacy &
+  Security manual allow path for the unsigned app.
 - `profile-locked`: retry the passphrase or create a new local profile; no
   cloud, backup, or OS-keychain-only recovery is available.
 - `malformed-payload`: ask the peer to export a fresh envelope and import only
@@ -109,6 +111,24 @@ not raw errors or local paths:
   envelope exchange.
 - `lifecycle-confirmation-required`: confirm the local-only delete/wipe scope
   before continuing.
+- `desktop-state-drift`: copy public diagnostics and report only whether row
+  selection, retry, cancel, composer primary action, or follow-up copy drifted.
+- `macos-gui-human-rehearsal-not-run`: source install authority is checked, but
+  disposable GUI first-run/profile/invite/manual-flow/delete/diagnostics still
+  needs a human follow-through.
+- `unknown-redacted`: paste only public diagnostics and choose the closest broad
+  area without logs, paths, codes, payloads, or screenshots of private data.
+
+## Maintainer Triage
+
+Maintainers should use `reference/PUBLIC_SUPPORT_TRIAGE.md` for the public
+support routing matrix and response snippets. Public issues should resolve into
+checksum retry, Gatekeeper recovery, profile recovery, payload retry/cancel,
+lifecycle confirmation, redacted diagnostics, or private security contact
+routing. Maintainers must not ask for raw logs, local paths, onion endpoints,
+invite codes, payloads, message text, passphrases, private keys, key material,
+private screenshots, external delivery proof, production-ready proof, audited
+status, or sensitive-use reports.
 
 ## Non-Claims
 
