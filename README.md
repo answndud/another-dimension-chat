@@ -204,6 +204,13 @@ Production protocol/session lifecycle review input is tracked in
 It records the current 1:1 state machine, replay/retry/cancel/delete semantics,
 unresolved review questions, and why production E2EE readiness remains false.
 
+Supported local/manual E2EE claim closure is tracked in
+[reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md](reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md).
+It allows only the narrow supported 1:1 local/manual envelope message-content
+encryption statement while keeping broad `production_e2ee_ready=false`,
+audited E2EE, secure messenger, sensitive-use, automatic network messaging,
+remote acknowledgement, and external delivery claims false.
+
 Production key and local storage lifecycle review input is tracked in
 [reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md](reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md).
 It records the current passphrase-first unlock, encrypted local
@@ -367,7 +374,9 @@ What exists today:
   Noise XX transport state is required, remote static verification is required,
   channel/message-number/nonce binding is fixed, replay state is committed only
   after decrypt, and tamper failure must not advance receive state. This is still
-  not an audited or production-ready E2EE claim.
+  not an audited or production-ready E2EE claim. The supported claim is limited
+  to 1:1 local/manual encrypted envelope message-content encryption as recorded
+  in `reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md`.
 - Local data lifecycle controls for conversation message-record deletion, session
   resume-record deletion, profile-store deletion, owned local app-data wipe,
   backup-exclusion preparation, local backup-exclusion verification boundaries,
@@ -445,7 +454,9 @@ What does not exist yet:
 - Audited or security-ready production end-to-end encryption. The local manual
   envelope runtime has a reviewed session/key/replay failure-model gate, but it
   is not an external audit, production security claim, or sensitive-communication
-  guarantee.
+  guarantee. The current E2EE wording is limited to the supported local/manual
+  envelope message-content scope in
+  `reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md`.
 - Secure production messaging suitable for sensitive communication.
 - Reliable Tor/onion transport across real networks.
 - Automatic background delivery, central message server delivery,

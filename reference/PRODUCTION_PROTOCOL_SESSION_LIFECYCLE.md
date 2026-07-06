@@ -1,9 +1,12 @@
 # Production Protocol And Session Lifecycle
 
-Status: OPS-2 source gate closed for review input, not production E2EE ready.
-This document describes the current 1:1 protocol/session state machine used for
-claim review. It does not authorize a secure messenger, audited, production-ready,
-sensitive communication, or reliable external onion delivery claim.
+Status: OPS-2 and RB-1 source gates closed for review input. The supported
+local/manual envelope message-content E2EE scope is ready, but broad
+production_e2ee_ready remains false. This document describes the current 1:1
+protocol/session state machine used for claim review. It does not authorize a
+secure messenger, audited, production-ready, sensitive communication, automatic
+network messaging, remote acknowledgement, or reliable external onion delivery
+claim.
 
 ## Shared Semantics
 
@@ -73,6 +76,20 @@ different message number, replay, retry, cancel, or deletion model.
 - dev-insecure behavior remains visibly separate from default production
   surfaces and must not be exposed as production messaging.
 
+## RB-1 Supported Local Manual E2EE Scope
+
+The RB-1 claim boundary is recorded in
+`reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md`.
+
+Allowed wording is limited to supported 1:1 local/manual encrypted envelope
+message-content encryption in the current app flow. Message content is encrypted
+before manual export, replay commits only after successful decrypt, tamper
+failure does not advance receive state, and retry/cancel remain local state.
+
+This boundary still keeps automatic network messaging, remote delivery
+acknowledgement, reliable external delivery, audited E2EE, secure messenger,
+sensitive-use, and broad production E2EE claims false.
+
 ## Existing Test Anchors
 
 The source gate relies on the following targeted tests and code boundaries:
@@ -110,9 +127,13 @@ These questions remain unresolved and must stay in the external review packet:
 - local_manual_and_future_transport_semantics_shared=true
 - replay_duplicate_retry_cancel_edges_documented=true
 - dev_insecure_surface_blocked_from_production_claim=true
+- rb_1_local_manual_e2ee_claim_closure_reviewed=true
+- supported_local_manual_e2ee_ready=true
+- supported_local_manual_e2ee_scope=1:1-local-manual-envelope-message-content-only
 - remote_ack_protocol_ready=false
+- automatic_network_messaging_ready=false
 - external_onion_delivery_verified=false
 - runtime_messaging_ready=false
 - production_e2ee_ready=false
 - security_ready_claimed=false
-- next_required_phase=OPS-3 production key management and local storage lifecycle
+- next_required_phase=RB-2 production key management rollback and deletion closure

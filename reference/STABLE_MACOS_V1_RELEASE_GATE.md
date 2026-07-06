@@ -15,6 +15,13 @@ RB-0 release authority and credential unblock is recorded in
 Xcode/notarytool availability are observed, but local code-signing identities,
 Developer ID signing, and notarization credentials are unavailable.
 
+RB-1 supported local/manual E2EE claim closure is recorded in
+`reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md`. It allows only supported
+1:1 local/manual envelope message-content encryption wording. Broad
+`production_e2ee_ready`, audited E2EE, secure messenger, sensitive-use,
+automatic network messaging, remote acknowledgement, and external delivery
+claims remain false.
+
 ## Gate Decision
 
 Decision: hold.
@@ -28,7 +35,7 @@ field evidence, and a separate owner release decision.
 
 | Area | Current result | Stable impact |
 | --- | --- | --- |
-| Protocol/session lifecycle | Review input exists; `production_e2ee_ready=false`. | Hold production-ready and security-ready claims. |
+| Protocol/session lifecycle | Supported local/manual envelope message-content scope is ready; broad `production_e2ee_ready=false`. | Hold production-ready and security-ready claims. |
 | Key/storage lifecycle | Review input exists; `production_key_management_ready=false`. | Hold sensitive-use and security-ready claims. |
 | Default transport | Local manual envelope default exists; `production_transport_ready=false`. | Hold reliable external delivery claims. |
 | macOS UX/onboarding | Source-side UX gate exists; `usability_study_completed=false`. | Hold production wording removal. |
@@ -72,7 +79,8 @@ preflight after the blockers below are resolved.
 - No signed/notarized stable macOS artifact exists.
 - No completed external review or audit exists.
 - No repeated real macOS two-machine field evidence exists.
-- Production E2EE readiness remains false.
+- Broad production E2EE readiness remains false; only supported local/manual
+  envelope message-content scope is ready.
 - Production key-management readiness remains false.
 - Production transport readiness remains false.
 - Production distribution readiness remains false.
@@ -90,6 +98,9 @@ preflight after the blockers below are resolved.
 - external_review_completed=false
 - audit_completed=false
 - macos_two_machine_real_user_flow_repeated=false
+- rb_1_local_manual_e2ee_claim_closure_reviewed=true
+- supported_local_manual_e2ee_ready=true
+- supported_local_manual_e2ee_scope=1:1-local-manual-envelope-message-content-only
 - production_e2ee_ready=false
 - production_key_management_ready=false
 - production_transport_ready=false

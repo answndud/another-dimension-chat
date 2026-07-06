@@ -2259,6 +2259,8 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(privateDeliveryStateJs, /appKeyWrappingReady: false/);
   assert.match(privateDeliveryStateJs, /local_manual_e2ee_runtime_boundary=\$\{fieldTestReportValue\(desktopCompletion\.localManualE2eeRuntimeBoundary/);
   assert.match(privateDeliveryStateJs, /local_manual_e2ee_runtime_ready=\$\{desktopCompletion\.localManualE2eeRuntimeReady === true\}/);
+  assert.match(privateDeliveryStateJs, /supported_local_manual_e2ee_ready=\$\{desktopCompletion\.supportedLocalManualE2eeReady === true\}/);
+  assert.match(privateDeliveryStateJs, /supported_local_manual_e2ee_scope=\$\{fieldTestReportValue\(desktopCompletion\.supportedLocalManualE2eeScope/);
   assert.match(privateDeliveryStateJs, /replay_commit_after_decrypt=\$\{desktopCompletion\.replayCommitAfterDecrypt === true\}/);
   assert.match(privateDeliveryStateJs, /tamper_failure_non_advance=\$\{desktopCompletion\.tamperFailureNonAdvance === true\}/);
   assert.match(privateDeliveryStateJs, /production_e2ee_ready=\$\{desktopCompletion\.productionE2eeReady === true\}/);
@@ -2303,6 +2305,8 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /allowed_public_intake_fields=\$\{allowedPublicIntakeFields\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /forbidden_public_intake_fields=\$\{forbiddenPublicIntakeFields\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /local_manual_e2ee_runtime_boundary=\$\{localManualE2eeBoundary\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_local_manual_e2ee_ready=\$\{supportedLocalManualE2eeReady\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /supported_local_manual_e2ee_scope=\$\{supportedLocalManualE2eeScope\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /default_transport_path=\$\{defaultTransportPath\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /default_transport_network_io=\$\{defaultTransportNetworkIo\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_onion_path=explicit-user-triggered-fail-closed/);
