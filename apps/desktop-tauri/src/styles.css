@@ -1746,6 +1746,35 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
   padding-top: 10px;
 }
 
+.public-recovery-guide {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: color-mix(in srgb, var(--panel) 94%, var(--accent-cyan));
+}
+
+.public-recovery-guide h6 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.public-recovery-guide ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.public-recovery-guide li {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .local-rehearsal-panel {
   display: grid;
   gap: 8px;
