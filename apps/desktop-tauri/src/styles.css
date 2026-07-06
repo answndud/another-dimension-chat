@@ -183,6 +183,21 @@ h1 {
   padding-left: 2px;
 }
 
+.first-run-checklist {
+  display: grid;
+  gap: 5px;
+  max-width: 82ch;
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.first-run-checklist li {
+  padding-left: 2px;
+}
+
 .local-dev-peer-label {
   position: fixed;
   z-index: 31;
