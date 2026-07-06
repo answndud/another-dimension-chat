@@ -1,6 +1,7 @@
 # macOS Public Beta Final Source Report
 
-Status: already public macOS unsigned beta.
+Status: already public macOS unsigned beta; source-side macOS unsigned public
+beta closure is 100%.
 
 This is still not production-ready. It is an unsigned experimental public beta,
 not audited, and sensitive communication prohibited. Do not use it for real
@@ -17,6 +18,12 @@ communication.
 - Practical desktop path: local profile unlock/create, invite room,
   verification surface, manual encrypted envelope export/import, reply,
   retry/cancel, local deletion, and redacted diagnostics copy
+- Reviewed public-safe screenshots:
+  `reference/screenshots/README.md`
+- Fresh install rehearsal result:
+  `reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md`
+- Public support triage:
+  `reference/PUBLIC_SUPPORT_TRIAGE.md`
 
 ## Final Source Acceptance
 
@@ -29,12 +36,12 @@ The source tree now has public-facing material for:
 - manual local 1:1 envelope flow
 - error and recovery copy
 - local data lifecycle boundary
-- public-safe screenshot checklist
-- public issue and support intake
+- public-safe screenshot checklist and reviewed screenshot set
+- public issue, support intake, triage matrix, and maintainer response snippets
 - CI/source verification boundary
 - dependency and supply-chain baseline boundary
 - release artifact integrity recheck notes
-- fresh install rehearsal checklist
+- fresh install rehearsal checklist and public-safe result record
 
 This source acceptance does not rebuild the DMG, upload release assets, edit the
 GitHub Release, notarize, sign, audit, create an auto-update channel, or claim
@@ -64,22 +71,37 @@ sensitive communication prohibited. Users must verify the same-release SHA-256
 before opening the DMG and use the normal macOS Privacy & Security manual allow
 path if Gatekeeper blocks the app.
 
-## Final Blockers
+## macOS Unsigned Public Beta Closure
 
-- Live release page/body/assets need an explicit release edit or upload request
-  before they can be brought back into source alignment.
+The macOS unsigned public beta source/maintainer readiness target is closed at
+100% for the current constrained scope. Users still download the already public
+unsigned Apple Silicon DMG from GitHub Releases, verify the same-release
+checksum, use the normal macOS manual allow path if needed, and treat the app as
+an unsigned experimental public beta.
+
+The fresh-install result has a documented GUI follow-through hold for manual
+first-run/profile/invite/manual-flow/delete/diagnostics rehearsal. That hold is
+now routed through public support triage rather than a release asset change. It
+does not authorize production claims or sensitive communication.
+
+No live release upload, DMG rebuild, checksum change, release asset deletion, or
+release body edit is performed by this closure.
+
+## Remaining Non-Beta Product Blockers
+
 - No signed or notarized macOS artifact exists.
 - No public Windows artifact exists.
 - Android and iOS remain future shared-core shell work, not this beta.
 - External two-machine peer evidence and external audit remain outside the v0.1
   public claim.
+- Production E2EE readiness, production key management, reliable default
+  transport, external review, field reliability evidence, and operational
+  incident process remain unfinished.
 
-## Next Work Choices
+## Next Work
 
-Pick one next axis:
-
-- release page edit after confirming the body text matches live assets
-- release asset upload only after explicit packaging/upload request
-- screenshot publication using the public-safe screenshot checklist
-- Windows parity and local runtime smoke on a real Windows machine
-- Android scope planning after desktop/macOS public beta wrap-up
+Proceed to the production-readiness track, starting with
+`Phase OPS-1 - Production Readiness Definition And Claim Gate`. Do not remove
+the unsigned experimental public beta, sensitive communication prohibited, not
+audited, or not production-ready public wording until the production gates are
+closed.
