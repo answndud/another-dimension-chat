@@ -199,6 +199,11 @@ until [reference/PRODUCTION_READINESS_CLAIM_GATE.md](reference/PRODUCTION_READIN
 is satisfied by the later stable release phases. Signing and notarization are
 macOS distribution ergonomics, not a messenger security trust boundary.
 
+Production protocol/session lifecycle review input is tracked in
+[reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md).
+It records the current 1:1 state machine, replay/retry/cancel/delete semantics,
+unresolved review questions, and why production E2EE readiness remains false.
+
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
 only. Allowed public fields are app version, build channel, build commit,
