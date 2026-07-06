@@ -45,6 +45,12 @@ Release authority: use the files attached to the GitHub Release, not branch
 files or source archives. The `main` branch may contain later documentation or
 source changes after the published DMG.
 
+Release page updates: artifact-free body edits are held unless the proposed
+body matches the live release asset set and keeps the required non-claims. The
+source policy is `reference/RELEASE_PAGE_UPDATE_POLICY.json`; the read-only
+gate is `scripts/macos_release_page_update_gate_once.sh`. The gate never edits
+the GitHub Release, uploads assets, rebuilds the DMG, or changes checksums.
+
 ### Local Data Lifecycle
 
 The desktop beta has separate local destructive actions. Conversation delete
