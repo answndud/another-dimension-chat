@@ -4,6 +4,14 @@ Another Dimension Chat does not have a complete production encrypted local stora
 
 This document records the current public-safe storage boundary around a narrow SQLCipher-backed `ADREC1` spike. It is intentionally conservative: default production code must not silently persist sensitive production records as plaintext files, and the current spike must not be described as complete production key management, rollback protection, secure deletion, backup, recovery, or production E2EE readiness.
 
+The production key and local storage lifecycle gate for the desktop-first
+operating-release track is tracked in
+[PRODUCTION_KEY_STORAGE_LIFECYCLE.md](PRODUCTION_KEY_STORAGE_LIFECYCLE.md).
+It consolidates the current passphrase-first unlock, encrypted
+profile/session/message store, destructive local actions, backup/migration
+boundary, marker-only rollback detection, and remaining production
+key-management review questions.
+
 ## Current State
 
 The repository currently has:
