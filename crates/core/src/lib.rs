@@ -1160,6 +1160,7 @@ pub mod production {
         "passphrase_first_storage_required",
         "explicit_envelope_export_import_only",
     ];
+    const SUPPORTED_DEFAULT_TRANSPORT_SCOPE: &str = "local-manual-courier-envelope-exchange-only";
 
     const PRODUCTION_KEY_ROLLBACK_BOUNDARY_POLICIES: &[&str] = &[
         "passphrase_first_v0_1_default",
@@ -3262,6 +3263,8 @@ pub mod production {
         default_transport_route: TransportKind,
         default_route_allowed_by_policy: bool,
         default_manual_envelope_exchange: bool,
+        supported_default_transport_ready: bool,
+        supported_default_transport_scope: &'static str,
         default_network_io_attempted: bool,
         default_automatic_background_delivery_claimed: bool,
         advanced_transport_mode: TransportMode,
@@ -3276,6 +3279,8 @@ pub mod production {
         relay_store_and_forward_decided: bool,
         relay_store_and_forward_allowed: bool,
         split_closed: bool,
+        production_transport_ready: bool,
+        reliable_external_delivery_claim_allowed: bool,
         security_ready_claimed: bool,
     }
 
@@ -6466,6 +6471,14 @@ pub mod production {
             self.default_manual_envelope_exchange
         }
 
+        pub fn supported_default_transport_ready(self) -> bool {
+            self.supported_default_transport_ready
+        }
+
+        pub fn supported_default_transport_scope(self) -> &'static str {
+            self.supported_default_transport_scope
+        }
+
         pub fn default_network_io_attempted(self) -> bool {
             self.default_network_io_attempted
         }
@@ -6520,6 +6533,14 @@ pub mod production {
 
         pub fn split_closed(self) -> bool {
             self.split_closed
+        }
+
+        pub fn production_transport_ready(self) -> bool {
+            self.production_transport_ready
+        }
+
+        pub fn reliable_external_delivery_claim_allowed(self) -> bool {
+            self.reliable_external_delivery_claim_allowed
         }
 
         pub fn security_ready_claimed(self) -> bool {
@@ -18086,6 +18107,13 @@ pub mod production {
             && !relay_store_and_forward_allowed
             && !onion_boundary.reliable_real_network_onion_delivery_claimed()
             && !onion_boundary.security_ready_claimed();
+        let supported_default_transport_ready = split_closed
+            && default_manual_envelope_exchange
+            && !default_network_io_attempted
+            && !default_automatic_background_delivery_claimed
+            && !central_message_server_allowed
+            && !push_notification_dependency_allowed
+            && !central_contact_discovery_allowed;
 
         ProductionPracticalTransportSplitSummary {
             policies: PRODUCTION_PRACTICAL_TRANSPORT_SPLIT_POLICIES,
@@ -18093,6 +18121,8 @@ pub mod production {
             default_transport_route: default_route.kind(),
             default_route_allowed_by_policy,
             default_manual_envelope_exchange,
+            supported_default_transport_ready,
+            supported_default_transport_scope: SUPPORTED_DEFAULT_TRANSPORT_SCOPE,
             default_network_io_attempted,
             default_automatic_background_delivery_claimed,
             advanced_transport_mode: advanced_policy.mode(),
@@ -18107,6 +18137,8 @@ pub mod production {
             relay_store_and_forward_decided,
             relay_store_and_forward_allowed,
             split_closed,
+            production_transport_ready: false,
+            reliable_external_delivery_claim_allowed: false,
             security_ready_claimed: false,
         }
     }
@@ -24228,6 +24260,11 @@ pub mod production {
             assert_eq!(split.default_transport_route(), TransportKind::LocalOnly);
             assert!(split.default_route_allowed_by_policy());
             assert!(split.default_manual_envelope_exchange());
+            assert!(split.supported_default_transport_ready());
+            assert_eq!(
+                split.supported_default_transport_scope(),
+                "local-manual-courier-envelope-exchange-only"
+            );
             assert!(!split.default_network_io_attempted());
             assert!(!split.default_automatic_background_delivery_claimed());
             assert_eq!(
@@ -24247,6 +24284,8 @@ pub mod production {
             assert!(!split.central_contact_discovery_allowed());
             assert!(!split.relay_store_and_forward_decided());
             assert!(!split.relay_store_and_forward_allowed());
+            assert!(!split.production_transport_ready());
+            assert!(!split.reliable_external_delivery_claim_allowed());
             assert!(!split.security_ready_claimed());
             assert!(split
                 .policies()

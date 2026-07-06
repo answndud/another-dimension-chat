@@ -42,7 +42,7 @@ must_contain "$DOC" "external_two_machine_delivery_verified=false"
 must_contain "$DOC" "reliable_external_delivery_claim_allowed=false"
 must_contain "$DOC" "production_transport_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
-must_contain "$DOC" "next_required_phase=OPS-5 macOS production UX and onboarding"
+must_contain "$DOC" "next_required_phase=RB-4 macOS UX usability and recovery closure"
 
 must_contain "README.md" "reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md"
 must_contain "SECURITY.md" "reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md"
@@ -50,7 +50,6 @@ must_contain "reference/TRANSPORT_DECISION.md" "PRODUCTION_DEFAULT_TRANSPORT_PAT
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_4_default_transport_product_path_reviewed=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "production_transport_ready=false"
-must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "next_required_phase=OPS-5 macOS production UX and onboarding"
 
 must_contain "scripts/desktop_default_transport_boundary_once.sh" "status=desktop-default-transport-boundary-source-ready"
 must_contain "apps/desktop-tauri/src/private-delivery-state.js" "default_transport_path=local-manual-encrypted-envelope-exchange"
@@ -100,5 +99,5 @@ external_two_machine_delivery_verified=false
 reliable_external_delivery_claim_allowed=false
 production_transport_ready=false
 security_ready_claimed=false
-next_required_phase=OPS-5-macos-production-ux-and-onboarding
+next_required_phase=RB-4-macos-ux-usability-recovery-closure
 STATUS
