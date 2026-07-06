@@ -43,6 +43,9 @@ communication prohibited. Do not use it for real communication.
 8. Maintainer rehearsal: before directing public testers, use
    [reference/MACOS_FRESH_INSTALL_REHEARSAL.md](reference/MACOS_FRESH_INSTALL_REHEARSAL.md)
    for a fresh-install checklist that records only public-safe results.
+9. Final source status: use
+   [reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md](reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md)
+   to report what is already public, what remains held, and the next work axis.
 
 Release authority: use the files attached to the GitHub Release, not branch
 files or source archives. The `main` branch may contain later documentation or
