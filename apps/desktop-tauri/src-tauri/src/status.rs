@@ -182,7 +182,7 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         session_durable_state_status:
             "local encrypted session lifecycle controls available; no audited readiness claim",
         local_data_lifecycle_policy: format!(
-            "backend={:?} passphrase_first_required={} os_keystore_optional={} os_keystore_only_rejected={} key_wrapping_ready={} key_policy_decided={} rollback_protection={:?} rollback_non_claim={} backup_policy_decided={} backup_verified={} logical_delete={} secure_media_deletion_claimed={} forward_only_schema_migration={} prototype_data_migration_ready={} runtime_messaging={} policy_tags={}",
+            "backend={:?} passphrase_first_required={} os_keystore_optional={} os_keystore_only_rejected={} key_wrapping_ready={} key_policy_decided={} rollback_protection={:?} rollback_non_claim={} backup_policy_decided={} backup_verified={} logical_delete={} supported_local_deletion_scope_ready={} supported_local_deletion_scope={} secure_media_deletion_claimed={} secure_deletion_claim_allowed={} forward_only_schema_migration={} prototype_data_migration_ready={} runtime_messaging={} policy_tags={}",
             local_data_policy.backend(),
             local_data_policy.passphrase_first_required(),
             local_data_policy.os_keystore_optional(),
@@ -194,14 +194,17 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             local_data_policy.backup_exclusion_policy_decided(),
             local_data_policy.backup_exclusion_verified(),
             local_data_policy.logical_delete_available(),
+            local_data_policy.supported_local_deletion_scope_ready(),
+            local_data_policy.supported_local_deletion_scope(),
             local_data_policy.secure_media_deletion_claimed(),
+            local_data_policy.secure_deletion_claim_allowed(),
             local_data_policy.forward_only_schema_migration(),
             local_data_policy.prototype_data_migration_ready(),
             local_data_policy.runtime_messaging_enabled(),
             local_data_policy.policy_tags().join(","),
         ),
         key_rollback_boundary: format!(
-            "boundary_closed={} passphrase_first_required={} os_keystore_optional={} os_keystore_dependency_required={} os_keystore_only_rejected={} app_key_wrapping_ready={} app_key_wrapping_non_claim={} rollback_protection={:?} rollback_prevention_claimed={} rollback_non_claim={} external_monotonic_state_required_before_claim={} backup_policy_decided={} backup_verified={} secure_media_deletion_claimed={} production_key_management_ready={} security_ready_claimed={} policies={}",
+            "boundary_closed={} passphrase_first_required={} os_keystore_optional={} os_keystore_dependency_required={} os_keystore_only_rejected={} app_key_wrapping_ready={} app_key_wrapping_non_claim={} supported_local_key_lifecycle_ready={} supported_local_key_lifecycle_scope={} rollback_protection={:?} supported_rollback_detection_ready={} supported_rollback_detection_scope={} rollback_prevention_claimed={} rollback_non_claim={} external_monotonic_state_required_before_claim={} backup_policy_decided={} backup_verified={} secure_media_deletion_claimed={} secure_deletion_claim_allowed={} production_key_management_ready={} security_ready_claimed={} policies={}",
             key_rollback.boundary_closed(),
             key_rollback.passphrase_first_required(),
             key_rollback.os_keystore_optional(),
@@ -209,13 +212,18 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             key_rollback.os_keystore_only_rejected(),
             key_rollback.app_key_wrapping_ready(),
             key_rollback.app_key_wrapping_non_claim_decided(),
+            key_rollback.supported_local_key_lifecycle_ready(),
+            key_rollback.supported_local_key_lifecycle_scope(),
             key_rollback.rollback_protection(),
+            key_rollback.supported_rollback_detection_ready(),
+            key_rollback.supported_rollback_detection_scope(),
             key_rollback.rollback_prevention_claimed(),
             key_rollback.rollback_non_claim_decided(),
             key_rollback.external_monotonic_state_required_before_claim(),
             key_rollback.backup_exclusion_policy_decided(),
             key_rollback.backup_exclusion_verified(),
             key_rollback.secure_media_deletion_claimed(),
+            key_rollback.secure_deletion_claim_allowed(),
             key_rollback.production_key_management_ready(),
             key_rollback.security_ready_claimed(),
             key_rollback.policies().join(","),
@@ -423,14 +431,38 @@ mod tests {
             .contains("rollback_non_claim=true"));
         assert!(status
             .local_data_lifecycle_policy
+            .contains("supported_local_deletion_scope_ready=true"));
+        assert!(status.local_data_lifecycle_policy.contains(
+            "supported_local_deletion_scope=local-logical-delete-and-owned-app-data-wipe-only"
+        ));
+        assert!(status
+            .local_data_lifecycle_policy
             .contains("secure_media_deletion_claimed=false"));
+        assert!(status
+            .local_data_lifecycle_policy
+            .contains("secure_deletion_claim_allowed=false"));
         assert!(status.key_rollback_boundary.contains("boundary_closed=true"));
         assert!(status
             .key_rollback_boundary
             .contains("app_key_wrapping_non_claim=true"));
         assert!(status
             .key_rollback_boundary
+            .contains("supported_local_key_lifecycle_ready=true"));
+        assert!(status.key_rollback_boundary.contains(
+            "supported_local_key_lifecycle_scope=passphrase-first-sqlcipher-local-profile-store-only"
+        ));
+        assert!(status
+            .key_rollback_boundary
+            .contains("supported_rollback_detection_ready=true"));
+        assert!(status.key_rollback_boundary.contains(
+            "supported_rollback_detection_scope=marker-only-detection-user-visible-reset-required"
+        ));
+        assert!(status
+            .key_rollback_boundary
             .contains("rollback_non_claim=true"));
+        assert!(status
+            .key_rollback_boundary
+            .contains("secure_deletion_claim_allowed=false"));
         assert!(status
             .key_rollback_boundary
             .contains("production_key_management_ready=false"));

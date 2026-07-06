@@ -1,8 +1,10 @@
 # Production Key And Local Storage Lifecycle Gate
 
-Status: OPS-3 source-side gate closed for review input. This is not production
-key-management readiness, secure media deletion, backup recovery, rollback
-prevention, or a security-ready claim.
+Status: OPS-3 and RB-2 source-side gates closed for review input. The supported
+local key lifecycle, marker-only rollback detection, and local deletion/wipe
+scopes are ready. This is not complete production key-management readiness,
+secure media deletion, backup recovery, rollback prevention, or a security-ready
+claim.
 
 This document records the current passphrase-first local storage lifecycle for
 the desktop-first 1:1 flow. It binds the profile, session, message, deletion,
@@ -22,6 +24,8 @@ default transport phase.
 - Schema migration is forward-only; destructive migration is blocked.
 - Rollback detection is marker-only. Rollback prevention is not claimed.
 - Secure deletion from physical storage media is not claimed.
+- The RB-2 supported scope is recorded in
+  `reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md`.
 
 ## Lifecycle Matrix
 
@@ -41,6 +45,10 @@ SQLCipher-backed store opening path, redacted `ProfilePassphrase` and database
 key debug output, and explicit unlock policy tests. It does not yet document a
 final production KDF parameter policy, app database-key wrapping, key rotation,
 key export, account recovery, or OS keychain/DPAPI/Keystore/Keychain wrapper.
+
+RB-2 records the stable local scope as passphrase-first SQLCipher passphrase
+handling for the local profile store only. No project-owned Argon2/scrypt KDF,
+raw-key wrapping, OS account recovery, or keychain-only unlock is claimed.
 
 Production record kinds that carry profile, pairing, identity private key,
 Noise static private key, replay, message, endpoint, handshake, session draft,
@@ -101,7 +109,14 @@ Targeted tests that anchor this gate:
 ## Current Gate Flags
 
 - production_key_storage_lifecycle_gate_reviewed=true
+- rb_2_key_rollback_deletion_claim_closure_reviewed=true
 - passphrase_first_unlock_required=true
+- supported_local_key_lifecycle_ready=true
+- supported_local_key_lifecycle_scope=passphrase-first-sqlcipher-local-profile-store-only
+- supported_rollback_detection_ready=true
+- supported_rollback_detection_scope=marker-only-detection-user-visible-reset-required
+- supported_local_deletion_scope_ready=true
+- supported_local_deletion_scope=local-logical-delete-and-owned-app-data-wipe-only
 - encrypted_profile_session_message_store_ready=true
 - destructive_local_actions_separated=true
 - exact_confirmation_required=true
@@ -110,7 +125,8 @@ Targeted tests that anchor this gate:
 - backup_recovery_claimed=false
 - rollback_detection_marker_only=true
 - rollback_prevention_claimed=false
+- secure_deletion_claim_allowed=false
 - secure_media_deletion_claimed=false
 - production_key_management_ready=false
 - security_ready_claimed=false
-- next_required_phase=OPS-4 reliable default transport product path
+- next_required_phase=RB-3 default practical transport closure

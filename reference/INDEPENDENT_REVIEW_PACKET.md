@@ -129,6 +129,11 @@ Review the unsigned experimental public beta boundary:
   encrypted local profile/session/message store lifecycle, destructive local
   actions, backup/migration boundaries, marker-only rollback detection, and
   unresolved production key-management review questions.
+- `reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md`: RB-2 supported local
+  key lifecycle, marker-only rollback detection, and local deletion/wipe scope,
+  while complete production key management, app key wrapping, rollback
+  prevention, secure media deletion, backup recovery, security-ready, and
+  sensitive-use claims remain false.
 - `reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md`: local manual encrypted
   envelope default path, separate explicit fail-closed onion/Tor advanced path,
   no-central-server boundaries, evidence order, and unresolved reliable
