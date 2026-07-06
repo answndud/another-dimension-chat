@@ -255,6 +255,14 @@ manual emergency release/update handling, dependency vulnerability triage, and
 template review while keeping production operational readiness and
 security-ready claims false.
 
+The stable macOS v1.0 release gate is tracked in
+[reference/STABLE_MACOS_V1_RELEASE_GATE.md](reference/STABLE_MACOS_V1_RELEASE_GATE.md),
+with the public-safe hold report in
+[reference/STABLE_RELEASE_HOLD_REPORT.md](reference/STABLE_RELEASE_HOLD_REPORT.md).
+The current decision is hold: no stable release, beta wording removal, release
+upload, DMG rebuild, production-ready claim, audited claim, reliable external
+delivery claim, or sensitive-use permission is authorized.
+
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
 only. Allowed public fields are app version, build channel, build commit,
