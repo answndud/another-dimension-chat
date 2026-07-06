@@ -69,6 +69,7 @@ test("main chat surface keeps invite, message, receive, and retry entry points",
     "copy-room-invite-token",
     "production-two-profile-message",
     "chat-delivery-notice",
+    "manual-flow-guide-title",
   ]) {
     assert.match(indexHtml, new RegExp(`id="${id}"`));
   }
@@ -127,6 +128,7 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(i18nJs, /nothing starts on app launch/);
   assert.match(i18nJs, /앱 실행 시 자동 시작되지 않습니다/);
   assert.match(i18nJs, /Receive attempts start after this explicit action; external delivery is not claimed\./);
+  assert.doesNotMatch(indexHtml, /New messages arrive after you turn this on\./);
   assert.match(i18nJs, /Local send attempt recorded\./);
   assert.match(i18nJs, /External receipt remains unconfirmed\./);
   assert.doesNotMatch(i18nJs, /New messages arrive after you turn this on\./);
@@ -2105,6 +2107,22 @@ test("private delivery stays explicit before network work starts", () => {
   assert.match(messageBody, /default_transport_network_io=false high_risk_onion_path=explicit-user-triggered-fail-closed external_delivery_claim=false/);
   assert.doesNotMatch(messageBody, /production_onion_outbound_envelope_send_attempt|production_two_profile_real_onion_roundtrip/);
   assert.match(functionBody(mainJs, "ensurePrivateDeliveryRuntimeReady"), /production_onion_persistent_client_start/);
+});
+
+test("manual encrypted envelope guide keeps local default flow visible", () => {
+  assert.match(indexHtml, /class="manual-flow-guide"/);
+  assert.match(indexHtml, /data-i18n="manualFlowGuideHint"/);
+  assert.match(indexHtml, /data-i18n="manualFlowGuideStepInvite"/);
+  assert.match(indexHtml, /data-i18n="manualFlowGuideStepExport"/);
+  assert.match(indexHtml, /data-i18n="manualFlowGuideStepImport"/);
+  assert.match(indexHtml, /data-i18n="manualFlowGuideStepRecovery"/);
+  assert.match(indexHtml, /data-i18n="manualFlowGuideBoundary"/);
+  assert.match(i18nJs, /Default path is local\/manual encrypted envelope exchange/);
+  assert.match(i18nJs, /export, carry through your existing channel, import, then reply/);
+  assert.match(i18nJs, /retry or cancel pending sends/);
+  assert.match(i18nJs, /delete only local conversation records/);
+  assert.match(i18nJs, /Manual local\/default path: no network I\/O, no automatic delivery, and no external delivery claim\./);
+  assert.match(stylesCss, /\.manual-flow-guide/);
 });
 
 test("safety mismatch revokes the saved room verification", () => {
