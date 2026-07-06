@@ -103,4 +103,8 @@ not production readiness by themselves.
 - macos_two_machine_real_user_flow_repeated=false
 - repeated_redacted_field_reports_available=false
 - production_field_evidence_ready=false
-- next_required_phase=OPS-9 operational support, incident, and vulnerability process
+- ops_9_operational_support_incident_process_reviewed=true
+- incident_response_tabletop_completed=true
+- support_template_review_completed=true
+- production_operational_readiness_claim_allowed=false
+- next_required_phase=OPS-10 stable macOS v1.0 release gate

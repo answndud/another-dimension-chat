@@ -152,6 +152,11 @@ Review the unsigned experimental public beta boundary:
   for redacted support reports and private security-contact routing.
 - `reference/TRANSPORT_EXPERIMENT_RUNBOOK.md`: public-safe manual network
   experiment boundary and coarse transport status vocabulary.
+- `reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md`: public support,
+  private vulnerability, incident response, key-compromise, emergency
+  release/update, and dependency vulnerability process boundary.
+- `reference/INCIDENT_TABLETOP_RECORD.md`: public-safe tabletop record and
+  support template review for OPS-9 operational readiness input.
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and
   no-reviewer-signoff/no-public-user-safety-signoff flags.
