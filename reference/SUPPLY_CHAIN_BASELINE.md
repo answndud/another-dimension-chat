@@ -31,6 +31,12 @@ inside the public provenance JSON. That links the public upload name to the
 local build provenance without claiming reproducible builds or artifact
 authenticity beyond the GitHub Release that the user chooses to trust.
 
+Branch files can change after a release. For public verification, the release
+authority is the same GitHub Release upload set: DMG, `.sha256`, provenance,
+manifest, `DEPENDENCY_INVENTORY.md`, and `DEPENDENCY_LOCKFILES.sha256`.
+Do not mix a DMG from one release with lockfile evidence copied from a branch,
+source archive, another release, or chat message.
+
 ## Current Package Managers
 
 - Rust workspace: Cargo lockfile at repository root.
