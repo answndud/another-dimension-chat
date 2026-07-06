@@ -1,0 +1,116 @@
+# Production Key And Local Storage Lifecycle Gate
+
+Status: OPS-3 source-side gate closed for review input. This is not production
+key-management readiness, secure media deletion, backup recovery, rollback
+prevention, or a security-ready claim.
+
+This document records the current passphrase-first local storage lifecycle for
+the desktop-first 1:1 flow. It binds the profile, session, message, deletion,
+backup, migration, and rollback semantics to one public-safe gate before the
+default transport phase.
+
+## Current Decision
+
+- Passphrase-first unlock is required for local high-risk profile access.
+- OS-keystore-only unlock is rejected. Optional OS wrapping may be evaluated
+  later, but it is not a required trust dependency.
+- Local profile/session/message records use the SQLCipher-backed `ADREC1`
+  storage spike and production record policy checks.
+- Conversation delete, session lifecycle delete, profile delete, and full local
+  wipe are separate local actions with separate recovery boundaries.
+- Backup exclusion is a required best-effort policy, not a completed guarantee.
+- Schema migration is forward-only; destructive migration is blocked.
+- Rollback detection is marker-only. Rollback prevention is not claimed.
+- Secure deletion from physical storage media is not claimed.
+
+## Lifecycle Matrix
+
+| Scope | Current behavior | Preserves | Removes | Claim boundary |
+| --- | --- | --- | --- | --- |
+| Profile unlock | Opens the local encrypted profile store after explicit profile name and passphrase input. | Local profile store, session records, message records. | Nothing. | Does not return paths, passphrases, key material, raw storage errors, or identifiers. |
+| Explicit lock | Clears the desktop unlocked status and requires passphrase input again. | Local encrypted store on disk. | In-memory unlocked status. | Does not claim memory zeroization or device-compromise resistance. |
+| Conversation delete | Deletes local sent/received message records, envelope records, indexes, and counters for the active conversation. | Session lifecycle records. | Local conversation message records. | Logical delete only; no backup recovery, rollback prevention, or secure media deletion. |
+| Session lifecycle delete | Deletes pairing/session resume records for the active session. | Message records. | Session draft, endpoint state, replay window, and session transport readiness. | Requires manual rebuild before messaging resumes. |
+| Profile delete | Requires typing the exact local profile name. | Other local profiles and app-owned data. | The selected local profile store. | Local-only delete; no cloud backup cleanup or secure media deletion claim. |
+| Full local wipe | Requires typing `WIPE LOCAL DATA`. | Nothing in app-owned local data roots. | App-owned profile, transport, lifecycle-marker, and cache data. | Local app-data wipe only; no device-wide or synced-data claim. |
+
+## Key And Storage Semantics
+
+Profile unlock is passphrase-first. The current public boundary relies on the
+SQLCipher-backed store opening path, redacted `ProfilePassphrase` and database
+key debug output, and explicit unlock policy tests. It does not yet document a
+final production KDF parameter policy, app database-key wrapping, key rotation,
+key export, account recovery, or OS keychain/DPAPI/Keystore/Keychain wrapper.
+
+Production record kinds that carry profile, pairing, identity private key,
+Noise static private key, replay, message, endpoint, handshake, session draft,
+or session transport state are encrypted-at-rest records. `SchemaMarker` is the
+only plaintext-allowed production storage class today.
+
+## Backup, Migration, And Rollback
+
+Backup/sync is not a product feature. The app can prepare and report
+backup-exclusion boundaries, but platform verification and recovery semantics
+remain explicit follow-up work. Users must not be told that cloud backup,
+backup recovery, rollback prevention, or secure deletion is available.
+
+Rollback detection uses local markers and profile snapshots. It can block
+runtime resume when local state looks inconsistent, but it does not prevent a
+restored encrypted database snapshot from existing. Any rollback-prevention
+claim requires an external monotonic-state design and external review.
+
+## Evidence Anchors
+
+- Storage policy and SQLCipher spike:
+  `crates/storage/src/lib.rs`
+- Core lifecycle and key/rollback summaries:
+  `crates/core/src/lib.rs`
+- Desktop Tauri lifecycle commands and redacted results:
+  `apps/desktop-tauri/src-tauri/src/lib.rs`
+- Desktop UI destructive-action copy and state cleanup:
+  `apps/desktop-tauri/src/main.js`
+- Storage decision history:
+  `reference/STORAGE_DECISION.md`
+
+Targeted tests that anchor this gate:
+
+- `unlock_policy_requires_passphrase_for_all_modes`
+- `sqlcipher_store_rejects_wrong_passphrase_before_returning_records`
+- `storage_backend_integration_summary_keeps_non_ready_boundaries_explicit`
+- `production_message_storage_summary_allows_encrypted_session_transport`
+- `production_local_data_lifecycle_policy_is_passphrase_first_with_non_claims`
+- `production_local_storage_lifecycle_product_matrix_closes_without_backup_or_rollback_claims`
+- `production_key_rollback_boundary_closes_policy_without_claiming_wrapping_or_rollback`
+- `production_profile_unlock_uses_app_data_store_without_returning_secrets`
+- `production_session_lifecycle_status_and_delete_are_redacted`
+- `production_data_lifecycle_delete_migration_and_wipe_are_redacted`
+
+## External Review Questions
+
+- Are the final passphrase KDF parameters, memory cost, and migration policy
+  adequate for this risk model?
+- Should optional platform key wrapping be added, and how can it remain optional
+  instead of becoming OS-account trust?
+- What monotonic-state design is acceptable before rollback prevention can be
+  claimed?
+- What exact backup-exclusion checks are required per platform before public
+  wording can move beyond best-effort?
+- What destructive-action wording is sufficient to avoid implying secure media
+  deletion or cloud-backup cleanup?
+
+## Current Gate Flags
+
+- production_key_storage_lifecycle_gate_reviewed=true
+- passphrase_first_unlock_required=true
+- encrypted_profile_session_message_store_ready=true
+- destructive_local_actions_separated=true
+- exact_confirmation_required=true
+- backup_exclusion_best_effort_only=true
+- cloud_backup_sync_enabled=false
+- backup_recovery_claimed=false
+- rollback_detection_marker_only=true
+- rollback_prevention_claimed=false
+- secure_media_deletion_claimed=false
+- production_key_management_ready=false
+- security_ready_claimed=false
+- next_required_phase=OPS-4 reliable default transport product path
