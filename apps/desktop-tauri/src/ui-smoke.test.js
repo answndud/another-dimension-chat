@@ -70,6 +70,7 @@ test("main chat surface keeps invite, message, receive, and retry entry points",
     "production-two-profile-message",
     "chat-delivery-notice",
     "manual-flow-guide-title",
+    "public-recovery-guide-title",
   ]) {
     assert.match(indexHtml, new RegExp(`id="${id}"`));
   }
@@ -2123,6 +2124,21 @@ test("manual encrypted envelope guide keeps local default flow visible", () => {
   assert.match(i18nJs, /delete only local conversation records/);
   assert.match(i18nJs, /Manual local\/default path: no network I\/O, no automatic delivery, and no external delivery claim\./);
   assert.match(stylesCss, /\.manual-flow-guide/);
+});
+
+test("public diagnostics recovery guide keeps support-safe next actions visible", () => {
+  assert.match(indexHtml, /class="public-recovery-guide"/);
+  assert.match(indexHtml, /data-i18n="publicRecoveryInstall"/);
+  assert.match(indexHtml, /data-i18n="publicRecoveryProfileLocked"/);
+  assert.match(indexHtml, /data-i18n="publicRecoveryPayloadReplay"/);
+  assert.match(indexHtml, /data-i18n="publicRecoveryTransportPolicy"/);
+  assert.match(indexHtml, /data-i18n="publicRecoveryLifecycle"/);
+  assert.match(i18nJs, /Install\/checksum failure: stop, verify the same-release \.sha256/);
+  assert.match(i18nJs, /Profile locked: retry the passphrase or create a new local profile/);
+  assert.match(i18nJs, /Malformed payload or replay rejected: ask for a fresh envelope/);
+  assert.match(i18nJs, /Transport unavailable or policy blocked: stay on manual envelope exchange/);
+  assert.match(i18nJs, /Lifecycle confirmation required: confirm the local-only delete or wipe scope/);
+  assert.match(stylesCss, /\.public-recovery-guide/);
 });
 
 test("safety mismatch revokes the saved room verification", () => {

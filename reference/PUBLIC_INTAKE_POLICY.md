@@ -90,6 +90,26 @@ permission state, invite codes, endpoints, payloads, safety material, profile
 names, message text, paths, logs, passphrases, private keys, key material, files
 from `docs/`, or local app data.
 
+## Public Recovery Vocabulary
+
+Public reports should use broad failure classes and the next recovery action,
+not raw errors or local paths:
+
+- `checksum-install-failure`: stop, verify the same-release `.sha256`, then
+  follow `README.md` or `INSTALL_UNSIGNED_MACOS.md`.
+- `profile-locked`: retry the passphrase or create a new local profile; no
+  cloud, backup, or OS-keychain-only recovery is available.
+- `malformed-payload`: ask the peer to export a fresh envelope and import only
+  into the active pending row.
+- `replay-rejected`: do not force the message through; import a fresh envelope
+  or review the active message number.
+- `transport-unavailable`: stay on manual envelope exchange or retry only after
+  explicit user delivery action.
+- `policy-blocked`: enable the relevant local permission or keep using manual
+  envelope exchange.
+- `lifecycle-confirmation-required`: confirm the local-only delete/wipe scope
+  before continuing.
+
 ## Non-Claims
 
 This intake policy does not claim:
