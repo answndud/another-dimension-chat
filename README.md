@@ -238,6 +238,14 @@ These files define reviewer scope and fix/hold/waive triage while keeping
 external review, audit completion, reviewer signoff, and security-ready claims
 false.
 
+Field evidence and reliability readiness is tracked in
+[reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md](reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md),
+with the redacted report template in
+[reference/REDACTED_FIELD_REPORT_PACKET.md](reference/REDACTED_FIELD_REPORT_PACKET.md).
+These files define the evidence ladder, report data boundary, and reliability
+decision rule while keeping real macOS two-machine repeated evidence, reliable
+external delivery, production field evidence, and sensitive-use claims false.
+
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
 only. Allowed public fields are app version, build channel, build commit,
