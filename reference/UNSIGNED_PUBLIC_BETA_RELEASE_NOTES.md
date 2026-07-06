@@ -12,6 +12,18 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Build commit: `e8954df9`
 - Platform: macOS aarch64
 
+## User Path
+
+1. Download the DMG and matching `.sha256` from the same GitHub Release.
+2. Verify the checksum before opening the DMG.
+3. If macOS blocks the unsigned app, use the normal Privacy & Security manual
+   allow path only after the checksum matches.
+4. In the app, test local profile unlock, invite room setup, manual encrypted
+   envelope export/import, reply/retry/cancel, local deletion, and redacted
+   diagnostics copy.
+5. Report only redacted diagnostics, broad failure class, checksum result, and
+   recovery next action in public.
+
 ## What This Beta Is For
 
 - Local desktop beta testing.
@@ -73,6 +85,17 @@ It is not notarized, not audited, not production-ready, and sensitive communicat
 - Safe public issue posting of endpoints, payloads, messages, local paths,
   passphrases, private keys, key material, crash dumps, screenshots of private
   room data, or private planning notes.
+
+## Known User Limits
+
+- macOS Apple Silicon is the only public app artifact in this release.
+- Windows, Android, and iOS do not have public release artifacts here.
+- Gatekeeper can block this unsigned/not notarized app until the user manually
+  allows it after checksum verification.
+- Manual encrypted envelope exchange is the practical default path for this
+  beta; external onion delivery success is not claimed.
+- Public support cannot use raw logs, endpoints, invite codes, payloads, message
+  text, local paths, passphrases, private keys, or key material.
 
 ## Install
 
