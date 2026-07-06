@@ -230,6 +230,14 @@ It records the current unsigned beta distribution state, signing/notarization
 holds, same-release checksum/provenance authority, update-channel blockers, and
 why stable signed distribution readiness remains false.
 
+External review and audit readiness is tracked in
+[reference/EXTERNAL_REVIEW_AUDIT_READINESS.md](reference/EXTERNAL_REVIEW_AUDIT_READINESS.md),
+with the public-safe finding tracker in
+[reference/AUDIT_FINDING_TRACKER.md](reference/AUDIT_FINDING_TRACKER.md).
+These files define reviewer scope and fix/hold/waive triage while keeping
+external review, audit completion, reviewer signoff, and security-ready claims
+false.
+
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
 only. Allowed public fields are app version, build channel, build commit,
