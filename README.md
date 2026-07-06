@@ -246,6 +246,15 @@ These files define the evidence ladder, report data boundary, and reliability
 decision rule while keeping real macOS two-machine repeated evidence, reliable
 external delivery, production field evidence, and sensitive-use claims false.
 
+Operational support, incident, and vulnerability process readiness is tracked in
+[reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md](reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md),
+with the tabletop record in
+[reference/INCIDENT_TABLETOP_RECORD.md](reference/INCIDENT_TABLETOP_RECORD.md).
+These files define public/private intake separation, key-compromise guidance,
+manual emergency release/update handling, dependency vulnerability triage, and
+template review while keeping production operational readiness and
+security-ready claims false.
+
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
 only. Allowed public fields are app version, build channel, build commit,
