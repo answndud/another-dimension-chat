@@ -126,8 +126,8 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "scope=so
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "dmg_required=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "network_or_onion_work=false"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "generated_artifacts_created=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze=desktop-public-beta-source-candidate"
@@ -366,7 +366,7 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
     echo "FAIL release readiness preflight missing hardening fallback" >&2
     exit 1
   }
-  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance" || {
+  printf '%s\n' "$preflight_output" | grep -Fq -- "checks_run=artifact-boundary,update-integrity-policy,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance" || {
     echo "FAIL release readiness preflight missing check list" >&2
     exit 1
   }
