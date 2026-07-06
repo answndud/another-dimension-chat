@@ -524,6 +524,7 @@ Do not publish `docs/`, app data, bridge lines, onion endpoints, invite codes, p
 For desktop-specific commands and beta notes, see [apps/desktop-tauri/README.md](apps/desktop-tauri/README.md).
 For the public-safe beta handoff checklist, see [reference/BETA_RELEASE_CHECKLIST.md](reference/BETA_RELEASE_CHECKLIST.md).
 For public-safe screenshot rules, see [reference/PUBLIC_SCREENSHOT_CHECKLIST.md](reference/PUBLIC_SCREENSHOT_CHECKLIST.md).
+For dependency evidence boundaries, see [reference/DEPENDENCY_INVENTORY.md](reference/DEPENDENCY_INVENTORY.md) and [reference/SUPPLY_CHAIN_BASELINE.md](reference/SUPPLY_CHAIN_BASELINE.md).
 For public review scope, see [reference/PUBLIC_THREAT_MODEL.md](reference/PUBLIC_THREAT_MODEL.md), [reference/INDEPENDENT_REVIEW_PACKET.md](reference/INDEPENDENT_REVIEW_PACKET.md), [reference/PUBLIC_INTAKE_POLICY.md](reference/PUBLIC_INTAKE_POLICY.md), and [reference/REPOSITORY_GOVERNANCE.md](reference/REPOSITORY_GOVERNANCE.md).
 
 ## CLI Prototype
