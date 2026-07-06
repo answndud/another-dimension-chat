@@ -121,6 +121,10 @@ Review the unsigned experimental public beta boundary:
   encrypted local profile/session/message store lifecycle, destructive local
   actions, backup/migration boundaries, marker-only rollback detection, and
   unresolved production key-management review questions.
+- `reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md`: local manual encrypted
+  envelope default path, separate explicit fail-closed onion/Tor advanced path,
+  no-central-server boundaries, evidence order, and unresolved reliable
+  external delivery review questions.
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and
   no-reviewer-signoff/no-public-user-safety-signoff flags.
