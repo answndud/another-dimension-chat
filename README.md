@@ -37,8 +37,10 @@ communication prohibited. Do not use it for real communication.
    failure class, and recovery next action. Do not post invite codes, payloads,
    endpoints, message text, local paths, raw logs, passphrases, private keys, or
    key material.
-7. Screenshots: use the public-safe screenshot checklist before publishing app
-   images, and do not post screenshots that show private room data. See
+7. Screenshots: reviewed public-safe screenshots are in
+   [reference/screenshots/README.md](reference/screenshots/README.md). Use the
+   public-safe screenshot checklist before publishing any other app images, and
+   do not post screenshots that show private room data. See
    [reference/PUBLIC_SCREENSHOT_CHECKLIST.md](reference/PUBLIC_SCREENSHOT_CHECKLIST.md).
 8. Maintainer rehearsal: before directing public testers, use
    [reference/MACOS_FRESH_INSTALL_REHEARSAL.md](reference/MACOS_FRESH_INSTALL_REHEARSAL.md)
@@ -66,6 +68,14 @@ delete requires the exact local profile name and removes that local profile
 store. Full local wipe requires typing `WIPE LOCAL DATA` and removes app-owned
 local data on this device. These controls do not provide cloud backup recovery,
 cloud sync, rollback prevention, or secure deletion from storage media.
+
+### Public Screenshots
+
+The committed public screenshot set is source-side visual evidence for the
+unsigned experimental public beta. It is not attached to the GitHub Release and
+does not change the release asset authority. See
+[reference/screenshots/README.md](reference/screenshots/README.md) for the
+reviewed image list, capture mode, and private-data boundary.
 
 ## Current Status
 
