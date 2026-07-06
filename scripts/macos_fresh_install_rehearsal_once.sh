@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CHECKLIST="$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL.md"
+RESULT="$ROOT_DIR/reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md"
 INSTALL_GUIDE="$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md"
 README="$ROOT_DIR/README.md"
 RELEASE_DIR="$ROOT_DIR/apps/desktop-tauri/public-release/unsigned-public-beta"
@@ -35,10 +36,11 @@ reject_text() {
 }
 
 require_file "$CHECKLIST"
+require_file "$RESULT"
 require_file "$INSTALL_GUIDE"
 require_file "$README"
 
-for file in "$CHECKLIST" "$INSTALL_GUIDE" "$README"; do
+for file in "$CHECKLIST" "$RESULT" "$INSTALL_GUIDE" "$README"; do
   require_text "$file" "unsigned experimental public beta"
   require_text "$file" "sensitive communication prohibited"
   require_text "$file" "not audited"
@@ -75,7 +77,31 @@ for text in \
 done
 
 require_text "$README" "reference/MACOS_FRESH_INSTALL_REHEARSAL.md"
+require_text "$README" "reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md"
+require_text "$CHECKLIST" "reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md"
 require_text "$INSTALL_GUIDE" "Do not use terminal quarantine-removal commands as an install step"
+
+require_text "$RESULT" "Status: hold for manual GUI follow-through; source install authority passed."
+require_text "$RESULT" "checksum result: OK"
+require_text "$RESULT" "macos-gui-human-rehearsal-not-run"
+require_text "$RESULT" "public beta non-claims confirmed: yes"
+require_text "$RESULT" "Fresh Download: pass"
+require_text "$RESULT" "Checksum: pass"
+require_text "$RESULT" "Mount The DMG: pass"
+require_text "$RESULT" "Copy The App: pass"
+require_text "$RESULT" "First Launch And Gatekeeper: hold"
+require_text "$RESULT" "manual Privacy & Security allow was not exercised"
+require_text "$RESULT" "First-Run Warning: hold"
+require_text "$RESULT" "Profile Unlock Or Create: hold"
+require_text "$RESULT" "Invite Room And Verify: hold"
+require_text "$RESULT" "Manual Encrypted Envelope Export/Import: hold"
+require_text "$RESULT" "Reply, Retry, And Cancel: hold"
+require_text "$RESULT" "Local Deletion: hold"
+require_text "$RESULT" "Redacted Diagnostics Copy: hold"
+require_text "$RESULT" "No release upload"
+require_text "$RESULT" "DMG rebuild"
+require_text "$RESULT" "production-ready"
+require_text "$RESULT" "external onion delivery claim"
 
 if [ -f "$RELEASE_DIR/$DMG" ] && [ -f "$RELEASE_DIR/$SHA_FILE" ]; then
   (

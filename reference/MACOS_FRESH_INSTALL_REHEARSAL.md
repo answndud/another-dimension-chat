@@ -11,6 +11,9 @@ data in the result.
 
 ## Result Header
 
+Current public-safe result record:
+`reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md`.
+
 Record only:
 
 - release tag
