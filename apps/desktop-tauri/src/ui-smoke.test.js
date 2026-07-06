@@ -140,6 +140,31 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(stylesCss, /\.public-beta-gate/);
 });
 
+test("screenshot-safe browser preview blanks public screenshot fields", () => {
+  const enabledBody = functionBody(mainJs, "screenshotSafePreviewModeEnabled");
+  assert.match(enabledBody, /screenshot-safe/);
+  assert.match(enabledBody, /localhost/);
+  assert.match(enabledBody, /127\.0\.0\.1/);
+  assert.match(enabledBody, /::1/);
+
+  const applyBody = functionBody(mainJs, "applyScreenshotSafePreviewMode");
+  assert.match(applyBody, /is-screenshot-safe-preview/);
+  assert.match(applyBody, /fields\.productionProfileName/);
+  assert.match(applyBody, /fields\.productionProfilePassphrase/);
+  assert.match(applyBody, /fields\.productionPairingEndpoint/);
+  assert.match(applyBody, /fields\.productionMessageBody/);
+  assert.match(applyBody, /fields\.productionTwoProfileMessage/);
+  assert.match(applyBody, /fields\.createdInviteCodeDisplay/);
+  assert.match(applyBody, /fields\.receivedInviteCode/);
+  assert.match(applyBody, /fields\.roomListInviteCode/);
+  assert.match(applyBody, /fields\.localPrivateRouteCode/);
+  assert.match(applyBody, /fields\.peerPrivateRouteCode/);
+  assert.match(applyBody, /fields\.fieldTestReport/);
+  assert.match(applyBody, /fields\.publicBetaDiagnostics/);
+  assert.match(applyBody, /private_fields_blank=true/);
+  assert.match(mainJs, /window\.setTimeout\(applyScreenshotSafePreviewMode, 50\)/);
+});
+
 test("message composer does not use instructional placeholder text", () => {
   const idIndex = indexHtml.indexOf('id="production-two-profile-message"');
   assert.notEqual(idIndex, -1, "missing production message composer");

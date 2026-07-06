@@ -35,6 +35,9 @@ communication prohibited. Do not use it for real communication.
    failure class, and recovery next action. Do not post invite codes, payloads,
    endpoints, message text, local paths, raw logs, passphrases, private keys, or
    key material.
+7. Screenshots: use the public-safe screenshot checklist before publishing app
+   images, and do not post screenshots that show private room data. See
+   [reference/PUBLIC_SCREENSHOT_CHECKLIST.md](reference/PUBLIC_SCREENSHOT_CHECKLIST.md).
 
 Release authority: use the files attached to the GitHub Release, not branch
 files or source archives. The `main` branch may contain later documentation or
@@ -514,6 +517,7 @@ Do not publish `docs/`, app data, bridge lines, onion endpoints, invite codes, p
 
 For desktop-specific commands and beta notes, see [apps/desktop-tauri/README.md](apps/desktop-tauri/README.md).
 For the public-safe beta handoff checklist, see [reference/BETA_RELEASE_CHECKLIST.md](reference/BETA_RELEASE_CHECKLIST.md).
+For public-safe screenshot rules, see [reference/PUBLIC_SCREENSHOT_CHECKLIST.md](reference/PUBLIC_SCREENSHOT_CHECKLIST.md).
 For public review scope, see [reference/PUBLIC_THREAT_MODEL.md](reference/PUBLIC_THREAT_MODEL.md), [reference/INDEPENDENT_REVIEW_PACKET.md](reference/INDEPENDENT_REVIEW_PACKET.md), [reference/PUBLIC_INTAKE_POLICY.md](reference/PUBLIC_INTAKE_POLICY.md), and [reference/REPOSITORY_GOVERNANCE.md](reference/REPOSITORY_GOVERNANCE.md).
 
 ## CLI Prototype
