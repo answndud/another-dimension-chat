@@ -129,6 +129,10 @@ Review the unsigned experimental public beta boundary:
   invite/verify/message flow, manual envelope guide, recovery guide, redacted
   diagnostics, destructive local lifecycle confirmations, advanced transport UX
   boundary, and remaining production wording blockers.
+- `reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md`: current unsigned beta
+  distribution state, signing/notarization holds, same-release
+  checksum/provenance authority, update-channel blockers, and remaining stable
+  signed distribution blockers.
 - Generated release provenance: records the public threat model, independent
   review packet, incomplete-review flag, published-review-gap flag, and
   no-reviewer-signoff/no-public-user-safety-signoff flags.

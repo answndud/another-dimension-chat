@@ -15,6 +15,11 @@ Current boundary:
   checklist, invite/verify/message flow, manual envelope guide, recovery guide,
   redacted diagnostics, local lifecycle confirmations, and advanced transport
   UX boundary while keeping beta/non-claim copy in place.
+- macOS production distribution gate status is tracked in
+  `../../reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md`. It records that the
+  current artifact is still unsigned beta, Developer ID signing/notarization and
+  stable update channels are unavailable, and release upload/DMG rebuild remain
+  explicit held actions.
 - Rust owns security-sensitive state and future protocol/storage/transport behavior.
 - Shared Rust core owns profile identity, pairing payload and safety
   transcript logic, message orchestration, protocol envelopes and replay,

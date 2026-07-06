@@ -2,6 +2,12 @@
 
 This document defines the unsigned public beta update boundary.
 
+The macOS production distribution gate for the stable-release track is tracked
+in [MACOS_PRODUCTION_DISTRIBUTION_GATE.md](MACOS_PRODUCTION_DISTRIBUTION_GATE.md).
+It records signing/notarization, same-release asset authority, update-channel,
+release upload, and DMG rebuild holds before any non-beta macOS distribution
+claim can be made.
+
 Another Dimension Chat does not provide auto-update, signed update channels,
 notarized releases, transparency logs, reproducible builds, or audited release
 promotion for this beta.

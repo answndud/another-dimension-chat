@@ -224,6 +224,12 @@ guide, recovery guide, redacted diagnostics, destructive local lifecycle
 confirmations, advanced transport UX boundary, and why production wording stays
 blocked.
 
+macOS production distribution gate status is tracked in
+[reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md](reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md).
+It records the current unsigned beta distribution state, signing/notarization
+holds, same-release checksum/provenance authority, update-channel blockers, and
+why stable signed distribution readiness remains false.
+
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
 only. Allowed public fields are app version, build channel, build commit,
