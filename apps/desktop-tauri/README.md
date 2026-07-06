@@ -78,6 +78,26 @@ redacted diagnostics, explicit user action review, no-auto-update parity, and
 local-manual envelope default path as parity gaps before any Windows public
 artifact work.
 
+Windows local runtime smoke handoff is source-only and tracked in
+`windows_local_runtime_smoke_handoff.json`. It is a checklist for a future real
+Windows machine run of `npm --prefix apps/desktop-tauri run test:windows-boundary`,
+not a Windows local runtime smoke passed claim.
+
+The handoff checklist covers:
+
+- WebView2 runtime smoke
+- Tauri app-data path review
+- path separator review
+- local deletion behavior review
+- redacted diagnostics behavior review
+- explicit user action before network review
+- local-manual envelope default path review
+- no auto-update channel review
+- public non-claim copy review
+
+It keeps no public Windows artifact, no Windows installer, no public artifact
+upload, not production-ready, and sensitive communication prohibited.
+
 Build the beta with the manual onion networking attempt feature compiled in:
 
 ```bash

@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "status": "source-boundary-windows-local-runtime-smoke-handoff",
+  "windows_local_runtime_smoke_handoff_verified": true,
+  "current_state": "source-boundary-only",
+  "windows_local_runtime_smoke_passed": false,
+  "windows_public_artifact_ready": false,
+  "windows_installer_ready": false,
+  "windows_public_artifact_upload_allowed": false,
+  "release_packaging_allowed": false,
+  "source_command": "npm --prefix apps/desktop-tauri run test:windows-boundary",
+  "must_run_on": "real-windows-machine",
+  "handoff_checklist": [
+    "webview2_runtime_smoke",
+    "tauri_app_data_path_review",
+    "path_separator_review",
+    "encrypted_store_profile_unlock_review",
+    "local_deletion_behavior_review",
+    "redacted_diagnostics_behavior_review",
+    "explicit_user_action_before_network_review",
+    "local_manual_envelope_default_path_review",
+    "no_auto_update_channel_review",
+    "public_non_claim_copy_review"
+  ],
+  "required_observation_fields": [
+    "platform",
+    "webview2_rendered",
+    "app_data_root_redacted",
+    "path_separator_behavior",
+    "local_deletion_behavior",
+    "redacted_diagnostics_only",
+    "explicit_user_action_before_network",
+    "local_manual_envelope_default_path",
+    "auto_update_channel_absent",
+    "public_non_claims_visible"
+  ],
+  "forbidden_observation_fields": [
+    "raw_local_paths",
+    "profile_names",
+    "message_text",
+    "invite_codes",
+    "pairing_payloads",
+    "envelope_payloads",
+    "onion_endpoints",
+    "bridge_lines",
+    "passphrases",
+    "private_keys",
+    "key_material",
+    "raw_logs",
+    "crash_dumps"
+  ],
+  "public_non_claims": [
+    "unsigned experimental public beta",
+    "sensitive communication prohibited",
+    "not audited",
+    "not production-ready",
+    "no public Windows artifact",
+    "no Windows installer",
+    "no public artifact upload",
+    "Windows local build candidate only"
+  ],
+  "source_evidence": [
+    "apps/desktop-tauri/windows_desktop_parity_intake.json",
+    "scripts/desktop_windows_parity_intake_once.sh",
+    "scripts/desktop_windows_local_runtime_smoke_boundary_once.sh",
+    "apps/desktop-tauri/scripts/verify-windows-local-runtime-boundary.mjs",
+    "apps/desktop-tauri/package.json:test:windows-boundary"
+  ]
+}
