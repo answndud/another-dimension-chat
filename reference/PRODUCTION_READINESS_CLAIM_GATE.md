@@ -87,4 +87,7 @@ not production readiness by themselves.
 - ops_3_key_storage_lifecycle_gate_reviewed=true
 - ops_4_default_transport_product_path_reviewed=true
 - production_transport_ready=false
-- next_required_phase=OPS-5 macOS production UX and onboarding
+- ops_5_macos_production_ux_onboarding_gate_reviewed=true
+- production_wording_ready=false
+- usability_study_completed=false
+- next_required_phase=OPS-6 macOS production distribution
