@@ -194,6 +194,11 @@ production-ready, not audited, and sensitive communication prohibited. The next
 development axis is the production-readiness track, starting with the
 production readiness definition and claim gate.
 
+Production readiness claim gate: beta and non-claim wording may not be removed
+until [reference/PRODUCTION_READINESS_CLAIM_GATE.md](reference/PRODUCTION_READINESS_CLAIM_GATE.md)
+is satisfied by the later stable release phases. Signing and notarization are
+macOS distribution ergonomics, not a messenger security trust boundary.
+
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
 only. Allowed public fields are app version, build channel, build commit,
