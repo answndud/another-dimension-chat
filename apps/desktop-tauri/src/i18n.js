@@ -930,6 +930,25 @@ const dictionaries = {
     deleteProfile: "Delete profile",
     fullWipeConfirm: "Type WIPE LOCAL DATA to wipe local app data",
     wipeLocalData: "Wipe local data",
+    localDataLifecycleGuideTitle: "Local data lifecycle scope",
+    localDataLifecycleGuideConversation:
+      "Conversation delete removes local message records and preserves session records.",
+    localDataLifecycleGuideSession:
+      "Session delete removes local session resume records and preserves message records.",
+    localDataLifecycleGuideProfile:
+      "Profile delete removes the local profile store after exact-name confirmation.",
+    localDataLifecycleGuideWipe:
+      "Full local wipe removes owned app data on this device after WIPE LOCAL DATA confirmation.",
+    localDataLifecycleGuideBoundary:
+      "No cloud backup recovery, rollback prevention, or secure deletion from storage media is claimed.",
+    conversationDeleteScopeNote:
+      "Deletes local conversation message records only; session resume records are preserved.",
+    sessionDeleteScopeNote:
+      "Deletes local session resume records only; conversation message records are preserved.",
+    profileDeleteScopeNote:
+      "Deletes the local profile store and clears affected room runtime only; no cloud backup recovery is performed.",
+    fullWipeScopeNote:
+      "Deletes owned local app data on this device only; secure deletion from storage media and rollback prevention are not claimed.",
     dataLifecycleStatusNext: "Next: continue only after the local lifecycle status matches the room action you want.",
     dataLifecyclePreparedNext:
       "Next: retry unlock or room resume locally; this does not claim rollback prevention or backup recovery.",
@@ -2056,6 +2075,25 @@ const dictionaries = {
     deleteProfile: "프로필 삭제",
     fullWipeConfirm: "로컬 앱 데이터를 지우려면 WIPE LOCAL DATA를 입력하세요",
     wipeLocalData: "로컬 데이터 삭제",
+    localDataLifecycleGuideTitle: "로컬 데이터 생명주기 범위",
+    localDataLifecycleGuideConversation:
+      "대화 삭제는 로컬 메시지 기록을 지우고 세션 기록은 보존합니다.",
+    localDataLifecycleGuideSession:
+      "세션 삭제는 로컬 세션 재개 기록을 지우고 메시지 기록은 보존합니다.",
+    localDataLifecycleGuideProfile:
+      "프로필 삭제는 정확한 이름 확인 후 로컬 프로필 저장소를 지웁니다.",
+    localDataLifecycleGuideWipe:
+      "전체 로컬 삭제는 WIPE LOCAL DATA 확인 후 이 기기의 앱 소유 데이터를 지웁니다.",
+    localDataLifecycleGuideBoundary:
+      "클라우드 백업 복구, 롤백 방지, 저장 매체 보안 삭제는 주장하지 않습니다.",
+    conversationDeleteScopeNote:
+      "로컬 대화 메시지 기록만 지웁니다. 세션 재개 기록은 보존됩니다.",
+    sessionDeleteScopeNote:
+      "로컬 세션 재개 기록만 지웁니다. 대화 메시지 기록은 보존됩니다.",
+    profileDeleteScopeNote:
+      "로컬 프로필 저장소와 영향을 받은 채팅방 실행 상태만 지웁니다. 클라우드 백업 복구는 수행하지 않습니다.",
+    fullWipeScopeNote:
+      "이 기기의 앱 소유 로컬 데이터만 지웁니다. 저장 매체 보안 삭제와 롤백 방지는 주장하지 않습니다.",
     dataLifecycleStatusNext: "다음: 원하는 채팅방 작업과 로컬 생명주기 상태가 맞을 때만 계속하세요.",
     dataLifecyclePreparedNext:
       "다음: 로컬에서 잠금 해제나 채팅방 재개를 다시 시도하세요. 롤백 보호나 백업 복구 주장은 하지 않습니다.",

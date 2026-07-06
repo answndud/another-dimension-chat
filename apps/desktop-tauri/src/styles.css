@@ -198,6 +198,34 @@ h1 {
   padding-left: 2px;
 }
 
+.lifecycle-guide {
+  display: grid;
+  gap: 6px;
+  border-left: 2px solid var(--warning);
+  padding-left: 10px;
+}
+
+.lifecycle-guide p,
+.lifecycle-guide ul {
+  margin: 0;
+}
+
+.lifecycle-guide ul {
+  display: grid;
+  gap: 4px;
+  padding-left: 16px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.lifecycle-action-note {
+  margin: -2px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .local-dev-peer-label {
   position: fixed;
   z-index: 31;

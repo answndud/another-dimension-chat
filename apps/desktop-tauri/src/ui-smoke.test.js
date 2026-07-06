@@ -1094,6 +1094,23 @@ test("runtime resume rollback block routes users to local data recovery", () => 
 });
 
 test("local data lifecycle actions expose destructive local-only boundaries", () => {
+  assert.match(indexHtml, /class="lifecycle-guide"/);
+  assert.match(indexHtml, /localDataLifecycleGuideConversation/);
+  assert.match(indexHtml, /localDataLifecycleGuideSession/);
+  assert.match(indexHtml, /localDataLifecycleGuideProfile/);
+  assert.match(indexHtml, /localDataLifecycleGuideWipe/);
+  assert.match(indexHtml, /localDataLifecycleGuideBoundary/);
+  assert.match(indexHtml, /conversationDeleteScopeNote/);
+  assert.match(indexHtml, /sessionDeleteScopeNote/);
+  assert.match(indexHtml, /profileDeleteScopeNote/);
+  assert.match(indexHtml, /fullWipeScopeNote/);
+  assert.match(i18nJs, /Conversation delete removes local message records and preserves session records/);
+  assert.match(i18nJs, /Session delete removes local session resume records and preserves message records/);
+  assert.match(i18nJs, /Full local wipe removes owned app data on this device after WIPE LOCAL DATA confirmation/);
+  assert.match(i18nJs, /No cloud backup recovery, rollback prevention, or secure deletion from storage media is claimed/);
+  assert.match(stylesCss, /\.lifecycle-guide/);
+  assert.match(stylesCss, /\.lifecycle-action-note/);
+
   const viewBody = functionBody(mainJs, "dataLifecycleActionView");
   assert.match(viewBody, /destructive_action=\$\{destructiveAction\}/);
   assert.match(viewBody, /redacted_result=true/);
@@ -1143,6 +1160,12 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(wipeBody, /dataLifecycleWipeRunning/);
   assert.match(wipeBody, /renderProductionDataLifecycleAction\(result, "full-local-wipe"\)/);
   assert.match(wipeBody, /await checkProductionProductUnlockStatus\(\)/);
+  const sessionDeleteBody = functionBody(mainJs, "deleteProductionSessionLifecycle");
+  assert.match(sessionDeleteBody, /local session lifecycle records only/);
+  assert.match(sessionDeleteBody, /Message data, backups, and secure deletion claims are handled separately/);
+  const conversationDeleteBody = functionBody(mainJs, "deleteProductionConversation");
+  assert.match(conversationDeleteBody, /local conversation message records only/);
+  assert.match(conversationDeleteBody, /not backup recovery, rollback prevention, or secure media deletion/);
   assert.match(i18nJs, /dataLifecycleDestructivePreflightReady/);
   assert.match(i18nJs, /파괴적 로컬 작업 확인/);
 });
