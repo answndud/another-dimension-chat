@@ -64,6 +64,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         another_dimension_core::production::production_backup_migration_boundary_summary();
     let transport_boundary =
         another_dimension_core::production::production_transport_envelope_io_boundary_summary();
+    let practical_transport =
+        another_dimension_core::production::production_practical_transport_split_summary();
     let supply_chain =
         another_dimension_core::production::production_supply_chain_integrity_boundary_summary();
     let independent_review =
@@ -247,8 +249,12 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             backup_migration.policies().join(","),
         ),
         transport_envelope_io_boundary: format!(
-            "boundary_closed={} explicit_user_action_required={} automatic_network_on_launch={} high_risk_onion_only_policy={} direct_fallback_allowed={} route_allowed_by_policy={} outbound_fail_closed_adapter_ready={} inbound_fail_closed_adapter_ready={} redacted_envelope_io_context_required={} remote_peer_authentication_required={} verified_pairwise_session_required={} send_receive_available={} external_two_machine_onion_delivery_verified={} reliable_real_network_onion_delivery_claimed={} production_messaging_ready={} security_ready_claimed={} policies={}",
+            "boundary_closed={} supported_default_transport_ready={} supported_default_transport_scope={} default_transport_path=local-manual-encrypted-envelope-exchange default_transport_network_io={} default_transport_automatic_delivery={} explicit_user_action_required={} automatic_network_on_launch={} high_risk_onion_only_policy={} direct_fallback_allowed={} route_allowed_by_policy={} outbound_fail_closed_adapter_ready={} inbound_fail_closed_adapter_ready={} redacted_envelope_io_context_required={} remote_peer_authentication_required={} verified_pairwise_session_required={} send_receive_available={} external_two_machine_onion_delivery_verified={} reliable_real_network_onion_delivery_claimed={} reliable_external_delivery_claim_allowed={} production_transport_ready={} production_messaging_ready={} security_ready_claimed={} policies={}",
             transport_boundary.boundary_closed(),
+            practical_transport.supported_default_transport_ready(),
+            practical_transport.supported_default_transport_scope(),
+            practical_transport.default_network_io_attempted(),
+            practical_transport.default_automatic_background_delivery_claimed(),
             transport_boundary.explicit_user_action_required(),
             transport_boundary.automatic_network_on_launch_allowed(),
             transport_boundary.high_risk_onion_only_policy(),
@@ -262,6 +268,8 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             transport_boundary.send_receive_available(),
             transport_boundary.external_two_machine_onion_delivery_verified(),
             transport_boundary.reliable_real_network_onion_delivery_claimed(),
+            practical_transport.reliable_external_delivery_claim_allowed(),
+            practical_transport.production_transport_ready(),
             transport_boundary.production_messaging_ready(),
             transport_boundary.security_ready_claimed(),
             transport_boundary.policies().join(","),
@@ -495,10 +503,25 @@ mod tests {
             .contains("boundary_closed=true"));
         assert!(status
             .transport_envelope_io_boundary
+            .contains("supported_default_transport_ready=true"));
+        assert!(status.transport_envelope_io_boundary.contains(
+            "supported_default_transport_scope=local-manual-courier-envelope-exchange-only"
+        ));
+        assert!(status
+            .transport_envelope_io_boundary
+            .contains("default_transport_network_io=false"));
+        assert!(status
+            .transport_envelope_io_boundary
             .contains("send_receive_available=false"));
         assert!(status
             .transport_envelope_io_boundary
             .contains("external_two_machine_onion_delivery_verified=false"));
+        assert!(status
+            .transport_envelope_io_boundary
+            .contains("reliable_external_delivery_claim_allowed=false"));
+        assert!(status
+            .transport_envelope_io_boundary
+            .contains("production_transport_ready=false"));
         assert!(status
             .transport_envelope_io_boundary
             .contains("direct_fallback_allowed=false"));

@@ -138,6 +138,10 @@ Review the unsigned experimental public beta boundary:
   envelope default path, separate explicit fail-closed onion/Tor advanced path,
   no-central-server boundaries, evidence order, and unresolved reliable
   external delivery review questions.
+- `reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md`: RB-3 supported
+  default local/manual courier envelope exchange scope, while automatic network
+  delivery, central message server delivery, reliable external delivery,
+  production transport readiness, and sensitive-use claims remain false.
 - `reference/MACOS_PRODUCTION_UX_ONBOARDING.md`: first-run checklist,
   invite/verify/message flow, manual envelope guide, recovery guide, redacted
   diagnostics, destructive local lifecycle confirmations, advanced transport UX
