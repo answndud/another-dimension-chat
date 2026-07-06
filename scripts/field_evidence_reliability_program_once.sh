@@ -79,7 +79,7 @@ must_contain "$GATE" "redacted_field_report_packet_available=true"
 must_contain "$GATE" "macos_two_machine_real_user_flow_repeated=false"
 must_contain "$GATE" "repeated_redacted_field_reports_available=false"
 must_contain "$GATE" "production_field_evidence_ready=false"
-must_contain "$GATE" "next_required_phase=OPS-9 operational support, incident, and vulnerability process"
+must_contain "$GATE" "next_required_action=external-audit-field-evidence-signed-notarized-artifact-owner-release-decision"
 must_contain "reference/PUBLIC_INTAKE_POLICY.md" "Desktop Real-User Test Preparation Boundary"
 must_contain "reference/PUBLIC_SUPPORT_TRIAGE.md" "Do not ask for external two-machine success evidence"
 
@@ -115,5 +115,5 @@ external_delivery_success_claim_allowed=false
 reliable_external_delivery_claim_allowed=false
 production_field_evidence_ready=false
 sensitive_communication_allowed=false
-next_required_phase=OPS-9-operational-support-incident-vulnerability-process
+next_required_action=external-audit-field-evidence-signed-notarized-artifact-owner-release-decision
 STATUS
