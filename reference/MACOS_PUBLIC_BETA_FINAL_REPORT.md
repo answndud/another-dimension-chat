@@ -43,15 +43,15 @@ external onion delivery success.
 ## Known Release Drift
 
 The public GitHub Release exists, and the local ignored DMG checksum matches the
-expected SHA-256. The live release asset set is known to differ from the current
-source release body expectation: `COMPONENT_BOUNDARIES.md` and
-`OPERATOR_FINAL_HANDOFF.md` are expected by source/local staging but missing
-from the live release assets observed in the read-only recheck.
+expected SHA-256. The live release body Download list matches the current live
+asset set, so there is no live release body edit needed for asset consistency.
 
-Because of that drift, a body-only release page edit is held unless the proposed
-body matches the actual live assets or a separately approved asset upload fixes
-the live asset set. No release upload, asset deletion, release body edit, DMG
-rebuild, or checksum change is authorized by this report.
+The source/local staging upload set still has two extra source-side documents,
+`COMPONENT_BOUNDARIES.md` and `OPERATOR_FINAL_HANDOFF.md`, that are not attached
+to the live release. Those files remain source/staging evidence only unless a
+separately approved release upload adds them later. No release upload, asset
+deletion, release body edit, DMG rebuild, or checksum change is authorized by
+this report.
 
 ## Public User Message
 
