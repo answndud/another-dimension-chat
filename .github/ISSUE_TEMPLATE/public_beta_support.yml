@@ -38,7 +38,43 @@ body:
     id: build_commit
     attributes:
       label: Build commit
-      placeholder: "806ecad1"
+      placeholder: "copy from Public diagnostics if shown"
+    validations:
+      required: false
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - macOS Apple Silicon unsigned DMG
+        - macOS install/checksum only
+        - browser preview
+        - source checkout
+        - other redacted platform
+    validations:
+      required: true
+  - type: input
+    id: checksum_result
+    attributes:
+      label: Checksum result
+      description: Report only pass/fail/not checked. Do not paste local paths.
+      placeholder: "pass / fail / not checked"
+    validations:
+      required: true
+  - type: input
+    id: failure_class
+    attributes:
+      label: Failure class
+      description: Copy the broad failure_class from Public diagnostics when available.
+      placeholder: "checksum-install-failure / profile-locked / transport-unavailable / none"
+    validations:
+      required: false
+  - type: input
+    id: recovery_next_action
+    attributes:
+      label: Recovery next action
+      description: Copy the redacted recovery_next_action from Public diagnostics when available.
+      placeholder: "verify-same-release-checksum / retry-passphrase / stay-on-manual-envelope"
     validations:
       required: false
   - type: dropdown
@@ -70,8 +106,11 @@ body:
         app_version=0.1.0
         build_channel=beta-onion
         failure_class=none
+        recovery_next_action=none
+        desktop_acceptance_status=not-claimed
+        desktop_acceptance_blockers=none
         app_launch_network=false
-        payload_boundary=status-build-failure-class-only
+        payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only
         crash_upload=false
         telemetry=false
         raw_log_export=false
