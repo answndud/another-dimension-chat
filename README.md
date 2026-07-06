@@ -247,6 +247,12 @@ guide, recovery guide, redacted diagnostics, destructive local lifecycle
 confirmations, advanced transport UX boundary, and why production wording stays
 blocked.
 
+macOS usability and recovery closure is tracked in
+[reference/MACOS_USABILITY_RECOVERY_CLOSURE.md](reference/MACOS_USABILITY_RECOVERY_CLOSURE.md).
+It provides the owner-observed critical desktop task script and recovery
+vocabulary alignment while keeping `usability_study_completed=false` until real
+representative user evidence exists.
+
 macOS production distribution gate status is tracked in
 [reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md](reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md).
 It records the current unsigned beta distribution state, signing/notarization

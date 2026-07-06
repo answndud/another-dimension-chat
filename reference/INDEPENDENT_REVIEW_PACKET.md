@@ -146,6 +146,10 @@ Review the unsigned experimental public beta boundary:
   invite/verify/message flow, manual envelope guide, recovery guide, redacted
   diagnostics, destructive local lifecycle confirmations, advanced transport UX
   boundary, and remaining production wording blockers.
+- `reference/MACOS_USABILITY_RECOVERY_CLOSURE.md`: RB-4 owner-observed
+  critical desktop task script and recovery vocabulary alignment, while
+  representative usability study completion and production wording readiness
+  remain false.
 - `reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md`: current unsigned beta
   distribution state, signing/notarization holds, same-release
   checksum/provenance authority, update-channel blockers, and remaining stable

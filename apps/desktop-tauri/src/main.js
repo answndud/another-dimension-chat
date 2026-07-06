@@ -7572,6 +7572,30 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
     publicDiagnostics.reliable_external_delivery_claim_allowed,
     "false",
   );
+  const supportedOwnerObservedUsabilityRehearsalReady = fieldTestReportValue(
+    publicDiagnostics.supported_owner_observed_usability_rehearsal_ready,
+    "false",
+  );
+  const supportedUsabilityRecoveryScope = fieldTestReportValue(
+    publicDiagnostics.supported_usability_recovery_scope,
+    "unknown",
+  );
+  const criticalDesktopTaskScriptReady = fieldTestReportValue(
+    publicDiagnostics.critical_desktop_task_script_ready,
+    "false",
+  );
+  const recoveryVocabularyAligned = fieldTestReportValue(
+    publicDiagnostics.recovery_vocabulary_aligned,
+    "false",
+  );
+  const usabilityStudyCompleted = fieldTestReportValue(
+    publicDiagnostics.usability_study_completed,
+    "false",
+  );
+  const productionWordingReady = fieldTestReportValue(
+    publicDiagnostics.production_wording_ready,
+    "false",
+  );
   const allowedPublicIntakeFields = String(publicDiagnostics.allowed_public_intake_fields ?? "unknown").trim() || "unknown";
   const forbiddenPublicIntakeFields = String(publicDiagnostics.forbidden_public_intake_fields ?? "unknown").trim() || "unknown";
   const excludedFields = String(publicDiagnostics.excluded_fields ?? "unknown").trim() || "unknown";
@@ -7594,7 +7618,7 @@ function refreshPublicBetaDiagnostics(report = fields.fieldTestReport?.value || 
     excludedFields.includes("passphrases") &&
     excludedFields.includes("key_material");
   if (fields.publicBetaDiagnosticsSummary) {
-    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} public_intake_policy_fields_aligned=${publicIntakePolicyFieldsAligned} allowed_public_intake_fields=${allowedPublicIntakeFields} forbidden_public_intake_fields=${forbiddenPublicIntakeFields} excluded_fields=${excludedFields} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} local_manual_e2ee_runtime_boundary=${localManualE2eeBoundary} supported_local_manual_e2ee_ready=${supportedLocalManualE2eeReady} supported_local_manual_e2ee_scope=${supportedLocalManualE2eeScope} production_e2ee_ready=${productionE2eeReady} supported_local_key_lifecycle_ready=${supportedLocalKeyLifecycleReady} supported_local_key_lifecycle_scope=${supportedLocalKeyLifecycleScope} supported_rollback_detection_ready=${supportedRollbackDetectionReady} supported_rollback_detection_scope=${supportedRollbackDetectionScope} supported_local_deletion_scope_ready=${supportedLocalDeletionScopeReady} supported_local_deletion_scope=${supportedLocalDeletionScope} production_key_management_ready=${productionKeyManagementReady} rollback_prevention_claimed=${rollbackPreventionClaimed} secure_deletion_claim_allowed=${secureDeletionClaimAllowed} default_transport_path=${defaultTransportPath} supported_default_transport_ready=${supportedDefaultTransportReady} supported_default_transport_scope=${supportedDefaultTransportScope} default_transport_network_io=${defaultTransportNetworkIo} production_transport_ready=${productionTransportReady} reliable_external_delivery_claim_allowed=${reliableExternalDeliveryClaimAllowed} high_risk_onion_path=explicit-user-triggered-fail-closed release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
+    fields.publicBetaDiagnosticsSummary.textContent = `public diagnostics generated failure_class=${failureClass} recovery_next_action=${recoveryNextAction} payload_next_action_match=${payloadNextActionMatchesSummary} raw_state_excluded=${rawStateExcluded} public_intake_policy_fields_aligned=${publicIntakePolicyFieldsAligned} allowed_public_intake_fields=${allowedPublicIntakeFields} forbidden_public_intake_fields=${forbiddenPublicIntakeFields} excluded_fields=${excludedFields} desktop_completion=${desktopCompletion.status} desktop_blockers=${desktopCompletion.blockerSummary} local_manual_e2ee_runtime_boundary=${localManualE2eeBoundary} supported_local_manual_e2ee_ready=${supportedLocalManualE2eeReady} supported_local_manual_e2ee_scope=${supportedLocalManualE2eeScope} production_e2ee_ready=${productionE2eeReady} supported_local_key_lifecycle_ready=${supportedLocalKeyLifecycleReady} supported_local_key_lifecycle_scope=${supportedLocalKeyLifecycleScope} supported_rollback_detection_ready=${supportedRollbackDetectionReady} supported_rollback_detection_scope=${supportedRollbackDetectionScope} supported_local_deletion_scope_ready=${supportedLocalDeletionScopeReady} supported_local_deletion_scope=${supportedLocalDeletionScope} production_key_management_ready=${productionKeyManagementReady} rollback_prevention_claimed=${rollbackPreventionClaimed} secure_deletion_claim_allowed=${secureDeletionClaimAllowed} default_transport_path=${defaultTransportPath} supported_default_transport_ready=${supportedDefaultTransportReady} supported_default_transport_scope=${supportedDefaultTransportScope} default_transport_network_io=${defaultTransportNetworkIo} production_transport_ready=${productionTransportReady} reliable_external_delivery_claim_allowed=${reliableExternalDeliveryClaimAllowed} supported_owner_observed_usability_rehearsal_ready=${supportedOwnerObservedUsabilityRehearsalReady} supported_usability_recovery_scope=${supportedUsabilityRecoveryScope} critical_desktop_task_script_ready=${criticalDesktopTaskScriptReady} recovery_vocabulary_aligned=${recoveryVocabularyAligned} usability_study_completed=${usabilityStudyCompleted} production_wording_ready=${productionWordingReady} high_risk_onion_path=explicit-user-triggered-fail-closed release_non_claims=unsigned-experimental-public-beta#not-audited#not-production-ready#sensitive-communication-prohibited non_claims=external-onion-delivery#production-messaging#security-ready#sensitive-communication support_bundle_export=false audit_evidence_claim=false external_delivery_evidence_claim=false security_ready_proof_claim=false windows_public_artifact=false windows_blocker=local-build-smoke-and-release-boundary-review app_launch_network=false`;
   }
   return payload;
 }
