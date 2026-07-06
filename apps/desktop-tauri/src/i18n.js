@@ -14,6 +14,14 @@ const dictionaries = {
       "If macOS blocks the unsigned app, use Privacy & Security manual allow only after the checksum matches.",
     publicBetaNoUpdateBody:
       "There is no auto-update, signing, notarization, completed review, external onion delivery claim, or secure messenger readiness claim.",
+    firstRunChecklistLabel: "First-run local desktop flow",
+    firstRunProfileStep: "Unlock, create, or reopen a local profile before room actions.",
+    firstRunRoomStep: "Create an invite room or paste the invite code you received.",
+    firstRunVerifyStep: "Compare the safety phrase, then write a message.",
+    firstRunManualMessageStep:
+      "Export/import the manual encrypted envelope, then reply, retry, cancel, or delete locally.",
+    firstRunDiagnosticsStep:
+      "Copy public diagnostics only after redaction; blocked actions show the reason and next recovery action.",
     displayMode: "Display mode",
     language: "Language",
     darkMode: "Dark mode",
@@ -1112,6 +1120,14 @@ const dictionaries = {
       "macOS가 서명되지 않은 앱을 차단하면 checksum이 일치한 뒤에만 Privacy & Security에서 수동 허용하세요.",
     publicBetaNoUpdateBody:
       "auto-update, signing, notarization, 완료된 review, external onion delivery claim, secure messenger readiness 주장은 없습니다.",
+    firstRunChecklistLabel: "첫 실행 로컬 desktop 흐름",
+    firstRunProfileStep: "방 작업 전에 로컬 profile을 unlock, create, reopen 합니다.",
+    firstRunRoomStep: "invite room을 만들거나 받은 invite code를 붙여넣습니다.",
+    firstRunVerifyStep: "safety phrase를 비교한 뒤 메시지를 작성합니다.",
+    firstRunManualMessageStep:
+      "manual encrypted envelope를 export/import한 뒤 reply, retry, cancel, delete를 로컬에서 처리합니다.",
+    firstRunDiagnosticsStep:
+      "public diagnostics는 redaction 후에만 복사합니다. blocked action은 reason과 next recovery action을 표시합니다.",
     displayMode: "화면 모드",
     language: "언어",
     darkMode: "다크 모드",
