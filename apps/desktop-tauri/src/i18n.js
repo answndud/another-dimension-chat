@@ -268,6 +268,18 @@ const dictionaries = {
     emptyConversationCreateRoom: "Open the room with the invite code.",
     emptyConversationVerify: "Compare the verification phrase before writing.",
     emptyConversationReady: "No messages yet. Write the first message.",
+    manualFlowGuideEyebrow: "Manual default path",
+    manualFlowGuideTitle: "Manual encrypted envelope flow",
+    manualFlowGuideHint:
+      "Default path is local/manual encrypted envelope exchange: export, carry through your existing channel, import, then reply.",
+    manualFlowGuideStepsLabel: "Manual message steps",
+    manualFlowGuideStepInvite: "Create or join an invite room, then compare the safety phrase.",
+    manualFlowGuideStepExport: "Write a message and export the encrypted envelope from this device.",
+    manualFlowGuideStepImport: "Import the remote envelope, show plaintext locally, then write the reply.",
+    manualFlowGuideStepRecovery:
+      "Use the selected row to retry or cancel pending sends; delete only local conversation records.",
+    manualFlowGuideBoundary:
+      "Manual local/default path: no network I/O, no automatic delivery, and no external delivery claim.",
     connectionNeeded: "Connection needed",
     peerNotConnected: "Start a private room",
     peerExchangeHint: "Choose one path: make a code for the other device, or paste the code you received.",
@@ -1374,6 +1386,18 @@ const dictionaries = {
     emptyConversationCreateRoom: "초대 코드로 채팅방을 여세요.",
     emptyConversationVerify: "메시지를 쓰기 전에 두 기기의 확인 문구를 비교하세요.",
     emptyConversationReady: "아직 메시지가 없습니다. 첫 메시지를 작성하세요.",
+    manualFlowGuideEyebrow: "수동 기본 경로",
+    manualFlowGuideTitle: "수동 암호화 envelope 흐름",
+    manualFlowGuideHint:
+      "기본 경로는 local/manual encrypted envelope exchange입니다. export하고, 기존 연락 수단으로 전달하고, import한 뒤 reply를 작성합니다.",
+    manualFlowGuideStepsLabel: "수동 메시지 단계",
+    manualFlowGuideStepInvite: "invite room을 만들거나 들어간 뒤 safety phrase를 비교합니다.",
+    manualFlowGuideStepExport: "메시지를 작성하고 이 기기에서 encrypted envelope를 export합니다.",
+    manualFlowGuideStepImport: "remote envelope를 import하고 plaintext를 로컬에서 확인한 뒤 reply를 작성합니다.",
+    manualFlowGuideStepRecovery:
+      "선택된 row에서 pending send를 retry 또는 cancel합니다. delete는 local conversation record만 지웁니다.",
+    manualFlowGuideBoundary:
+      "Manual local/default path: no network I/O, no automatic delivery, and no external delivery claim.",
     connectionNeeded: "연결 필요",
     peerNotConnected: "비공개 채팅방 시작",
     peerExchangeHint: "둘 중 하나만 선택하세요. 내 코드를 만들거나, 받은 코드를 붙여넣으면 됩니다.",
