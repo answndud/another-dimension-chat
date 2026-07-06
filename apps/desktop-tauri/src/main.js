@@ -1521,6 +1521,72 @@ function setText(node, value) {
   }
 }
 
+function screenshotSafePreviewModeEnabled() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return (
+      params.get("screenshot-safe") === "1" &&
+      ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function clearScreenshotSafeValue(node) {
+  if (node && "value" in node) {
+    node.value = "";
+  }
+}
+
+function applyScreenshotSafePreviewMode() {
+  if (!screenshotSafePreviewModeEnabled()) {
+    return false;
+  }
+  document.body?.classList.add("is-screenshot-safe-preview");
+  [
+    fields.productionProfileName,
+    fields.productionProfilePassphrase,
+    fields.productionProfileDeleteConfirmation,
+    fields.productionFullWipeConfirmation,
+    fields.productionPairingEndpoint,
+    fields.productionPairingPayload,
+    fields.productionRemotePairingPayload,
+    fields.productionHandshakeInitPayload,
+    fields.productionRemoteHandshakeInitPayload,
+    fields.productionHandshakeReplyPayload,
+    fields.productionRemoteHandshakeReplyPayload,
+    fields.productionHandshakeFinishPayload,
+    fields.productionRemoteHandshakeFinishPayload,
+    fields.productionMessageBody,
+    fields.productionMessageEnvelope,
+    fields.productionRemoteMessageEnvelope,
+    fields.productionReceivedMessage,
+    fields.productionMessageTranscriptExport,
+    fields.productionTwoProfileA,
+    fields.productionTwoProfileB,
+    fields.productionTwoProfilePassphrase,
+    fields.productionTwoProfileMessage,
+    fields.createdInviteCodeDisplay,
+    fields.receivedInviteCode,
+    fields.settingsInviteCodeDisplay,
+    fields.roomInviteTokenDisplay,
+    fields.roomListInviteCode,
+    fields.localPrivateRouteCode,
+    fields.peerPrivateRouteCode,
+    fields.fieldTestReport,
+    fields.peerFieldTestReport,
+    fields.publicBetaDiagnostics,
+  ].forEach(clearScreenshotSafeValue);
+  setText(fields.productionTwoProfileCurrentInput, "screenshot_safe_preview=true private_fields_blank=true");
+  setText(fields.productionTwoProfileLastSuccess, "No screenshot candidate data captured");
+  setText(
+    fields.productionProfileBoundary,
+    "screenshot_safe_preview=true private_fields_blank=true local_only=true",
+  );
+  return true;
+}
+
 function isCurrentInviteCodeNoticeKey(key = latestChatDeliveryNoticeKey) {
   return key === "inviteCodeReadyNotice" || key === "receivedInviteCodeReadyNotice";
 }
@@ -8001,7 +8067,7 @@ function syncTwoProfileDerivedConnectionFields() {
     latestConnectionCodeRole = "";
     syncProductionProfilePassphraseFromTwoProfile();
     renderCurrentInviteCodeDisplay();
-    restorePrivateRouteExchangeForRoom(productionTwoProfileInput());
+    restorePrivateRouteExchangeForRoom(productionTwoProfileInput({ sync: false }));
     return;
   }
   const role = connectionCodeRoleFor(code);
@@ -8019,7 +8085,7 @@ function syncTwoProfileDerivedConnectionFields() {
   latestDerivedConnectionCode = code;
   syncProductionProfilePassphraseFromTwoProfile();
   renderCurrentInviteCodeDisplay();
-  restorePrivateRouteExchangeForRoom(productionTwoProfileInput());
+  restorePrivateRouteExchangeForRoom(productionTwoProfileInput({ sync: false }));
 }
 
 function currentInviteRoomIdentityForInput(input) {
@@ -13782,8 +13848,10 @@ function productionRoundtripMessage() {
   return (fields.productionRoundtripMessage?.value ?? "").trim();
 }
 
-function productionTwoProfileInput() {
-  syncTwoProfileDerivedConnectionFields();
+function productionTwoProfileInput(options = {}) {
+  if (options.sync !== false) {
+    syncTwoProfileDerivedConnectionFields();
+  }
   const connectionCode = (fields.productionTwoProfileB?.value ?? "").trim();
   const derivedPeerProfile = fields.productionTwoProfileB?.dataset.peerProfile ?? "";
   return {
@@ -21072,3 +21140,5 @@ renderSavedInviteRooms();
 showRoomList();
 syncSavedInviteRoomMetadataFromLocalStores();
 loadProductionOnionBridgeConfigStatus();
+applyScreenshotSafePreviewMode();
+window.setTimeout(applyScreenshotSafePreviewMode, 50);
