@@ -217,6 +217,15 @@ for an external success claim, or requests to use the beta for sensitive
 communication. There is no external two-machine success claim, no production
 readiness claim, and sensitive communication prohibited remains in force.
 
+Public Support Triage: maintainers should use
+`reference/PUBLIC_SUPPORT_TRIAGE.md` for checksum retry, Gatekeeper recovery,
+profile recovery, payload retry/cancel, lifecycle confirmation, redacted
+diagnostics, and private security contact routing. Public triage must not
+request raw logs, local paths, onion endpoints, invite codes, payloads, message
+text, passphrases, private keys, key material, private screenshots, external
+delivery proof, production-ready proof, audited status, or sensitive-use
+reports.
+
 Desktop Default Practical Transport Boundary: the desktop default practical path
 is local manual encrypted envelope exchange. It is the only default source
 boundary for v0.1 and has `network_io=false`, `automatic_delivery=false`,

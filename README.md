@@ -36,7 +36,9 @@ communication prohibited. Do not use it for real communication.
 6. Feedback: public issues must include only redacted diagnostics, broad
    failure class, and recovery next action. Do not post invite codes, payloads,
    endpoints, message text, local paths, raw logs, passphrases, private keys, or
-   key material.
+   key material. Maintainers should use
+   [reference/PUBLIC_SUPPORT_TRIAGE.md](reference/PUBLIC_SUPPORT_TRIAGE.md) for
+   public-safe routing and response snippets.
 7. Screenshots: reviewed public-safe screenshots are in
    [reference/screenshots/README.md](reference/screenshots/README.md). Use the
    public-safe screenshot checklist before publishing any other app images, and
@@ -197,6 +199,14 @@ planning notes. Hold criteria are missing redacted diagnostics, forbidden
 private data, network before explicit action, or checksum mismatch. Abort criteria
 are exposed secrets, requests for raw logs, requests for an external success
 claim, or requests to use the beta for sensitive communication. There is no external two-machine success claim, no production readiness claim, and sensitive communication prohibited remains in force.
+
+Public Support Triage: maintainers route reports through
+`reference/PUBLIC_SUPPORT_TRIAGE.md`. Public routing may ask for checksum retry,
+Gatekeeper recovery, profile recovery, payload retry/cancel, lifecycle
+confirmation, redacted diagnostics, or a private security contact path. It must
+not request raw logs, local paths, endpoints, invite codes, payloads, message
+text, passphrases, private keys, key material, private screenshots, external
+delivery proof, or sensitive-use reports.
 
 Published unsigned public beta:
 

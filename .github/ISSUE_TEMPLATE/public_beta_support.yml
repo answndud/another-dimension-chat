@@ -65,8 +65,8 @@ body:
     id: failure_class
     attributes:
       label: Failure class
-      description: Copy the broad failure_class from Public diagnostics when available.
-      placeholder: "checksum-install-failure / profile-locked / transport-unavailable / none"
+      description: Copy the broad failure_class from Public diagnostics when available, or choose the closest class from PUBLIC_SUPPORT_TRIAGE.md.
+      placeholder: "checksum-install-failure / macos-manual-allow / profile-locked / malformed-payload / replay-rejected / transport-unavailable / policy-blocked / lifecycle-confirmation-required / desktop-state-drift / unknown-redacted"
     validations:
       required: false
   - type: input
@@ -85,9 +85,15 @@ body:
         - checksum verification
         - macOS manual allow
         - app launch
+        - profile unlock or create
+        - invite room or verification
+        - malformed payload or replay rejection
+        - retry, cancel, or pending state drift
+        - local deletion or lifecycle confirmation
         - public diagnostics copy
         - local room flow
         - explicit private delivery action
+        - private security contact request
         - documentation
         - other redacted report
     validations:
