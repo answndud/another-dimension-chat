@@ -35,6 +35,7 @@ for file in "$MATRIX" "$TARGET" "README.md" "SECURITY.md" \
   "reference/PRODUCTION_E2EE_SOURCE_GATE.md" \
   "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md" \
   "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
+  "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md" \
   "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
   "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md" \
   "reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md" \
@@ -140,6 +141,7 @@ for linked in \
   "MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md" \
   "PRODUCTION_E2EE_SOURCE_GATE.md" \
   "MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
+  "MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md" \
   "EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
   "EXTERNAL_REVIEW_INTAKE_RUNBOOK.md" \
   "REPRESENTATIVE_USABILITY_REPORT_PACKET.md" \
@@ -199,6 +201,9 @@ for flag in \
   "protocol_session_e2ee_source_ready=true" \
   "protocol_session_e2ee_source_scope=1:1-local-manual-envelope-message-content-session-replay-retry-cancel-delete" \
   "manual_update_integrity_policy_available=true" \
+  "macos_signed_update_manifest_schema_available=true" \
+  "macos_signed_update_manifest_validator_available=true" \
+  "signed_update_manifest_candidate_verifier_ready=true" \
   "d100_3_signed_notarized_execution_path_reviewed=true" \
   "macos_signed_notarized_execution_path_available=true" \
   "signed_notarized_rc_execution_ready=false" \

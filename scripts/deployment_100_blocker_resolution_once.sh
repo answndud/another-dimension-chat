@@ -40,6 +40,7 @@ for file in "$PLAN" "$MATRIX" "$ACTIVE" "$REGISTER" \
   "reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md" \
   "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md" \
   "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
+  "reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md" \
   "reference/STABLE_MACOS_V1_RELEASE_GATE.md" \
   "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
   "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md" \
@@ -74,6 +75,7 @@ for linked in \
   "MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md" \
   "MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md" \
   "MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
+  "MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md" \
   "STABLE_MACOS_V1_RELEASE_GATE.md" \
   "EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
   "WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md" \
@@ -116,6 +118,10 @@ for flag in \
   "secure_deletion_claim_allowed=false" \
   "production_transport_ready=false" \
   "production_operational_readiness_claim_allowed=false" \
+  "macos_signed_update_manifest_schema_available=true" \
+  "macos_signed_update_manifest_validator_available=true" \
+  "signed_update_manifest_candidate_verifier_ready=true" \
+  "signed_update_manifest_ready=false" \
   "update_signature_ready=false" \
   "production_ready_claim_allowed=false" \
   "audited_claim_allowed=false" \
@@ -148,6 +154,7 @@ scripts/target_standard_100_active_queue_closure_once.sh >/dev/null
 scripts/deployment_readiness_gap_reconciliation_once.sh >/dev/null
 scripts/stable_macos_v1_release_gate_once.sh >/dev/null
 scripts/macos_release_credential_evidence_once.sh >/dev/null
+scripts/macos_signed_update_manifest_once.sh >/dev/null
 scripts/macos_universal_scoped_artifact_policy_once.sh >/dev/null
 scripts/macos_signed_notarized_rc_artifact_once.sh >/dev/null
 scripts/macos_signed_notarized_execution_path_once.sh >/dev/null
