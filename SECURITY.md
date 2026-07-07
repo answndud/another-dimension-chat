@@ -39,6 +39,10 @@ The production readiness claim gate is tracked in
 remain until that gate and the later stable release phases are complete.
 Signing and notarization are distribution ergonomics, not a messenger security
 trust boundary.
+RB-8 selected the lower release class path in
+`reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md`: signed public beta or
+RC only, with stable/production, audited, security-ready, reliable-delivery,
+and sensitive-use claims still false.
 
 The production protocol/session lifecycle review input is tracked in
 `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`. It documents the current

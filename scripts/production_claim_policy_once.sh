@@ -6,6 +6,7 @@ GATE="$ROOT_DIR/reference/PRODUCTION_READINESS_CLAIM_GATE.md"
 README="$ROOT_DIR/README.md"
 SECURITY="$ROOT_DIR/SECURITY.md"
 FINAL_REPORT="$ROOT_DIR/reference/MACOS_PUBLIC_BETA_FINAL_REPORT.md"
+DECISION="$ROOT_DIR/reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md"
 
 require_file() {
   if [ ! -f "$1" ]; then
@@ -32,7 +33,7 @@ reject_text() {
   fi
 }
 
-for file in "$GATE" "$README" "$SECURITY" "$FINAL_REPORT"; do
+for file in "$GATE" "$README" "$SECURITY" "$FINAL_REPORT" "$DECISION"; do
   require_file "$file"
 done
 
@@ -44,12 +45,17 @@ for file in "$README" "$SECURITY" "$FINAL_REPORT"; do
 done
 
 require_text "$README" "reference/PRODUCTION_READINESS_CLAIM_GATE.md"
+require_text "$README" "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md"
 require_text "$README" "Signing and notarization are"
 require_text "$SECURITY" "reference/PRODUCTION_READINESS_CLAIM_GATE.md"
+require_text "$SECURITY" "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md"
 require_text "$SECURITY" "distribution ergonomics, not a messenger security"
 require_text "$FINAL_REPORT" "Phase OPS-1 - Production Readiness Definition And Claim Gate"
 
 require_text "$GATE" "Status: not satisfied"
+require_text "$GATE" "rb_8_production_claim_release_class_decision_reviewed=true"
+require_text "$GATE" "stable_release_candidate_gate_decision=lower-release-class-only"
+require_text "$GATE" "next_release_class=signed-public-beta-or-rc"
 require_text "$GATE" "Production-Ready Meaning"
 require_text "$GATE" "Functional readiness"
 require_text "$GATE" "Security readiness"
@@ -65,7 +71,9 @@ require_text "$GATE" "beta_wording_removal_allowed=false"
 require_text "$GATE" "audited_claim_allowed=false"
 require_text "$GATE" "sensitive_communication_allowed=false"
 require_text "$GATE" "reliable_external_delivery_claim_allowed=false"
-require_text "$GATE" "next_required_phase=OPS-2 production E2EE protocol and session lifecycle hardening"
+require_text "$GATE" "lower_release_class_claim_boundary_ready=true"
+require_text "$GATE" "public_wording_matches_lower_release_class=true"
+require_text "$GATE" "owner_stable_release_approval_recorded=false"
 require_text "$GATE" "OPS-2 production E2EE protocol/session lifecycle hardening is complete"
 require_text "$GATE" "OPS-3 production key management and local storage lifecycle is complete"
 require_text "$GATE" "OPS-4 reliable default transport product path is complete"
@@ -84,16 +92,21 @@ for file in "$README" "$SECURITY" "$FINAL_REPORT"; do
   reject_text "$file" "sensitive communication allowed"
   reject_text "$file" "audited secure messenger"
   reject_text "$file" "production-ready public beta"
-  reject_text "$file" "reliable external onion delivery"
+  reject_text "$file" "reliable external onion delivery product"
   reject_text "$file" "Briar/Cwtch-equivalent claim"
   reject_text "$file" "censorship-resistant messenger"
 done
 
+scripts/production_claim_release_class_decision_once.sh >/dev/null
+
 printf 'status=production-claim-policy-ready\n'
+printf 'rb_8_production_claim_release_class_decision_reviewed=true\n'
+printf 'stable_release_candidate_gate_decision=lower-release-class-only\n'
+printf 'next_release_class=signed-public-beta-or-rc\n'
 printf 'production_ready_claim_allowed=false\n'
 printf 'beta_wording_removal_allowed=false\n'
 printf 'audited_claim_allowed=false\n'
 printf 'sensitive_communication_allowed=false\n'
 printf 'reliable_external_delivery_claim_allowed=false\n'
 printf 'signed_notarized_security_boundary=false\n'
-printf 'next_required_phase=OPS-2-production-e2ee-protocol-session-lifecycle-hardening\n'
+printf 'next_required_phase=RB-9-github-stable-release-publication\n'

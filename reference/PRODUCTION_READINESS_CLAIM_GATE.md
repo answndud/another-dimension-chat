@@ -1,8 +1,10 @@
 # Production Readiness Claim Gate
 
-Status: not satisfied. The public wording must remain unsigned experimental
-public beta, sensitive communication prohibited, not audited, and
-not production-ready until this gate is closed by a later stable release phase.
+Status: not satisfied. RB-8 production claim release-class decision is recorded
+in `reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md`. The public wording
+must remain unsigned experimental public beta, sensitive communication
+prohibited, not audited, and not production-ready until this gate is closed by a
+later stable release phase.
 
 This gate defines when beta wording may be removed. It does not make the current
 app production-ready, audited, secure for sensitive communication, or equivalent
@@ -77,12 +79,18 @@ not production readiness by themselves.
 
 ## Current Decision
 
+- rb_8_production_claim_release_class_decision_reviewed=true
+- stable_release_candidate_gate_decision=lower-release-class-only
+- next_release_class=signed-public-beta-or-rc
 - production_ready_claim_allowed=false
 - beta_wording_removal_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false
 - reliable_external_delivery_claim_allowed=false
 - signed_notarized_security_boundary=false
+- lower_release_class_claim_boundary_ready=true
+- public_wording_matches_lower_release_class=true
+- owner_stable_release_approval_recorded=false
 - ops_2_protocol_session_lifecycle_gate_reviewed=true
 - ops_3_key_storage_lifecycle_gate_reviewed=true
 - ops_4_default_transport_product_path_reviewed=true

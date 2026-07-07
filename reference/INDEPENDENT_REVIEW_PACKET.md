@@ -142,6 +142,9 @@ Review the unsigned experimental public beta boundary:
   default local/manual courier envelope exchange scope, while automatic network
   delivery, central message server delivery, reliable external delivery,
   production transport readiness, and sensitive-use claims remain false.
+- `reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md`: RB-8 claim decision
+  that selects signed public beta or RC while keeping stable/production,
+  audited, security-ready, reliable-delivery, and sensitive-use claims false.
 - `reference/MACOS_PRODUCTION_UX_ONBOARDING.md`: first-run checklist,
   invite/verify/message flow, manual envelope guide, recovery guide, redacted
   diagnostics, destructive local lifecycle confirmations, advanced transport UX
