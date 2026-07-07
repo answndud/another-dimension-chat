@@ -145,6 +145,9 @@ Review the unsigned experimental public beta boundary:
 - `reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md`: RB-8 claim decision
   that selects signed public beta or RC while keeping stable/production,
   audited, security-ready, reliable-delivery, and sensitive-use claims false.
+- `reference/GITHUB_RELEASE_PUBLICATION_SCOPE_DOWN.md`: RB-9 publication
+  scope-down that selects the existing unsigned public beta prerelease as the
+  current lower-class publication without stable release mutation.
 - `reference/MACOS_PRODUCTION_UX_ONBOARDING.md`: first-run checklist,
   invite/verify/message flow, manual envelope guide, recovery guide, redacted
   diagnostics, destructive local lifecycle confirmations, advanced transport UX

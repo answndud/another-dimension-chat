@@ -69,6 +69,12 @@ candidate decision is lower release class only: signed public beta or RC.
 Production-ready, audited, security-ready, reliable external delivery, beta
 wording removal, and sensitive-use claims remain false.
 
+RB-9 GitHub publication scope-down is recorded in
+`reference/GITHUB_RELEASE_PUBLICATION_SCOPE_DOWN.md`. It selects the existing
+`v0.1.0-beta-onion-unsigned` public prerelease as the current lower-class
+publication. No stable release upload, release edit, DMG rebuild, or stable tag
+creation is authorized.
+
 ## Gate Decision
 
 Decision: hold.
@@ -142,11 +148,13 @@ preflight after the blockers below are resolved.
 
 - stable_macos_v1_release_gate_reviewed=true
 - rb_8_production_claim_release_class_decision_reviewed=true
+- rb_9_github_release_publication_scope_down_reviewed=true
 - stable_release_gate_decision=hold
 - stable_release_candidate_gate_decision=lower-release-class-only
 - next_release_class=signed-public-beta-or-rc
 - stable_macos_v1_release_allowed=false
 - public_stable_release_allowed=false
+- lower_release_publication_selected=true
 - stable_signed_notarized_artifact_available=false
 - rb_7_macos_stable_artifact_release_class_scope_down_reviewed=true
 - external_review_completed=false
@@ -206,6 +214,11 @@ preflight after the blockers below are resolved.
 - external_review_still_blocks_stable_or_production_claims=true
 - reliable_external_delivery_claim_allowed=false
 - release_upload_authorized=false
+- stable_release_published=false
+- stable_release_upload_authorized=false
+- release_body_edit_performed=false
+- release_asset_delete_performed=false
+- lower_release_publication_claim_boundary_ready=true
 - dmg_rebuild_authorized=false
 - release_body_beta_wording_removal_authorized=false
 - release_authority_credential_unblock_reviewed=true
