@@ -25,7 +25,7 @@ hold states remain visible.
 | C100-3 key management, rollback prevention, and storage lifecycle | source gate with rollback/key-management hold | `reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md`, `scripts/production_key_management_source_gate_once.sh`, `reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md`, `reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md` |
 | C100-4 default practical transport product path | source gate with production transport hold | `reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md`, `reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md` |
 | C100-5 advanced onion/Tor path evidence boundary | source gate with external evidence hold | `reference/TRANSPORT_EXPERIMENT_RUNBOOK.md`, `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md` |
-| M100-6 macOS representative usability evidence | hold gate | `reference/MACOS_USABILITY_RECOVERY_CLOSURE.md`, `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md` |
+| M100-6 macOS representative usability evidence | closed by active-queue waiver, evidence claims held | `reference/MACOS_USABILITY_RECOVERY_CLOSURE.md`, `reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md` |
 | M100-7 macOS update and rollback-safe release channel | source gate with update-channel hold | `reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md`, `scripts/macos_update_rollback_safe_release_channel_once.sh` |
 | M100-8 macOS stable release gate and public copy upgrade | hold gate | `reference/STABLE_MACOS_V1_RELEASE_GATE.md`, `scripts/stable_macos_v1_release_gate_once.sh` |
 | A100-1 external security review packet freeze | source packet gate | `reference/INDEPENDENT_REVIEW_PACKET.md`, `scripts/external_review_audit_readiness_once.sh` |
