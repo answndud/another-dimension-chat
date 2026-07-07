@@ -34,6 +34,7 @@ for file in "$REGISTER" "$MATRIX" \
   "reference/PRODUCTION_E2EE_SOURCE_GATE.md" \
   "reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md" \
   "reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md" \
+  "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md" \
   "reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md" \
   "reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md" \
   "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md" \
@@ -60,6 +61,9 @@ must_contain "$REGISTER" "protocol_session_e2ee_source_ready=true"
 must_contain "$REGISTER" "supported_default_transport_ready=true"
 must_contain "$REGISTER" "supported_local_key_lifecycle_ready=true"
 must_contain "$REGISTER" "supported_local_deletion_scope_ready=true"
+must_contain "$REGISTER" "production_key_management_source_gate_reviewed=true"
+must_contain "$REGISTER" "production_key_management_source_ready=true"
+must_contain "$REGISTER" "d100_2_key_management_source_gate_reviewed=true"
 must_contain "$REGISTER" "manual_update_integrity_policy_available=true"
 
 must_contain "$MATRIX" "target_standard_100_deployment_gap_reconciled=true"
@@ -73,6 +77,9 @@ must_contain "$MATRIX" "protocol_session_e2ee_source_ready=true"
 must_contain "$MATRIX" "supported_default_transport_ready=true"
 must_contain "$MATRIX" "supported_local_key_lifecycle_ready=true"
 must_contain "$MATRIX" "supported_local_deletion_scope_ready=true"
+must_contain "$MATRIX" "production_key_management_source_gate_reviewed=true"
+must_contain "$MATRIX" "production_key_management_source_ready=true"
+must_contain "$MATRIX" "d100_2_key_management_source_gate_reviewed=true"
 must_contain "$MATRIX" "manual_update_integrity_policy_available=true"
 
 must_contain "$MATRIX" "pass for explicit Apple Silicon current scope; universal/Intel hold"
@@ -83,7 +90,7 @@ must_contain "$MATRIX" "source pass for manual same-release policy; signed updat
 must_contain "$MATRIX" "source pass; production operations claim false"
 must_contain "$MATRIX" "source pass; identity audit false"
 must_contain "$MATRIX" "D100-1 source-ready protocol/session pass; production/audit/sensitive-use/external-delivery false"
-must_contain "$MATRIX" "supported-scope pass; full production key management false"
+must_contain "$MATRIX" "D100-2 source-ready local key/storage pass; app wrapping/key rotation/rollback prevention/secure deletion false"
 must_contain "$MATRIX" "supported-scope pass; production transport false"
 must_contain "$MATRIX" "source pass for current manual release class; signed update hold"
 
@@ -93,6 +100,9 @@ must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/DEPLOYMENT_READ
 must_contain "README.md" "reference/PRODUCTION_E2EE_SOURCE_GATE.md"
 must_contain "SECURITY.md" "reference/PRODUCTION_E2EE_SOURCE_GATE.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_E2EE_SOURCE_GATE.md"
+must_contain "README.md" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
+must_contain "SECURITY.md" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
+must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 
 for file in "$REGISTER" "$MATRIX" "README.md" "SECURITY.md"; do
   must_contain "$file" "not production-ready"
@@ -114,6 +124,7 @@ done
 scripts/target_standard_100_evidence_matrix_once.sh >/dev/null
 scripts/production_e2ee_source_gate_once.sh >/dev/null
 scripts/production_protocol_session_lifecycle_once.sh >/dev/null
+scripts/production_key_management_source_gate_once.sh >/dev/null
 scripts/macos_universal_scoped_artifact_policy_once.sh >/dev/null
 scripts/macos_production_ux_onboarding_once.sh >/dev/null
 scripts/pairwise_identity_safety_product_closure_once.sh >/dev/null
@@ -141,6 +152,9 @@ protocol_session_e2ee_source_ready=true
 supported_default_transport_ready=true
 supported_local_key_lifecycle_ready=true
 supported_local_deletion_scope_ready=true
+production_key_management_source_gate_reviewed=true
+production_key_management_source_ready=true
+d100_2_key_management_source_gate_reviewed=true
 manual_update_integrity_policy_available=true
 production_ready_claim_allowed=false
 audited_claim_allowed=false

@@ -20,7 +20,8 @@ Production-ready requires all five categories below to be true at the same time.
 2. Security readiness: protocol/session state machine, E2EE assumptions, replay
    rejection, retry/cancel semantics, key management, local storage lifecycle,
    migration/rollback policy, and destructive-action boundaries have tests and
-   reviewable documentation.
+   reviewable documentation, including
+   `reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md`.
 3. Transport readiness: the default product path lets normal users exchange
    messages without a central trusted server, phone/email/global account,
    searchable username, central contact discovery, central message server, push
@@ -95,6 +96,8 @@ not production readiness by themselves.
 - d100_1_e2ee_source_gate_reviewed=true
 - protocol_session_e2ee_source_ready=true
 - ops_3_key_storage_lifecycle_gate_reviewed=true
+- d100_2_key_management_source_gate_reviewed=true
+- production_key_management_source_ready=true
 - ops_4_default_transport_product_path_reviewed=true
 - production_transport_ready=false
 - ops_5_macos_production_ux_onboarding_gate_reviewed=true

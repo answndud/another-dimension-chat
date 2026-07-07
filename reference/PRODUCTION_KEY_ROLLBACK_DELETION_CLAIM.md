@@ -27,6 +27,11 @@ The passphrase policy relies on SQLCipher passphrase handling through the local
 profile store. No project-owned Argon2/scrypt KDF, OS account recovery, raw-key
 wrapping, or keychain-only unlock is claimed for this release class.
 
+D100-2 records the broader key-management source gate in
+`reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md`. It decomposes the current
+passable local scope from app key wrapping, key rotation, rollback prevention,
+backup recovery, and secure-deletion holds without expanding the RB-2 claim.
+
 ## Still Forbidden
 
 Do not claim:
@@ -57,6 +62,10 @@ Do not claim:
 ## Current Gate Flags
 
 - rb_2_key_rollback_deletion_claim_closure_reviewed=true
+- production_key_management_source_gate_reviewed=true
+- production_key_management_source_ready=true
+- d100_2_key_management_source_gate_reviewed=true
+- key_management_source_scope=passphrase-first-sqlcipher-local-profile-store-marker-rollback-local-delete-only
 - supported_local_key_lifecycle_ready=true
 - supported_local_key_lifecycle_scope=passphrase-first-sqlcipher-local-profile-store-only
 - supported_rollback_detection_ready=true
@@ -65,7 +74,13 @@ Do not claim:
 - supported_local_deletion_scope=local-logical-delete-and-owned-app-data-wipe-only
 - passphrase_first_unlock_required=true
 - os_keystore_only_rejected=true
+- sqlcipher_adrec1_local_store_ready=true
+- sqlcipher_passphrase_kdf_scope_ready=true
+- project_owned_argon2_scrypt_kdf_ready=false
 - app_key_wrapping_ready=false
+- key_rotation_ready=false
+- forward_only_schema_version_ready=true
+- prototype_data_migration_ready=false
 - rollback_detection_marker_only=true
 - rollback_prevention_claimed=false
 - secure_deletion_claim_allowed=false

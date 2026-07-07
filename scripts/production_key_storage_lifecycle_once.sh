@@ -26,8 +26,20 @@ cd "$ROOT"
 DOC="reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
 
 must_contain "$DOC" "production_key_storage_lifecycle_gate_reviewed=true"
+must_contain "$DOC" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
+must_contain "$DOC" "production_key_management_source_gate_reviewed=true"
+must_contain "$DOC" "production_key_management_source_ready=true"
+must_contain "$DOC" "d100_2_key_management_source_gate_reviewed=true"
+must_contain "$DOC" "key_management_source_scope=passphrase-first-sqlcipher-local-profile-store-marker-rollback-local-delete-only"
 must_contain "$DOC" "passphrase_first_unlock_required=true"
 must_contain "$DOC" "encrypted_profile_session_message_store_ready=true"
+must_contain "$DOC" "sqlcipher_adrec1_local_store_ready=true"
+must_contain "$DOC" "sqlcipher_passphrase_kdf_scope_ready=true"
+must_contain "$DOC" "project_owned_argon2_scrypt_kdf_ready=false"
+must_contain "$DOC" "forward_only_schema_version_ready=true"
+must_contain "$DOC" "prototype_data_migration_ready=false"
+must_contain "$DOC" "app_key_wrapping_ready=false"
+must_contain "$DOC" "key_rotation_ready=false"
 must_contain "$DOC" "destructive_local_actions_separated=true"
 must_contain "$DOC" "exact_confirmation_required=true"
 must_contain "$DOC" "backup_exclusion_best_effort_only=true"
@@ -44,7 +56,9 @@ must_contain "README.md" "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
 must_contain "SECURITY.md" "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
 must_contain "reference/STORAGE_DECISION.md" "PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
+must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_3_key_storage_lifecycle_gate_reviewed=true"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "production_key_management_source_ready=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_4_default_transport_product_path_reviewed=true"
 
 must_contain "crates/storage/src/lib.rs" "unlock_policy_requires_passphrase_for_all_modes"
@@ -69,6 +83,9 @@ must_contain "apps/desktop-tauri/src/ui-smoke.test.js" "confirmationMatched: con
 
 for file in "$DOC" "README.md" "SECURITY.md" "reference/STORAGE_DECISION.md"; do
   must_not_match "$file" "production_key_management_ready=true"
+  must_not_match "$file" "app_key_wrapping_ready=true"
+  must_not_match "$file" "key_rotation_ready=true"
+  must_not_match "$file" "project_owned_argon2_scrypt_kdf_ready=true"
   must_not_match "$file" "rollback_prevention_claimed=true"
   must_not_match "$file" "secure_media_deletion_claimed=true"
   must_not_match "$file" "backup_recovery_claimed=true"
@@ -86,6 +103,9 @@ exact_confirmation_required=true
 backup_exclusion_best_effort_only=true
 cloud_backup_sync_enabled=false
 backup_recovery_claimed=false
+production_key_management_source_gate_reviewed=true
+production_key_management_source_ready=true
+d100_2_key_management_source_gate_reviewed=true
 rollback_detection_marker_only=true
 rollback_prevention_claimed=false
 secure_media_deletion_claimed=false

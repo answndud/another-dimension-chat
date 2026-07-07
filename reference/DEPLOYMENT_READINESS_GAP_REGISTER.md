@@ -21,7 +21,7 @@ current supported scope is named precisely:
 | Onboarding and recovery UX | First-run, invite, safety verification, manual envelope, retry/cancel, destructive local lifecycle, and diagnostics are source-gated. | Representative user evidence remains false. |
 | Pairwise identity | Local identity persistence, signed invite payloads, canonical safety transcript, duplicate rejection, rebuild/re-pairing, and mismatch revocation are source-gated. | Identity audit remains false. |
 | Message-content E2EE | D100-1 source-ready protocol/session surface is gated by `reference/PRODUCTION_E2EE_SOURCE_GATE.md` for local/manual 1:1 message content, session, replay, retry, cancel, delete, and local record boundaries. | Broad production E2EE readiness, audit, sensitive-use, automatic networking, remote ack, and external delivery remain false. |
-| Local key/deletion lifecycle | Passphrase-first SQLCipher local profile scope, marker-only rollback detection, and local logical delete/wipe are source-gated. | Complete production key management, app key wrapping, rollback prevention, and secure media deletion remain false. |
+| Local key/deletion lifecycle | D100-2 source-ready local key/storage scope is gated by `reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md` for passphrase-first SQLCipher, forward-only schema versioning, marker-only rollback detection, and local logical delete/wipe. | Complete production key management, app key wrapping, key rotation, rollback prevention, backup recovery, and secure media deletion remain false. |
 | Default transport | Local/manual courier envelope exchange is the supported default. | Production transport and reliable external delivery remain false. |
 | Update/release integrity | Manual same-release GitHub Release verification, provenance, rollback warning, and emergency process are source-gated. | Signed update manifest, rollback prevention, stable release approval, and release upload remain false. |
 | Operations | Public/private intake, tabletop, emergency release, dependency triage, and support-template boundaries are source-gated. | Production operational readiness claim remains false. |
@@ -45,14 +45,11 @@ These cannot be made true by editing source files alone:
 
 ## Next Work Order
 
-1. D100-2: replace broad production key-management false with a pass-capable
-   key policy for KDF/versioning/key wrapping/rotation, or keep a named stable
-   lower-scope policy if complete key management is intentionally out of scope.
-2. D100-3: prepare signed/notarized macOS RC execution so it passes
+1. D100-3: prepare signed/notarized macOS RC execution so it passes
    automatically when Developer ID and notary credentials appear.
-3. D100-4: make the Windows public artifact path executable on a real Windows
+2. D100-4: make the Windows public artifact path executable on a real Windows
    runner/device and reject local-only results.
-4. D100-5: run external review, field evidence, and representative usability
+3. D100-5: run external review, field evidence, and representative usability
    intake with real non-sensitive reports; do not fabricate evidence.
 
 ## Current Flags
@@ -76,6 +73,10 @@ These cannot be made true by editing source files alone:
 - supported_default_transport_ready=true
 - supported_local_key_lifecycle_ready=true
 - supported_local_deletion_scope_ready=true
+- production_key_management_source_gate_reviewed=true
+- production_key_management_source_ready=true
+- d100_2_key_management_source_gate_reviewed=true
+- key_management_source_scope=passphrase-first-sqlcipher-local-profile-store-marker-rollback-local-delete-only
 - manual_update_integrity_policy_available=true
 - developer_id_signing_available=false
 - notarization_available=false
@@ -88,5 +89,10 @@ These cannot be made true by editing source files alone:
 - ios_public_artifact_available=false
 - production_ready_claim_allowed=false
 - production_e2ee_ready=false
+- production_key_management_ready=false
+- app_key_wrapping_ready=false
+- key_rotation_ready=false
+- rollback_prevention_claimed=false
+- secure_deletion_claim_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false

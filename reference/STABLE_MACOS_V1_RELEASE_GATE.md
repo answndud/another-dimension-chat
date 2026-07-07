@@ -29,6 +29,9 @@ rollback detection, and explicit local logical delete / owned app-data wipe
 wording. Complete `production_key_management_ready`, app key wrapping, rollback
 prevention, secure media deletion, backup recovery, security-ready, and
 sensitive-use claims remain false.
+D100-2 key-management source readiness is recorded in
+`reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md`; it is a pass/hold source
+gate, not production key-management readiness.
 
 RB-3 supported default practical transport closure is recorded in
 `reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md`. It makes the
@@ -89,7 +92,7 @@ field evidence, and a separate owner release decision.
 | Area | Current result | Stable impact |
 | --- | --- | --- |
 | Protocol/session lifecycle | D100-1 source-ready protocol/session surface is pass-capable for supported local/manual envelope message-content scope; broad `production_e2ee_ready=false`. | Hold production-ready and security-ready claims. |
-| Key/storage lifecycle | Supported local key/deletion scope exists; broad `production_key_management_ready=false`. | Hold sensitive-use and security-ready claims. |
+| Key/storage lifecycle | D100-2 source-ready local key/storage scope exists; app wrapping, key rotation, rollback prevention, backup recovery, and broad `production_key_management_ready=false`. | Hold sensitive-use and security-ready claims. |
 | Default transport | Supported local/manual courier envelope default exists; broad `production_transport_ready=false`. | Hold reliable external delivery claims. |
 | macOS UX/onboarding | Owner-observed task script exists; `usability_study_completed=false`. | Hold production wording removal. |
 | macOS distribution | Distribution gate exists; RB-7 scope-down permits lower release classes only; `stable_signed_notarized_artifact_available=false`. | Hold stable release publication and production distribution claims. |
@@ -169,6 +172,8 @@ preflight after the blockers below are resolved.
 - supported_local_manual_e2ee_ready=true
 - supported_local_manual_e2ee_scope=1:1-local-manual-envelope-message-content-only
 - rb_2_key_rollback_deletion_claim_closure_reviewed=true
+- d100_2_key_management_source_gate_reviewed=true
+- production_key_management_source_ready=true
 - supported_local_key_lifecycle_ready=true
 - supported_local_key_lifecycle_scope=passphrase-first-sqlcipher-local-profile-store-only
 - supported_rollback_detection_ready=true
