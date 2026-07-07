@@ -126,4 +126,4 @@ Targeted tests that anchor this gate:
 - external_delivery_claim_allowed=false
 - sensitive_communication_allowed=false
 - security_ready_claimed=false
-- next_required_phase=RB-5 real macOS two-machine field evidence closure
+- next_required_phase=Phase M100-5 - macOS Error Recovery And Destructive Action Completion

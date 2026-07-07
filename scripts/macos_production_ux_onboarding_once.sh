@@ -45,7 +45,7 @@ must_contain "$DOC" "automatic_network_on_launch_allowed=false"
 must_contain "$DOC" "external_delivery_claim_allowed=false"
 must_contain "$DOC" "sensitive_communication_allowed=false"
 must_contain "$DOC" "security_ready_claimed=false"
-must_contain "$DOC" "next_required_phase=RB-5 real macOS two-machine field evidence closure"
+must_contain "$DOC" "next_required_phase=Phase M100-5 - macOS Error Recovery And Destructive Action Completion"
 
 must_contain "README.md" "reference/MACOS_PRODUCTION_UX_ONBOARDING.md"
 must_contain "SECURITY.md" "reference/MACOS_PRODUCTION_UX_ONBOARDING.md"
@@ -113,5 +113,5 @@ automatic_network_on_launch_allowed=false
 external_delivery_claim_allowed=false
 sensitive_communication_allowed=false
 security_ready_claimed=false
-next_required_phase=RB-5-real-macos-two-machine-field-evidence-closure
+next_required_phase=Phase-M100-5-macOS-Error-Recovery-And-Destructive-Action-Completion
 STATUS
