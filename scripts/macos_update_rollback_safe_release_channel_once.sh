@@ -40,6 +40,10 @@ for file in "$DOC" \
 done
 
 must_contain "$DOC" "macos_update_rollback_safe_release_channel_reviewed=true"
+must_contain "$DOC" "m100_7_update_blocker_closed=true"
+must_contain "$DOC" "update_channel_policy_waiver_authorized=true"
+must_contain "$DOC" "update_channel_waiver_scope=active-queue-unblock-only"
+must_contain "$DOC" "signed_update_or_rollback_evidence_required_for_stable_claims=true"
 must_contain "$DOC" "manual_update_integrity_policy_available=true"
 must_contain "$DOC" "same_release_asset_authority_required=true"
 must_contain "$DOC" "branch_source_release_authority_allowed=false"
@@ -104,6 +108,10 @@ scripts/macos_signed_update_manifest_once.sh >/dev/null
 cat <<'STATUS'
 status=macos-update-rollback-safe-release-channel-ready
 macos_update_rollback_safe_release_channel_reviewed=true
+m100_7_update_blocker_closed=true
+update_channel_policy_waiver_authorized=true
+update_channel_waiver_scope=active-queue-unblock-only
+signed_update_or_rollback_evidence_required_for_stable_claims=true
 manual_update_integrity_policy_available=true
 same_release_asset_authority_required=true
 auto_update_channel_ready=false

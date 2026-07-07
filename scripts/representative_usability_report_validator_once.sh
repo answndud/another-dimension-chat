@@ -155,5 +155,5 @@ representative_usability_sample_threshold=3-5
 accepted_representative_usability_reports=0
 usability_study_completed=false
 representative_usability_evidence_completed=false
-next_required_phase=Phase-M100-7-macOS-Update-And-Rollback-Safe-Release-Channel
+next_required_phase=Phase-M100-8-macOS-Stable-Release-Gate-And-Public-Copy-Upgrade
 STATUS
