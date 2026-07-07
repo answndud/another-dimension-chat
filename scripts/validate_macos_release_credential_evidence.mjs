@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -123,7 +124,18 @@ function isIsoUtc(value) {
   return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value);
 }
 
-function validateEvidence(file) {
+function currentGitHead() {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "";
+  }
+}
+
+function validateEvidence(file, { requireCurrentHead = false, head = "" } = {}) {
   const text = fs.readFileSync(file, "utf8");
   const fields = parseEvidence(text);
   const issues = [];
@@ -142,6 +154,9 @@ function validateEvidence(file) {
 
   const sourceCommit = fields.get("source_commit") ?? "";
   if (!/^[0-9a-f]{7,40}$/i.test(sourceCommit)) issues.push("invalid-source-commit");
+  if (requireCurrentHead && (!/^[0-9a-f]{40}$/i.test(head) || sourceCommit !== head)) {
+    issues.push("source-commit-not-current-head");
+  }
 
   const teamId = fields.get("apple_team_id") ?? "";
   const developerIdTeamId = fields.get("developer_id_team_id") ?? "";
@@ -183,7 +198,14 @@ function validateEvidence(file) {
   return { file, fields, issues, valid: issues.length === 0 };
 }
 
-const evidenceFiles = collectEvidenceFiles(process.argv.slice(2));
+const rawArgs = process.argv.slice(2);
+const requireCurrentHead =
+  rawArgs.includes("--require-current-head") || process.env.AD_REQUIRE_CURRENT_HEAD === "1";
+const evidenceInputs = rawArgs.filter((arg) => arg !== "--require-current-head");
+const head = requireCurrentHead ? currentGitHead() : "";
+
+const evidenceFiles = collectEvidenceFiles(evidenceInputs);
+console.log(`credential_evidence_current_head_required=${requireCurrentHead}`);
 console.log(`credential_evidence_files_found=${evidenceFiles.length}`);
 
 if (evidenceFiles.length === 0) {
@@ -194,7 +216,7 @@ if (evidenceFiles.length === 0) {
   process.exit(0);
 }
 
-const validated = evidenceFiles.map(validateEvidence);
+const validated = evidenceFiles.map((file) => validateEvidence(file, { requireCurrentHead, head }));
 let failures = 0;
 for (const result of validated) {
   const name = path.basename(result.file);
