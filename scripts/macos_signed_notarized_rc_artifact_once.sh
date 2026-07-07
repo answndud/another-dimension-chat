@@ -57,7 +57,7 @@ must_contain "$DOC" "rc_artifact_sha256_recorded=false"
 must_contain "$DOC" "release_upload_authorized=false"
 must_contain "$DOC" "dmg_rebuild_authorized=false"
 must_contain "$DOC" "generated_release_artifacts_staged=false"
-must_contain "$DOC" "next_required_phase=Phase M100-4 - macOS First-Run And Onboarding Production UX"
+must_contain "$DOC" "next_required_phase=Phase M100-6 - macOS Representative Usability Evidence"
 
 must_contain "$DIST_GATE" "stable_signed_notarized_artifact_available=false"
 must_contain "$DIST_GATE" "production_distribution_ready=false"
@@ -101,7 +101,7 @@ rc_artifact_sha256_recorded=false
 release_upload_authorized=false
 dmg_rebuild_authorized=false
 generated_release_artifacts_staged=false
-next_required_phase=Phase-M100-4-macOS-First-Run-And-Onboarding-Production-UX
+next_required_phase=Phase-M100-6-macOS-Representative-Usability-Evidence
 STATUS
   exit 0
 fi
