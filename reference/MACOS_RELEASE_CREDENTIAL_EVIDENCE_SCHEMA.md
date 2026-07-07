@@ -105,4 +105,4 @@ current repository `HEAD`.
 - production_ready_claim_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false
-- next_required_phase=Phase M100-6 - macOS Representative Usability Evidence
+- next_required_phase=Phase M100-7 - macOS Update And Rollback-Safe Release Channel

@@ -113,6 +113,9 @@ updated, and a later explicit release/claim task authorizes the wording.
 - m100_3_artifact_blocker_closed=true
 - signed_notarized_rc_policy_waiver_authorized=true
 - signed_notarized_artifact_required_for_distribution_claims=true
+- m100_6_usability_blocker_closed=true
+- representative_usability_policy_waiver_authorized=true
+- representative_usability_evidence_required_for_stable_claims=true
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
 - macos_release_credential_evidence_collector_available=true
@@ -234,4 +237,4 @@ updated, and a later explicit release/claim task authorizes the wording.
 - generated_release_artifacts_staged=false
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false
-- next_required_phase=Phase M100-6 - macOS Representative Usability Evidence
+- next_required_phase=Phase M100-7 - macOS Update And Rollback-Safe Release Channel

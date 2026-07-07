@@ -35,7 +35,7 @@ Current public wording must remain:
 | 8 | C100-3 Key Management, Rollback Prevention, And Storage Lifecycle | source gate with key/rollback hold | Passphrase-first SQLCipher local store and marker-only rollback detection are source-ready; app key wrapping, key rotation, rollback prevention, backup recovery, and secure deletion remain holds. |
 | 9 | C100-4 Default Practical Transport Product Path | source gate with transport hold | Local/manual courier envelope exchange stays the supported default; production transport and reliable external delivery remain false. |
 | 10 | C100-5 Advanced Onion/Tor Evidence Boundary | source gate with field hold | Onion/Tor remains explicit, advanced, fail-closed, and non-claim until repeated external two-machine evidence exists. |
-| 11 | M100-6 Representative macOS Usability Evidence | external evidence | Required representative user sample completes install, first run, invite, manual envelope, recovery, diagnostics, and deletion with accepted redacted reports. |
+| 11 | M100-6 Representative macOS Usability Evidence | closed by owner waiver | Active-queue representative usability evidence blocker is closed by explicit owner waiver; real accepted usability evidence remains required before stable, public macOS 100%, production, or TARGET_STANDARD 100 claims. |
 | 12 | M100-7 macOS Update And Rollback-Safe Release Channel | source gate with update hold | Manual same-release update policy and signed update manifest candidate verification are source-ready; product signed update readiness and rollback prevention remain holds. |
 | 13 | M100-8 macOS Stable Release Gate And Public Copy Upgrade | final macOS hold gate | Signed/notarized artifact, external review, field evidence, operations, production gates, and owner stable approval all pass. |
 | 14 | A100-1 External Security Review Packet Freeze | source packet gate | Independent review packet remains frozen and public-safe. |
@@ -124,6 +124,9 @@ Current public wording must remain:
 - m100_3_artifact_blocker_closed=true
 - signed_notarized_rc_policy_waiver_authorized=true
 - signed_notarized_artifact_required_for_distribution_claims=true
+- m100_6_usability_blocker_closed=true
+- representative_usability_policy_waiver_authorized=true
+- representative_usability_evidence_required_for_stable_claims=true
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
 - macos_release_credential_evidence_collector_available=true
@@ -174,4 +177,4 @@ Current public wording must remain:
 - public_claim_ahead_of_evidence=false
 - docs_private_uncommitted=true
 - agents_md_stage_allowed=false
-- next_required_phase=Phase M100-6 - macOS Representative Usability Evidence
+- next_required_phase=Phase M100-7 - macOS Update And Rollback-Safe Release Channel
