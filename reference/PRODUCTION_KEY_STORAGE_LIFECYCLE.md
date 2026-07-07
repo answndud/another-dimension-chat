@@ -128,6 +128,7 @@ Targeted tests that anchor this gate:
 - sqlcipher_adrec1_local_store_ready=true
 - sqlcipher_passphrase_kdf_scope_ready=true
 - sqlcipher_passphrase_rekey_source_ready=true
+- tauri_profile_passphrase_rekey_command_ready=true
 - project_owned_argon2_scrypt_kdf_ready=false
 - forward_only_schema_version_ready=true
 - prototype_data_migration_ready=false

@@ -7618,6 +7618,18 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionProfilePassphraseRekeySummary {
+        storage_opened: bool,
+        profile_marker_present: bool,
+        passphrase_rekeyed: bool,
+        old_passphrase_rejected: bool,
+        new_passphrase_verified: bool,
+        key_material_exposed: bool,
+        transport_io_opened: bool,
+        runtime_messaging_enabled: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionProfileIdentityInitSummary {
         storage_opened: bool,
         identity_private_key_written: bool,
@@ -8217,6 +8229,40 @@ pub mod production {
 
         pub fn profile_marker_present(self) -> bool {
             self.profile_marker_present
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn transport_io_opened(self) -> bool {
+            self.transport_io_opened
+        }
+
+        pub fn runtime_messaging_enabled(self) -> bool {
+            self.runtime_messaging_enabled
+        }
+    }
+
+    impl ProductionProfilePassphraseRekeySummary {
+        pub fn storage_opened(self) -> bool {
+            self.storage_opened
+        }
+
+        pub fn profile_marker_present(self) -> bool {
+            self.profile_marker_present
+        }
+
+        pub fn passphrase_rekeyed(self) -> bool {
+            self.passphrase_rekeyed
+        }
+
+        pub fn old_passphrase_rejected(self) -> bool {
+            self.old_passphrase_rejected
+        }
+
+        pub fn new_passphrase_verified(self) -> bool {
+            self.new_passphrase_verified
         }
 
         pub fn key_material_exposed(self) -> bool {
@@ -12020,6 +12066,51 @@ pub mod production {
         Ok(ProductionProfileStatusSummary {
             storage_opened: true,
             profile_marker_present,
+            key_material_exposed: false,
+            transport_io_opened: false,
+            runtime_messaging_enabled: false,
+        })
+    }
+
+    pub fn production_profile_passphrase_rekey(
+        store_path: impl AsRef<std::path::Path>,
+        profile: ProfileName,
+        current_passphrase: &ProfilePassphrase,
+        new_passphrase: &ProfilePassphrase,
+    ) -> Result<ProductionProfilePassphraseRekeySummary, ProductionSessionError> {
+        if current_passphrase == new_passphrase {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+
+        let store_path = store_path.as_ref();
+        let locked = LockedProfileStore::new(store_path);
+        let store = locked.unlock(current_passphrase)?;
+        let profile_marker_present = store.profile_marker_exists(&profile)?;
+        if !profile_marker_present {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+        store.rekey_with_passphrase(new_passphrase)?;
+        drop(store);
+
+        let old_passphrase_rejected = matches!(
+            locked.unlock(current_passphrase),
+            Err(ProductionStorageError::UnlockFailed)
+        );
+        if !old_passphrase_rejected {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
+        let reopened = locked.unlock(new_passphrase)?;
+        let new_passphrase_verified = reopened.profile_marker_exists(&profile)?;
+        if !new_passphrase_verified {
+            return Err(ProductionSessionError::ProfileMarkerMissing);
+        }
+
+        Ok(ProductionProfilePassphraseRekeySummary {
+            storage_opened: true,
+            profile_marker_present,
+            passphrase_rekeyed: true,
+            old_passphrase_rejected,
+            new_passphrase_verified,
             key_material_exposed: false,
             transport_io_opened: false,
             runtime_messaging_enabled: false,
@@ -25395,6 +25486,53 @@ pub mod production {
             assert!(!present.key_material_exposed());
             assert!(!present.transport_io_opened());
             assert!(!present.runtime_messaging_enabled());
+
+            let _ = std::fs::remove_dir_all(dir);
+        }
+
+        #[test]
+        fn production_profile_passphrase_rekey_changes_unlock_secret_without_runtime() {
+            let dir = std::env::temp_dir().join(format!(
+                "another-dimension-production-profile-rekey-{}-{:?}",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+            if dir.exists() {
+                std::fs::remove_dir_all(&dir).expect("remove stale dir");
+            }
+            std::fs::create_dir_all(&dir).expect("create dir");
+            let store_path = dir.join("profile.db");
+            let profile = ProfileName::new("alice").expect("valid profile");
+            let old_passphrase = ProfilePassphrase::new("old-passphrase").expect("passphrase");
+            let new_passphrase = ProfilePassphrase::new("new-passphrase").expect("passphrase");
+
+            production_profile_init(&store_path, profile.clone(), &old_passphrase)
+                .expect("profile init");
+            let summary = production_profile_passphrase_rekey(
+                &store_path,
+                profile.clone(),
+                &old_passphrase,
+                &new_passphrase,
+            )
+            .expect("profile rekey");
+
+            assert!(summary.storage_opened());
+            assert!(summary.profile_marker_present());
+            assert!(summary.passphrase_rekeyed());
+            assert!(summary.old_passphrase_rejected());
+            assert!(summary.new_passphrase_verified());
+            assert!(!summary.key_material_exposed());
+            assert!(!summary.transport_io_opened());
+            assert!(!summary.runtime_messaging_enabled());
+            assert!(
+                production_profile_status(&store_path, profile.clone(), &old_passphrase).is_err()
+            );
+            let reopened = production_profile_status(&store_path, profile, &new_passphrase)
+                .expect("profile status with new passphrase");
+            assert!(reopened.profile_marker_present());
+            assert!(!reopened.key_material_exposed());
+            assert!(!reopened.transport_io_opened());
+            assert!(!reopened.runtime_messaging_enabled());
 
             let _ = std::fs::remove_dir_all(dir);
         }
