@@ -59,6 +59,14 @@ blocker for lower release classes such as signed public beta or RC. Review and
 audit still block stable, production, audited, security-ready, and sensitive-use
 wording.
 
+D100-4 external evidence intake execution is recorded in
+`reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`. It makes the reviewer packet,
+finding tracker, field report validator,
+`reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md` representative usability
+validator, consent/non-sensitive-use notice, and local-only/fabricated evidence rejection
+operator-ready. It does not complete external review, audit, field evidence, or
+representative usability evidence.
+
 RB-7 macOS stable artifact scope-down is recorded in
 `reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md`. It does not
 claim a signed, notarized, or stapled stable artifact. It only removes missing
@@ -96,8 +104,8 @@ field evidence, and a separate owner release decision.
 | Default transport | Supported local/manual courier envelope default exists; broad `production_transport_ready=false`. | Hold reliable external delivery claims. |
 | macOS UX/onboarding | Owner-observed task script exists; `usability_study_completed=false`. | Hold production wording removal. |
 | macOS distribution | Distribution gate exists; RB-7 scope-down permits lower release classes only; `stable_signed_notarized_artifact_available=false`. | Hold stable release publication and production distribution claims. |
-| External review/audit | Review packet exists; RB-6 scope-down permits lower release classes only; `external_review_completed=false` and `audit_completed=false`. | Keep `not audited`; hold stable, production, security-ready, and sensitive-use claims. |
-| Field evidence | Program and validator exist; RB-5 scope-down permits lower release classes only; `macos_two_machine_real_user_flow_repeated=false`. | Hold stable, reliable delivery, production, and sensitive-use claims. |
+| External review/audit | Review packet and D100-4 intake path exist; RB-6 scope-down permits lower release classes only; `external_review_completed=false` and `audit_completed=false`. | Keep `not audited`; hold stable, production, security-ready, and sensitive-use claims. |
+| Field evidence | Program, validator, and D100-4 intake path exist; RB-5 scope-down permits lower release classes only; `macos_two_machine_real_user_flow_repeated=false`. | Hold stable, reliable delivery, production, and sensitive-use claims. |
 | Operations | Incident/support process exists; `production_operational_readiness_claim_allowed=false`. | Hold production operations claim. |
 
 ## Public Wording Decision
@@ -165,6 +173,16 @@ preflight after the blockers below are resolved.
 - rb_7_macos_stable_artifact_release_class_scope_down_reviewed=true
 - external_review_completed=false
 - audit_completed=false
+- d100_4_external_evidence_intake_execution_reviewed=true
+- external_evidence_intake_operator_ready=true
+- reviewer_packet_freeze_ready=true
+- audit_finding_tracker_ready=true
+- audit_finding_tracker_schema_machine_checkable=true
+- audit_finding_counts_machine_checked=true
+- field_report_validator_ready=true
+- usability_report_validator_ready=true
+- consent_non_sensitive_use_notice_ready=true
+- fabricated_or_local_only_evidence_rejected=true
 - rb_6_external_review_release_class_scope_down_reviewed=true
 - macos_two_machine_real_user_flow_repeated=false
 - rb_5_field_evidence_release_class_scope_down_reviewed=true
@@ -192,6 +210,7 @@ preflight after the blockers below are resolved.
 - critical_desktop_task_script_ready=true
 - recovery_vocabulary_aligned=true
 - usability_study_completed=false
+- representative_usability_evidence_completed=false
 - production_wording_ready=false
 - production_e2ee_ready=false
 - production_key_management_ready=false

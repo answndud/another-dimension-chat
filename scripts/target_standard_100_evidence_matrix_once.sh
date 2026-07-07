@@ -33,6 +33,9 @@ for file in "$MATRIX" "$TARGET" "README.md" "SECURITY.md" \
   "reference/PRODUCTION_E2EE_SOURCE_GATE.md" \
   "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md" \
   "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
+  "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
+  "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md" \
+  "reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md" \
   "reference/STABLE_MACOS_V1_RELEASE_GATE.md" \
   "reference/STABLE_RELEASE_HOLD_REPORT.md" \
   "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md" \
@@ -127,6 +130,9 @@ for linked in \
   "DEPLOYMENT_READINESS_GAP_REGISTER.md" \
   "PRODUCTION_E2EE_SOURCE_GATE.md" \
   "MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
+  "EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
+  "EXTERNAL_REVIEW_INTAKE_RUNBOOK.md" \
+  "REPRESENTATIVE_USABILITY_REPORT_PACKET.md" \
   "PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md" \
   "PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md" \
   "PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md" \
@@ -180,6 +186,22 @@ for flag in \
   "d100_3_signed_notarized_execution_path_reviewed=true" \
   "macos_signed_notarized_execution_path_available=true" \
   "signed_notarized_rc_execution_ready=false" \
+  "d100_4_external_evidence_intake_execution_reviewed=true" \
+  "external_evidence_intake_operator_ready=true" \
+  "external_review_intake_runbook_available=true" \
+  "external_review_intake_operator_ready=true" \
+  "reviewer_packet_freeze_ready=true" \
+  "audit_finding_tracker_ready=true" \
+  "audit_finding_tracker_schema_machine_checkable=true" \
+  "audit_finding_counts_machine_checked=true" \
+  "field_report_validator_ready=true" \
+  "usability_report_validator_ready=true" \
+  "consent_non_sensitive_use_notice_ready=true" \
+  "representative_usability_report_packet_available=true" \
+  "representative_usability_report_validator_available=true" \
+  "representative_usability_sample_threshold=3-5" \
+  "field_report_sample_threshold=multiple-real-two-machine-plus-different-network" \
+  "fabricated_or_local_only_evidence_rejected=true" \
   "production_claim_gate_linked=true" \
   "audit_review_gate_linked=true" \
   "field_evidence_gate_linked=true" \
@@ -206,6 +228,7 @@ for flag in \
   "notarization_available=false" \
   "stable_signed_notarized_artifact_available=false" \
   "representative_usability_evidence_completed=false" \
+  "local_only_evidence_promoted_to_external=false" \
   "production_e2ee_ready=false" \
   "production_key_management_ready=false" \
   "app_key_wrapping_ready=false" \

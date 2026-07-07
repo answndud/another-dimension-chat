@@ -5,6 +5,9 @@ Another Dimension Chat is not a secure messenger release today.
 This packet gives an independent reviewer a public-safe starting point. It is
 not an external review result and does not imply approval.
 
+Required public labels: unsigned experimental public beta, sensitive
+communication prohibited, not audited, and not production-ready.
+
 ## Review Gap Boundary
 
 The unsigned public beta release packet must publish this gap explicitly:
@@ -14,6 +17,7 @@ The unsigned public beta release packet must publish this gap explicitly:
 - `reviewer_signoff_claimed=false`
 - `public_user_safety_signoff_claimed=false`
 - `review_packet_inputs_public_safe=true`
+- `reviewer_packet_freeze_ready=true`
 - `known_review_gaps_published=true`
 - `public_safe_review_commands_required=true`
 - `private_reporting_boundary=private-vulnerability-reporting-or-minimal-public-contact-request`
@@ -201,11 +205,19 @@ Review the unsigned experimental public beta boundary:
 - `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`: public-safe reviewer packet
   scope, severity definitions, fix/hold/waive triage process, and current
   no-audit/no-signoff flags.
+- `reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md`: D100-4 operator runbook for
+  freezing reviewer inputs, routing sensitive findings privately, updating the
+  tracker, and keeping review completion claims false.
+- `reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`: D100-4 focused intake gate
+  connecting review, field, and representative usability evidence validators
+  while preserving current public non-claims.
 - `reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md`: RB-6 release-class
   scope-down that keeps review/audit claims false while allowing lower release
   classes to continue without audited or security-ready claims.
 - `reference/AUDIT_FINDING_TRACKER.md`: public-safe finding tracker template
   with current zero-finding/no-audit status and required non-claims.
+- `scripts/validate_audit_finding_tracker.mjs`: tracker schema/count/redaction
+  validator for public-safe external review finding intake.
 - `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md`: field evidence ladder,
   required macOS flow coverage, report data boundary, reliability decision
   rule, and current no-external-success/no-reliability flags.
@@ -215,6 +227,12 @@ Review the unsigned experimental public beta boundary:
 - `reference/REDACTED_FIELD_REPORT_PACKET.md`: public-safe field report
   template, forbidden private fields, current empty evidence ledger, and
   required non-claims.
+- `reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md`: D100-4 representative
+  usability report packet with consent, non-sensitive-use notice, 3-5 sample
+  threshold, and current no-completed-study flags.
+- `scripts/validate_representative_usability_reports.mjs`: representative
+  usability report validator that accepts only redacted candidate evidence and
+  never opens production wording by itself.
 - `reference/PUBLIC_SUPPORT_TRIAGE.md`: public-safe maintainer routing matrix
   for redacted support reports and private security-contact routing.
 - `reference/TRANSPORT_EXPERIMENT_RUNBOOK.md`: public-safe manual network

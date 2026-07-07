@@ -29,12 +29,16 @@ REVIEW_PACKET="reference/INDEPENDENT_REVIEW_PACKET.md"
 GATE="reference/PRODUCTION_READINESS_CLAIM_GATE.md"
 VALIDATOR="scripts/validate_redacted_field_reports.mjs"
 SCOPE_DOWN="reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md"
+INTAKE="reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md"
 
-for file in "$PROGRAM" "$PACKET" "$REVIEW_PACKET" "$GATE" "$VALIDATOR" "$SCOPE_DOWN" "README.md" "SECURITY.md"; do
+for file in "$PROGRAM" "$PACKET" "$REVIEW_PACKET" "$GATE" "$VALIDATOR" "$SCOPE_DOWN" "$INTAKE" "README.md" "SECURITY.md"; do
   [ -f "$file" ] || fail "missing required field evidence input: $file"
 done
 
 must_contain "$PROGRAM" "field_evidence_reliability_program_reviewed=true"
+must_contain "$PROGRAM" "d100_4_external_evidence_intake_execution_reviewed=true"
+must_contain "$PROGRAM" "external_evidence_intake_operator_ready=true"
+must_contain "$PROGRAM" "field_report_validator_ready=true"
 must_contain "$PROGRAM" "rb_5_field_evidence_release_class_scope_down_reviewed=true"
 must_contain "$PROGRAM" "redacted_field_report_packet_available=true"
 must_contain "$PROGRAM" "redacted_field_report_validator_available=true"
@@ -60,6 +64,9 @@ must_contain "$PROGRAM" "next_required_phase=RB-6 external review and audit clos
 
 must_contain "$PACKET" "redacted_field_report_packet_available=true"
 must_contain "$PACKET" "redacted_field_report_validator_available=true"
+must_contain "$PACKET" "d100_4_external_evidence_intake_execution_reviewed=true"
+must_contain "$PACKET" "external_evidence_intake_operator_ready=true"
+must_contain "$PACKET" "field_report_validator_ready=true"
 must_contain "$PACKET" "accepted_production_field_reports=0"
 must_contain "$PACKET" "clean_install_checksum_status=pass|fail|partial|not-run"
 must_contain "$PACKET" "manual_envelope_round_trip_status=pass|fail|partial|not-run"
@@ -75,6 +82,7 @@ must_contain "$PACKET" "sensitive_communication_allowed=false"
 for required in \
   "reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md" \
   "reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md" \
+  "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
   "reference/REDACTED_FIELD_REPORT_PACKET.md" \
   "reference/PUBLIC_INTAKE_POLICY.md" \
   "reference/PUBLIC_SUPPORT_TRIAGE.md" \
@@ -84,15 +92,19 @@ for required in \
 done
 
 must_contain "README.md" "reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md"
+must_contain "README.md" "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md"
 must_contain "README.md" "reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md"
 must_contain "README.md" "reference/REDACTED_FIELD_REPORT_PACKET.md"
 must_contain "SECURITY.md" "reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md"
+must_contain "SECURITY.md" "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md"
 must_contain "SECURITY.md" "reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md"
 must_contain "SECURITY.md" "reference/REDACTED_FIELD_REPORT_PACKET.md"
 must_contain "$VALIDATOR" "status=waiting-for-redacted-field-reports"
 must_contain "$VALIDATOR" "status=redacted-field-evidence-candidate-requires-review"
 must_contain "$VALIDATOR" "production_field_evidence_ready=false"
 must_contain "$GATE" "ops_8_field_evidence_reliability_program_reviewed=true"
+must_contain "$GATE" "d100_4_external_evidence_intake_execution_reviewed=true"
+must_contain "$GATE" "external_evidence_intake_operator_ready=true"
 must_contain "$GATE" "rb_5_field_evidence_release_class_scope_down_reviewed=true"
 must_contain "$GATE" "redacted_field_report_packet_available=true"
 must_contain "$GATE" "redacted_field_report_validator_available=true"
@@ -127,6 +139,9 @@ scripts/field_evidence_release_class_scope_down_once.sh >/dev/null
 cat <<'STATUS'
 status=field-evidence-reliability-program-ready
 field_evidence_reliability_program_reviewed=true
+d100_4_external_evidence_intake_execution_reviewed=true
+external_evidence_intake_operator_ready=true
+field_report_validator_ready=true
 rb_5_field_evidence_release_class_scope_down_reviewed=true
 redacted_field_report_packet_available=true
 redacted_field_report_validator_available=true
