@@ -186,6 +186,10 @@ Review the unsigned experimental public beta boundary:
   and universal/Intel claim blockers.
 - `reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md`: M100-3 signed/notarized
   RC runbook and focused artifact verifier, with current no-artifact hold.
+- `reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md`: D100-3 one-shot
+  credential probe, signing, notarization, stapling, Gatekeeper assessment,
+  checksum, and generated provenance execution path, with current credential
+  and artifact hold.
 - `reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md`: M100-7 manual
   same-release update integrity and rollback-warning source gate, with no
   auto-update, signed update channel, release upload, or rollback-prevention

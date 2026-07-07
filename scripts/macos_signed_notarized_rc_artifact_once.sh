@@ -26,9 +26,10 @@ cd "$ROOT"
 DOC="reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md"
 DIST_GATE="reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
 CREDENTIAL_GATE="reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md"
+EXECUTION_PATH="reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 
 for file in "$DOC" "$DIST_GATE" "$CREDENTIAL_GATE" "README.md" "SECURITY.md" \
-  "reference/INDEPENDENT_REVIEW_PACKET.md"; do
+  "$EXECUTION_PATH" "reference/INDEPENDENT_REVIEW_PACKET.md"; do
   [ -f "$file" ] || fail "missing required signed RC input: $file"
 done
 
@@ -40,6 +41,9 @@ command -v spctl >/dev/null 2>&1 && SPCTL_AVAILABLE=true
 xcrun --find stapler >/dev/null 2>&1 && STAPLER_AVAILABLE=true
 
 must_contain "$DOC" "m100_3_signed_notarized_rc_runbook_reviewed=true"
+must_contain "$DOC" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
+must_contain "$DOC" "d100_3_signed_notarized_execution_path_reviewed=true"
+must_contain "$DOC" "macos_signed_notarized_execution_path_available=true"
 must_contain "$DOC" "signed_notarized_rc_artifact_verifier_available=true"
 must_contain "$DOC" "signed_notarized_rc_artifact_available=false"
 must_contain "$DOC" "ad_signed_rc_dmg_input_required_for_artifact_verification=true"
@@ -60,8 +64,11 @@ must_contain "$DIST_GATE" "production_distribution_ready=false"
 must_contain "$CREDENTIAL_GATE" "developer_id_signing_available=false"
 must_contain "$CREDENTIAL_GATE" "notarization_credential_available=false"
 must_contain "README.md" "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md"
+must_contain "README.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 must_contain "SECURITY.md" "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md"
+must_contain "SECURITY.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md"
+must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 
 for file in "$DOC" "$DIST_GATE" "$CREDENTIAL_GATE" "README.md" "SECURITY.md"; do
   must_not_match "$file" "release_upload_authorized=true"
