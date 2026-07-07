@@ -1,7 +1,8 @@
 # Production Key Management Source Gate
 
 Status: D100-2 source gate is ready for the supported local key/storage scope.
-This is a source-readiness gate only. It is not complete production key
+C100-3 is closed for active-queue progress by explicit owner policy waiver
+only. This is a source-readiness gate only. It is not complete production key
 management, not app key wrapping readiness, not key rotation readiness, not
 rollback prevention, not secure deletion, not an audit result, and not
 permission for sensitive communication.
@@ -28,6 +29,14 @@ It confirms that current source has a coherent pass/hold boundary for review;
 it does not claim final KDF ownership, app database-key wrapping, key rotation,
 backup recovery, rollback prevention, secure media deletion, or device
 compromise resistance.
+
+The selected workaround is an explicit owner policy waiver for C100-3 only:
+missing app key wrapping, production key rotation, external monotonic rollback
+prevention design, backup/recovery evidence, secure deletion evidence, and
+external review no longer keep C100-3 in the active queue. Production key
+management, rollback-prevention, secure-deletion, security-ready, and
+sensitive-use claims remain blocked until real evidence or a later explicit
+claim-policy decision exists.
 
 ## Unit Status
 
@@ -74,6 +83,12 @@ compromise resistance.
 ## Current Gate Flags
 
 - production_key_management_source_gate_reviewed=true
+- c100_3_key_management_blocker_closed=true
+- key_management_policy_waiver_authorized=true
+- key_management_waiver_scope=active-queue-unblock-only
+- app_key_wrapping_required_for_key_management_claims=true
+- rollback_prevention_external_monotonic_state_required_for_claims=true
+- secure_deletion_evidence_required_for_claims=true
 - production_key_management_source_ready=true
 - d100_2_key_management_source_gate_reviewed=true
 - key_management_source_scope=passphrase-first-sqlcipher-local-profile-store-marker-rollback-local-delete-only
@@ -103,4 +118,4 @@ compromise resistance.
 - production_key_management_ready=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=D100-3 macOS signed/notarized artifact execution path
+- next_required_phase=Phase C100-4 - Default Practical Transport Product Path

@@ -103,6 +103,11 @@ These cannot be made true by editing source files alone:
 - supported_local_key_lifecycle_ready=true
 - supported_local_deletion_scope_ready=true
 - production_key_management_source_gate_reviewed=true
+- c100_3_key_management_blocker_closed=true
+- key_management_policy_waiver_authorized=true
+- app_key_wrapping_required_for_key_management_claims=true
+- rollback_prevention_external_monotonic_state_required_for_claims=true
+- secure_deletion_evidence_required_for_claims=true
 - production_key_management_source_ready=true
 - d100_2_key_management_source_gate_reviewed=true
 - key_management_source_scope=passphrase-first-sqlcipher-local-profile-store-marker-rollback-local-delete-only

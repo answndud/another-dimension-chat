@@ -1,10 +1,11 @@
 # Production Key And Local Storage Lifecycle Gate
 
-Status: OPS-3 and RB-2 source-side gates closed for review input. The supported
-local key lifecycle, marker-only rollback detection, and local deletion/wipe
-scopes are ready. This is not complete production key-management readiness,
-secure media deletion, backup recovery, rollback prevention, or a security-ready
-claim.
+Status: OPS-3 and RB-2 source-side gates closed for review input. C100-3 is
+closed for active-queue progress by explicit owner policy waiver only. The
+supported local key lifecycle, marker-only rollback detection, and local
+deletion/wipe scopes are ready. This is not complete production key-management
+readiness, secure media deletion, backup recovery, rollback prevention, or a
+security-ready claim.
 
 This document records the current passphrase-first local storage lifecycle for
 the desktop-first 1:1 flow. It binds the profile, session, message, deletion,
@@ -112,6 +113,12 @@ Targeted tests that anchor this gate:
 ## Current Gate Flags
 
 - production_key_storage_lifecycle_gate_reviewed=true
+- c100_3_key_management_blocker_closed=true
+- key_management_policy_waiver_authorized=true
+- key_management_waiver_scope=active-queue-unblock-only
+- app_key_wrapping_required_for_key_management_claims=true
+- rollback_prevention_external_monotonic_state_required_for_claims=true
+- secure_deletion_evidence_required_for_claims=true
 - rb_2_key_rollback_deletion_claim_closure_reviewed=true
 - production_key_management_source_gate_reviewed=true
 - production_key_management_source_ready=true
@@ -145,4 +152,4 @@ Targeted tests that anchor this gate:
 - secure_media_deletion_claimed=false
 - production_key_management_ready=false
 - security_ready_claimed=false
-- next_required_phase=RB-3 default practical transport closure
+- next_required_phase=Phase C100-4 - Default Practical Transport Product Path

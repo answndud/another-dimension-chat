@@ -26,6 +26,12 @@ cd "$ROOT"
 DOC="reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
 
 must_contain "$DOC" "production_key_storage_lifecycle_gate_reviewed=true"
+must_contain "$DOC" "c100_3_key_management_blocker_closed=true"
+must_contain "$DOC" "key_management_policy_waiver_authorized=true"
+must_contain "$DOC" "key_management_waiver_scope=active-queue-unblock-only"
+must_contain "$DOC" "app_key_wrapping_required_for_key_management_claims=true"
+must_contain "$DOC" "rollback_prevention_external_monotonic_state_required_for_claims=true"
+must_contain "$DOC" "secure_deletion_evidence_required_for_claims=true"
 must_contain "$DOC" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 must_contain "$DOC" "production_key_management_source_gate_reviewed=true"
 must_contain "$DOC" "production_key_management_source_ready=true"
@@ -50,7 +56,7 @@ must_contain "$DOC" "rollback_prevention_claimed=false"
 must_contain "$DOC" "secure_media_deletion_claimed=false"
 must_contain "$DOC" "production_key_management_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
-must_contain "$DOC" "next_required_phase=RB-3 default practical transport closure"
+must_contain "$DOC" "next_required_phase=Phase C100-4 - Default Practical Transport Product Path"
 
 must_contain "README.md" "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
 must_contain "SECURITY.md" "reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md"
@@ -96,6 +102,12 @@ done
 cat <<'STATUS'
 status=production-key-storage-lifecycle-ready
 production_key_storage_lifecycle_gate_reviewed=true
+c100_3_key_management_blocker_closed=true
+key_management_policy_waiver_authorized=true
+key_management_waiver_scope=active-queue-unblock-only
+app_key_wrapping_required_for_key_management_claims=true
+rollback_prevention_external_monotonic_state_required_for_claims=true
+secure_deletion_evidence_required_for_claims=true
 passphrase_first_unlock_required=true
 encrypted_profile_session_message_store_ready=true
 destructive_local_actions_separated=true
@@ -111,5 +123,5 @@ rollback_prevention_claimed=false
 secure_media_deletion_claimed=false
 production_key_management_ready=false
 security_ready_claimed=false
-next_required_phase=RB-3-default-practical-transport-closure
+next_required_phase=Phase-C100-4-Default-Practical-Transport-Product-Path
 STATUS
