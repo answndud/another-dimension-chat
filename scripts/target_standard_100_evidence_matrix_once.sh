@@ -199,6 +199,10 @@ for flag in \
   "production_e2ee_policy_waiver_authorized=true" \
   "production_e2ee_external_review_required_for_claims=true" \
   "production_e2ee_field_evidence_required_for_claims=true" \
+  "c100_2_identity_blocker_closed=true" \
+  "pairwise_identity_policy_waiver_authorized=true" \
+  "pairwise_identity_external_audit_required_for_claims=true" \
+  "pairwise_identity_field_evidence_required_for_claims=true" \
   "macos_release_credential_evidence_schema_available=true" \
   "macos_release_credential_evidence_validator_available=true" \
   "macos_release_credential_evidence_collector_available=true" \
@@ -401,5 +405,5 @@ production_ready_claim_allowed=false
 audited_claim_allowed=false
 sensitive_communication_allowed=false
 reliable_external_delivery_claim_allowed=false
-next_required_phase=Phase-C100-2-Pairwise-Identity-And-Safety-Verification-Closure
+next_required_phase=Phase-C100-3-Key-Management-Rollback-Prevention-And-Storage-Lifecycle
 STATUS
