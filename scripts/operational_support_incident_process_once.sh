@@ -82,7 +82,7 @@ must_contain "$GATE" "ops_9_operational_support_incident_process_reviewed=true"
 must_contain "$GATE" "incident_response_tabletop_completed=true"
 must_contain "$GATE" "support_template_review_completed=true"
 must_contain "$GATE" "production_operational_readiness_claim_allowed=false"
-must_contain "$GATE" "next_required_phase=OPS-10 stable macOS v1.0 release gate"
+must_contain "$GATE" "ops_10_stable_macos_v1_release_gate_reviewed=true"
 
 must_contain ".github/ISSUE_TEMPLATE/config.yml" "private vulnerability reporting"
 must_contain ".github/ISSUE_TEMPLATE/public_beta_support.yml" "Do not post bridge lines"

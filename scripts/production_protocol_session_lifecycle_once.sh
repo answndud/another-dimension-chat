@@ -45,7 +45,7 @@ require_text "$SECURITY" "reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md"
 require_text "$CRYPTO" "PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md"
 require_text "$REVIEW" "PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md"
 
-require_text "$DOC" "Status: OPS-2 source gate closed for review input, not production E2EE ready."
+require_text "$DOC" "Status: OPS-2 and RB-1 source gates closed for review input."
 require_text "$DOC" "Shared Semantics"
 require_text "$DOC" "State Machine"
 require_text "$DOC" "Edge-Case Rules"
@@ -78,7 +78,7 @@ require_text "$DOC" "external_onion_delivery_verified=false"
 require_text "$DOC" "runtime_messaging_ready=false"
 require_text "$DOC" "production_e2ee_ready=false"
 require_text "$DOC" "security_ready_claimed=false"
-require_text "$DOC" "next_required_phase=OPS-3 production key management and local storage lifecycle"
+require_text "$DOC" "next_required_phase=RB-2 production key management rollback and deletion closure"
 
 require_text "$CORE" "fn production_session_readiness_gate_lists_blockers_without_opening_runtime"
 require_text "$CORE" "fn production_async_delivery_semantics_are_reviewed_without_network_claim"
@@ -124,4 +124,4 @@ printf 'external_onion_delivery_verified=false\n'
 printf 'runtime_messaging_ready=false\n'
 printf 'production_e2ee_ready=false\n'
 printf 'security_ready_claimed=false\n'
-printf 'next_required_phase=OPS-3-production-key-management-local-storage-lifecycle\n'
+printf 'next_required_phase=RB-2-production-key-management-rollback-and-deletion-closure\n'

@@ -231,11 +231,23 @@ P100-0 100% definition lock is tracked in
 [reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md](reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md):
 it defines the evidence matrix for judging general macOS public app 100% and
 full target-standard 100% while keeping the current non-claims unchanged.
+The current PLAN active queue source/hold closure is tracked in
+[reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md](reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md):
+it maps each remaining 100% phase to a source-side or explicit hold gate while
+keeping macOS 100%, whole-product 100%, stable, production-ready, audited,
+reliable-delivery, and sensitive-use claims false.
 
 Production protocol/session lifecycle review input is tracked in
 [reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md).
 It records the current 1:1 state machine, replay/retry/cancel/delete semantics,
 unresolved review questions, and why production E2EE readiness remains false.
+
+Pairwise identity and safety product closure is tracked in
+[reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md](reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md).
+It connects local pairwise identity persistence, signed invite payloads,
+canonical safety transcripts, duplicate-contact rejection, rebuild/re-pairing,
+and safety mismatch revocation while keeping identity audit, security-ready,
+and sensitive-use claims false.
 
 Supported local/manual E2EE claim closure is tracked in
 [reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md](reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md).
@@ -296,6 +308,11 @@ scope-down is tracked in
 which allows lower release classes to continue while keeping stable
 signed/notarized artifact, production distribution, and security-ready claims
 false.
+The macOS update and rollback-safe release channel source gate is tracked in
+[reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md](reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md).
+It keeps the current channel manual and same-release-asset based, with no
+auto-update, signed update manifest, release upload, rollback-prevention, or
+stable distribution claim.
 
 External review and audit readiness is tracked in
 [reference/EXTERNAL_REVIEW_AUDIT_READINESS.md](reference/EXTERNAL_REVIEW_AUDIT_READINESS.md),
