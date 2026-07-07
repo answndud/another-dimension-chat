@@ -260,6 +260,11 @@ It allows only the narrow supported 1:1 local/manual envelope message-content
 encryption statement while keeping broad `production_e2ee_ready=false`,
 audited E2EE, secure messenger, sensitive-use, automatic network messaging,
 remote acknowledgement, and external delivery claims false.
+D100-1 production E2EE source gate is tracked in
+[reference/PRODUCTION_E2EE_SOURCE_GATE.md](reference/PRODUCTION_E2EE_SOURCE_GATE.md):
+it marks the supported local/manual 1:1 E2EE source boundary pass-capable while
+keeping production E2EE, audited, secure messenger, sensitive-use, automatic
+network messaging, remote acknowledgement, and external delivery claims false.
 
 Production key and local storage lifecycle review input is tracked in
 [reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md](reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md).
