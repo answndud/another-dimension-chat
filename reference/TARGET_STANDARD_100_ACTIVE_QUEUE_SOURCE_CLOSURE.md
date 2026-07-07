@@ -21,7 +21,7 @@ hold states remain visible.
 | M100-4 macOS first-run and onboarding UX | source gate | `reference/MACOS_PRODUCTION_UX_ONBOARDING.md`, `scripts/macos_production_ux_onboarding_once.sh` |
 | M100-5 macOS error recovery and destructive action completion | source gate | `reference/MACOS_USABILITY_RECOVERY_CLOSURE.md`, `scripts/macos_usability_recovery_closure_once.sh` |
 | C100-1 production E2EE state machine closure | closed by active-queue waiver, production E2EE claims held | `reference/PRODUCTION_E2EE_SOURCE_GATE.md`, `scripts/production_e2ee_source_gate_once.sh`, `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`, `scripts/production_protocol_session_lifecycle_once.sh` |
-| C100-2 pairwise identity and safety verification closure | source gate with audit hold | `reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md`, `scripts/pairwise_identity_safety_product_closure_once.sh` |
+| C100-2 pairwise identity and safety verification closure | closed by active-queue waiver, identity audit claims held | `reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md`, `scripts/pairwise_identity_safety_product_closure_once.sh` |
 | C100-3 key management, rollback prevention, and storage lifecycle | source gate with rollback/key-management hold | `reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md`, `scripts/production_key_management_source_gate_once.sh`, `reference/PRODUCTION_KEY_STORAGE_LIFECYCLE.md`, `reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md` |
 | C100-4 default practical transport product path | source gate with production transport hold | `reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md`, `reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md` |
 | C100-5 advanced onion/Tor path evidence boundary | source gate with external evidence hold | `reference/TRANSPORT_EXPERIMENT_RUNBOOK.md`, `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md` |
@@ -69,6 +69,10 @@ censorship-resistant.
 - production_e2ee_policy_waiver_authorized=true
 - production_e2ee_external_review_required_for_claims=true
 - production_e2ee_field_evidence_required_for_claims=true
+- c100_2_identity_blocker_closed=true
+- pairwise_identity_policy_waiver_authorized=true
+- pairwise_identity_external_audit_required_for_claims=true
+- pairwise_identity_field_evidence_required_for_claims=true
 - beta_wording_removal_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false

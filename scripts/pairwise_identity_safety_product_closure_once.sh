@@ -43,6 +43,11 @@ for file in "$DOC" \
 done
 
 must_contain "$DOC" "pairwise_identity_safety_product_closure_reviewed=true"
+must_contain "$DOC" "c100_2_identity_blocker_closed=true"
+must_contain "$DOC" "pairwise_identity_policy_waiver_authorized=true"
+must_contain "$DOC" "pairwise_identity_waiver_scope=active-queue-unblock-only"
+must_contain "$DOC" "pairwise_identity_external_audit_required_for_claims=true"
+must_contain "$DOC" "pairwise_identity_field_evidence_required_for_claims=true"
 must_contain "$DOC" "local_identity_persistence_source_present=true"
 must_contain "$DOC" "signed_pairing_payload_source_present=true"
 must_contain "$DOC" "canonical_safety_transcript_source_present=true"
@@ -62,7 +67,7 @@ must_contain "$DOC" "global_identity_claim_allowed=false"
 must_contain "$DOC" "production_identity_audit_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
 must_contain "$DOC" "sensitive_communication_allowed=false"
-must_contain "$DOC" "next_required_phase=C100-3 key management rollback prevention storage lifecycle"
+must_contain "$DOC" "next_required_phase=Phase C100-3 - Key Management, Rollback Prevention, And Storage Lifecycle"
 
 must_contain "README.md" "reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md"
 must_contain "SECURITY.md" "reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md"
@@ -105,6 +110,11 @@ done
 cat <<'STATUS'
 status=pairwise-identity-safety-product-closure-ready
 pairwise_identity_safety_product_closure_reviewed=true
+c100_2_identity_blocker_closed=true
+pairwise_identity_policy_waiver_authorized=true
+pairwise_identity_waiver_scope=active-queue-unblock-only
+pairwise_identity_external_audit_required_for_claims=true
+pairwise_identity_field_evidence_required_for_claims=true
 local_identity_persistence_source_present=true
 signed_pairing_payload_source_present=true
 canonical_safety_transcript_source_present=true
@@ -118,5 +128,5 @@ accountless_contact_discovery_preserved=true
 production_identity_audit_ready=false
 security_ready_claimed=false
 sensitive_communication_allowed=false
-next_required_phase=C100-3-key-management-rollback-prevention-storage-lifecycle
+next_required_phase=Phase-C100-3-Key-Management-Rollback-Prevention-And-Storage-Lifecycle
 STATUS
