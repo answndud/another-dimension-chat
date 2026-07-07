@@ -7,6 +7,10 @@ APP_VERSION="0.1.0"
 BUILD_CHANNEL="beta-onion"
 BUILD_COMMIT="e8954df9"
 PLATFORM="macos-aarch64"
+MACOS_PUBLIC_SUPPORT_SCOPE="apple-silicon-aarch64-only"
+MACOS_UNIVERSAL_ARTIFACT_READY=false
+MACOS_INTEL_ARTIFACT_READY=false
+MACOS_MINIMUM_VERSION_CLAIMED=false
 RELEASE_TAG="v0.1.0-beta-onion-unsigned"
 RELEASE_URL="https://github.com/answndud/another-dimension-chat/releases/tag/$RELEASE_TAG"
 EXPECTED_DMG_SHA="7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a"
@@ -274,6 +278,10 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "build_channel": "$BUILD_CHANNEL",
   "build_commit": "$BUILD_COMMIT",
   "platform": "$PLATFORM",
+  "macos_public_support_scope": "$MACOS_PUBLIC_SUPPORT_SCOPE",
+  "macos_universal_artifact_ready": $MACOS_UNIVERSAL_ARTIFACT_READY,
+  "macos_intel_artifact_ready": $MACOS_INTEL_ARTIFACT_READY,
+  "macos_minimum_version_claimed": $MACOS_MINIMUM_VERSION_CLAIMED,
   "distribution": "unsigned-github-public-beta",
   "windows_distribution": "local-build-candidate-only",
   "windows_local_usable_criteria_defined": true,
@@ -437,6 +445,10 @@ This folder is for a GitHub Release upload.
 - Build channel: \`$BUILD_CHANNEL\`
 - Build commit: \`$BUILD_COMMIT\`
 - Platform: \`$PLATFORM\`
+- macOS support scope: $MACOS_PUBLIC_SUPPORT_SCOPE
+- macOS universal artifact ready: $MACOS_UNIVERSAL_ARTIFACT_READY
+- macOS Intel artifact ready: $MACOS_INTEL_ARTIFACT_READY
+- macOS minimum version claimed: $MACOS_MINIMUM_VERSION_CLAIMED
 - Windows distribution: local-build-candidate-only
 - Windows local usable criteria defined: true
 - Windows local runtime smoke status: source-boundary-only
@@ -709,6 +721,10 @@ done
 
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact\": \"$RELEASE_DMG\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"artifact_sha256\": \"$EXPECTED_DMG_SHA\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"macos_public_support_scope\": \"$MACOS_PUBLIC_SUPPORT_SCOPE\""
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"macos_universal_artifact_ready\": $MACOS_UNIVERSAL_ARTIFACT_READY"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"macos_intel_artifact_ready\": $MACOS_INTEL_ARTIFACT_READY"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"macos_minimum_version_claimed\": $MACOS_MINIMUM_VERSION_CLAIMED"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"release_tag\": \"$RELEASE_TAG\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"release_url\": \"$RELEASE_URL\""
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"windows_distribution\": \"local-build-candidate-only\""

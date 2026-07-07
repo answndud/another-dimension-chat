@@ -171,6 +171,10 @@ and Xcode/notarytool availability are recorded, but no Apple Developer ID
 signing identity or notarization credential is available locally; stable
 signed/notarized release remains scoped down until credentials and explicit
 release authorization exist.
+macOS architecture support policy is tracked in
+`reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md`: the current public
+artifact is explicitly Apple Silicon `aarch64` only, with universal and Intel
+support claims false until matching build/provenance evidence exists.
 
 The public privacy-model comparison is tracked in `reference/PRIVACY_MODEL_COMPARISON.md`. It maps the intended Korean Briar/Cwtch-style direction to current public beta gaps and LINDDUN categories; it is not a claim that the current beta has reached that level.
 

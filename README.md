@@ -341,6 +341,11 @@ The repository admin path and Xcode/notarytool availability are recorded, but
 no Apple Developer ID signing identity or notarization credential is available
 locally; stable signed/notarized release remains scoped down until credentials
 and explicit release authorization exist.
+macOS architecture support policy is tracked in
+[reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md](reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md):
+the current public artifact is explicitly Apple Silicon `aarch64` only, with
+universal and Intel support claims false until matching build/provenance
+evidence exists.
 
 Desktop Real-User Test Preparation Boundary: tester-facing reports must use
 redacted public support diagnostics, failure class, and recovery next action
