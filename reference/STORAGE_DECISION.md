@@ -240,13 +240,17 @@ It supports:
 - Deleting encrypted records by opaque `EncryptedRecordId`.
 - Rewriting an unlocked SQLCipher database to a new passphrase through the
   storage-layer rekey primitive.
+- Redacted core/Tauri profile passphrase-change command surface that verifies
+  the old passphrase stops unlocking and the new passphrase opens the same
+  profile marker.
 
 It does not support:
 
 - UI-level production profile unlock.
 - OS keychain/DPAPI/Keystore wrapping.
 - Project-owned password KDFs.
-- User-visible key rotation UI, recovery policy, or production rotation claim.
+- Settings UI, recovery policy, backup/export behavior, or production rotation
+  claim for user-visible key rotation.
 - Backup/export/import.
 - Migration from `dev-insecure` storage.
 - Persistent Noise/session transport state.
