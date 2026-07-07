@@ -29,6 +29,7 @@ TARGET="docs/product/TARGET_STANDARD.md"
 for file in "$MATRIX" "$TARGET" "README.md" "SECURITY.md" \
   "reference/PRODUCTION_READINESS_CLAIM_GATE.md" \
   "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md" \
+  "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md" \
   "reference/STABLE_MACOS_V1_RELEASE_GATE.md" \
   "reference/STABLE_RELEASE_HOLD_REPORT.md" \
   "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md" \
@@ -52,6 +53,9 @@ done
 must_contain "README.md" "reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
 must_contain "SECURITY.md" "reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
+must_contain "README.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
+must_contain "SECURITY.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
+must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 
 must_contain "$MATRIX" "Status: P100-0 definition locked"
 must_contain "$MATRIX" "## Evidence Order"
@@ -117,6 +121,7 @@ done
 for linked in \
   "PRODUCTION_READINESS_CLAIM_GATE.md" \
   "PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md" \
+  "DEPLOYMENT_READINESS_GAP_REGISTER.md" \
   "STABLE_MACOS_V1_RELEASE_GATE.md" \
   "STABLE_RELEASE_HOLD_REPORT.md" \
   "EXTERNAL_REVIEW_AUDIT_READINESS.md" \
@@ -140,8 +145,19 @@ done
 for flag in \
   "evidence_matrix_machine_checkable=true" \
   "target_standard_100_evidence_matrix_available=true" \
+  "target_standard_100_active_queue_source_closure_available=true" \
+  "target_standard_100_deployment_gap_reconciled=true" \
   "target_standard_criteria_complete=true" \
   "macos_public_app_100_criteria_complete=true" \
+  "pairwise_identity_safety_product_closure_reviewed=true" \
+  "macos_update_rollback_safe_release_channel_reviewed=true" \
+  "macos_current_scope_supported=true" \
+  "macos_universal_intel_scope_still_hold=true" \
+  "onboarding_recovery_source_ready=true" \
+  "supported_default_transport_ready=true" \
+  "supported_local_key_lifecycle_ready=true" \
+  "supported_local_deletion_scope_ready=true" \
+  "manual_update_integrity_policy_available=true" \
   "production_claim_gate_linked=true" \
   "audit_review_gate_linked=true" \
   "field_evidence_gate_linked=true" \

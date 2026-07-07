@@ -236,6 +236,11 @@ The current PLAN active queue source/hold closure is tracked in
 it maps each remaining 100% phase to a source-side or explicit hold gate while
 keeping macOS 100%, whole-product 100%, stable, production-ready, audited,
 reliable-delivery, and sensitive-use claims false.
+Deployment readiness gaps are tracked in
+[reference/DEPLOYMENT_READINESS_GAP_REGISTER.md](reference/DEPLOYMENT_READINESS_GAP_REGISTER.md):
+it promotes source-solved items to named supported scopes and keeps the
+remaining external blockers visible instead of treating all false/hold flags as
+the same kind of work.
 
 Production protocol/session lifecycle review input is tracked in
 [reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md).

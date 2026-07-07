@@ -76,6 +76,11 @@ The current active queue source/hold closure is tracked in
 100% phase is mapped to a source-side or explicit hold gate, with macOS 100%,
 whole-product 100%, stable, production-ready, audited, reliable-delivery, and
 sensitive-use claims still false.
+Deployment readiness gaps are tracked in
+`reference/DEPLOYMENT_READINESS_GAP_REGISTER.md`: source-solved items are
+promoted to named supported scopes, while remaining external blockers stay
+visible and do not open production, audit, reliable-delivery, or sensitive-use
+claims.
 
 The production protocol/session lifecycle review input is tracked in
 `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`. It documents the current
