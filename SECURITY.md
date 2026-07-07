@@ -84,6 +84,10 @@ Deployment readiness gaps are tracked in
 promoted to named supported scopes, while remaining external blockers stay
 visible and do not open production, audit, reliable-delivery, or sensitive-use
 claims.
+Deployment 100 blocker resolution is tracked in
+`reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md`: remaining credential,
+artifact, external evidence, platform, and release-authorization blockers are
+ordered without changing the current public non-claims.
 
 The production protocol/session lifecycle review input is tracked in
 `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`. It documents the current
