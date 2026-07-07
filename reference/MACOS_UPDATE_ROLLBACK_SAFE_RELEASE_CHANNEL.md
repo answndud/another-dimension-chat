@@ -73,4 +73,4 @@ and owner release authorization before public wording changes.
 - production_distribution_ready=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=M100-8 macOS stable release gate and public copy upgrade
+- next_required_phase=C100-1 Production E2EE State Machine Closure

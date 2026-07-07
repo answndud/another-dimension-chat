@@ -37,7 +37,7 @@ Current public wording must remain:
 | 10 | C100-5 Advanced Onion/Tor Evidence Boundary | source gate with field hold | Onion/Tor remains explicit, advanced, fail-closed, and non-claim until repeated external two-machine evidence exists. |
 | 11 | M100-6 Representative macOS Usability Evidence | closed by owner waiver | Active-queue representative usability evidence blocker is closed by explicit owner waiver; real accepted usability evidence remains required before stable, public macOS 100%, production, or TARGET_STANDARD 100 claims. |
 | 12 | M100-7 macOS Update And Rollback-Safe Release Channel | closed by owner waiver | Manual same-release update policy and signed update manifest candidate verification are source-ready; active blocker is closed by explicit owner waiver while product signed update readiness and rollback prevention remain holds. |
-| 13 | M100-8 macOS Stable Release Gate And Public Copy Upgrade | final macOS hold gate | Signed/notarized artifact, external review, field evidence, operations, production gates, and owner stable approval all pass. |
+| 13 | M100-8 macOS Stable Release Gate And Public Copy Upgrade | closed by owner waiver | Stable gate is reviewed as hold; active blocker is closed by explicit owner waiver while stable release, public copy upgrade, and production claims remain blocked. |
 | 14 | A100-1 External Security Review Packet Freeze | source packet gate | Independent review packet remains frozen and public-safe. |
 | 15 | A100-2 External Review Execution And Finding Closure | external review hold | Named reviewer or audit completes; findings are fixed, held, or waived with public-safe signoff. |
 | 16 | F100-1 External Two-Machine Field Evidence Program | external field hold | Repeated real two-machine/different-network reports are accepted by validators. |
@@ -130,6 +130,9 @@ Current public wording must remain:
 - m100_7_update_blocker_closed=true
 - update_channel_policy_waiver_authorized=true
 - signed_update_or_rollback_evidence_required_for_stable_claims=true
+- m100_8_stable_release_blocker_closed=true
+- stable_release_policy_waiver_authorized=true
+- stable_release_evidence_required_for_public_copy_upgrade=true
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
 - macos_release_credential_evidence_collector_available=true
@@ -180,4 +183,4 @@ Current public wording must remain:
 - public_claim_ahead_of_evidence=false
 - docs_private_uncommitted=true
 - agents_md_stage_allowed=false
-- next_required_phase=Phase M100-8 - macOS Stable Release Gate And Public Copy Upgrade
+- next_required_phase=Phase C100-1 - Production E2EE State Machine Closure

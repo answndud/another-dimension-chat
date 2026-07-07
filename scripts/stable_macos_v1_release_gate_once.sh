@@ -49,6 +49,12 @@ for file in "$GATE_DOC" "$HOLD_REPORT" "$CLAIM_GATE" "$PACKET" "$CLAIM_DECISION"
 done
 
 must_contain "$GATE_DOC" "stable_macos_v1_release_gate_reviewed=true"
+must_contain "$GATE_DOC" "m100_8_stable_release_blocker_closed=true"
+must_contain "$GATE_DOC" "stable_release_policy_waiver_authorized=true"
+must_contain "$GATE_DOC" "stable_release_waiver_scope=active-queue-unblock-only"
+must_contain "$GATE_DOC" "stable_release_evidence_required_for_public_copy_upgrade=true"
+must_contain "$GATE_DOC" "public_copy_upgrade_authorized=false"
+must_contain "$GATE_DOC" "public_copy_upgrade_performed=false"
 must_contain "$GATE_DOC" "rb_8_production_claim_release_class_decision_reviewed=true"
 must_contain "$GATE_DOC" "rb_9_github_release_publication_scope_down_reviewed=true"
 must_contain "$GATE_DOC" "stable_release_gate_decision=hold"
@@ -115,6 +121,12 @@ must_contain "$GATE_DOC" "release_body_beta_wording_removal_authorized=false"
 must_contain "$GATE_DOC" "next_required_action=external-audit-field-evidence-signed-notarized-artifact-owner-release-decision"
 
 must_contain "$HOLD_REPORT" "stable_release_hold_report_available=true"
+must_contain "$HOLD_REPORT" "m100_8_stable_release_blocker_closed=true"
+must_contain "$HOLD_REPORT" "stable_release_policy_waiver_authorized=true"
+must_contain "$HOLD_REPORT" "stable_release_waiver_scope=active-queue-unblock-only"
+must_contain "$HOLD_REPORT" "stable_release_evidence_required_for_public_copy_upgrade=true"
+must_contain "$HOLD_REPORT" "public_copy_upgrade_authorized=false"
+must_contain "$HOLD_REPORT" "public_copy_upgrade_performed=false"
 must_contain "$HOLD_REPORT" "stable_release_gate_decision=hold"
 must_contain "$HOLD_REPORT" "stable_macos_v1_release_allowed=false"
 must_contain "$HOLD_REPORT" "public_stable_release_allowed=false"
@@ -221,6 +233,12 @@ done
 cat <<'STATUS'
 status=stable-macos-v1-release-gate-held
 stable_macos_v1_release_gate_reviewed=true
+m100_8_stable_release_blocker_closed=true
+stable_release_policy_waiver_authorized=true
+stable_release_waiver_scope=active-queue-unblock-only
+stable_release_evidence_required_for_public_copy_upgrade=true
+public_copy_upgrade_authorized=false
+public_copy_upgrade_performed=false
 stable_release_gate_decision=hold
 stable_macos_v1_release_allowed=false
 public_stable_release_allowed=false
