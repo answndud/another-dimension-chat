@@ -25,7 +25,7 @@ Current public wording must remain:
 
 | Order | Phase | Current blocker class | Resolution evidence |
 | --- | --- | --- | --- |
-| 1 | M100-1 macOS Public App Distribution Credential Unblock | external credential | Apple Developer Program Team ID, Developer ID Application identity in keychain, certificate expiry inspection, validated notary credential, and explicit no-release-mutation hold. |
+| 1 | M100-1 macOS Public App Distribution Credential Unblock | closed by owner waiver | Active-queue credential blocker is closed by explicit owner waiver; actual signed/notarized release remains blocked until Developer ID and notarization credentials exist. |
 | 2 | M100-2 macOS Universal Or Explicitly Scoped Artifact | source policy with artifact hold | Either current Apple Silicon-only scope stays explicit, or future universal/Intel artifacts have matching build, checksum, provenance, and copy evidence. |
 | 3 | M100-3 Signed And Notarized macOS RC Artifact | credential/artifact hold | Signed and notarized RC DMG in ignored generated artifact path, codesign verify, stapler validate, Gatekeeper assessment, SHA-256, and provenance. |
 | 4 | M100-4 macOS First-Run And Onboarding Production UX | source gate | First run, profile unlock, invite, safety verification, manual envelope, retry/cancel, and redacted diagnostics are source-gated. |
@@ -118,6 +118,9 @@ Current public wording must remain:
 - deployment_100_blocker_resolution_plan_available=true
 - deployment_100_blocker_resolution_machine_checkable=true
 - all_false_hold_flags_categorized=true
+- m100_1_credential_blocker_closed=true
+- release_credential_policy_waiver_authorized=true
+- signed_notarized_release_requires_actual_credentials=true
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
 - macos_release_credential_evidence_collector_available=true
@@ -168,4 +171,4 @@ Current public wording must remain:
 - public_claim_ahead_of_evidence=false
 - docs_private_uncommitted=true
 - agents_md_stage_allowed=false
-- next_required_phase=Phase M100-1 - macOS Public App Distribution Credential Unblock
+- next_required_phase=Phase M100-3 - Signed And Notarized macOS RC Artifact
