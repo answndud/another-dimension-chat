@@ -56,6 +56,13 @@ blocker for lower release classes such as signed public beta or RC. Review and
 audit still block stable, production, audited, security-ready, and sensitive-use
 wording.
 
+RB-7 macOS stable artifact scope-down is recorded in
+`reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md`. It does not
+claim a signed, notarized, or stapled stable artifact. It only removes missing
+stable artifact work as a blocker for lower release classes such as unsigned or
+signed public beta / RC. Signed/notarized artifacts still block stable,
+production, distribution, and install-friction claims.
+
 ## Gate Decision
 
 Decision: hold.
@@ -73,7 +80,7 @@ field evidence, and a separate owner release decision.
 | Key/storage lifecycle | Supported local key/deletion scope exists; broad `production_key_management_ready=false`. | Hold sensitive-use and security-ready claims. |
 | Default transport | Supported local/manual courier envelope default exists; broad `production_transport_ready=false`. | Hold reliable external delivery claims. |
 | macOS UX/onboarding | Owner-observed task script exists; `usability_study_completed=false`. | Hold production wording removal. |
-| macOS distribution | Distribution gate exists; `stable_signed_notarized_artifact_available=false`. | Hold stable release publication. |
+| macOS distribution | Distribution gate exists; RB-7 scope-down permits lower release classes only; `stable_signed_notarized_artifact_available=false`. | Hold stable release publication and production distribution claims. |
 | External review/audit | Review packet exists; RB-6 scope-down permits lower release classes only; `external_review_completed=false` and `audit_completed=false`. | Keep `not audited`; hold stable, production, security-ready, and sensitive-use claims. |
 | Field evidence | Program and validator exist; RB-5 scope-down permits lower release classes only; `macos_two_machine_real_user_flow_repeated=false`. | Hold stable, reliable delivery, production, and sensitive-use claims. |
 | Operations | Incident/support process exists; `production_operational_readiness_claim_allowed=false`. | Hold production operations claim. |
@@ -132,6 +139,7 @@ preflight after the blockers below are resolved.
 - stable_macos_v1_release_allowed=false
 - public_stable_release_allowed=false
 - stable_signed_notarized_artifact_available=false
+- rb_7_macos_stable_artifact_release_class_scope_down_reviewed=true
 - external_review_completed=false
 - audit_completed=false
 - rb_6_external_review_release_class_scope_down_reviewed=true
@@ -170,6 +178,10 @@ preflight after the blockers below are resolved.
 - field_evidence_no_longer_blocks_lower_release_class=true
 - field_evidence_still_blocks_stable_or_production_claims=true
 - production_distribution_ready=false
+- stable_or_production_release_allowed_without_signed_artifact=false
+- unsigned_or_signed_public_beta_or_rc_release_class_allowed_without_stable_artifact=true
+- signed_artifact_no_longer_blocks_lower_release_class=true
+- signed_artifact_still_blocks_stable_or_production_claims=true
 - production_field_evidence_ready=false
 - production_operational_readiness_claim_allowed=false
 - production_ready_claim_allowed=false
