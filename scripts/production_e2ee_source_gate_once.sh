@@ -47,6 +47,11 @@ done
 
 for flag in \
   "production_e2ee_source_gate_reviewed=true" \
+  "c100_1_e2ee_blocker_closed=true" \
+  "production_e2ee_policy_waiver_authorized=true" \
+  "production_e2ee_waiver_scope=active-queue-unblock-only" \
+  "production_e2ee_external_review_required_for_claims=true" \
+  "production_e2ee_field_evidence_required_for_claims=true" \
   "production_e2ee_source_ready=true" \
   "d100_1_e2ee_source_gate_reviewed=true" \
   "protocol_session_e2ee_source_ready=true" \
@@ -95,6 +100,10 @@ done
 
 must_contain "$PROTOCOL_DOC" "reference/PRODUCTION_E2EE_SOURCE_GATE.md"
 must_contain "$PROTOCOL_DOC" "production_e2ee_source_gate_reviewed=true"
+must_contain "$PROTOCOL_DOC" "c100_1_e2ee_blocker_closed=true"
+must_contain "$PROTOCOL_DOC" "production_e2ee_policy_waiver_authorized=true"
+must_contain "$PROTOCOL_DOC" "production_e2ee_external_review_required_for_claims=true"
+must_contain "$PROTOCOL_DOC" "production_e2ee_field_evidence_required_for_claims=true"
 must_contain "$PROTOCOL_DOC" "production_e2ee_source_ready=true"
 must_contain "$PROTOCOL_DOC" "d100_1_e2ee_source_gate_reviewed=true"
 must_contain "$PROTOCOL_DOC" "protocol_session_e2ee_source_ready=true"
@@ -107,12 +116,18 @@ must_contain "$KEY_DOC" "Session lifecycle delete"
 must_contain "$KEY_DOC" "session records"
 
 must_contain "$MATRIX" "PRODUCTION_E2EE_SOURCE_GATE.md"
+must_contain "$MATRIX" "c100_1_e2ee_blocker_closed=true"
+must_contain "$MATRIX" "production_e2ee_policy_waiver_authorized=true"
+must_contain "$MATRIX" "production_e2ee_external_review_required_for_claims=true"
+must_contain "$MATRIX" "production_e2ee_field_evidence_required_for_claims=true"
 must_contain "$MATRIX" "production_e2ee_source_gate_reviewed=true"
 must_contain "$MATRIX" "production_e2ee_source_ready=true"
 must_contain "$MATRIX" "d100_1_e2ee_source_gate_reviewed=true"
 must_contain "$MATRIX" "protocol_session_e2ee_source_ready=true"
 must_contain "$MATRIX" "production_e2ee_ready=false"
 must_contain "$GAP_REGISTER" "production_e2ee_source_gate_reviewed=true"
+must_contain "$GAP_REGISTER" "c100_1_e2ee_blocker_closed=true"
+must_contain "$GAP_REGISTER" "production_e2ee_policy_waiver_authorized=true"
 must_contain "$GAP_REGISTER" "production_e2ee_source_ready=true"
 must_contain "$GAP_REGISTER" "d100_1_e2ee_source_gate_reviewed=true"
 must_contain "$GAP_REGISTER" "protocol_session_e2ee_source_ready=true"
@@ -157,6 +172,11 @@ scripts/production_local_manual_e2ee_claim_closure_once.sh >/dev/null
 cat <<'STATUS'
 status=production-e2ee-source-gate-ready
 production_e2ee_source_gate_reviewed=true
+c100_1_e2ee_blocker_closed=true
+production_e2ee_policy_waiver_authorized=true
+production_e2ee_waiver_scope=active-queue-unblock-only
+production_e2ee_external_review_required_for_claims=true
+production_e2ee_field_evidence_required_for_claims=true
 production_e2ee_source_ready=true
 d100_1_e2ee_source_gate_reviewed=true
 protocol_session_e2ee_source_ready=true
@@ -183,5 +203,5 @@ external_onion_delivery_verified=false
 external_review_completed=false
 audit_completed=false
 security_ready_claimed=false
-next_required_phase=D100-2-production-key-management-pass-capable-source-gate
+next_required_phase=Phase-C100-2-Pairwise-Identity-And-Safety-Verification-Closure
 STATUS

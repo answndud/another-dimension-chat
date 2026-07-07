@@ -8,6 +8,11 @@ secure messenger, audited, production-ready, sensitive communication, automatic
 network messaging, remote acknowledgement, or reliable external onion delivery
 claim.
 
+C100-1 is closed for active-queue progress by explicit owner policy waiver
+only. External review, audit, real field evidence, production E2EE, secure
+messenger, security-ready, reliable delivery, and sensitive-use claims remain
+false or hold.
+
 ## Shared Semantics
 
 The local manual envelope path and any future transport path must share the same
@@ -132,6 +137,11 @@ These questions remain unresolved and must stay in the external review packet:
 ## Current Decision
 
 - protocol_session_lifecycle_gate_reviewed=true
+- c100_1_e2ee_blocker_closed=true
+- production_e2ee_policy_waiver_authorized=true
+- production_e2ee_waiver_scope=active-queue-unblock-only
+- production_e2ee_external_review_required_for_claims=true
+- production_e2ee_field_evidence_required_for_claims=true
 - local_manual_and_future_transport_semantics_shared=true
 - replay_duplicate_retry_cancel_edges_documented=true
 - dev_insecure_surface_blocked_from_production_claim=true
@@ -149,4 +159,4 @@ These questions remain unresolved and must stay in the external review packet:
 - runtime_messaging_ready=false
 - production_e2ee_ready=false
 - security_ready_claimed=false
-- next_required_phase=RB-2 production key management rollback and deletion closure
+- next_required_phase=Phase C100-2 - Pairwise Identity And Safety Verification Closure
