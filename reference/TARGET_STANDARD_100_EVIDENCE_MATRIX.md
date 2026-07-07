@@ -109,6 +109,8 @@ updated, and a later explicit release/claim task authorizes the wording.
 - deployment_100_blocker_resolution_plan_available=true
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
+- macos_release_credential_evidence_collector_available=true
+- macos_release_credential_evidence_collector_source_ready=true
 - macos_release_credential_evidence_intake_ready=true
 - target_standard_100_deployment_gap_reconciled=true
 - target_standard_criteria_complete=true

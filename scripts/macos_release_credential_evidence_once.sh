@@ -25,11 +25,12 @@ cd "$ROOT"
 
 SCHEMA="reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md"
 VALIDATOR="scripts/validate_macos_release_credential_evidence.mjs"
+COLLECTOR="scripts/collect_macos_release_credential_evidence.sh"
 CREDENTIAL_GATE="reference/RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md"
 BLOCKER_PLAN="reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
 MATRIX="reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
 
-for file in "$SCHEMA" "$VALIDATOR" "$CREDENTIAL_GATE" "$BLOCKER_PLAN" "$MATRIX" \
+for file in "$SCHEMA" "$VALIDATOR" "$COLLECTOR" "$CREDENTIAL_GATE" "$BLOCKER_PLAN" "$MATRIX" \
   "README.md" "SECURITY.md"; do
   [ -f "$file" ] || fail "missing M100-1 credential evidence input: $file"
 done
@@ -37,6 +38,8 @@ done
 for flag in \
   "macos_release_credential_evidence_schema_available=true" \
   "macos_release_credential_evidence_validator_available=true" \
+  "macos_release_credential_evidence_collector_available=true" \
+  "macos_release_credential_evidence_collector_source_ready=true" \
   "macos_release_credential_evidence_intake_ready=true" \
   "macos_release_credential_evidence_private_docs_required=true" \
   "macos_release_credential_evidence_secret_redaction_required=true" \
@@ -56,9 +59,16 @@ done
 
 must_contain "$SCHEMA" "docs/macos-release-credential-evidence/"
 must_contain "$SCHEMA" "scripts/validate_macos_release_credential_evidence.mjs"
+must_contain "$SCHEMA" "scripts/collect_macos_release_credential_evidence.sh"
 must_contain "$SCHEMA" "scripts/macos_release_credential_evidence_once.sh"
 must_contain "$VALIDATOR" "status=macos-release-credential-evidence-candidate-requires-live-verifier"
+must_contain "$COLLECTOR" "AD_MACOS_CREDENTIAL_EVIDENCE_DRY_RUN"
+must_contain "$COLLECTOR" "xcrun notarytool history"
+must_contain "$COLLECTOR" "secret_material_included=false"
+must_contain "$COLLECTOR" "xcode_path_redacted=true"
+must_contain "$COLLECTOR" "release_mutation_authorized=false"
 must_contain "$CREDENTIAL_GATE" "MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md"
+must_contain "$CREDENTIAL_GATE" "scripts/collect_macos_release_credential_evidence.sh"
 must_contain "$BLOCKER_PLAN" "MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md"
 must_contain "$MATRIX" "MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md"
 must_contain "README.md" "reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md"
@@ -117,6 +127,18 @@ printf '%s\n' "$candidate_output" | grep -Fq "accepted_macos_release_credential_
 printf '%s\n' "$candidate_output" | grep -Fq "m100_1_release_credential_evidence_candidate=true" || fail "valid evidence did not become a candidate"
 printf '%s\n' "$candidate_output" | grep -Fq "m100_1_release_credentials_ready=false" || fail "evidence validator must not bypass live credential verifier"
 printf '%s\n' "$candidate_output" | grep -Fq "status=macos-release-credential-evidence-candidate-requires-live-verifier" || fail "valid evidence did not require live verifier"
+
+collector_status=0
+collector_output="$(AD_MACOS_CREDENTIAL_EVIDENCE_DRY_RUN=1 "$ROOT/scripts/collect_macos_release_credential_evidence.sh" 2>&1)" || collector_status=$?
+if [ "$collector_status" -eq 0 ]; then
+  printf '%s\n' "$collector_output" | grep -Fq "status=macos-release-credential-evidence-collector-ready-dry-run" ||
+    fail "credential collector dry-run did not report ready status"
+  printf '%s\n' "$collector_output" | grep -Fq "m100_1_release_credentials_ready=false" ||
+    fail "credential collector must not bypass live release gate"
+else
+  printf '%s\n' "$collector_output" | grep -Fq "status=macos-release-credential-evidence-collector-blocked" ||
+    fail "credential collector blocked status was not reported"
+fi
 
 cat >"$tmp_dir/secret.properties" <<'EVIDENCE'
 schema_version=macos-release-credential-evidence-v1
@@ -189,6 +211,8 @@ cat <<'STATUS'
 status=macos-release-credential-evidence-intake-ready
 macos_release_credential_evidence_schema_available=true
 macos_release_credential_evidence_validator_available=true
+macos_release_credential_evidence_collector_available=true
+macos_release_credential_evidence_collector_source_ready=true
 macos_release_credential_evidence_intake_ready=true
 m100_1_release_credential_evidence_candidate=false
 m100_1_release_credentials_ready=false
