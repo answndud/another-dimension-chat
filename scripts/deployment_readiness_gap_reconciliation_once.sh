@@ -25,8 +25,9 @@ cd "$ROOT"
 
 REGISTER="reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 MATRIX="reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
+BLOCKER_PLAN="reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
 
-for file in "$REGISTER" "$MATRIX" \
+for file in "$REGISTER" "$MATRIX" "$BLOCKER_PLAN" \
   "reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md" \
   "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
   "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
@@ -50,6 +51,7 @@ for file in "$REGISTER" "$MATRIX" \
 done
 
 must_contain "$REGISTER" "deployment_readiness_gap_register_reviewed=true"
+must_contain "$REGISTER" "deployment_100_blocker_resolution_plan_available=true"
 must_contain "$REGISTER" "target_standard_100_deployment_gap_reconciled=true"
 must_contain "$REGISTER" "stale_generic_partial_or_hold_reduced=true"
 must_contain "$REGISTER" "source_solved_items_promoted_to_named_supported_scope=true"
@@ -101,6 +103,7 @@ must_contain "$REGISTER" "windows_installer_ready=false"
 must_contain "$REGISTER" "windows_public_artifact_upload_allowed=false"
 
 must_contain "$MATRIX" "target_standard_100_deployment_gap_reconciled=true"
+must_contain "$MATRIX" "deployment_100_blocker_resolution_plan_available=true"
 must_contain "$MATRIX" "macos_current_scope_supported=true"
 must_contain "$MATRIX" "macos_universal_intel_scope_still_hold=true"
 must_contain "$MATRIX" "onboarding_recovery_source_ready=true"
@@ -143,6 +146,8 @@ must_contain "$MATRIX" "source pass for current manual release class; signed upd
 
 must_contain "README.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 must_contain "SECURITY.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
+must_contain "README.md" "reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
+must_contain "SECURITY.md" "reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 must_contain "README.md" "reference/PRODUCTION_E2EE_SOURCE_GATE.md"
 must_contain "SECURITY.md" "reference/PRODUCTION_E2EE_SOURCE_GATE.md"
@@ -194,6 +199,7 @@ scripts/operational_support_incident_process_once.sh >/dev/null
 cat <<'STATUS'
 status=deployment-readiness-gap-reconciled
 deployment_readiness_gap_register_reviewed=true
+deployment_100_blocker_resolution_plan_available=true
 target_standard_100_deployment_gap_reconciled=true
 stale_generic_partial_or_hold_reduced=true
 source_solved_items_promoted_to_named_supported_scope=true

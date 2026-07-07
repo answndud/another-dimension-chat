@@ -245,6 +245,10 @@ Deployment readiness gaps are tracked in
 it promotes source-solved items to named supported scopes and keeps the
 remaining external blockers visible instead of treating all false/hold flags as
 the same kind of work.
+Deployment 100 blocker resolution is tracked in
+[reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md](reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md):
+it orders the remaining credential, artifact, external evidence, platform, and
+release-authorization blockers without upgrading public claims.
 
 Production protocol/session lifecycle review input is tracked in
 [reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md).
