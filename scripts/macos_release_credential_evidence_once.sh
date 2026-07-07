@@ -41,6 +41,7 @@ for flag in \
   "macos_release_credential_evidence_collector_available=true" \
   "macos_release_credential_evidence_collector_source_ready=true" \
   "macos_release_credential_evidence_intake_ready=true" \
+  "macos_release_credential_evidence_current_head_bound=true" \
   "macos_release_credential_evidence_private_docs_required=true" \
   "macos_release_credential_evidence_secret_redaction_required=true" \
   "m100_1_release_credential_evidence_candidate=false" \
@@ -62,6 +63,8 @@ must_contain "$SCHEMA" "scripts/validate_macos_release_credential_evidence.mjs"
 must_contain "$SCHEMA" "scripts/collect_macos_release_credential_evidence.sh"
 must_contain "$SCHEMA" "scripts/macos_release_credential_evidence_once.sh"
 must_contain "$VALIDATOR" "status=macos-release-credential-evidence-candidate-requires-live-verifier"
+must_contain "$VALIDATOR" "AD_REQUIRE_CURRENT_HEAD"
+must_contain "$VALIDATOR" "source-commit-not-current-head"
 must_contain "$COLLECTOR" "AD_MACOS_CREDENTIAL_EVIDENCE_DRY_RUN"
 must_contain "$COLLECTOR" "xcrun notarytool history"
 must_contain "$COLLECTOR" "secret_material_included=false"
@@ -127,6 +130,17 @@ printf '%s\n' "$candidate_output" | grep -Fq "accepted_macos_release_credential_
 printf '%s\n' "$candidate_output" | grep -Fq "m100_1_release_credential_evidence_candidate=true" || fail "valid evidence did not become a candidate"
 printf '%s\n' "$candidate_output" | grep -Fq "m100_1_release_credentials_ready=false" || fail "evidence validator must not bypass live credential verifier"
 printf '%s\n' "$candidate_output" | grep -Fq "status=macos-release-credential-evidence-candidate-requires-live-verifier" || fail "valid evidence did not require live verifier"
+
+if AD_REQUIRE_CURRENT_HEAD=1 node "$VALIDATOR" "$tmp_dir/valid.properties" >"$tmp_dir/stale.out" 2>&1; then
+  fail "strict validator accepted stale source commit evidence"
+fi
+grep -Fq "source-commit-not-current-head" "$tmp_dir/stale.out" || fail "strict validator did not report stale source commit"
+
+current_head="$(git rev-parse HEAD)"
+sed "s/^source_commit=.*/source_commit=$current_head/" "$tmp_dir/valid.properties" >"$tmp_dir/current.properties"
+current_output="$(AD_REQUIRE_CURRENT_HEAD=1 node "$VALIDATOR" "$tmp_dir/current.properties")"
+printf '%s\n' "$current_output" | grep -Fq "credential_evidence_current_head_required=true" || fail "strict validator did not report current-head requirement"
+printf '%s\n' "$current_output" | grep -Fq "accepted_macos_release_credential_evidence=1" || fail "strict validator did not accept current HEAD evidence"
 
 collector_status=0
 collector_output="$(AD_MACOS_CREDENTIAL_EVIDENCE_DRY_RUN=1 "$ROOT/scripts/collect_macos_release_credential_evidence.sh" 2>&1)" || collector_status=$?
@@ -214,6 +228,7 @@ macos_release_credential_evidence_validator_available=true
 macos_release_credential_evidence_collector_available=true
 macos_release_credential_evidence_collector_source_ready=true
 macos_release_credential_evidence_intake_ready=true
+macos_release_credential_evidence_current_head_bound=true
 m100_1_release_credential_evidence_candidate=false
 m100_1_release_credentials_ready=false
 release_upload_authorized=false
