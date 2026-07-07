@@ -97,6 +97,8 @@ for flag in \
   "macos_release_credential_evidence_collector_available=true" \
   "macos_release_credential_evidence_collector_source_ready=true" \
   "macos_release_credential_evidence_intake_ready=true" \
+  "macos_release_credential_evidence_current_head_bound=true" \
+  "macos_release_credential_evidence_private_docs_path_bound=true" \
   "apple_developer_team_id_recorded=false" \
   "notarization_credential_available=false" \
   "notarytool_credential_validated=false" \
