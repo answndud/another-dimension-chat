@@ -92,6 +92,10 @@ macOS release credential evidence intake is tracked in
 `reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md`: it accepts only
 public-safe Team ID, Developer ID certificate, and notary history evidence and
 rejects credential secrets.
+macOS signed update manifest candidates are tracked in
+`reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md`: candidate Ed25519
+signatures can be verified without changing the current no-auto-update,
+release-upload, rollback-prevention, or production-readiness holds.
 
 The production protocol/session lifecycle review input is tracked in
 `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`. It documents the current
