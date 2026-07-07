@@ -47,6 +47,10 @@ RB-9 publication scope-down is tracked in
 `reference/GITHUB_RELEASE_PUBLICATION_SCOPE_DOWN.md`: the existing
 `v0.1.0-beta-onion-unsigned` public prerelease remains the current lower-class
 publication, with no stable release upload or release edit.
+RB-10 Windows public artifact scope-down is tracked in
+`reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md`: Windows remains a local
+build candidate only, with no public Windows artifact, installer, signing,
+upload, or Windows production claim.
 
 The production protocol/session lifecycle review input is tracked in
 `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`. It documents the current
