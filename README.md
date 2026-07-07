@@ -249,6 +249,10 @@ Deployment 100 blocker resolution is tracked in
 [reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md](reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md):
 it orders the remaining credential, artifact, external evidence, platform, and
 release-authorization blockers without upgrading public claims.
+macOS release credential evidence intake is tracked in
+[reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md](reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.md):
+it defines public-safe Team ID, Developer ID certificate, and notary history
+evidence while rejecting secrets and keeping release mutation unauthorized.
 
 Production protocol/session lifecycle review input is tracked in
 [reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md).
