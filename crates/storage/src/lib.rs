@@ -143,6 +143,7 @@ pub mod production {
         backend: StorageBackendKind,
         passphrase_first_unlock: bool,
         encrypted_record_body_store: bool,
+        sqlcipher_passphrase_rekey_source_ready: bool,
         production_key_management_ready: bool,
         rollback_protection: ReplayRollbackProtection,
         secure_deletion_from_media: bool,
@@ -160,6 +161,10 @@ pub mod production {
 
         pub fn encrypted_record_body_store(self) -> bool {
             self.encrypted_record_body_store
+        }
+
+        pub fn sqlcipher_passphrase_rekey_source_ready(self) -> bool {
+            self.sqlcipher_passphrase_rekey_source_ready
         }
 
         pub fn production_key_management_ready(self) -> bool {
@@ -241,6 +246,7 @@ pub mod production {
             backend: StorageBackendKind::SqlCipherAdrec1Spike,
             passphrase_first_unlock: true,
             encrypted_record_body_store: true,
+            sqlcipher_passphrase_rekey_source_ready: true,
             production_key_management_ready: false,
             rollback_protection: replay_persistence_guarantees().rollback_protection,
             secure_deletion_from_media: false,
@@ -575,6 +581,16 @@ pub mod production {
             self.connection
                 .pragma_query_value(None, "user_version", |row| row.get::<_, i64>(0))
                 .map_err(ProductionStorageError::from)
+        }
+
+        pub fn rekey_with_passphrase(
+            &self,
+            new_passphrase: &ProfilePassphrase,
+        ) -> Result<(), ProductionStorageError> {
+            let key = new_passphrase.as_database_key();
+            self.connection
+                .pragma_update(None, "rekey", key.expose_for_sqlcipher())?;
+            verify_sqlcipher_key(&self.connection)
         }
 
         pub fn put(
@@ -1033,6 +1049,48 @@ pub mod production {
         }
 
         #[test]
+        fn sqlcipher_store_rekey_rotates_passphrase_without_plaintext_exposure() {
+            let (_dir, path) = unique_test_database_path("rekey-passphrase");
+            let old_passphrase = ProfilePassphrase::new("old-passphrase").expect("passphrase");
+            let new_passphrase = ProfilePassphrase::new("new-passphrase").expect("passphrase");
+            let record_id = EncryptedRecordId::new("record_0001").expect("record id");
+            let record = EncryptedRecord::new(
+                ProductionRecordKind::MessageEnvelope,
+                EncryptedRecordScope::contact(
+                    ProfileName::new("alice").expect("profile"),
+                    ContactId::new("bob").expect("contact"),
+                ),
+                b"nonce-for-test".to_vec(),
+                b"sealed-body-for-test".to_vec(),
+            )
+            .expect("record");
+
+            {
+                let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &old_passphrase)
+                    .expect("open with old passphrase");
+                store.put(&record_id, &record).expect("put before rekey");
+                store.rekey_with_passphrase(&new_passphrase).expect("rekey");
+                assert_eq!(
+                    store.get(&record_id).expect("read after rekey"),
+                    Some(record.clone())
+                );
+            }
+
+            assert_eq!(
+                SqlCipherRecordStore::unlock_with_passphrase(&path, &old_passphrase)
+                    .map(|store| store.get(&record_id)),
+                Err(ProductionStorageError::UnlockFailed)
+            );
+            let reopened = SqlCipherRecordStore::unlock_with_passphrase(&path, &new_passphrase)
+                .expect("open with new passphrase");
+            assert_eq!(reopened.get(&record_id).expect("get"), Some(record));
+
+            let database_bytes = std::fs::read(&path).expect("read database");
+            assert!(!contains_bytes(&database_bytes, b"sealed-body-for-test"));
+            assert!(!contains_bytes(&database_bytes, b"ADREC1"));
+        }
+
+        #[test]
         fn sqlcipher_store_schema_migration_is_forward_only() {
             let (_dir, path) = unique_test_database_path("schema-version");
             let key = StorageDatabaseKey::test_only("test-key");
@@ -1130,6 +1188,7 @@ pub mod production {
             assert_eq!(summary.backend(), StorageBackendKind::SqlCipherAdrec1Spike);
             assert!(summary.passphrase_first_unlock());
             assert!(summary.encrypted_record_body_store());
+            assert!(summary.sqlcipher_passphrase_rekey_source_ready());
             assert!(!summary.production_key_management_ready());
             assert_eq!(
                 summary.rollback_protection(),

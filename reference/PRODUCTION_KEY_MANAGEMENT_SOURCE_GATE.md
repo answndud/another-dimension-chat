@@ -16,6 +16,7 @@ This gate treats the following supported local scope as pass-capable:
 - encrypted-at-rest production record classification for private keys, replay,
   message, endpoint, and session transport state,
 - forward-only schema version handling,
+- SQLCipher passphrase rekey primitive,
 - marker-only rollback detection with user-visible reset/rebuild recovery,
 - explicit local conversation delete, session delete, profile delete, and owned
   app-data wipe scopes,
@@ -36,7 +37,7 @@ compromise resistance.
 | Record encryption | source-ready | SQLCipher-backed `ADREC1` record path; no raw key wrapping claim. |
 | Schema versioning | source-ready | Forward-only schema version handling; no prototype-data migration claim. |
 | App key wrapping | hold | `app_key_wrapping_ready=false`. |
-| Key rotation | hold | no rekey/rotation UI or production rotation claim. |
+| Key rotation | source primitive only; product hold | SQLCipher passphrase rekey is source-ready; no rotation UI, policy, backup/recovery, or production rotation claim. |
 | Rollback handling | supported detection only | marker-only detection; rollback prevention false. |
 | Deletion | supported local lifecycle only | logical delete/app-data wipe only; secure media deletion false. |
 | Backup/recovery | hold | backup exclusion is best-effort policy; backup recovery false. |
@@ -47,6 +48,7 @@ compromise resistance.
 - `reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md`
 - `reference/STORAGE_DECISION.md`
 - `crates/storage/src/lib.rs`: `storage_backend_integration_boundary_summary`
+- `crates/storage/src/lib.rs`: `rekey_with_passphrase`
 - `crates/storage/src/lib.rs`: `sqlcipher_store_schema_migration_is_forward_only`
 - `crates/core/src/lib.rs`: `production_key_rollback_boundary_summary`
 - `crates/core/src/lib.rs`: `production_local_data_lifecycle_policy_summary`
@@ -56,6 +58,7 @@ compromise resistance.
 
 - `unlock_policy_requires_passphrase_for_all_modes`
 - `sqlcipher_store_rejects_wrong_passphrase_before_returning_records`
+- `sqlcipher_store_rekey_rotates_passphrase_without_plaintext_exposure`
 - `sqlcipher_store_schema_migration_is_forward_only`
 - `storage_backend_integration_summary_keeps_non_ready_boundaries_explicit`
 - `production_local_data_lifecycle_policy_is_passphrase_first_with_non_claims`
@@ -76,6 +79,7 @@ compromise resistance.
 - os_keystore_only_rejected=true
 - encrypted_profile_session_message_store_ready=true
 - forward_only_schema_version_ready=true
+- sqlcipher_passphrase_rekey_source_ready=true
 - prototype_data_migration_ready=false
 - app_key_wrapping_ready=false
 - key_rotation_ready=false

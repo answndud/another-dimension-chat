@@ -238,13 +238,15 @@ It supports:
 - High-risk mode rejection for OS-keystore-only auto-unlock.
 - Saving and loading durable replay windows as the first wired production record kind.
 - Deleting encrypted records by opaque `EncryptedRecordId`.
+- Rewriting an unlocked SQLCipher database to a new passphrase through the
+  storage-layer rekey primitive.
 
 It does not support:
 
 - UI-level production profile unlock.
 - OS keychain/DPAPI/Keystore wrapping.
 - Project-owned password KDFs.
-- Key rotation.
+- User-visible key rotation UI, recovery policy, or production rotation claim.
 - Backup/export/import.
 - Migration from `dev-insecure` storage.
 - Persistent Noise/session transport state.
@@ -417,7 +419,7 @@ When production unlock is added, prefer this sequence:
 2. Support a passphrase unlock path first, relying on SQLCipher passphrase key derivation rather than adding a separate custom KDF.
 3. Add OS keychain/DPAPI/Keystore wrapping only as an optional convenience or recovery layer after the passphrase path is tested.
 4. Keep high-risk mode from auto-unlocking solely because the user is logged into the OS account. Initial unlock policy test is in place.
-5. Add key rotation through SQLCipher rekey only after backup, rollback, and recovery behavior are documented.
+5. Expose user-visible key rotation through SQLCipher rekey only after backup, rollback, and recovery behavior are documented.
 
 RB-2 keeps that direction: public wording may describe SQLCipher passphrase
 handling for the local profile store, but must not claim a project-owned
@@ -445,7 +447,7 @@ Required tests before production unlock:
 - No passphrase, database key, or derived key appears in debug output, logs, panic text, or CLI output. Initial debug redaction test is in place.
 - Locked profiles cannot read `ADREC1` records. Initial locked-handle API is in place.
 - High-risk mode does not auto-unlock through OS keychain alone. Initial unlock policy test is in place.
-- Rekey/rotation tests exist before any key rotation UI is exposed.
+- Rekey storage tests are in place; user-visible rotation tests still need to exist before any key rotation UI is exposed.
 
 ## Encrypted Record Envelope
 
