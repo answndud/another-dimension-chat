@@ -220,6 +220,13 @@ RB-12 iOS implementation authorization is tracked in
 iOS remains a source shell over the shared-core boundary only, with no IPA,
 TestFlight/App Store distribution, runtime messaging, iCloud backup, APNs, or
 iOS public artifact claim.
+RB-13 cross-platform target-standard final closure is tracked in
+[reference/CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md](reference/CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md):
+the next release class is `signed-public-beta-or-rc`, platform claims are
+aligned to actual artifacts/source shells, and whole-product 100%, stable,
+production-ready, audited, security-ready, reliable-delivery,
+Briar/Cwtch-equivalent, censorship-resistant, and sensitive-use claims remain
+false.
 
 Production protocol/session lifecycle review input is tracked in
 [reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md).
