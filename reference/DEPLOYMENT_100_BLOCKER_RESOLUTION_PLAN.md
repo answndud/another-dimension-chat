@@ -124,6 +124,7 @@ Current public wording must remain:
 - macos_release_credential_evidence_collector_source_ready=true
 - macos_release_credential_evidence_intake_ready=true
 - macos_release_credential_evidence_current_head_bound=true
+- macos_release_credential_evidence_private_docs_path_bound=true
 - m100_1_release_credentials_ready=false
 - developer_id_signing_available=false
 - apple_developer_team_id_recorded=false
