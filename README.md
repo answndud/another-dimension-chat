@@ -202,6 +202,10 @@ RB-8 selected the lower release class path in
 [reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md](reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md):
 signed public beta or RC only, with stable/production, audited,
 security-ready, reliable-delivery, and sensitive-use claims still false.
+RB-9 publication scope-down is tracked in
+[reference/GITHUB_RELEASE_PUBLICATION_SCOPE_DOWN.md](reference/GITHUB_RELEASE_PUBLICATION_SCOPE_DOWN.md):
+the existing `v0.1.0-beta-onion-unsigned` public prerelease remains the current
+lower-class publication, with no stable release upload or release edit.
 
 Production protocol/session lifecycle review input is tracked in
 [reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md).
