@@ -75,4 +75,4 @@ wording changes.
 - external_delivery_claim_allowed=false
 - sensitive_communication_allowed=false
 - security_ready_claimed=false
-- next_required_phase=RB-5 real macOS two-machine field evidence closure
+- next_required_phase=Phase M100-6 - macOS Representative Usability Evidence
