@@ -13,7 +13,7 @@ artifacts are excluded from public artifact claims rather than hidden.
 | Platform | Current class | Public artifact claim | Decision |
 | --- | --- | --- | --- |
 | macOS | unsigned experimental public beta | yes, macOS beta only | pass for current lower release class |
-| Windows | local-build-candidate-only | no | hold Windows public artifact claim |
+| Windows | execution-path-ready-local-build-candidate-only | no | hold Windows public artifact claim |
 | Android | source-shell-only | no | hold Android runtime/artifact claim |
 | iOS | source-shell-only | no | hold iOS runtime/artifact claim |
 
@@ -34,7 +34,7 @@ artifacts are excluded from public artifact claims rather than hidden.
 | External review/audit | hold | Review packet exists; review/audit completion remains false. |
 | Field evidence | hold for stable/production | Existing lower-class beta publication selected. |
 | Signed/notarized stable artifact | hold | Lower release class selected. |
-| Windows public artifact | hold | Local build candidate only. |
+| Windows public artifact | hold | D100-5 execution path [WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md](WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md) and real-Windows result schema [WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md](WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md) are ready; real runtime pass, artifact, installer, signing, and upload remain false. |
 | Android public artifact | hold | Source shell only. |
 | iOS public artifact | hold | Source shell only. |
 
@@ -60,6 +60,14 @@ Public wording must keep:
 - next_release_class=signed-public-beta-or-rc
 - macos_current_public_artifact_class=unsigned-experimental-public-beta
 - windows_current_public_artifact_class=none-local-build-candidate-only
+- d100_5_windows_public_artifact_execution_path_reviewed=true
+- windows_public_artifact_execution_path_available=true
+- windows_real_runtime_result_schema_available=true
+- windows_real_runtime_result_validator_available=true
+- windows_real_runtime_smoke_passed=false
+- windows_public_artifact_ready=false
+- windows_installer_ready=false
+- windows_public_artifact_upload_allowed=false
 - android_current_public_artifact_class=none-source-shell-only
 - ios_current_public_artifact_class=none-source-shell-only
 - whole_target_standard_100_claim_allowed=false

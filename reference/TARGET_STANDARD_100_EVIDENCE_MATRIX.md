@@ -65,7 +65,7 @@ updated, and a later explicit release/claim task authorizes the wording.
 | User-authorized network actions only | Network behavior requires explicit user action and redacted status. | pass for current boundary | [TRANSPORT_EXPERIMENT_RUNBOOK.md](TRANSPORT_EXPERIMENT_RUNBOOK.md) |
 | No external onion delivery claim before evidence | Reliable external onion delivery and repeated external onion evidence remain false until repeated external two-machine evidence exists. | hold | [FIELD_EVIDENCE_RELIABILITY_PROGRAM.md](FIELD_EVIDENCE_RELIABILITY_PROGRAM.md), [REDACTED_FIELD_REPORT_PACKET.md](REDACTED_FIELD_REPORT_PACKET.md) |
 | macOS public app | Signed/notarized or explicitly scoped macOS artifact, no Gatekeeper exception, usable onboarding, recovery, support, update, and incident path are complete. | hold | [MACOS_PRODUCTION_DISTRIBUTION_GATE.md](MACOS_PRODUCTION_DISTRIBUTION_GATE.md), [STABLE_MACOS_V1_RELEASE_GATE.md](STABLE_MACOS_V1_RELEASE_GATE.md) |
-| Windows desktop public app | Real Windows runtime smoke, WebView2/app-data/path review, encrypted store, deletion, diagnostics, packaging, checksum/provenance, and public artifact policy are complete. | hold | [WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md](WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md) |
+| Windows desktop public app | Real Windows runtime smoke, WebView2/app-data/path review, encrypted store, deletion, diagnostics, packaging, checksum/provenance, and public artifact policy are complete. | execution path ready; real Windows artifact hold | [WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md](WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md), [WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md](WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md), [WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md](WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md) |
 | Android thin shell | User has explicitly unlocked real Android implementation scope; shell preserves shared-core boundary and avoids Google account, Play Services, FCM, Play Store trust, and cloud backup dependencies. | hold | [ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md](ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md) |
 | iOS thin shell | User has explicitly unlocked real iOS implementation scope after Android; shell preserves shared-core boundary and avoids Apple account, iCloud, APNs, App Store/TestFlight trust, and cloud backup dependencies. | hold | [IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md](IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md) |
 | Shared Rust core owns security-sensitive behavior | Identity, pairing, protocol, message lifecycle, encrypted storage, and transport policy stay in shared Rust core. | pass for current boundary | [COMPONENT_BOUNDARIES.md](COMPONENT_BOUNDARIES.md), [CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md](CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md) |
@@ -83,7 +83,7 @@ updated, and a later explicit release/claim task authorizes the wording.
 | Production claim gate | [PRODUCTION_READINESS_CLAIM_GATE.md](PRODUCTION_READINESS_CLAIM_GATE.md), [PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md](PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md), [STABLE_MACOS_V1_RELEASE_GATE.md](STABLE_MACOS_V1_RELEASE_GATE.md) | linked; production claim false |
 | Audit/review | [EXTERNAL_REVIEW_AUDIT_READINESS.md](EXTERNAL_REVIEW_AUDIT_READINESS.md), [EXTERNAL_REVIEW_INTAKE_RUNBOOK.md](EXTERNAL_REVIEW_INTAKE_RUNBOOK.md), [AUDIT_FINDING_TRACKER.md](AUDIT_FINDING_TRACKER.md), [INDEPENDENT_REVIEW_PACKET.md](INDEPENDENT_REVIEW_PACKET.md), [EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md](EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md) | linked; intake operator-ready; audit/review completion false |
 | Field evidence | [FIELD_EVIDENCE_RELIABILITY_PROGRAM.md](FIELD_EVIDENCE_RELIABILITY_PROGRAM.md), [FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md](FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md), [REDACTED_FIELD_REPORT_PACKET.md](REDACTED_FIELD_REPORT_PACKET.md), [EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md](EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md) | linked; intake operator-ready; repeated external evidence false |
-| Platform support matrix | [CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md](CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md), [WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md](WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md), [ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md](ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md), [IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md](IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md) | linked; platform public artifact holds explicit |
+| Platform support matrix | [CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md](CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md), [WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md](WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md), [WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md](WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md), [ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md](ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md), [IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md](IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md) | linked; platform public artifact holds explicit |
 | macOS distribution and UX | [MACOS_PRODUCTION_DISTRIBUTION_GATE.md](MACOS_PRODUCTION_DISTRIBUTION_GATE.md), [MACOS_PRODUCTION_UX_ONBOARDING.md](MACOS_PRODUCTION_UX_ONBOARDING.md), [MACOS_USABILITY_RECOVERY_CLOSURE.md](MACOS_USABILITY_RECOVERY_CLOSURE.md), [REPRESENTATIVE_USABILITY_REPORT_PACKET.md](REPRESENTATIVE_USABILITY_REPORT_PACKET.md) | linked; stable distribution and representative usability hold |
 | Operations and release integrity | [OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md](OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md), [INCIDENT_TABLETOP_RECORD.md](INCIDENT_TABLETOP_RECORD.md), [UPDATE_INTEGRITY.md](UPDATE_INTEGRITY.md), [STABLE_RELEASE_HOLD_REPORT.md](STABLE_RELEASE_HOLD_REPORT.md) | linked; production operations claim false |
 
@@ -146,6 +146,25 @@ updated, and a later explicit release/claim task authorizes the wording.
 - field_report_sample_threshold=multiple-real-two-machine-plus-different-network
 - fabricated_or_local_only_evidence_rejected=true
 - local_only_evidence_promoted_to_external=false
+- d100_5_windows_public_artifact_execution_path_reviewed=true
+- windows_public_artifact_execution_path_available=true
+- windows_real_runtime_result_schema_available=true
+- windows_real_runtime_result_validator_available=true
+- real_windows_runtime_smoke_requirements_defined=true
+- windows_installer_signing_decision_recorded=true
+- windows_checksum_provenance_requirements_defined=true
+- windows_public_copy_requirements_defined=true
+- windows_support_diagnostics_requirements_defined=true
+- windows_no_overclaim_gate_ready=true
+- windows_real_runtime_smoke_passed=false
+- windows_public_artifact_ready=false
+- windows_installer_ready=false
+- windows_signing_ready=false
+- windows_public_artifact_upload_allowed=false
+- windows_release_packaging_allowed=false
+- windows_generated_artifact_commit_allowed=false
+- windows_public_copy_published=false
+- windows_production_claim_allowed=false
 - production_claim_gate_linked=true
 - audit_review_gate_linked=true
 - field_evidence_gate_linked=true
