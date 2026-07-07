@@ -29,6 +29,8 @@ for file in "$DOC" \
   "reference/PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md" \
   "reference/GITHUB_RELEASE_PUBLICATION_SCOPE_DOWN.md" \
   "reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md" \
+  "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md" \
+  "reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md" \
   "reference/ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md" \
   "reference/IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md" \
   "README.md" "SECURITY.md"; do
@@ -42,6 +44,14 @@ must_contain "$DOC" "platform_public_claims_aligned=true"
 must_contain "$DOC" "next_release_class=signed-public-beta-or-rc"
 must_contain "$DOC" "macos_current_public_artifact_class=unsigned-experimental-public-beta"
 must_contain "$DOC" "windows_current_public_artifact_class=none-local-build-candidate-only"
+must_contain "$DOC" "d100_5_windows_public_artifact_execution_path_reviewed=true"
+must_contain "$DOC" "windows_public_artifact_execution_path_available=true"
+must_contain "$DOC" "windows_real_runtime_result_schema_available=true"
+must_contain "$DOC" "windows_real_runtime_result_validator_available=true"
+must_contain "$DOC" "windows_real_runtime_smoke_passed=false"
+must_contain "$DOC" "windows_public_artifact_ready=false"
+must_contain "$DOC" "windows_installer_ready=false"
+must_contain "$DOC" "windows_public_artifact_upload_allowed=false"
 must_contain "$DOC" "android_current_public_artifact_class=none-source-shell-only"
 must_contain "$DOC" "ios_current_public_artifact_class=none-source-shell-only"
 must_contain "$DOC" "whole_target_standard_100_claim_allowed=false"
@@ -78,6 +88,7 @@ done
 scripts/production_claim_release_class_decision_once.sh >/dev/null
 scripts/github_release_publication_scope_down_once.sh >/dev/null
 scripts/windows_public_artifact_scope_down_once.sh >/dev/null
+scripts/windows_public_artifact_execution_path_once.sh >/dev/null
 scripts/android_implementation_authorization_scope_down_once.sh >/dev/null
 scripts/ios_implementation_authorization_scope_down_once.sh >/dev/null
 
@@ -89,6 +100,9 @@ platform_artifact_matrix_available=true
 platform_public_claims_aligned=true
 next_release_class=signed-public-beta-or-rc
 whole_target_standard_100_claim_allowed=false
+d100_5_windows_public_artifact_execution_path_reviewed=true
+windows_public_artifact_execution_path_available=true
+windows_public_artifact_ready=false
 production_ready_claim_allowed=false
 audited_claim_allowed=false
 security_ready_claimed=false

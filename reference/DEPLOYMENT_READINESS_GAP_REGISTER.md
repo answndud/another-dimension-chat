@@ -25,6 +25,7 @@ current supported scope is named precisely:
 | Default transport | Local/manual courier envelope exchange is the supported default. | Production transport and reliable external delivery remain false. |
 | Update/release integrity | Manual same-release GitHub Release verification, provenance, rollback warning, and emergency process are source-gated. | Signed update manifest, rollback prevention, stable release approval, and release upload remain false. |
 | External evidence intake | D100-4 review, field, and representative usability intake is gated by `reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`, with reviewer packet freeze, finding tracker validation, field report validation, representative usability validation, consent/non-sensitive-use notice, and local-only/fabricated evidence rejection. | Completed external review/audit, real repeated field reports, representative usability completion, and all related production/audit/reliability/sensitive-use claims remain false. |
+| Windows public artifact execution | D100-5 Windows public artifact path is gated by `reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md`, with `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md`, runtime smoke requirements, installer/signing decision, checksum/provenance, public copy, support diagnostics, and no-overclaim validation. | Real Windows runtime pass, public artifact, installer, signing, upload, and Windows public claim remain false. |
 | Operations | Public/private intake, tabletop, emergency release, dependency triage, and support-template boundaries are source-gated. | Production operational readiness claim remains false. |
 
 ## Remaining External Or Evidence Blockers
@@ -53,15 +54,20 @@ These cannot be made true by editing source files alone:
 - Real representative usability evidence from the required user sample; D100-4
   report validation and consent notice are ready, but study completion remains
   false.
-- Real Windows runtime smoke on Windows hardware plus a public Windows artifact.
+- Real Windows runtime smoke on Windows hardware plus a public Windows artifact;
+  D100-5 execution path is ready via
+  `reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md`, but runtime pass,
+  artifact, installer, signing, upload, and public claim remain false.
 - Explicit Android/iOS runtime implementation authorization and public mobile
   artifacts if full TARGET_STANDARD 100 remains the goal.
 - Live release upload/edit authorization for any stable release mutation.
 
 ## Next Work Order
 
-1. D100-5: make the Windows public artifact path executable on a real Windows
-   runner/device and reject local-only results.
+1. Resolve remaining external blockers: Developer ID/notary credentials,
+   signed/notarized macOS artifact, completed external review/audit, repeated
+   field evidence, real Windows artifact execution, mobile authorization, and
+   explicit release upload approval.
 
 ## Current Flags
 
@@ -103,6 +109,25 @@ These cannot be made true by editing source files alone:
 - consent_non_sensitive_use_notice_ready=true
 - fabricated_or_local_only_evidence_rejected=true
 - local_only_evidence_promoted_to_external=false
+- d100_5_windows_public_artifact_execution_path_reviewed=true
+- windows_public_artifact_execution_path_available=true
+- windows_real_runtime_result_schema_available=true
+- windows_real_runtime_result_validator_available=true
+- real_windows_runtime_smoke_requirements_defined=true
+- windows_installer_signing_decision_recorded=true
+- windows_checksum_provenance_requirements_defined=true
+- windows_public_copy_requirements_defined=true
+- windows_support_diagnostics_requirements_defined=true
+- windows_no_overclaim_gate_ready=true
+- windows_real_runtime_smoke_passed=false
+- windows_public_artifact_ready=false
+- windows_installer_ready=false
+- windows_signing_ready=false
+- windows_public_artifact_upload_allowed=false
+- windows_release_packaging_allowed=false
+- windows_generated_artifact_commit_allowed=false
+- windows_public_copy_published=false
+- windows_production_claim_allowed=false
 - developer_id_signing_available=false
 - notarization_available=false
 - external_review_completed=false
