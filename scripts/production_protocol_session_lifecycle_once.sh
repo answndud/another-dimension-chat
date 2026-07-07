@@ -73,6 +73,9 @@ require_text "$DOC" "protocol_session_lifecycle_gate_reviewed=true"
 require_text "$DOC" "local_manual_and_future_transport_semantics_shared=true"
 require_text "$DOC" "replay_duplicate_retry_cancel_edges_documented=true"
 require_text "$DOC" "dev_insecure_surface_blocked_from_production_claim=true"
+require_text "$DOC" "d100_1_e2ee_source_gate_reviewed=true"
+require_text "$DOC" "protocol_session_e2ee_source_ready=true"
+require_text "$DOC" "protocol_session_e2ee_source_scope=1:1-local-manual-envelope-message-content-session-replay-retry-cancel-delete"
 require_text "$DOC" "remote_ack_protocol_ready=false"
 require_text "$DOC" "external_onion_delivery_verified=false"
 require_text "$DOC" "runtime_messaging_ready=false"
@@ -115,8 +118,13 @@ for file in "$README" "$SECURITY" "$DOC"; do
   reject_text "$file" "safe for sensitive communication"
 done
 
+scripts/production_local_manual_e2ee_claim_closure_once.sh >/dev/null
+
 printf 'status=production-protocol-session-lifecycle-ready\n'
 printf 'protocol_session_lifecycle_gate_reviewed=true\n'
+printf 'd100_1_e2ee_source_gate_reviewed=true\n'
+printf 'protocol_session_e2ee_source_ready=true\n'
+printf 'protocol_session_e2ee_source_scope=1:1-local-manual-envelope-message-content-session-replay-retry-cancel-delete\n'
 printf 'local_manual_and_future_transport_semantics_shared=true\n'
 printf 'replay_duplicate_retry_cancel_edges_documented=true\n'
 printf 'remote_ack_protocol_ready=false\n'
