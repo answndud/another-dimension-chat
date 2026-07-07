@@ -7,8 +7,14 @@ evidence collection plan and reliability claim boundary, not a real external
 two-machine success result, not repeated field evidence, not production
 readiness, not audited security, and not permission for sensitive communication.
 
+Required public labels: unsigned experimental public beta, sensitive
+communication prohibited, not audited, and not production-ready.
+
 The program defines which evidence can change transport and production wording.
 It also defines what must remain false until real redacted reports exist.
+D100-4 intake execution is tracked in
+`reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`; it makes the report intake
+path operator-ready without accepting local-only or fabricated evidence.
 
 ## Evidence Ladder
 
@@ -105,6 +111,9 @@ Public wording must still say `sensitive communication prohibited`,
 ## Current Gate Flags
 
 - field_evidence_reliability_program_reviewed=true
+- d100_4_external_evidence_intake_execution_reviewed=true
+- external_evidence_intake_operator_ready=true
+- field_report_validator_ready=true
 - rb_5_field_evidence_release_class_scope_down_reviewed=true
 - redacted_field_report_packet_available=true
 - redacted_field_report_validator_available=true

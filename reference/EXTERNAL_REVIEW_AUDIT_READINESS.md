@@ -15,6 +15,7 @@ overclaiming readiness.
 The public-safe review packet starts at:
 
 - `reference/INDEPENDENT_REVIEW_PACKET.md`
+- `reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md`
 - `reference/PUBLIC_THREAT_MODEL.md`
 - `reference/PRODUCTION_READINESS_CLAIM_GATE.md`
 - `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`
@@ -80,6 +81,15 @@ contact request. Public issues must not contain exploit details, payloads,
 endpoints, logs, paths, passphrases, private keys, key material, or screenshots
 of private room data.
 
+## D100-4 Intake Execution
+
+D100-4 freezes the reviewer packet and makes the finding tracker
+machine-checkable for real external intake. The runbook is
+`reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md`, the integrated gate is
+`reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`, and tracker validation is
+performed by `scripts/validate_audit_finding_tracker.mjs`. This only makes the
+intake path operator-ready; it does not create an external review result.
+
 ## RB-6 Scope-Down
 
 RB-6 does not fabricate an external reviewer or audit. Instead, it removes the
@@ -93,6 +103,14 @@ Public wording must still say `not audited`, `not production-ready`, and
 ## Current Gate Flags
 
 - external_review_audit_readiness_gate_reviewed=true
+- d100_4_external_evidence_intake_execution_reviewed=true
+- external_review_intake_runbook_available=true
+- external_review_intake_operator_ready=true
+- reviewer_packet_freeze_ready=true
+- audit_finding_tracker_ready=true
+- audit_finding_tracker_schema_machine_checkable=true
+- audit_finding_counts_machine_checked=true
+- sensitive_finding_private_route_required=true
 - rb_6_external_review_release_class_scope_down_reviewed=true
 - review_packet_public_safe=true
 - review_packet_complete_for_current_source=true
