@@ -42,6 +42,10 @@ must_contain "$DOC" "release_upload_performed=false"
 must_contain "$DOC" "release_body_edit_performed=false"
 must_contain "$DOC" "dmg_rebuild_performed=false"
 must_contain "$DOC" "generated_release_artifacts_staged=false"
+must_contain "$DOC" "d100_3_signed_notarized_execution_path_reviewed=true"
+must_contain "$DOC" "macos_signed_notarized_execution_path_available=true"
+must_contain "$DOC" "signed_notarized_rc_execution_ready=false"
+must_contain "$DOC" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 must_contain "$DOC" "production_distribution_ready=false"
 must_contain "$DOC" "signed_notarized_security_boundary=false"
 must_contain "$DOC" "security_ready_claimed=false"
@@ -58,6 +62,7 @@ must_contain "SECURITY.md" "reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_
 must_contain "apps/desktop-tauri/README.md" "../../reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
 must_contain "reference/UPDATE_INTEGRITY.md" "MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
+must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_STABLE_ARTIFACT_RELEASE_CLASS_SCOPE_DOWN.md"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_6_macos_production_distribution_gate_reviewed=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "rb_7_macos_stable_artifact_release_class_scope_down_reviewed=true"
@@ -88,6 +93,7 @@ done
 
 scripts/macos_public_beta_final_source_preflight_once.sh >/dev/null
 scripts/macos_release_page_update_gate_once.sh >/dev/null
+scripts/macos_signed_notarized_execution_path_once.sh >/dev/null
 scripts/macos_stable_artifact_release_class_scope_down_once.sh >/dev/null
 
 if git -C "$ROOT" ls-files | grep -Eq '^apps/desktop-tauri/(public-release|beta-artifacts)/'; then
@@ -116,6 +122,9 @@ release_upload_performed=false
 release_body_edit_performed=false
 dmg_rebuild_performed=false
 generated_release_artifacts_staged=false
+d100_3_signed_notarized_execution_path_reviewed=true
+macos_signed_notarized_execution_path_available=true
+signed_notarized_rc_execution_ready=false
 production_distribution_ready=false
 signed_notarized_security_boundary=false
 security_ready_claimed=false

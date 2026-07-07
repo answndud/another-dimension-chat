@@ -32,6 +32,7 @@ for file in "$MATRIX" "$TARGET" "README.md" "SECURITY.md" \
   "reference/DEPLOYMENT_READINESS_GAP_REGISTER.md" \
   "reference/PRODUCTION_E2EE_SOURCE_GATE.md" \
   "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md" \
+  "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
   "reference/STABLE_MACOS_V1_RELEASE_GATE.md" \
   "reference/STABLE_RELEASE_HOLD_REPORT.md" \
   "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md" \
@@ -125,6 +126,7 @@ for linked in \
   "PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md" \
   "DEPLOYMENT_READINESS_GAP_REGISTER.md" \
   "PRODUCTION_E2EE_SOURCE_GATE.md" \
+  "MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
   "PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md" \
   "PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md" \
   "PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md" \
@@ -175,6 +177,9 @@ for flag in \
   "protocol_session_e2ee_source_ready=true" \
   "protocol_session_e2ee_source_scope=1:1-local-manual-envelope-message-content-session-replay-retry-cancel-delete" \
   "manual_update_integrity_policy_available=true" \
+  "d100_3_signed_notarized_execution_path_reviewed=true" \
+  "macos_signed_notarized_execution_path_available=true" \
+  "signed_notarized_rc_execution_ready=false" \
   "production_claim_gate_linked=true" \
   "audit_review_gate_linked=true" \
   "field_evidence_gate_linked=true" \

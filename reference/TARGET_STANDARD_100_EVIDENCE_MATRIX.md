@@ -26,9 +26,9 @@ updated, and a later explicit release/claim task authorizes the wording.
 | --- | --- | --- | --- |
 | GitHub Release or official distribution page download | Same-release DMG, checksum, provenance, manifest, release notes, install guide, and update-integrity note are available from the release authority. | pass for current unsigned beta only | [UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md](UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md), [UPDATE_INTEGRITY.md](UPDATE_INTEGRITY.md) |
 | Checksum and provenance verification | User can verify the downloaded artifact against a same-release `.sha256` file and public provenance. | pass for current unsigned beta only | [UNSIGNED_PUBLIC_BETA_INSTALL.md](UNSIGNED_PUBLIC_BETA_INSTALL.md), [UPDATE_INTEGRITY.md](UPDATE_INTEGRITY.md) |
-| Developer ID signing | Developer ID Application identity is available, current, and used for the release artifact. | hold | [RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md](RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md), [MACOS_PRODUCTION_DISTRIBUTION_GATE.md](MACOS_PRODUCTION_DISTRIBUTION_GATE.md) |
-| Notarization and stapling | Notarization credential is available; artifact passes notarytool/stapler validation. | hold | [RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md](RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md), [MACOS_PRODUCTION_DISTRIBUTION_GATE.md](MACOS_PRODUCTION_DISTRIBUTION_GATE.md) |
-| Gatekeeper no-exception open | A normal macOS user can open the app without Privacy & Security manual allow or quarantine workaround. | hold | [MACOS_PRODUCTION_DISTRIBUTION_GATE.md](MACOS_PRODUCTION_DISTRIBUTION_GATE.md) |
+| Developer ID signing | Developer ID Application identity is available, current, and used for the release artifact. | execution path ready; credential hold | [RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md](RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md), [MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md](MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md), [MACOS_PRODUCTION_DISTRIBUTION_GATE.md](MACOS_PRODUCTION_DISTRIBUTION_GATE.md) |
+| Notarization and stapling | Notarization credential is available; artifact passes notarytool/stapler validation. | execution path ready; credential/artifact hold | [RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md](RELEASE_AUTHORITY_CREDENTIAL_UNBLOCK.md), [MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md](MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md), [MACOS_PRODUCTION_DISTRIBUTION_GATE.md](MACOS_PRODUCTION_DISTRIBUTION_GATE.md) |
+| Gatekeeper no-exception open | A normal macOS user can open the app without Privacy & Security manual allow or quarantine workaround. | execution path ready; signed artifact hold | [MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md](MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md), [MACOS_PRODUCTION_DISTRIBUTION_GATE.md](MACOS_PRODUCTION_DISTRIBUTION_GATE.md) |
 | Supported architecture and macOS scope | Apple Silicon and Intel Mac are both supported, or the release explicitly scopes supported architecture and macOS versions. | pass for explicit Apple Silicon current scope; universal/Intel hold | [MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md](MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md), [MACOS_PRODUCTION_DISTRIBUTION_GATE.md](MACOS_PRODUCTION_DISTRIBUTION_GATE.md) |
 | First run and profile unlock | User can understand warning, create/unlock a local profile, and recover from wrong passphrase or corrupt store in app. | source pass; representative usability hold | [MACOS_PRODUCTION_UX_ONBOARDING.md](MACOS_PRODUCTION_UX_ONBOARDING.md), [MACOS_USABILITY_RECOVERY_CLOSURE.md](MACOS_USABILITY_RECOVERY_CLOSURE.md) |
 | Invite and safety verification | User can create/import an invite and compare safety material before messaging. | source pass; representative usability hold | [MACOS_PRODUCTION_UX_ONBOARDING.md](MACOS_PRODUCTION_UX_ONBOARDING.md), [PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md](PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md) |
@@ -126,6 +126,9 @@ updated, and a later explicit release/claim task authorizes the wording.
 - protocol_session_e2ee_source_ready=true
 - protocol_session_e2ee_source_scope=1:1-local-manual-envelope-message-content-session-replay-retry-cancel-delete
 - manual_update_integrity_policy_available=true
+- d100_3_signed_notarized_execution_path_reviewed=true
+- macos_signed_notarized_execution_path_available=true
+- signed_notarized_rc_execution_ready=false
 - production_claim_gate_linked=true
 - audit_review_gate_linked=true
 - field_evidence_gate_linked=true
