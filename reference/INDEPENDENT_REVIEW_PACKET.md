@@ -118,6 +118,9 @@ Review the unsigned experimental public beta boundary:
 - `reference/COMPONENT_BOUNDARIES.md`: component replacement and readiness map.
 - `reference/PRODUCTION_READINESS_CLAIM_GATE.md`: production-readiness,
   external-review, audit, field-evidence, and stable-release claim gate.
+- `reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md`: P100-0 evidence matrix
+  for judging general macOS public app 100% and full target-standard 100%
+  without upgrading current public non-claims.
 - `reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md`: 1:1 protocol/session
   state machine, replay/retry/cancel/delete semantics, and unresolved
   production E2EE review questions.

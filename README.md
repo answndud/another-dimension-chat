@@ -227,6 +227,10 @@ aligned to actual artifacts/source shells, and whole-product 100%, stable,
 production-ready, audited, security-ready, reliable-delivery,
 Briar/Cwtch-equivalent, censorship-resistant, and sensitive-use claims remain
 false.
+P100-0 100% definition lock is tracked in
+[reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md](reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md):
+it defines the evidence matrix for judging general macOS public app 100% and
+full target-standard 100% while keeping the current non-claims unchanged.
 
 Production protocol/session lifecycle review input is tracked in
 [reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md](reference/PRODUCTION_PROTOCOL_SESSION_LIFECYCLE.md).
