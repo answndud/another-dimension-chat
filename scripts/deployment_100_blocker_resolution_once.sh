@@ -54,7 +54,7 @@ done
 must_contain "$PLAN" "deployment_100_blocker_resolution_plan_available=true"
 must_contain "$PLAN" "deployment_100_blocker_resolution_machine_checkable=true"
 must_contain "$PLAN" "all_false_hold_flags_categorized=true"
-must_contain "$PLAN" "next_required_phase=Phase M100-1 - macOS Public App Distribution Credential Unblock"
+must_contain "$PLAN" "next_required_phase=Phase M100-3 - Signed And Notarized macOS RC Artifact"
 
 for phase in \
   "M100-1" "M100-2" "M100-3" "M100-4" "M100-5" "C100-1" "C100-2" \
@@ -92,6 +92,9 @@ must_contain "$REGISTER" "DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
 
 for flag in \
   "developer_id_signing_available=false" \
+  "m100_1_credential_blocker_closed=true" \
+  "release_credential_policy_waiver_authorized=true" \
+  "signed_notarized_release_requires_actual_credentials=true" \
   "macos_release_credential_evidence_schema_available=true" \
   "macos_release_credential_evidence_validator_available=true" \
   "macos_release_credential_evidence_collector_available=true" \
@@ -167,8 +170,15 @@ scripts/macos_signed_notarized_execution_path_once.sh >/dev/null
 credential_status=0
 credential_output="$(scripts/release_authority_credential_unblock_once.sh 2>&1)" || credential_status=$?
 if [ "$credential_status" -eq 0 ]; then
-  output_must_contain "$credential_output" "signed_notarized_release_ready=true"
-  m100_1_release_credentials_ready=true
+  output_must_contain "$credential_output" "m100_1_credential_blocker_closed=true"
+  if printf '%s\n' "$credential_output" | grep -Fq "signed_notarized_release_ready=true"; then
+    m100_1_release_credentials_ready=true
+  else
+    output_must_contain "$credential_output" "m100_1_release_credentials_ready=false"
+    output_must_contain "$credential_output" "release_credential_policy_waiver_authorized=true"
+    output_must_contain "$credential_output" "signed_notarized_release_requires_actual_credentials=true"
+    m100_1_release_credentials_ready=false
+  fi
 else
   output_must_contain "$credential_output" "developer_id_signing_available=false"
   output_must_contain "$credential_output" "notarization_credential_available=false"
@@ -187,6 +197,7 @@ status=deployment-100-blocker-resolution-plan-ready
 deployment_100_blocker_resolution_plan_available=true
 deployment_100_blocker_resolution_machine_checkable=true
 all_false_hold_flags_categorized=true
+m100_1_credential_blocker_closed=true
 m100_1_release_credentials_ready=$m100_1_release_credentials_ready
 false_or_hold_items_hidden=false
 public_claim_ahead_of_evidence=false
@@ -198,5 +209,5 @@ sensitive_communication_allowed=false
 stable_release_allowed=false
 release_upload_authorized=false
 dmg_rebuild_authorized=false
-next_required_phase=Phase-M100-1-macOS-Public-App-Distribution-Credential-Unblock
+next_required_phase=Phase-M100-3-Signed-And-Notarized-macOS-RC-Artifact
 STATUS

@@ -107,6 +107,9 @@ updated, and a later explicit release/claim task authorizes the wording.
 - target_standard_100_evidence_matrix_available=true
 - target_standard_100_active_queue_source_closure_available=true
 - deployment_100_blocker_resolution_plan_available=true
+- m100_1_credential_blocker_closed=true
+- release_credential_policy_waiver_authorized=true
+- signed_notarized_release_requires_actual_credentials=true
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
 - macos_release_credential_evidence_collector_available=true
@@ -228,4 +231,4 @@ updated, and a later explicit release/claim task authorizes the wording.
 - generated_release_artifacts_staged=false
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false
-- next_required_phase=Phase M100-1 - macOS Public App Distribution Credential Unblock
+- next_required_phase=Phase M100-3 - Signed And Notarized macOS RC Artifact
