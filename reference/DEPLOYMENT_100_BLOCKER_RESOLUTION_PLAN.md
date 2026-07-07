@@ -32,7 +32,7 @@ Current public wording must remain:
 | 5 | M100-5 macOS Error Recovery And Destructive Action Completion | source gate | Wrong passphrase, corrupt store, retry/cancel, profile delete, conversation delete, session delete, and full local wipe remain redacted and user-visible. |
 | 6 | C100-1 Production E2EE State Machine Closure | closed by owner waiver | Local/manual 1:1 message-content encryption, replay, retry, cancel, delete, and session lifecycle are source-ready; active blocker is closed by explicit owner waiver while broad production E2EE waits for review and field evidence. |
 | 7 | C100-2 Pairwise Identity And Safety Verification Closure | closed by owner waiver | Pairwise identity persistence, signed invite payloads, canonical transcript, duplicate rejection, and mismatch revocation are source-ready; active blocker is closed by explicit owner waiver while identity audit and security claims remain held. |
-| 8 | C100-3 Key Management, Rollback Prevention, And Storage Lifecycle | source gate with key/rollback hold | Passphrase-first SQLCipher local store and marker-only rollback detection are source-ready; app key wrapping, key rotation, rollback prevention, backup recovery, and secure deletion remain holds. |
+| 8 | C100-3 Key Management, Rollback Prevention, And Storage Lifecycle | closed by owner waiver | Passphrase-first SQLCipher local store and marker-only rollback detection are source-ready; active blocker is closed by explicit owner waiver while app key wrapping, key rotation, rollback prevention, backup recovery, and secure deletion remain holds. |
 | 9 | C100-4 Default Practical Transport Product Path | source gate with transport hold | Local/manual courier envelope exchange stays the supported default; production transport and reliable external delivery remain false. |
 | 10 | C100-5 Advanced Onion/Tor Evidence Boundary | source gate with field hold | Onion/Tor remains explicit, advanced, fail-closed, and non-claim until repeated external two-machine evidence exists. |
 | 11 | M100-6 Representative macOS Usability Evidence | closed by owner waiver | Active-queue representative usability evidence blocker is closed by explicit owner waiver; real accepted usability evidence remains required before stable, public macOS 100%, production, or TARGET_STANDARD 100 claims. |
@@ -141,6 +141,11 @@ Current public wording must remain:
 - pairwise_identity_policy_waiver_authorized=true
 - pairwise_identity_external_audit_required_for_claims=true
 - pairwise_identity_field_evidence_required_for_claims=true
+- c100_3_key_management_blocker_closed=true
+- key_management_policy_waiver_authorized=true
+- app_key_wrapping_required_for_key_management_claims=true
+- rollback_prevention_external_monotonic_state_required_for_claims=true
+- secure_deletion_evidence_required_for_claims=true
 - macos_release_credential_evidence_schema_available=true
 - macos_release_credential_evidence_validator_available=true
 - macos_release_credential_evidence_collector_available=true
@@ -191,4 +196,4 @@ Current public wording must remain:
 - public_claim_ahead_of_evidence=false
 - docs_private_uncommitted=true
 - agents_md_stage_allowed=false
-- next_required_phase=Phase C100-3 - Key Management, Rollback Prevention, And Storage Lifecycle
+- next_required_phase=Phase C100-4 - Default Practical Transport Product Path
