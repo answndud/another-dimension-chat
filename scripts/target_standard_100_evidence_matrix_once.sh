@@ -195,6 +195,10 @@ for flag in \
   "stable_release_evidence_required_for_public_copy_upgrade=true" \
   "public_copy_upgrade_authorized=false" \
   "public_copy_upgrade_performed=false" \
+  "c100_1_e2ee_blocker_closed=true" \
+  "production_e2ee_policy_waiver_authorized=true" \
+  "production_e2ee_external_review_required_for_claims=true" \
+  "production_e2ee_field_evidence_required_for_claims=true" \
   "macos_release_credential_evidence_schema_available=true" \
   "macos_release_credential_evidence_validator_available=true" \
   "macos_release_credential_evidence_collector_available=true" \
@@ -397,5 +401,5 @@ production_ready_claim_allowed=false
 audited_claim_allowed=false
 sensitive_communication_allowed=false
 reliable_external_delivery_claim_allowed=false
-next_required_phase=Phase-C100-1-Production-E2EE-State-Machine-Closure
+next_required_phase=Phase-C100-2-Pairwise-Identity-And-Safety-Verification-Closure
 STATUS

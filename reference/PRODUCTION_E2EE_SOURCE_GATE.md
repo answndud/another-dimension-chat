@@ -1,9 +1,10 @@
 # Production E2EE Source Gate
 
 Status: D100-1 source gate is ready for the supported local/manual 1:1
-envelope message-content scope. This is a source-readiness gate only. It is not
-a secure messenger claim, not a broad production E2EE readiness claim, not an
-audit result, not reliable external delivery evidence, and not permission for
+envelope message-content scope. C100-1 is closed for active-queue progress by
+explicit owner policy waiver only. This is a source-readiness gate only. It is
+not a secure messenger claim, not a broad production E2EE readiness claim, not
+an audit result, not reliable external delivery evidence, and not permission for
 sensitive communication.
 
 ## Source-Ready Scope
@@ -24,6 +25,12 @@ This gate treats the following source-backed scope as pass-capable:
 The gate is deliberately narrower than `production_e2ee_ready`. It confirms that
 the current source has a coherent pass/fail boundary for review; it does not
 claim the product is ready for sensitive communication or production use.
+
+The selected workaround is an explicit owner policy waiver for C100-1 only:
+missing external protocol review, audit, and field evidence no longer keep
+C100-1 in the active queue, but production E2EE, secure messenger, audited,
+security-ready, reliable delivery, and sensitive-use claims remain blocked
+until real evidence or a later explicit claim-policy decision exists.
 
 ## Required Anchors
 
@@ -61,6 +68,11 @@ These remain false or hold until separate evidence exists:
 ## Current Gate Flags
 
 - production_e2ee_source_gate_reviewed=true
+- c100_1_e2ee_blocker_closed=true
+- production_e2ee_policy_waiver_authorized=true
+- production_e2ee_waiver_scope=active-queue-unblock-only
+- production_e2ee_external_review_required_for_claims=true
+- production_e2ee_field_evidence_required_for_claims=true
 - production_e2ee_source_ready=true
 - d100_1_e2ee_source_gate_reviewed=true
 - protocol_session_e2ee_source_ready=true
@@ -88,4 +100,4 @@ These remain false or hold until separate evidence exists:
 - external_review_completed=false
 - audit_completed=false
 - security_ready_claimed=false
-- next_required_phase=D100-2 production key management pass-capable source gate
+- next_required_phase=Phase C100-2 - Pairwise Identity And Safety Verification Closure

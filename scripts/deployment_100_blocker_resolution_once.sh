@@ -54,7 +54,7 @@ done
 must_contain "$PLAN" "deployment_100_blocker_resolution_plan_available=true"
 must_contain "$PLAN" "deployment_100_blocker_resolution_machine_checkable=true"
 must_contain "$PLAN" "all_false_hold_flags_categorized=true"
-must_contain "$PLAN" "next_required_phase=Phase C100-1 - Production E2EE State Machine Closure"
+must_contain "$PLAN" "next_required_phase=Phase C100-2 - Pairwise Identity And Safety Verification Closure"
 
 for phase in \
   "M100-1" "M100-2" "M100-3" "M100-4" "M100-5" "C100-1" "C100-2" \
@@ -107,6 +107,10 @@ for flag in \
   "m100_8_stable_release_blocker_closed=true" \
   "stable_release_policy_waiver_authorized=true" \
   "stable_release_evidence_required_for_public_copy_upgrade=true" \
+  "c100_1_e2ee_blocker_closed=true" \
+  "production_e2ee_policy_waiver_authorized=true" \
+  "production_e2ee_external_review_required_for_claims=true" \
+  "production_e2ee_field_evidence_required_for_claims=true" \
   "macos_release_credential_evidence_schema_available=true" \
   "macos_release_credential_evidence_validator_available=true" \
   "macos_release_credential_evidence_collector_available=true" \
@@ -215,6 +219,7 @@ m100_3_artifact_blocker_closed=true
 m100_6_usability_blocker_closed=true
 m100_7_update_blocker_closed=true
 m100_8_stable_release_blocker_closed=true
+c100_1_e2ee_blocker_closed=true
 m100_1_release_credentials_ready=$m100_1_release_credentials_ready
 false_or_hold_items_hidden=false
 public_claim_ahead_of_evidence=false
@@ -226,5 +231,5 @@ sensitive_communication_allowed=false
 stable_release_allowed=false
 release_upload_authorized=false
 dmg_rebuild_authorized=false
-next_required_phase=Phase-C100-1-Production-E2EE-State-Machine-Closure
+next_required_phase=Phase-C100-2-Pairwise-Identity-And-Safety-Verification-Closure
 STATUS
