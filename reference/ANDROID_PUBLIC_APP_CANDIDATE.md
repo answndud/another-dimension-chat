@@ -22,6 +22,7 @@ delivery, or cloud backup dependencies.
 - android_public_artifact_checksum_verifier_ready=true
 - android_shell_uses_shared_core_json_bridge_candidate=true
 - android_forbidden_dependency_scan_ready=true
+- android_generated_artifact_guard_ready=true
 - android_backup_exclusion_configured=true
 - android_release_package_smoke_ready=false
 - android_real_device_smoke_passed=false

@@ -29,6 +29,7 @@ for file in "$DOC" \
   "reference/FINAL_100_EVIDENCE_LEDGER_SCHEMA.md" \
   "scripts/final_100_evidence_ledger_once.sh" \
   "scripts/validate_final_100_evidence_ledger.mjs" \
+  "scripts/mobile_generated_artifact_guard_once.sh" \
   "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
   "reference/MACOS_RELEASE_DISTRIBUTION_METADATA.md" \
   "reference/MACOS_FIRST_RUN_RECOVERY_USABILITY_MATRIX.md" \
@@ -82,6 +83,7 @@ must_contain "reference/IOS_PUBLIC_APP_CANDIDATE.md" "ios_public_artifact_ready=
 must_contain "reference/EXTERNAL_AUDIT_FIELD_EVIDENCE_GATE.md" "external_review_completed=false"
 must_contain "reference/EXTERNAL_AUDIT_FIELD_EVIDENCE_GATE.md" "repeated_redacted_field_reports_available=false"
 must_contain "reference/STABLE_MACOS_V1_RELEASE_GATE.md" "stable_release_gate_decision=hold"
+must_contain "scripts/mobile_generated_artifact_guard_once.sh" "generated_artifacts_staged=false"
 
 for file in "$DOC" \
   reference/PRODUCTION_READINESS_CLAIM_GATE.md \
@@ -105,6 +107,7 @@ for file in "$DOC" \
 done
 
 scripts/final_100_evidence_ledger_once.sh >/dev/null
+scripts/mobile_generated_artifact_guard_once.sh >/dev/null
 
 if git -C "$ROOT" diff --cached --name-only | grep -Eq '^(docs/|AGENTS.md|apps/desktop-tauri/(public-release|beta-artifacts)/|public-release/|beta-artifacts/)'; then
   fail "private docs, AGENTS.md, or generated artifact path is staged"
@@ -128,6 +131,8 @@ external_review_completed=false
 audit_completed=false
 repeated_redacted_field_reports_available=false
 production_ready_claim_allowed=false
+generated_artifacts_staged=false
+mobile_generated_artifacts_staged=false
 audited_claim_allowed=false
 sensitive_communication_allowed=false
 public_claim_may_not_exceed_evidence=true
