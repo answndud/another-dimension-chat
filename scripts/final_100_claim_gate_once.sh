@@ -26,6 +26,9 @@ must_not_match() {
 DOC="reference/FINAL_100_CLAIM_GATE.md"
 
 for file in "$DOC" \
+  "reference/FINAL_100_EVIDENCE_LEDGER_SCHEMA.md" \
+  "scripts/final_100_evidence_ledger_once.sh" \
+  "scripts/validate_final_100_evidence_ledger.mjs" \
   "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
   "reference/MACOS_RELEASE_DISTRIBUTION_METADATA.md" \
   "reference/MACOS_FIRST_RUN_RECOVERY_USABILITY_MATRIX.md" \
@@ -41,6 +44,8 @@ done
 
 for flag in \
   "final_100_claim_gate_ready=true" \
+  "final_100_evidence_ledger_schema_available=true" \
+  "final_100_evidence_ledger_validator_available=true" \
   "macos_public_app_100_claim_allowed=false" \
   "whole_target_standard_100_claim_allowed=false" \
   "production_claim_gate_passed=false" \
@@ -64,6 +69,8 @@ for flag in \
 done
 
 must_contain "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" "gatekeeper_assess_executed=false"
+must_contain "reference/FINAL_100_EVIDENCE_LEDGER_SCHEMA.md" "final_100_evidence_ledger_schema_available=true"
+must_contain "scripts/validate_final_100_evidence_ledger.mjs" "final-100-evidence-ledger-v1"
 must_contain "reference/MACOS_RELEASE_DISTRIBUTION_METADATA.md" "macos_release_distribution_artifact_ready=false"
 must_contain "reference/MACOS_FIRST_RUN_RECOVERY_USABILITY_MATRIX.md" "representative_usability_evidence_completed=false"
 must_contain "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md" "signed_update_manifest_ready=false"
@@ -96,6 +103,8 @@ for file in "$DOC" \
   must_not_match "$file" "sensitive_communication_allowed=true"
 done
 
+scripts/final_100_evidence_ledger_once.sh >/dev/null
+
 if git -C "$ROOT" diff --cached --name-only | grep -Eq '^(docs/|AGENTS.md|apps/desktop-tauri/(public-release|beta-artifacts)/|public-release/|beta-artifacts/)'; then
   fail "private docs, AGENTS.md, or generated artifact path is staged"
 fi
@@ -103,6 +112,8 @@ fi
 cat <<'STATUS'
 status=final-100-claim-gate-held
 final_100_claim_gate_ready=true
+final_100_evidence_ledger_schema_available=true
+final_100_evidence_ledger_validator_available=true
 macos_public_app_100_claim_allowed=false
 whole_target_standard_100_claim_allowed=false
 production_claim_gate_passed=false
