@@ -8504,6 +8504,8 @@ async function saveInviteRoomOutboundMessage(input = productionTwoProfileInput()
     fields.productionMessageNumber.value = String(messageNumber);
   }
   storeMessageEnvelopeSlot(profileA, result.envelope_payload, {
+    explicitUserAction: true,
+    manualAction: "export-envelope",
     receiver: profileB,
     roomFingerprint: twoProfileSessionStatusFingerprint(input),
     messageNumber,
@@ -9676,6 +9678,8 @@ function selectedMessageEnvelopeMetadata(profile, messageNumber, message) {
     return {};
   }
   return {
+    explicitUserAction: true,
+    manualAction: "export-envelope",
     receiver: selectedEntry.receiver,
     roomFingerprint,
     messageNumber: parsedNumber,
@@ -11941,7 +11945,14 @@ function storeProductionMessageEnvelope() {
     return;
   }
   const metadata = selectedMessageEnvelopeMetadata(profile, messageNumber, message);
-  storeMessageEnvelopeSlot(profile, value, metadata);
+  if (!storeMessageEnvelopeSlot(profile, value, metadata)) {
+    setProductionMessageState("Message envelope slot needs selected row");
+    setText(
+      fields.productionMessageWarning,
+      "Select the matching pending message row before storing a scoped manual envelope slot.",
+    );
+    return;
+  }
   setProductionMessageState("Message envelope stored");
   setText(
     fields.productionMessageWarning,
@@ -12053,11 +12064,18 @@ function relayProductionMessageEnvelopeToPeer() {
     return;
   }
   resetProductionMessageImportState();
-  storeMessageEnvelopeSlot(
+  if (!storeMessageEnvelopeSlot(
     profile,
     value,
     selectedMessageEnvelopeMetadata(profile, messageNumber, message),
-  );
+  )) {
+    setProductionMessageState("Envelope relay needs selected row");
+    setText(
+      fields.productionMessageWarning,
+      "Select the matching pending message row before relaying a scoped manual envelope slot.",
+    );
+    return;
+  }
   renderProductionTwoProfileConversationList();
   if (!selectProductionProfileForManualRelay(counterpart)) {
     setProductionMessageState("Envelope relay needs supported peer");
@@ -19504,6 +19522,8 @@ function syncTwoProfileConversationAfterManualExport(
   const envelope = String(envelopePayload ?? "").trim();
   if (exportedProfile && envelope) {
     storeMessageEnvelopeSlot(exportedProfile, envelope, {
+      explicitUserAction: true,
+      manualAction: "export-envelope",
       receiver: selectedEntry?.receiver,
       roomFingerprint: twoProfileSessionStatusFingerprint(input),
       messageNumber: exportedNumber,

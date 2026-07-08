@@ -51,10 +51,16 @@ must_contain "$DOC" "supported_default_transport_ready=true"
 must_contain "$DOC" "supported_default_transport_scope=local-manual-courier-envelope-exchange-only"
 must_contain "$DOC" "default_transport_product_path=local-manual-encrypted-envelope-exchange"
 must_contain "$DOC" "manual_courier_envelope_recovery_available=true"
+must_contain "$DOC" "manual_envelope_explicit_user_export_required=true"
+must_contain "$DOC" "manual_envelope_slot_network_io=false"
+must_contain "$DOC" "manual_envelope_slot_automatic_delivery=false"
 must_contain "$DOC" "legacy_unscoped_envelope_import_ready=false"
+must_contain "$DOC" "implicit_envelope_import_ready=false"
 must_contain "$DOC" "wrong_room_envelope_import_ready=false"
 must_contain "$DOC" "stale_envelope_import_ready=false"
 must_contain "$DOC" "stale_envelope_recovery_hint_ready=true"
+must_contain "$DOC" "canceled_envelope_recovery_hint_ready=true"
+must_contain "$DOC" "duplicate_received_envelope_recovery_hint_ready=true"
 must_contain "$DOC" "default_transport_network_io=false"
 must_contain "$DOC" "default_transport_automatic_delivery=false"
 must_contain "$DOC" "default_transport_central_message_server=false"
@@ -64,6 +70,8 @@ must_contain "$DOC" "default_direct_peer_fallback_allowed=false"
 must_contain "$DOC" "untrusted_relay_store_and_forward_decided=false"
 must_contain "$DOC" "untrusted_relay_store_and_forward_allowed=false"
 must_contain "$DOC" "advanced_onion_path=explicit-user-triggered-fail-closed-onion-only"
+must_contain "$DOC" "advanced_onion_controls_hidden_by_default=true"
+must_contain "$DOC" "startup_onion_status_only=true"
 must_contain "$DOC" "advanced_onion_direct_fallback=false"
 must_contain "$DOC" "advanced_onion_send_receive_available=false"
 must_contain "$DOC" "automatic_network_on_launch_allowed=false"
@@ -100,7 +108,11 @@ must_contain "$UI_SMOKE" "reliable_external_delivery_claim_allowed="
 must_contain "$TRANSPORT_DOC" "reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md"
 must_contain "$TRANSPORT_DOC" "supported_default_transport_ready=true"
 must_contain "$RECOVERY_DOC" "manual_envelope_active_pending_row_required=true"
+must_contain "$RECOVERY_DOC" "manual_envelope_explicit_user_export_required=true"
 must_contain "$RECOVERY_GATE" "status=desktop-manual-courier-envelope-recovery-ready"
+must_contain "$UI_SMOKE" "default public surface hides advanced onion controls outside developer mode"
+must_contain "$UI_SMOKE" "startup invokes only redacted local onion status"
+must_contain "apps/desktop-tauri/src/i18n.js" "Single private delivery attempt completed; reliability is not claimed."
 must_contain "$TRANSPORT_DOC" "production_transport_ready=false"
 must_contain "$TRANSPORT_DOC" "reliable_external_delivery_claim_allowed=false"
 must_contain "$PACKET" "reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md"
@@ -111,6 +123,7 @@ must_contain "SECURITY.md" "reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLA
 
 for file in "$DOC" "$TRANSPORT_DOC" "$STABLE_GATE" "README.md" "SECURITY.md"; do
   must_not_match "$file" "default_transport_network_io=true"
+  must_not_match "$file" "implicit_envelope_import_ready=true"
   must_not_match "$file" "default_transport_automatic_delivery=true"
   must_not_match "$file" "default_transport_central_message_server=true"
   must_not_match "$file" "default_transport_push_dependency=true"
@@ -139,10 +152,16 @@ supported_default_transport_ready=true
 supported_default_transport_scope=local-manual-courier-envelope-exchange-only
 default_transport_product_path=local-manual-encrypted-envelope-exchange
 manual_courier_envelope_recovery_available=true
+manual_envelope_explicit_user_export_required=true
+manual_envelope_slot_network_io=false
+manual_envelope_slot_automatic_delivery=false
 legacy_unscoped_envelope_import_ready=false
+implicit_envelope_import_ready=false
 wrong_room_envelope_import_ready=false
 stale_envelope_import_ready=false
 stale_envelope_recovery_hint_ready=true
+canceled_envelope_recovery_hint_ready=true
+duplicate_received_envelope_recovery_hint_ready=true
 default_transport_network_io=false
 default_transport_automatic_delivery=false
 default_transport_central_message_server=false
@@ -152,6 +171,8 @@ default_direct_peer_fallback_allowed=false
 untrusted_relay_store_and_forward_decided=false
 untrusted_relay_store_and_forward_allowed=false
 advanced_onion_path=explicit-user-triggered-fail-closed-onion-only
+advanced_onion_controls_hidden_by_default=true
+startup_onion_status_only=true
 advanced_onion_direct_fallback=false
 advanced_onion_send_receive_available=false
 automatic_network_on_launch_allowed=false
