@@ -64,7 +64,7 @@ must_contain "$DOC" "reliable_external_delivery_claim_allowed=false"
 must_contain "$DOC" "production_transport_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
 must_contain "$DOC" "sensitive_communication_allowed=false"
-must_contain "$DOC" "next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program"
+must_contain "$DOC" "next_required_phase=Phase O100-1 - Operations, Incident, And Vulnerability Readiness"
 
 must_contain "$CORE" "SUPPORTED_DEFAULT_TRANSPORT_SCOPE"
 must_contain "$CORE" "pub fn supported_default_transport_ready"
@@ -144,5 +144,5 @@ reliable_external_delivery_claim_allowed=false
 production_transport_ready=false
 security_ready_claimed=false
 sensitive_communication_allowed=false
-next_required_phase=Phase-F100-1-External-Two-Machine-Field-Evidence-Program
+next_required_phase=Phase-O100-1-Operations-Incident-And-Vulnerability-Readiness
 STATUS

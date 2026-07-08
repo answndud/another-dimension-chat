@@ -85,4 +85,4 @@ release page, owner approval, external review, and stable gate.
 - production_ready_claim_allowed=false
 - audited_claim_allowed=false
 - sensitive_communication_allowed=false
-- next_required_phase=F100-1 External Two-Machine Field Evidence Program
+- next_required_phase=O100-1 Operations, Incident, And Vulnerability Readiness
