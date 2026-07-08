@@ -177,6 +177,54 @@ function validateEvidenceFileRef(baseDir, groupName, fieldName, value) {
     if (actualSha !== value.sha256) {
       issues.push(`${prefix}:sha-mismatch`);
     }
+    const text = fs.readFileSync(file, "utf8");
+    for (const [pattern, label] of FORBIDDEN_PATTERNS) {
+      if (pattern.test(text)) issues.push(`${prefix}:forbidden-content:${label}`);
+    }
+  }
+  return issues;
+}
+
+function collectEvidenceFilePaths(baseDir, value) {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectEvidenceFilePaths(baseDir, item));
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const file = evidencePath(baseDir, value.path);
+  if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) return [];
+  return [file];
+}
+
+function validateRepresentativeUsabilityReports(ledger, file, { requireCurrentHead }) {
+  const refs = ledger.evidence_files?.macos?.representative_usability_reports;
+  const reportFiles = collectEvidenceFilePaths(path.dirname(file), refs);
+  if (reportFiles.length === 0) return [];
+  const validator = path.join(process.cwd(), "scripts", "validate_representative_usability_reports.mjs");
+  const issues = [];
+  let output = "";
+  try {
+    output = execFileSync(process.execPath, [validator, ...reportFiles], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        AD_REQUIRE_CURRENT_HEAD: requireCurrentHead ? "1" : process.env.AD_REQUIRE_CURRENT_HEAD ?? "",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch {
+    return ["macos.representative_usability_reports:validator-failed"];
+  }
+  if (!output.includes("representative_usability_sample_threshold_met=true")) {
+    issues.push("macos.representative_usability_reports:sample-threshold-not-met");
+  }
+  if (!output.includes("representative_usability_required_tasks_passed=true")) {
+    issues.push("macos.representative_usability_reports:required-tasks-not-passed");
+  }
+  if (!output.includes("app_launch_network_stayed_false_all_reports=true")) {
+    issues.push("macos.representative_usability_reports:network-boundary-not-proven");
+  }
+  if (!output.includes("status=representative-usability-evidence-candidate-requires-review")) {
+    issues.push("macos.representative_usability_reports:not-candidate");
   }
   return issues;
 }
@@ -274,6 +322,7 @@ function validateLedger(file, { requireCurrentHead, head }) {
     issues.push(...validateGroup(ledger, groupName));
   }
   issues.push(...validateEvidenceFiles(ledger, file));
+  issues.push(...validateRepresentativeUsabilityReports(ledger, file, { requireCurrentHead }));
   const fieldReportCount = ledger.external?.accepted_field_report_count;
   if (!Number.isInteger(fieldReportCount) || fieldReportCount < 4) {
     issues.push("external.accepted_field_report_count:below-threshold");
@@ -295,6 +344,8 @@ console.log(`final_100_evidence_ledger_files_found=${files.length}`);
 
 if (files.length === 0) {
   console.log("accepted_final_100_evidence_ledgers=0");
+  console.log("final_100_evidence_ledger_child_files_content_redacted=true");
+  console.log("final_100_evidence_ledger_requires_valid_representative_usability_reports=true");
   console.log("final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true");
   console.log("macos_public_app_100_claim_allowed=false");
   console.log("whole_target_standard_100_claim_allowed=false");
@@ -323,6 +374,8 @@ if (failures > 0) {
 
 console.log(`accepted_final_100_evidence_ledgers=${files.length}`);
 console.log("final_100_evidence_ledger_child_files_sha_verified=true");
+console.log("final_100_evidence_ledger_child_files_content_redacted=true");
+console.log("final_100_evidence_ledger_requires_valid_representative_usability_reports=true");
 console.log("final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true");
 console.log("final_100_evidence_candidate_requires_owner_claim_decision=true");
 console.log("macos_public_app_100_claim_allowed=false");

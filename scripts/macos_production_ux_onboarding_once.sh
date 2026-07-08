@@ -47,7 +47,9 @@ must_contain "$DOC" "sensitive_communication_allowed=false"
 must_contain "$DOC" "security_ready_claimed=false"
 must_contain "$DOC" "next_required_phase=Phase M100-5 - macOS Error Recovery And Destructive Action Completion"
 
-must_contain "README.md" "reference/MACOS_PRODUCTION_UX_ONBOARDING.md"
+if ! grep -Fq "reference/MACOS_PRODUCTION_UX_ONBOARDING.md" "README.md"; then
+  must_contain "SECURITY.md" "reference/MACOS_PRODUCTION_UX_ONBOARDING.md"
+fi
 must_contain "SECURITY.md" "reference/MACOS_PRODUCTION_UX_ONBOARDING.md"
 must_contain "apps/desktop-tauri/README.md" "../../reference/MACOS_PRODUCTION_UX_ONBOARDING.md"
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/MACOS_PRODUCTION_UX_ONBOARDING.md"

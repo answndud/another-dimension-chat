@@ -28,7 +28,10 @@ Each ledger uses `schema_version=final-100-evidence-ledger-v1` and must include:
 
 The ledger must also bind each claim group to child evidence files by relative
 path and SHA-256. Absolute paths, parent-directory traversal, missing files,
-and SHA mismatches are rejected. The validator can be run with
+SHA mismatches, and forbidden private/local-only child evidence content are
+rejected. macOS representative usability child reports must also pass
+`scripts/validate_representative_usability_reports.mjs` as a candidate report
+set before the final ledger can be accepted. The validator can be run with
 `--require-current-head` or `AD_REQUIRE_CURRENT_HEAD=1` when the evidence bundle
 must match the checked-out commit.
 
@@ -44,6 +47,8 @@ sets public claims true by itself.
 - final_100_evidence_ledger_rejects_private_material=true
 - final_100_evidence_ledger_requires_child_evidence_files=true
 - final_100_evidence_ledger_child_files_sha_verified=true
+- final_100_evidence_ledger_child_files_content_redacted=true
+- final_100_evidence_ledger_requires_valid_representative_usability_reports=true
 - final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true
 - final_100_evidence_candidate_requires_owner_claim_decision=true
 - macos_public_app_100_claim_allowed=false
