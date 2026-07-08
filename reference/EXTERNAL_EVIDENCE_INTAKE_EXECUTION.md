@@ -71,6 +71,12 @@ It checks the intake path without fabricating external evidence.
 - audit_finding_counts_machine_checked=true
 - sensitive_finding_private_route_required=true
 - field_report_validator_ready=true
+- f100_1_field_evidence_blocker_closed=true
+- field_evidence_policy_waiver_authorized=true
+- real_external_two_machine_field_evidence_required_for_claims=true
+- accepted_redacted_field_reports_required_for_claims=true
+- field_evidence_execution_claim_allowed=false
+- accepted_production_field_reports=0
 - usability_report_validator_ready=true
 - consent_non_sensitive_use_notice_ready=true
 - external_execution_required=true

@@ -26,6 +26,9 @@ supported default path as local/manual courier envelope exchange. Reliable
 external delivery, security-ready, production-ready, audited, and sensitive-use
 wording remain forbidden.
 
+F100-1 is closed for active-queue progress by owner waiver only. That waiver
+does not change the required future evidence below.
+
 ## What This Does Not Prove
 
 This closure does not prove:
@@ -59,6 +62,13 @@ cover:
 ## Current Scope-Down Flags
 
 - rb_5_field_evidence_release_class_scope_down_reviewed=true
+- f100_1_field_evidence_blocker_closed=true
+- field_evidence_policy_waiver_authorized=true
+- field_evidence_waiver_scope=active-queue-unblock-only
+- real_external_two_machine_field_evidence_required_for_claims=true
+- accepted_redacted_field_reports_required_for_claims=true
+- field_evidence_execution_claim_allowed=false
+- accepted_production_field_reports=0
 - real_external_macos_two_machine_reports_available=false
 - redacted_field_report_validator_available=true
 - production_field_evidence_ready=false

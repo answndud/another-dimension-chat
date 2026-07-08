@@ -87,4 +87,4 @@ guide, and support copy, then verified on representative supported systems.
 - generated_release_artifacts_staged=false
 - signed_notarized_release_ready=false
 - sensitive_communication_allowed=false
-- next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program
+- next_required_phase=Phase O100-1 - Operations, Incident, And Vulnerability Readiness

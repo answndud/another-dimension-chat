@@ -64,7 +64,7 @@ must_contain "$DOC" "automatic_network_on_launch_allowed=false"
 must_contain "$DOC" "external_delivery_claim_allowed=false"
 must_contain "$DOC" "sensitive_communication_allowed=false"
 must_contain "$DOC" "security_ready_claimed=false"
-must_contain "$DOC" "next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program"
+must_contain "$DOC" "next_required_phase=Phase O100-1 - Operations, Incident, And Vulnerability Readiness"
 
 must_contain "$UX_DOC" "reference/MACOS_USABILITY_RECOVERY_CLOSURE.md"
 must_contain "$UX_DOC" "supported_owner_observed_usability_rehearsal_ready=true"
@@ -134,5 +134,5 @@ automatic_network_on_launch_allowed=false
 external_delivery_claim_allowed=false
 sensitive_communication_allowed=false
 security_ready_claimed=false
-next_required_phase=Phase-F100-1-External-Two-Machine-Field-Evidence-Program
+next_required_phase=Phase-O100-1-Operations-Incident-And-Vulnerability-Readiness
 STATUS
