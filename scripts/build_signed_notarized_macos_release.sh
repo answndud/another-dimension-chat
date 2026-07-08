@@ -185,6 +185,7 @@ cat >"$PROVENANCE_OUT" <<JSON
   "notarized": true,
   "stapled": true,
   "gatekeeper_assessed": true,
+  "macos_dmg_contained_app_verifier_available": true,
   "dmg_mounted_app_found": true,
   "dmg_contained_app_codesign_verify_passed": true,
   "dmg_contained_app_gatekeeper_assess_passed": true,
