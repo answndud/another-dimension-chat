@@ -17,8 +17,10 @@ must_contain() {
 
 DOC="reference/IOS_PUBLIC_APP_CANDIDATE.md"
 VALIDATOR="scripts/validate_ios_public_artifact_manifest.mjs"
+SHELL_BOUNDARY="scripts/verify_ios_shell_boundary.sh"
 
 for file in "$DOC" "$VALIDATOR" \
+  "$SHELL_BOUNDARY" \
   "apps/mobile/ios/AnotherDimension/Info.plist" \
   "apps/mobile/ios/AnotherDimension/AnotherDimension.entitlements" \
   "apps/mobile/ios/AnotherDimension/JsonBridgeSharedCoreAdapter.swift" \
@@ -31,6 +33,9 @@ for flag in \
   "ios_artifact_manifest_schema_available=true" \
   "ios_artifact_manifest_validator_available=true" \
   "ios_artifact_package_structure_verified=true" \
+  "ios_xcode_project_scaffold_valid=true" \
+  "ios_project_signing_provisioning_hold=true" \
+  "ios_shell_blocked_surface_ui_complete=true" \
   "ios_public_artifact_checksum_verifier_ready=true" \
   "ios_shell_uses_shared_core_json_bridge_candidate=true" \
   "ios_forbidden_dependency_scan_ready=true" \
@@ -53,10 +58,14 @@ done
 
 must_contain "$VALIDATOR" "ios-public-artifact-manifest-v1"
 must_contain "$VALIDATOR" "ios_artifact_package_structure_verified=true"
+must_contain "apps/mobile/ios/AnotherDimension.xcodeproj/project.pbxproj" "PBXNativeTarget"
+must_contain "apps/mobile/ios/AnotherDimension.xcodeproj/project.pbxproj" "CODE_SIGNING_ALLOWED = NO;"
 must_contain "apps/mobile/ios/AnotherDimension/AnotherDimension.entitlements" "<array/>"
 must_contain "apps/mobile/ios/AnotherDimension/JsonBridgeSharedCoreAdapter.swift" "RuntimeScopeUnlockedJsonBridgeMobileApi"
 
 node --check "$VALIDATOR" >/dev/null
+"$SHELL_BOUNDARY" >/dev/null
+xcodebuild -list -project apps/mobile/ios/AnotherDimension.xcodeproj >/dev/null
 scripts/verify_mobile_forbidden_dependency_scan_once.sh >/dev/null
 
 empty_output="$(node "$VALIDATOR" "$ROOT/apps/mobile/ios/public-release")"
@@ -174,6 +183,9 @@ ios_public_app_candidate_path_ready=true
 ios_artifact_manifest_schema_available=true
 ios_artifact_manifest_validator_available=true
 ios_artifact_package_structure_verified=true
+ios_xcode_project_scaffold_valid=true
+ios_project_signing_provisioning_hold=true
+ios_shell_blocked_surface_ui_complete=true
 ios_public_artifact_checksum_verifier_ready=true
 ios_shell_uses_shared_core_json_bridge_candidate=true
 ios_forbidden_dependency_scan_ready=true
