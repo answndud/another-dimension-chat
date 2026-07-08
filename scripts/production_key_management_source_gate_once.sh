@@ -66,6 +66,8 @@ for flag in \
   "encrypted_profile_session_message_store_ready=true" \
   "forward_only_schema_version_ready=true" \
   "sqlcipher_passphrase_rekey_source_ready=true" \
+  "sqlcipher_passphrase_rotation_generation_source_ready=true" \
+  "minimum_forward_key_rotation_generation_ready=true" \
   "tauri_profile_passphrase_rekey_command_ready=true" \
   "prototype_data_migration_ready=false" \
   "app_key_wrapping_ready=false" \
@@ -93,12 +95,16 @@ must_contain "$KEY_DOC" "secure_deletion_evidence_required_for_claims=true"
 must_contain "$KEY_DOC" "production_key_management_source_gate_reviewed=true"
 must_contain "$KEY_DOC" "production_key_management_source_ready=true"
 must_contain "$KEY_DOC" "sqlcipher_passphrase_rekey_source_ready=true"
+must_contain "$KEY_DOC" "sqlcipher_passphrase_rotation_generation_source_ready=true"
+must_contain "$KEY_DOC" "minimum_forward_key_rotation_generation_ready=true"
 must_contain "$KEY_DOC" "tauri_profile_passphrase_rekey_command_ready=true"
 must_contain "$RB2_DOC" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 must_contain "$RB2_DOC" "c100_3_key_management_blocker_closed=true"
 must_contain "$RB2_DOC" "key_management_policy_waiver_authorized=true"
 must_contain "$RB2_DOC" "d100_2_key_management_source_gate_reviewed=true"
 must_contain "$RB2_DOC" "sqlcipher_passphrase_rekey_source_ready=true"
+must_contain "$RB2_DOC" "sqlcipher_passphrase_rotation_generation_source_ready=true"
+must_contain "$RB2_DOC" "minimum_forward_key_rotation_generation_ready=true"
 must_contain "$RB2_DOC" "tauri_profile_passphrase_rekey_command_ready=true"
 must_contain "$MATRIX" "production_key_management_source_ready=true"
 must_contain "$MATRIX" "c100_3_key_management_blocker_closed=true"
@@ -106,6 +112,8 @@ must_contain "$MATRIX" "key_management_policy_waiver_authorized=true"
 must_contain "$MATRIX" "rollback_prevention_external_monotonic_state_required_for_claims=true"
 must_contain "$MATRIX" "secure_deletion_evidence_required_for_claims=true"
 must_contain "$MATRIX" "sqlcipher_passphrase_rekey_source_ready=true"
+must_contain "$MATRIX" "sqlcipher_passphrase_rotation_generation_source_ready=true"
+must_contain "$MATRIX" "minimum_forward_key_rotation_generation_ready=true"
 must_contain "$MATRIX" "tauri_profile_passphrase_rekey_command_ready=true"
 must_contain "$MATRIX" "production_key_management_ready=false"
 must_contain "$GAP_REGISTER" "production_key_management_source_ready=true"
@@ -127,15 +135,22 @@ must_contain "$STORAGE_DECISION" "No recovery code, backup key, or remote reset 
 must_contain "$STORAGE" "pub fn storage_backend_integration_boundary_summary()"
 must_contain "$STORAGE" "passphrase_first_unlock: true"
 must_contain "$STORAGE" "sqlcipher_passphrase_rekey_source_ready: true"
+must_contain "$STORAGE" "sqlcipher_passphrase_rotation_generation_source_ready: true"
 must_contain "$STORAGE" "production_key_management_ready: false"
 must_contain "$STORAGE" "secure_deletion_from_media: false"
 must_contain "$STORAGE" "pub fn rekey_with_passphrase"
+must_contain "$STORAGE" "pub fn rekey_with_passphrase_rotation_generation"
+must_contain "$STORAGE" "pub fn load_key_rotation_generation"
 must_contain "$STORAGE" "apply_forward_only_schema_version"
 must_contain "$STORAGE" "fn unlock_policy_requires_passphrase_for_all_modes"
 must_contain "$STORAGE" "fn sqlcipher_store_rekey_rotates_passphrase_without_plaintext_exposure"
+must_contain "$STORAGE" "fn sqlcipher_store_rekey_records_forward_rotation_generation_without_plaintext_marker"
 must_contain "$STORAGE" "fn sqlcipher_store_schema_migration_is_forward_only"
 must_contain "$STORAGE" "fn storage_backend_integration_summary_keeps_non_ready_boundaries_explicit"
 must_contain "$CORE" "pub fn production_profile_passphrase_rekey"
+must_contain "$CORE" "key_rotation_generation"
+must_contain "$CORE" "key_rotation_marker_written"
+must_contain "$CORE" "minimum_forward_key_rotation_generation_ready"
 must_contain "$CORE" "fn production_profile_passphrase_rekey_changes_unlock_secret_without_runtime"
 must_contain "$CORE" "pub fn production_key_rollback_boundary_summary()"
 must_contain "$CORE" "app_key_wrapping_ready = storage.production_key_management_ready()"
@@ -145,6 +160,8 @@ must_contain "$CORE" "fn production_key_rollback_boundary_closes_policy_without_
 must_contain "$CORE" "fn production_local_data_lifecycle_policy_is_passphrase_first_with_non_claims"
 must_contain "$TAURI_LIB" "fn production_profile_unlock_uses_app_data_store_without_returning_secrets"
 must_contain "$TAURI_LIB" "fn production_profile_passphrase_rekey"
+must_contain "$TAURI_LIB" "key_rotation_generation"
+must_contain "$TAURI_LIB" "key_rotation_marker_written"
 must_contain "$TAURI_LIB" "fn production_profile_passphrase_rekey_is_redacted_and_invalidates_old_passphrase"
 must_contain "$TAURI_LIB" "fn production_session_lifecycle_status_and_delete_are_redacted"
 
@@ -186,6 +203,8 @@ os_keystore_only_rejected=true
 encrypted_profile_session_message_store_ready=true
 forward_only_schema_version_ready=true
 sqlcipher_passphrase_rekey_source_ready=true
+sqlcipher_passphrase_rotation_generation_source_ready=true
+minimum_forward_key_rotation_generation_ready=true
 tauri_profile_passphrase_rekey_command_ready=true
 prototype_data_migration_ready=false
 app_key_wrapping_ready=false

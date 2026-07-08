@@ -2585,6 +2585,8 @@ pub mod production {
         os_keystore_only_rejected: bool,
         app_key_wrapping_ready: bool,
         app_key_wrapping_non_claim_decided: bool,
+        sqlcipher_passphrase_rotation_generation_source_ready: bool,
+        minimum_forward_key_rotation_generation_ready: bool,
         supported_local_key_lifecycle_ready: bool,
         supported_local_key_lifecycle_scope: &'static str,
         rollback_protection: ReplayRollbackProtection,
@@ -4093,6 +4095,14 @@ pub mod production {
 
         pub fn app_key_wrapping_non_claim_decided(self) -> bool {
             self.app_key_wrapping_non_claim_decided
+        }
+
+        pub fn sqlcipher_passphrase_rotation_generation_source_ready(self) -> bool {
+            self.sqlcipher_passphrase_rotation_generation_source_ready
+        }
+
+        pub fn minimum_forward_key_rotation_generation_ready(self) -> bool {
+            self.minimum_forward_key_rotation_generation_ready
         }
 
         pub fn supported_local_key_lifecycle_ready(self) -> bool {
@@ -7622,6 +7632,8 @@ pub mod production {
         storage_opened: bool,
         profile_marker_present: bool,
         passphrase_rekeyed: bool,
+        key_rotation_generation: u64,
+        key_rotation_marker_written: bool,
         old_passphrase_rejected: bool,
         new_passphrase_verified: bool,
         key_material_exposed: bool,
@@ -8255,6 +8267,14 @@ pub mod production {
 
         pub fn passphrase_rekeyed(self) -> bool {
             self.passphrase_rekeyed
+        }
+
+        pub fn key_rotation_generation(self) -> u64 {
+            self.key_rotation_generation
+        }
+
+        pub fn key_rotation_marker_written(self) -> bool {
+            self.key_rotation_marker_written
         }
 
         pub fn old_passphrase_rejected(self) -> bool {
@@ -12089,7 +12109,8 @@ pub mod production {
         if !profile_marker_present {
             return Err(ProductionSessionError::ProfileMarkerMissing);
         }
-        store.rekey_with_passphrase(new_passphrase)?;
+        let key_rotation_generation =
+            store.rekey_with_passphrase_rotation_generation(new_passphrase)?;
         drop(store);
 
         let old_passphrase_rejected = matches!(
@@ -12104,11 +12125,20 @@ pub mod production {
         if !new_passphrase_verified {
             return Err(ProductionSessionError::ProfileMarkerMissing);
         }
+        let key_rotation_marker_written = reopened
+            .load_key_rotation_generation()?
+            .map(|generation| generation == key_rotation_generation)
+            .unwrap_or(false);
+        if !key_rotation_marker_written {
+            return Err(ProductionSessionError::UnexpectedEnvelope);
+        }
 
         Ok(ProductionProfilePassphraseRekeySummary {
             storage_opened: true,
             profile_marker_present,
             passphrase_rekeyed: true,
+            key_rotation_generation: key_rotation_generation.value(),
+            key_rotation_marker_written,
             old_passphrase_rejected,
             new_passphrase_verified,
             key_material_exposed: false,
@@ -15507,6 +15537,10 @@ pub mod production {
         let backup_exclusion_policy_decided = true;
         let backup_exclusion_verified = false;
         let secure_media_deletion_claimed = storage.secure_deletion_from_media();
+        let sqlcipher_passphrase_rotation_generation_source_ready =
+            storage.sqlcipher_passphrase_rotation_generation_source_ready();
+        let minimum_forward_key_rotation_generation_ready =
+            sqlcipher_passphrase_rotation_generation_source_ready;
 
         let app_key_wrapping_non_claim_decided = !app_key_wrapping_ready;
         let rollback_non_claim_decided =
@@ -15518,6 +15552,7 @@ pub mod production {
             && app_key_wrapping_non_claim_decided
             && rollback_non_claim_decided
             && external_monotonic_state_required_before_claim
+            && minimum_forward_key_rotation_generation_ready
             && backup_exclusion_policy_decided
             && !secure_media_deletion_claimed;
         let supported_local_key_lifecycle_ready = boundary_closed
@@ -15537,6 +15572,8 @@ pub mod production {
             os_keystore_only_rejected,
             app_key_wrapping_ready,
             app_key_wrapping_non_claim_decided,
+            sqlcipher_passphrase_rotation_generation_source_ready,
+            minimum_forward_key_rotation_generation_ready,
             supported_local_key_lifecycle_ready,
             supported_local_key_lifecycle_scope: SUPPORTED_LOCAL_KEY_LIFECYCLE_SCOPE,
             rollback_protection,
@@ -24096,6 +24133,8 @@ pub mod production {
             assert!(boundary.os_keystore_only_rejected());
             assert!(!boundary.app_key_wrapping_ready());
             assert!(boundary.app_key_wrapping_non_claim_decided());
+            assert!(boundary.sqlcipher_passphrase_rotation_generation_source_ready());
+            assert!(boundary.minimum_forward_key_rotation_generation_ready());
             assert!(boundary.supported_local_key_lifecycle_ready());
             assert_eq!(
                 boundary.supported_local_key_lifecycle_scope(),
@@ -25519,6 +25558,8 @@ pub mod production {
             assert!(summary.storage_opened());
             assert!(summary.profile_marker_present());
             assert!(summary.passphrase_rekeyed());
+            assert_eq!(summary.key_rotation_generation(), 1);
+            assert!(summary.key_rotation_marker_written());
             assert!(summary.old_passphrase_rejected());
             assert!(summary.new_passphrase_verified());
             assert!(!summary.key_material_exposed());

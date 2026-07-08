@@ -175,6 +175,8 @@ updated, and a later explicit release/claim task authorizes the wording.
 - d100_2_key_management_source_gate_reviewed=true
 - key_management_source_scope=passphrase-first-sqlcipher-local-profile-store-marker-rollback-local-delete-only
 - sqlcipher_passphrase_rekey_source_ready=true
+- sqlcipher_passphrase_rotation_generation_source_ready=true
+- minimum_forward_key_rotation_generation_ready=true
 - tauri_profile_passphrase_rekey_command_ready=true
 - production_e2ee_source_gate_reviewed=true
 - production_e2ee_source_ready=true
