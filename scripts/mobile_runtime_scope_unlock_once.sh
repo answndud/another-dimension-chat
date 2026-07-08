@@ -71,6 +71,8 @@ for flag in \
   "android_json_bridge_adapter_ready=true" \
   "ios_json_bridge_adapter_ready=true" \
   "mobile_forbidden_dependency_scan_ready=true" \
+  "mobile_error_taxonomy_bound_to_json_bridge=true" \
+  "profile_unlock_status_failure_class=locked_profile" \
   "callable_json_bridge_implemented=true" \
   "callable_ffi_implemented=false" \
   "generated_bindings_claimed=false" \
@@ -93,6 +95,9 @@ must_contain "$CRATE" "shared_core_status_surface_json"
 must_contain "$CRATE" "redacted_support_diagnostics_json"
 must_contain "$CRATE" "mobile_command_result_json"
 must_contain "$CRATE" "callable_json_bridge_implemented"
+must_contain "$CRATE" "\"locked_profile\""
+must_contain "$CRATE" "\"enter passphrase\""
+must_contain "$CRATE" "\"transport_unavailable\""
 must_contain "$ANDROID_ADAPTER" "RuntimeScopeUnlockedJsonBridgeMobileApi"
 must_contain "$ANDROID_ADAPTER" "SharedCoreJsonBridge"
 must_contain "$ANDROID_ADAPTER" "sharedCoreStatusSurfaceJson"
@@ -127,6 +132,8 @@ shared_rust_mobile_bridge_crate_ready=true
 android_json_bridge_adapter_ready=true
 ios_json_bridge_adapter_ready=true
 mobile_forbidden_dependency_scan_ready=true
+mobile_error_taxonomy_bound_to_json_bridge=true
+profile_unlock_status_failure_class=locked_profile
 callable_json_bridge_implemented=true
 callable_ffi_implemented=false
 generated_bindings_claimed=false
