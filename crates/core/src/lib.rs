@@ -2586,6 +2586,7 @@ pub mod production {
         app_key_wrapping_ready: bool,
         app_key_wrapping_non_claim_decided: bool,
         sqlcipher_passphrase_rotation_generation_source_ready: bool,
+        key_rotation_marker_monotonic_write_enforced: bool,
         minimum_forward_key_rotation_generation_ready: bool,
         supported_local_key_lifecycle_ready: bool,
         supported_local_key_lifecycle_scope: &'static str,
@@ -4099,6 +4100,10 @@ pub mod production {
 
         pub fn sqlcipher_passphrase_rotation_generation_source_ready(self) -> bool {
             self.sqlcipher_passphrase_rotation_generation_source_ready
+        }
+
+        pub fn key_rotation_marker_monotonic_write_enforced(self) -> bool {
+            self.key_rotation_marker_monotonic_write_enforced
         }
 
         pub fn minimum_forward_key_rotation_generation_ready(self) -> bool {
@@ -15539,8 +15544,11 @@ pub mod production {
         let secure_media_deletion_claimed = storage.secure_deletion_from_media();
         let sqlcipher_passphrase_rotation_generation_source_ready =
             storage.sqlcipher_passphrase_rotation_generation_source_ready();
+        let key_rotation_marker_monotonic_write_enforced =
+            storage.key_rotation_marker_monotonic_write_enforced();
         let minimum_forward_key_rotation_generation_ready =
-            sqlcipher_passphrase_rotation_generation_source_ready;
+            sqlcipher_passphrase_rotation_generation_source_ready
+                && key_rotation_marker_monotonic_write_enforced;
 
         let app_key_wrapping_non_claim_decided = !app_key_wrapping_ready;
         let rollback_non_claim_decided =
@@ -15573,6 +15581,7 @@ pub mod production {
             app_key_wrapping_ready,
             app_key_wrapping_non_claim_decided,
             sqlcipher_passphrase_rotation_generation_source_ready,
+            key_rotation_marker_monotonic_write_enforced,
             minimum_forward_key_rotation_generation_ready,
             supported_local_key_lifecycle_ready,
             supported_local_key_lifecycle_scope: SUPPORTED_LOCAL_KEY_LIFECYCLE_SCOPE,
@@ -24134,6 +24143,7 @@ pub mod production {
             assert!(!boundary.app_key_wrapping_ready());
             assert!(boundary.app_key_wrapping_non_claim_decided());
             assert!(boundary.sqlcipher_passphrase_rotation_generation_source_ready());
+            assert!(boundary.key_rotation_marker_monotonic_write_enforced());
             assert!(boundary.minimum_forward_key_rotation_generation_ready());
             assert!(boundary.supported_local_key_lifecycle_ready());
             assert_eq!(

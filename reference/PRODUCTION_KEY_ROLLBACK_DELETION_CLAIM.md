@@ -41,10 +41,12 @@ management, rollback-prevention, secure-deletion, security-ready, and
 sensitive-use claims remain false.
 
 The supported local key lifecycle includes SQLCipher passphrase rekey plus an
-encrypted one-generation-forward rotation marker. That marker is source
-evidence for local passphrase rotation continuity only; it is not app key
-wrapping, recovery, rollback prevention, or a complete production key-rotation
-claim.
+encrypted one-generation-forward rotation marker. Duplicate or lower marker
+generation writes are rejected, and marker scope is validated. Replay-window
+expected-scope loading exists for follow-up production call-site hardening.
+That marker is source evidence for local passphrase rotation continuity only;
+it is not app key wrapping, recovery, rollback prevention, or a complete
+production key-rotation claim.
 
 ## Still Forbidden
 
@@ -98,6 +100,9 @@ Do not claim:
 - sqlcipher_passphrase_kdf_scope_ready=true
 - sqlcipher_passphrase_rekey_source_ready=true
 - sqlcipher_passphrase_rotation_generation_source_ready=true
+- key_rotation_marker_monotonic_write_enforced=true
+- key_rotation_marker_scope_bound=true
+- replay_window_scope_bound_loader_ready=true
 - minimum_forward_key_rotation_generation_ready=true
 - tauri_profile_passphrase_rekey_command_ready=true
 - project_owned_argon2_scrypt_kdf_ready=false
