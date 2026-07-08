@@ -73,13 +73,18 @@ for flag in \
   "windows_support_diagnostics_requirements_defined=true" \
   "windows_no_overclaim_gate_ready=true" \
   "windows_result_requires_real_windows_machine=true" \
+  "windows_result_requires_current_source_commit=true" \
+  "windows_result_current_head_strict_mode_ready=true" \
   "windows_result_requires_checksum_provenance=true" \
   "windows_artifact_requires_same_release_authority=true" \
   "windows_artifact_checksum_bytes_verified_by_validator=true" \
   "windows_artifact_provenance_consistency_verified_by_validator=true" \
+  "windows_artifact_provenance_field_consistency_verified_by_validator=true" \
+  "windows_artifact_bundle_target_extension_bound=true" \
   "windows_result_requires_support_diagnostics_review=true" \
   "windows_result_requires_public_non_claims=true" \
   "windows_result_rejects_local_only_or_private_data=true" \
+  "windows_result_rejects_private_docs_local_app_data_and_screenshots=true" \
   "windows_public_artifact_candidate_requires_manual_review=true" \
   "windows_real_runtime_smoke_passed=false" \
   "windows_public_artifact_ready=false" \
@@ -118,8 +123,16 @@ done
 
 must_contain "$SCHEMA" "windows_real_runtime_result_schema_available=true"
 must_contain "$SCHEMA" "WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"
+must_contain "$SCHEMA" "windows_result_requires_current_source_commit=true"
+must_contain "$SCHEMA" "windows_result_current_head_strict_mode_ready=true"
+must_contain "$SCHEMA" "windows_result_rejects_private_docs_local_app_data_and_screenshots=true"
 must_contain "$SCHEMA" "windows_public_artifact_ready=false"
 must_contain "$VALIDATOR" "status=windows-public-artifact-candidate-requires-review"
+must_contain "$VALIDATOR" "windows_public_artifact_result_current_head_required="
+must_contain "$VALIDATOR" "source-commit-not-current-head"
+must_contain "$VALIDATOR" "private-docs"
+must_contain "$VALIDATOR" "windows-local-app-data"
+must_contain "$VALIDATOR" "private-screenshot"
 must_contain "$MANIFEST_SCHEMA" "windows_artifact_manifest_checksum_schema_available=true"
 must_contain "$MANIFEST_VALIDATOR" "windows-public-artifact-manifest-v1"
 must_contain "$MANIFEST_GENERATOR" "AD_PREPARE_WINDOWS_PUBLIC_ARTIFACT_METADATA"
@@ -182,6 +195,12 @@ candidate_output="$(node "$VALIDATOR" "$tmp_dir/win-valid.md")"
 printf '%s\n' "$candidate_output" | grep -Fq "accepted_windows_public_artifact_results=1" || fail "candidate validator did not accept valid result"
 printf '%s\n' "$candidate_output" | grep -Fq "windows_public_artifact_ready=false" || fail "validator must not auto-open Windows artifact readiness"
 printf '%s\n' "$candidate_output" | grep -Fq "status=windows-public-artifact-candidate-requires-review" || fail "candidate validator did not require review"
+
+if AD_REQUIRE_CURRENT_HEAD=1 node "$VALIDATOR" "$tmp_dir/win-valid.md" >"$tmp_dir/stale-source.out" 2>&1; then
+  fail "strict Windows public artifact result validator accepted stale source commit"
+fi
+grep -Fq "source-commit-not-current-head" "$tmp_dir/stale-source.out" ||
+  fail "strict Windows public artifact result validator did not report stale source commit"
 
 cat >"$tmp_dir/not-windows.md" <<'RESULT'
 schema_version=windows-public-artifact-result-v1
@@ -256,6 +275,30 @@ if node "$VALIDATOR" "$tmp_dir/private-path.md" >/tmp/windows-private-path.out 2
 fi
 grep -Fq "forbidden-content:windows-local-path" /tmp/windows-private-path.out || fail "private Windows path rejection was not reported"
 
+sed 's|note=C:\\Users\\Alice\\AppData\\Local\\AnotherDimension|note=docs/PLAN.md|' \
+  "$tmp_dir/private-path.md" >"$tmp_dir/private-docs.md"
+if node "$VALIDATOR" "$tmp_dir/private-docs.md" >"$tmp_dir/private-docs.out" 2>&1; then
+  fail "validator accepted private docs path"
+fi
+grep -Fq "forbidden-content:private-docs" "$tmp_dir/private-docs.out" ||
+  fail "private docs path rejection was not reported"
+
+sed 's|note=C:\\Users\\Alice\\AppData\\Local\\AnotherDimension|note=%LOCALAPPDATA%\\AnotherDimension|' \
+  "$tmp_dir/private-path.md" >"$tmp_dir/localappdata.md"
+if node "$VALIDATOR" "$tmp_dir/localappdata.md" >"$tmp_dir/localappdata.out" 2>&1; then
+  fail "validator accepted LOCALAPPDATA path"
+fi
+grep -Fq "forbidden-content:windows-local-app-data" "$tmp_dir/localappdata.out" ||
+  fail "LOCALAPPDATA path rejection was not reported"
+
+sed 's|note=C:\\Users\\Alice\\AppData\\Local\\AnotherDimension|note=![private room screenshot](room.png)|' \
+  "$tmp_dir/private-path.md" >"$tmp_dir/private-screenshot.md"
+if node "$VALIDATOR" "$tmp_dir/private-screenshot.md" >"$tmp_dir/private-screenshot.out" 2>&1; then
+  fail "validator accepted private screenshot marker"
+fi
+grep -Fq "forbidden-content:private-screenshot" "$tmp_dir/private-screenshot.out" ||
+  fail "private screenshot marker rejection was not reported"
+
 scripts/windows_artifact_manifest_checksum_once.sh >/dev/null
 
 if git -C "$ROOT" diff --cached --name-only | grep -Eq '^(docs/|AGENTS.md|apps/desktop-tauri/(public-release|beta-artifacts)/|public-release/|beta-artifacts/)'; then
@@ -278,6 +321,9 @@ windows_checksum_provenance_requirements_defined=true
 windows_public_copy_requirements_defined=true
 windows_support_diagnostics_requirements_defined=true
 windows_no_overclaim_gate_ready=true
+windows_result_requires_current_source_commit=true
+windows_result_current_head_strict_mode_ready=true
+windows_result_rejects_private_docs_local_app_data_and_screenshots=true
 windows_real_runtime_smoke_passed=false
 windows_public_artifact_ready=false
 windows_installer_ready=false

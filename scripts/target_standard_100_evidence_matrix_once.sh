@@ -346,6 +346,8 @@ for flag in \
   "windows_public_artifact_execution_path_available=true" \
   "windows_real_runtime_result_schema_available=true" \
   "windows_real_runtime_result_validator_available=true" \
+  "windows_result_requires_current_source_commit=true" \
+  "windows_result_current_head_strict_mode_ready=true" \
   "real_windows_runtime_smoke_requirements_defined=true" \
   "windows_installer_signing_decision_recorded=true" \
   "windows_checksum_provenance_requirements_defined=true" \

@@ -29,6 +29,8 @@ Public wording must still say `not production-ready`.
 - windows_public_artifact_execution_path_available=true
 - windows_real_runtime_result_schema_available=true
 - windows_real_runtime_result_validator_available=true
+- windows_result_requires_current_source_commit=true
+- windows_result_current_head_strict_mode_ready=true
 - windows_artifact_manifest_checksum_schema_available=true
 - windows_artifact_manifest_checksum_validator_available=true
 - windows_artifact_metadata_generator_ready=true
