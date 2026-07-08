@@ -79,6 +79,11 @@ must_contain "$DOC" "real_external_two_machine_field_evidence_required_for_claim
 must_contain "$DOC" "accepted_redacted_field_reports_required_for_claims=true"
 must_contain "$DOC" "field_evidence_execution_claim_allowed=false"
 must_contain "$DOC" "accepted_production_field_reports=0"
+must_contain "$DOC" "o100_1_operations_blocker_closed=true"
+must_contain "$DOC" "operations_source_gate_closed=true"
+must_contain "$DOC" "production_operations_evidence_required_for_claims=true"
+must_contain "$DOC" "real_incident_response_execution_required_for_claims=true"
+must_contain "$DOC" "production_operational_readiness_claim_allowed=false"
 must_contain "$DOC" "review_packet_synced_to_latest_source_gates=true"
 must_contain "$DOC" "review_packet_includes_c100_5_onion_boundary=true"
 must_contain "$DOC" "review_packet_includes_target_standard_matrix=true"
@@ -184,6 +189,8 @@ cat <<'STATUS'
 status=target-standard-100-active-queue-source-closure-ready
 target_standard_100_active_queue_source_closure_reviewed=true
 all_plan_active_phases_have_source_or_hold_gate=true
+o100_1_operations_blocker_closed=true
+operations_source_gate_closed=true
 false_or_hold_items_hidden=false
 public_claim_ahead_of_evidence=false
 production_ready_claim_allowed=false

@@ -41,7 +41,7 @@ Current public wording must remain:
 | 14 | A100-1 External Security Review Packet Freeze | closed by source packet freeze | Independent review packet is frozen, public-safe, synced to latest source gates, and linked to the finding tracker; real external review completion remains false for A100-2. |
 | 15 | A100-2 External Review Execution And Finding Closure | closed by owner waiver | Active blocker is closed by explicit owner waiver; named review/audit execution, public-safe findings, and accepted finding closure remain required before audit/security/stable/production wording. |
 | 16 | F100-1 External Two-Machine Field Evidence Program | closed by owner waiver | Active blocker is closed by explicit owner waiver; repeated real two-machine/different-network reports and accepted redacted field evidence remain required before reliability, production, stable, or sensitive-use wording. |
-| 17 | O100-1 Operations, Incident, And Vulnerability Readiness | source gate with operations hold | Support, vulnerability intake, incident severity, dependency advisory, emergency release, and user notification paths are rehearsed. |
+| 17 | O100-1 Operations, Incident, And Vulnerability Readiness | closed by source gate, production operations claims held | Support, vulnerability intake, incident severity, dependency advisory, emergency release, key-compromise, redacted support, and user notification paths are machine-checkable. |
 | 18 | W100-1 Windows Runtime Parity Scope Unlock | platform runtime | Real Windows runtime smoke and parity evidence exist. |
 | 19 | W100-2 Windows Public Artifact And Distribution | platform artifact hold | Windows public artifact, installer/signing decision, checksum/provenance, support diagnostics, public copy, and upload authorization pass. |
 | 20 | X100-1 Cross-Desktop Product Parity | source matrix gate | macOS and Windows public claims align with actual artifacts. |
@@ -82,6 +82,8 @@ Current public wording must remain:
 - `rollback_prevention_claimed=false`.
 - `secure_deletion_claim_allowed=false`.
 - `production_transport_ready=false`.
+- `o100_1_operations_blocker_closed=true` with production operations claims
+  still held.
 - `production_operational_readiness_claim_allowed=false`.
 - `signed_update_manifest_ready=false`.
 - `update_signature_ready=false`.
@@ -213,6 +215,10 @@ Current public wording must remain:
 - rollback_prevention_claimed=false
 - secure_deletion_claim_allowed=false
 - production_transport_ready=false
+- o100_1_operations_blocker_closed=true
+- operations_source_gate_closed=true
+- production_operations_evidence_required_for_claims=true
+- real_incident_response_execution_required_for_claims=true
 - production_operational_readiness_claim_allowed=false
 - macos_signed_update_manifest_schema_available=true
 - macos_signed_update_manifest_validator_available=true
@@ -231,4 +237,4 @@ Current public wording must remain:
 - public_claim_ahead_of_evidence=false
 - docs_private_uncommitted=true
 - agents_md_stage_allowed=false
-- next_required_phase=Phase O100-1 - Operations, Incident, And Vulnerability Readiness
+- next_required_phase=Phase W100-1 - Windows Runtime Parity Scope Unlock

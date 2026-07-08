@@ -31,7 +31,7 @@ hold states remain visible.
 | A100-1 external security review packet freeze | closed by source packet freeze, review completion claims held | `reference/INDEPENDENT_REVIEW_PACKET.md`, `scripts/external_review_audit_readiness_once.sh` |
 | A100-2 external review execution and finding closure | closed by active-queue waiver, review/audit claims held | `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`, `reference/AUDIT_FINDING_TRACKER.md` |
 | F100-1 external two-machine field evidence program | closed by active-queue waiver, field/reliability claims held | `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md`, `scripts/field_evidence_reliability_program_once.sh` |
-| O100-1 operational support, incident, and vulnerability readiness | source gate with production operations hold | `reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md`, `scripts/operational_support_incident_process_once.sh` |
+| O100-1 operational support, incident, and vulnerability readiness | closed by source gate, production operations claims held | `reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md`, `reference/INCIDENT_TABLETOP_RECORD.md`, `scripts/operational_support_incident_process_once.sh` |
 | W100-1 Windows runtime parity scope unlock | source handoff gate | `scripts/desktop_windows_local_runtime_smoke_boundary_once.sh` |
 | W100-2 Windows public artifact and distribution | hold gate | `reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md`, `scripts/windows_public_artifact_scope_down_once.sh` |
 | X100-1 cross-desktop product parity | source matrix gate | `reference/CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md`, `scripts/cross_platform_target_standard_final_closure_once.sh` |
@@ -104,6 +104,11 @@ censorship-resistant.
 - accepted_redacted_field_reports_required_for_claims=true
 - field_evidence_execution_claim_allowed=false
 - accepted_production_field_reports=0
+- o100_1_operations_blocker_closed=true
+- operations_source_gate_closed=true
+- production_operations_evidence_required_for_claims=true
+- real_incident_response_execution_required_for_claims=true
+- production_operational_readiness_claim_allowed=false
 - review_packet_synced_to_latest_source_gates=true
 - review_packet_includes_c100_5_onion_boundary=true
 - review_packet_includes_target_standard_matrix=true
