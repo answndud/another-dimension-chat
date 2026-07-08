@@ -10,12 +10,18 @@ communication.
 
 The focused verifier is
 `scripts/macos_signed_notarized_rc_artifact_once.sh`. If
-`AD_SIGNED_RC_DMG` points to a DMG, it performs focused artifact checks:
+`AD_SIGNED_RC_DMG` points to a DMG and
+`AD_SIGNED_RC_EXPECTED_APP_BUNDLE` points to the signed source app bundle, it
+performs focused artifact checks:
 
 - file exists and is not inside the repository's tracked source tree,
 - `codesign --verify --deep --strict --verbose=2`,
 - `spctl --assess --type open --verbose=4`,
 - `xcrun stapler validate`,
+- read-only DMG mount, contained `.app` discovery, contained app
+  `codesign --verify --deep --strict --verbose=2`,
+- contained app `spctl --assess --type execute --verbose=4`,
+- byte-level comparison between the mounted app and expected signed source app,
 - SHA-256 calculation,
 - generated artifact paths are not staged or tracked.
 
@@ -39,7 +45,7 @@ checksum, and optional generated provenance while holding without credentials.
    packaging flow.
 4. Submit for notarization and wait for success.
 5. Staple notarization where applicable.
-6. Run `AD_SIGNED_RC_DMG=/path/to/rc.dmg scripts/macos_signed_notarized_rc_artifact_once.sh`.
+6. Run `AD_SIGNED_RC_DMG=/path/to/rc.dmg AD_SIGNED_RC_EXPECTED_APP_BUNDLE=/path/to/Another\ Dimension\ Chat.app scripts/macos_signed_notarized_rc_artifact_once.sh`.
 7. Record the SHA-256 and provenance in generated release evidence.
 8. Keep README, SECURITY, release notes, app UI, and support copy in non-claim
    beta/RC wording until stable gates, external review, and field evidence pass.
@@ -54,14 +60,20 @@ checksum, and optional generated provenance while holding without credentials.
 - d100_3_signed_notarized_execution_path_reviewed=true
 - macos_signed_notarized_execution_path_available=true
 - signed_notarized_rc_artifact_verifier_available=true
+- macos_dmg_contained_app_verifier_available=true
 - signed_notarized_rc_artifact_available=false
 - ad_signed_rc_dmg_input_required_for_artifact_verification=true
+- ad_signed_rc_expected_app_bundle_required_for_artifact_verification=true
 - codesign_tool_available=true
 - spctl_tool_available=true
 - stapler_tool_available=true
 - codesign_verify_passed=false
 - spctl_assess_passed=false
 - stapler_validate_passed=false
+- dmg_mounted_app_found=false
+- dmg_contained_app_codesign_verify_passed=false
+- dmg_contained_app_gatekeeper_assess_passed=false
+- dmg_contained_app_matches_signed_source_app=false
 - rc_artifact_sha256_recorded=false
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false

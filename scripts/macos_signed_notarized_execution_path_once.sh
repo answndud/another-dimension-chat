@@ -33,16 +33,21 @@ REVIEW_PACKET="reference/INDEPENDENT_REVIEW_PACKET.md"
 TAURI_CONFIG="apps/desktop-tauri/src-tauri/tauri.conf.json"
 ENTITLEMENTS="${AD_MACOS_ENTITLEMENTS:-$ROOT/apps/desktop-tauri/src-tauri/Entitlements.plist}"
 SIGNED_BUILD_SCRIPT="scripts/build_signed_notarized_macos_release.sh"
+DMG_CONTAINED_APP_VERIFIER="scripts/verify_macos_dmg_contained_app.sh"
 
 for file in "$DOC" "$RC_DOC" "$CREDENTIAL_GATE" "$DIST_GATE" "$MATRIX" \
-  "$GAP_REGISTER" "$REVIEW_PACKET" "$TAURI_CONFIG" "$ENTITLEMENTS" "$SIGNED_BUILD_SCRIPT" "README.md" "SECURITY.md"; do
+  "$GAP_REGISTER" "$REVIEW_PACKET" "$TAURI_CONFIG" "$ENTITLEMENTS" \
+  "$SIGNED_BUILD_SCRIPT" "$DMG_CONTAINED_APP_VERIFIER" "README.md" "SECURITY.md"; do
   [ -f "$file" ] || fail "missing D100-3 signed/notarized execution input: $file"
 done
 
 for file in "$RC_DOC" "$DIST_GATE" "$MATRIX" "$GAP_REGISTER" "$REVIEW_PACKET" \
-  "README.md" "SECURITY.md"; do
+  "SECURITY.md"; do
   must_contain "$file" "MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
 done
+if ! grep -Fq "MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" "README.md"; then
+  must_contain "SECURITY.md" "MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md"
+fi
 
 for flag in \
   "d100_3_signed_notarized_execution_path_reviewed=true" \
@@ -59,6 +64,11 @@ for flag in \
   "notary_submit_wait_path_ready=true" \
   "stapler_staple_validate_path_ready=true" \
   "gatekeeper_assessment_path_ready=true" \
+  "macos_dmg_contained_app_verifier_available=true" \
+  "dmg_mounted_app_found=false" \
+  "dmg_contained_app_codesign_verify_passed=false" \
+  "dmg_contained_app_gatekeeper_assess_passed=false" \
+  "dmg_contained_app_matches_signed_source_app=false" \
   "checksum_provenance_update_path_ready=true" \
   "explicit_execution_env_required=true" \
   "ad_execute_macos_sign_notary_required=true" \
@@ -91,13 +101,18 @@ must_contain "$TAURI_CONFIG" '"providerShortName": null'
 must_contain "$ENTITLEMENTS" "<dict/>"
 must_contain "$SIGNED_BUILD_SCRIPT" "AD_BUILD_MACOS_SIGNED_RC"
 must_contain "$SIGNED_BUILD_SCRIPT" "hdiutil create"
+must_contain "$SIGNED_BUILD_SCRIPT" "verify_macos_dmg_contained_app.sh"
 must_contain "$SIGNED_BUILD_SCRIPT" "xcrun notarytool submit"
 must_contain "$DOC" "codesign --force --deep --options runtime --timestamp --entitlements"
 must_contain "$DOC" "xcrun notarytool submit"
 must_contain "$DOC" "xcrun stapler staple"
 must_contain "$DOC" "xcrun stapler validate"
 must_contain "$DOC" "spctl --assess --type open --verbose=4"
+must_contain "$DOC" "spctl --assess --type execute --verbose=4"
+must_contain "$DOC" "dmg_contained_app_matches_signed_source_app=false"
 must_contain "$DOC" "AD_SIGNED_RC_PROVENANCE_OUT"
+must_contain "$DMG_CONTAINED_APP_VERIFIER" "dmg_contained_app_codesign_verify_passed=true"
+must_contain "$DMG_CONTAINED_APP_VERIFIER" "dmg_contained_app_gatekeeper_assess_passed=true"
 must_contain "$CREDENTIAL_GATE" "developer_id_signing_available=false"
 must_contain "$CREDENTIAL_GATE" "notarization_credential_available=false"
 must_contain "$DIST_GATE" "stable_signed_notarized_artifact_available=false"
@@ -179,6 +194,11 @@ signing_command_path_ready=true
 notary_submit_wait_path_ready=true
 stapler_staple_validate_path_ready=true
 gatekeeper_assessment_path_ready=true
+macos_dmg_contained_app_verifier_available=true
+dmg_mounted_app_found=false
+dmg_contained_app_codesign_verify_passed=false
+dmg_contained_app_gatekeeper_assess_passed=false
+dmg_contained_app_matches_signed_source_app=false
 checksum_provenance_update_path_ready=true
 explicit_execution_env_required=true
 developer_id_signing_available=false
@@ -235,6 +255,15 @@ fi
 xcrun stapler staple "$RC_DMG"
 xcrun stapler validate "$RC_DMG"
 spctl --assess --type open --verbose=4 "$RC_DMG"
+contained_app_output="$(AD_VERIFY_DMG="$RC_DMG" AD_VERIFY_EXPECTED_APP_BUNDLE="$APP_BUNDLE" "$DMG_CONTAINED_APP_VERIFIER")"
+printf '%s\n' "$contained_app_output" | grep -Fq "dmg_mounted_app_found=true" ||
+  fail "DMG contained app was not found"
+printf '%s\n' "$contained_app_output" | grep -Fq "dmg_contained_app_codesign_verify_passed=true" ||
+  fail "DMG contained app codesign verification failed"
+printf '%s\n' "$contained_app_output" | grep -Fq "dmg_contained_app_gatekeeper_assess_passed=true" ||
+  fail "DMG contained app Gatekeeper assessment failed"
+printf '%s\n' "$contained_app_output" | grep -Fq "dmg_contained_app_matches_signed_source_app=true" ||
+  fail "DMG contained app does not match the signed source app bundle"
 rc_sha="$(shasum -a 256 "$RC_DMG" | awk '{print $1}')"
 
 generated_provenance_written=false
@@ -244,7 +273,7 @@ if [ -n "$PROVENANCE_OUT" ]; then
     *) fail "AD_SIGNED_RC_PROVENANCE_OUT must be under ignored generated artifact directories" ;;
   esac
   mkdir -p "$(dirname "$PROVENANCE_OUT")"
-  printf '{"artifact":"%s","sha256":"%s","release_upload_authorized":false}\n' \
+  printf '{"artifact":"%s","sha256":"%s","dmg_mounted_app_found":true,"dmg_contained_app_codesign_verify_passed":true,"dmg_contained_app_gatekeeper_assess_passed":true,"dmg_contained_app_matches_signed_source_app":true,"release_upload_authorized":false}\n' \
     "$RC_DMG" "$rc_sha" >"$PROVENANCE_OUT"
   generated_provenance_written=true
 fi
@@ -267,6 +296,10 @@ actual_signing_executed=true
 notary_submit_executed=true
 stapler_staple_executed=true
 gatekeeper_assess_executed=true
+dmg_mounted_app_found=true
+dmg_contained_app_codesign_verify_passed=true
+dmg_contained_app_gatekeeper_assess_passed=true
+dmg_contained_app_matches_signed_source_app=true
 rc_artifact_sha256=$rc_sha
 generated_provenance_written=$generated_provenance_written
 release_upload_authorized=false

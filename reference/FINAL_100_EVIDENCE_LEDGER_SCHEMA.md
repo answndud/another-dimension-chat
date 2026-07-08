@@ -14,9 +14,10 @@ raw logs, passphrases, keys, invite codes, endpoints, or generated artifacts.
 
 Each ledger uses `schema_version=final-100-evidence-ledger-v1` and must include:
 
-- macOS signed/notarized/stapled artifact evidence, release distribution
-  manifest evidence, clean Gatekeeper open evidence, and representative
-  usability evidence.
+- macOS signed/notarized/stapled artifact evidence, DMG-contained app
+  codesign/Gatekeeper/source-match evidence, release distribution manifest
+  evidence, clean Gatekeeper open evidence, and representative usability
+  evidence.
 - Windows real runtime and public artifact evidence.
 - Android real device and APK/AAB artifact evidence.
 - iOS real device and IPA/TestFlight artifact evidence.
@@ -43,6 +44,7 @@ sets public claims true by itself.
 - final_100_evidence_ledger_rejects_private_material=true
 - final_100_evidence_ledger_requires_child_evidence_files=true
 - final_100_evidence_ledger_child_files_sha_verified=true
+- final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true
 - final_100_evidence_candidate_requires_owner_claim_decision=true
 - macos_public_app_100_claim_allowed=false
 - whole_target_standard_100_claim_allowed=false
