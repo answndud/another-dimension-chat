@@ -65,7 +65,7 @@ must_contain "$DOC" "stable_release_allowed=false"
 must_contain "$DOC" "production_distribution_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
 must_contain "$DOC" "sensitive_communication_allowed=false"
-must_contain "$DOC" "next_required_phase=A100-2 External Review Execution And Finding Closure"
+must_contain "$DOC" "next_required_phase=F100-1 External Two-Machine Field Evidence Program"
 
 must_contain "README.md" "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
 must_contain "SECURITY.md" "reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md"
@@ -129,5 +129,5 @@ stable_release_allowed=false
 production_distribution_ready=false
 security_ready_claimed=false
 sensitive_communication_allowed=false
-next_required_phase=A100-2-External-Review-Execution-And-Finding-Closure
+next_required_phase=F100-1-External-Two-Machine-Field-Evidence-Program
 STATUS

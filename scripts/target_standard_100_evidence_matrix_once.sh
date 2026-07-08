@@ -258,6 +258,14 @@ for flag in \
   "external_review_intake_operator_ready=true" \
   "reviewer_packet_freeze_ready=true" \
   "a100_1_external_security_review_packet_frozen=true" \
+  "a100_2_external_review_execution_blocker_closed=true" \
+  "external_review_execution_policy_waiver_authorized=true" \
+  "external_review_execution_waiver_scope=active-queue-unblock-only" \
+  "named_external_review_required_for_claims=true" \
+  "accepted_audit_finding_closure_required_for_claims=true" \
+  "external_review_execution_claim_allowed=false" \
+  "audit_findings_recorded=0" \
+  "audit_finding_closure_claim_allowed=false" \
   "review_packet_synced_to_latest_source_gates=true" \
   "review_packet_includes_c100_5_onion_boundary=true" \
   "review_packet_includes_target_standard_matrix=true" \
@@ -298,6 +306,8 @@ for flag in \
   "audited_claim_allowed=false" \
   "secure_messenger_claim_allowed=false" \
   "sensitive_communication_allowed=false" \
+  "external_review_execution_claim_allowed=false" \
+  "audit_finding_closure_claim_allowed=false" \
   "reliable_external_delivery_claim_allowed=false" \
   "repeated_external_onion_evidence_claim_allowed=false" \
   "briar_cwtch_equivalent_claim_allowed=false" \
@@ -429,5 +439,5 @@ audited_claim_allowed=false
 sensitive_communication_allowed=false
 reliable_external_delivery_claim_allowed=false
 repeated_external_onion_evidence_claim_allowed=false
-next_required_phase=Phase-A100-2-External-Review-Execution-And-Finding-Closure
+next_required_phase=Phase-F100-1-External-Two-Machine-Field-Evidence-Program
 STATUS

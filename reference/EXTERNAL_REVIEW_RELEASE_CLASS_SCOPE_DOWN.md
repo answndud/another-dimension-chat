@@ -24,6 +24,9 @@ RC as long as the public wording keeps:
 The existing review packet and finding tracker are sufficient for reviewer
 intake readiness. They are not an external review result.
 
+A100-2 is closed for active-queue progress by owner waiver only. This does not
+change the required future review evidence below.
+
 ## Required Future Review
 
 Before stable or production wording can change, maintainers still need:
@@ -38,6 +41,11 @@ Before stable or production wording can change, maintainers still need:
 ## Current Scope-Down Flags
 
 - rb_6_external_review_release_class_scope_down_reviewed=true
+- a100_2_external_review_execution_blocker_closed=true
+- external_review_execution_policy_waiver_authorized=true
+- named_external_review_required_for_claims=true
+- accepted_audit_finding_closure_required_for_claims=true
+- external_review_execution_claim_allowed=false
 - review_packet_public_safe=true
 - audit_finding_tracker_available=true
 - external_review_completed=false

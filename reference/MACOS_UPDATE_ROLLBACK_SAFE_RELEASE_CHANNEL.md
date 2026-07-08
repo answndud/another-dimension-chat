@@ -73,4 +73,4 @@ and owner release authorization before public wording changes.
 - production_distribution_ready=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=A100-2 External Review Execution And Finding Closure
+- next_required_phase=F100-1 External Two-Machine Field Evidence Program

@@ -29,7 +29,7 @@ hold states remain visible.
 | M100-7 macOS update and rollback-safe release channel | closed by active-queue waiver, signed update and rollback claims held | `reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md`, `scripts/macos_update_rollback_safe_release_channel_once.sh` |
 | M100-8 macOS stable release gate and public copy upgrade | closed by active-queue waiver, stable/public copy claims held | `reference/STABLE_MACOS_V1_RELEASE_GATE.md`, `scripts/stable_macos_v1_release_gate_once.sh` |
 | A100-1 external security review packet freeze | closed by source packet freeze, review completion claims held | `reference/INDEPENDENT_REVIEW_PACKET.md`, `scripts/external_review_audit_readiness_once.sh` |
-| A100-2 external review execution and finding closure | hold gate | `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`, `reference/AUDIT_FINDING_TRACKER.md` |
+| A100-2 external review execution and finding closure | closed by active-queue waiver, review/audit claims held | `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`, `reference/AUDIT_FINDING_TRACKER.md` |
 | F100-1 external two-machine field evidence program | hold gate | `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md`, `scripts/field_evidence_reliability_program_once.sh` |
 | O100-1 operational support, incident, and vulnerability readiness | source gate with production operations hold | `reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md`, `scripts/operational_support_incident_process_once.sh` |
 | W100-1 Windows runtime parity scope unlock | source handoff gate | `scripts/desktop_windows_local_runtime_smoke_boundary_once.sh` |
@@ -89,6 +89,14 @@ censorship-resistant.
 - advanced_onion_repeated_external_evidence_required_for_claims=true
 - external_delivery_success_claim_allowed=false
 - a100_1_external_security_review_packet_frozen=true
+- a100_2_external_review_execution_blocker_closed=true
+- external_review_execution_policy_waiver_authorized=true
+- external_review_execution_waiver_scope=active-queue-unblock-only
+- named_external_review_required_for_claims=true
+- accepted_audit_finding_closure_required_for_claims=true
+- external_review_execution_claim_allowed=false
+- audit_findings_recorded=0
+- audit_finding_closure_claim_allowed=false
 - review_packet_synced_to_latest_source_gates=true
 - review_packet_includes_c100_5_onion_boundary=true
 - review_packet_includes_target_standard_matrix=true

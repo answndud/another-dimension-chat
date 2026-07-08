@@ -120,6 +120,12 @@ audit, field evidence, usability evidence, or any production claim.
 - signed_artifact_still_blocks_stable_or_production_claims=true
 - ops_7_external_review_audit_readiness_gate_reviewed=true
 - a100_1_external_security_review_packet_frozen=true
+- a100_2_external_review_execution_blocker_closed=true
+- external_review_execution_policy_waiver_authorized=true
+- named_external_review_required_for_claims=true
+- accepted_audit_finding_closure_required_for_claims=true
+- external_review_execution_claim_allowed=false
+- audit_finding_closure_claim_allowed=false
 - review_packet_synced_to_latest_source_gates=true
 - review_packet_finding_tracker_synced=true
 - d100_4_external_evidence_intake_execution_reviewed=true
