@@ -78,6 +78,8 @@ Public wording must still say `not production-ready` and
   `reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md`
 - Signed/notarized execution path:
   `reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md`
+- Release distribution metadata schema:
+  `reference/MACOS_RELEASE_DISTRIBUTION_METADATA.md`
 - Release page update gate: `scripts/macos_release_page_update_gate_once.sh`
 - Public beta source preflight:
   `scripts/macos_public_beta_final_source_preflight_once.sh`
@@ -97,6 +99,9 @@ Public wording must still say `not production-ready` and
 - update_signature_ready=false
 - rollback_policy_ready=false
 - checksum_provenance_manifest_boundary_ready=true
+- macos_release_distribution_manifest_schema_available=true
+- macos_release_distribution_metadata_generator_ready=true
+- macos_release_upload_script_ready=true
 - same_release_asset_authority_required=true
 - release_upload_performed=false
 - release_body_edit_performed=false
