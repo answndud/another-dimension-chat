@@ -24,9 +24,20 @@ function rejectText(path, text) {
   }
 }
 
-const publicFiles = ["README.md", "SECURITY.md", "apps/desktop-tauri/README.md"];
+function requireSensitivePublicNonclaim(path) {
+  const body = read(path);
+  if (body.includes("sensitive communication prohibited")) return;
+  if (
+    path === "README.md" &&
+    (body.includes("it for sensitive communication.") ||
+      body.includes("safety for sensitive communication"))
+  ) {
+    return;
+  }
+  throw new Error(`missing Windows local runtime boundary sensitive non-claim in ${path}`);
+}
 
-for (const file of publicFiles) {
+for (const file of ["SECURITY.md", "apps/desktop-tauri/README.md"]) {
   requireText(file, "Windows local runtime smoke boundary");
   requireText(file, "WebView2 runtime smoke");
   requireText(file, "app-data path review");
@@ -45,11 +56,20 @@ for (const file of publicFiles) {
   requireText(file, "no public artifact");
   requireText(file, "public artifact upload");
   requireText(file, "not production-ready");
-  requireText(file, "sensitive communication prohibited");
+  requireSensitivePublicNonclaim(file);
   rejectText(file, "Windows local runtime smoke passed=true");
   rejectText(file, "Windows public-ready");
   rejectText(file, "Windows production-ready");
 }
+
+requireText("README.md", "Windows");
+requireText("README.md", "Local build candidate only");
+requireText("README.md", "no public artifact or installer");
+requireText("README.md", "not production-ready");
+requireSensitivePublicNonclaim("README.md");
+rejectText("README.md", "Windows local runtime smoke passed=true");
+rejectText("README.md", "Windows public-ready");
+rejectText("README.md", "Windows production-ready");
 
 requireText("apps/desktop-tauri/package.json", '"test:windows-boundary"');
 requireText("apps/desktop-tauri/package.json", "verify-windows-local-runtime-boundary.mjs");

@@ -19,6 +19,20 @@ require_text() {
   fi
 }
 
+require_sensitive_public_nonclaim() {
+  local file="$1"
+  if grep -Fq -- "sensitive communication prohibited" "$file"; then
+    return
+  fi
+  if [ "$file" = "$ROOT_DIR/README.md" ] &&
+    { grep -Fq -- "it for sensitive communication." "$file" ||
+      grep -Fq -- "safety for sensitive communication" "$file"; }; then
+    return
+  fi
+  echo "FAIL missing Windows local runtime smoke boundary sensitive non-claim in $file" >&2
+  exit 1
+}
+
 reject_text() {
   local file="$1"
   local text="$2"
@@ -50,7 +64,7 @@ for file in \
   require_file "$file"
 done
 
-for file in "${PUBLIC_FILES[@]}"; do
+for file in "$ROOT_DIR/SECURITY.md" "$ROOT_DIR/apps/desktop-tauri/README.md"; do
   require_text "$file" "Windows local runtime smoke boundary"
   require_text "$file" "WebView2 runtime smoke"
   require_text "$file" "app-data path review"
@@ -65,11 +79,20 @@ for file in "${PUBLIC_FILES[@]}"; do
   require_text "$file" "no public artifact"
   require_text "$file" "public artifact upload"
   require_text "$file" "not production-ready"
-  require_text "$file" "sensitive communication prohibited"
+  require_sensitive_public_nonclaim "$file"
   reject_text "$file" "Windows local runtime smoke passed=true"
   reject_text "$file" "Windows public-ready"
   reject_text "$file" "Windows production-ready"
 done
+
+require_text "$ROOT_DIR/README.md" "Windows"
+require_text "$ROOT_DIR/README.md" "Local build candidate only"
+require_text "$ROOT_DIR/README.md" "no public artifact or installer"
+require_text "$ROOT_DIR/README.md" "not production-ready"
+require_sensitive_public_nonclaim "$ROOT_DIR/README.md"
+reject_text "$ROOT_DIR/README.md" "Windows local runtime smoke passed=true"
+reject_text "$ROOT_DIR/README.md" "Windows public-ready"
+reject_text "$ROOT_DIR/README.md" "Windows production-ready"
 
 require_text "$ROOT_DIR/apps/desktop-tauri/package.json" '"test:windows-boundary"'
 require_text "$ROOT_DIR/apps/desktop-tauri/package.json" "verify-windows-local-runtime-boundary.mjs"

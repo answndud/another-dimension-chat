@@ -83,12 +83,15 @@ of private room data.
 
 ## D100-4 Intake Execution
 
-D100-4 freezes the reviewer packet and makes the finding tracker
-machine-checkable for real external intake. The runbook is
-`reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md`, the integrated gate is
-`reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`, and tracker validation is
-performed by `scripts/validate_audit_finding_tracker.mjs`. This only makes the
-intake path operator-ready; it does not create an external review result.
+D100-4 freezes the reviewer packet and makes the finding tracker and future
+named reviewer signoff records machine-checkable for real external intake. The
+runbook is `reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md`, the signoff schema is
+`reference/EXTERNAL_REVIEW_SIGNOFF_SCHEMA.md`, the integrated gate is
+`reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`, tracker validation is
+performed by `scripts/validate_audit_finding_tracker.mjs`, and signoff
+candidate validation is performed by `scripts/validate_external_review_signoff.mjs`.
+This only makes the intake path operator-ready; it does not create an external
+review result.
 
 ## A100-1 Packet Freeze
 
@@ -145,6 +148,9 @@ Public wording must still say `not audited`, `not production-ready`, and
 - d100_4_external_evidence_intake_execution_reviewed=true
 - external_review_intake_runbook_available=true
 - external_review_intake_operator_ready=true
+- external_review_signoff_schema_available=true
+- external_review_signoff_validator_available=true
+- external_review_signoff_candidate_requires_owner_claim_decision=true
 - reviewer_packet_freeze_ready=true
 - audit_finding_tracker_ready=true
 - audit_finding_tracker_schema_machine_checkable=true

@@ -12,6 +12,20 @@ must_contain() {
   grep -Fq "$needle" "$file" || fail "$file missing required text: $needle"
 }
 
+must_reference_public_gate() {
+  local file="$1"
+  local needle="$2"
+  if grep -Fq "$needle" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    grep -Fq "SECURITY.md" "$file" &&
+    grep -Fq "$needle" "SECURITY.md"; then
+    return
+  fi
+  fail "$file missing public-reachable reference: $needle"
+}
+
 must_not_match() {
   local file="$1"
   local pattern="$2"
@@ -28,7 +42,9 @@ RUNBOOK="reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md"
 TRACKER="reference/AUDIT_FINDING_TRACKER.md"
 PACKET="reference/INDEPENDENT_REVIEW_PACKET.md"
 SCOPE_DOWN="reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
+SIGNOFF_SCHEMA="reference/EXTERNAL_REVIEW_SIGNOFF_SCHEMA.md"
 TRACKER_VALIDATOR="scripts/validate_audit_finding_tracker.mjs"
+SIGNOFF_VALIDATOR="scripts/validate_external_review_signoff.mjs"
 
 must_contain "$DOC" "external_review_audit_readiness_gate_reviewed=true"
 must_contain "$DOC" "a100_1_external_security_review_packet_frozen=true"
@@ -50,6 +66,9 @@ must_contain "$DOC" "generated_release_artifacts_excluded_from_review_packet=tru
 must_contain "$DOC" "d100_4_external_evidence_intake_execution_reviewed=true"
 must_contain "$DOC" "external_review_intake_runbook_available=true"
 must_contain "$DOC" "external_review_intake_operator_ready=true"
+must_contain "$DOC" "external_review_signoff_schema_available=true"
+must_contain "$DOC" "external_review_signoff_validator_available=true"
+must_contain "$DOC" "external_review_signoff_candidate_requires_owner_claim_decision=true"
 must_contain "$DOC" "reviewer_packet_freeze_ready=true"
 must_contain "$DOC" "audit_finding_tracker_ready=true"
 must_contain "$DOC" "audit_finding_tracker_schema_machine_checkable=true"
@@ -76,6 +95,9 @@ must_contain "$DOC" "next_required_phase=RB-7 signed notarized macOS stable arti
 
 must_contain "$RUNBOOK" "external_review_intake_runbook_available=true"
 must_contain "$RUNBOOK" "external_review_intake_operator_ready=true"
+must_contain "$RUNBOOK" "external_review_signoff_schema_available=true"
+must_contain "$RUNBOOK" "external_review_signoff_validator_available=true"
+must_contain "$RUNBOOK" "external_review_signoff_candidate_requires_owner_claim_decision=true"
 must_contain "$RUNBOOK" "a100_1_external_security_review_packet_frozen=true"
 must_contain "$RUNBOOK" "a100_2_external_review_execution_blocker_closed=true"
 must_contain "$RUNBOOK" "external_review_execution_policy_waiver_authorized=true"
@@ -110,11 +132,16 @@ must_contain "$TRACKER" "external_review_completed=false"
 must_contain "$TRACKER" "audit_completed=false"
 must_contain "$TRACKER" "audited_claim_allowed=false"
 must_contain "$TRACKER" "security_ready_claimed=false"
+must_contain "$SIGNOFF_SCHEMA" "external_review_signoff_schema_available=true"
+must_contain "$SIGNOFF_SCHEMA" "external_review_signoff_validator_available=true"
+must_contain "$SIGNOFF_SCHEMA" "external_review_signoff_candidate_requires_owner_claim_decision=true"
+must_contain "$SIGNOFF_VALIDATOR" "status=external-review-signoff-candidate-requires-owner-claim-decision"
 must_contain "$TRACKER_VALIDATOR" "status=audit-finding-tracker-valid"
 
 for required in \
   "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md" \
   "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md" \
+  "reference/EXTERNAL_REVIEW_SIGNOFF_SCHEMA.md" \
   "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md" \
   "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
   "reference/AUDIT_FINDING_TRACKER.md" \
@@ -136,14 +163,16 @@ for required in \
   must_contain "$PACKET" "$required"
 done
 
-must_contain "README.md" "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md"
-must_contain "README.md" "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md"
-must_contain "README.md" "reference/AUDIT_FINDING_TRACKER.md"
-must_contain "README.md" "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
+must_reference_public_gate "README.md" "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md"
+must_reference_public_gate "README.md" "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md"
+must_reference_public_gate "README.md" "reference/AUDIT_FINDING_TRACKER.md"
+must_reference_public_gate "README.md" "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
+must_reference_public_gate "README.md" "reference/EXTERNAL_REVIEW_SIGNOFF_SCHEMA.md"
 must_contain "SECURITY.md" "reference/EXTERNAL_REVIEW_AUDIT_READINESS.md"
 must_contain "SECURITY.md" "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md"
 must_contain "SECURITY.md" "reference/AUDIT_FINDING_TRACKER.md"
 must_contain "SECURITY.md" "reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md"
+must_contain "SECURITY.md" "reference/EXTERNAL_REVIEW_SIGNOFF_SCHEMA.md"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_7_external_review_audit_readiness_gate_reviewed=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "a100_1_external_security_review_packet_frozen=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "a100_2_external_review_execution_blocker_closed=true"
@@ -181,6 +210,7 @@ for file in "$DOC" "$RUNBOOK" "$TRACKER" "$PACKET" "$SCOPE_DOWN" "README.md" "SE
 done
 
 scripts/audit_finding_tracker_validator_once.sh >/dev/null
+scripts/external_review_signoff_validator_once.sh >/dev/null
 scripts/external_review_release_class_scope_down_once.sh >/dev/null
 
 cat <<'STATUS'
@@ -205,6 +235,9 @@ generated_release_artifacts_excluded_from_review_packet=true
 d100_4_external_evidence_intake_execution_reviewed=true
 external_review_intake_runbook_available=true
 external_review_intake_operator_ready=true
+external_review_signoff_schema_available=true
+external_review_signoff_validator_available=true
+external_review_signoff_candidate_requires_owner_claim_decision=true
 reviewer_packet_freeze_ready=true
 audit_finding_tracker_ready=true
 audit_finding_tracker_schema_machine_checkable=true

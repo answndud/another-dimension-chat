@@ -19,6 +19,20 @@ require_text() {
   fi
 }
 
+require_sensitive_public_nonclaim() {
+  local file="$1"
+  if grep -Fq -- "sensitive communication prohibited" "$file"; then
+    return
+  fi
+  if [ "$file" = "$ROOT_DIR/README.md" ] &&
+    { grep -Fq -- "it for sensitive communication." "$file" ||
+      grep -Fq -- "safety for sensitive communication" "$file"; }; then
+    return
+  fi
+  echo "FAIL missing Windows desktop readiness source audit sensitive non-claim in $file" >&2
+  exit 1
+}
+
 reject_text() {
   local file="$1"
   local text="$2"
@@ -49,7 +63,7 @@ for file in \
   require_file "$file"
 done
 
-for file in "${PUBLIC_FILES[@]}"; do
+for file in "$ROOT_DIR/SECURITY.md" "$ROOT_DIR/apps/desktop-tauri/README.md"; do
   require_text "$file" "Windows desktop readiness source audit"
   require_text "$file" "local build candidate only"
   require_text "$file" "no public Windows artifact"
@@ -66,12 +80,22 @@ for file in "${PUBLIC_FILES[@]}"; do
   require_text "$file" "release request"
   require_text "$file" "local-manual envelope default path"
   require_text "$file" "not production-ready"
-  require_text "$file" "sensitive communication prohibited"
+  require_sensitive_public_nonclaim "$file"
   reject_text "$file" "Windows public artifact ready"
   reject_text "$file" "Windows installer ready"
   reject_text "$file" "Windows production-ready"
   reject_text "$file" "Windows signing proves security"
 done
+
+require_text "$ROOT_DIR/README.md" "Windows"
+require_text "$ROOT_DIR/README.md" "Local build candidate only"
+require_text "$ROOT_DIR/README.md" "no public artifact or installer"
+require_text "$ROOT_DIR/README.md" "not production-ready"
+require_sensitive_public_nonclaim "$ROOT_DIR/README.md"
+reject_text "$ROOT_DIR/README.md" "Windows public artifact ready"
+reject_text "$ROOT_DIR/README.md" "Windows installer ready"
+reject_text "$ROOT_DIR/README.md" "Windows production-ready"
+reject_text "$ROOT_DIR/README.md" "Windows signing proves security"
 
 require_text "$ROOT_DIR/apps/desktop-tauri/package.json" '"tauri:build"'
 require_text "$ROOT_DIR/apps/desktop-tauri/src-tauri/tauri.conf.json" '"targets": "all"'
