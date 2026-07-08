@@ -42,10 +42,13 @@ claim-policy decision.
 ## Allowed Report Fields
 
 - `participant_label`
+- `participant_dedup_token`
 - `representative_user_type`
 - `app_version`
 - `build_channel`
 - `build_commit`
+- `artifact_sha256`
+- `distribution_manifest_sha256`
 - `platform`
 - `session_scope`
 - `consent_notice_acknowledged`
@@ -59,6 +62,10 @@ claim-policy decision.
 - `retry_cancel_recovery_status`
 - `local_delete_wipe_status`
 - `public_diagnostics_copy_status`
+- `redacted_support_report_copy_status`
+- `support_report_raw_logs_allowed`
+- `support_report_private_payload_allowed`
+- `support_report_key_material_allowed`
 - `recovery_next_action_understood`
 - `required_task_status`
 - `blocker_class`
@@ -80,10 +87,13 @@ local app data, or private planning notes.
 
 ```text
 participant_label=R01
+participant_dedup_token=dedup_<non-reversible-32-to-64-hex-token>
 representative_user_type=family|friend|personal-client|non-developer
 app_version=
 build_channel=
-build_commit=
+build_commit=<7-to-40-char-git-sha>
+artifact_sha256=<64-char-artifact-sha256>
+distribution_manifest_sha256=<64-char-manifest-sha256>
 platform=macos
 session_scope=first-run-invite-manual-envelope-recovery-diagnostics-delete
 consent_notice_acknowledged=true|false
@@ -97,6 +107,10 @@ manual_envelope_exchange_status=pass|fail|partial|not-run
 retry_cancel_recovery_status=pass|fail|partial|not-run
 local_delete_wipe_status=pass|fail|partial|not-run
 public_diagnostics_copy_status=pass|fail|partial|not-run
+redacted_support_report_copy_status=pass|fail|partial|not-run
+support_report_raw_logs_allowed=false
+support_report_private_payload_allowed=false
+support_report_key_material_allowed=false
 recovery_next_action_understood=pass|fail|partial|not-run
 required_task_status=pass|fail|partial
 blocker_class=none-redacted|install-checksum|first-launch-warning|profile-unlock|invite-join|safety-verification|manual-envelope|retry-cancel|local-delete-wipe|diagnostics-copy|recovery-copy|unknown-redacted
@@ -114,6 +128,9 @@ non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-p
 - representative_usability_waiver_scope=active-queue-unblock-only
 - representative_usability_evidence_required_for_stable_claims=true
 - representative_usability_report_validator_available=true
+- representative_usability_dedup_token_required=true
+- representative_usability_artifact_binding_required=true
+- representative_usability_redacted_support_report_required=true
 - consent_non_sensitive_use_notice_ready=true
 - representative_usability_sample_threshold=3-5
 - representative_usability_candidate_requires_manual_review=true

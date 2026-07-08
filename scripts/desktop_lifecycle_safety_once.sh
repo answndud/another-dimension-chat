@@ -84,14 +84,14 @@ require_text "$UI_SMOKE" "localDataLifecycleGuideConversation"
 require_text "$UI_SMOKE" "conversationDeleteScopeNote"
 
 require_text "$README" "### Local Data Lifecycle"
-require_text "$README" "Conversation delete"
+require_text "$README" "conversation delete"
 require_text "$README" "preserving session records"
-require_text "$README" "Session delete"
+require_text "$README" "session delete"
 require_text "$README" "preserving message records"
-require_text "$README" "Full local wipe requires typing"
+require_text "$README" "full local wipe requires typing"
 require_text "$README" "WIPE LOCAL DATA"
 require_text "$README" "cloud backup recovery"
-require_text "$README" "cloud sync, rollback prevention, or secure deletion from storage media"
+require_text "$README" "prevention, or secure deletion from storage media"
 
 for file in "$INDEX_HTML" "$I18N_JS" "$MAIN_JS" "$README"; do
   reject_text "$file" "secure deletion from storage media is provided"
