@@ -30,7 +30,7 @@ pub struct PrototypeStatus {
     experimental_transport_status: &'static str,
     bootstrap_status_classification: &'static str,
     transport_io_status: String,
-    privacy_model_boundary: &'static str,
+    privacy_model_boundary: String,
     storage_status: &'static str,
     release_integrity_status: &'static str,
     desktop_platform_readiness_boundary: String,
@@ -72,6 +72,14 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
         another_dimension_core::production::production_independent_review_boundary_summary();
     let diagnostics_redaction =
         another_dimension_core::production::production_diagnostics_redaction_boundary_summary();
+    let high_risk_threat_model = another_dimension_core::production::
+        production_high_risk_threat_model_claim_boundary_summary();
+    let high_risk_threat_matrix = high_risk_threat_model
+        .matrix()
+        .iter()
+        .map(|entry| format!("{}:{}", entry.attacker_class(), entry.status().as_str()))
+        .collect::<Vec<_>>()
+        .join(",");
 
     PrototypeStatus {
         secure_release: false,
@@ -302,8 +310,13 @@ pub fn redacted_prototype_status() -> PrototypeStatus {
             preflight.production_messaging_ready(),
             next_connector.required_gate(),
         ),
-        privacy_model_boundary:
-            "target=no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server; current_beta_not_briar_cwtch_equivalent=true; audited_e2ee=false; repeated_external_onion_evidence=false; offline_mesh=false; independent_review_complete=false; security_ready=false",
+        privacy_model_boundary: format!(
+            "target=no-phone-no-email-no-global-account-no-central-contact-discovery-no-central-message-server; high_risk_threat_model={}; app_matrix_required={} public_copy_matrix_required={} compromised_endpoint=not_protected direct_coercion=not_protected global_traffic_correlation=not_protected claimable_statuses=protected,mitigated forbidden_claims={}; current_beta_not_briar_cwtch_equivalent=true; audited_e2ee=false; repeated_external_onion_evidence=false; offline_mesh=false; independent_review_complete=false; security_ready=false",
+            high_risk_threat_matrix,
+            high_risk_threat_model.app_matrix_required(),
+            high_risk_threat_model.public_copy_matrix_required(),
+            high_risk_threat_model.forbidden_claims().join(","),
+        ),
         storage_status:
             "ADREC1 storage spike plus forward-only schema and local data lifecycle boundary",
         release_integrity_status:
