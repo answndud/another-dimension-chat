@@ -26,6 +26,10 @@ cd "$ROOT"
 DOC="reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
 SCHEMA="reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md"
 VALIDATOR="scripts/validate_windows_public_artifact_results.mjs"
+MANIFEST_SCHEMA="reference/WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"
+MANIFEST_VALIDATOR="scripts/validate_windows_artifact_manifest.mjs"
+MANIFEST_GENERATOR="scripts/prepare_windows_public_artifact_metadata.sh"
+MANIFEST_VERIFIER="scripts/windows_artifact_manifest_checksum_once.sh"
 SCOPE_DOWN="reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md"
 PARITY="apps/desktop-tauri/windows_desktop_parity_intake.json"
 HANDOFF="apps/desktop-tauri/windows_local_runtime_smoke_handoff.json"
@@ -33,7 +37,8 @@ MATRIX="reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
 GAP_REGISTER="reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 CROSS_PLATFORM="reference/CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md"
 
-for file in "$DOC" "$SCHEMA" "$VALIDATOR" "$SCOPE_DOWN" "$PARITY" "$HANDOFF" \
+for file in "$DOC" "$SCHEMA" "$VALIDATOR" "$MANIFEST_SCHEMA" "$MANIFEST_VALIDATOR" \
+  "$MANIFEST_GENERATOR" "$MANIFEST_VERIFIER" "$SCOPE_DOWN" "$PARITY" "$HANDOFF" \
   "$MATRIX" "$GAP_REGISTER" "$CROSS_PLATFORM" "README.md" "SECURITY.md"; do
   [ -f "$file" ] || fail "missing D100-5 Windows artifact input: $file"
 done
@@ -43,6 +48,10 @@ for flag in \
   "windows_public_artifact_execution_path_available=true" \
   "windows_real_runtime_result_schema_available=true" \
   "windows_real_runtime_result_validator_available=true" \
+  "windows_artifact_manifest_checksum_schema_available=true" \
+  "windows_artifact_manifest_checksum_validator_available=true" \
+  "windows_artifact_metadata_generator_ready=true" \
+  "windows_artifact_manifest_checksum_verifier_ready=true" \
   "real_windows_runtime_smoke_requirements_defined=true" \
   "windows_installer_signing_decision_recorded=true" \
   "windows_checksum_provenance_requirements_defined=true" \
@@ -51,6 +60,9 @@ for flag in \
   "windows_no_overclaim_gate_ready=true" \
   "windows_result_requires_real_windows_machine=true" \
   "windows_result_requires_checksum_provenance=true" \
+  "windows_artifact_requires_same_release_authority=true" \
+  "windows_artifact_checksum_bytes_verified_by_validator=true" \
+  "windows_artifact_provenance_consistency_verified_by_validator=true" \
   "windows_result_requires_support_diagnostics_review=true" \
   "windows_result_requires_public_non_claims=true" \
   "windows_result_rejects_local_only_or_private_data=true" \
@@ -59,6 +71,8 @@ for flag in \
   "windows_public_artifact_ready=false" \
   "windows_installer_ready=false" \
   "windows_signing_ready=false" \
+  "windows_artifact_release_upload_authorized=false" \
+  "windows_artifact_release_body_edit_authorized=false" \
   "windows_public_artifact_upload_allowed=false" \
   "windows_release_packaging_allowed=false" \
   "windows_generated_artifact_commit_allowed=false" \
@@ -81,8 +95,12 @@ for file in "$DOC" "$SCOPE_DOWN" "$MATRIX" "$GAP_REGISTER" "$CROSS_PLATFORM" \
 done
 
 must_contain "$SCHEMA" "windows_real_runtime_result_schema_available=true"
+must_contain "$SCHEMA" "WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"
 must_contain "$SCHEMA" "windows_public_artifact_ready=false"
 must_contain "$VALIDATOR" "status=windows-public-artifact-candidate-requires-review"
+must_contain "$MANIFEST_SCHEMA" "windows_artifact_manifest_checksum_schema_available=true"
+must_contain "$MANIFEST_VALIDATOR" "windows-public-artifact-manifest-v1"
+must_contain "$MANIFEST_GENERATOR" "AD_PREPARE_WINDOWS_PUBLIC_ARTIFACT_METADATA"
 must_contain "$PARITY" '"windows_public_artifact_ready": false'
 must_contain "$HANDOFF" '"must_run_on": "real-windows-machine"'
 
@@ -216,6 +234,8 @@ if node "$VALIDATOR" "$tmp_dir/private-path.md" >/tmp/windows-private-path.out 2
 fi
 grep -Fq "forbidden-content:windows-local-path" /tmp/windows-private-path.out || fail "private Windows path rejection was not reported"
 
+scripts/windows_artifact_manifest_checksum_once.sh >/dev/null
+
 if git -C "$ROOT" diff --cached --name-only | grep -Eq '^(docs/|AGENTS.md|apps/desktop-tauri/(public-release|beta-artifacts)/|public-release/|beta-artifacts/)'; then
   fail "private docs, AGENTS.md, or generated artifact path is staged"
 fi
@@ -226,6 +246,10 @@ d100_5_windows_public_artifact_execution_path_reviewed=true
 windows_public_artifact_execution_path_available=true
 windows_real_runtime_result_schema_available=true
 windows_real_runtime_result_validator_available=true
+windows_artifact_manifest_checksum_schema_available=true
+windows_artifact_manifest_checksum_validator_available=true
+windows_artifact_metadata_generator_ready=true
+windows_artifact_manifest_checksum_verifier_ready=true
 real_windows_runtime_smoke_requirements_defined=true
 windows_installer_signing_decision_recorded=true
 windows_checksum_provenance_requirements_defined=true
@@ -236,6 +260,8 @@ windows_real_runtime_smoke_passed=false
 windows_public_artifact_ready=false
 windows_installer_ready=false
 windows_signing_ready=false
+windows_artifact_release_upload_authorized=false
+windows_artifact_release_body_edit_authorized=false
 windows_public_artifact_upload_allowed=false
 windows_release_packaging_allowed=false
 windows_generated_artifact_commit_allowed=false
