@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -72,7 +73,91 @@ function hasAllNonClaims(value) {
   return Array.isArray(value) && REQUIRED_NON_CLAIMS.every((claim) => value.includes(claim));
 }
 
-function validateArtifact(artifact, index, releaseClass) {
+function sha256File(file) {
+  return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+}
+
+function readJson(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function relativeSibling(baseFile, siblingName) {
+  if (!siblingName || typeof siblingName !== "string") return "";
+  if (siblingName !== path.basename(siblingName)) return "";
+  return path.join(path.dirname(baseFile), siblingName);
+}
+
+function validateChecksumFile(file, artifact, artifactFile, actualSha) {
+  const checksumFile = relativeSibling(file, artifact.checksum_file);
+  const issues = [];
+  if (!checksumFile || !fs.existsSync(checksumFile)) {
+    return [`artifact:${artifact.filename}:missing-checksum-file`];
+  }
+  const checksumText = fs.readFileSync(checksumFile, "utf8").trim();
+  const expectedLine = `${actualSha}  ${path.basename(artifactFile)}`;
+  if (checksumText !== expectedLine) {
+    issues.push(`artifact:${artifact.filename}:checksum-file-mismatch`);
+  }
+  return issues;
+}
+
+function validateProvenanceFile(file, manifest, artifact, actualSha) {
+  const provenanceFile = relativeSibling(file, artifact.provenance_file);
+  if (!provenanceFile || !fs.existsSync(provenanceFile)) {
+    return [`artifact:${artifact.filename}:missing-provenance-file`];
+  }
+  const provenance = readJson(provenanceFile);
+  if (!provenance || typeof provenance !== "object") {
+    return [`artifact:${artifact.filename}:invalid-provenance-json`];
+  }
+  const issues = [];
+  if (provenance.schema_version !== "macos-release-distribution-provenance-v1") {
+    issues.push(`artifact:${artifact.filename}:invalid-provenance-schema`);
+  }
+  if (provenance.repository !== manifest.repository) {
+    issues.push(`artifact:${artifact.filename}:provenance-repository-mismatch`);
+  }
+  if (provenance.artifact_sha256 !== actualSha) {
+    issues.push(`artifact:${artifact.filename}:provenance-sha-mismatch`);
+  }
+  if (provenance.artifact_filename !== artifact.filename) {
+    issues.push(`artifact:${artifact.filename}:provenance-filename-mismatch`);
+  }
+  if (provenance.source_commit !== manifest.source_commit) {
+    issues.push(`artifact:${artifact.filename}:provenance-source-commit-mismatch`);
+  }
+  if (provenance.release_class !== manifest.release_class) {
+    issues.push(`artifact:${artifact.filename}:provenance-release-class-mismatch`);
+  }
+  if (provenance.architecture !== artifact.architecture) {
+    issues.push(`artifact:${artifact.filename}:provenance-architecture-mismatch`);
+  }
+  if (provenance.signing_status !== artifact.signing_status) {
+    issues.push(`artifact:${artifact.filename}:provenance-signing-mismatch`);
+  }
+  if (provenance.notarization_status !== artifact.notarization_status) {
+    issues.push(`artifact:${artifact.filename}:provenance-notarization-mismatch`);
+  }
+  if (provenance.stapled !== artifact.stapled) {
+    issues.push(`artifact:${artifact.filename}:provenance-stapled-mismatch`);
+  }
+  if (provenance.release_upload_authorized !== false) {
+    issues.push(`artifact:${artifact.filename}:provenance-upload-must-stay-false`);
+  }
+  if (provenance.macos_release_distribution_artifact_ready !== false) {
+    issues.push(`artifact:${artifact.filename}:provenance-public-ready-must-stay-false`);
+  }
+  if (provenance.generated_release_artifacts_commit_allowed !== false) {
+    issues.push(`artifact:${artifact.filename}:provenance-commit-must-stay-false`);
+  }
+  return issues;
+}
+
+function validateArtifact(file, manifest, artifact, index) {
   const issues = [];
   const prefix = `artifact[${index}]`;
   if (!artifact || typeof artifact !== "object") return [`${prefix}:not-object`];
@@ -86,11 +171,23 @@ function validateArtifact(artifact, index, releaseClass) {
   if (typeof artifact.stapled !== "boolean") issues.push(`${prefix}:invalid-stapled`);
   if (!artifact.checksum_file || typeof artifact.checksum_file !== "string") issues.push(`${prefix}:missing-checksum-file`);
   if (!artifact.provenance_file || typeof artifact.provenance_file !== "string") issues.push(`${prefix}:missing-provenance-file`);
-  if (releaseClass === "stable") {
+  if (manifest.release_class === "stable") {
     if (artifact.signing_status !== "signed") issues.push(`${prefix}:stable-must-be-signed`);
     if (artifact.notarization_status !== "notarized") issues.push(`${prefix}:stable-must-be-notarized`);
     if (artifact.stapled !== true) issues.push(`${prefix}:stable-must-be-stapled`);
   }
+
+  const artifactFile = relativeSibling(file, artifact.filename);
+  if (!artifactFile || !fs.existsSync(artifactFile)) {
+    issues.push(`${prefix}:missing-artifact-file`);
+    return issues;
+  }
+  const actualSha = sha256File(artifactFile);
+  const actualSize = fs.statSync(artifactFile).size;
+  if (artifact.sha256 !== actualSha) issues.push(`${prefix}:artifact-sha-mismatch`);
+  if (artifact.size_bytes !== actualSize) issues.push(`${prefix}:artifact-size-mismatch`);
+  issues.push(...validateChecksumFile(file, artifact, artifactFile, actualSha));
+  issues.push(...validateProvenanceFile(file, manifest, artifact, actualSha));
   return issues;
 }
 
@@ -121,7 +218,7 @@ function validateManifest(file, { requireCurrentHead, head }) {
     issues.push("missing-artifacts");
   } else {
     manifest.artifacts.forEach((artifact, index) => {
-      issues.push(...validateArtifact(artifact, index, manifest.release_class));
+      issues.push(...validateArtifact(file, manifest, artifact, index));
     });
   }
   return { file, valid: issues.length === 0, issues };
@@ -158,6 +255,8 @@ if (failures > 0) {
 }
 
 console.log(`accepted_macos_release_distribution_manifests=${files.length}`);
+console.log("macos_release_distribution_checksum_bytes_verified=true");
+console.log("macos_release_distribution_provenance_consistency_verified=true");
 console.log("macos_release_distribution_artifact_ready=false");
 console.log("release_upload_authorized=false");
 console.log("status=macos-release-distribution-manifest-candidate-requires-artifact-gate");

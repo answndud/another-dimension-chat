@@ -6,15 +6,18 @@ repeated real multi-platform field reports. This is not an audit result, not
 external review completion, not field reliability evidence, not production-ready,
 and not permission for sensitive communication.
 
-The gate combines the existing audit finding tracker, external evidence intake,
-and redacted field report validators with the current platform artifact holds:
-macOS signing/distribution, Windows public artifact, Android APK/AAB, and iOS
-IPA/TestFlight remain evidence blockers.
+The gate combines the existing audit finding tracker, external review signoff
+intake, external evidence intake, and redacted field report validators with the
+current platform artifact holds: macOS signing/distribution, Windows public
+artifact, Android APK/AAB, and iOS IPA/TestFlight remain evidence blockers.
 
 ## Current Gate Flags
 
 - external_audit_field_evidence_gate_ready=true
 - audit_finding_tracker_validator_ready=true
+- external_review_signoff_schema_available=true
+- external_review_signoff_validator_ready=true
+- external_review_signoff_candidate_requires_owner_claim_decision=true
 - external_evidence_intake_validator_ready=true
 - redacted_field_report_validator_ready=true
 - fabricated_or_local_only_evidence_rejected=true

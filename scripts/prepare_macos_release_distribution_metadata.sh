@@ -69,7 +69,26 @@ manifest_file="$OUT_DIR/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json"
 release_body_file="$OUT_DIR/GITHUB_RELEASE_BODY.md"
 provenance_file="$artifact_name.provenance.json"
 
+cp "$ARTIFACT" "$OUT_DIR/$artifact_name"
 printf '%s  %s\n' "$sha256" "$artifact_name" >"$OUT_DIR/$checksum_file"
+
+cat >"$OUT_DIR/$provenance_file" <<JSON
+{
+  "schema_version": "macos-release-distribution-provenance-v1",
+  "repository": "answndud/another-dimension-chat",
+  "source_commit": "$source_commit",
+  "artifact_filename": "$artifact_name",
+  "artifact_sha256": "$sha256",
+  "release_class": "$RELEASE_CLASS",
+  "architecture": "$ARCHITECTURE",
+  "signing_status": "$SIGNING_STATUS",
+  "notarization_status": "$NOTARIZATION_STATUS",
+  "stapled": $STAPLED,
+  "release_upload_authorized": false,
+  "macos_release_distribution_artifact_ready": false,
+  "generated_release_artifacts_commit_allowed": false
+}
+JSON
 
 cat >"$manifest_file" <<JSON
 {
@@ -129,6 +148,7 @@ status=macos-release-distribution-metadata-prepared
 macos_release_distribution_metadata_generator_ready=true
 manifest=$manifest_file
 checksum=$OUT_DIR/$checksum_file
+provenance=$OUT_DIR/$provenance_file
 release_body=$release_body_file
 release_upload_authorized=false
 release_body_edit_authorized=false

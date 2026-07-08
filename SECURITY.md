@@ -184,7 +184,8 @@ stable distribution claim.
 External review and audit readiness is tracked in
 `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`, with the D100-4 operator
 runbook in `reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md`, the public-safe
-finding tracker in `reference/AUDIT_FINDING_TRACKER.md`, and the RB-6
+finding tracker in `reference/AUDIT_FINDING_TRACKER.md`, future named reviewer
+signoff intake in `reference/EXTERNAL_REVIEW_SIGNOFF_SCHEMA.md`, and the RB-6
 release-class scope-down in `reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md`.
 These files define reviewer scope, fix/hold/waive triage, tracker validation,
 and the lower-release-class workaround while keeping external review, audit

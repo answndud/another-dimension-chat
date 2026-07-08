@@ -12,6 +12,20 @@ must_contain() {
   grep -Fq "$needle" "$file" || fail "$file missing required text: $needle"
 }
 
+must_reference_public_gate() {
+  local file="$1"
+  local needle="$2"
+  if grep -Fq "$needle" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    grep -Fq "SECURITY.md" "$file" &&
+    grep -Fq "$needle" "SECURITY.md"; then
+    return
+  fi
+  fail "$file missing public-reachable reference: $needle"
+}
+
 must_not_match() {
   local file="$1"
   local pattern="$2"
@@ -86,12 +100,20 @@ done
 
 for file in "$SCHEMA" "$SCOPE_DOWN" "$MATRIX" "$GAP_REGISTER" "$CROSS_PLATFORM" \
   "README.md" "SECURITY.md"; do
-  must_contain "$file" "WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
+  if [ "$file" = "README.md" ]; then
+    must_reference_public_gate "$file" "WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
+  else
+    must_contain "$file" "WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
+  fi
 done
 
 for file in "$DOC" "$SCOPE_DOWN" "$MATRIX" "$GAP_REGISTER" "$CROSS_PLATFORM" \
   "README.md" "SECURITY.md"; do
-  must_contain "$file" "WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md"
+  if [ "$file" = "README.md" ]; then
+    must_reference_public_gate "$file" "WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md"
+  else
+    must_contain "$file" "WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md"
+  fi
 done
 
 must_contain "$SCHEMA" "windows_real_runtime_result_schema_available=true"
