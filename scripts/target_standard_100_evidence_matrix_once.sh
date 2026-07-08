@@ -273,6 +273,10 @@ for flag in \
   "accepted_redacted_field_reports_required_for_claims=true" \
   "field_evidence_execution_claim_allowed=false" \
   "accepted_production_field_reports=0" \
+  "o100_1_operations_blocker_closed=true" \
+  "operations_source_gate_closed=true" \
+  "production_operations_evidence_required_for_claims=true" \
+  "real_incident_response_execution_required_for_claims=true" \
   "review_packet_synced_to_latest_source_gates=true" \
   "review_packet_includes_c100_5_onion_boundary=true" \
   "review_packet_includes_target_standard_matrix=true" \
@@ -447,5 +451,7 @@ audited_claim_allowed=false
 sensitive_communication_allowed=false
 reliable_external_delivery_claim_allowed=false
 repeated_external_onion_evidence_claim_allowed=false
-next_required_phase=Phase-O100-1-Operations-Incident-And-Vulnerability-Readiness
+o100_1_operations_blocker_closed=true
+operations_source_gate_closed=true
+next_required_phase=Phase-W100-1-Windows-Runtime-Parity-Scope-Unlock
 STATUS

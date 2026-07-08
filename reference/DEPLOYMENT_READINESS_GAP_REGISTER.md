@@ -30,7 +30,7 @@ current supported scope is named precisely:
 | Update/release integrity | Manual same-release GitHub Release verification, signed update manifest candidate verification, provenance, rollback warning, and emergency process are source-gated. | Product signed update readiness, rollback prevention, stable release approval, and release upload remain false. |
 | External evidence intake | D100-4 review, field, and representative usability intake is gated by `reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md`, with reviewer packet freeze, finding tracker validation, field report validation, representative usability validation, consent/non-sensitive-use notice, and local-only/fabricated evidence rejection. | Completed external review/audit, real repeated field reports, representative usability completion, and all related production/audit/reliability/sensitive-use claims remain false. |
 | Windows public artifact execution | D100-5 Windows public artifact path is gated by `reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md`, with `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md`, runtime smoke requirements, installer/signing decision, checksum/provenance, public copy, support diagnostics, and no-overclaim validation. | Real Windows runtime pass, public artifact, installer, signing, upload, and Windows public claim remain false. |
-| Operations | Public/private intake, tabletop, emergency release, dependency triage, and support-template boundaries are source-gated. | Production operational readiness claim remains false. |
+| Operations | Public/private intake, tabletop, emergency release, rollback, dependency triage, key-compromise, user notification, and support-template boundaries are source-gated. | Production operational readiness claim remains false until real operations output and owner claim approval exist. |
 
 ## Remaining External Or Evidence Blockers
 
@@ -184,6 +184,11 @@ These cannot be made true by editing source files alone:
 - windows_generated_artifact_commit_allowed=false
 - windows_public_copy_published=false
 - windows_production_claim_allowed=false
+- o100_1_operations_blocker_closed=true
+- operations_source_gate_closed=true
+- production_operations_evidence_required_for_claims=true
+- real_incident_response_execution_required_for_claims=true
+- production_operational_readiness_claim_allowed=false
 - developer_id_signing_available=false
 - notarization_available=false
 - external_review_completed=false
