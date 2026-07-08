@@ -49,7 +49,12 @@ const FLOW_STATUS_FIELDS = Object.freeze([
 ]);
 
 const ALLOWED_VALUES = new Map([
-  ["platform_pair", new Set(["macos-to-macos"])],
+  ["platform_pair", new Set([
+    "macos-to-macos",
+    "macos-to-windows",
+    "windows-to-windows",
+    "android-to-ios",
+  ])],
   ["checksum_result", new Set(["pass", "fail", "not-run"])],
   ["install_path_reached", new Set(["download", "checksum", "mount", "copy", "manual-allow", "first-launch"])],
   ["flow_scope", new Set(["same-machine", "local-two-instance", "two-machine-same-network", "two-machine-different-network"])],
@@ -79,6 +84,12 @@ const REQUIRED_NON_CLAIMS = Object.freeze([
   "sensitive-communication-prohibited",
   "not-audited",
   "not-production-ready",
+]);
+const REQUIRED_PLATFORM_PAIRS = Object.freeze([
+  "macos-to-macos",
+  "macos-to-windows",
+  "windows-to-windows",
+  "android-to-ios",
 ]);
 
 const FORBIDDEN_PATTERNS = Object.freeze([
@@ -188,6 +199,7 @@ console.log(`reports_found=${reports.length}`);
 if (reports.length === 0) {
   console.log("accepted_production_field_reports=0");
   console.log("macos_two_machine_real_user_flow_repeated=false");
+  console.log("required_platform_pairs_covered=false");
   console.log("different_networks_covered=false");
   console.log("restart_resume_covered=false");
   console.log("offline_online_transition_covered=false");
@@ -221,16 +233,20 @@ const differentNetworksCovered = productionReports.some((report) =>
   fieldEquals(report, "flow_scope", "two-machine-different-network") ||
   fieldEquals(report, "network_condition_class", "different-networks"),
 );
+const requiredPlatformPairsCovered = REQUIRED_PLATFORM_PAIRS.every((pair) =>
+  productionReports.some((report) => fieldEquals(report, "platform_pair", pair)),
+);
 const allRequiredFlowPassed = productionReports.every((report) =>
   FLOW_STATUS_FIELDS.every((field) => fieldEquals(report, field, "pass")),
 );
 const launchNetworkStayedFalse = productionReports.every((report) =>
   fieldEquals(report, "app_launch_network_stayed_false", "true"),
 );
-const repeated = productionReports.length >= 2;
+const repeated = productionReports.length >= REQUIRED_PLATFORM_PAIRS.length;
 
 console.log(`accepted_production_field_reports=${productionReports.length}`);
 console.log(`macos_two_machine_real_user_flow_repeated=${repeated}`);
+console.log(`required_platform_pairs_covered=${requiredPlatformPairsCovered}`);
 console.log(`different_networks_covered=${differentNetworksCovered}`);
 console.log(`restart_resume_covered=${productionReports.some((report) => fieldEquals(report, "restart_resume_status", "pass"))}`);
 console.log(`offline_online_transition_covered=${productionReports.some((report) => fieldEquals(report, "offline_online_transition_status", "pass"))}`);
@@ -240,6 +256,8 @@ console.log("production_field_evidence_ready_reason=manual-review-and-stable-gat
 
 if (!repeated) {
   console.log("status=waiting-for-repeated-two-machine-reports");
+} else if (!requiredPlatformPairsCovered) {
+  console.log("status=waiting-for-required-platform-pair-coverage");
 } else if (!differentNetworksCovered) {
   console.log("status=waiting-for-different-network-report");
 } else if (!allRequiredFlowPassed || !launchNetworkStayedFalse) {
