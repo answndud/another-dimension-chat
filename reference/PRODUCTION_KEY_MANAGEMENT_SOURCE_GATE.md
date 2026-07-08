@@ -18,6 +18,7 @@ This gate treats the following supported local scope as pass-capable:
   message, endpoint, and session transport state,
 - forward-only schema version handling,
 - SQLCipher passphrase rekey primitive,
+- SQLCipher passphrase forward rotation generation marker,
 - redacted Tauri profile passphrase-change command surface,
 - marker-only rollback detection with user-visible reset/rebuild recovery,
 - explicit local conversation delete, session delete, profile delete, and owned
@@ -47,7 +48,7 @@ claim-policy decision exists.
 | Record encryption | source-ready | SQLCipher-backed `ADREC1` record path; no raw key wrapping claim. |
 | Schema versioning | source-ready | Forward-only schema version handling; no prototype-data migration claim. |
 | App key wrapping | hold | `app_key_wrapping_ready=false`. |
-| Key rotation | source primitive and command only; product hold | SQLCipher passphrase rekey plus redacted Tauri profile passphrase-change command are source-ready; no recovery policy, backup/recovery, settings UI, or production rotation claim. |
+| Key rotation | source primitive, generation marker, and command only; product hold | SQLCipher passphrase rekey plus one-generation-forward encrypted rotation marker and redacted Tauri profile passphrase-change command are source-ready; no recovery policy, backup/recovery, settings UI, app key rotation, or production rotation claim. |
 | Rollback handling | supported detection only | marker-only detection; rollback prevention false. |
 | Deletion | supported local lifecycle only | logical delete/app-data wipe only; secure media deletion false. |
 | Backup/recovery | hold | backup exclusion is best-effort policy; backup recovery false. |
@@ -59,6 +60,7 @@ claim-policy decision exists.
 - `reference/STORAGE_DECISION.md`
 - `crates/storage/src/lib.rs`: `storage_backend_integration_boundary_summary`
 - `crates/storage/src/lib.rs`: `rekey_with_passphrase`
+- `crates/storage/src/lib.rs`: `rekey_with_passphrase_rotation_generation`
 - `crates/core/src/lib.rs`: `production_profile_passphrase_rekey`
 - `apps/desktop-tauri/src-tauri/src/lib.rs`: `production_profile_passphrase_rekey`
 - `crates/storage/src/lib.rs`: `sqlcipher_store_schema_migration_is_forward_only`
@@ -71,6 +73,7 @@ claim-policy decision exists.
 - `unlock_policy_requires_passphrase_for_all_modes`
 - `sqlcipher_store_rejects_wrong_passphrase_before_returning_records`
 - `sqlcipher_store_rekey_rotates_passphrase_without_plaintext_exposure`
+- `sqlcipher_store_rekey_records_forward_rotation_generation_without_plaintext_marker`
 - `production_profile_passphrase_rekey_changes_unlock_secret_without_runtime`
 - `production_profile_passphrase_rekey_is_redacted_and_invalidates_old_passphrase`
 - `sqlcipher_store_schema_migration_is_forward_only`
@@ -100,6 +103,8 @@ claim-policy decision exists.
 - encrypted_profile_session_message_store_ready=true
 - forward_only_schema_version_ready=true
 - sqlcipher_passphrase_rekey_source_ready=true
+- sqlcipher_passphrase_rotation_generation_source_ready=true
+- minimum_forward_key_rotation_generation_ready=true
 - tauri_profile_passphrase_rekey_command_ready=true
 - prototype_data_migration_ready=false
 - app_key_wrapping_ready=false

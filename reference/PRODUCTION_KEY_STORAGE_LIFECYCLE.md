@@ -47,7 +47,7 @@ default transport phase.
 Profile unlock is passphrase-first. The current public boundary relies on the
 SQLCipher-backed store opening path, redacted `ProfilePassphrase` and database
 key debug output, and explicit unlock policy tests. It does not yet document a
-final production KDF parameter policy, app database-key wrapping, key rotation,
+final production KDF parameter policy, app database-key wrapping, product key rotation,
 key export, account recovery, or OS keychain/DPAPI/Keystore/Keychain wrapper.
 
 RB-2 records the stable local scope as passphrase-first SQLCipher passphrase
@@ -135,6 +135,8 @@ Targeted tests that anchor this gate:
 - sqlcipher_adrec1_local_store_ready=true
 - sqlcipher_passphrase_kdf_scope_ready=true
 - sqlcipher_passphrase_rekey_source_ready=true
+- sqlcipher_passphrase_rotation_generation_source_ready=true
+- minimum_forward_key_rotation_generation_ready=true
 - tauri_profile_passphrase_rekey_command_ready=true
 - project_owned_argon2_scrypt_kdf_ready=false
 - forward_only_schema_version_ready=true
