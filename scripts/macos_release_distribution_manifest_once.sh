@@ -27,8 +27,9 @@ DOC="reference/MACOS_RELEASE_DISTRIBUTION_METADATA.md"
 VALIDATOR="scripts/validate_macos_release_distribution_manifest.mjs"
 GENERATOR="scripts/prepare_macos_release_distribution_metadata.sh"
 UPLOAD="scripts/upload_macos_release_assets_approved.sh"
+ARTIFACT_GUARD="scripts/mobile_generated_artifact_guard_once.sh"
 
-for file in "$DOC" "$VALIDATOR" "$GENERATOR" "$UPLOAD"; do
+for file in "$DOC" "$VALIDATOR" "$GENERATOR" "$UPLOAD" "$ARTIFACT_GUARD"; do
   [ -f "$file" ] || fail "missing macOS release distribution input: $file"
 done
 
@@ -240,6 +241,7 @@ grep -Fq "source-commit-not-current-head" "$tmp_dir/stale.out" ||
 
 "$GENERATOR" >/dev/null
 "$UPLOAD" >/dev/null
+"$ARTIFACT_GUARD" >/dev/null
 
 if git -C "$ROOT" ls-files | grep -Eq '^(apps/desktop-tauri/(public-release|beta-artifacts)/|public-release/|beta-artifacts/)'; then
   fail "generated release artifact path is tracked"
@@ -270,4 +272,5 @@ macos_release_distribution_artifact_ready=false
 release_upload_authorized=false
 release_body_edit_authorized=false
 generated_release_artifacts_commit_allowed=false
+generated_artifacts_staged=false
 STATUS

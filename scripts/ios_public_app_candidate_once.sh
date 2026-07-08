@@ -18,9 +18,11 @@ must_contain() {
 DOC="reference/IOS_PUBLIC_APP_CANDIDATE.md"
 VALIDATOR="scripts/validate_ios_public_artifact_manifest.mjs"
 SHELL_BOUNDARY="scripts/verify_ios_shell_boundary.sh"
+ARTIFACT_GUARD="scripts/mobile_generated_artifact_guard_once.sh"
 
 for file in "$DOC" "$VALIDATOR" \
   "$SHELL_BOUNDARY" \
+  "$ARTIFACT_GUARD" \
   "apps/mobile/ios/AnotherDimension/Info.plist" \
   "apps/mobile/ios/AnotherDimension/AnotherDimension.entitlements" \
   "apps/mobile/ios/AnotherDimension/JsonBridgeSharedCoreAdapter.swift" \
@@ -39,6 +41,7 @@ for flag in \
   "ios_public_artifact_checksum_verifier_ready=true" \
   "ios_shell_uses_shared_core_json_bridge_candidate=true" \
   "ios_forbidden_dependency_scan_ready=true" \
+  "ios_generated_artifact_guard_ready=true" \
   "ios_minimal_entitlements_review_ready=true" \
   "ios_release_package_smoke_ready=false" \
   "ios_real_device_smoke_passed=false" \
@@ -66,6 +69,7 @@ must_contain "apps/mobile/ios/AnotherDimension/JsonBridgeSharedCoreAdapter.swift
 node --check "$VALIDATOR" >/dev/null
 "$SHELL_BOUNDARY" >/dev/null
 xcodebuild -list -project apps/mobile/ios/AnotherDimension.xcodeproj >/dev/null
+"$ARTIFACT_GUARD" >/dev/null
 scripts/verify_mobile_forbidden_dependency_scan_once.sh >/dev/null
 
 empty_output="$(node "$VALIDATOR" "$ROOT/apps/mobile/ios/public-release")"
@@ -189,6 +193,7 @@ ios_shell_blocked_surface_ui_complete=true
 ios_public_artifact_checksum_verifier_ready=true
 ios_shell_uses_shared_core_json_bridge_candidate=true
 ios_forbidden_dependency_scan_ready=true
+ios_generated_artifact_guard_ready=true
 ios_minimal_entitlements_review_ready=true
 ios_release_package_smoke_ready=false
 ios_real_device_smoke_passed=false

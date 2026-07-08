@@ -17,8 +17,9 @@ must_contain() {
 
 DOC="reference/FINAL_100_EVIDENCE_LEDGER_SCHEMA.md"
 VALIDATOR="scripts/validate_final_100_evidence_ledger.mjs"
+ARTIFACT_GUARD="scripts/mobile_generated_artifact_guard_once.sh"
 
-for file in "$DOC" "$VALIDATOR" "reference/FINAL_100_CLAIM_GATE.md"; do
+for file in "$DOC" "$VALIDATOR" "$ARTIFACT_GUARD" "reference/FINAL_100_CLAIM_GATE.md"; do
   [ -f "$file" ] || fail "missing final 100 evidence ledger input: $file"
 done
 
@@ -55,8 +56,10 @@ must_contain "$VALIDATOR" "final_100_evidence_ledger_requires_macos_dmg_containe
 must_contain "$VALIDATOR" "status=final-100-evidence-candidate-requires-review"
 must_contain "reference/FINAL_100_CLAIM_GATE.md" "final_100_evidence_ledger_schema_available=true"
 must_contain "scripts/final_100_claim_gate_once.sh" "final_100_evidence_ledger_once.sh"
+must_contain "$ARTIFACT_GUARD" "generated_artifacts_staged=false"
 
 node --check "$VALIDATOR" >/dev/null
+"$ARTIFACT_GUARD" >/dev/null
 
 empty_output="$(node "$VALIDATOR" "$ROOT/docs/final-100-evidence")"
 printf '%s\n' "$empty_output" | grep -Fq "status=waiting-for-final-100-evidence-ledger" ||
@@ -378,4 +381,5 @@ whole_target_standard_100_claim_allowed=false
 production_ready_claim_allowed=false
 audited_claim_allowed=false
 sensitive_communication_allowed=false
+generated_artifacts_staged=false
 STATUS

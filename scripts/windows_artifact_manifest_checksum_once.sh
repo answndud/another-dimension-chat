@@ -28,8 +28,9 @@ VALIDATOR="scripts/validate_windows_artifact_manifest.mjs"
 GENERATOR="scripts/prepare_windows_public_artifact_metadata.sh"
 EXECUTION="reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
 SCHEMA="reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md"
+ARTIFACT_GUARD="scripts/mobile_generated_artifact_guard_once.sh"
 
-for file in "$DOC" "$VALIDATOR" "$GENERATOR" "$EXECUTION" "$SCHEMA"; do
+for file in "$DOC" "$VALIDATOR" "$GENERATOR" "$EXECUTION" "$SCHEMA" "$ARTIFACT_GUARD"; do
   [ -f "$file" ] || fail "missing Windows artifact manifest input: $file"
 done
 
@@ -199,6 +200,8 @@ fi
 grep -Fq "provenance-signing-status-mismatch" "$tmp_dir/bad-signing.out" ||
   fail "provenance signing mismatch rejection was not reported"
 
+"$ARTIFACT_GUARD" >/dev/null
+
 if git -C "$ROOT" ls-files | grep -Eq '^(apps/desktop-tauri/(public-release|beta-artifacts)/|public-release/|beta-artifacts/)'; then
   fail "generated Windows artifact path is tracked"
 fi
@@ -222,6 +225,7 @@ windows_installer_ready=false
 windows_signing_ready=false
 windows_public_artifact_upload_allowed=false
 windows_generated_artifact_commit_allowed=false
+generated_artifacts_staged=false
 production_ready_claim_allowed=false
 sensitive_communication_allowed=false
 STATUS

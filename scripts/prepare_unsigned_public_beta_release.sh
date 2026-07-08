@@ -98,6 +98,7 @@ require_release_output_dir() {
 check_artifact_boundary() {
   require_ignored_path "$ROOT_DIR/apps/desktop-tauri/public-release/"
   require_ignored_path "$ROOT_DIR/apps/desktop-tauri/beta-artifacts/"
+  "$ROOT_DIR/scripts/mobile_generated_artifact_guard_once.sh" >/dev/null
   if git -C "$ROOT_DIR" ls-files apps/desktop-tauri/public-release apps/desktop-tauri/beta-artifacts | grep -q .; then
     echo "FAIL generated release or beta artifact paths are tracked" >&2
     git -C "$ROOT_DIR" ls-files apps/desktop-tauri/public-release apps/desktop-tauri/beta-artifacts >&2

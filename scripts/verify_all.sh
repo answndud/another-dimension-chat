@@ -16,6 +16,7 @@ run_step() {
 
 cd "$ROOT_DIR"
 
+run_step "generated artifact guard" scripts/mobile_generated_artifact_guard_once.sh
 run_step "rustfmt" cargo fmt --all -- --check
 for test_name in \
   production_setup_drafts_can_encrypt_and_decrypt_envelope \

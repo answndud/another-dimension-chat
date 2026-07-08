@@ -24,6 +24,7 @@ backup dependencies.
 - ios_public_artifact_checksum_verifier_ready=true
 - ios_shell_uses_shared_core_json_bridge_candidate=true
 - ios_forbidden_dependency_scan_ready=true
+- ios_generated_artifact_guard_ready=true
 - ios_minimal_entitlements_review_ready=true
 - ios_release_package_smoke_ready=false
 - ios_real_device_smoke_passed=false
