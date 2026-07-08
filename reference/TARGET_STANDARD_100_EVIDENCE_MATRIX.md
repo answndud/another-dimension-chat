@@ -79,7 +79,8 @@ updated, and a later explicit release/claim task authorizes the wording.
 
 | Gate class | Required linked evidence | Current state |
 | --- | --- | --- |
-| Deployment 100 blocker resolution | [DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md](DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md), [TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md](TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md), [DEPLOYMENT_READINESS_GAP_REGISTER.md](DEPLOYMENT_READINESS_GAP_REGISTER.md) | linked; every false/hold flag is assigned to a source, external evidence, platform artifact, credential, or explicit release-authorization phase |
+| Deployment 100 blocker resolution | [DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md](DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md), [TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md](TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md), [TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md](TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md), [DEPLOYMENT_READINESS_GAP_REGISTER.md](DEPLOYMENT_READINESS_GAP_REGISTER.md) | linked; every false/hold flag is assigned to a source, external evidence, platform artifact, credential, or explicit release-authorization phase |
+| Final active queue closure | [TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md](TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md) | linked; W100-1 through R100-3 closed only by source/hold gates; 100% claims false |
 | Deployment readiness gap reconciliation | [DEPLOYMENT_READINESS_GAP_REGISTER.md](DEPLOYMENT_READINESS_GAP_REGISTER.md), [TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md](TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md) | linked; source-solved supported scopes separated from remaining external blockers |
 | Production claim gate | [PRODUCTION_READINESS_CLAIM_GATE.md](PRODUCTION_READINESS_CLAIM_GATE.md), [PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md](PRODUCTION_CLAIM_RELEASE_CLASS_DECISION.md), [STABLE_MACOS_V1_RELEASE_GATE.md](STABLE_MACOS_V1_RELEASE_GATE.md) | linked; production claim false |
 | Audit/review | [EXTERNAL_REVIEW_AUDIT_READINESS.md](EXTERNAL_REVIEW_AUDIT_READINESS.md), [EXTERNAL_REVIEW_INTAKE_RUNBOOK.md](EXTERNAL_REVIEW_INTAKE_RUNBOOK.md), [AUDIT_FINDING_TRACKER.md](AUDIT_FINDING_TRACKER.md), [INDEPENDENT_REVIEW_PACKET.md](INDEPENDENT_REVIEW_PACKET.md), [EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md](EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md) | linked; intake operator-ready; audit/review completion false |
@@ -106,6 +107,10 @@ updated, and a later explicit release/claim task authorizes the wording.
 - evidence_matrix_machine_checkable=true
 - target_standard_100_evidence_matrix_available=true
 - target_standard_100_active_queue_source_closure_available=true
+- target_standard_100_final_active_queue_closure_available=true
+- final_active_queue_closure_reviewed=true
+- final_active_queue_range=W100-1-through-R100-3
+- all_remaining_active_phases_closed_by_source_or_hold_gate=true
 - deployment_100_blocker_resolution_plan_available=true
 - m100_1_credential_blocker_closed=true
 - release_credential_policy_waiver_authorized=true
@@ -286,6 +291,20 @@ updated, and a later explicit release/claim task authorizes the wording.
 - production_operations_evidence_required_for_claims=true
 - real_incident_response_execution_required_for_claims=true
 - production_operational_readiness_claim_allowed=false
+- w100_1_windows_runtime_parity_scope_blocker_closed=true
+- w100_2_windows_public_artifact_blocker_closed=true
+- x100_1_cross_desktop_product_parity_blocker_closed=true
+- mob100_0_mobile_scope_unlock_decision_closed=true
+- mob100_1_mobile_api_stabilization_blocker_closed=true
+- mob100_2_android_public_app_candidate_blocker_closed=true
+- mob100_3_ios_public_app_candidate_blocker_closed=true
+- x100_2_cross_platform_field_support_blocker_closed=true
+- r100_1_production_claim_gate_decision_closed=true
+- r100_2_stable_macos_release_decision_closed=true
+- r100_3_whole_product_target_standard_gate_decision_closed=true
+- plan_active_queue_complete=true
+- production_claim_gate_passed=false
+- stable_release_publication_performed=false
 - windows_public_artifact_available=false
 - android_public_artifact_available=false
 - ios_public_artifact_available=false
@@ -295,4 +314,4 @@ updated, and a later explicit release/claim task authorizes the wording.
 - generated_release_artifacts_staged=false
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false
-- next_required_phase=Phase W100-1 - Windows Runtime Parity Scope Unlock
+- next_required_phase=no-active-source-queue

@@ -31,6 +31,7 @@ for file in "$DOC" \
   "reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md" \
   "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md" \
   "reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md" \
+  "reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md" \
   "reference/ANDROID_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md" \
   "reference/IOS_IMPLEMENTATION_AUTHORIZATION_SCOPE_DOWN.md" \
   "README.md" "SECURITY.md"; do
@@ -38,6 +39,20 @@ for file in "$DOC" \
 done
 
 must_contain "$DOC" "rb_13_cross_platform_target_standard_final_closure_reviewed=true"
+must_contain "$DOC" "target_standard_100_final_active_queue_closure_available=true"
+must_contain "$DOC" "final_active_queue_closure_reviewed=true"
+must_contain "$DOC" "all_remaining_active_phases_closed_by_source_or_hold_gate=true"
+must_contain "$DOC" "w100_1_windows_runtime_parity_scope_blocker_closed=true"
+must_contain "$DOC" "w100_2_windows_public_artifact_blocker_closed=true"
+must_contain "$DOC" "x100_1_cross_desktop_product_parity_blocker_closed=true"
+must_contain "$DOC" "mob100_0_mobile_scope_unlock_decision_closed=true"
+must_contain "$DOC" "mob100_1_mobile_api_stabilization_blocker_closed=true"
+must_contain "$DOC" "mob100_2_android_public_app_candidate_blocker_closed=true"
+must_contain "$DOC" "mob100_3_ios_public_app_candidate_blocker_closed=true"
+must_contain "$DOC" "x100_2_cross_platform_field_support_blocker_closed=true"
+must_contain "$DOC" "r100_1_production_claim_gate_decision_closed=true"
+must_contain "$DOC" "r100_2_stable_macos_release_decision_closed=true"
+must_contain "$DOC" "r100_3_whole_product_target_standard_gate_decision_closed=true"
 must_contain "$DOC" "target_standard_matrix_available=true"
 must_contain "$DOC" "platform_artifact_matrix_available=true"
 must_contain "$DOC" "platform_public_claims_aligned=true"
@@ -63,6 +78,8 @@ must_contain "$DOC" "reliable_external_delivery_claim_allowed=false"
 must_contain "$DOC" "briar_cwtch_equivalent_claim_allowed=false"
 must_contain "$DOC" "censorship_resistant_claim_allowed=false"
 must_contain "$DOC" "stable_release_allowed=false"
+must_contain "$DOC" "production_claim_gate_passed=false"
+must_contain "$DOC" "stable_release_publication_performed=false"
 must_contain "$DOC" "lower_release_class_claim_boundary_ready=true"
 must_contain "$DOC" "remaining_limitations_public_safe=true"
 must_contain "$DOC" "plan_active_queue_complete=true"
@@ -95,6 +112,8 @@ scripts/ios_implementation_authorization_scope_down_once.sh >/dev/null
 cat <<'STATUS'
 status=cross-platform-target-standard-final-closure-complete
 rb_13_cross_platform_target_standard_final_closure_reviewed=true
+final_active_queue_closure_reviewed=true
+all_remaining_active_phases_closed_by_source_or_hold_gate=true
 target_standard_matrix_available=true
 platform_artifact_matrix_available=true
 platform_public_claims_aligned=true
@@ -111,6 +130,8 @@ reliable_external_delivery_claim_allowed=false
 briar_cwtch_equivalent_claim_allowed=false
 censorship_resistant_claim_allowed=false
 stable_release_allowed=false
+production_claim_gate_passed=false
+stable_release_publication_performed=false
 lower_release_class_claim_boundary_ready=true
 plan_active_queue_complete=true
 STATUS

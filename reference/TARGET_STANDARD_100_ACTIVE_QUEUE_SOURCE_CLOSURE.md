@@ -5,11 +5,12 @@ macOS public app 100%, full TARGET_STANDARD 100%, production readiness, audit
 completion, stable release approval, reliable external onion delivery, or
 sensitive communication permission.
 
-This record maps each remaining `docs/PLAN.md` Active phase to a public-safe
-source/reference/script gate. Phases that require external credentials, external
-reviewers, real field evidence, live release mutation, Windows hardware, or
-explicit mobile runtime authorization are closed only as hold gates. False and
-hold states remain visible.
+This record maps each `docs/PLAN.md` Active phase to a public-safe
+source/reference/script gate. The final W100-1 through R100-3 range is closed
+by `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`. Phases that
+require external credentials, external reviewers, real field evidence, live
+release mutation, Windows hardware, or explicit mobile runtime authorization
+are closed only as hold gates. False and hold states remain visible.
 
 ## Phase Closure Matrix
 
@@ -32,17 +33,17 @@ hold states remain visible.
 | A100-2 external review execution and finding closure | closed by active-queue waiver, review/audit claims held | `reference/EXTERNAL_REVIEW_AUDIT_READINESS.md`, `reference/AUDIT_FINDING_TRACKER.md` |
 | F100-1 external two-machine field evidence program | closed by active-queue waiver, field/reliability claims held | `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md`, `scripts/field_evidence_reliability_program_once.sh` |
 | O100-1 operational support, incident, and vulnerability readiness | closed by source gate, production operations claims held | `reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md`, `reference/INCIDENT_TABLETOP_RECORD.md`, `scripts/operational_support_incident_process_once.sh` |
-| W100-1 Windows runtime parity scope unlock | source handoff gate | `scripts/desktop_windows_local_runtime_smoke_boundary_once.sh` |
-| W100-2 Windows public artifact and distribution | hold gate | `reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md`, `scripts/windows_public_artifact_scope_down_once.sh` |
-| X100-1 cross-desktop product parity | source matrix gate | `reference/CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md`, `scripts/cross_platform_target_standard_final_closure_once.sh` |
-| MOB100-0 mobile scope unlock decision | explicit hold gate | `scripts/verify_mobile_authorization_boundary_closure.sh` |
-| MOB100-1 shared Rust core mobile API stabilization | source boundary gate | `scripts/verify_mobile_binding_gate.sh` |
-| MOB100-2 Android public app candidate | source shell hold gate | `scripts/verify_android_shell_boundary.sh` |
-| MOB100-3 iOS public app candidate | source shell hold gate | `scripts/verify_ios_shell_boundary.sh` |
-| X100-2 cross-platform field evidence and support | hold gate | `reference/CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md`, `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md` |
-| R100-1 production claim gate pass | hold gate | `reference/PRODUCTION_READINESS_CLAIM_GATE.md`, `scripts/production_claim_policy_once.sh` |
-| R100-2 stable macOS public release | hold gate, no release mutation | `reference/GITHUB_RELEASE_PUBLICATION_SCOPE_DOWN.md`, `reference/STABLE_MACOS_V1_RELEASE_GATE.md` |
-| R100-3 whole-product TARGET_STANDARD 100 release gate | hold gate | `reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md`, `scripts/target_standard_100_evidence_matrix_once.sh` |
+| W100-1 Windows runtime parity scope unlock | closed by source runtime handoff, real Windows hold | `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`, `scripts/desktop_windows_local_runtime_smoke_boundary_once.sh` |
+| W100-2 Windows public artifact and distribution | closed by artifact hold, no packaging/upload | `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`, `reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md`, `scripts/windows_public_artifact_scope_down_once.sh` |
+| X100-1 cross-desktop product parity | closed by source matrix, platform claims aligned | `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`, `reference/CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md`, `scripts/cross_platform_target_standard_final_closure_once.sh` |
+| MOB100-0 mobile scope unlock decision | closed by authorization hold, no runtime expansion | `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`, `scripts/verify_mobile_authorization_boundary_closure.sh` |
+| MOB100-1 shared Rust core mobile API stabilization | closed by source boundary gate | `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`, `scripts/verify_mobile_binding_gate.sh` |
+| MOB100-2 Android public app candidate | closed by source shell hold, no APK/AAB | `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`, `scripts/verify_android_shell_boundary.sh` |
+| MOB100-3 iOS public app candidate | closed by source shell hold, no IPA/TestFlight | `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`, `scripts/verify_ios_shell_boundary.sh` |
+| X100-2 cross-platform field evidence and support | closed by external field/platform artifact hold | `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`, `reference/CROSS_PLATFORM_TARGET_STANDARD_FINAL_CLOSURE.md`, `reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md` |
+| R100-1 production claim gate pass | closed by claim-denied decision | `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`, `reference/PRODUCTION_READINESS_CLAIM_GATE.md`, `scripts/production_claim_policy_once.sh` |
+| R100-2 stable macOS public release | closed by no-mutation release hold | `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`, `reference/GITHUB_RELEASE_PUBLICATION_SCOPE_DOWN.md`, `reference/STABLE_MACOS_V1_RELEASE_GATE.md` |
+| R100-3 whole-product TARGET_STANDARD 100 release gate | closed by final 100% hold decision | `reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md`, `reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md`, `scripts/target_standard_100_evidence_matrix_once.sh` |
 
 ## Current Non-Claims
 
@@ -62,6 +63,10 @@ censorship-resistant.
 
 - target_standard_100_active_queue_source_closure_reviewed=true
 - all_plan_active_phases_have_source_or_hold_gate=true
+- target_standard_100_final_active_queue_closure_available=true
+- final_active_queue_closure_reviewed=true
+- final_active_queue_range=W100-1-through-R100-3
+- all_remaining_active_phases_closed_by_source_or_hold_gate=true
 - false_or_hold_items_hidden=false
 - public_claim_ahead_of_evidence=false
 - production_ready_claim_allowed=false
@@ -109,6 +114,25 @@ censorship-resistant.
 - production_operations_evidence_required_for_claims=true
 - real_incident_response_execution_required_for_claims=true
 - production_operational_readiness_claim_allowed=false
+- w100_1_windows_runtime_parity_scope_blocker_closed=true
+- w100_2_windows_public_artifact_blocker_closed=true
+- x100_1_cross_desktop_product_parity_blocker_closed=true
+- mob100_0_mobile_scope_unlock_decision_closed=true
+- mob100_1_mobile_api_stabilization_blocker_closed=true
+- mob100_2_android_public_app_candidate_blocker_closed=true
+- mob100_3_ios_public_app_candidate_blocker_closed=true
+- x100_2_cross_platform_field_support_blocker_closed=true
+- r100_1_production_claim_gate_decision_closed=true
+- r100_2_stable_macos_release_decision_closed=true
+- r100_3_whole_product_target_standard_gate_decision_closed=true
+- plan_active_queue_complete=true
+- next_required_phase=no-active-source-queue
+- windows_real_runtime_smoke_passed=false
+- windows_public_artifact_ready=false
+- android_public_artifact_ready=false
+- ios_public_artifact_ready=false
+- production_claim_gate_passed=false
+- stable_release_publication_performed=false
 - review_packet_synced_to_latest_source_gates=true
 - review_packet_includes_c100_5_onion_boundary=true
 - review_packet_includes_target_standard_matrix=true

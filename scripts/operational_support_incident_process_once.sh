@@ -62,7 +62,7 @@ must_contain "$PROCESS" "raw_log_request_allowed=false"
 must_contain "$PROCESS" "production_operational_readiness_claim_allowed=false"
 must_contain "$PROCESS" "security_ready_claimed=false"
 must_contain "$PROCESS" "sensitive_communication_allowed=false"
-must_contain "$PROCESS" "next_required_phase=Phase W100-1 - Windows Runtime Parity Scope Unlock"
+must_contain "$PROCESS" "next_required_phase=no-active-source-queue"
 
 must_contain "$TABLETOP" "incident_tabletop_completed=true"
 must_contain "$TABLETOP" "o100_1_operations_blocker_closed=true"
@@ -140,5 +140,5 @@ raw_log_request_allowed=false
 production_operational_readiness_claim_allowed=false
 security_ready_claimed=false
 sensitive_communication_allowed=false
-next_required_phase=Phase-W100-1-Windows-Runtime-Parity-Scope-Unlock
+next_required_phase=no-active-source-queue
 STATUS

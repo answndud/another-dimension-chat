@@ -172,6 +172,10 @@ audit, field evidence, usability evidence, or any production claim.
 - support_template_review_completed=true
 - production_operational_readiness_claim_allowed=false
 - ops_10_stable_macos_v1_release_gate_reviewed=true
+- r100_1_production_claim_gate_decision_closed=true
+- production_claim_gate_passed=false
+- production_claim_gate_passed_by_evidence=false
+- final_active_queue_closure_reviewed=true
 - stable_release_gate_decision=hold
 - stable_macos_v1_release_allowed=false
 - public_stable_release_allowed=false

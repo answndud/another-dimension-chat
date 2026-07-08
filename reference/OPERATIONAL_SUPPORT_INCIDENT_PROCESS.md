@@ -135,4 +135,4 @@ stable release authority, owner approval, and later claim-policy review.
 - production_operational_readiness_claim_allowed=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
-- next_required_phase=Phase W100-1 - Windows Runtime Parity Scope Unlock
+- next_required_phase=no-active-source-queue
