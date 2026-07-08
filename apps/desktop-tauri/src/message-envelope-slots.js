@@ -2,20 +2,55 @@ export function messageEnvelopeSlotPayload(slot) {
   return typeof slot === "string" ? slot : String(slot?.payload ?? "").trim();
 }
 
-export function messageEnvelopeSlotMatchesEntry(slot, entry) {
-  if (!slot || !entry) {
-    return false;
+export function messageEnvelopeSlotMismatchReason(slot, entry) {
+  if (!slot) {
+    return "empty-slot";
+  }
+  if (!entry) {
+    return "missing-entry";
   }
   if (typeof slot === "string") {
-    return true;
+    return "legacy-unscoped-slot";
   }
-  return (
-    Number.parseInt(slot.messageNumber, 10) === Number.parseInt(entry.messageNumber, 10) &&
-    String(slot.sender ?? "").trim().toLowerCase() === String(entry.sender ?? "").trim().toLowerCase() &&
-    String(slot.receiver ?? "").trim().toLowerCase() === String(entry.receiver ?? "").trim().toLowerCase() &&
-    String(slot.roomFingerprint ?? "").trim() === String(entry.roomFingerprint ?? "").trim() &&
-    String(slot.message ?? "").trim() === String(entry.message ?? "").trim()
-  );
+  if (Number.parseInt(slot.messageNumber, 10) !== Number.parseInt(entry.messageNumber, 10)) {
+    return "message-number-mismatch";
+  }
+  if (String(slot.sender ?? "").trim().toLowerCase() !== String(entry.sender ?? "").trim().toLowerCase()) {
+    return "sender-mismatch";
+  }
+  if (String(slot.receiver ?? "").trim().toLowerCase() !== String(entry.receiver ?? "").trim().toLowerCase()) {
+    return "receiver-mismatch";
+  }
+  if (String(slot.roomFingerprint ?? "").trim() !== String(entry.roomFingerprint ?? "").trim()) {
+    return "room-fingerprint-mismatch";
+  }
+  if (String(slot.message ?? "").trim() !== String(entry.message ?? "").trim()) {
+    return "message-mismatch";
+  }
+  return "matched";
+}
+
+export function messageEnvelopeSlotRecoveryHint(slot, entry) {
+  switch (messageEnvelopeSlotMismatchReason(slot, entry)) {
+    case "matched":
+      return "Envelope slot matches the selected pending message.";
+    case "legacy-unscoped-slot":
+      return "Stored envelope is unscoped. Export this pending message again before importing.";
+    case "room-fingerprint-mismatch":
+      return "Stored envelope belongs to another room. Reopen the matching room or export this pending message again.";
+    case "message-number-mismatch":
+    case "message-mismatch":
+      return "Stored envelope is stale for this pending message. Export the selected message again before importing.";
+    case "sender-mismatch":
+    case "receiver-mismatch":
+      return "Stored envelope is for another sender or receiver. Select the matching pending row before importing.";
+    default:
+      return "Select a pending message with a matching scoped envelope before importing.";
+  }
+}
+
+export function messageEnvelopeSlotMatchesEntry(slot, entry) {
+  return messageEnvelopeSlotMismatchReason(slot, entry) === "matched";
 }
 
 export function messageEnvelopeSlotReadyForEntry(slot, entry) {

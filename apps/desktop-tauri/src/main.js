@@ -67,6 +67,7 @@ import {
   messageEnvelopeSlotImportReadyForEntry,
   messageEnvelopeSlotMatchesEntry,
   messageEnvelopeSlotPayload,
+  messageEnvelopeSlotRecoveryHint,
 } from "./message-envelope-slots.js";
 import { combinedTwoProfileTranscriptTsv } from "./transcript-export.js";
 import { transcriptRetentionView } from "./transcript-retention.js";
@@ -9642,9 +9643,6 @@ function clearMessageEnvelopeFieldsForPayload(payload) {
 function pruneStaleMessageEnvelopeSlots() {
   let pruned = 0;
   for (const [key, slot] of productionPayloadSlots.messageEnvelope.entries()) {
-    if (typeof slot === "string") {
-      continue;
-    }
     const payload = messageEnvelopeSlotPayload(slot);
     const stillImportReadyForConversation = [...productionTwoProfileConversationEntries.values()].some((entry) =>
       messageEnvelopeSlotImportReadyForEntry(slot, entry),
@@ -11972,7 +11970,7 @@ function loadProductionMessageEnvelope() {
     setProductionMessageState("Remote envelope slot stale");
     setText(
       fields.productionMessageWarning,
-      `Stored ${counterpart} envelope does not match selected message #${entry.messageNumber}. Export that message again before importing.`,
+      `${messageEnvelopeSlotRecoveryHint(slot, entry)} Pending row: ${counterpart} -> ${profile} #${entry.messageNumber}.`,
     );
     return;
   }

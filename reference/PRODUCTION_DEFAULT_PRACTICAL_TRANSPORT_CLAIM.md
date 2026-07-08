@@ -51,6 +51,8 @@ Do not claim:
 
 - `production_practical_transport_split_summary`
 - `production_transport_envelope_io_boundary_summary`
+- `reference/MANUAL_COURIER_ENVELOPE_RECOVERY.md`
+- `scripts/desktop_manual_courier_envelope_recovery_once.sh`
 - desktop public diagnostics:
   `supported_default_transport_ready=true`
 - desktop public diagnostics:
@@ -71,6 +73,11 @@ Do not claim:
 - supported_default_transport_ready=true
 - supported_default_transport_scope=local-manual-courier-envelope-exchange-only
 - default_transport_product_path=local-manual-encrypted-envelope-exchange
+- manual_courier_envelope_recovery_available=true
+- legacy_unscoped_envelope_import_ready=false
+- wrong_room_envelope_import_ready=false
+- stale_envelope_import_ready=false
+- stale_envelope_recovery_hint_ready=true
 - default_transport_network_io=false
 - default_transport_automatic_delivery=false
 - default_transport_central_message_server=false

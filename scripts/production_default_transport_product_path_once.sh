@@ -24,6 +24,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 DOC="reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md"
+RECOVERY_DOC="reference/MANUAL_COURIER_ENVELOPE_RECOVERY.md"
+RECOVERY_GATE="scripts/desktop_manual_courier_envelope_recovery_once.sh"
 
 must_contain "$DOC" "production_default_transport_path_reviewed=true"
 must_contain "$DOC" "c100_4_transport_blocker_closed=true"
@@ -32,6 +34,11 @@ must_contain "$DOC" "default_transport_waiver_scope=active-queue-unblock-only"
 must_contain "$DOC" "default_transport_usability_evidence_required_for_claims=true"
 must_contain "$DOC" "default_transport_field_evidence_required_for_claims=true"
 must_contain "$DOC" "default_transport_product_path=local-manual-encrypted-envelope-exchange"
+must_contain "$DOC" "manual_courier_envelope_recovery_available=true"
+must_contain "$DOC" "legacy_unscoped_envelope_import_ready=false"
+must_contain "$DOC" "wrong_room_envelope_import_ready=false"
+must_contain "$DOC" "stale_envelope_import_ready=false"
+must_contain "$DOC" "stale_envelope_recovery_hint_ready=true"
 must_contain "$DOC" "default_transport_network_io=false"
 must_contain "$DOC" "default_transport_automatic_delivery=false"
 must_contain "$DOC" "default_transport_central_message_server=false"
@@ -57,6 +64,8 @@ must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_4_default_trans
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "production_transport_ready=false"
 
 must_contain "scripts/desktop_default_transport_boundary_once.sh" "status=desktop-default-transport-boundary-source-ready"
+must_contain "$RECOVERY_DOC" "manual_courier_envelope_recovery_available=true"
+must_contain "$RECOVERY_GATE" "status=desktop-manual-courier-envelope-recovery-ready"
 must_contain "apps/desktop-tauri/src/private-delivery-state.js" "default_transport_path=local-manual-encrypted-envelope-exchange"
 must_contain "apps/desktop-tauri/src/private-delivery-state.js" "default_transport_network_io=false"
 must_contain "apps/desktop-tauri/src/private-delivery-state.js" "high_risk_onion_direct_fallback=false"
@@ -84,6 +93,7 @@ for file in "$DOC" "README.md" "SECURITY.md" "reference/TRANSPORT_DECISION.md"; 
 done
 
 scripts/desktop_default_transport_boundary_once.sh >/dev/null
+scripts/desktop_manual_courier_envelope_recovery_once.sh >/dev/null
 
 cat <<'STATUS'
 status=production-default-transport-product-path-ready
@@ -94,6 +104,11 @@ default_transport_waiver_scope=active-queue-unblock-only
 default_transport_usability_evidence_required_for_claims=true
 default_transport_field_evidence_required_for_claims=true
 default_transport_product_path=local-manual-encrypted-envelope-exchange
+manual_courier_envelope_recovery_available=true
+legacy_unscoped_envelope_import_ready=false
+wrong_room_envelope_import_ready=false
+stale_envelope_import_ready=false
+stale_envelope_recovery_hint_ready=true
 default_transport_network_io=false
 default_transport_automatic_delivery=false
 default_transport_central_message_server=false

@@ -91,6 +91,10 @@ decision exists.
   `crates/core/src/lib.rs`
 - Default transport beta verifier:
   `scripts/desktop_default_transport_boundary_once.sh`
+- Manual courier envelope recovery verifier:
+  `scripts/desktop_manual_courier_envelope_recovery_once.sh`
+- Manual courier envelope recovery contract:
+  `reference/MANUAL_COURIER_ENVELOPE_RECOVERY.md`
 - Desktop diagnostics default transport status:
   `apps/desktop-tauri/src/private-delivery-state.js`
 - UI explicit private delivery gate:
@@ -101,6 +105,8 @@ Targeted tests that anchor this gate:
 
 - `production_practical_transport_split_keeps_default_manual_and_onion_advanced`
 - `production_transport_envelope_io_boundary_closes_without_external_evidence_claim`
+- `manual message envelope slots are import-ready only for active lifecycle rows`
+- `manual message envelope slots are scoped to the room fingerprint`
 - `private delivery stays explicit before network work starts`
 - `default transport boundary keeps the public diagnostic path manual and non-centralized`
 
@@ -116,6 +122,11 @@ Targeted tests that anchor this gate:
 - supported_default_transport_ready=true
 - supported_default_transport_scope=local-manual-courier-envelope-exchange-only
 - default_transport_product_path=local-manual-encrypted-envelope-exchange
+- manual_courier_envelope_recovery_available=true
+- legacy_unscoped_envelope_import_ready=false
+- wrong_room_envelope_import_ready=false
+- stale_envelope_import_ready=false
+- stale_envelope_recovery_hint_ready=true
 - default_transport_network_io=false
 - default_transport_automatic_delivery=false
 - default_transport_central_message_server=false
