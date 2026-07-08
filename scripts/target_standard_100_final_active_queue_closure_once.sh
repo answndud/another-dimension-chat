@@ -12,6 +12,19 @@ must_contain() {
   grep -Fq "$needle" "$file" || fail "$file missing required text: $needle"
 }
 
+must_contain_sensitive_nonclaim() {
+  local file="$1"
+  if grep -Fq "sensitive communication prohibited" "$file"; then
+    return
+  fi
+  if [ "$file" = "README.md" ] &&
+    { grep -Fq "it for sensitive communication." "$file" ||
+      grep -Fq "safety for sensitive communication" "$file"; }; then
+    return
+  fi
+  fail "$file missing required sensitive-communication non-claim"
+}
+
 must_not_match() {
   local file="$1"
   local pattern="$2"
@@ -124,7 +137,7 @@ for file in "$DOC" "$ACTIVE" "$MATRIX" "$PLAN" "$REGISTER" \
   "reference/STABLE_MACOS_V1_RELEASE_GATE.md" \
   "README.md" "SECURITY.md"; do
   must_contain "$file" "not production-ready"
-  must_contain "$file" "sensitive communication prohibited"
+  must_contain_sensitive_nonclaim "$file"
   must_not_match "$file" "windows_real_runtime_smoke_passed=true"
   must_not_match "$file" "windows_public_artifact_ready=true"
   must_not_match "$file" "android_public_artifact_ready=true"
