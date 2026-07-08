@@ -244,6 +244,27 @@ The public threat model is tracked in `reference/PUBLIC_THREAT_MODEL.md`, and th
 
 Do not use this project to communicate sensitive information.
 
+## High-Risk Mode Claim Matrix
+
+High-Risk Mode uses a defined threat-model matrix rather than a broad
+"high-risk safe" claim.
+
+| Attacker class | Status | Boundary |
+| --- | --- | --- |
+| Remote passive observer | mitigated | Message content uses encrypted manual envelopes and network work is explicit, but metadata and global traffic correlation are not fully hidden. |
+| Remote active attacker | mitigated | Pairing, envelope, replay, and transport boundaries fail closed, but this is not an audited active-attack proof. |
+| Malicious peer | mitigated | Signed invites, safety checks, duplicate handling, and malformed payload rejection reduce false-safe states. |
+| Local-at-rest attacker | mitigated | Passphrase-first encrypted local storage is required, but unlocked or compromised endpoints are outside the claim. |
+| Supply-chain/update attacker | mitigated | Manual same-release checksum, provenance, and advisory paths reduce update risk without claiming audited supply-chain security. |
+| Compromised endpoint | not_protected | Malware or full device compromise can observe plaintext, keys, UI, and user actions outside the app boundary. |
+| Direct coercion | not_protected | The app cannot prevent forced disclosure or forced action; panic controls are mitigation only. |
+| Global traffic correlation | not_protected | Metadata minimization can reduce exposure, but full global traffic-correlation defense is not claimed. |
+
+Public wording may use only `protected` or `mitigated` entries as implemented
+feature targets. It must not claim audited security, Briar/Cwtch equivalence,
+compromised-device safety, coercion safety, full censorship resistance, full
+global-correlation safety, or reliable external onion delivery.
+
 ## Reporting Security Issues
 
 If you find a security issue, please use GitHub's private vulnerability reporting feature if it is enabled for the repository.
@@ -348,8 +369,9 @@ This project does not currently claim:
 - External audit, independent review, reviewer signoff, or public user safety signoff.
 - Protection against device compromise.
 - Protection against coercion.
-- Protection against malicious contacts.
 - Protection against global traffic correlation.
+- Audited proof against malicious contacts. Current signed-invite, safety-check,
+  duplicate, and malformed-input handling is a mitigation target only.
 - Security superiority over Signal.
 - Briar/Cwtch-equivalent privacy or security level, repeated external onion
   evidence, offline mesh delivery, or security-ready status.

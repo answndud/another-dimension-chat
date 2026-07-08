@@ -659,6 +659,15 @@ current capability claim. The beta does not claim Briar/Cwtch equivalence,
 audited E2EE readiness, repeated external onion evidence, offline mesh
 delivery, independent review completion, or security-ready status.
 
+High-Risk Mode is a defined threat-model target, not a universal safety claim.
+It aims to mitigate remote passive observers, remote active attackers,
+malicious peers, local-at-rest attackers, and supply-chain/update attackers.
+It does not protect compromised endpoints, direct coercion, or full global
+traffic correlation. The project does not claim audited security,
+Briar/Cwtch-equivalent privacy, compromised-device safety, coercion safety,
+full censorship resistance, full global-correlation safety, or reliable
+external onion delivery.
+
 ## Repository Layout
 
 ```text

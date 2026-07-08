@@ -1274,6 +1274,86 @@ pub mod production {
         "relay_store_and_forward_requires_separate_no_trusted_server_decision",
     ];
 
+    const PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX: &[ProductionHighRiskThreatModelEntry] = &[
+        ProductionHighRiskThreatModelEntry {
+            attacker_class: "remote_passive_observer",
+            status: ProductionHighRiskProtectionStatus::Mitigated,
+            reason:
+                "message content uses encrypted manual envelopes and network delivery is explicit, but metadata and global correlation are not fully hidden",
+        },
+        ProductionHighRiskThreatModelEntry {
+            attacker_class: "remote_active_attacker",
+            status: ProductionHighRiskProtectionStatus::Mitigated,
+            reason:
+                "pairing, envelope, replay, and transport boundaries fail closed, but this is not an audited active-attack proof",
+        },
+        ProductionHighRiskThreatModelEntry {
+            attacker_class: "malicious_peer",
+            status: ProductionHighRiskProtectionStatus::Mitigated,
+            reason:
+                "signed invites, safety transcript checks, duplicate handling, and malformed payload rejection reduce false-safe states",
+        },
+        ProductionHighRiskThreatModelEntry {
+            attacker_class: "local_at_rest_attacker",
+            status: ProductionHighRiskProtectionStatus::Mitigated,
+            reason:
+                "passphrase-first encrypted local storage is required, but an unlocked or compromised endpoint is outside the claim",
+        },
+        ProductionHighRiskThreatModelEntry {
+            attacker_class: "supply_chain_update_attacker",
+            status: ProductionHighRiskProtectionStatus::Mitigated,
+            reason:
+                "manual same-release checksum, provenance, and advisory paths reduce update risk without claiming audited supply-chain security",
+        },
+        ProductionHighRiskThreatModelEntry {
+            attacker_class: "compromised_endpoint",
+            status: ProductionHighRiskProtectionStatus::NotProtected,
+            reason:
+                "malware or full device compromise can observe plaintext, keys, UI, and user actions outside the app boundary",
+        },
+        ProductionHighRiskThreatModelEntry {
+            attacker_class: "direct_coercion",
+            status: ProductionHighRiskProtectionStatus::NotProtected,
+            reason:
+                "the app cannot prevent a person from forcing disclosure or action; later panic controls are mitigation only",
+        },
+        ProductionHighRiskThreatModelEntry {
+            attacker_class: "global_traffic_correlation",
+            status: ProductionHighRiskProtectionStatus::NotProtected,
+            reason:
+                "metadata minimization can reduce exposure, but full global traffic-correlation defense is not claimed",
+        },
+    ];
+
+    const PRODUCTION_HIGH_RISK_CLAIMABLE_STATUSES: &[ProductionHighRiskProtectionStatus] = &[
+        ProductionHighRiskProtectionStatus::Protected,
+        ProductionHighRiskProtectionStatus::Mitigated,
+    ];
+
+    const PRODUCTION_HIGH_RISK_FORBIDDEN_CLAIMS: &[&str] = &[
+        "audited_security",
+        "briar_cwtch_equivalent",
+        "signal_equivalent_or_superior",
+        "compromised_endpoint_safe",
+        "coercion_safe",
+        "full_global_traffic_correlation_safe",
+        "full_censorship_resistance",
+        "reliable_external_onion_delivery",
+    ];
+
+    const PRODUCTION_HIGH_RISK_ORDINARY_USE_CLAIMS: &[&str] = &[
+        "no_phone_number",
+        "no_email",
+        "no_global_account",
+        "no_searchable_username",
+        "no_central_contact_discovery",
+        "no_central_message_server",
+        "pairwise_invite",
+        "local_encrypted_storage",
+        "user_mediated_encrypted_exchange",
+        "redacted_diagnostics",
+    ];
+
     const PRODUCTION_SUPPLY_CHAIN_INTEGRITY_POLICIES: &[&str] = &[
         "manual_github_release_download",
         "dmg_sha256_required",
@@ -3285,6 +3365,60 @@ pub mod production {
         production_transport_ready: bool,
         reliable_external_delivery_claim_allowed: bool,
         security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionHighRiskProtectionStatus {
+        Protected,
+        Mitigated,
+        NotProtected,
+    }
+
+    impl ProductionHighRiskProtectionStatus {
+        pub fn as_str(self) -> &'static str {
+            match self {
+                Self::Protected => "protected",
+                Self::Mitigated => "mitigated",
+                Self::NotProtected => "not_protected",
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionHighRiskThreatModelEntry {
+        attacker_class: &'static str,
+        status: ProductionHighRiskProtectionStatus,
+        reason: &'static str,
+    }
+
+    impl ProductionHighRiskThreatModelEntry {
+        pub fn attacker_class(self) -> &'static str {
+            self.attacker_class
+        }
+
+        pub fn status(self) -> ProductionHighRiskProtectionStatus {
+            self.status
+        }
+
+        pub fn reason(self) -> &'static str {
+            self.reason
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionHighRiskThreatModelClaimBoundarySummary {
+        matrix: &'static [ProductionHighRiskThreatModelEntry],
+        claimable_statuses: &'static [ProductionHighRiskProtectionStatus],
+        forbidden_claims: &'static [&'static str],
+        ordinary_use_claims: &'static [&'static str],
+        app_matrix_required: bool,
+        public_copy_matrix_required: bool,
+        compromised_endpoint_not_protected: bool,
+        direct_coercion_not_protected: bool,
+        global_traffic_correlation_not_protected: bool,
+        audited_security_claim_allowed: bool,
+        briar_cwtch_equivalence_claim_allowed: bool,
+        boundary_closed: bool,
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -6560,6 +6694,56 @@ pub mod production {
 
         pub fn security_ready_claimed(self) -> bool {
             self.security_ready_claimed
+        }
+    }
+
+    impl ProductionHighRiskThreatModelClaimBoundarySummary {
+        pub fn matrix(self) -> &'static [ProductionHighRiskThreatModelEntry] {
+            self.matrix
+        }
+
+        pub fn claimable_statuses(self) -> &'static [ProductionHighRiskProtectionStatus] {
+            self.claimable_statuses
+        }
+
+        pub fn forbidden_claims(self) -> &'static [&'static str] {
+            self.forbidden_claims
+        }
+
+        pub fn ordinary_use_claims(self) -> &'static [&'static str] {
+            self.ordinary_use_claims
+        }
+
+        pub fn app_matrix_required(self) -> bool {
+            self.app_matrix_required
+        }
+
+        pub fn public_copy_matrix_required(self) -> bool {
+            self.public_copy_matrix_required
+        }
+
+        pub fn compromised_endpoint_not_protected(self) -> bool {
+            self.compromised_endpoint_not_protected
+        }
+
+        pub fn direct_coercion_not_protected(self) -> bool {
+            self.direct_coercion_not_protected
+        }
+
+        pub fn global_traffic_correlation_not_protected(self) -> bool {
+            self.global_traffic_correlation_not_protected
+        }
+
+        pub fn audited_security_claim_allowed(self) -> bool {
+            self.audited_security_claim_allowed
+        }
+
+        pub fn briar_cwtch_equivalence_claim_allowed(self) -> bool {
+            self.briar_cwtch_equivalence_claim_allowed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
         }
     }
 
@@ -18280,6 +18464,72 @@ pub mod production {
         }
     }
 
+    pub fn production_high_risk_threat_model_claim_boundary_summary(
+    ) -> ProductionHighRiskThreatModelClaimBoundarySummary {
+        let app_matrix_required = true;
+        let public_copy_matrix_required = true;
+        let compromised_endpoint_not_protected = PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX
+            .iter()
+            .any(|entry| {
+                entry.attacker_class == "compromised_endpoint"
+                    && entry.status == ProductionHighRiskProtectionStatus::NotProtected
+            });
+        let direct_coercion_not_protected = PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX
+            .iter()
+            .any(|entry| {
+                entry.attacker_class == "direct_coercion"
+                    && entry.status == ProductionHighRiskProtectionStatus::NotProtected
+            });
+        let global_traffic_correlation_not_protected = PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX
+            .iter()
+            .any(|entry| {
+                entry.attacker_class == "global_traffic_correlation"
+                    && entry.status == ProductionHighRiskProtectionStatus::NotProtected
+            });
+        let audited_security_claim_allowed = false;
+        let briar_cwtch_equivalence_claim_allowed = false;
+        let boundary_closed = app_matrix_required
+            && public_copy_matrix_required
+            && compromised_endpoint_not_protected
+            && direct_coercion_not_protected
+            && global_traffic_correlation_not_protected
+            && !audited_security_claim_allowed
+            && !briar_cwtch_equivalence_claim_allowed
+            && PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX.len() == 8
+            && PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX.iter().all(|entry| {
+                PRODUCTION_HIGH_RISK_CLAIMABLE_STATUSES.contains(&entry.status)
+                    || entry.status == ProductionHighRiskProtectionStatus::NotProtected
+            })
+            && PRODUCTION_HIGH_RISK_ORDINARY_USE_CLAIMS.contains(&"no_phone_number")
+            && PRODUCTION_HIGH_RISK_ORDINARY_USE_CLAIMS.contains(&"no_email")
+            && PRODUCTION_HIGH_RISK_ORDINARY_USE_CLAIMS.contains(&"no_global_account")
+            && PRODUCTION_HIGH_RISK_ORDINARY_USE_CLAIMS
+                .contains(&"no_central_contact_discovery")
+            && PRODUCTION_HIGH_RISK_ORDINARY_USE_CLAIMS
+                .contains(&"user_mediated_encrypted_exchange")
+            && PRODUCTION_HIGH_RISK_FORBIDDEN_CLAIMS.contains(&"audited_security")
+            && PRODUCTION_HIGH_RISK_FORBIDDEN_CLAIMS.contains(&"briar_cwtch_equivalent")
+            && PRODUCTION_HIGH_RISK_FORBIDDEN_CLAIMS.contains(&"compromised_endpoint_safe")
+            && PRODUCTION_HIGH_RISK_FORBIDDEN_CLAIMS.contains(&"coercion_safe")
+            && PRODUCTION_HIGH_RISK_FORBIDDEN_CLAIMS
+                .contains(&"full_global_traffic_correlation_safe");
+
+        ProductionHighRiskThreatModelClaimBoundarySummary {
+            matrix: PRODUCTION_HIGH_RISK_THREAT_MODEL_MATRIX,
+            claimable_statuses: PRODUCTION_HIGH_RISK_CLAIMABLE_STATUSES,
+            forbidden_claims: PRODUCTION_HIGH_RISK_FORBIDDEN_CLAIMS,
+            ordinary_use_claims: PRODUCTION_HIGH_RISK_ORDINARY_USE_CLAIMS,
+            app_matrix_required,
+            public_copy_matrix_required,
+            compromised_endpoint_not_protected,
+            direct_coercion_not_protected,
+            global_traffic_correlation_not_protected,
+            audited_security_claim_allowed,
+            briar_cwtch_equivalence_claim_allowed,
+            boundary_closed,
+        }
+    }
+
     pub fn production_supply_chain_integrity_boundary_summary(
     ) -> ProductionSupplyChainIntegrityBoundarySummary {
         let manual_github_release_download_required = true;
@@ -24436,6 +24686,86 @@ pub mod production {
             assert!(split
                 .policies()
                 .contains(&"relay_store_and_forward_requires_separate_no_trusted_server_decision"));
+        }
+
+        #[test]
+        fn production_high_risk_threat_model_claim_boundary_is_explicit_and_bounded() {
+            let boundary = production_high_risk_threat_model_claim_boundary_summary();
+            let status_for = |attacker_class: &str| {
+                boundary
+                    .matrix()
+                    .iter()
+                    .find(|entry| entry.attacker_class() == attacker_class)
+                    .map(|entry| entry.status())
+            };
+
+            assert!(boundary.boundary_closed());
+            assert!(boundary.app_matrix_required());
+            assert!(boundary.public_copy_matrix_required());
+            assert_eq!(boundary.matrix().len(), 8);
+            assert_eq!(
+                status_for("remote_passive_observer"),
+                Some(ProductionHighRiskProtectionStatus::Mitigated)
+            );
+            assert_eq!(
+                status_for("remote_active_attacker"),
+                Some(ProductionHighRiskProtectionStatus::Mitigated)
+            );
+            assert_eq!(
+                status_for("malicious_peer"),
+                Some(ProductionHighRiskProtectionStatus::Mitigated)
+            );
+            assert_eq!(
+                status_for("local_at_rest_attacker"),
+                Some(ProductionHighRiskProtectionStatus::Mitigated)
+            );
+            assert_eq!(
+                status_for("supply_chain_update_attacker"),
+                Some(ProductionHighRiskProtectionStatus::Mitigated)
+            );
+            assert_eq!(
+                status_for("compromised_endpoint"),
+                Some(ProductionHighRiskProtectionStatus::NotProtected)
+            );
+            assert_eq!(
+                status_for("direct_coercion"),
+                Some(ProductionHighRiskProtectionStatus::NotProtected)
+            );
+            assert_eq!(
+                status_for("global_traffic_correlation"),
+                Some(ProductionHighRiskProtectionStatus::NotProtected)
+            );
+            assert!(boundary
+                .claimable_statuses()
+                .contains(&ProductionHighRiskProtectionStatus::Protected));
+            assert!(boundary
+                .claimable_statuses()
+                .contains(&ProductionHighRiskProtectionStatus::Mitigated));
+            assert!(boundary.compromised_endpoint_not_protected());
+            assert!(boundary.direct_coercion_not_protected());
+            assert!(boundary.global_traffic_correlation_not_protected());
+            assert!(!boundary.audited_security_claim_allowed());
+            assert!(!boundary.briar_cwtch_equivalence_claim_allowed());
+            assert!(boundary.ordinary_use_claims().contains(&"no_phone_number"));
+            assert!(boundary.ordinary_use_claims().contains(&"no_email"));
+            assert!(boundary.ordinary_use_claims().contains(&"no_global_account"));
+            assert!(boundary
+                .ordinary_use_claims()
+                .contains(&"no_central_contact_discovery"));
+            assert!(boundary
+                .ordinary_use_claims()
+                .contains(&"user_mediated_encrypted_exchange"));
+            assert!(boundary.forbidden_claims().contains(&"audited_security"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"briar_cwtch_equivalent"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"compromised_endpoint_safe"));
+            assert!(boundary.forbidden_claims().contains(&"coercion_safe"));
+            assert!(boundary
+                .forbidden_claims()
+                .contains(&"full_global_traffic_correlation_safe"));
         }
 
         #[test]
