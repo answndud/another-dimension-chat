@@ -1,5 +1,21 @@
+const MANUAL_COURIER_TRANSPORT_MODE = "local-manual-courier-envelope-exchange";
+const MANUAL_ENVELOPE_EXPORT_ACTION = "export-envelope";
+
 export function messageEnvelopeSlotPayload(slot) {
   return typeof slot === "string" ? slot : String(slot?.payload ?? "").trim();
+}
+
+export function messageEnvelopeSlotCreatedByExplicitUserAction(slot) {
+  return Boolean(
+    slot &&
+      typeof slot !== "string" &&
+      slot.createdByExplicitUserAction === true &&
+      slot.manualAction === MANUAL_ENVELOPE_EXPORT_ACTION &&
+      slot.transportMode === MANUAL_COURIER_TRANSPORT_MODE &&
+      slot.defaultTransportNetworkIo === false &&
+      slot.defaultTransportAutomaticDelivery === false &&
+      slot.automaticNetworkOnLaunch === false,
+  );
 }
 
 export function messageEnvelopeSlotMismatchReason(slot, entry) {
@@ -11,6 +27,15 @@ export function messageEnvelopeSlotMismatchReason(slot, entry) {
   }
   if (typeof slot === "string") {
     return "legacy-unscoped-slot";
+  }
+  if (!messageEnvelopeSlotCreatedByExplicitUserAction(slot)) {
+    return "missing-explicit-user-action";
+  }
+  if (entry?.outboundDeliveryState === "canceled") {
+    return "canceled-entry";
+  }
+  if (entry?.statuses?.has?.("received")) {
+    return "already-received-entry";
   }
   if (Number.parseInt(slot.messageNumber, 10) !== Number.parseInt(entry.messageNumber, 10)) {
     return "message-number-mismatch";
@@ -36,6 +61,12 @@ export function messageEnvelopeSlotRecoveryHint(slot, entry) {
       return "Envelope slot matches the selected pending message.";
     case "legacy-unscoped-slot":
       return "Stored envelope is unscoped. Export this pending message again before importing.";
+    case "missing-explicit-user-action":
+      return "Stored envelope is not tied to an explicit manual export. Export the selected pending message again.";
+    case "canceled-entry":
+      return "Selected pending message was canceled. Write and export a new message before importing.";
+    case "already-received-entry":
+      return "Selected pending message was already received. Choose a different pending row before importing.";
     case "room-fingerprint-mismatch":
       return "Stored envelope belongs to another room. Reopen the matching room or export this pending message again.";
     case "message-number-mismatch":
@@ -67,11 +98,19 @@ export function messageEnvelopeSlotImportReadyForEntry(slot, entry) {
 export function createMessageEnvelopeSlot(profile, payload, metadata = {}) {
   const normalizedProfile = String(profile ?? "").trim().toLowerCase();
   const envelope = String(payload ?? "").trim();
-  if (!normalizedProfile || !envelope) {
+  const explicitUserExport =
+    metadata.explicitUserAction === true && metadata.manualAction === MANUAL_ENVELOPE_EXPORT_ACTION;
+  if (!normalizedProfile || !envelope || !explicitUserExport) {
     return null;
   }
   return {
     payload: envelope,
+    createdByExplicitUserAction: true,
+    manualAction: MANUAL_ENVELOPE_EXPORT_ACTION,
+    transportMode: MANUAL_COURIER_TRANSPORT_MODE,
+    defaultTransportNetworkIo: false,
+    defaultTransportAutomaticDelivery: false,
+    automaticNetworkOnLaunch: false,
     sender: normalizedProfile,
     receiver: String(metadata.receiver ?? "").trim().toLowerCase(),
     roomFingerprint: String(metadata.roomFingerprint ?? "").trim(),

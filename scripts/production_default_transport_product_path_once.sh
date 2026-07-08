@@ -35,10 +35,16 @@ must_contain "$DOC" "default_transport_usability_evidence_required_for_claims=tr
 must_contain "$DOC" "default_transport_field_evidence_required_for_claims=true"
 must_contain "$DOC" "default_transport_product_path=local-manual-encrypted-envelope-exchange"
 must_contain "$DOC" "manual_courier_envelope_recovery_available=true"
+must_contain "$DOC" "manual_envelope_explicit_user_export_required=true"
+must_contain "$DOC" "manual_envelope_slot_network_io=false"
+must_contain "$DOC" "manual_envelope_slot_automatic_delivery=false"
 must_contain "$DOC" "legacy_unscoped_envelope_import_ready=false"
+must_contain "$DOC" "implicit_envelope_import_ready=false"
 must_contain "$DOC" "wrong_room_envelope_import_ready=false"
 must_contain "$DOC" "stale_envelope_import_ready=false"
 must_contain "$DOC" "stale_envelope_recovery_hint_ready=true"
+must_contain "$DOC" "canceled_envelope_recovery_hint_ready=true"
+must_contain "$DOC" "duplicate_received_envelope_recovery_hint_ready=true"
 must_contain "$DOC" "default_transport_network_io=false"
 must_contain "$DOC" "default_transport_automatic_delivery=false"
 must_contain "$DOC" "default_transport_central_message_server=false"
@@ -47,6 +53,8 @@ must_contain "$DOC" "default_transport_central_contact_discovery=false"
 must_contain "$DOC" "default_direct_peer_fallback_allowed=false"
 must_contain "$DOC" "untrusted_relay_store_and_forward_decided=false"
 must_contain "$DOC" "advanced_onion_path=explicit-user-triggered-fail-closed-onion-only"
+must_contain "$DOC" "advanced_onion_controls_hidden_by_default=true"
+must_contain "$DOC" "startup_onion_status_only=true"
 must_contain "$DOC" "advanced_onion_direct_fallback=false"
 must_contain "$DOC" "advanced_onion_send_receive_available=false"
 must_contain "$DOC" "automatic_network_on_launch_allowed=false"
@@ -65,7 +73,10 @@ must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "production_transpor
 
 must_contain "scripts/desktop_default_transport_boundary_once.sh" "status=desktop-default-transport-boundary-source-ready"
 must_contain "$RECOVERY_DOC" "manual_courier_envelope_recovery_available=true"
+must_contain "$RECOVERY_DOC" "manual_envelope_explicit_user_export_required=true"
 must_contain "$RECOVERY_GATE" "status=desktop-manual-courier-envelope-recovery-ready"
+must_contain "apps/desktop-tauri/src/i18n.js" "Single private delivery attempt completed; reliability is not claimed."
+must_not_match "apps/desktop-tauri/src/i18n.js" "Private delivery completed without showing private details"
 must_contain "apps/desktop-tauri/src/private-delivery-state.js" "default_transport_path=local-manual-encrypted-envelope-exchange"
 must_contain "apps/desktop-tauri/src/private-delivery-state.js" "default_transport_network_io=false"
 must_contain "apps/desktop-tauri/src/private-delivery-state.js" "high_risk_onion_direct_fallback=false"
@@ -80,6 +91,7 @@ must_contain "crates/core/src/lib.rs" "production_transport_envelope_io_boundary
 
 for file in "$DOC" "README.md" "SECURITY.md" "reference/TRANSPORT_DECISION.md"; do
   must_not_match "$file" "default_transport_network_io=true"
+  must_not_match "$file" "implicit_envelope_import_ready=true"
   must_not_match "$file" "default_transport_automatic_delivery=true"
   must_not_match "$file" "default_transport_central_message_server=true"
   must_not_match "$file" "default_transport_push_dependency=true"
@@ -105,10 +117,16 @@ default_transport_usability_evidence_required_for_claims=true
 default_transport_field_evidence_required_for_claims=true
 default_transport_product_path=local-manual-encrypted-envelope-exchange
 manual_courier_envelope_recovery_available=true
+manual_envelope_explicit_user_export_required=true
+manual_envelope_slot_network_io=false
+manual_envelope_slot_automatic_delivery=false
 legacy_unscoped_envelope_import_ready=false
+implicit_envelope_import_ready=false
 wrong_room_envelope_import_ready=false
 stale_envelope_import_ready=false
 stale_envelope_recovery_hint_ready=true
+canceled_envelope_recovery_hint_ready=true
+duplicate_received_envelope_recovery_hint_ready=true
 default_transport_network_io=false
 default_transport_automatic_delivery=false
 default_transport_central_message_server=false
@@ -117,6 +135,8 @@ default_transport_central_contact_discovery=false
 default_direct_peer_fallback_allowed=false
 untrusted_relay_store_and_forward_decided=false
 advanced_onion_path=explicit-user-triggered-fail-closed-onion-only
+advanced_onion_controls_hidden_by_default=true
+startup_onion_status_only=true
 advanced_onion_direct_fallback=false
 advanced_onion_send_receive_available=false
 automatic_network_on_launch_allowed=false
