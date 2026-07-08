@@ -26,8 +26,9 @@ cd "$ROOT"
 REGISTER="reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 MATRIX="reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
 BLOCKER_PLAN="reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md"
+FINAL="reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md"
 
-for file in "$REGISTER" "$MATRIX" "$BLOCKER_PLAN" \
+for file in "$REGISTER" "$MATRIX" "$BLOCKER_PLAN" "$FINAL" \
   "reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md" \
   "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" \
   "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" \
@@ -139,6 +140,23 @@ must_contain "$REGISTER" "windows_real_runtime_smoke_passed=false"
 must_contain "$REGISTER" "windows_public_artifact_ready=false"
 must_contain "$REGISTER" "windows_installer_ready=false"
 must_contain "$REGISTER" "windows_public_artifact_upload_allowed=false"
+must_contain "$REGISTER" "target_standard_100_final_active_queue_closure_available=true"
+must_contain "$REGISTER" "final_active_queue_closure_reviewed=true"
+must_contain "$REGISTER" "all_remaining_active_phases_closed_by_source_or_hold_gate=true"
+must_contain "$REGISTER" "w100_1_windows_runtime_parity_scope_blocker_closed=true"
+must_contain "$REGISTER" "w100_2_windows_public_artifact_blocker_closed=true"
+must_contain "$REGISTER" "x100_1_cross_desktop_product_parity_blocker_closed=true"
+must_contain "$REGISTER" "mob100_0_mobile_scope_unlock_decision_closed=true"
+must_contain "$REGISTER" "mob100_1_mobile_api_stabilization_blocker_closed=true"
+must_contain "$REGISTER" "mob100_2_android_public_app_candidate_blocker_closed=true"
+must_contain "$REGISTER" "mob100_3_ios_public_app_candidate_blocker_closed=true"
+must_contain "$REGISTER" "x100_2_cross_platform_field_support_blocker_closed=true"
+must_contain "$REGISTER" "r100_1_production_claim_gate_decision_closed=true"
+must_contain "$REGISTER" "r100_2_stable_macos_release_decision_closed=true"
+must_contain "$REGISTER" "r100_3_whole_product_target_standard_gate_decision_closed=true"
+must_contain "$REGISTER" "plan_active_queue_complete=true"
+must_contain "$REGISTER" "production_claim_gate_passed=false"
+must_contain "$REGISTER" "stable_release_publication_performed=false"
 
 must_contain "$MATRIX" "target_standard_100_deployment_gap_reconciled=true"
 must_contain "$MATRIX" "deployment_100_blocker_resolution_plan_available=true"
@@ -178,6 +196,9 @@ must_contain "$MATRIX" "windows_public_artifact_execution_path_available=true"
 must_contain "$MATRIX" "windows_real_runtime_result_schema_available=true"
 must_contain "$MATRIX" "windows_real_runtime_smoke_passed=false"
 must_contain "$MATRIX" "windows_public_artifact_ready=false"
+must_contain "$MATRIX" "target_standard_100_final_active_queue_closure_available=true"
+must_contain "$MATRIX" "final_active_queue_closure_reviewed=true"
+must_contain "$MATRIX" "plan_active_queue_complete=true"
 
 must_contain "$MATRIX" "pass for explicit Apple Silicon current scope; universal/Intel hold"
 must_contain "$MATRIX" "source pass; representative usability hold"
@@ -249,6 +270,7 @@ scripts/production_default_practical_transport_closure_once.sh >/dev/null
 scripts/macos_update_rollback_safe_release_channel_once.sh >/dev/null
 scripts/macos_signed_update_manifest_once.sh >/dev/null
 scripts/operational_support_incident_process_once.sh >/dev/null
+scripts/target_standard_100_final_active_queue_closure_once.sh >/dev/null
 
 cat <<'STATUS'
 status=deployment-readiness-gap-reconciled
@@ -300,6 +322,8 @@ usability_report_validator_ready=true
 fabricated_or_local_only_evidence_rejected=true
 o100_1_operations_blocker_closed=true
 operations_source_gate_closed=true
+final_active_queue_closure_reviewed=true
+plan_active_queue_complete=true
 d100_5_windows_public_artifact_execution_path_reviewed=true
 windows_public_artifact_execution_path_available=true
 windows_real_runtime_result_schema_available=true

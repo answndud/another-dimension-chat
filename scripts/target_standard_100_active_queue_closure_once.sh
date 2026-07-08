@@ -30,6 +30,7 @@ for file in "$DOC" \
   "SECURITY.md" \
   "reference/INDEPENDENT_REVIEW_PACKET.md" \
   "reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md" \
+  "reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md" \
   "reference/PRODUCTION_READINESS_CLAIM_GATE.md" \
   "reference/STABLE_MACOS_V1_RELEASE_GATE.md"; do
   [ -f "$file" ] || fail "missing active queue closure input: $file"
@@ -37,6 +38,10 @@ done
 
 must_contain "$DOC" "target_standard_100_active_queue_source_closure_reviewed=true"
 must_contain "$DOC" "all_plan_active_phases_have_source_or_hold_gate=true"
+must_contain "$DOC" "target_standard_100_final_active_queue_closure_available=true"
+must_contain "$DOC" "final_active_queue_closure_reviewed=true"
+must_contain "$DOC" "final_active_queue_range=W100-1-through-R100-3"
+must_contain "$DOC" "all_remaining_active_phases_closed_by_source_or_hold_gate=true"
 must_contain "$DOC" "false_or_hold_items_hidden=false"
 must_contain "$DOC" "public_claim_ahead_of_evidence=false"
 must_contain "$DOC" "production_ready_claim_allowed=false"
@@ -84,6 +89,21 @@ must_contain "$DOC" "operations_source_gate_closed=true"
 must_contain "$DOC" "production_operations_evidence_required_for_claims=true"
 must_contain "$DOC" "real_incident_response_execution_required_for_claims=true"
 must_contain "$DOC" "production_operational_readiness_claim_allowed=false"
+must_contain "$DOC" "w100_1_windows_runtime_parity_scope_blocker_closed=true"
+must_contain "$DOC" "w100_2_windows_public_artifact_blocker_closed=true"
+must_contain "$DOC" "x100_1_cross_desktop_product_parity_blocker_closed=true"
+must_contain "$DOC" "mob100_0_mobile_scope_unlock_decision_closed=true"
+must_contain "$DOC" "mob100_1_mobile_api_stabilization_blocker_closed=true"
+must_contain "$DOC" "mob100_2_android_public_app_candidate_blocker_closed=true"
+must_contain "$DOC" "mob100_3_ios_public_app_candidate_blocker_closed=true"
+must_contain "$DOC" "x100_2_cross_platform_field_support_blocker_closed=true"
+must_contain "$DOC" "r100_1_production_claim_gate_decision_closed=true"
+must_contain "$DOC" "r100_2_stable_macos_release_decision_closed=true"
+must_contain "$DOC" "r100_3_whole_product_target_standard_gate_decision_closed=true"
+must_contain "$DOC" "plan_active_queue_complete=true"
+must_contain "$DOC" "next_required_phase=no-active-source-queue"
+must_contain "$DOC" "production_claim_gate_passed=false"
+must_contain "$DOC" "stable_release_publication_performed=false"
 must_contain "$DOC" "review_packet_synced_to_latest_source_gates=true"
 must_contain "$DOC" "review_packet_includes_c100_5_onion_boundary=true"
 must_contain "$DOC" "review_packet_includes_target_standard_matrix=true"
@@ -128,6 +148,7 @@ must_contain "$DOC" "scripts/macos_universal_scoped_artifact_policy_once.sh"
 must_contain "$DOC" "reference/MACOS_SIGNED_NOTARIZED_RC_ARTIFACT.md"
 must_contain "$DOC" "scripts/macos_signed_notarized_rc_artifact_once.sh"
 must_contain "$DOC" "deployment_100_blocker_resolution_plan_available=true"
+must_contain "$DOC" "reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md"
 
 must_contain "README.md" "reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md"
 must_contain "SECURITY.md" "reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md"
@@ -179,6 +200,7 @@ scripts/verify_android_shell_boundary.sh >/dev/null
 scripts/verify_ios_shell_boundary.sh >/dev/null
 scripts/production_claim_policy_once.sh >/dev/null
 scripts/github_release_publication_scope_down_once.sh >/dev/null
+scripts/target_standard_100_final_active_queue_closure_once.sh >/dev/null
 scripts/target_standard_100_evidence_matrix_once.sh >/dev/null
 
 if git diff --cached --name-only -- docs AGENTS.md public-release beta-artifacts | grep -q .; then
@@ -189,8 +211,11 @@ cat <<'STATUS'
 status=target-standard-100-active-queue-source-closure-ready
 target_standard_100_active_queue_source_closure_reviewed=true
 all_plan_active_phases_have_source_or_hold_gate=true
+final_active_queue_closure_reviewed=true
+all_remaining_active_phases_closed_by_source_or_hold_gate=true
 o100_1_operations_blocker_closed=true
 operations_source_gate_closed=true
+plan_active_queue_complete=true
 false_or_hold_items_hidden=false
 public_claim_ahead_of_evidence=false
 production_ready_claim_allowed=false
@@ -202,5 +227,5 @@ whole_target_standard_100_claim_allowed=false
 stable_release_allowed=false
 release_upload_authorized=false
 dmg_rebuild_authorized=false
-next_required_action=external-audit-field-evidence-signed-notarized-artifact-owner-release-decision
+next_required_phase=no-active-source-queue
 STATUS

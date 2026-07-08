@@ -32,6 +32,8 @@ until a later explicit release task changes it.
 ## Current Scope-Down Flags
 
 - rb_9_github_release_publication_scope_down_reviewed=true
+- r100_2_stable_macos_release_decision_closed=true
+- stable_release_publication_performed=false
 - lower_release_publication_selected=true
 - stable_release_published=false
 - stable_release_tag_created=false

@@ -33,6 +33,8 @@ for file in "$DOC" "$CLAIM_DECISION" "$STABLE_GATE" "$PACKET" "README.md" "SECUR
 done
 
 must_contain "$DOC" "rb_9_github_release_publication_scope_down_reviewed=true"
+must_contain "$DOC" "r100_2_stable_macos_release_decision_closed=true"
+must_contain "$DOC" "stable_release_publication_performed=false"
 must_contain "$DOC" "release_tag=v0.1.0-beta-onion-unsigned"
 must_contain "$DOC" "release_class=unsigned-experimental-public-beta"
 must_contain "$DOC" "existing_lower_release_public_prerelease_observed=true"
@@ -82,6 +84,8 @@ fi
 cat <<'STATUS'
 status=github-release-publication-scope-down-closed
 rb_9_github_release_publication_scope_down_reviewed=true
+r100_2_stable_macos_release_decision_closed=true
+stable_release_publication_performed=false
 lower_release_publication_selected=true
 release_tag=v0.1.0-beta-onion-unsigned
 stable_release_published=false
