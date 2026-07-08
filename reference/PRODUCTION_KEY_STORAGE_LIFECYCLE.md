@@ -24,6 +24,10 @@ default transport phase.
 - Backup exclusion is a required best-effort policy, not a completed guarantee.
 - Schema migration is forward-only; destructive migration is blocked.
 - Rollback detection is marker-only. Rollback prevention is not claimed.
+- The encrypted local key-rotation generation marker rejects duplicate or
+  downgraded generation writes.
+- The key-rotation marker is scope-bound and replay-window expected-scope
+  loading is available for production call-site hardening.
 - Secure deletion from physical storage media is not claimed.
 - The RB-2 supported scope is recorded in
   `reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md`.
@@ -88,6 +92,9 @@ Targeted tests that anchor this gate:
 
 - `unlock_policy_requires_passphrase_for_all_modes`
 - `sqlcipher_store_rejects_wrong_passphrase_before_returning_records`
+- `sqlcipher_store_key_rotation_generation_marker_is_monotonic`
+- `sqlcipher_store_rejects_key_rotation_marker_scope_mismatch`
+- `sqlcipher_store_rejects_replay_window_scope_mismatch`
 - `storage_backend_integration_summary_keeps_non_ready_boundaries_explicit`
 - `production_message_storage_summary_allows_encrypted_session_transport`
 - `production_local_data_lifecycle_policy_is_passphrase_first_with_non_claims`
@@ -136,6 +143,9 @@ Targeted tests that anchor this gate:
 - sqlcipher_passphrase_kdf_scope_ready=true
 - sqlcipher_passphrase_rekey_source_ready=true
 - sqlcipher_passphrase_rotation_generation_source_ready=true
+- key_rotation_marker_monotonic_write_enforced=true
+- key_rotation_marker_scope_bound=true
+- replay_window_scope_bound_loader_ready=true
 - minimum_forward_key_rotation_generation_ready=true
 - tauri_profile_passphrase_rekey_command_ready=true
 - project_owned_argon2_scrypt_kdf_ready=false

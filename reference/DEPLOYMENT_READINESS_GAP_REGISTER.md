@@ -128,6 +128,9 @@ These cannot be made true by editing source files alone:
 - d100_2_key_management_source_gate_reviewed=true
 - key_management_source_scope=passphrase-first-sqlcipher-local-profile-store-marker-rollback-local-delete-only
 - sqlcipher_passphrase_rekey_source_ready=true
+- key_rotation_marker_monotonic_write_enforced=true
+- key_rotation_marker_scope_bound=true
+- replay_window_scope_bound_loader_ready=true
 - tauri_profile_passphrase_rekey_command_ready=true
 - manual_update_integrity_policy_available=true
 - macos_signed_update_manifest_schema_available=true
