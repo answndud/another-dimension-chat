@@ -259,6 +259,67 @@ function validateRedactedFieldReports(ledger, file) {
   return issues;
 }
 
+function validateExternalReviewSignoff(ledger, file, { requireCurrentHead }) {
+  const refs = ledger.evidence_files?.external?.review_signoff;
+  const signoffFiles = collectEvidenceFilePaths(path.dirname(file), refs);
+  if (signoffFiles.length === 0) return [];
+  const validator = path.join(process.cwd(), "scripts", "validate_external_review_signoff.mjs");
+  const issues = [];
+  let output = "";
+  try {
+    output = execFileSync(process.execPath, [validator, ...signoffFiles], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        AD_REQUIRE_CURRENT_HEAD: requireCurrentHead ? "1" : process.env.AD_REQUIRE_CURRENT_HEAD ?? "",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch {
+    return ["external.review_signoff:validator-failed"];
+  }
+  if (!output.includes(`accepted_external_review_signoffs=${signoffFiles.length}`)) {
+    issues.push("external.review_signoff:not-all-accepted");
+  }
+  if (!output.includes("external_review_signoff_candidate_requires_owner_claim_decision=true")) {
+    issues.push("external.review_signoff:owner-claim-decision-not-required");
+  }
+  if (!output.includes("status=external-review-signoff-candidate-requires-owner-claim-decision")) {
+    issues.push("external.review_signoff:not-candidate");
+  }
+  return issues;
+}
+
+function validateAuditFindingTracker(ledger, file) {
+  const refs = ledger.evidence_files?.external?.audit_finding_tracker;
+  const trackerFiles = collectEvidenceFilePaths(path.dirname(file), refs);
+  if (trackerFiles.length === 0) return [];
+  const validator = path.join(process.cwd(), "scripts", "validate_audit_finding_tracker.mjs");
+  const issues = [];
+  for (const trackerFile of trackerFiles) {
+    let output = "";
+    try {
+      output = execFileSync(process.execPath, [validator, trackerFile], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+    } catch {
+      issues.push("external.audit_finding_tracker:validator-failed");
+      continue;
+    }
+    if (!output.includes("status=audit-finding-tracker-valid")) {
+      issues.push("external.audit_finding_tracker:not-valid");
+    }
+    if (!output.includes("critical_findings_open=0") || !output.includes("high_findings_open=0")) {
+      issues.push("external.audit_finding_tracker:critical-high-open");
+    }
+    if (!output.includes("external_review_completed=false") || !output.includes("audit_completed=false")) {
+      issues.push("external.audit_finding_tracker:claim-boundary-missing");
+    }
+  }
+  return issues;
+}
+
 function validateGroup(ledger, groupName) {
   const group = ledger[groupName];
   const issues = [];
@@ -353,6 +414,8 @@ function validateLedger(file, { requireCurrentHead, head }) {
   }
   issues.push(...validateEvidenceFiles(ledger, file));
   issues.push(...validateRepresentativeUsabilityReports(ledger, file, { requireCurrentHead }));
+  issues.push(...validateExternalReviewSignoff(ledger, file, { requireCurrentHead }));
+  issues.push(...validateAuditFindingTracker(ledger, file));
   issues.push(...validateRedactedFieldReports(ledger, file));
   const fieldReportCount = ledger.external?.accepted_field_report_count;
   if (!Number.isInteger(fieldReportCount) || fieldReportCount < 4) {
@@ -377,6 +440,8 @@ if (files.length === 0) {
   console.log("accepted_final_100_evidence_ledgers=0");
   console.log("final_100_evidence_ledger_child_files_content_redacted=true");
   console.log("final_100_evidence_ledger_requires_valid_representative_usability_reports=true");
+  console.log("final_100_evidence_ledger_requires_valid_external_review_signoff=true");
+  console.log("final_100_evidence_ledger_requires_valid_audit_finding_tracker=true");
   console.log("final_100_evidence_ledger_requires_valid_redacted_field_reports=true");
   console.log("final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true");
   console.log("macos_public_app_100_claim_allowed=false");
@@ -408,6 +473,8 @@ console.log(`accepted_final_100_evidence_ledgers=${files.length}`);
 console.log("final_100_evidence_ledger_child_files_sha_verified=true");
 console.log("final_100_evidence_ledger_child_files_content_redacted=true");
 console.log("final_100_evidence_ledger_requires_valid_representative_usability_reports=true");
+console.log("final_100_evidence_ledger_requires_valid_external_review_signoff=true");
+console.log("final_100_evidence_ledger_requires_valid_audit_finding_tracker=true");
 console.log("final_100_evidence_ledger_requires_valid_redacted_field_reports=true");
 console.log("final_100_evidence_ledger_requires_macos_dmg_contained_app_evidence=true");
 console.log("final_100_evidence_candidate_requires_owner_claim_decision=true");

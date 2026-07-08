@@ -65,6 +65,13 @@ case "$SIGNING_STATUS" in unsigned|signed) ;; *) fail "unsupported AD_MACOS_ARTI
 case "$NOTARIZATION_STATUS" in not-notarized|notarized) ;; *) fail "unsupported AD_MACOS_ARTIFACT_NOTARIZATION_STATUS" ;; esac
 case "$STAPLED" in true|false) ;; *) fail "AD_MACOS_ARTIFACT_STAPLED must be true or false" ;; esac
 
+artifact_name="$(basename "$ARTIFACT")"
+sha256="$(shasum -a 256 "$ARTIFACT" | awk '{print $1}')"
+size_bytes="$(wc -c <"$ARTIFACT" | tr -d ' ')"
+version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
+source_commit="$(git rev-parse HEAD)"
+signed_rc_provenance_json_fields=""
+
 if [ "$RELEASE_CLASS" = "unsigned-public-beta" ] &&
   [ "$SIGNING_STATUS" = "unsigned" ] &&
   [ "$NOTARIZATION_STATUS" = "not-notarized" ]; then
@@ -80,10 +87,37 @@ else
     "$ROOT"/apps/desktop-tauri/public-release/*|"$ROOT"/apps/desktop-tauri/beta-artifacts/*) ;;
     *) fail "AD_MACOS_SIGNED_RC_PROVENANCE_IN must be under an ignored generated artifact directory" ;;
   esac
-  contained_app_output="$(node - "$SIGNED_RC_PROVENANCE_IN" <<'NODE'
+  contained_app_output="$(node - "$SIGNED_RC_PROVENANCE_IN" "$artifact_name" "$sha256" "$source_commit" "$ARCHITECTURE" <<'NODE'
 const fs = require("node:fs");
+const expectedTargetArch = (architecture) => {
+  if (architecture === "macos-aarch64") return "aarch64-apple-darwin";
+  if (architecture === "macos-x86_64") return "x86_64-apple-darwin";
+  if (architecture === "macos-universal") return "macos-universal";
+  return "";
+};
 const file = process.argv[2];
+const artifactName = process.argv[3];
+const artifactSha = process.argv[4];
+const sourceCommit = process.argv[5];
+const architecture = process.argv[6];
 const provenance = JSON.parse(fs.readFileSync(file, "utf8"));
+const expected = {
+  schema_version: "macos-signed-notarized-rc-provenance-v1",
+  artifact: artifactName,
+  sha256: artifactSha,
+  source_commit: sourceCommit,
+  target_arch: expectedTargetArch(architecture),
+  signed: true,
+  notarized: true,
+  stapled: true,
+  gatekeeper_assessed: true,
+  release_upload_authorized: false,
+};
+for (const [field, value] of Object.entries(expected)) {
+  if (provenance[field] !== value) {
+    throw new Error(`signed RC provenance ${field} mismatch`);
+  }
+}
 const fields = [
   "macos_dmg_contained_app_verifier_available",
   "dmg_mounted_app_found",
@@ -97,8 +131,18 @@ for (const field of fields) {
   }
 }
 for (const field of fields) {
-  console.log("true");
+  console.log(provenance[field]);
 }
+console.log(provenance.schema_version);
+console.log(provenance.artifact);
+console.log(provenance.sha256);
+console.log(provenance.source_commit);
+console.log(provenance.target_arch);
+console.log(provenance.signed);
+console.log(provenance.notarized);
+console.log(provenance.stapled);
+console.log(provenance.gatekeeper_assessed);
+console.log(provenance.dmg_rebuild_authorized === true ? "true" : "false");
 NODE
   )"
   DMG_CONTAINED_APP_VERIFIER_AVAILABLE="$(printf '%s\n' "$contained_app_output" | sed -n '1p')"
@@ -106,6 +150,16 @@ NODE
   DMG_CONTAINED_APP_CODESIGN_VERIFY_PASSED="$(printf '%s\n' "$contained_app_output" | sed -n '3p')"
   DMG_CONTAINED_APP_GATEKEEPER_ASSESS_PASSED="$(printf '%s\n' "$contained_app_output" | sed -n '4p')"
   DMG_CONTAINED_APP_MATCHES_SIGNED_SOURCE_APP="$(printf '%s\n' "$contained_app_output" | sed -n '5p')"
+  SIGNED_RC_PROVENANCE_SCHEMA_VERSION="$(printf '%s\n' "$contained_app_output" | sed -n '6p')"
+  SIGNED_RC_ARTIFACT="$(printf '%s\n' "$contained_app_output" | sed -n '7p')"
+  SIGNED_RC_SHA256="$(printf '%s\n' "$contained_app_output" | sed -n '8p')"
+  SIGNED_RC_SOURCE_COMMIT="$(printf '%s\n' "$contained_app_output" | sed -n '9p')"
+  SIGNED_RC_TARGET_ARCH="$(printf '%s\n' "$contained_app_output" | sed -n '10p')"
+  SIGNED_RC_SIGNED="$(printf '%s\n' "$contained_app_output" | sed -n '11p')"
+  SIGNED_RC_NOTARIZED="$(printf '%s\n' "$contained_app_output" | sed -n '12p')"
+  SIGNED_RC_STAPLED="$(printf '%s\n' "$contained_app_output" | sed -n '13p')"
+  SIGNED_RC_GATEKEEPER_ASSESSED="$(printf '%s\n' "$contained_app_output" | sed -n '14p')"
+  SIGNED_RC_DMG_REBUILD_AUTHORIZED="$(printf '%s\n' "$contained_app_output" | sed -n '15p')"
   [ "$DMG_CONTAINED_APP_VERIFIER_AVAILABLE" = "true" ] ||
     fail "signed RC provenance did not verify macOS DMG contained-app verifier availability"
   [ "$DMG_MOUNTED_APP_FOUND" = "true" ] ||
@@ -116,14 +170,20 @@ NODE
     fail "signed RC provenance did not verify contained app Gatekeeper assessment"
   [ "$DMG_CONTAINED_APP_MATCHES_SIGNED_SOURCE_APP" = "true" ] ||
     fail "signed RC provenance did not verify contained app source match"
+  signed_rc_provenance_json_fields=",
+  \"signed_rc_provenance_schema_version\": \"$SIGNED_RC_PROVENANCE_SCHEMA_VERSION\",
+  \"signed_rc_artifact\": \"$SIGNED_RC_ARTIFACT\",
+  \"signed_rc_sha256\": \"$SIGNED_RC_SHA256\",
+  \"signed_rc_source_commit\": \"$SIGNED_RC_SOURCE_COMMIT\",
+  \"signed_rc_target_arch\": \"$SIGNED_RC_TARGET_ARCH\",
+  \"signed_rc_signed\": $SIGNED_RC_SIGNED,
+  \"signed_rc_notarized\": $SIGNED_RC_NOTARIZED,
+  \"signed_rc_stapled\": $SIGNED_RC_STAPLED,
+  \"signed_rc_gatekeeper_assessed\": $SIGNED_RC_GATEKEEPER_ASSESSED,
+  \"signed_rc_dmg_rebuild_authorized\": $SIGNED_RC_DMG_REBUILD_AUTHORIZED"
 fi
 
 mkdir -p "$OUT_DIR"
-artifact_name="$(basename "$ARTIFACT")"
-sha256="$(shasum -a 256 "$ARTIFACT" | awk '{print $1}')"
-size_bytes="$(wc -c <"$ARTIFACT" | tr -d ' ')"
-version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
-source_commit="$(git rev-parse HEAD)"
 checksum_file="$artifact_name.sha256"
 manifest_file="$OUT_DIR/MACOS_RELEASE_DISTRIBUTION_MANIFEST.json"
 release_body_file="$OUT_DIR/GITHUB_RELEASE_BODY.md"
@@ -151,7 +211,7 @@ cat >"$OUT_DIR/$provenance_file" <<JSON
   "dmg_contained_app_matches_signed_source_app": $DMG_CONTAINED_APP_MATCHES_SIGNED_SOURCE_APP,
   "release_upload_authorized": false,
   "macos_release_distribution_artifact_ready": false,
-  "generated_release_artifacts_commit_allowed": false
+  "generated_release_artifacts_commit_allowed": false$signed_rc_provenance_json_fields
 }
 JSON
 

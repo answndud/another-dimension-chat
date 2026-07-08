@@ -72,6 +72,8 @@ done
 must_contain "reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md" "gatekeeper_assess_executed=false"
 must_contain "reference/FINAL_100_EVIDENCE_LEDGER_SCHEMA.md" "final_100_evidence_ledger_schema_available=true"
 must_contain "reference/FINAL_100_EVIDENCE_LEDGER_SCHEMA.md" "final_100_evidence_ledger_requires_valid_redacted_field_reports=true"
+must_contain "reference/FINAL_100_EVIDENCE_LEDGER_SCHEMA.md" "final_100_evidence_ledger_requires_valid_external_review_signoff=true"
+must_contain "reference/FINAL_100_EVIDENCE_LEDGER_SCHEMA.md" "final_100_evidence_ledger_requires_valid_audit_finding_tracker=true"
 must_contain "scripts/validate_final_100_evidence_ledger.mjs" "final-100-evidence-ledger-v1"
 must_contain "reference/MACOS_RELEASE_DISTRIBUTION_METADATA.md" "macos_release_distribution_artifact_ready=false"
 must_contain "reference/MACOS_FIRST_RUN_RECOVERY_USABILITY_MATRIX.md" "representative_usability_evidence_completed=false"
