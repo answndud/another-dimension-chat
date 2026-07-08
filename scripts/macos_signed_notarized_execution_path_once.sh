@@ -30,9 +30,12 @@ DIST_GATE="reference/MACOS_PRODUCTION_DISTRIBUTION_GATE.md"
 MATRIX="reference/TARGET_STANDARD_100_EVIDENCE_MATRIX.md"
 GAP_REGISTER="reference/DEPLOYMENT_READINESS_GAP_REGISTER.md"
 REVIEW_PACKET="reference/INDEPENDENT_REVIEW_PACKET.md"
+TAURI_CONFIG="apps/desktop-tauri/src-tauri/tauri.conf.json"
+ENTITLEMENTS="${AD_MACOS_ENTITLEMENTS:-$ROOT/apps/desktop-tauri/src-tauri/Entitlements.plist}"
+SIGNED_BUILD_SCRIPT="scripts/build_signed_notarized_macos_release.sh"
 
 for file in "$DOC" "$RC_DOC" "$CREDENTIAL_GATE" "$DIST_GATE" "$MATRIX" \
-  "$GAP_REGISTER" "$REVIEW_PACKET" "README.md" "SECURITY.md"; do
+  "$GAP_REGISTER" "$REVIEW_PACKET" "$TAURI_CONFIG" "$ENTITLEMENTS" "$SIGNED_BUILD_SCRIPT" "README.md" "SECURITY.md"; do
   [ -f "$file" ] || fail "missing D100-3 signed/notarized execution input: $file"
 done
 
@@ -44,6 +47,13 @@ done
 for flag in \
   "d100_3_signed_notarized_execution_path_reviewed=true" \
   "macos_signed_notarized_execution_path_available=true" \
+  "macos_tauri_signing_config_ready=true" \
+  "macos_hardened_runtime_configured=true" \
+  "macos_entitlements_configured=true" \
+  "macos_entitlements_minimal=true" \
+  "macos_signed_notarized_release_build_script_ready=true" \
+  "signed_app_build_path_ready=true" \
+  "dmg_create_from_signed_app_path_ready=true" \
   "credential_probe_path_ready=true" \
   "signing_command_path_ready=true" \
   "notary_submit_wait_path_ready=true" \
@@ -72,7 +82,17 @@ for flag in \
   must_contain "$DOC" "$flag"
 done
 
-must_contain "$DOC" "codesign --force --deep --options runtime --timestamp --sign"
+must_contain "$TAURI_CONFIG" '"macOS"'
+must_contain "$TAURI_CONFIG" '"minimumSystemVersion": "12.0"'
+must_contain "$TAURI_CONFIG" '"hardenedRuntime": true'
+must_contain "$TAURI_CONFIG" '"entitlements": "Entitlements.plist"'
+must_contain "$TAURI_CONFIG" '"signingIdentity": null'
+must_contain "$TAURI_CONFIG" '"providerShortName": null'
+must_contain "$ENTITLEMENTS" "<dict/>"
+must_contain "$SIGNED_BUILD_SCRIPT" "AD_BUILD_MACOS_SIGNED_RC"
+must_contain "$SIGNED_BUILD_SCRIPT" "hdiutil create"
+must_contain "$SIGNED_BUILD_SCRIPT" "xcrun notarytool submit"
+must_contain "$DOC" "codesign --force --deep --options runtime --timestamp --entitlements"
 must_contain "$DOC" "xcrun notarytool submit"
 must_contain "$DOC" "xcrun stapler staple"
 must_contain "$DOC" "xcrun stapler validate"
@@ -147,6 +167,13 @@ if [ "$EXECUTE" != "1" ]; then
 status=macos-signed-notarized-execution-path-held
 d100_3_signed_notarized_execution_path_reviewed=true
 macos_signed_notarized_execution_path_available=true
+macos_tauri_signing_config_ready=true
+macos_hardened_runtime_configured=true
+macos_entitlements_configured=true
+macos_entitlements_minimal=true
+macos_signed_notarized_release_build_script_ready=true
+signed_app_build_path_ready=true
+dmg_create_from_signed_app_path_ready=true
 credential_probe_path_ready=true
 signing_command_path_ready=true
 notary_submit_wait_path_ready=true
@@ -190,7 +217,7 @@ case "$RC_DMG" in
   "$ROOT"/*) fail "AD_RC_DMG must be in an ignored generated artifact directory: $RC_DMG" ;;
 esac
 
-codesign --force --deep --options runtime --timestamp --sign "$IDENTITY" "$APP_BUNDLE"
+codesign --force --deep --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$APP_BUNDLE"
 codesign --force --timestamp --sign "$IDENTITY" "$RC_DMG"
 
 if [ -n "$NOTARY_PROFILE" ]; then
@@ -226,6 +253,13 @@ cat <<STATUS
 status=macos-signed-notarized-execution-path-verified
 d100_3_signed_notarized_execution_path_reviewed=true
 macos_signed_notarized_execution_path_available=true
+macos_tauri_signing_config_ready=true
+macos_hardened_runtime_configured=true
+macos_entitlements_configured=true
+macos_entitlements_minimal=true
+macos_signed_notarized_release_build_script_ready=true
+signed_app_build_path_ready=true
+dmg_create_from_signed_app_path_ready=true
 developer_id_signing_available=true
 notarization_credential_available=true
 signed_notarized_rc_execution_ready=true

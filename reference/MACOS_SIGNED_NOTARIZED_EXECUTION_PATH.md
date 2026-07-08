@@ -13,6 +13,14 @@ or artifact inputs are absent. Actual signing and notarization require the
 explicit `AD_EXECUTE_MACOS_SIGN_NOTARY=1` environment variable plus operator
 provided artifact paths and credentials.
 
+The release-build path that creates a DMG from a signed `.app` bundle is
+`scripts/build_signed_notarized_macos_release.sh`. It also holds by default and
+requires both `AD_EXECUTE_MACOS_SIGN_NOTARY=1` and
+`AD_BUILD_MACOS_SIGNED_RC=1`, plus `AD_DMG_REBUILD_AUTHORIZED=1`, before it
+runs Tauri build, signs the `.app`,
+creates a DMG with `hdiutil create`, signs/notarizes/staples the DMG, and
+records checksum/provenance under ignored generated artifact directories.
+
 ## Execution Inputs
 
 Actual execution requires all of these:
@@ -21,11 +29,16 @@ Actual execution requires all of these:
 - `AD_RELEASE_SIGNING_IDENTITY`
 - `AD_RC_APP_BUNDLE`
 - `AD_RC_DMG`
+- optional `AD_MACOS_ENTITLEMENTS`, otherwise the source-controlled minimal
+  `apps/desktop-tauri/src-tauri/Entitlements.plist` is used
 - one notarization credential path:
   `AD_RELEASE_NOTARYTOOL_PROFILE`/`NOTARYTOOL_PROFILE`, or App Store Connect API
   key env, or Apple ID/app-specific password env
 - optional generated evidence path `AD_SIGNED_RC_PROVENANCE_OUT`, which must be
   under ignored generated artifact directories
+- for build-and-package execution, `AD_BUILD_MACOS_SIGNED_RC=1`,
+  `AD_DMG_REBUILD_AUTHORIZED=1`, and optional
+  `AD_MACOS_TARGET_ARCH=aarch64-apple-darwin|x86_64-apple-darwin`
 
 ## One-Shot Command Path
 
@@ -36,7 +49,7 @@ The script connects these operations in order:
 2. Verify provided `.app` and `.dmg` paths exist and are not tracked source
    outputs.
 3. Sign the `.app` bundle:
-   `codesign --force --deep --options runtime --timestamp --sign "$AD_RELEASE_SIGNING_IDENTITY" "$AD_RC_APP_BUNDLE"`.
+   `codesign --force --deep --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$AD_RELEASE_SIGNING_IDENTITY" "$AD_RC_APP_BUNDLE"`.
 4. Sign the DMG/container:
    `codesign --force --timestamp --sign "$AD_RELEASE_SIGNING_IDENTITY" "$AD_RC_DMG"`.
 5. Submit and wait for notarization with `xcrun notarytool submit "$AD_RC_DMG" --wait`.
@@ -48,10 +61,21 @@ The script connects these operations in order:
    production-ready, audited, and sensitive-use claims false until later gates
    authorize them.
 
+For the release-build path, the signed `.app` is created first, then copied into
+a temporary DMG staging directory, and only then packaged into the signed DMG.
+The script must not reuse a DMG that already contains an unsigned app bundle.
+
 ## Current Gate Flags
 
 - d100_3_signed_notarized_execution_path_reviewed=true
 - macos_signed_notarized_execution_path_available=true
+- macos_tauri_signing_config_ready=true
+- macos_hardened_runtime_configured=true
+- macos_entitlements_configured=true
+- macos_entitlements_minimal=true
+- macos_signed_notarized_release_build_script_ready=true
+- signed_app_build_path_ready=true
+- dmg_create_from_signed_app_path_ready=true
 - credential_probe_path_ready=true
 - signing_command_path_ready=true
 - notary_submit_wait_path_ready=true
