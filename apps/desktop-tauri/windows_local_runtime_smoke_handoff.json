@@ -4,6 +4,8 @@
   "windows_local_runtime_smoke_handoff_verified": true,
   "current_state": "source-boundary-only",
   "windows_local_runtime_smoke_passed": false,
+  "windows_result_requires_current_source_commit": true,
+  "windows_result_current_head_strict_mode_ready": true,
   "windows_public_artifact_ready": false,
   "windows_installer_ready": false,
   "windows_public_artifact_upload_allowed": false,
