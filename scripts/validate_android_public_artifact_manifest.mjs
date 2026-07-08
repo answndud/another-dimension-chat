@@ -150,8 +150,15 @@ function validateManifest(file, { requireCurrentHead, head }) {
   const actualSize = fs.statSync(artifactFile).size;
   if (artifact.sha256 !== actualSha) issues.push("artifact-sha-mismatch");
   if (artifact.size_bytes !== actualSize) issues.push("artifact-size-mismatch");
-  if (!new Set([".apk", ".aab"]).has(path.extname(artifact.filename).toLowerCase())) {
+  const artifactExtension = path.extname(artifact.filename).toLowerCase();
+  if (!new Set([".apk", ".aab"]).has(artifactExtension)) {
     issues.push("invalid-artifact-extension");
+  }
+  if (
+    (manifest.artifact_kind === "apk" && artifactExtension !== ".apk") ||
+    (manifest.artifact_kind === "aab" && artifactExtension !== ".aab")
+  ) {
+    issues.push("artifact-extension-kind-mismatch");
   }
   issues.push(...validatePackageStructure(artifactFile, manifest.artifact_kind));
   const checksumFile = sibling(file, artifact.checksum_file);
@@ -214,6 +221,7 @@ if (failures > 0) {
 
 console.log(`accepted_android_public_artifact_manifests=${files.length}`);
 console.log("android_artifact_package_structure_verified=true");
+console.log("android_artifact_kind_extension_bound=true");
 console.log("android_public_artifact_ready=false");
 console.log("android_public_artifact_upload_allowed=false");
 console.log("status=android-public-artifact-candidate-requires-release-gate");

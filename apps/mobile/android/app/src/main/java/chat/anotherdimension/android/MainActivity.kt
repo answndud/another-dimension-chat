@@ -59,6 +59,26 @@ class MainActivity : Activity() {
                 )
             }
         }
+        val pairing = Button(this).apply {
+            text = "Pairing"
+            setOnClickListener {
+                statusView.text = renderResult(
+                    sharedCore.pairingPayloadExportImport(
+                        ExplicitUserActionToken("tap_pairing_payload"),
+                    ),
+                )
+            }
+        }
+        val safety = Button(this).apply {
+            text = "Safety"
+            setOnClickListener {
+                statusView.text = renderResult(
+                    sharedCore.safetyTranscriptConfirm(
+                        ExplicitUserActionToken("tap_safety_transcript"),
+                    ),
+                )
+            }
+        }
         val envelope = Button(this).apply {
             text = "Envelope"
             setOnClickListener {
@@ -67,6 +87,12 @@ class MainActivity : Activity() {
                         ExplicitUserActionToken("tap_manual_envelope"),
                     ),
                 )
+            }
+        }
+        val transcript = Button(this).apply {
+            text = "Transcript"
+            setOnClickListener {
+                statusView.text = renderResult(sharedCore.messageTranscriptView())
             }
         }
         val diagnostics = Button(this).apply {
@@ -95,7 +121,10 @@ class MainActivity : Activity() {
         root.addView(passphrase)
         root.addView(unlock)
         root.addView(invite)
+        root.addView(pairing)
+        root.addView(safety)
         root.addView(envelope)
+        root.addView(transcript)
         root.addView(diagnostics)
         root.addView(copyDiagnostics)
         root.addView(lifecycle)
