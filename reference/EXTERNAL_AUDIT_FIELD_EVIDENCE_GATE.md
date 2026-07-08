@@ -24,6 +24,7 @@ artifact, Android APK/AAB, and iOS IPA/TestFlight remain evidence blockers.
 - named_external_review_required_for_claims=true
 - accepted_audit_finding_closure_required_for_claims=true
 - repeated_real_field_reports_required_for_claims=true
+- required_platform_pair_coverage_required_for_claims=true
 - macos_public_artifact_evidence_required=true
 - windows_public_artifact_evidence_required=true
 - android_public_artifact_evidence_required=true

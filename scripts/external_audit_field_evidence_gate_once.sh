@@ -57,6 +57,7 @@ for flag in \
   "named_external_review_required_for_claims=true" \
   "accepted_audit_finding_closure_required_for_claims=true" \
   "repeated_real_field_reports_required_for_claims=true" \
+  "required_platform_pair_coverage_required_for_claims=true" \
   "macos_public_artifact_evidence_required=true" \
   "windows_public_artifact_evidence_required=true" \
   "android_public_artifact_evidence_required=true" \
@@ -74,6 +75,7 @@ done
 must_contain "reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md" "external_review_completed=false"
 must_contain "reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md" "fabricated_or_local_only_evidence_rejected=true"
 must_contain "reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md" "repeated_redacted_field_reports_available=false"
+must_contain "reference/REDACTED_FIELD_REPORT_PACKET.md" "required_platform_pair_coverage_required_for_claims=true"
 must_contain "reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md" "windows_public_artifact_ready=false"
 must_contain "reference/ANDROID_PUBLIC_APP_CANDIDATE.md" "android_public_artifact_ready=false"
 must_contain "reference/IOS_PUBLIC_APP_CANDIDATE.md" "ios_public_artifact_ready=false"
@@ -145,6 +147,7 @@ fabricated_or_local_only_evidence_rejected=true
 named_external_review_required_for_claims=true
 accepted_audit_finding_closure_required_for_claims=true
 repeated_real_field_reports_required_for_claims=true
+required_platform_pair_coverage_required_for_claims=true
 external_review_completed=false
 audit_completed=false
 repeated_redacted_field_reports_available=false
