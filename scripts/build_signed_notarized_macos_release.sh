@@ -23,9 +23,11 @@ TARGET_ARCH="${AD_MACOS_TARGET_ARCH:-aarch64-apple-darwin}"
 BUILD_CHANNEL="${AD_MACOS_BUILD_CHANNEL:-beta-onion}"
 OUT_DIR="${AD_SIGNED_MACOS_RELEASE_OUT_DIR:-$ROOT/apps/desktop-tauri/public-release/signed-notarized-rc}"
 PROVENANCE_OUT="${AD_SIGNED_RC_PROVENANCE_OUT:-}"
+DMG_CONTAINED_APP_VERIFIER="$ROOT/scripts/verify_macos_dmg_contained_app.sh"
 
 [ -f "$CONFIG" ] || fail "missing Tauri config: $CONFIG"
 [ -f "$ENTITLEMENTS" ] || fail "missing macOS entitlements: $ENTITLEMENTS"
+[ -f "$DMG_CONTAINED_APP_VERIFIER" ] || fail "missing DMG contained app verifier: $DMG_CONTAINED_APP_VERIFIER"
 
 case "$TARGET_ARCH" in
   aarch64-apple-darwin|x86_64-apple-darwin) ;;
@@ -56,6 +58,11 @@ dmg_codesign_path_ready=true
 notary_submit_wait_path_ready=true
 stapler_staple_validate_path_ready=true
 gatekeeper_assessment_path_ready=true
+macos_dmg_contained_app_verifier_available=true
+dmg_mounted_app_found=false
+dmg_contained_app_codesign_verify_passed=false
+dmg_contained_app_gatekeeper_assess_passed=false
+dmg_contained_app_matches_signed_source_app=false
 explicit_execution_env_required=true
 ad_execute_macos_sign_notary_required=true
 ad_build_macos_signed_rc_required=true
@@ -149,6 +156,15 @@ fi
 xcrun stapler staple "$DMG_PATH"
 xcrun stapler validate "$DMG_PATH"
 spctl --assess --type open --verbose=4 "$DMG_PATH"
+contained_app_output="$(AD_VERIFY_DMG="$DMG_PATH" AD_VERIFY_EXPECTED_APP_BUNDLE="$APP_BUNDLE" "$DMG_CONTAINED_APP_VERIFIER")"
+printf '%s\n' "$contained_app_output" | grep -Fq "dmg_mounted_app_found=true" ||
+  fail "DMG contained app was not found"
+printf '%s\n' "$contained_app_output" | grep -Fq "dmg_contained_app_codesign_verify_passed=true" ||
+  fail "DMG contained app codesign verification failed"
+printf '%s\n' "$contained_app_output" | grep -Fq "dmg_contained_app_gatekeeper_assess_passed=true" ||
+  fail "DMG contained app Gatekeeper assessment failed"
+printf '%s\n' "$contained_app_output" | grep -Fq "dmg_contained_app_matches_signed_source_app=true" ||
+  fail "DMG contained app does not match the signed source app bundle"
 
 sha256="$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')"
 printf '%s  %s\n' "$sha256" "$(basename "$DMG_PATH")" >"$DMG_PATH.sha256"
@@ -169,6 +185,10 @@ cat >"$PROVENANCE_OUT" <<JSON
   "notarized": true,
   "stapled": true,
   "gatekeeper_assessed": true,
+  "dmg_mounted_app_found": true,
+  "dmg_contained_app_codesign_verify_passed": true,
+  "dmg_contained_app_gatekeeper_assess_passed": true,
+  "dmg_contained_app_matches_signed_source_app": true,
   "release_upload_authorized": false,
   "dmg_rebuild_authorized": $DMG_REBUILD_AUTHORIZED_BOOL
 }
@@ -184,6 +204,10 @@ dmg_codesign_path_ready=true
 notary_submit_executed=true
 stapler_staple_executed=true
 gatekeeper_assess_executed=true
+dmg_mounted_app_found=true
+dmg_contained_app_codesign_verify_passed=true
+dmg_contained_app_gatekeeper_assess_passed=true
+dmg_contained_app_matches_signed_source_app=true
 signed_notarized_rc_dmg=$DMG_PATH
 rc_artifact_sha256=$sha256
 provenance_out=$PROVENANCE_OUT
