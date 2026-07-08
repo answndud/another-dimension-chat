@@ -9,6 +9,13 @@ Signed update manifest schema and candidate verification are tracked in
 `reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md`. Emergency release
 no-mutation handling is tracked in
 `reference/MACOS_EMERGENCY_RELEASE_INTEGRITY.md`.
+Signed update manifest candidates must include the same-release distribution
+manifest SHA and the DMG-contained `.app` verification fields before the
+candidate verifier accepts them. This prevents the update path from bypassing
+the release distribution metadata gate. The verifier runs the distribution
+manifest validator and compares the signed update payload against actual
+distribution manifest, artifact, provenance, and contained-app fields instead
+of accepting self-attested booleans.
 
 The current public release class remains an unsigned experimental public beta.
 No auto-update, signed update manifest, transparency log, stable release,
@@ -66,6 +73,11 @@ and owner release authorization before public wording changes.
 - macos_signed_update_manifest_schema_available=true
 - macos_signed_update_manifest_validator_available=true
 - signed_update_manifest_candidate_verifier_ready=true
+- signed_update_manifest_requires_distribution_manifest_sha256=true
+- signed_update_manifest_requires_dmg_contained_app_evidence=true
+- signed_update_manifest_requires_distribution_manifest_validation=true
+- signed_update_manifest_requires_signed_false_hold_flags=true
+- signed_update_manifest_previous_monotonicity_verifier_ready=true
 - signed_update_manifest_ready=false
 - update_signature_ready=false
 - update_version_monotonicity_policy_ready=true
@@ -75,6 +87,9 @@ and owner release authorization before public wording changes.
 - macos_emergency_release_integrity_available=true
 - emergency_release_advisory_packet_script_available=true
 - emergency_release_no_artifact_mutation_verifier_ready=true
+- emergency_advisory_requires_affected_release_artifact_binding=true
+- emergency_advisory_requires_distribution_manifest_sha256=true
+- emergency_advisory_requires_signed_false_hold_flags=true
 - emergency_release_generates_app_artifact=false
 - emergency_release_advisory_publication_authorized=false
 - dependency_vulnerability_decision_table_available=true
