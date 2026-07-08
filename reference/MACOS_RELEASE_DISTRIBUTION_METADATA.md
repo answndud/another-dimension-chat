@@ -24,9 +24,12 @@ checksum, provenance, and public copy all use the same architecture value.
 The generator writes only under ignored generated artifact directories and
 copies the selected artifact beside the generated checksum, provenance, release
 body, and manifest so validation uses one same-release asset authority
-directory. It keeps upload/edit/commit permissions false. The upload script
-holds unless `AD_RELEASE_UPLOAD_AUTHORIZED=1` is present and the manifest
-validates first.
+directory. For signed/notarized or stable candidates it requires
+`AD_MACOS_SIGNED_RC_PROVENANCE_IN` from the signed build/notarization path and
+copies the contained-app verification fields from that provenance instead of
+accepting unaudited manual booleans. It keeps upload/edit/commit permissions
+false. The upload script holds unless `AD_RELEASE_UPLOAD_AUTHORIZED=1` is
+present and the manifest validates first.
 
 ## Manifest Fields
 
@@ -37,13 +40,18 @@ Each macOS release distribution manifest uses
 - version and release class,
 - artifact filename, SHA-256, size, platform, architecture, signing status,
   notarization status, stapled status, checksum file, and provenance file,
+- for signed/notarized or stable candidates, signed-build provenance proving
+  the DMG-contained app verifier was available, the app mounted, contained-app
+  codesign passed, contained-app Gatekeeper execute assessment passed, and the
+  mounted app matched the signed source app,
 - same-release asset authority requirement,
 - public non-claims,
 - release upload, release body edit, and generated artifact commit flags.
 
 The manifest validator also checks sibling artifact bytes, the `.sha256` file,
-and the provenance JSON before accepting a candidate. Acceptance still does not
-mean release upload authorization or public artifact readiness.
+the provenance JSON, and signed/notarized contained-app evidence before
+accepting a candidate. Acceptance still does not mean release upload
+authorization or public artifact readiness.
 
 ## Current Gate Flags
 
@@ -51,6 +59,12 @@ mean release upload authorization or public artifact readiness.
 - macos_release_distribution_manifest_validator_available=true
 - macos_release_distribution_checksum_bytes_verified=true
 - macos_release_distribution_provenance_consistency_verified=true
+- macos_release_distribution_dmg_contained_app_evidence_required=true
+- macos_dmg_contained_app_verifier_available=false
+- dmg_mounted_app_found=false
+- dmg_contained_app_codesign_verify_passed=false
+- dmg_contained_app_gatekeeper_assess_passed=false
+- dmg_contained_app_matches_signed_source_app=false
 - macos_release_distribution_metadata_generator_ready=true
 - macos_release_upload_script_ready=true
 - macos_current_public_support_scope=apple-silicon-aarch64-only

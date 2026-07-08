@@ -24,6 +24,13 @@ const ALLOWED_ARCHITECTURES = new Set([
 
 const ALLOWED_SIGNING_STATUS = new Set(["unsigned", "signed"]);
 const ALLOWED_NOTARIZATION_STATUS = new Set(["not-notarized", "notarized"]);
+const DMG_CONTAINED_APP_FIELDS = Object.freeze([
+  "macos_dmg_contained_app_verifier_available",
+  "dmg_mounted_app_found",
+  "dmg_contained_app_codesign_verify_passed",
+  "dmg_contained_app_gatekeeper_assess_passed",
+  "dmg_contained_app_matches_signed_source_app",
+]);
 const FORBIDDEN_PATTERNS = Object.freeze([
   [/release_upload_authorized"\s*:\s*true/i, "release-upload-authorized"],
   [/release_body_edit_authorized"\s*:\s*true/i, "release-body-edit-authorized"],
@@ -145,6 +152,11 @@ function validateProvenanceFile(file, manifest, artifact, actualSha) {
   if (provenance.stapled !== artifact.stapled) {
     issues.push(`artifact:${artifact.filename}:provenance-stapled-mismatch`);
   }
+  for (const field of DMG_CONTAINED_APP_FIELDS) {
+    if (provenance[field] !== artifact[field]) {
+      issues.push(`artifact:${artifact.filename}:provenance-${field}-mismatch`);
+    }
+  }
   if (provenance.release_upload_authorized !== false) {
     issues.push(`artifact:${artifact.filename}:provenance-upload-must-stay-false`);
   }
@@ -169,8 +181,21 @@ function validateArtifact(file, manifest, artifact, index) {
   if (!ALLOWED_SIGNING_STATUS.has(artifact.signing_status)) issues.push(`${prefix}:invalid-signing-status`);
   if (!ALLOWED_NOTARIZATION_STATUS.has(artifact.notarization_status)) issues.push(`${prefix}:invalid-notarization-status`);
   if (typeof artifact.stapled !== "boolean") issues.push(`${prefix}:invalid-stapled`);
+  for (const field of DMG_CONTAINED_APP_FIELDS) {
+    if (typeof artifact[field] !== "boolean") issues.push(`${prefix}:invalid-${field}`);
+  }
   if (!artifact.checksum_file || typeof artifact.checksum_file !== "string") issues.push(`${prefix}:missing-checksum-file`);
   if (!artifact.provenance_file || typeof artifact.provenance_file !== "string") issues.push(`${prefix}:missing-provenance-file`);
+  const signedOrNotarized =
+    artifact.signing_status === "signed" ||
+    artifact.notarization_status === "notarized" ||
+    manifest.release_class === "signed-notarized-rc" ||
+    manifest.release_class === "stable";
+  if (signedOrNotarized) {
+    for (const field of DMG_CONTAINED_APP_FIELDS) {
+      if (artifact[field] !== true) issues.push(`${prefix}:${field}-required-for-signed-distribution`);
+    }
+  }
   if (manifest.release_class === "stable") {
     if (artifact.signing_status !== "signed") issues.push(`${prefix}:stable-must-be-signed`);
     if (artifact.notarization_status !== "notarized") issues.push(`${prefix}:stable-must-be-notarized`);
@@ -234,6 +259,7 @@ console.log(`macos_release_distribution_manifest_files_found=${files.length}`);
 
 if (files.length === 0) {
   console.log("accepted_macos_release_distribution_manifests=0");
+  console.log("macos_release_distribution_dmg_contained_app_evidence_required=true");
   console.log("macos_release_distribution_artifact_ready=false");
   console.log("status=waiting-for-macos-release-distribution-manifest");
   process.exit(0);
@@ -257,6 +283,7 @@ if (failures > 0) {
 console.log(`accepted_macos_release_distribution_manifests=${files.length}`);
 console.log("macos_release_distribution_checksum_bytes_verified=true");
 console.log("macos_release_distribution_provenance_consistency_verified=true");
+console.log("macos_release_distribution_dmg_contained_app_evidence_verified=true");
 console.log("macos_release_distribution_artifact_ready=false");
 console.log("release_upload_authorized=false");
 console.log("status=macos-release-distribution-manifest-candidate-requires-artifact-gate");

@@ -273,7 +273,7 @@ if [ -n "$PROVENANCE_OUT" ]; then
     *) fail "AD_SIGNED_RC_PROVENANCE_OUT must be under ignored generated artifact directories" ;;
   esac
   mkdir -p "$(dirname "$PROVENANCE_OUT")"
-  printf '{"artifact":"%s","sha256":"%s","dmg_mounted_app_found":true,"dmg_contained_app_codesign_verify_passed":true,"dmg_contained_app_gatekeeper_assess_passed":true,"dmg_contained_app_matches_signed_source_app":true,"release_upload_authorized":false}\n' \
+  printf '{"artifact":"%s","sha256":"%s","macos_dmg_contained_app_verifier_available":true,"dmg_mounted_app_found":true,"dmg_contained_app_codesign_verify_passed":true,"dmg_contained_app_gatekeeper_assess_passed":true,"dmg_contained_app_matches_signed_source_app":true,"release_upload_authorized":false}\n' \
     "$RC_DMG" "$rc_sha" >"$PROVENANCE_OUT"
   generated_provenance_written=true
 fi
