@@ -10,7 +10,9 @@ packaging review, signing decision, checksum/provenance set, and upload review
 are completed on a Windows machine.
 D100-5 execution path readiness is tracked in
 `reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md`, with real-Windows result
-schema in `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md`.
+schema in `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md` and artifact
+manifest/checksum consistency in
+`reference/WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md`.
 
 ## Scope-Down Decision
 
@@ -27,6 +29,10 @@ Public wording must still say `not production-ready`.
 - windows_public_artifact_execution_path_available=true
 - windows_real_runtime_result_schema_available=true
 - windows_real_runtime_result_validator_available=true
+- windows_artifact_manifest_checksum_schema_available=true
+- windows_artifact_manifest_checksum_validator_available=true
+- windows_artifact_metadata_generator_ready=true
+- windows_artifact_manifest_checksum_verifier_ready=true
 - real_windows_runtime_smoke_requirements_defined=true
 - windows_installer_signing_decision_recorded=true
 - windows_checksum_provenance_requirements_defined=true
