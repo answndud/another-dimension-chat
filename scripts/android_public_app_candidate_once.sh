@@ -30,6 +30,7 @@ for flag in \
   "android_public_app_candidate_path_ready=true" \
   "android_artifact_manifest_schema_available=true" \
   "android_artifact_manifest_validator_available=true" \
+  "android_artifact_package_structure_verified=true" \
   "android_public_artifact_checksum_verifier_ready=true" \
   "android_shell_uses_shared_core_json_bridge_candidate=true" \
   "android_forbidden_dependency_scan_ready=true" \
@@ -50,6 +51,7 @@ for flag in \
 done
 
 must_contain "$VALIDATOR" "android-public-artifact-manifest-v1"
+must_contain "$VALIDATOR" "android_artifact_package_structure_verified=true"
 must_contain "apps/mobile/android/app/src/main/AndroidManifest.xml" 'android:allowBackup="false"'
 must_contain "apps/mobile/android/app/src/main/res/xml/data_extraction_rules.xml" '<exclude domain="database" path="."'
 must_contain "apps/mobile/android/app/src/main/java/chat/anotherdimension/android/JsonBridgeSharedCoreAdapter.kt" "RuntimeScopeUnlockedJsonBridgeMobileApi"
@@ -64,7 +66,10 @@ printf '%s\n' "$empty_output" | grep -Fq "status=waiting-for-android-public-arti
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 artifact="$tmp_dir/another-dimension-0.1.0-runtime-candidate.apk"
-printf 'android artifact fixture\n' >"$artifact"
+mkdir -p "$tmp_dir/apk-root"
+printf '<manifest package="chat.anotherdimension"/>\n' >"$tmp_dir/apk-root/AndroidManifest.xml"
+printf 'dex fixture\n' >"$tmp_dir/apk-root/classes.dex"
+(cd "$tmp_dir/apk-root" && zip -qr "$artifact" AndroidManifest.xml classes.dex)
 artifact_sha="$(shasum -a 256 "$artifact" | awk '{print $1}')"
 artifact_size="$(wc -c <"$artifact" | tr -d ' ')"
 printf '%s  %s\n' "$artifact_sha" "$(basename "$artifact")" >"$tmp_dir/another-dimension-0.1.0-runtime-candidate.apk.sha256"
@@ -72,6 +77,10 @@ cat >"$tmp_dir/another-dimension-0.1.0-runtime-candidate.apk.provenance.json" <<
 {
   "schema_version": "android-public-artifact-provenance-v1",
   "source_commit": "abcdef1234567890",
+  "artifact_kind": "apk",
+  "distribution_path": "sideload-hold",
+  "signing_status": "unsigned-debug-hold",
+  "real_device_smoke_passed": true,
   "artifact_sha256": "$artifact_sha",
   "android_public_artifact_ready": false
 }
@@ -111,14 +120,58 @@ JSON
 candidate_output="$(node "$VALIDATOR" "$tmp_dir/ANDROID_PUBLIC_ARTIFACT_MANIFEST.json")"
 printf '%s\n' "$candidate_output" | grep -Fq "accepted_android_public_artifact_manifests=1" ||
   fail "valid Android artifact manifest was not accepted"
+printf '%s\n' "$candidate_output" | grep -Fq "android_artifact_package_structure_verified=true" ||
+  fail "Android validator did not verify APK/AAB package structure"
 printf '%s\n' "$candidate_output" | grep -Fq "android_public_artifact_ready=false" ||
   fail "Android validator must not claim public artifact readiness"
+
+if AD_REQUIRE_CURRENT_HEAD=1 node "$VALIDATOR" "$tmp_dir/ANDROID_PUBLIC_ARTIFACT_MANIFEST.json" >"$tmp_dir/stale.out" 2>&1; then
+  fail "strict Android artifact validator accepted stale source commit"
+fi
+grep -Fq "source-commit-not-current-head" "$tmp_dir/stale.out" ||
+  fail "strict Android artifact validator did not report stale source commit"
+
+bad_artifact="$tmp_dir/bad-placeholder.apk"
+printf 'not a zip package\n' >"$bad_artifact"
+bad_sha="$(shasum -a 256 "$bad_artifact" | awk '{print $1}')"
+bad_size="$(wc -c <"$bad_artifact" | tr -d ' ')"
+cp "$tmp_dir/ANDROID_PUBLIC_ARTIFACT_MANIFEST.json" "$tmp_dir/BAD_ANDROID_PUBLIC_ARTIFACT_MANIFEST.json"
+node - "$tmp_dir/BAD_ANDROID_PUBLIC_ARTIFACT_MANIFEST.json" "$bad_sha" "$bad_size" <<'NODE'
+const fs = require("node:fs");
+const [manifestPath, sha, size] = process.argv.slice(2);
+const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+manifest.artifact.filename = "bad-placeholder.apk";
+manifest.artifact.sha256 = sha;
+manifest.artifact.size_bytes = Number(size);
+manifest.artifact.checksum_file = "bad-placeholder.apk.sha256";
+manifest.artifact.provenance_file = "bad-placeholder.apk.provenance.json";
+fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+NODE
+printf '%s  %s\n' "$bad_sha" "bad-placeholder.apk" >"$tmp_dir/bad-placeholder.apk.sha256"
+cat >"$tmp_dir/bad-placeholder.apk.provenance.json" <<JSON
+{
+  "schema_version": "android-public-artifact-provenance-v1",
+  "source_commit": "abcdef1234567890",
+  "artifact_kind": "apk",
+  "distribution_path": "sideload-hold",
+  "signing_status": "unsigned-debug-hold",
+  "real_device_smoke_passed": true,
+  "artifact_sha256": "$bad_sha",
+  "android_public_artifact_ready": false
+}
+JSON
+if node "$VALIDATOR" "$tmp_dir/BAD_ANDROID_PUBLIC_ARTIFACT_MANIFEST.json" >"$tmp_dir/bad.out" 2>&1; then
+  fail "Android validator accepted placeholder non-ZIP APK"
+fi
+grep -Fq "artifact-not-zip-package" "$tmp_dir/bad.out" ||
+  fail "Android validator did not report placeholder package rejection"
 
 cat <<'STATUS'
 status=android-public-app-candidate-source-ready
 android_public_app_candidate_path_ready=true
 android_artifact_manifest_schema_available=true
 android_artifact_manifest_validator_available=true
+android_artifact_package_structure_verified=true
 android_public_artifact_checksum_verifier_ready=true
 android_shell_uses_shared_core_json_bridge_candidate=true
 android_forbidden_dependency_scan_ready=true

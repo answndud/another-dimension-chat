@@ -17,6 +17,7 @@ backup dependencies.
 - ios_public_app_candidate_path_ready=true
 - ios_artifact_manifest_schema_available=true
 - ios_artifact_manifest_validator_available=true
+- ios_artifact_package_structure_verified=true
 - ios_public_artifact_checksum_verifier_ready=true
 - ios_shell_uses_shared_core_json_bridge_candidate=true
 - ios_forbidden_dependency_scan_ready=true

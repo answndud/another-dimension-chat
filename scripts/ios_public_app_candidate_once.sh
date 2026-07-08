@@ -30,6 +30,7 @@ for flag in \
   "ios_public_app_candidate_path_ready=true" \
   "ios_artifact_manifest_schema_available=true" \
   "ios_artifact_manifest_validator_available=true" \
+  "ios_artifact_package_structure_verified=true" \
   "ios_public_artifact_checksum_verifier_ready=true" \
   "ios_shell_uses_shared_core_json_bridge_candidate=true" \
   "ios_forbidden_dependency_scan_ready=true" \
@@ -51,6 +52,7 @@ for flag in \
 done
 
 must_contain "$VALIDATOR" "ios-public-artifact-manifest-v1"
+must_contain "$VALIDATOR" "ios_artifact_package_structure_verified=true"
 must_contain "apps/mobile/ios/AnotherDimension/AnotherDimension.entitlements" "<array/>"
 must_contain "apps/mobile/ios/AnotherDimension/JsonBridgeSharedCoreAdapter.swift" "RuntimeScopeUnlockedJsonBridgeMobileApi"
 
@@ -64,7 +66,11 @@ printf '%s\n' "$empty_output" | grep -Fq "status=waiting-for-ios-public-artifact
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 artifact="$tmp_dir/AnotherDimension-0.1.0-runtime-candidate.ipa"
-printf 'ios artifact fixture\n' >"$artifact"
+mkdir -p "$tmp_dir/ipa-root/Payload/AnotherDimension.app"
+printf '<plist><dict><key>CFBundleIdentifier</key><string>chat.anotherdimension</string></dict></plist>\n' \
+  >"$tmp_dir/ipa-root/Payload/AnotherDimension.app/Info.plist"
+printf 'mobile provisioning fixture\n' >"$tmp_dir/ipa-root/Payload/AnotherDimension.app/embedded.mobileprovision"
+(cd "$tmp_dir/ipa-root" && zip -qr "$artifact" Payload)
 artifact_sha="$(shasum -a 256 "$artifact" | awk '{print $1}')"
 artifact_size="$(wc -c <"$artifact" | tr -d ' ')"
 printf '%s  %s\n' "$artifact_sha" "$(basename "$artifact")" >"$tmp_dir/AnotherDimension-0.1.0-runtime-candidate.ipa.sha256"
@@ -72,6 +78,10 @@ cat >"$tmp_dir/AnotherDimension-0.1.0-runtime-candidate.ipa.provenance.json" <<J
 {
   "schema_version": "ios-public-artifact-provenance-v1",
   "source_commit": "abcdef1234567890",
+  "artifact_kind": "ipa",
+  "distribution_path": "testflight-hold",
+  "signing_status": "development-signed-hold",
+  "real_device_smoke_passed": true,
   "artifact_sha256": "$artifact_sha",
   "ios_public_artifact_ready": false
 }
@@ -112,14 +122,58 @@ JSON
 candidate_output="$(node "$VALIDATOR" "$tmp_dir/IOS_PUBLIC_ARTIFACT_MANIFEST.json")"
 printf '%s\n' "$candidate_output" | grep -Fq "accepted_ios_public_artifact_manifests=1" ||
   fail "valid iOS artifact manifest was not accepted"
+printf '%s\n' "$candidate_output" | grep -Fq "ios_artifact_package_structure_verified=true" ||
+  fail "iOS validator did not verify IPA package structure"
 printf '%s\n' "$candidate_output" | grep -Fq "ios_public_artifact_ready=false" ||
   fail "iOS validator must not claim public artifact readiness"
+
+if AD_REQUIRE_CURRENT_HEAD=1 node "$VALIDATOR" "$tmp_dir/IOS_PUBLIC_ARTIFACT_MANIFEST.json" >"$tmp_dir/stale.out" 2>&1; then
+  fail "strict iOS artifact validator accepted stale source commit"
+fi
+grep -Fq "source-commit-not-current-head" "$tmp_dir/stale.out" ||
+  fail "strict iOS artifact validator did not report stale source commit"
+
+bad_artifact="$tmp_dir/bad-placeholder.ipa"
+printf 'not a zip package\n' >"$bad_artifact"
+bad_sha="$(shasum -a 256 "$bad_artifact" | awk '{print $1}')"
+bad_size="$(wc -c <"$bad_artifact" | tr -d ' ')"
+cp "$tmp_dir/IOS_PUBLIC_ARTIFACT_MANIFEST.json" "$tmp_dir/BAD_IOS_PUBLIC_ARTIFACT_MANIFEST.json"
+node - "$tmp_dir/BAD_IOS_PUBLIC_ARTIFACT_MANIFEST.json" "$bad_sha" "$bad_size" <<'NODE'
+const fs = require("node:fs");
+const [manifestPath, sha, size] = process.argv.slice(2);
+const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+manifest.artifact.filename = "bad-placeholder.ipa";
+manifest.artifact.sha256 = sha;
+manifest.artifact.size_bytes = Number(size);
+manifest.artifact.checksum_file = "bad-placeholder.ipa.sha256";
+manifest.artifact.provenance_file = "bad-placeholder.ipa.provenance.json";
+fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+NODE
+printf '%s  %s\n' "$bad_sha" "bad-placeholder.ipa" >"$tmp_dir/bad-placeholder.ipa.sha256"
+cat >"$tmp_dir/bad-placeholder.ipa.provenance.json" <<JSON
+{
+  "schema_version": "ios-public-artifact-provenance-v1",
+  "source_commit": "abcdef1234567890",
+  "artifact_kind": "ipa",
+  "distribution_path": "testflight-hold",
+  "signing_status": "development-signed-hold",
+  "real_device_smoke_passed": true,
+  "artifact_sha256": "$bad_sha",
+  "ios_public_artifact_ready": false
+}
+JSON
+if node "$VALIDATOR" "$tmp_dir/BAD_IOS_PUBLIC_ARTIFACT_MANIFEST.json" >"$tmp_dir/bad.out" 2>&1; then
+  fail "iOS validator accepted placeholder non-ZIP IPA"
+fi
+grep -Fq "artifact-not-zip-package" "$tmp_dir/bad.out" ||
+  fail "iOS validator did not report placeholder package rejection"
 
 cat <<'STATUS'
 status=ios-public-app-candidate-source-ready
 ios_public_app_candidate_path_ready=true
 ios_artifact_manifest_schema_available=true
 ios_artifact_manifest_validator_available=true
+ios_artifact_package_structure_verified=true
 ios_public_artifact_checksum_verifier_ready=true
 ios_shell_uses_shared_core_json_bridge_candidate=true
 ios_forbidden_dependency_scan_ready=true
