@@ -67,7 +67,7 @@ must_contain "$DOC" "global_identity_claim_allowed=false"
 must_contain "$DOC" "production_identity_audit_ready=false"
 must_contain "$DOC" "security_ready_claimed=false"
 must_contain "$DOC" "sensitive_communication_allowed=false"
-must_contain "$DOC" "next_required_phase=Phase A100-2 - External Review Execution And Finding Closure"
+must_contain "$DOC" "next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program"
 
 must_contain "README.md" "reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md"
 must_contain "SECURITY.md" "reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md"
@@ -128,5 +128,5 @@ accountless_contact_discovery_preserved=true
 production_identity_audit_ready=false
 security_ready_claimed=false
 sensitive_communication_allowed=false
-next_required_phase=Phase-A100-2-External-Review-Execution-And-Finding-Closure
+next_required_phase=Phase-F100-1-External-Two-Machine-Field-Evidence-Program
 STATUS

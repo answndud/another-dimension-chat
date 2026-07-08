@@ -28,6 +28,10 @@ communication.
    completed review result, findings closure, stable gate pass, and owner
    approval.
 
+A100-2 may be removed from the active queue only by explicit owner waiver while
+the named-review and finding-closure evidence remains false. That waiver does
+not alter the intake rules above.
+
 ## Tracker Rules
 
 - Use `AR-0001` style IDs for real public-safe findings.
@@ -45,6 +49,11 @@ communication.
 - external_review_intake_runbook_available=true
 - external_review_intake_operator_ready=true
 - a100_1_external_security_review_packet_frozen=true
+- a100_2_external_review_execution_blocker_closed=true
+- external_review_execution_policy_waiver_authorized=true
+- named_external_review_required_for_claims=true
+- accepted_audit_finding_closure_required_for_claims=true
+- external_review_execution_claim_allowed=false
 - review_packet_synced_to_latest_source_gates=true
 - review_packet_includes_c100_5_onion_boundary=true
 - review_packet_includes_target_standard_matrix=true

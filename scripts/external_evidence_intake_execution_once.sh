@@ -53,6 +53,11 @@ for flag in \
   "external_review_intake_runbook_available=true" \
   "external_review_intake_operator_ready=true" \
   "a100_1_external_security_review_packet_frozen=true" \
+  "a100_2_external_review_execution_blocker_closed=true" \
+  "external_review_execution_policy_waiver_authorized=true" \
+  "named_external_review_required_for_claims=true" \
+  "accepted_audit_finding_closure_required_for_claims=true" \
+  "external_review_execution_claim_allowed=false" \
   "review_packet_synced_to_latest_source_gates=true" \
   "review_packet_includes_c100_5_onion_boundary=true" \
   "review_packet_includes_target_standard_matrix=true" \
@@ -108,6 +113,9 @@ done
 
 must_contain "$REVIEW_DOC" "reviewer_packet_freeze_ready=true"
 must_contain "$REVIEW_DOC" "a100_1_external_security_review_packet_frozen=true"
+must_contain "$REVIEW_DOC" "a100_2_external_review_execution_blocker_closed=true"
+must_contain "$REVIEW_DOC" "external_review_execution_policy_waiver_authorized=true"
+must_contain "$REVIEW_DOC" "external_review_execution_claim_allowed=false"
 must_contain "$REVIEW_DOC" "review_packet_synced_to_latest_source_gates=true"
 must_contain "$REVIEW_DOC" "review_packet_finding_tracker_synced=true"
 must_contain "$REVIEW_RUNBOOK" "external_review_intake_operator_ready=true"
@@ -141,6 +149,7 @@ for file in "$DOC" "$REVIEW_DOC" "$REVIEW_RUNBOOK" "$TRACKER" "$REVIEW_PACKET" "
   must_not_match "$file" "sensitive_communication_allowed=true"
   must_not_match "$file" "fabricated_review_or_peer_evidence_allowed=true"
   must_not_match "$file" "local_only_evidence_promoted_to_external=true"
+  must_not_match "$file" "external_review_execution_claim_allowed=true"
 done
 
 scripts/external_review_audit_readiness_once.sh >/dev/null
@@ -233,6 +242,11 @@ external_review_intake_runbook_available=true
 external_review_intake_operator_ready=true
 reviewer_packet_freeze_ready=true
 a100_1_external_security_review_packet_frozen=true
+a100_2_external_review_execution_blocker_closed=true
+external_review_execution_policy_waiver_authorized=true
+named_external_review_required_for_claims=true
+accepted_audit_finding_closure_required_for_claims=true
+external_review_execution_claim_allowed=false
 review_packet_synced_to_latest_source_gates=true
 review_packet_includes_c100_5_onion_boundary=true
 review_packet_includes_target_standard_matrix=true

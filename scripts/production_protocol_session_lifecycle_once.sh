@@ -85,7 +85,7 @@ require_text "$DOC" "external_onion_delivery_verified=false"
 require_text "$DOC" "runtime_messaging_ready=false"
 require_text "$DOC" "production_e2ee_ready=false"
 require_text "$DOC" "security_ready_claimed=false"
-require_text "$DOC" "next_required_phase=Phase A100-2 - External Review Execution And Finding Closure"
+require_text "$DOC" "next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program"
 
 require_text "$CORE" "fn production_session_readiness_gate_lists_blockers_without_opening_runtime"
 require_text "$CORE" "fn production_async_delivery_semantics_are_reviewed_without_network_claim"
@@ -141,4 +141,4 @@ printf 'external_onion_delivery_verified=false\n'
 printf 'runtime_messaging_ready=false\n'
 printf 'production_e2ee_ready=false\n'
 printf 'security_ready_claimed=false\n'
-printf 'next_required_phase=Phase-A100-2-External-Review-Execution-And-Finding-Closure\n'
+printf 'next_required_phase=Phase-F100-1-External-Two-Machine-Field-Evidence-Program\n'

@@ -54,7 +54,7 @@ done
 must_contain "$PLAN" "deployment_100_blocker_resolution_plan_available=true"
 must_contain "$PLAN" "deployment_100_blocker_resolution_machine_checkable=true"
 must_contain "$PLAN" "all_false_hold_flags_categorized=true"
-must_contain "$PLAN" "next_required_phase=Phase A100-2 - External Review Execution And Finding Closure"
+must_contain "$PLAN" "next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program"
 
 for phase in \
   "M100-1" "M100-2" "M100-3" "M100-4" "M100-5" "C100-1" "C100-2" \
@@ -140,6 +140,14 @@ for flag in \
   "review_packet_finding_tracker_synced=true" \
   "private_docs_excluded_from_review_packet=true" \
   "generated_release_artifacts_excluded_from_review_packet=true" \
+  "a100_2_external_review_execution_blocker_closed=true" \
+  "external_review_execution_policy_waiver_authorized=true" \
+  "external_review_execution_waiver_scope=active-queue-unblock-only" \
+  "named_external_review_required_for_claims=true" \
+  "accepted_audit_finding_closure_required_for_claims=true" \
+  "external_review_execution_claim_allowed=false" \
+  "audit_findings_recorded=0" \
+  "audit_finding_closure_claim_allowed=false" \
   "macos_release_credential_evidence_schema_available=true" \
   "macos_release_credential_evidence_validator_available=true" \
   "macos_release_credential_evidence_collector_available=true" \
@@ -254,6 +262,7 @@ c100_3_key_management_blocker_closed=true
 c100_4_transport_blocker_closed=true
 c100_5_onion_evidence_blocker_closed=true
 a100_1_external_security_review_packet_frozen=true
+a100_2_external_review_execution_blocker_closed=true
 m100_1_release_credentials_ready=$m100_1_release_credentials_ready
 false_or_hold_items_hidden=false
 public_claim_ahead_of_evidence=false
@@ -265,5 +274,5 @@ sensitive_communication_allowed=false
 stable_release_allowed=false
 release_upload_authorized=false
 dmg_rebuild_authorized=false
-next_required_phase=Phase-A100-2-External-Review-Execution-And-Finding-Closure
+next_required_phase=Phase-F100-1-External-Two-Machine-Field-Evidence-Program
 STATUS

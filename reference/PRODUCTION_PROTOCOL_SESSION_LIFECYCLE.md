@@ -159,4 +159,4 @@ These questions remain unresolved and must stay in the external review packet:
 - runtime_messaging_ready=false
 - production_e2ee_ready=false
 - security_ready_claimed=false
-- next_required_phase=Phase A100-2 - External Review Execution And Finding Closure
+- next_required_phase=Phase F100-1 - External Two-Machine Field Evidence Program
