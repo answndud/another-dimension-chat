@@ -6,7 +6,9 @@ This record connects same-release checksum/provenance authority, version
 monotonicity policy, rollback warning, emergency release procedure, and
 non-claim wording to a focused verifier.
 Signed update manifest schema and candidate verification are tracked in
-`reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md`.
+`reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md`. Emergency release
+no-mutation handling is tracked in
+`reference/MACOS_EMERGENCY_RELEASE_INTEGRITY.md`.
 
 The current public release class remains an unsigned experimental public beta.
 No auto-update, signed update manifest, transparency log, stable release,
@@ -31,6 +33,9 @@ evidence or a later explicit claim-policy decision.
 - Update rollback handling is a warning and recovery policy only; automatic
   rollback prevention remains false.
 - Emergency release handling is defined in the operational incident process.
+- Emergency release source tooling may generate advisory/checklist/manifest
+  material only; release upload, release edit, asset deletion, DMG rebuild, and
+  advisory publication require a separate explicit release task.
 
 ## Future Pass Conditions
 
@@ -67,6 +72,13 @@ and owner release authorization before public wording changes.
 - rollback_warning_policy_ready=true
 - rollback_prevention_claimed=false
 - emergency_release_path_defined=true
+- macos_emergency_release_integrity_available=true
+- emergency_release_advisory_packet_script_available=true
+- emergency_release_no_artifact_mutation_verifier_ready=true
+- emergency_release_generates_app_artifact=false
+- emergency_release_advisory_publication_authorized=false
+- dependency_vulnerability_decision_table_available=true
+- dependency_vulnerability_decisions=hold#advisory#rebuild#revoke
 - release_upload_authorized=false
 - dmg_rebuild_authorized=false
 - stable_release_allowed=false
