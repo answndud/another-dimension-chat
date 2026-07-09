@@ -1,32 +1,32 @@
 const dictionaries = {
   en: {
     appTagline: "Private 1:1 chat",
-    publicBetaEyebrow: "Unsigned experimental public beta",
-    publicBetaWarningTitle: "Experimental beta only",
+    publicBetaEyebrow: "No-account private messenger beta",
+    publicBetaWarningTitle: "Private 1:1 chat without a central trusted server",
     publicBetaWarningBody:
-      "This build is an unsigned experimental public beta, not notarized, not audited, not production-ready, and sensitive communication prohibited. Its High-Risk Mode uses a defined threat matrix; compromised endpoints, direct coercion, and full global traffic correlation are not protected.",
+      "Use this unsigned experimental public beta for pairwise invites, mandatory safety comparison, encrypted manual envelope exchange, local data ownership, and redacted support diagnostics. It is not notarized, not audited, not production-ready, and sensitive communication prohibited.",
     publicBetaNetworkBody:
-      "Network and onion delivery stay off on launch. They require manual permission and an explicit delivery action.",
-    publicBetaGateLabel: "Public beta use boundary",
+      "Default exchange is manual encrypted envelopes. Network and onion delivery stay off on launch and require manual permission plus an explicit delivery action.",
+    publicBetaGateLabel: "Public app use boundary",
     publicBetaChecksumBody:
       "Download updates from the same GitHub Release and verify the matching .sha256 before opening the app.",
     publicBetaInstallBody:
       "If macOS blocks the unsigned app, use Privacy & Security manual allow only after the checksum matches.",
     publicBetaNoUpdateBody:
-      "There is no auto-update, signing, notarization, completed review, external onion delivery claim, Briar/Cwtch-equivalence claim, coercion-safe claim, or secure messenger readiness claim.",
+      "High-Risk Mode has a defined threat model, onion-only advanced transport, local-at-rest hardening, and redacted support. There is no auto-update, signing, notarization, completed review, full censorship-resistance claim, external onion delivery claim, Briar/Cwtch-equivalence claim, compromised-device-safe claim, coercion-safe claim, or secure messenger readiness claim.",
     versionIntegrityStatusInitial:
       "current_version=unknown release_authority=same-github-release-assets checksum_verification=matching-sha256-before-open auto_update_ready=false rollback_prevention_claimed=false",
     windowsRuntimeParityStatusInitial:
       "platform_scope=desktop-shared-core windows_distribution=local-build-candidate-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false",
-    firstRunChecklistLabel: "First-run local desktop flow",
-    firstRunProfileStep: "Unlock, create, or reopen a local profile before room actions.",
-    firstRunRoomStep: "Create an invite room or paste the invite code you received.",
-    firstRunVerifyStep: "Compare the safety phrase, then write a message.",
+    firstRunChecklistLabel: "First-run private message flow",
+    firstRunProfileStep: "Create, unlock, or reopen your local profile before room actions.",
+    firstRunRoomStep: "Create a pairwise invite room or paste the invite code you received.",
+    firstRunVerifyStep: "Compare the mandatory safety phrase, then write a message.",
     firstRunManualMessageStep:
       "Export/import the manual encrypted envelope, then reply, retry, cancel, or delete locally.",
     firstRunDiagnosticsStep:
       "Copy public diagnostics only after redaction; blocked actions show the reason and next recovery action.",
-    firstRunPrimaryNextAction: "Next: enter a local profile and passphrase.",
+    firstRunPrimaryNextAction: "Next: create or unlock your local profile.",
     displayMode: "Display mode",
     language: "Language",
     darkMode: "Dark mode",
@@ -1167,32 +1167,32 @@ const dictionaries = {
   },
   ko: {
     appTagline: "1:1 비공개 채팅",
-    publicBetaEyebrow: "서명되지 않은 실험용 공개 베타",
-    publicBetaWarningTitle: "실험용 베타 전용",
+    publicBetaEyebrow: "계정 없는 private messenger beta",
+    publicBetaWarningTitle: "중앙 trusted server 없는 1:1 private chat",
     publicBetaWarningBody:
-      "이 빌드는 unsigned experimental public beta이며, notarization을 받지 않았고, not audited, not production-ready 상태이고, sensitive communication prohibited입니다. High-Risk Mode는 정의된 threat matrix만 말하며, 감염된 기기, 직접 강압, 전역 트래픽 상관관계 완전 방어는 보호 범위가 아닙니다.",
+      "이 unsigned experimental public beta는 pairwise invite, mandatory safety comparison, encrypted manual envelope exchange, local data ownership, redacted support diagnostics를 시험할 수 있습니다. notarization을 받지 않았고, not audited, not production-ready 상태이며, sensitive communication prohibited입니다.",
     publicBetaNetworkBody:
-      "네트워크와 onion 전송은 앱 실행 시 자동으로 시작되지 않습니다. 수동 허용과 명시적인 전송 동작이 필요합니다.",
-    publicBetaGateLabel: "공개 베타 사용 경계",
+      "기본 교환 방식은 manual encrypted envelope입니다. 네트워크와 onion 전송은 앱 실행 시 자동으로 시작되지 않고, 수동 허용과 명시적인 전송 동작이 필요합니다.",
+    publicBetaGateLabel: "공개 앱 사용 경계",
     publicBetaChecksumBody:
       "업데이트는 같은 GitHub Release에서 받고, 앱을 열기 전에 함께 첨부된 .sha256을 확인하세요.",
     publicBetaInstallBody:
       "macOS가 서명되지 않은 앱을 차단하면 checksum이 일치한 뒤에만 Privacy & Security에서 수동 허용하세요.",
     publicBetaNoUpdateBody:
-      "auto-update, signing, notarization, 완료된 review, external onion delivery claim, Briar/Cwtch 동급 claim, 강압 안전 claim, secure messenger readiness 주장은 없습니다.",
+      "High-Risk Mode는 defined threat model, onion-only advanced transport, local-at-rest hardening, redacted support만 말합니다. auto-update, signing, notarization, 완료된 review, full censorship-resistance claim, external onion delivery claim, Briar/Cwtch 동급 claim, compromised-device-safe claim, coercion-safe claim, secure messenger readiness 주장은 없습니다.",
     versionIntegrityStatusInitial:
       "current_version=unknown release_authority=same-github-release-assets checksum_verification=matching-sha256-before-open auto_update_ready=false rollback_prevention_claimed=false",
     windowsRuntimeParityStatusInitial:
       "platform_scope=desktop-shared-core windows_distribution=local-build-candidate-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false",
-    firstRunChecklistLabel: "첫 실행 로컬 desktop 흐름",
-    firstRunProfileStep: "방 작업 전에 로컬 profile을 unlock, create, reopen 합니다.",
-    firstRunRoomStep: "invite room을 만들거나 받은 invite code를 붙여넣습니다.",
-    firstRunVerifyStep: "safety phrase를 비교한 뒤 메시지를 작성합니다.",
+    firstRunChecklistLabel: "첫 private message 흐름",
+    firstRunProfileStep: "방 작업 전에 로컬 profile을 create, unlock, reopen 합니다.",
+    firstRunRoomStep: "pairwise invite room을 만들거나 받은 invite code를 붙여넣습니다.",
+    firstRunVerifyStep: "mandatory safety phrase를 비교한 뒤 메시지를 작성합니다.",
     firstRunManualMessageStep:
       "manual encrypted envelope를 export/import한 뒤 reply, retry, cancel, delete를 로컬에서 처리합니다.",
     firstRunDiagnosticsStep:
       "public diagnostics는 redaction 후에만 복사합니다. blocked action은 reason과 next recovery action을 표시합니다.",
-    firstRunPrimaryNextAction: "다음: 로컬 profile과 passphrase를 입력하세요.",
+    firstRunPrimaryNextAction: "다음: 로컬 profile을 만들거나 unlock 하세요.",
     displayMode: "화면 모드",
     language: "언어",
     darkMode: "다크 모드",

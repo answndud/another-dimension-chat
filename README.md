@@ -2,9 +2,11 @@
 
 [![Verify](https://github.com/answndud/another-dimension-chat/actions/workflows/verify.yml/badge.svg)](https://github.com/answndud/another-dimension-chat/actions/workflows/verify.yml)
 
-Another Dimension Chat is an early Rust prototype for a high-risk 1:1 messenger architecture.
+Another Dimension Chat is a no-central-trusted-server 1:1 private messenger app candidate built in Rust/Tauri.
 
-The project goal is not "a serverless chat app" in the loose sense. The long-term goal is a no-central-trusted-server messenger that avoids phone-number identity, global accounts, centralized contact discovery, centralized push notifications, central message servers, and default direct P2P transport in high-risk mode. The current practical default transport path is explicit user-mediated encrypted envelope exchange; advanced onion/Tor work remains an opt-in, fail-closed, user-triggered path.
+It is useful when two people want no phone number, no email identity, no global account, a pairwise invite, mandatory safety comparison, encrypted user-mediated message exchange, and local data ownership.
+
+The project goal is not "a serverless chat app" in the loose sense. The long-term goal is a no-central-trusted-server messenger that avoids phone-number identity, global accounts, centralized contact discovery, centralized push notifications, central message servers, and default direct P2P transport in high-risk mode. The current practical default transport path is explicit user-mediated encrypted envelope exchange; advanced onion/Tor work remains an opt-in, onion-only, fail-closed, user-triggered path.
 
 ## macOS Public Beta Quick Start
 
@@ -29,9 +31,10 @@ communication prohibited. Do not use it for real communication.
    For troubleshooting, use `INSTALL_UNSIGNED_MACOS.md` attached to the same
    GitHub Release; this repository keeps the source copy at
    `reference/UNSIGNED_PUBLIC_BETA_INSTALL.md`.
-5. First run: use the app to test local profile unlock, invite room setup,
-   manual encrypted envelope export/import, reply/retry/cancel, local deletion,
-   and redacted diagnostics copy. This beta does not prove external onion
+5. First run: create or unlock a local profile, create or join a pairwise
+   invite room, compare safety material, exchange manual encrypted envelopes,
+   reply/retry/cancel, manage local deletion, and copy redacted diagnostics.
+   This beta does not prove external onion
    delivery.
 6. Feedback: public issues must include only redacted diagnostics, broad
    failure class, and recovery next action. Do not post invite codes, payloads,
@@ -660,13 +663,14 @@ audited E2EE readiness, repeated external onion evidence, offline mesh
 delivery, independent review completion, or security-ready status.
 
 High-Risk Mode is a defined threat-model target, not a universal safety claim.
-It aims to mitigate remote passive observers, remote active attackers,
-malicious peers, local-at-rest attackers, and supply-chain/update attackers.
-It does not protect compromised endpoints, direct coercion, or full global
-traffic correlation. The project does not claim audited security,
-Briar/Cwtch-equivalent privacy, compromised-device safety, coercion safety,
-full censorship resistance, full global-correlation safety, or reliable
-external onion delivery.
+It combines mandatory safety comparison, encrypted user-mediated exchange,
+onion-only advanced transport, local-at-rest hardening, and redacted support
+reports. It aims to mitigate remote passive observers, remote active attackers,
+malicious peers, local-at-rest attackers, and supply-chain/update attackers. It
+does not protect compromised endpoints, direct coercion, or full global traffic
+correlation. The project does not claim audited security, full censorship
+resistance, Briar/Cwtch-equivalent privacy, compromised-device safety, coercion
+safety, full global-correlation safety, or reliable external onion delivery.
 
 ## Repository Layout
 
