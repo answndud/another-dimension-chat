@@ -33,14 +33,33 @@ final class SourceBoundaryBlockedMobileCommandAdapter: BlockedMobileCommandAdapt
         "mobile readiness not claimed",
     ]
 
+    private let canonicalSharedCoreErrorTaxonomy = [
+        "locked_profile",
+        "malformed_payload",
+        "replay_rejected",
+        "policy_blocked",
+        "transport_unavailable",
+        "unsupported_mobile_surface",
+        "lifecycle_confirmation_required",
+        "ffi_unavailable",
+    ]
+
+    private let canonicalSharedCoreRecoveryActions = [
+        "enter passphrase",
+        "show redacted parse failure",
+        "show redacted replay rejection",
+        "explicit user action required",
+        "manual transport action required",
+        "use desktop source boundary",
+        "confirm lifecycle intent before any shared Rust core binding for local_data_lifecycle",
+        "connect shared Rust core binding",
+    ]
+
     func profileUnlockLockStatus(passphraseProvided: Bool) -> SharedCoreCommandResult {
         if passphraseProvided {
-            return blocked(
-                failureClass: "ffi_unavailable",
-                recoveryNextAction: "connect shared Rust core binding for profile_unlock_lock_status"
-            )
+            return blocked(failureClass: "locked_profile", recoveryNextAction: "enter passphrase")
         }
-        return blocked(failureClass: "locked_profile", recoveryNextAction: "enter passphrase")
+        return blocked(failureClass: "policy_blocked", recoveryNextAction: "explicit user action required")
     }
 
     func inviteCodeCreateJoin(action: ExplicitUserActionToken) -> SharedCoreCommandResult {
@@ -61,8 +80,8 @@ final class SourceBoundaryBlockedMobileCommandAdapter: BlockedMobileCommandAdapt
 
     func messageTranscriptView() -> SharedCoreCommandResult {
         blocked(
-            failureClass: "ffi_unavailable",
-            recoveryNextAction: "load transcript through shared Rust core for message_transcript_view"
+            failureClass: "transport_unavailable",
+            recoveryNextAction: "manual transport action required"
         )
     }
 
@@ -80,7 +99,7 @@ final class SourceBoundaryBlockedMobileCommandAdapter: BlockedMobileCommandAdapt
         if action.reason.isEmpty {
             return blocked(failureClass: "policy_blocked", recoveryNextAction: "explicit user action required")
         }
-        return blocked(failureClass: "ffi_unavailable", recoveryNextAction: "connect shared Rust core binding for \(surface)")
+        return blocked(failureClass: "transport_unavailable", recoveryNextAction: "manual transport action required")
     }
 
     private func blocked(failureClass: String, recoveryNextAction: String) -> SharedCoreCommandResult {
