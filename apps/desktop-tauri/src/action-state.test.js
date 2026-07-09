@@ -132,6 +132,7 @@ test("high-risk threat model matrix keeps public claims bounded", () => {
   assert.match(boundary.boundary, /briar_cwtch_equivalence_claim=false/);
   assert.match(boundary.boundary, /coercion_safe_claim=false/);
   assert.match(boundary.boundary, /full_global_traffic_correlation_safe_claim=false/);
+  assert.match(boundary.boundary, /full_censorship_resistance_claim=false/);
 });
 
 test("version integrity view keeps manual update and rollback claims bounded", () => {
