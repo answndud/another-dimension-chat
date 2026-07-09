@@ -130,8 +130,7 @@ impl NoSilentNetworkTransportBoundarySummary {
     }
 }
 
-pub fn no_silent_network_transport_boundary_summary(
-) -> NoSilentNetworkTransportBoundarySummary {
+pub fn no_silent_network_transport_boundary_summary() -> NoSilentNetworkTransportBoundarySummary {
     NoSilentNetworkTransportBoundarySummary {
         default_policy_mode: TransportPolicy::practical_default().mode(),
         default_route_kind: TransportKind::LocalOnly,
@@ -171,6 +170,41 @@ pub struct HighRiskTransportMetadataMinimizationSummary {
     encrypted_endpoint_update_state_separated: bool,
     stream_send_receive_retry_cancel_state_separated: bool,
     not_ready_reason: &'static str,
+}
+
+const HIGH_RISK_ONION_RUNTIME_FAILURE_CLASSES: &[&str] = &[
+    "bridge_config_missing",
+    "bootstrap_timeout",
+    "peer_unreachable",
+    "stale_endpoint",
+    "receive_owner_mismatch",
+];
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HighRiskOnionRuntimeEvidenceSummary {
+    policy_mode: TransportMode,
+    runtime_route_kind: TransportKind,
+    explicit_start_action_required: bool,
+    explicit_stop_action_supported: bool,
+    app_launch_network_attempted: bool,
+    room_open_network_attempted: bool,
+    direct_fallback_allowed: bool,
+    dns_endpoint_allowed: bool,
+    ip_endpoint_allowed: bool,
+    raw_bridge_line_exposed: bool,
+    raw_onion_endpoint_exposed: bool,
+    descriptor_exposed: bool,
+    local_path_exposed: bool,
+    endpoint_rotation_state_separated: bool,
+    encrypted_endpoint_update_ready: bool,
+    stale_endpoint_refresh_action: &'static str,
+    receive_loop_owner_scoped: bool,
+    failure_classes: &'static [&'static str],
+    runtime_event_identifiers_redacted: bool,
+    runtime_evidence_required_for_ready: bool,
+    runtime_evidence_present: bool,
+    high_risk_transport_ready: bool,
+    boundary_closed: bool,
 }
 
 impl HighRiskTransportMetadataMinimizationSummary {
@@ -267,6 +301,100 @@ impl HighRiskTransportMetadataMinimizationSummary {
     }
 }
 
+impl HighRiskOnionRuntimeEvidenceSummary {
+    pub fn policy_mode(self) -> TransportMode {
+        self.policy_mode
+    }
+
+    pub fn runtime_route_kind(self) -> TransportKind {
+        self.runtime_route_kind
+    }
+
+    pub fn explicit_start_action_required(self) -> bool {
+        self.explicit_start_action_required
+    }
+
+    pub fn explicit_stop_action_supported(self) -> bool {
+        self.explicit_stop_action_supported
+    }
+
+    pub fn app_launch_network_attempted(self) -> bool {
+        self.app_launch_network_attempted
+    }
+
+    pub fn room_open_network_attempted(self) -> bool {
+        self.room_open_network_attempted
+    }
+
+    pub fn direct_fallback_allowed(self) -> bool {
+        self.direct_fallback_allowed
+    }
+
+    pub fn dns_endpoint_allowed(self) -> bool {
+        self.dns_endpoint_allowed
+    }
+
+    pub fn ip_endpoint_allowed(self) -> bool {
+        self.ip_endpoint_allowed
+    }
+
+    pub fn raw_bridge_line_exposed(self) -> bool {
+        self.raw_bridge_line_exposed
+    }
+
+    pub fn raw_onion_endpoint_exposed(self) -> bool {
+        self.raw_onion_endpoint_exposed
+    }
+
+    pub fn descriptor_exposed(self) -> bool {
+        self.descriptor_exposed
+    }
+
+    pub fn local_path_exposed(self) -> bool {
+        self.local_path_exposed
+    }
+
+    pub fn endpoint_rotation_state_separated(self) -> bool {
+        self.endpoint_rotation_state_separated
+    }
+
+    pub fn encrypted_endpoint_update_ready(self) -> bool {
+        self.encrypted_endpoint_update_ready
+    }
+
+    pub fn stale_endpoint_refresh_action(self) -> &'static str {
+        self.stale_endpoint_refresh_action
+    }
+
+    pub fn receive_loop_owner_scoped(self) -> bool {
+        self.receive_loop_owner_scoped
+    }
+
+    pub fn failure_classes(self) -> &'static [&'static str] {
+        self.failure_classes
+    }
+
+    pub fn runtime_event_identifiers_redacted(self) -> bool {
+        self.runtime_event_identifiers_redacted
+    }
+
+    pub fn runtime_evidence_required_for_ready(self) -> bool {
+        self.runtime_evidence_required_for_ready
+    }
+
+    pub fn runtime_evidence_present(self) -> bool {
+        self.runtime_evidence_present
+    }
+
+    pub fn high_risk_transport_ready(self) -> bool {
+        self.high_risk_transport_ready
+    }
+
+    pub fn boundary_closed(self) -> bool {
+        self.boundary_closed
+    }
+}
+
 pub fn high_risk_transport_metadata_minimization_summary(
 ) -> HighRiskTransportMetadataMinimizationSummary {
     let policy = TransportPolicy::advanced_high_risk_onion();
@@ -301,6 +429,68 @@ pub fn high_risk_transport_metadata_minimization_summary(
         encrypted_endpoint_update_state_separated: true,
         stream_send_receive_retry_cancel_state_separated: true,
         not_ready_reason: "runtime-network-disabled-until-explicit-user-action",
+    }
+}
+
+pub fn high_risk_onion_runtime_evidence_summary() -> HighRiskOnionRuntimeEvidenceSummary {
+    let metadata = high_risk_transport_metadata_minimization_summary();
+    let policy = TransportPolicy::advanced_high_risk_onion();
+    let onion_route =
+        TransportRoute::onion("runtime-evidence.onion").expect("static onion route is valid");
+    let direct_fallback_allowed = TransportRoute::direct_peer("peer.example")
+        .ok()
+        .is_some_and(|route| policy.require_allowed(&route).is_ok());
+    let dns_endpoint_allowed = TransportRoute::onion("example.com").is_ok();
+    let ip_endpoint_allowed = TransportRoute::onion("192.0.2.10").is_ok();
+    let runtime_evidence_present = false;
+    let high_risk_transport_ready = runtime_evidence_present
+        && metadata.onion_only()
+        && policy.require_allowed(&onion_route).is_ok()
+        && !direct_fallback_allowed
+        && !dns_endpoint_allowed
+        && !ip_endpoint_allowed;
+    let boundary_closed = metadata.onion_only()
+        && policy.mode() == TransportMode::HighRiskOnionOnly
+        && onion_route.kind() == TransportKind::OnionService
+        && metadata.explicit_user_permission_required()
+        && !metadata.app_launch_bootstrap_allowed()
+        && !direct_fallback_allowed
+        && !dns_endpoint_allowed
+        && !ip_endpoint_allowed
+        && !metadata.bridge_line_exposed_in_status()
+        && !metadata.onion_endpoint_exposed_in_status()
+        && !metadata.descriptor_exposed_in_status()
+        && !metadata.local_path_exposed_in_status()
+        && metadata.endpoint_rotation_state_separated()
+        && metadata.encrypted_endpoint_update_state_separated()
+        && metadata.stream_send_receive_retry_cancel_state_separated()
+        && !runtime_evidence_present
+        && !high_risk_transport_ready;
+
+    HighRiskOnionRuntimeEvidenceSummary {
+        policy_mode: policy.mode(),
+        runtime_route_kind: onion_route.kind(),
+        explicit_start_action_required: true,
+        explicit_stop_action_supported: true,
+        app_launch_network_attempted: false,
+        room_open_network_attempted: false,
+        direct_fallback_allowed,
+        dns_endpoint_allowed,
+        ip_endpoint_allowed,
+        raw_bridge_line_exposed: metadata.bridge_line_exposed_in_status(),
+        raw_onion_endpoint_exposed: metadata.onion_endpoint_exposed_in_status(),
+        descriptor_exposed: metadata.descriptor_exposed_in_status(),
+        local_path_exposed: metadata.local_path_exposed_in_status(),
+        endpoint_rotation_state_separated: metadata.endpoint_rotation_state_separated(),
+        encrypted_endpoint_update_ready: metadata.encrypted_endpoint_update_state_separated(),
+        stale_endpoint_refresh_action: "refresh-private-route",
+        receive_loop_owner_scoped: true,
+        failure_classes: HIGH_RISK_ONION_RUNTIME_FAILURE_CLASSES,
+        runtime_event_identifiers_redacted: true,
+        runtime_evidence_required_for_ready: true,
+        runtime_evidence_present,
+        high_risk_transport_ready,
+        boundary_closed,
     }
 }
 
