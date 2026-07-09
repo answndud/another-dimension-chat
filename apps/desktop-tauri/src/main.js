@@ -6,6 +6,7 @@ import {
   productionBridgeCensorshipBoundaryView,
   productionActionAvailability,
   productionCounterpartProfile,
+  productionFirstRunDesktopSummaryView,
   productionHandshakeFinishImportView,
   productionHandshakePayloadView,
   productionHighRiskThreatModelBoundaryView,
@@ -32,6 +33,7 @@ import {
   productionPairwiseInviteGuidanceView,
   productionPairwiseInviteImportFailureView,
   productionPairwiseSafetyVerificationFlowView,
+  productionProfileRecoveryActionsView,
   productionPairingPayloadView,
   productionProfileUnlockRecoveryView,
   productionProfileMessageReadiness,
@@ -92,6 +94,7 @@ const fields = {
   mainBlockerSummary: document.querySelector("#main-blocker-summary"),
   privacyModelSummary: document.querySelector("#privacy-model-summary"),
   releaseClaim: document.querySelector("#release-claim"),
+  firstRunPrimaryNextAction: document.querySelector("#first-run-primary-next-action"),
   messaging: document.querySelector("#messaging"),
   localDevPeerLabel: document.querySelector("#local-dev-peer-label"),
   localPeerTestHint: document.querySelector("#local-peer-test-hint"),
@@ -497,6 +500,7 @@ let latestProductionTwoProfileSessionStatus = null;
 const latestProductionTwoProfileSessionStatusesByRoom = new Map();
 let latestProductionTwoProfileSafety = null;
 let latestProductionTwoProfileSuccess = null;
+let latestProductionProfileUnlocked = false;
 let latestProductionTwoProfileOnionEndpoints = null;
 const latestProductionTwoProfileRealOnionResultsByRoom = new Map();
 const latestProductionTwoProfileRealOnionRecoveriesByRoom = new Map();
@@ -3185,6 +3189,12 @@ function productionSessionReadyForMessages() {
     latestProductionSessionStateForInput(),
     scopedTwoProfileStatus,
   );
+}
+
+function renderFirstRunDesktopSummary(input = {}) {
+  const view = productionFirstRunDesktopSummaryView(input);
+  setText(fields.firstRunPrimaryNextAction, `Next: ${view.primaryNextAction}`);
+  return view;
 }
 
 function activeProductionProfileName() {
@@ -12839,6 +12849,25 @@ function applyProductionActionState() {
   const twoProfileReplyDraftReady = Boolean((selectedDeliveredReplyReady || latestReplySelected) && twoProfile.message);
   state.hasTwoProfileReplySelected = selectedDeliveredReplyReady || latestReplySelected;
   state.hasTwoProfileReplyDraftInput = twoProfileReplyDraftReady;
+  renderFirstRunDesktopSummary({
+    profileInputPresent: hasProfileUnlockInput,
+    profileUnlocked: latestProductionProfileUnlocked || sessionReadyForMessages || twoProfileSessionsReady,
+    roomPresent: Boolean(
+      hasLocalPairingPayload ||
+        hasRemotePairingInput ||
+        hasSessionDraftSaved ||
+        twoProfileSessionsReady ||
+        (twoProfile.profileA && twoProfile.profileB && twoProfile.profileA !== twoProfile.profileB),
+    ),
+    safetyVerified: Boolean(pairingSafetyVerified || twoProfileSafetyConfirmed),
+    messageFlowReady: Boolean(
+      hasLocalMessageEnvelope ||
+        hasInboundEnvelopeInput ||
+        hasImportedMessage ||
+        hasReceivedMessage ||
+        twoProfileReplyDraftReady,
+    ),
+  });
   const manualPrimaryActions = productionManualPrimaryActions(state);
   const plaintextReviewPending = Boolean(hasImportedMessage && !hasReceivedMessage);
   const replyComposerCurrent = Boolean(
@@ -13835,6 +13864,7 @@ function resetProductionTwoProfileView() {
 }
 
 function resetProductionProfileView() {
+  latestProductionProfileUnlocked = false;
   setProductionProfileState("Profile locked");
   setText(fields.productionProfileWarning, "Production profile has not been unlocked yet.");
   setText(fields.productionProductUnlockState, "Not checked yet");
@@ -13842,6 +13872,9 @@ function resetProductionProfileView() {
   setText(fields.productionProfileIdentity, "Not checked yet");
   setText(fields.productionProfileBoundary, "Not checked yet");
   setText(fields.productionDataLifecycle, "Not checked yet");
+  renderFirstRunDesktopSummary({
+    profileInputPresent: Boolean(productionProfileInput().profile && productionProfileInput().passphrase),
+  });
   if (fields.lockProductionProfile) {
     fields.lockProductionProfile.disabled = true;
   }
@@ -18044,6 +18077,7 @@ async function runProductionRoundtrip() {
 
 function renderProductionProductUnlockStatus(result) {
   const unlocked = result?.unlocked === true;
+  latestProductionProfileUnlocked = unlocked;
   const reason = result?.redacted_reason || "unknown";
   const profile = result?.profile ? ` profile=${result.profile}` : "";
   const expires = result?.expires_at_ms ? ` expires_at_ms=${result.expires_at_ms}` : "";
@@ -18108,13 +18142,14 @@ function productionProductUnlockRecoveryView(result, options = {}) {
   }
 
   const profileRecovery = productionProfileUnlockRecoveryView(result);
+  const recoveryActions = productionProfileRecoveryActionsView(profileRecovery);
   return {
     state: "Profile locked",
     warning: profileRecovery.warning || t("profileRecoveryLocked"),
     storage: `Locked reason=${reason} local_recovery=${profileRecovery.kind}`,
     identity: "Not opened; no raw storage error exposed",
-    next: profileRecovery.nextAction || t("profileRecoveryLockedNext"),
-    boundary: `${boundary} ${profileRecovery.boundary} recovery=passphrase-first-lockout rollback_suspicion=false resume_blocked=false`,
+    next: recoveryActions.primaryNextAction || profileRecovery.nextAction || t("profileRecoveryLockedNext"),
+    boundary: `${boundary} ${profileRecovery.boundary} ${recoveryActions.boundary} recovery=passphrase-first-lockout rollback_suspicion=false resume_blocked=false`,
   };
 }
 
@@ -18699,12 +18734,14 @@ async function unlockProductionProfile() {
       return;
     }
     const recovery = productionProfileUnlockRecoveryView({ error });
+    const recoveryActions = productionProfileRecoveryActionsView(recovery);
+    latestProductionProfileUnlocked = false;
     setProductionProfileState("Profile unlock failed");
     setText(fields.productionProfileWarning, recovery.warning);
     setText(fields.productionProfileStorage, `Failed local_recovery=${recovery.kind}`);
     setText(fields.productionProfileIdentity, "Not opened; no raw storage error exposed");
-    setText(fields.productionProfileBoundary, recovery.boundary);
-    setText(fields.productionProfileNextAction, recovery.nextAction);
+    setText(fields.productionProfileBoundary, `${recovery.boundary} ${recoveryActions.boundary}`);
+    setText(fields.productionProfileNextAction, recoveryActions.primaryNextAction || recovery.nextAction);
   } finally {
     clearProductionBusyAction("profile-unlock");
     if (fields.unlockProductionProfile) {

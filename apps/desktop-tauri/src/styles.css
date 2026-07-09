@@ -198,6 +198,16 @@ h1 {
   padding-left: 2px;
 }
 
+.first-run-primary-next-action {
+  max-width: 82ch;
+  margin: 8px 0 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .lifecycle-guide {
   display: grid;
   gap: 6px;
