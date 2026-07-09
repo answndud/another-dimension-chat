@@ -31,6 +31,7 @@ pub mod production {
         UnlockFactor, UnlockMode, UnlockRequest,
     };
     use another_dimension_transport::{
+        high_risk_onion_runtime_evidence_summary,
         high_risk_transport_metadata_minimization_summary, BoundOutboundStreamSession,
         EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
         EndpointRotationApplyContext, EndpointRotationSequence, EndpointUpdateChannel,
@@ -3851,6 +3852,33 @@ pub mod production {
         production_transport_ready: bool,
         reliable_external_delivery_claim_allowed: bool,
         security_ready_claimed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionHighRiskOnionRuntimeEvidenceBoundarySummary {
+        policy_mode: TransportMode,
+        runtime_route_kind: TransportKind,
+        explicit_start_action_required: bool,
+        explicit_stop_action_supported: bool,
+        app_launch_network_attempted: bool,
+        room_open_network_attempted: bool,
+        direct_fallback_allowed: bool,
+        dns_endpoint_allowed: bool,
+        ip_endpoint_allowed: bool,
+        raw_bridge_line_exposed: bool,
+        raw_onion_endpoint_exposed: bool,
+        descriptor_exposed: bool,
+        local_path_exposed: bool,
+        endpoint_rotation_state_separated: bool,
+        encrypted_endpoint_update_ready: bool,
+        stale_endpoint_refresh_action: &'static str,
+        receive_loop_owner_scoped: bool,
+        failure_classes: &'static [&'static str],
+        runtime_event_identifiers_redacted: bool,
+        runtime_evidence_required_for_ready: bool,
+        runtime_evidence_present: bool,
+        high_risk_transport_ready: bool,
+        boundary_closed: bool,
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -7946,6 +7974,100 @@ pub mod production {
 
         pub fn security_ready_claimed(self) -> bool {
             self.security_ready_claimed
+        }
+    }
+
+    impl ProductionHighRiskOnionRuntimeEvidenceBoundarySummary {
+        pub fn policy_mode(self) -> TransportMode {
+            self.policy_mode
+        }
+
+        pub fn runtime_route_kind(self) -> TransportKind {
+            self.runtime_route_kind
+        }
+
+        pub fn explicit_start_action_required(self) -> bool {
+            self.explicit_start_action_required
+        }
+
+        pub fn explicit_stop_action_supported(self) -> bool {
+            self.explicit_stop_action_supported
+        }
+
+        pub fn app_launch_network_attempted(self) -> bool {
+            self.app_launch_network_attempted
+        }
+
+        pub fn room_open_network_attempted(self) -> bool {
+            self.room_open_network_attempted
+        }
+
+        pub fn direct_fallback_allowed(self) -> bool {
+            self.direct_fallback_allowed
+        }
+
+        pub fn dns_endpoint_allowed(self) -> bool {
+            self.dns_endpoint_allowed
+        }
+
+        pub fn ip_endpoint_allowed(self) -> bool {
+            self.ip_endpoint_allowed
+        }
+
+        pub fn raw_bridge_line_exposed(self) -> bool {
+            self.raw_bridge_line_exposed
+        }
+
+        pub fn raw_onion_endpoint_exposed(self) -> bool {
+            self.raw_onion_endpoint_exposed
+        }
+
+        pub fn descriptor_exposed(self) -> bool {
+            self.descriptor_exposed
+        }
+
+        pub fn local_path_exposed(self) -> bool {
+            self.local_path_exposed
+        }
+
+        pub fn endpoint_rotation_state_separated(self) -> bool {
+            self.endpoint_rotation_state_separated
+        }
+
+        pub fn encrypted_endpoint_update_ready(self) -> bool {
+            self.encrypted_endpoint_update_ready
+        }
+
+        pub fn stale_endpoint_refresh_action(self) -> &'static str {
+            self.stale_endpoint_refresh_action
+        }
+
+        pub fn receive_loop_owner_scoped(self) -> bool {
+            self.receive_loop_owner_scoped
+        }
+
+        pub fn failure_classes(self) -> &'static [&'static str] {
+            self.failure_classes
+        }
+
+        pub fn runtime_event_identifiers_redacted(self) -> bool {
+            self.runtime_event_identifiers_redacted
+        }
+
+        pub fn runtime_evidence_required_for_ready(self) -> bool {
+            self.runtime_evidence_required_for_ready
+        }
+
+        pub fn runtime_evidence_present(self) -> bool {
+            self.runtime_evidence_present
+        }
+
+        pub fn high_risk_transport_ready(self) -> bool {
+            self.high_risk_transport_ready
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
         }
     }
 
@@ -20537,6 +20659,66 @@ pub mod production {
         }
     }
 
+    pub fn production_high_risk_onion_runtime_evidence_boundary_summary(
+    ) -> ProductionHighRiskOnionRuntimeEvidenceBoundarySummary {
+        let runtime = high_risk_onion_runtime_evidence_summary();
+        let boundary_closed = runtime.boundary_closed()
+            && runtime.policy_mode() == TransportMode::HighRiskOnionOnly
+            && runtime.runtime_route_kind() == TransportKind::OnionService
+            && runtime.explicit_start_action_required()
+            && runtime.explicit_stop_action_supported()
+            && !runtime.app_launch_network_attempted()
+            && !runtime.room_open_network_attempted()
+            && !runtime.direct_fallback_allowed()
+            && !runtime.dns_endpoint_allowed()
+            && !runtime.ip_endpoint_allowed()
+            && !runtime.raw_bridge_line_exposed()
+            && !runtime.raw_onion_endpoint_exposed()
+            && !runtime.descriptor_exposed()
+            && !runtime.local_path_exposed()
+            && runtime.endpoint_rotation_state_separated()
+            && runtime.encrypted_endpoint_update_ready()
+            && runtime.stale_endpoint_refresh_action() == "refresh-private-route"
+            && runtime.receive_loop_owner_scoped()
+            && runtime.failure_classes().contains(&"bridge_config_missing")
+            && runtime.failure_classes().contains(&"bootstrap_timeout")
+            && runtime.failure_classes().contains(&"peer_unreachable")
+            && runtime.failure_classes().contains(&"stale_endpoint")
+            && runtime
+                .failure_classes()
+                .contains(&"receive_owner_mismatch")
+            && runtime.runtime_event_identifiers_redacted()
+            && runtime.runtime_evidence_required_for_ready()
+            && !runtime.runtime_evidence_present()
+            && !runtime.high_risk_transport_ready();
+
+        ProductionHighRiskOnionRuntimeEvidenceBoundarySummary {
+            policy_mode: runtime.policy_mode(),
+            runtime_route_kind: runtime.runtime_route_kind(),
+            explicit_start_action_required: runtime.explicit_start_action_required(),
+            explicit_stop_action_supported: runtime.explicit_stop_action_supported(),
+            app_launch_network_attempted: runtime.app_launch_network_attempted(),
+            room_open_network_attempted: runtime.room_open_network_attempted(),
+            direct_fallback_allowed: runtime.direct_fallback_allowed(),
+            dns_endpoint_allowed: runtime.dns_endpoint_allowed(),
+            ip_endpoint_allowed: runtime.ip_endpoint_allowed(),
+            raw_bridge_line_exposed: runtime.raw_bridge_line_exposed(),
+            raw_onion_endpoint_exposed: runtime.raw_onion_endpoint_exposed(),
+            descriptor_exposed: runtime.descriptor_exposed(),
+            local_path_exposed: runtime.local_path_exposed(),
+            endpoint_rotation_state_separated: runtime.endpoint_rotation_state_separated(),
+            encrypted_endpoint_update_ready: runtime.encrypted_endpoint_update_ready(),
+            stale_endpoint_refresh_action: runtime.stale_endpoint_refresh_action(),
+            receive_loop_owner_scoped: runtime.receive_loop_owner_scoped(),
+            failure_classes: runtime.failure_classes(),
+            runtime_event_identifiers_redacted: runtime.runtime_event_identifiers_redacted(),
+            runtime_evidence_required_for_ready: runtime.runtime_evidence_required_for_ready(),
+            runtime_evidence_present: runtime.runtime_evidence_present(),
+            high_risk_transport_ready: runtime.high_risk_transport_ready(),
+            boundary_closed,
+        }
+    }
+
     pub fn production_high_risk_threat_model_claim_boundary_summary(
     ) -> ProductionHighRiskThreatModelClaimBoundarySummary {
         let app_matrix_required = true;
@@ -21055,9 +21237,13 @@ pub mod production {
     ) -> ProductionHighRiskReadinessGateSummary {
         let threat = production_high_risk_threat_model_claim_boundary_summary();
         let transport = production_high_risk_transport_metadata_boundary_summary();
+        let runtime_evidence = production_high_risk_onion_runtime_evidence_boundary_summary();
         let key_rollback = production_key_rollback_boundary_summary();
         let supply_chain = production_supply_chain_integrity_boundary_summary();
         let threat_matrix_accepted = input.threat_matrix_accepted && threat.boundary_closed();
+        let high_risk_transport_ready = input.high_risk_transport_ready
+            && runtime_evidence.runtime_evidence_present()
+            && runtime_evidence.high_risk_transport_ready();
         let high_risk_transport_explicitly_disabled = input.high_risk_transport_explicitly_disabled
             && !transport.app_launch_bootstrap_allowed()
             && !transport.direct_fallback_allowed();
@@ -21071,7 +21257,7 @@ pub mod production {
             && input.rollback_marker_healthy
             && input.diagnostics_redacted
             && release_integrity_available;
-        let status = if base_ready && input.high_risk_transport_ready {
+        let status = if base_ready && high_risk_transport_ready {
             ProductionHighRiskReadinessStatus::Ready
         } else if base_ready && high_risk_transport_explicitly_disabled {
             ProductionHighRiskReadinessStatus::Limited
@@ -21093,7 +21279,12 @@ pub mod production {
             ("diagnostics-not-redacted", "use-redacted-support-report")
         } else if !release_integrity_available {
             ("release-integrity-missing", "run-release-integrity-gate")
-        } else if !input.high_risk_transport_ready && !high_risk_transport_explicitly_disabled {
+        } else if input.high_risk_transport_ready && !runtime_evidence.runtime_evidence_present() {
+            (
+                "transport-runtime-evidence-missing",
+                "run-high-risk-transport-runtime-evidence",
+            )
+        } else if !high_risk_transport_ready && !high_risk_transport_explicitly_disabled {
             (
                 "transport-neither-ready-nor-disabled",
                 "enable-high-risk-transport-or-mark-disabled",
@@ -21109,6 +21300,7 @@ pub mod production {
         let high_risk_ready_claim_allowed = status == ProductionHighRiskReadinessStatus::Ready;
         let boundary_closed = threat.boundary_closed()
             && transport.boundary_closed()
+            && runtime_evidence.boundary_closed()
             && key_rollback.boundary_closed()
             && supply_chain.boundary_closed()
             && !key_rollback.rollback_prevention_claimed()
@@ -21121,7 +21313,7 @@ pub mod production {
             next_action,
             threat_matrix_accepted,
             pairwise_safety_verified: input.pairwise_safety_verified,
-            high_risk_transport_ready: input.high_risk_transport_ready,
+            high_risk_transport_ready,
             high_risk_transport_explicitly_disabled,
             production_key_management_ready,
             rollback_marker_healthy: input.rollback_marker_healthy,
@@ -27803,6 +27995,46 @@ pub mod production {
         }
 
         #[test]
+        fn high_risk_onion_runtime_evidence_blocks_ready_without_redacted_runtime_evidence() {
+            let boundary = production_high_risk_onion_runtime_evidence_boundary_summary();
+
+            assert!(boundary.boundary_closed());
+            assert_eq!(boundary.policy_mode(), TransportMode::HighRiskOnionOnly);
+            assert_eq!(boundary.runtime_route_kind(), TransportKind::OnionService);
+            assert!(boundary.explicit_start_action_required());
+            assert!(boundary.explicit_stop_action_supported());
+            assert!(!boundary.app_launch_network_attempted());
+            assert!(!boundary.room_open_network_attempted());
+            assert!(!boundary.direct_fallback_allowed());
+            assert!(!boundary.dns_endpoint_allowed());
+            assert!(!boundary.ip_endpoint_allowed());
+            assert!(!boundary.raw_bridge_line_exposed());
+            assert!(!boundary.raw_onion_endpoint_exposed());
+            assert!(!boundary.descriptor_exposed());
+            assert!(!boundary.local_path_exposed());
+            assert!(boundary.endpoint_rotation_state_separated());
+            assert!(boundary.encrypted_endpoint_update_ready());
+            assert_eq!(
+                boundary.stale_endpoint_refresh_action(),
+                "refresh-private-route"
+            );
+            assert!(boundary.receive_loop_owner_scoped());
+            assert!(boundary
+                .failure_classes()
+                .contains(&"bridge_config_missing"));
+            assert!(boundary.failure_classes().contains(&"bootstrap_timeout"));
+            assert!(boundary.failure_classes().contains(&"peer_unreachable"));
+            assert!(boundary.failure_classes().contains(&"stale_endpoint"));
+            assert!(boundary
+                .failure_classes()
+                .contains(&"receive_owner_mismatch"));
+            assert!(boundary.runtime_event_identifiers_redacted());
+            assert!(boundary.runtime_evidence_required_for_ready());
+            assert!(!boundary.runtime_evidence_present());
+            assert!(!boundary.high_risk_transport_ready());
+        }
+
+        #[test]
         fn production_high_risk_threat_model_claim_boundary_is_explicit_and_bounded() {
             let boundary = production_high_risk_threat_model_claim_boundary_summary();
             let status_for = |attacker_class: &str| {
@@ -27932,26 +28164,36 @@ pub mod production {
             assert!(!limited.release_high_risk_claim_allowed());
             assert!(!limited.unmet_conditions_hidden());
 
-            let ready = production_high_risk_readiness_gate(ProductionHighRiskReadinessInput {
-                high_risk_transport_ready: true,
-                high_risk_transport_explicitly_disabled: false,
-                ..base
-            });
-            assert_eq!(ready.status(), ProductionHighRiskReadinessStatus::Ready);
-            assert_eq!(ready.status().as_str(), "ready");
-            assert_eq!(ready.primary_reason_code(), "none");
-            assert_eq!(ready.next_action(), "ready");
-            assert!(ready.threat_matrix_accepted());
-            assert!(ready.pairwise_safety_verified());
-            assert!(ready.high_risk_transport_ready());
-            assert!(ready.production_key_management_ready());
-            assert!(ready.rollback_marker_healthy());
-            assert!(ready.diagnostics_redacted());
-            assert!(ready.release_integrity_available());
-            assert!(ready.high_risk_ready_claim_allowed());
-            assert!(ready.public_support_high_risk_claim_allowed());
-            assert!(ready.release_high_risk_claim_allowed());
-            assert!(ready.boundary_closed());
+            let missing_runtime_evidence =
+                production_high_risk_readiness_gate(ProductionHighRiskReadinessInput {
+                    high_risk_transport_ready: true,
+                    high_risk_transport_explicitly_disabled: false,
+                    ..base
+                });
+            assert_eq!(
+                missing_runtime_evidence.status(),
+                ProductionHighRiskReadinessStatus::NotReady
+            );
+            assert_eq!(missing_runtime_evidence.status().as_str(), "not_ready");
+            assert_eq!(
+                missing_runtime_evidence.primary_reason_code(),
+                "transport-runtime-evidence-missing"
+            );
+            assert_eq!(
+                missing_runtime_evidence.next_action(),
+                "run-high-risk-transport-runtime-evidence"
+            );
+            assert!(missing_runtime_evidence.threat_matrix_accepted());
+            assert!(missing_runtime_evidence.pairwise_safety_verified());
+            assert!(!missing_runtime_evidence.high_risk_transport_ready());
+            assert!(missing_runtime_evidence.production_key_management_ready());
+            assert!(missing_runtime_evidence.rollback_marker_healthy());
+            assert!(missing_runtime_evidence.diagnostics_redacted());
+            assert!(missing_runtime_evidence.release_integrity_available());
+            assert!(!missing_runtime_evidence.high_risk_ready_claim_allowed());
+            assert!(!missing_runtime_evidence.public_support_high_risk_claim_allowed());
+            assert!(!missing_runtime_evidence.release_high_risk_claim_allowed());
+            assert!(missing_runtime_evidence.boundary_closed());
         }
 
         #[test]

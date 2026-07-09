@@ -195,6 +195,17 @@ export function productionHighRiskTransportMetadataBoundaryView() {
       "high_risk_transport_redacted_session_id=true",
       "high_risk_transport_endpoint_state_separated=true",
       "high_risk_transport_stream_retry_cancel_state_separated=true",
+      "high_risk_transport_explicit_start_action_required=true",
+      "high_risk_transport_explicit_stop_action_supported=true",
+      "high_risk_transport_room_open_network=false",
+      "high_risk_transport_endpoint_rotation_state_separated=true",
+      "high_risk_transport_encrypted_endpoint_update_ready=true",
+      "high_risk_transport_stale_endpoint_refresh_action=refresh-private-route",
+      "high_risk_transport_receive_loop_owner_scoped=true",
+      "high_risk_transport_failure_classes=bridge_config_missing#bootstrap_timeout#peer_unreachable#stale_endpoint#receive_owner_mismatch",
+      "high_risk_transport_runtime_event_identifiers_redacted=true",
+      "high_risk_transport_runtime_evidence_required_for_ready=true",
+      "high_risk_transport_runtime_evidence_present=false",
       "high_risk_transport_ready=false",
       "high_risk_transport_not_ready_reason=runtime-network-disabled-until-explicit-user-action",
     ].join(" "),
@@ -204,7 +215,8 @@ export function productionHighRiskTransportMetadataBoundaryView() {
 export function productionHighRiskReadinessGateView(input = {}) {
   const threatMatrixAccepted = input.threatMatrixAccepted === true;
   const pairwiseSafetyVerified = input.pairwiseSafetyVerified === true;
-  const highRiskTransportReady = input.highRiskTransportReady === true;
+  const highRiskRuntimeEvidencePresent = input.highRiskRuntimeEvidencePresent === true;
+  const highRiskTransportReady = input.highRiskTransportReady === true && highRiskRuntimeEvidencePresent;
   const highRiskTransportExplicitlyDisabled = input.highRiskTransportExplicitlyDisabled === true;
   const productionKeyManagementReady = input.productionKeyManagementReady === true;
   const rollbackMarkerHealthy = input.rollbackMarkerHealthy === true;
@@ -219,6 +231,9 @@ export function productionHighRiskReadinessGateView(input = {}) {
   if (!rollbackMarkerHealthy) missing.push(["rollback-marker-not-healthy", "check-local-data-lifecycle"]);
   if (!diagnosticsRedacted) missing.push(["diagnostics-not-redacted", "use-redacted-support-report"]);
   if (!releaseIntegrityAvailable) missing.push(["release-integrity-missing", "run-release-integrity-gate"]);
+  if (input.highRiskTransportReady === true && !highRiskRuntimeEvidencePresent) {
+    missing.push(["transport-runtime-evidence-missing", "run-high-risk-transport-runtime-evidence"]);
+  }
   if (!highRiskTransportReady && !highRiskTransportExplicitlyDisabled) {
     missing.push(["transport-neither-ready-nor-disabled", "enable-high-risk-transport-or-mark-disabled"]);
   }
@@ -245,6 +260,8 @@ export function productionHighRiskReadinessGateView(input = {}) {
     `threat_matrix_accepted=${threatMatrixAccepted}`,
     `pairwise_safety_verified=${pairwiseSafetyVerified}`,
     `high_risk_transport_ready=${highRiskTransportReady}`,
+    "high_risk_transport_runtime_evidence_required_for_ready=true",
+    `high_risk_transport_runtime_evidence_present=${highRiskRuntimeEvidencePresent}`,
     `high_risk_transport_explicitly_disabled=${highRiskTransportExplicitlyDisabled}`,
     `production_key_management_ready=${productionKeyManagementReady}`,
     `rollback_marker_healthy=${rollbackMarkerHealthy}`,

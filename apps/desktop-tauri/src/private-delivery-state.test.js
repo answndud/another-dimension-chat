@@ -503,6 +503,12 @@ test("default transport boundary keeps the public diagnostic path manual and non
   assert.match(diagnostics, /high_risk_transport_dns_endpoint=false/);
   assert.match(diagnostics, /high_risk_transport_ip_endpoint=false/);
   assert.match(diagnostics, /high_risk_transport_app_launch_bootstrap=false/);
+  assert.match(diagnostics, /high_risk_transport_runtime_evidence_required_for_ready=true/);
+  assert.match(diagnostics, /high_risk_transport_runtime_evidence_present=false/);
+  assert.match(
+    diagnostics,
+    /high_risk_transport_failure_classes=bridge_config_missing#bootstrap_timeout#peer_unreachable#stale_endpoint#receive_owner_mismatch/,
+  );
   assert.match(diagnostics, /high_risk_transport_not_ready_reason=runtime-network-disabled-until-explicit-user-action/);
 });
 
@@ -522,9 +528,28 @@ test("high-risk transport metadata boundary exposes only redacted status", () =>
   assert.equal(boundary.localPathExposed, false);
   assert.equal(boundary.envelopeSizeBucket, "bucket-4k");
   assert.equal(boundary.timestampPrecision, "minute");
+  assert.equal(boundary.explicitStartActionRequired, true);
+  assert.equal(boundary.explicitStopActionSupported, true);
+  assert.equal(boundary.roomOpenNetworkAttempted, false);
+  assert.equal(boundary.endpointRotationStateSeparated, true);
+  assert.equal(boundary.encryptedEndpointUpdateReady, true);
+  assert.equal(boundary.staleEndpointRefreshAction, "refresh-private-route");
+  assert.equal(boundary.receiveLoopOwnerScoped, true);
+  assert.deepEqual(boundary.failureClasses, [
+    "bridge_config_missing",
+    "bootstrap_timeout",
+    "peer_unreachable",
+    "stale_endpoint",
+    "receive_owner_mismatch",
+  ]);
+  assert.equal(boundary.runtimeEventIdentifiersRedacted, true);
+  assert.equal(boundary.runtimeEvidenceRequiredForReady, true);
+  assert.equal(boundary.runtimeEvidencePresent, false);
   assert.equal(boundary.highRiskTransportReady, false);
   assert.equal(boundary.notReadyReason, "runtime-network-disabled-until-explicit-user-action");
   assert.match(boundary.boundary, /high_risk_transport_bridge_failure_class=redacted/);
+  assert.match(boundary.boundary, /high_risk_transport_room_open_network=false/);
+  assert.match(boundary.boundary, /high_risk_transport_runtime_evidence_present=false/);
   assert.doesNotMatch(boundary.boundary, /bridge_line=|onion_endpoint=|descriptor=|local_path=/);
 });
 
