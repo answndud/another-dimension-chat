@@ -32,8 +32,14 @@ class MainActivity : Activity() {
             text = "Another Dimension"
             textSize = 22f
         }
+        val purpose = TextView(this).apply {
+            text = "app_purpose=${status.appPurpose}"
+        }
         val warning = TextView(this).apply {
             text = renderPublicNonClaims(status)
+        }
+        val mobileBoundary = TextView(this).apply {
+            text = renderMobilePublicBoundary(status)
         }
         val passphrase = EditText(this).apply {
             hint = "Passphrase"
@@ -117,7 +123,9 @@ class MainActivity : Activity() {
         }
 
         root.addView(title)
+        root.addView(purpose)
         root.addView(warning)
+        root.addView(mobileBoundary)
         root.addView(passphrase)
         root.addView(unlock)
         root.addView(invite)
@@ -136,13 +144,18 @@ class MainActivity : Activity() {
         listOf(
             "schema_version=${status.schemaVersion}",
             "platform=${status.platform}",
+            "app_purpose=${status.appPurpose}",
             "profile_lock_state=${status.profileLockState}",
             "runtime_command_surface=${status.runtimeCommandSurface.joinToString(separator = ",")}",
             "mobile_command_surface=${status.mobileCommandSurface.joinToString(separator = ",")}",
+            "unavailable_actions=${status.unavailableActions.joinToString(separator = ",")}",
             "local_data_lifecycle_state=${status.localDataLifecycleState}",
+            "local_privacy_boundary=${status.localPrivacyBoundary.joinToString(separator = ",")}",
             "backup_exclusion_state=${status.backupExclusionState}",
             "install_update_integrity_state=${status.installUpdateIntegrityState}",
             "diagnostics_redaction_state=${status.diagnosticsRedactionState}",
+            "error_taxonomy=${status.errorTaxonomy.joinToString(separator = ",")}",
+            renderMobilePublicBoundary(status),
             renderPublicNonClaims(status),
         ).joinToString(separator = "\n")
 
@@ -155,6 +168,18 @@ class MainActivity : Activity() {
 
     private fun renderPublicNonClaims(status: SharedCoreStatusDto): String =
         "public_non_claims=${status.publicNonClaims.joinToString(separator = "|")}"
+
+    private fun renderMobilePublicBoundary(status: SharedCoreStatusDto): String =
+        listOf(
+            "unavailable_actions=${status.unavailableActions.joinToString(separator = ",")}",
+            "local_privacy_boundary=${status.localPrivacyBoundary.joinToString(separator = ",")}",
+            "fcm_enabled=${status.fcmEnabled}",
+            "apns_enabled=${status.apnsEnabled}",
+            "cloud_backup_claimed=${status.cloudBackupClaimed}",
+            "icloud_backup_claimed=${status.icloudBackupClaimed}",
+            "account_contact_discovery_claimed=${status.accountContactDiscoveryClaimed}",
+            "independent_protocol_storage_transport_claimed=${status.independentProtocolStorageTransportClaimed}",
+        ).joinToString(separator = "\n")
 
     private fun copyRedactedDiagnosticsPayload(status: SharedCoreStatusDto): String {
         val payload = renderRedactedDiagnosticsPayload(status)

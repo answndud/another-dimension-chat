@@ -33,11 +33,33 @@ class SourceBoundaryBlockedMobileCommandAdapter : BlockedMobileCommandAdapter {
         "mobile readiness not claimed",
     )
 
+    private val canonicalSharedCoreErrorTaxonomy = listOf(
+        "locked_profile",
+        "malformed_payload",
+        "replay_rejected",
+        "policy_blocked",
+        "transport_unavailable",
+        "unsupported_mobile_surface",
+        "lifecycle_confirmation_required",
+        "ffi_unavailable",
+    )
+
+    private val canonicalSharedCoreRecoveryActions = listOf(
+        "enter passphrase",
+        "show redacted parse failure",
+        "show redacted replay rejection",
+        "explicit user action required",
+        "manual transport action required",
+        "use desktop source boundary",
+        "confirm lifecycle intent before any shared Rust core binding for local_data_lifecycle",
+        "connect shared Rust core binding",
+    )
+
     override fun profileUnlockLockStatus(passphraseProvided: Boolean): SharedCoreCommandResult {
         return if (passphraseProvided) {
-            blocked("ffi_unavailable", "connect shared Rust core binding for profile_unlock_lock_status")
-        } else {
             blocked("locked_profile", "enter passphrase")
+        } else {
+            blocked("policy_blocked", "explicit user action required")
         }
     }
 
@@ -54,7 +76,7 @@ class SourceBoundaryBlockedMobileCommandAdapter : BlockedMobileCommandAdapter {
         explicitActionBoundary(action, "manual_envelope_export_import")
 
     override fun messageTranscriptView(): SharedCoreCommandResult =
-        blocked("ffi_unavailable", "load transcript through shared Rust core for message_transcript_view")
+        blocked("transport_unavailable", "manual transport action required")
 
     override fun localDataLifecycle(action: ExplicitUserActionToken): SharedCoreCommandResult =
         if (action.reason.isBlank()) {
@@ -73,7 +95,7 @@ class SourceBoundaryBlockedMobileCommandAdapter : BlockedMobileCommandAdapter {
         return if (action.reason.isBlank()) {
             blocked("policy_blocked", "explicit user action required")
         } else {
-            blocked("ffi_unavailable", "connect shared Rust core binding for $surface")
+            blocked("transport_unavailable", "manual transport action required")
         }
     }
 

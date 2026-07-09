@@ -15,7 +15,11 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Another Dimension")
                 .font(.title)
+            Text("app_purpose=\(sharedCore.sharedCoreStatusSurface().appPurpose)")
+                .font(.footnote)
             Text(ContentView.renderPublicNonClaims(sharedCore.sharedCoreStatusSurface()))
+                .font(.footnote)
+            Text(ContentView.renderMobilePublicBoundary(sharedCore.sharedCoreStatusSurface()))
                 .font(.footnote)
             SecureField("Passphrase", text: $passphrase)
                 .textFieldStyle(.roundedBorder)
@@ -82,19 +86,37 @@ struct ContentView: View {
         [
             "schema_version=\(status.schemaVersion)",
             "platform=\(status.platform)",
+            "app_purpose=\(status.appPurpose)",
             "profile_lock_state=\(status.profileLockState)",
             "runtime_command_surface=\(status.runtimeCommandSurface.joined(separator: ","))",
             "mobile_command_surface=\(status.mobileCommandSurface.joined(separator: ","))",
+            "unavailable_actions=\(status.unavailableActions.joined(separator: ","))",
             "local_data_lifecycle_state=\(status.localDataLifecycleState)",
+            "local_privacy_boundary=\(status.localPrivacyBoundary.joined(separator: ","))",
             "backup_exclusion_state=\(status.backupExclusionState)",
             "install_update_integrity_state=\(status.installUpdateIntegrityState)",
             "diagnostics_redaction_state=\(status.diagnosticsRedactionState)",
+            "error_taxonomy=\(status.errorTaxonomy.joined(separator: ","))",
+            renderMobilePublicBoundary(status),
             renderPublicNonClaims(status),
         ].joined(separator: "\n")
     }
 
     private static func renderPublicNonClaims(_ status: SharedCoreStatusDto) -> String {
         "public_non_claims=\(status.publicNonClaims.joined(separator: "|"))"
+    }
+
+    private static func renderMobilePublicBoundary(_ status: SharedCoreStatusDto) -> String {
+        [
+            "unavailable_actions=\(status.unavailableActions.joined(separator: ","))",
+            "local_privacy_boundary=\(status.localPrivacyBoundary.joined(separator: ","))",
+            "fcm_enabled=\(status.fcmEnabled)",
+            "apns_enabled=\(status.apnsEnabled)",
+            "cloud_backup_claimed=\(status.cloudBackupClaimed)",
+            "icloud_backup_claimed=\(status.icloudBackupClaimed)",
+            "account_contact_discovery_claimed=\(status.accountContactDiscoveryClaimed)",
+            "independent_protocol_storage_transport_claimed=\(status.independentProtocolStorageTransportClaimed)",
+        ].joined(separator: "\n")
     }
 
     private func copyRedactedDiagnosticsPayload(_ status: SharedCoreStatusDto) -> String {

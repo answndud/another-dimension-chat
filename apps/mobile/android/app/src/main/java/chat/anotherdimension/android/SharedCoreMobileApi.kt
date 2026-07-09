@@ -2,17 +2,65 @@ package chat.anotherdimension.android
 
 data class ExplicitUserActionToken(val reason: String)
 
+val sharedCoreMobileErrorTaxonomy = listOf(
+    "locked_profile",
+    "malformed_payload",
+    "replay_rejected",
+    "policy_blocked",
+    "transport_unavailable",
+    "unsupported_mobile_surface",
+    "lifecycle_confirmation_required",
+    "ffi_unavailable",
+)
+
+val sharedCoreMobileUnavailableActions = listOf(
+    "native_network_delivery",
+    "runtime_messaging",
+    "push_notification_delivery",
+    "cloud_backup",
+    "account_contact_discovery",
+    "mobile_public_artifact",
+)
+
+val sharedCoreMobileLocalPrivacyBoundary = listOf(
+    "platform_private_app_data_only",
+    "encrypted_local_store_through_shared_core",
+    "redacted_support_diagnostics_only",
+    "no_cloud_backup",
+)
+
+val sharedCoreMobileRecoveryActions = listOf(
+    "enter passphrase",
+    "show redacted parse failure",
+    "show redacted replay rejection",
+    "explicit user action required",
+    "manual transport action required",
+    "use desktop source boundary",
+    "confirm lifecycle intent before any shared Rust core binding for local_data_lifecycle",
+    "connect shared Rust core binding",
+)
+
 data class SharedCoreStatusDto(
     val schemaVersion: Int,
     val platform: String,
+    val appPurpose: String,
     val profileLockState: String,
     val runtimeCommandSurface: List<String>,
     val mobileCommandSurface: List<String>,
+    val unavailableActions: List<String>,
     val localDataLifecycleState: String,
+    val localPrivacyBoundary: List<String>,
     val backupExclusionState: String,
     val installUpdateIntegrityState: String,
     val diagnosticsRedactionState: String,
     val publicNonClaims: List<String>,
+    val errorTaxonomy: List<String>,
+    val fcmEnabled: Boolean,
+    val apnsEnabled: Boolean,
+    val cloudBackupClaimed: Boolean,
+    val icloudBackupClaimed: Boolean,
+    val accountContactDiscoveryClaimed: Boolean,
+    val independentProtocolStorageTransportClaimed: Boolean,
 )
 
 data class SharedCoreCommandResult(
@@ -56,12 +104,7 @@ class AndroidSharedCoreBoundary(
         "external onion delivery not claimed",
         "mobile readiness not claimed",
     )
-    private val sourceBoundaryBlockedErrorTaxonomy = listOf(
-        "locked_profile",
-        "policy_blocked",
-        "ffi_unavailable",
-        "explicit user action required",
-    )
+    private val sourceBoundaryBlockedErrorTaxonomy = sharedCoreMobileErrorTaxonomy
 
     override fun sharedCoreStatusSurface(): SharedCoreStatusDto =
         readOnlyStatusAdapter.sharedCoreStatusSurface()

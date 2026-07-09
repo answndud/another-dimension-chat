@@ -4,17 +4,65 @@ struct ExplicitUserActionToken {
     let reason: String
 }
 
+let sharedCoreMobileErrorTaxonomy = [
+    "locked_profile",
+    "malformed_payload",
+    "replay_rejected",
+    "policy_blocked",
+    "transport_unavailable",
+    "unsupported_mobile_surface",
+    "lifecycle_confirmation_required",
+    "ffi_unavailable",
+]
+
+let sharedCoreMobileUnavailableActions = [
+    "native_network_delivery",
+    "runtime_messaging",
+    "push_notification_delivery",
+    "cloud_backup",
+    "account_contact_discovery",
+    "mobile_public_artifact",
+]
+
+let sharedCoreMobileLocalPrivacyBoundary = [
+    "platform_private_app_data_only",
+    "encrypted_local_store_through_shared_core",
+    "redacted_support_diagnostics_only",
+    "no_cloud_backup",
+]
+
+let sharedCoreMobileRecoveryActions = [
+    "enter passphrase",
+    "show redacted parse failure",
+    "show redacted replay rejection",
+    "explicit user action required",
+    "manual transport action required",
+    "use desktop source boundary",
+    "confirm lifecycle intent before any shared Rust core binding for local_data_lifecycle",
+    "connect shared Rust core binding",
+]
+
 struct SharedCoreStatusDto {
     let schemaVersion: Int
     let platform: String
+    let appPurpose: String
     let profileLockState: String
     let runtimeCommandSurface: [String]
     let mobileCommandSurface: [String]
+    let unavailableActions: [String]
     let localDataLifecycleState: String
+    let localPrivacyBoundary: [String]
     let backupExclusionState: String
     let installUpdateIntegrityState: String
     let diagnosticsRedactionState: String
     let publicNonClaims: [String]
+    let errorTaxonomy: [String]
+    let fcmEnabled: Bool
+    let apnsEnabled: Bool
+    let cloudBackupClaimed: Bool
+    let icloudBackupClaimed: Bool
+    let accountContactDiscoveryClaimed: Bool
+    let independentProtocolStorageTransportClaimed: Bool
 }
 
 struct SharedCoreCommandResult {
@@ -57,12 +105,7 @@ final class IOSSharedCoreBoundary: SharedCoreMobileApi {
         "external onion delivery not claimed",
         "mobile readiness not claimed",
     ]
-    private let sourceBoundaryBlockedErrorTaxonomy = [
-        "locked_profile",
-        "policy_blocked",
-        "ffi_unavailable",
-        "explicit user action required",
-    ]
+    private let sourceBoundaryBlockedErrorTaxonomy = sharedCoreMobileErrorTaxonomy
 
     init(
         readOnlyStatusAdapter: ReadOnlyNativeStatusAdapter = SourceBoundaryReadOnlyNativeStatusAdapter(),
