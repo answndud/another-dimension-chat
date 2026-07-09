@@ -3556,6 +3556,53 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionMessageEnvelopeImportFailureKind {
+        Malformed,
+        Oversized,
+        Corrupted,
+        WrongType,
+        ReplayRejected,
+        Duplicate,
+    }
+
+    impl ProductionMessageEnvelopeImportFailureKind {
+        pub fn as_str(self) -> &'static str {
+            match self {
+                Self::Malformed => "malformed",
+                Self::Oversized => "oversized",
+                Self::Corrupted => "corrupted",
+                Self::WrongType => "wrong_type",
+                Self::ReplayRejected => "replay_rejected",
+                Self::Duplicate => "duplicate",
+            }
+        }
+
+        pub fn next_action(self) -> &'static str {
+            match self {
+                Self::Malformed => "ask_peer_for_fresh_envelope",
+                Self::Oversized => "reject_and_request_smaller_envelope",
+                Self::Corrupted => "discard_and_request_fresh_envelope",
+                Self::WrongType => "load_a_message_data_envelope",
+                Self::ReplayRejected => "ignore_replayed_envelope",
+                Self::Duplicate => "ignore_duplicate_envelope",
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionMessageEnvelopeImportDecision {
+        accepted: bool,
+        failure_kind: Option<ProductionMessageEnvelopeImportFailureKind>,
+        imported: bool,
+        delivered: bool,
+        plaintext_returned: bool,
+        path_returned: bool,
+        key_material_exposed: bool,
+        generic_error: bool,
+        next_action: &'static str,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionSupplyChainIntegrityBoundarySummary {
         policies: &'static [&'static str],
         manual_github_release_download_required: bool,
@@ -6968,6 +7015,44 @@ pub mod production {
 
         pub fn re_pair_required(self) -> bool {
             self.re_pair_required
+        }
+
+        pub fn generic_error(self) -> bool {
+            self.generic_error
+        }
+
+        pub fn next_action(self) -> &'static str {
+            self.next_action
+        }
+    }
+
+    impl ProductionMessageEnvelopeImportDecision {
+        pub fn accepted(self) -> bool {
+            self.accepted
+        }
+
+        pub fn failure_kind(self) -> Option<ProductionMessageEnvelopeImportFailureKind> {
+            self.failure_kind
+        }
+
+        pub fn imported(self) -> bool {
+            self.imported
+        }
+
+        pub fn delivered(self) -> bool {
+            self.delivered
+        }
+
+        pub fn plaintext_returned(self) -> bool {
+            self.plaintext_returned
+        }
+
+        pub fn path_returned(self) -> bool {
+            self.path_returned
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
         }
 
         pub fn generic_error(self) -> bool {
@@ -18975,6 +19060,47 @@ pub mod production {
         }
     }
 
+    pub fn production_message_envelope_import_decision(
+        payload_present: bool,
+        payload_decodable: bool,
+        payload_oversized: bool,
+        payload_corrupted: bool,
+        message_type_data: bool,
+        replay_accepted: bool,
+        duplicate_envelope: bool,
+    ) -> ProductionMessageEnvelopeImportDecision {
+        let failure_kind = if payload_oversized {
+            Some(ProductionMessageEnvelopeImportFailureKind::Oversized)
+        } else if !payload_present {
+            Some(ProductionMessageEnvelopeImportFailureKind::Malformed)
+        } else if payload_corrupted {
+            Some(ProductionMessageEnvelopeImportFailureKind::Corrupted)
+        } else if !payload_decodable {
+            Some(ProductionMessageEnvelopeImportFailureKind::Malformed)
+        } else if !message_type_data {
+            Some(ProductionMessageEnvelopeImportFailureKind::WrongType)
+        } else if duplicate_envelope {
+            Some(ProductionMessageEnvelopeImportFailureKind::Duplicate)
+        } else if !replay_accepted {
+            Some(ProductionMessageEnvelopeImportFailureKind::ReplayRejected)
+        } else {
+            None
+        };
+        ProductionMessageEnvelopeImportDecision {
+            accepted: failure_kind.is_none(),
+            failure_kind,
+            imported: failure_kind.is_none(),
+            delivered: failure_kind.is_none(),
+            plaintext_returned: false,
+            path_returned: false,
+            key_material_exposed: false,
+            generic_error: false,
+            next_action: failure_kind
+                .map(ProductionMessageEnvelopeImportFailureKind::next_action)
+                .unwrap_or("import_message_envelope"),
+        }
+    }
+
     pub fn production_supply_chain_integrity_boundary_summary(
     ) -> ProductionSupplyChainIntegrityBoundarySummary {
         let manual_github_release_download_required = true;
@@ -25414,6 +25540,73 @@ pub mod production {
             assert!(revoked.re_pair_required());
             assert!(!mismatch.generic_error());
             assert!(!revoked.generic_error());
+        }
+
+        #[test]
+        fn production_message_envelope_import_decision_fails_closed_for_malformed_replay_and_duplicate_inputs(
+        ) {
+            let malformed = production_message_envelope_import_decision(
+                false, false, false, false, true, true, false,
+            );
+            let oversized = production_message_envelope_import_decision(
+                true, false, true, false, true, true, false,
+            );
+            let corrupted = production_message_envelope_import_decision(
+                true, false, false, true, true, true, false,
+            );
+            let wrong_type = production_message_envelope_import_decision(
+                true, true, false, false, false, true, false,
+            );
+            let replay = production_message_envelope_import_decision(
+                true, true, false, false, true, false, false,
+            );
+            let duplicate = production_message_envelope_import_decision(
+                true, true, false, false, true, true, true,
+            );
+            let accepted = production_message_envelope_import_decision(
+                true, true, false, false, true, true, false,
+            );
+
+            assert_eq!(
+                malformed.failure_kind(),
+                Some(ProductionMessageEnvelopeImportFailureKind::Malformed)
+            );
+            assert_eq!(
+                oversized.failure_kind(),
+                Some(ProductionMessageEnvelopeImportFailureKind::Oversized)
+            );
+            assert_eq!(
+                corrupted.failure_kind(),
+                Some(ProductionMessageEnvelopeImportFailureKind::Corrupted)
+            );
+            assert_eq!(
+                wrong_type.failure_kind(),
+                Some(ProductionMessageEnvelopeImportFailureKind::WrongType)
+            );
+            assert_eq!(
+                replay.failure_kind(),
+                Some(ProductionMessageEnvelopeImportFailureKind::ReplayRejected)
+            );
+            assert_eq!(
+                duplicate.failure_kind(),
+                Some(ProductionMessageEnvelopeImportFailureKind::Duplicate)
+            );
+            for decision in [
+                malformed, oversized, corrupted, wrong_type, replay, duplicate,
+            ] {
+                assert!(!decision.accepted());
+                assert!(!decision.imported());
+                assert!(!decision.delivered());
+                assert!(!decision.plaintext_returned());
+                assert!(!decision.path_returned());
+                assert!(!decision.key_material_exposed());
+                assert!(!decision.generic_error());
+                assert_ne!(decision.next_action(), "import_message_envelope");
+            }
+            assert!(accepted.accepted());
+            assert!(accepted.imported());
+            assert!(accepted.delivered());
+            assert_eq!(accepted.failure_kind(), None);
         }
 
         #[test]
