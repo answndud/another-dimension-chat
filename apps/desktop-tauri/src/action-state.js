@@ -390,6 +390,88 @@ export function productionPairwiseSafetyVerificationFlowView(input = {}) {
   };
 }
 
+const profileUnlockRecoveryCopy = {
+  wrong_passphrase: {
+    warning: "Profile store did not unlock. Re-enter the profile passphrase.",
+    nextAction: "Retry with the profile passphrase.",
+  },
+  missing_store: {
+    warning: "No local profile store is available on this device.",
+    nextAction: "Create a new local profile on this device.",
+  },
+  corrupt_store: {
+    warning: "The local profile store cannot be opened safely.",
+    nextAction: "Inspect local storage or create a new local profile.",
+  },
+  migration_needed: {
+    warning: "This local profile store needs a supported migration before unlock.",
+    nextAction: "Run a supported local store migration.",
+  },
+  unsupported_unlock_factor: {
+    warning: "Unlock requires the profile passphrase. OS keychain-only unlock is not supported.",
+    nextAction: "Unlock with the profile passphrase.",
+  },
+};
+
+function normalizedProfileUnlockRecoveryKind(value) {
+  const text = String(value?.failure_kind ?? value?.failureKind ?? value?.kind ?? value?.redacted_reason ?? value?.error ?? value ?? "")
+    .trim()
+    .toLowerCase();
+  if (text.includes("migration") || text.includes("future-schema") || text.includes("schema")) {
+    return "migration_needed";
+  }
+  if (text.includes("corrupt") || text.includes("malformed database")) {
+    return "corrupt_store";
+  }
+  if (text.includes("missing_store") || text.includes("missing-store") || text.includes("store-unavailable")) {
+    return "missing_store";
+  }
+  if (text.includes("unsupported") || text.includes("os_keystore") || text.includes("os-keystore") || text.includes("keychain")) {
+    return "unsupported_unlock_factor";
+  }
+  return "wrong_passphrase";
+}
+
+export function productionProfileUnlockRecoveryView(input = {}) {
+  const kind = normalizedProfileUnlockRecoveryKind(input);
+  const copy = profileUnlockRecoveryCopy[kind] ?? profileUnlockRecoveryCopy.wrong_passphrase;
+  const retryWithPassphraseAllowed =
+    kind === "wrong_passphrase" || kind === "unsupported_unlock_factor";
+  const createNewProfileAllowed = kind === "missing_store" || kind === "corrupt_store";
+  const migrationRequired = kind === "migration_needed";
+  return {
+    kind,
+    warning: copy.warning,
+    nextAction: copy.nextAction,
+    retryWithPassphraseAllowed,
+    createNewProfileAllowed,
+    migrationRequired,
+    boundary: [
+      "profile_unlock_recovery=true",
+      `failure=${kind}`,
+      "wrong_passphrase_split=true",
+      "missing_store_split=true",
+      "corrupt_store_split=true",
+      "migration_needed_split=true",
+      "unsupported_unlock_factor_split=true",
+      `retry_with_passphrase=${retryWithPassphraseAllowed}`,
+      `create_new_profile=${createNewProfileAllowed}`,
+      `migration_required=${migrationRequired}`,
+      "passphrase_required=true",
+      "os_keychain_only_supported=false",
+      "cloud_backup_sync=false",
+      "backup_recovery_claim=false",
+      "rollback_protection_claim=false",
+      "secure_media_deletion_claim=false",
+      "not_protected_device_compromise=true",
+      "raw_path_returned=false",
+      "passphrase_returned=false",
+      "key_material=false",
+      "generic_error=false",
+    ].join(" "),
+  };
+}
+
 export function productionTwoProfileCurrentAction(state) {
   const input = state?.input ?? {};
   if (state?.busy) {
