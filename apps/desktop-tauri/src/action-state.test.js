@@ -9,6 +9,7 @@ import {
   productionBridgeCensorshipBoundaryView,
   productionHighRiskThreatModelBoundaryView,
   productionHighRiskThreatModelClaimMatrix,
+  productionVersionIntegrityView,
   productionInviteCodeProfiles,
   productionInviteIdentityBoundaryView,
   productionLocalDataRecoveryView,
@@ -130,6 +131,34 @@ test("high-risk threat model matrix keeps public claims bounded", () => {
   assert.match(boundary.boundary, /briar_cwtch_equivalence_claim=false/);
   assert.match(boundary.boundary, /coercion_safe_claim=false/);
   assert.match(boundary.boundary, /full_global_traffic_correlation_safe_claim=false/);
+});
+
+test("version integrity view keeps manual update and rollback claims bounded", () => {
+  const view = productionVersionIntegrityView({
+    currentVersion: "0.1.0",
+    buildChannel: "beta-onion",
+    buildCommit: "abc1234",
+    latestVersion: "0.1.1",
+    currentReleaseTag: "v0.1.0-beta-onion-unsigned",
+  });
+
+  assert.equal(view.currentVersion, "0.1.0");
+  assert.equal(view.latestVersion, "0.1.1");
+  assert.equal(view.versionComparison, "manual-review-newer-or-different-version");
+  assert.equal(view.expectedReleaseAuthority, "same-github-release-assets");
+  assert.equal(view.checksumVerification, "matching-sha256-before-open");
+  assert.equal(view.autoUpdateReady, false);
+  assert.equal(view.signedUpdateManifestReady, false);
+  assert.equal(view.rollbackPreventionClaimed, false);
+  assert.equal(view.manualUpdateRequired, true);
+  assert.equal(view.badReleaseAdvisoryPathReady, true);
+  assert.match(view.summary, /emergency_advisory_path=scripts\/prepare_macos_emergency_release_advisory_packet\.sh/);
+  assert.match(view.boundary, /manual_update_required=true/);
+  assert.match(view.boundary, /auto_update_ready=false/);
+  assert.match(view.boundary, /rollback_warning_policy=manual-warning-only/);
+  assert.match(view.boundary, /rollback_prevention_claimed=false/);
+  assert.match(view.boundary, /branch_source_release_authority_allowed=false/);
+  assert.doesNotMatch(view.boundary, /auto_update_ready=true|rollback_prevention_claimed=true|security_ready_claim=true/);
 });
 
 test("first-run desktop summary keeps purpose release status and next action visible", () => {

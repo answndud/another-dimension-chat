@@ -69,6 +69,7 @@ import {
   productionTwoProfileShouldShowOutboundRecovery,
   productionTwoProfileSessionSummaryView,
   productionTwoProfileSessionStatusView,
+  productionVersionIntegrityView,
 } from "./action-state.js";
 import {
   createMessageEnvelopeSlot,
@@ -96,6 +97,7 @@ const fields = {
   privacyModelSummary: document.querySelector("#privacy-model-summary"),
   releaseClaim: document.querySelector("#release-claim"),
   firstRunPrimaryNextAction: document.querySelector("#first-run-primary-next-action"),
+  versionIntegrityStatus: document.querySelector("#version-integrity-status"),
   messaging: document.querySelector("#messaging"),
   localDevPeerLabel: document.querySelector("#local-dev-peer-label"),
   localPeerTestHint: document.querySelector("#local-peer-test-hint"),
@@ -1510,6 +1512,7 @@ function applyLanguage(language) {
   renderRoomIdentityBar(productionTwoProfileInput(), twoProfileSessionsReadyForInput(productionTwoProfileInput()));
   renderRoomStatusSummary(productionTwoProfileInput(), twoProfileSessionsReadyForInput(productionTwoProfileInput()));
   renderPrototypeStatus();
+  renderVersionIntegrityStatus();
   renderMessageTtlControlOptions();
   renderProductionTwoProfileFlow(productionTwoProfileInput());
   renderProductionTwoProfileDirection(productionTwoProfileInput());
@@ -3209,6 +3212,18 @@ function productionSessionReadyForMessages() {
 function renderFirstRunDesktopSummary(input = {}) {
   const view = productionFirstRunDesktopSummaryView(input);
   setText(fields.firstRunPrimaryNextAction, `Next: ${view.primaryNextAction}`);
+  return view;
+}
+
+function renderVersionIntegrityStatus(input = {}) {
+  const view = productionVersionIntegrityView({
+    currentVersion: FIELD_TEST_APP_VERSION,
+    buildChannel: FIELD_TEST_BUILD_CHANNEL,
+    buildCommit: FIELD_TEST_BUILD_COMMIT,
+    currentReleaseTag: "v0.1.0-beta-onion-unsigned",
+    ...input,
+  });
+  setText(fields.versionIntegrityStatus, view.summary);
   return view;
 }
 

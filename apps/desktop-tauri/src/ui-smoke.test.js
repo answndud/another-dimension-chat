@@ -108,9 +108,12 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(indexHtml, /class="public-beta-gate"/);
   assert.match(indexHtml, /class="first-run-checklist"/);
   assert.match(indexHtml, /id="first-run-primary-next-action"/);
+  assert.match(indexHtml, /id="version-integrity-status"/);
+  assert.match(indexHtml, /class="version-integrity-status"/);
   assert.match(indexHtml, /data-i18n="publicBetaChecksumBody"/);
   assert.match(indexHtml, /data-i18n="publicBetaInstallBody"/);
   assert.match(indexHtml, /data-i18n="publicBetaNoUpdateBody"/);
+  assert.match(indexHtml, /data-i18n="versionIntegrityStatusInitial"/);
   assert.match(indexHtml, /data-i18n="firstRunProfileStep"/);
   assert.match(indexHtml, /data-i18n="firstRunRoomStep"/);
   assert.match(indexHtml, /data-i18n="firstRunVerifyStep"/);
@@ -124,6 +127,8 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(i18nJs, /not production-ready/);
   assert.match(i18nJs, /sensitive communication prohibited/);
   assert.match(i18nJs, /external onion delivery claim/);
+  assert.match(i18nJs, /release_authority=same-github-release-assets/);
+  assert.match(i18nJs, /rollback_prevention_claimed=false/);
   assert.match(i18nJs, /Ready for local beta messages/);
   assert.match(i18nJs, /Verified local beta room\. Manual message actions are available\./);
   assert.match(i18nJs, /Explicit local\/manual messaging path available/);
@@ -821,6 +826,16 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(functionBody(mainJs, "confirmTwoProfileSafetyForInput"), /!twoProfileSafetyForInput\(input\)/);
   assert.doesNotMatch(functionBody(mainJs, "finishInviteRoomReadyFromStatus"), /confirmTwoProfileSafetyForInput/);
   assert.match(functionBody(mainJs, "confirmCurrentTwoProfileSafety"), /confirmTwoProfileSafetyForInput\(input\)/);
+  assert.match(actionStateJs, /export function productionVersionIntegrityView/);
+  assert.match(actionStateJs, /const emergencyAdvisoryPath = "scripts\/prepare_macos_emergency_release_advisory_packet\.sh"/);
+  assert.match(actionStateJs, /emergency_advisory_path=\$\{emergencyAdvisoryPath\}/);
+  assert.match(actionStateJs, /rollback_warning_policy=manual-warning-only/);
+  assert.match(actionStateJs, /rollback_prevention_claimed=false/);
+  assert.match(mainJs, /productionVersionIntegrityView/);
+  assert.match(functionBody(mainJs, "renderVersionIntegrityStatus"), /FIELD_TEST_APP_VERSION/);
+  assert.match(functionBody(mainJs, "renderVersionIntegrityStatus"), /v0\.1\.0-beta-onion-unsigned/);
+  assert.match(functionBody(mainJs, "applyLanguage"), /renderVersionIntegrityStatus\(\)/);
+  assert.match(stylesCss, /\.version-integrity-status/);
   assert.match(functionBody(mainJs, "twoProfileRoomIdentityInput"), /connectionCode/);
   assert.match(functionBody(mainJs, "twoProfileRoomIdentityInput"), /inviteRole/);
   assert.match(functionBody(mainJs, "latestTwoProfileSuccessForInput"), /roomFingerprint === twoProfileSessionStatusFingerprint\(input\)/);
