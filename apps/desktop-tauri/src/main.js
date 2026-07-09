@@ -35,6 +35,7 @@ import {
   productionPairwiseSafetyVerificationFlowView,
   productionProfileRecoveryActionsView,
   productionPairingPayloadView,
+  productionRedactedSupportReportView,
   productionProfileUnlockRecoveryView,
   productionProfileMessageReadiness,
   productionProfilePreset,
@@ -466,6 +467,9 @@ const fields = {
   publicBetaDiagnosticsSummary: document.querySelector("#public-beta-diagnostics-summary"),
   refreshPublicBetaDiagnostics: document.querySelector("#refresh-public-beta-diagnostics"),
   copyPublicBetaDiagnostics: document.querySelector("#copy-public-beta-diagnostics"),
+  redactedSupportReport: document.querySelector("#redacted-support-report"),
+  redactedSupportReportSummary: document.querySelector("#redacted-support-report-summary"),
+  copyRedactedSupportReport: document.querySelector("#copy-redacted-support-report"),
   productionTwoProfileTranscriptExport: document.querySelector("#production-two-profile-transcript-export"),
   productionTwoProfileNextStep: document.querySelector("#production-two-profile-next-step"),
   openManualProductionTools: document.querySelector("#open-manual-production-tools"),
@@ -7690,6 +7694,72 @@ async function copyPublicBetaDiagnostics() {
     selectPublicBetaDiagnosticsPayload(payload);
     setProductionTwoProfileState("Public diagnostics selected");
     setText(fields.productionTwoProfileWarning, t("publicBetaDiagnosticsCopyFallback"));
+    return false;
+  }
+}
+
+function buildRedactedSupportReport(input = {}) {
+  return productionRedactedSupportReportView({
+    appVersion: FIELD_TEST_APP_VERSION,
+    buildChannel: FIELD_TEST_BUILD_CHANNEL,
+    buildCommit: FIELD_TEST_BUILD_COMMIT,
+    platform: globalThis.navigator?.platform || "unknown",
+    releaseClass: "unsigned-public-beta",
+    ...input,
+  });
+}
+
+function renderRedactedSupportReport(input = {}) {
+  const view = buildRedactedSupportReport(input);
+  if (fields.redactedSupportReport) {
+    fields.redactedSupportReport.value = view.payload;
+  }
+  if (fields.redactedSupportReportSummary) {
+    fields.redactedSupportReportSummary.textContent = view.copyEnabled
+      ? `${t("redactedSupportReportReady")} active_flow=${view.activeFlow} redacted_error_code=${view.redactedErrorCode}`
+      : t("redactedSupportReportEmpty");
+  }
+  setDisabled(fields.copyRedactedSupportReport, !view.copyEnabled);
+  return view;
+}
+
+function rememberFailureSupportReport(
+  activeFlow,
+  failureClass,
+  recoveryNextAction = "inspect-visible-next-action",
+  nonSensitiveStatus = "failure",
+) {
+  return renderRedactedSupportReport({
+    activeFlow,
+    redactedErrorCode: failureClass,
+    recoveryNextAction,
+    nonSensitiveStatus,
+  });
+}
+
+function selectRedactedSupportReportPayload(payload) {
+  if (!fields.redactedSupportReport) {
+    return;
+  }
+  fields.redactedSupportReport.value = payload;
+  fields.redactedSupportReport.focus?.();
+  fields.redactedSupportReport.select?.();
+}
+
+async function copyRedactedSupportReport() {
+  const payload = fields.redactedSupportReport?.value || renderRedactedSupportReport().payload;
+  if (!payload) {
+    return false;
+  }
+  try {
+    await navigator.clipboard.writeText(payload);
+    setProductionTwoProfileState("Redacted support report copied");
+    setText(fields.productionTwoProfileWarning, t("redactedSupportReportCopied"));
+    return true;
+  } catch {
+    selectRedactedSupportReportPayload(payload);
+    setProductionTwoProfileState("Redacted support report selected");
+    setText(fields.productionTwoProfileWarning, t("redactedSupportReportCopyFallback"));
     return false;
   }
 }
@@ -18657,6 +18727,12 @@ async function deleteProductionProfile() {
     setProductionProfileState("Profile delete failed");
     setText(fields.productionProfileWarning, String(error));
     setText(fields.productionProfileNextAction, t("dataLifecycleFailedNext"));
+    rememberFailureSupportReport(
+      "profile-delete",
+      "destructive_action_failed",
+      "retry-local-lifecycle-action",
+      "destructive_action_failed",
+    );
     return null;
   } finally {
     clearProductionBusyAction("profile-delete");
@@ -18698,6 +18774,12 @@ async function wipeProductionLocalData() {
     setProductionProfileState("Local data wipe failed");
     setText(fields.productionProfileWarning, String(error));
     setText(fields.productionProfileNextAction, t("dataLifecycleFailedNext"));
+    rememberFailureSupportReport(
+      "full-local-wipe",
+      "destructive_action_failed",
+      "retry-local-lifecycle-action",
+      "destructive_action_failed",
+    );
     return null;
   } finally {
     clearProductionBusyAction("full-local-data-wipe");
@@ -18736,6 +18818,14 @@ async function unlockProductionProfile() {
       setText(fields.productionProfileStorage, productUnlockRecovery.storage);
       setText(fields.productionProfileIdentity, productUnlockRecovery.identity);
       setText(fields.productionProfileBoundary, productUnlockRecovery.boundary);
+      rememberFailureSupportReport(
+        "profile-unlock",
+        productUnlockRecovery.storage?.includes("local_recovery=")
+          ? productUnlockRecovery.storage.split("local_recovery=")[1]?.split(/\s+/)[0]
+          : "profile_unlock_blocked",
+        productUnlockRecovery.next,
+        "profile_unlock_failed",
+      );
       return;
     }
     const result = await invoke("production_profile_unlock", { profile, passphrase });
@@ -18774,6 +18864,12 @@ async function unlockProductionProfile() {
     setText(fields.productionProfileIdentity, "Not opened; no raw storage error exposed");
     setText(fields.productionProfileBoundary, `${recovery.boundary} ${recoveryActions.boundary}`);
     setText(fields.productionProfileNextAction, recoveryActions.primaryNextAction || recovery.nextAction);
+    rememberFailureSupportReport(
+      "profile-unlock",
+      recovery.kind,
+      recoveryActions.primaryNextAction || recovery.nextAction,
+      "profile_unlock_failed",
+    );
   } finally {
     clearProductionBusyAction("profile-unlock");
     if (fields.unlockProductionProfile) {
@@ -19260,6 +19356,12 @@ async function deleteProductionSessionLifecycle(input = productionPairingInput()
     setProductionPairingState("Session lifecycle delete failed");
     setText(fields.productionPairingWarning, String(error));
     setText(fields.productionSessionLifecycle, "Failed");
+    rememberFailureSupportReport(
+      "session-delete",
+      "destructive_action_failed",
+      "retry-local-lifecycle-action",
+      "destructive_action_failed",
+    );
   } finally {
     clearProductionBusyAction("session-lifecycle-delete");
     if (fields.deleteProductionSessionLifecycle) {
@@ -20129,6 +20231,12 @@ async function exportProductionMessageEnvelope() {
     setProductionMessageState("Message envelope export failed");
     setText(fields.productionMessageWarning, String(error));
     setText(fields.productionMessageOutbound, "Failed");
+    rememberFailureSupportReport(
+      "message-envelope-export",
+      "message_exchange_failed",
+      "retry-envelope-export",
+      "message_exchange_failed",
+    );
   } finally {
     clearProductionBusyAction("message-export");
     if (fields.exportProductionMessageEnvelope) {
@@ -20201,6 +20309,12 @@ async function deleteProductionConversation() {
     }
     setProductionMessageState("Conversation delete failed");
     setText(fields.productionMessageWarning, String(error));
+    rememberFailureSupportReport(
+      "conversation-delete",
+      "destructive_action_failed",
+      "retry-local-lifecycle-action",
+      "destructive_action_failed",
+    );
   } finally {
     clearProductionBusyAction("conversation-delete");
     applyProductionActionState();
@@ -20306,6 +20420,12 @@ async function importProductionMessageEnvelope() {
     setProductionMessageState("Message envelope import failed");
     setText(fields.productionMessageWarning, String(error));
     setText(fields.productionMessageInbound, "Failed");
+    rememberFailureSupportReport(
+      "message-envelope-import",
+      "message_exchange_failed",
+      "ask-for-fresh-envelope",
+      "message_exchange_failed",
+    );
   } finally {
     clearProductionBusyAction("message-import");
     if (fields.importProductionMessageEnvelope) {
@@ -21350,6 +21470,10 @@ if (fields.refreshPublicBetaDiagnostics) {
 
 if (fields.copyPublicBetaDiagnostics) {
   fields.copyPublicBetaDiagnostics.addEventListener("click", copyPublicBetaDiagnostics);
+}
+
+if (fields.copyRedactedSupportReport) {
+  fields.copyRedactedSupportReport.addEventListener("click", copyRedactedSupportReport);
 }
 
 if (fields.peerFieldTestReport) {

@@ -175,6 +175,13 @@ const dictionaries = {
       "Transport unavailable or policy blocked: stay on manual envelope exchange, or enable delivery and press an explicit action.",
     publicRecoveryLifecycle:
       "Lifecycle confirmation required: confirm the local-only delete or wipe scope before continuing.",
+    redactedSupportReport: "Redacted support report",
+    copyRedactedSupportReport: "Copy support report",
+    redactedSupportReportReady: "Redacted support report ready.",
+    redactedSupportReportEmpty: "No failure report yet.",
+    redactedSupportReportCopied: "Redacted support report copied.",
+    redactedSupportReportCopyFallback:
+      "Could not copy automatically. The redacted support report is selected; copy it manually.",
     refreshPublicBetaDiagnostics: "Refresh diagnostics",
     copyPublicBetaDiagnostics: "Copy diagnostics",
     publicBetaDiagnosticsCopied: "Public support diagnostics copied.",
@@ -1330,6 +1337,13 @@ const dictionaries = {
       "Transport unavailable 또는 policy blocked: manual envelope exchange를 유지하거나 delivery를 켠 뒤 명시적 action을 누르세요.",
     publicRecoveryLifecycle:
       "Lifecycle confirmation required: 계속하기 전에 local-only delete 또는 wipe 범위를 확인하세요.",
+    redactedSupportReport: "민감정보 제거 지원 리포트",
+    copyRedactedSupportReport: "지원 리포트 복사",
+    redactedSupportReportReady: "민감정보 제거 지원 리포트가 준비되었습니다.",
+    redactedSupportReportEmpty: "아직 실패 리포트가 없습니다.",
+    redactedSupportReportCopied: "민감정보 제거 지원 리포트를 복사했습니다.",
+    redactedSupportReportCopyFallback:
+      "자동 복사에 실패했습니다. 민감정보 제거 지원 리포트를 선택해 두었으니 직접 복사하세요.",
     refreshPublicBetaDiagnostics: "진단 정보 새로고침",
     copyPublicBetaDiagnostics: "진단 정보 복사",
     publicBetaDiagnosticsCopied: "공개 지원용 진단 정보를 복사했습니다.",

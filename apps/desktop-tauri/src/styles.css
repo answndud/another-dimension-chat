@@ -1837,6 +1837,22 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
   line-height: 1.45;
 }
 
+.redacted-support-report-panel {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: color-mix(in srgb, var(--panel-strong) 58%, transparent);
+}
+
+.redacted-support-report-panel h6 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
 .local-rehearsal-panel {
   display: grid;
   gap: 8px;

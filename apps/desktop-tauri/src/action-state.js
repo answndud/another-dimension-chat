@@ -655,6 +655,84 @@ export function productionProfileRecoveryActionsView(recovery = {}) {
   };
 }
 
+function redactedSupportReportToken(value, fallback = "unknown") {
+  const token = String(value ?? "")
+    .trim()
+    .replace(/[^A-Za-z0-9._:-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 96);
+  return token || fallback;
+}
+
+export function productionRedactedSupportReportView(input = {}) {
+  const appVersion = redactedSupportReportToken(input.appVersion);
+  const buildChannel = redactedSupportReportToken(input.buildChannel);
+  const buildCommit = redactedSupportReportToken(input.buildCommit);
+  const platform = redactedSupportReportToken(input.platform);
+  const releaseClass = redactedSupportReportToken(input.releaseClass, "unsigned-public-beta");
+  const activeFlow = redactedSupportReportToken(input.activeFlow, "unknown-flow");
+  const redactedErrorCode = redactedSupportReportToken(
+    input.redactedErrorCode ?? input.failureClass,
+    "unknown-failure",
+  );
+  const nonSensitiveStatus = redactedSupportReportToken(input.nonSensitiveStatus, "failure");
+  const recoveryNextAction = redactedSupportReportToken(input.recoveryNextAction, "inspect-visible-next-action");
+  const copyEnabled = activeFlow !== "unknown-flow" && redactedErrorCode !== "unknown-failure";
+  const payload = [
+    "Another Dimension Chat redacted support report",
+    "report_version=1",
+    `app_version=${appVersion}`,
+    `build_channel=${buildChannel}`,
+    `build_commit=${buildCommit}`,
+    `platform=${platform}`,
+    `release_class=${releaseClass}`,
+    `active_flow=${activeFlow}`,
+    `redacted_error_code=${redactedErrorCode}`,
+    `non_sensitive_status=${nonSensitiveStatus}`,
+    `recovery_next_action=${recoveryNextAction}`,
+    "passphrase=<redacted>",
+    "private_key=<redacted>",
+    "invite_body=<redacted>",
+    "message_body=<redacted>",
+    "envelope_payload=<redacted>",
+    "raw_local_path=<redacted>",
+    "credential=<redacted>",
+    "support_bundle_export=false",
+    "raw_logs_included=false",
+    "telemetry_upload=false",
+  ].join("\n");
+  const boundary = [
+    "redacted_support_report=true",
+    `copy_enabled=${copyEnabled}`,
+    "allowed_fields=app-version#build-channel#build-commit#platform#release-class#active-flow#redacted-error-code#non-sensitive-status#recovery-next-action",
+    "passphrase_included=false",
+    "private_key_included=false",
+    "invite_body_included=false",
+    "message_body_included=false",
+    "envelope_payload_included=false",
+    "raw_local_path_included=false",
+    "credential_included=false",
+    "support_bundle_export=false",
+    "audit_evidence_claim=false",
+    "external_delivery_evidence_claim=false",
+    "security_ready_proof_claim=false",
+  ].join(" ");
+  return {
+    appVersion,
+    buildChannel,
+    buildCommit,
+    platform,
+    releaseClass,
+    activeFlow,
+    redactedErrorCode,
+    nonSensitiveStatus,
+    recoveryNextAction,
+    copyEnabled,
+    payload,
+    boundary,
+  };
+}
+
 export function productionTwoProfileCurrentAction(state) {
   const input = state?.input ?? {};
   if (state?.busy) {
