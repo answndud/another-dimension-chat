@@ -111,11 +111,12 @@ pub use stream_session::{
 };
 pub(crate) use transport_policy::is_safe_endpoint_token;
 pub use transport_policy::{
+    high_risk_transport_metadata_minimization_summary,
     no_silent_network_transport_boundary_summary, DirectPeerEndpoint, EnvelopeTransport,
-    LocalTransportEndpoint, NoSilentNetworkTransportBoundarySummary, OnionEnvelopeTransport,
-    Transport, TransportAdapterIntegrationBoundarySummary, TransportKind,
-    TransportMessagePathBoundarySummary, TransportMode, TransportPolicy, TransportReceiveRequest,
-    TransportRoute, TransportSendRequest,
+    HighRiskTransportMetadataMinimizationSummary, LocalTransportEndpoint,
+    NoSilentNetworkTransportBoundarySummary, OnionEnvelopeTransport, Transport,
+    TransportAdapterIntegrationBoundarySummary, TransportKind, TransportMessagePathBoundarySummary,
+    TransportMode, TransportPolicy, TransportReceiveRequest, TransportRoute, TransportSendRequest,
 };
 
 #[cfg(test)]

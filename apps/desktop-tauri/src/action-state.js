@@ -171,6 +171,36 @@ export function productionHighRiskThreatModelBoundaryView() {
   };
 }
 
+export function productionHighRiskTransportMetadataBoundaryView() {
+  return {
+    status: "not-ready",
+    notReadyReason: "runtime-network-disabled-until-explicit-user-action",
+    boundary: [
+      "high_risk_transport_mode=onion-only",
+      "high_risk_transport_onion_only=true",
+      "high_risk_transport_direct_fallback=false",
+      "high_risk_transport_dns_endpoint=false",
+      "high_risk_transport_ip_endpoint=false",
+      "high_risk_transport_explicit_user_permission=true",
+      "high_risk_transport_app_launch_bootstrap=false",
+      "high_risk_transport_bridge_failure_class=redacted",
+      "high_risk_transport_bridge_line_exposed=false",
+      "high_risk_transport_onion_endpoint_exposed=false",
+      "high_risk_transport_descriptor_exposed=false",
+      "high_risk_transport_local_path_exposed=false",
+      "high_risk_transport_envelope_size_bucket=bucket-4k",
+      "high_risk_transport_optional_send_delay=true",
+      "high_risk_transport_timestamp_precision=minute",
+      "high_risk_transport_redacted_contact_id=true",
+      "high_risk_transport_redacted_session_id=true",
+      "high_risk_transport_endpoint_state_separated=true",
+      "high_risk_transport_stream_retry_cancel_state_separated=true",
+      "high_risk_transport_ready=false",
+      "high_risk_transport_not_ready_reason=runtime-network-disabled-until-explicit-user-action",
+    ].join(" "),
+  };
+}
+
 function releaseIntegrityToken(value, fallback = "unknown") {
   const token = String(value ?? "")
     .trim()

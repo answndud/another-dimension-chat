@@ -111,6 +111,7 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(indexHtml, /id="version-integrity-status"/);
   assert.match(indexHtml, /id="windows-runtime-parity-status"/);
   assert.match(indexHtml, /id="high-risk-threat-model-status"/);
+  assert.match(indexHtml, /id="high-risk-transport-metadata-status"/);
   assert.match(indexHtml, /class="version-integrity-status"/);
   assert.match(indexHtml, /data-i18n="publicBetaChecksumBody"/);
   assert.match(indexHtml, /data-i18n="publicBetaInstallBody"/);
@@ -118,8 +119,11 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(indexHtml, /data-i18n="versionIntegrityStatusInitial"/);
   assert.match(indexHtml, /data-i18n="windowsRuntimeParityStatusInitial"/);
   assert.match(indexHtml, /data-i18n="highRiskThreatModelStatusInitial"/);
+  assert.match(indexHtml, /data-i18n="highRiskTransportMetadataStatusInitial"/);
   assert.match(indexHtml, /windows_public_artifact_ready=false/);
   assert.match(indexHtml, /shared_core_bypass_allowed=false/);
+  assert.match(indexHtml, /high_risk_transport_direct_fallback=false/);
+  assert.match(indexHtml, /high_risk_transport_app_launch_bootstrap=false/);
   assert.match(indexHtml, /compromised_endpoint:not_protected/);
   assert.match(indexHtml, /direct_coercion:not_protected/);
   assert.match(indexHtml, /global_traffic_correlation:not_protected/);
@@ -856,6 +860,8 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(actionStateJs, /macos_only_wording_allowed=false/);
   assert.match(actionStateJs, /shared_core_bypass_allowed=false/);
   assert.match(actionStateJs, /full_censorship_resistance_claim=false/);
+  assert.match(actionStateJs, /high_risk_transport_mode=onion-only/);
+  assert.match(actionStateJs, /high_risk_transport_not_ready_reason=runtime-network-disabled-until-explicit-user-action/);
   assert.doesNotMatch(actionStateJs, /windows_public_artifact_ready=true|shared_core_bypass_allowed=true/);
   assert.match(mainJs, /productionVersionIntegrityView/);
   assert.match(mainJs, /productionWindowsRuntimeParityView/);
@@ -865,9 +871,12 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(functionBody(mainJs, "renderWindowsRuntimeParityStatus"), /windowsRuntimeParityStatus/);
   assert.match(functionBody(mainJs, "renderHighRiskThreatModelStatus"), /productionHighRiskThreatModelBoundaryView/);
   assert.match(functionBody(mainJs, "renderHighRiskThreatModelStatus"), /highRiskThreatModelStatus/);
+  assert.match(functionBody(mainJs, "renderHighRiskTransportMetadataStatus"), /productionHighRiskTransportMetadataBoundaryView/);
+  assert.match(functionBody(mainJs, "renderHighRiskTransportMetadataStatus"), /highRiskTransportMetadataStatus/);
   assert.match(functionBody(mainJs, "applyLanguage"), /renderVersionIntegrityStatus\(\)/);
   assert.match(functionBody(mainJs, "applyLanguage"), /renderWindowsRuntimeParityStatus\(\)/);
   assert.match(functionBody(mainJs, "applyLanguage"), /renderHighRiskThreatModelStatus\(\)/);
+  assert.match(functionBody(mainJs, "applyLanguage"), /renderHighRiskTransportMetadataStatus\(\)/);
   assert.match(stylesCss, /\.version-integrity-status/);
   assert.match(functionBody(mainJs, "twoProfileRoomIdentityInput"), /connectionCode/);
   assert.match(functionBody(mainJs, "twoProfileRoomIdentityInput"), /inviteRole/);
@@ -2647,6 +2656,8 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /usability_study_completed=\$\{usabilityStudyCompleted\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /production_wording_ready=\$\{productionWordingReady\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_onion_path=explicit-user-triggered-fail-closed/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_transport_mode=\$\{highRiskTransportMode\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_transport_not_ready_reason=\$\{highRiskTransportNotReadyReason\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /production_e2ee_ready=\$\{productionE2eeReady\}/);
   assert.doesNotMatch(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public diagnostics ready failure_class=/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /desktop_completion=\$\{desktopCompletion\.status\}/);
