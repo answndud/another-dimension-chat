@@ -285,6 +285,13 @@ diagnostics are redacted, and release integrity evidence is available. If
 transport is explicitly disabled, the app may show `limited`, but not
 High-Risk-ready.
 
+Final release acceptance treats stable public app readiness and High-Risk Mode
+readiness as separate decisions. The final gate must keep both release-ready
+outputs false if P0/P1 local bug audit is incomplete, a P0/P1 local bug is
+present, source acceptance or artifact consistency is missing, or High-Risk
+required conditions are incomplete. It must not record payloads, passphrases,
+local paths, or key material in checklist output.
+
 ## Reporting Security Issues
 
 If you find a security issue, please use GitHub's private vulnerability reporting feature if it is enabled for the repository.
