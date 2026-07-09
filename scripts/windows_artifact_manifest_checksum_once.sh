@@ -41,6 +41,7 @@ for flag in \
   "windows_artifact_manifest_checksum_verifier_ready=true" \
   "windows_artifact_requires_same_release_authority=true" \
   "windows_artifact_checksum_bytes_verified_by_validator=true" \
+  "windows_artifact_package_structure_verified_by_validator=true" \
   "windows_artifact_provenance_consistency_verified_by_validator=true" \
   "windows_artifact_provenance_field_consistency_verified_by_validator=true" \
   "windows_artifact_bundle_target_extension_bound=true" \
@@ -61,6 +62,10 @@ done
 must_contain "$VALIDATOR" "windows-public-artifact-manifest-v1"
 must_contain "$VALIDATOR" "windows-public-artifact-provenance-v1"
 must_contain "$VALIDATOR" "windows_artifact_checksum_bytes_verified=true"
+must_contain "$VALIDATOR" "windows_artifact_package_structure_verified=true"
+must_contain "$VALIDATOR" "invalid-pe-mz-header"
+must_contain "$VALIDATOR" "invalid-msi-compound-file-header"
+must_contain "$VALIDATOR" "invalid-zip-header"
 must_contain "$VALIDATOR" "provenance-signing-status-mismatch"
 must_contain "$VALIDATOR" "bundle-target-extension-mismatch"
 must_contain "$GENERATOR" "AD_PREPARE_WINDOWS_PUBLIC_ARTIFACT_METADATA"
@@ -94,7 +99,15 @@ printf '%s\n' "$held_output" | grep -Fq "status=windows-public-artifact-metadata
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 artifact="$tmp_dir/Another Dimension Chat_0.1.0_x64-setup.exe"
-printf 'windows artifact fixture\n' >"$artifact"
+node - "$artifact" <<'NODE'
+const fs = require("node:fs");
+const file = process.argv[2];
+const bytes = Buffer.alloc(512, 0);
+bytes.write("MZ", 0, "ascii");
+bytes.writeUInt32LE(0x80, 0x3c);
+bytes.write("PE\0\0", 0x80, "binary");
+fs.writeFileSync(file, bytes);
+NODE
 artifact_sha="$(shasum -a 256 "$artifact" | awk '{print $1}')"
 artifact_size="$(wc -c <"$artifact" | tr -d ' ')"
 printf '%s  %s\n' "$artifact_sha" "$(basename "$artifact")" >"$tmp_dir/Another Dimension Chat_0.1.0_x64-setup.exe.sha256"
@@ -159,6 +172,8 @@ printf '%s\n' "$candidate_output" | grep -Fq "accepted_windows_artifact_manifest
   fail "valid Windows artifact manifest was not accepted"
 printf '%s\n' "$candidate_output" | grep -Fq "windows_artifact_checksum_bytes_verified=true" ||
   fail "validator did not report checksum-byte verification"
+printf '%s\n' "$candidate_output" | grep -Fq "windows_artifact_package_structure_verified=true" ||
+  fail "validator did not report package structure verification"
 printf '%s\n' "$candidate_output" | grep -Fq "windows_public_artifact_ready=false" ||
   fail "validator must not claim Windows artifact readiness"
 printf '%s\n' "$candidate_output" | grep -Fq "status=windows-artifact-manifest-candidate-requires-release-gate" ||
@@ -169,6 +184,72 @@ if AD_REQUIRE_CURRENT_HEAD=1 node "$VALIDATOR" "$tmp_dir/WINDOWS_ARTIFACT_MANIFE
 fi
 grep -Fq "source-commit-not-current-head" "$tmp_dir/stale.out" ||
   fail "strict Windows artifact validator did not report stale source commit"
+
+text_artifact="$tmp_dir/text-not-pe.exe"
+printf 'not a PE artifact\n' >"$text_artifact"
+text_artifact_sha="$(shasum -a 256 "$text_artifact" | awk '{print $1}')"
+text_artifact_size="$(wc -c <"$text_artifact" | tr -d ' ')"
+printf '%s  %s\n' "$text_artifact_sha" "$(basename "$text_artifact")" >"$tmp_dir/text-not-pe.exe.sha256"
+cat >"$tmp_dir/text-not-pe.exe.provenance.json" <<JSON
+{
+  "schema_version": "windows-public-artifact-provenance-v1",
+  "repository": "answndud/another-dimension-chat",
+  "source_commit": "abcdef1234567890",
+  "artifact_filename": "text-not-pe.exe",
+  "artifact_sha256": "$text_artifact_sha",
+  "release_class": "unsigned-windows-beta",
+  "bundle_target": "nsis",
+  "signing_status": "unsigned-hold",
+  "release_upload_authorized": false,
+  "windows_public_artifact_ready": false,
+  "generated_release_artifacts_commit_allowed": false
+}
+JSON
+cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_TEXT_EXE.json" <<JSON
+{
+  "schema_version": "windows-public-artifact-manifest-v1",
+  "repository": "answndud/another-dimension-chat",
+  "source_commit": "abcdef1234567890",
+  "version": "0.1.0",
+  "release_class": "unsigned-windows-beta",
+  "same_release_asset_authority_required": true,
+  "release_upload_authorized": false,
+  "release_body_edit_authorized": false,
+  "windows_public_artifact_ready": false,
+  "windows_installer_ready": false,
+  "generated_release_artifacts_commit_allowed": false,
+  "public_non_claims": [
+    "unsigned experimental public beta",
+    "sensitive communication prohibited",
+    "not audited",
+    "not production-ready",
+    "no public Windows artifact",
+    "no Windows installer",
+    "no public artifact upload"
+  ],
+  "artifacts": [
+    {
+      "filename": "text-not-pe.exe",
+      "sha256": "$text_artifact_sha",
+      "size_bytes": $text_artifact_size,
+      "platform": "windows",
+      "architecture": "windows-x64",
+      "bundle_target": "nsis",
+      "signing_status": "unsigned-hold",
+      "checksum_file": "text-not-pe.exe.sha256",
+      "provenance_file": "text-not-pe.exe.provenance.json",
+      "webview2_runtime_required": true,
+      "smartscreen_reputation_claim": false,
+      "signing_trust_boundary": false
+    }
+  ]
+}
+JSON
+if node "$VALIDATOR" "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST_TEXT_EXE.json" >"$tmp_dir/text-exe.out" 2>&1; then
+  fail "validator accepted a text file as a Windows executable artifact"
+fi
+grep -Fq "invalid-pe-mz-header" "$tmp_dir/text-exe.out" ||
+  fail "text executable rejection was not reported"
 
 bad_sha="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 if [ "$bad_sha" = "$artifact_sha" ]; then
@@ -217,6 +298,7 @@ windows_artifact_metadata_generator_ready=true
 windows_artifact_manifest_checksum_verifier_ready=true
 windows_artifact_requires_same_release_authority=true
 windows_artifact_checksum_bytes_verified_by_validator=true
+windows_artifact_package_structure_verified_by_validator=true
 windows_artifact_provenance_consistency_verified_by_validator=true
 windows_artifact_provenance_field_consistency_verified_by_validator=true
 windows_artifact_bundle_target_extension_bound=true

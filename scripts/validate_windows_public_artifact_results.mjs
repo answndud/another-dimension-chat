@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -14,6 +15,7 @@ const REQUIRED_FIELDS = Object.freeze([
   "architecture",
   "artifact_kind",
   "artifact_path_redacted",
+  "artifact_manifest_file",
   "artifact_sha256",
   "artifact_provenance_sha256",
   "artifact_manifest_sha256",
@@ -144,8 +146,92 @@ function currentHead() {
   }
 }
 
+function sha256File(file) {
+  return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+}
+
+function readJson(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function relativeEvidenceFile(baseFile, relativePath) {
+  if (!relativePath || typeof relativePath !== "string") return "";
+  if (path.isAbsolute(relativePath)) return "";
+  const normalized = path.normalize(relativePath);
+  if (normalized === "." || normalized.startsWith("..") || path.isAbsolute(normalized)) return "";
+  return path.join(path.dirname(baseFile), normalized);
+}
+
+function relativeSibling(baseFile, siblingName) {
+  if (!siblingName || typeof siblingName !== "string") return "";
+  if (siblingName !== path.basename(siblingName)) return "";
+  return path.join(path.dirname(baseFile), siblingName);
+}
+
 function sameSet(actual, expected) {
   return actual.size === expected.length && expected.every((item) => actual.has(item));
+}
+
+function validateArtifactEvidenceBundle(file, fields, { requireCurrentHead = false } = {}) {
+  const issues = [];
+  const manifestFile = relativeEvidenceFile(file, fields.get("artifact_manifest_file"));
+  if (!manifestFile || !fs.existsSync(manifestFile) || !fs.statSync(manifestFile).isFile()) {
+    return ["artifact_manifest_file:missing-file"];
+  }
+  if (sha256File(manifestFile) !== fields.get("artifact_manifest_sha256")) {
+    issues.push("artifact-manifest-sha-mismatch");
+  }
+  const validator = path.join(process.cwd(), "scripts", "validate_windows_artifact_manifest.mjs");
+  try {
+    const output = execFileSync(process.execPath, [validator, manifestFile], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        AD_REQUIRE_CURRENT_HEAD: requireCurrentHead ? "1" : process.env.AD_REQUIRE_CURRENT_HEAD ?? "",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    if (!output.includes("accepted_windows_artifact_manifests=1")) {
+      issues.push("artifact-manifest-not-accepted");
+    }
+    if (!output.includes("windows_artifact_package_structure_verified=true")) {
+      issues.push("artifact-manifest-package-structure-not-verified");
+    }
+  } catch {
+    issues.push("artifact-manifest-validator-failed");
+  }
+
+  const manifest = readJson(manifestFile);
+  if (!manifest || !Array.isArray(manifest.artifacts)) {
+    issues.push("artifact-manifest-invalid-json");
+    return issues;
+  }
+  const artifact = manifest.artifacts.find((entry) => entry?.sha256 === fields.get("artifact_sha256"));
+  if (!artifact) {
+    issues.push("artifact-sha-not-found-in-manifest");
+    return issues;
+  }
+  const artifactFile = relativeSibling(manifestFile, artifact.filename);
+  if (!artifactFile || !fs.existsSync(artifactFile) || !fs.statSync(artifactFile).isFile()) {
+    issues.push("artifact-file-missing-from-manifest-directory");
+  } else if (sha256File(artifactFile) !== fields.get("artifact_sha256")) {
+    issues.push("artifact-file-sha-mismatch");
+  }
+  const provenanceFile = relativeSibling(manifestFile, artifact.provenance_file);
+  if (!provenanceFile || !fs.existsSync(provenanceFile) || !fs.statSync(provenanceFile).isFile()) {
+    issues.push("artifact-provenance-file-missing");
+  } else if (sha256File(provenanceFile) !== fields.get("artifact_provenance_sha256")) {
+    issues.push("artifact-provenance-sha-mismatch");
+  }
+  const signingDecision = fields.get("installer_signing_decision");
+  if (signingDecision !== "not-applicable" && artifact.signing_status !== signingDecision) {
+    issues.push("installer-signing-decision-mismatch");
+  }
+  return issues;
 }
 
 function validateResult(file, { requireCurrentHead = false, head = "" } = {}) {
@@ -190,6 +276,7 @@ function validateResult(file, { requireCurrentHead = false, head = "" } = {}) {
       issues.push(`forbidden-content:${label}`);
     }
   }
+  issues.push(...validateArtifactEvidenceBundle(file, fields, { requireCurrentHead }));
   return { file, fields, issues, valid: issues.length === 0 };
 }
 
@@ -207,6 +294,7 @@ console.log(`results_found=${results.length}`);
 
 if (results.length === 0) {
   console.log("accepted_windows_public_artifact_results=0");
+  console.log("windows_result_requires_valid_artifact_manifest=true");
   console.log("windows_real_runtime_smoke_passed=false");
   console.log("windows_public_artifact_ready=false");
   console.log("status=waiting-for-real-windows-public-artifact-results");
@@ -241,6 +329,9 @@ const reviewComplete = validated.every((result) =>
 );
 
 console.log(`accepted_windows_public_artifact_results=${validated.length}`);
+console.log("windows_result_artifact_manifest_sha_verified=true");
+console.log("windows_result_artifact_provenance_sha_verified=true");
+console.log("windows_result_artifact_bytes_sha_verified=true");
 console.log(`windows_real_runtime_smoke_passed=${allPass}`);
 console.log(`windows_public_artifact_candidate_requires_review=${allPass && reviewComplete}`);
 console.log("windows_public_artifact_ready=false");
