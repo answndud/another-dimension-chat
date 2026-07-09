@@ -28,6 +28,7 @@ import {
   productionMessageEnvelopeExportView,
   productionMessageEnvelopeImportView,
   productionMessageDeliveryProductizationView,
+  productionStorageKeyManagementHardeningView,
   productionMessageTtlInputValue,
   productionOnionReceiveFailureMessage,
   productionOnionReceiveLoopRefreshPlan,
@@ -13415,6 +13416,9 @@ function applyProductionActionState() {
   });
   document.body.dataset.deliveryPrimaryAction = deliveryProductization.primaryAction;
   document.body.dataset.deliveryBoundaryClosed = String(deliveryProductization.boundaryClosed);
+  const storageKeyManagement = productionStorageKeyManagementHardeningView();
+  document.body.dataset.storageKeyManagementReady = String(storageKeyManagement.productionKeyManagementReady);
+  document.body.dataset.storageKeyManagementBoundaryClosed = String(storageKeyManagement.boundaryClosed);
   setText(fields.messaging, localizedBoundaryStatus(`message_delivery_productization ${deliveryProductization.boundary}`));
   clearMismatchedChatDeliveryNotice(twoProfile);
   clearMismatchedPrivateRouteFollowup(twoProfile);
