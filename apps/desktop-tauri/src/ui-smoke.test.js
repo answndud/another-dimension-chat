@@ -188,9 +188,15 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(actionStateJs, /export function productionFinalReleaseAcceptanceView/);
   assert.match(actionStateJs, /export function productionExternalTwoMachineEvidenceView/);
   assert.match(actionStateJs, /export function productionMessageDeliveryProductizationView/);
+  assert.match(actionStateJs, /export function productionStorageKeyManagementHardeningView/);
+  assert.match(actionStateJs, /production_key_management_ready=\$\{productionKeyManagementReady\}/);
+  assert.match(actionStateJs, /kdf_params_versioned=\$\{kdfParamsVersioned\}/);
+  assert.match(actionStateJs, /ui_error_private_fields_allowed=false/);
   assert.match(mainJs, /productionMessageDeliveryProductizationView/);
+  assert.match(mainJs, /productionStorageKeyManagementHardeningView/);
   assert.match(mainJs, /dataset\.deliveryPrimaryAction/);
   assert.match(mainJs, /message_delivery_productization/);
+  assert.match(mainJs, /dataset\.storageKeyManagementBoundaryClosed/);
   assert.match(actionStateJs, /primary_action=\$\{primaryAction\}/);
   assert.match(actionStateJs, /first_message_round_trip_ready=\$\{firstMessageRoundTripReady\}/);
   assert.match(actionStateJs, /false_delivered_allowed=false/);

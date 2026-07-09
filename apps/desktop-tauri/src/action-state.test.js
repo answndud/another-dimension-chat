@@ -27,6 +27,7 @@ import {
   productionProfileUnlockRecoveryView,
   productionProfileRecoveryActionsView,
   productionRedactedSupportReportView,
+  productionStorageKeyManagementHardeningView,
   productionInviteRoomConversationMetadata,
   productionManualCurrentFocusTarget,
   productionManualCurrentStepView,
@@ -704,6 +705,35 @@ test("local data recovery view keeps backup migration and corrupt store limits e
   assert.match(unlockMigration.boundary, /local_data_recovery=true/);
   assert.match(unlockMigration.boundary, /failure=migration_failure/);
   assert.match(unlockMigration.boundary, /silent_data_loss=false/);
+});
+
+test("storage key management hardening view keeps secrets redacted and claims bounded", () => {
+  const ready = productionStorageKeyManagementHardeningView();
+  assert.equal(ready.productionKeyManagementReady, true);
+  assert.equal(ready.boundaryClosed, true);
+  assert.equal(ready.rawPathReturned, false);
+  assert.equal(ready.passphraseReturned, false);
+  assert.equal(ready.keyMaterialExposed, false);
+  assert.equal(ready.backupRecoveryClaimed, false);
+  assert.equal(ready.rollbackPreventionClaimed, false);
+  assert.equal(ready.secureMediaDeletionClaimed, false);
+  assert.match(ready.boundary, /passphrase_first_required=true/);
+  assert.match(ready.boundary, /kdf_params_versioned=true/);
+  assert.match(ready.boundary, /migration_failure_distinct_from_corrupt_store=true/);
+  assert.match(ready.boundary, /ui_error_private_fields_allowed=false/);
+  assert.match(ready.boundary, /support_report_redacted=true/);
+  assert.doesNotMatch(
+    ready.boundary,
+    /correct horse|private-key|\/Users\/alex|raw_path_returned=true|key_material_exposed=true/,
+  );
+
+  const blocked = productionStorageKeyManagementHardeningView({
+    kdfParamsVersioned: false,
+    passphraseReturned: true,
+  });
+  assert.equal(blocked.productionKeyManagementReady, false);
+  assert.equal(blocked.boundaryClosed, false);
+  assert.equal(blocked.passphraseReturned, true);
 });
 
 test("chat action moves from setup to compose to stored send", () => {

@@ -31,7 +31,9 @@ impl From<io::Error> for StorageError {
 
 pub mod production {
     use super::*;
-    use another_dimension_crypto::production::profile_key_hierarchy_boundary_summary;
+    use another_dimension_crypto::production::{
+        profile_key_hierarchy_boundary_summary, PROFILE_KDF_PARAMS_VERSION,
+    };
     use another_dimension_protocol::{decode_hex, encode_hex, ReplayWindow};
     use rusqlite::{params, Connection, OptionalExtension};
     use std::path::Path;
@@ -635,6 +637,77 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionStorageMigrationRedactionBoundarySummary {
+        current_kdf_params_version: u16,
+        forward_only_schema_migration: bool,
+        migration_failure_distinct_from_corrupt_store: bool,
+        migration_retry_action: &'static str,
+        corrupt_store_rebuild_action: &'static str,
+        unlock_migration_action: &'static str,
+        destructive_migration_allowed: bool,
+        raw_path_returned: bool,
+        passphrase_returned: bool,
+        key_material_exposed: bool,
+        rollback_prevention_claimed: bool,
+        secure_media_deletion_claimed: bool,
+        boundary_closed: bool,
+    }
+
+    impl ProductionStorageMigrationRedactionBoundarySummary {
+        pub fn current_kdf_params_version(self) -> u16 {
+            self.current_kdf_params_version
+        }
+
+        pub fn forward_only_schema_migration(self) -> bool {
+            self.forward_only_schema_migration
+        }
+
+        pub fn migration_failure_distinct_from_corrupt_store(self) -> bool {
+            self.migration_failure_distinct_from_corrupt_store
+        }
+
+        pub fn migration_retry_action(self) -> &'static str {
+            self.migration_retry_action
+        }
+
+        pub fn corrupt_store_rebuild_action(self) -> &'static str {
+            self.corrupt_store_rebuild_action
+        }
+
+        pub fn unlock_migration_action(self) -> &'static str {
+            self.unlock_migration_action
+        }
+
+        pub fn destructive_migration_allowed(self) -> bool {
+            self.destructive_migration_allowed
+        }
+
+        pub fn raw_path_returned(self) -> bool {
+            self.raw_path_returned
+        }
+
+        pub fn passphrase_returned(self) -> bool {
+            self.passphrase_returned
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn rollback_prevention_claimed(self) -> bool {
+            self.rollback_prevention_claimed
+        }
+
+        pub fn secure_media_deletion_claimed(self) -> bool {
+            self.secure_media_deletion_claimed
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
     pub fn storage_backend_integration_boundary_summary() -> StorageBackendIntegrationBoundarySummary
     {
         let key_hierarchy = profile_key_hierarchy_boundary_summary();
@@ -649,6 +722,7 @@ pub mod production {
             && profile_root_key_derivation_ready
             && domain_separated_profile_keys_ready
             && passphrase_key_debug_redacted
+            && key_hierarchy.kdf_params_versioned()
             && key_buffers_zeroized_on_drop
             && key_hierarchy.weak_passphrase_rejected()
             && key_hierarchy.unsupported_kdf_params_rejected()
@@ -690,6 +764,58 @@ pub mod production {
             production_key_management_ready: storage.production_key_management_ready(),
             secure_deletion_from_media: false,
             durable_session_transport_persistence_allowed: true,
+        }
+    }
+
+    pub fn production_storage_migration_redaction_boundary_summary(
+    ) -> ProductionStorageMigrationRedactionBoundarySummary {
+        let key_hierarchy = profile_key_hierarchy_boundary_summary();
+        let migration =
+            local_profile_recovery_decision(LocalProfileRecoveryFailureKind::MigrationFailure);
+        let corrupt =
+            local_profile_recovery_decision(LocalProfileRecoveryFailureKind::CorruptStore);
+        let unlock_migration =
+            profile_store_unlock_recovery_decision(ProfileStoreUnlockFailureKind::MigrationNeeded);
+        let migration_failure_distinct_from_corrupt_store = migration.kind()
+            == LocalProfileRecoveryFailureKind::MigrationFailure
+            && corrupt.kind() == LocalProfileRecoveryFailureKind::CorruptStore
+            && migration.next_action() != corrupt.next_action()
+            && unlock_migration.kind() == ProfileStoreUnlockFailureKind::MigrationNeeded;
+        let destructive_migration_allowed =
+            migration.destructive_migration_allowed() || corrupt.destructive_migration_allowed();
+        let raw_path_returned = unlock_migration.raw_path_returned();
+        let passphrase_returned = unlock_migration.passphrase_returned();
+        let key_material_exposed = unlock_migration.key_material_exposed();
+        let rollback_prevention_claimed = migration.rollback_prevention_claimed()
+            || unlock_migration.rollback_protection_claimed();
+        let secure_media_deletion_claimed = migration.secure_media_deletion_claimed()
+            || unlock_migration.secure_media_deletion_claimed();
+        let forward_only_schema_migration = true;
+        let boundary_closed = key_hierarchy.kdf_params_versioned()
+            && key_hierarchy.kdf_params_version() == PROFILE_KDF_PARAMS_VERSION
+            && forward_only_schema_migration
+            && migration_failure_distinct_from_corrupt_store
+            && !destructive_migration_allowed
+            && !raw_path_returned
+            && !passphrase_returned
+            && !key_material_exposed
+            && !rollback_prevention_claimed
+            && !secure_media_deletion_claimed;
+
+        ProductionStorageMigrationRedactionBoundarySummary {
+            current_kdf_params_version: key_hierarchy.kdf_params_version(),
+            forward_only_schema_migration,
+            migration_failure_distinct_from_corrupt_store,
+            migration_retry_action: migration.next_action(),
+            corrupt_store_rebuild_action: corrupt.next_action(),
+            unlock_migration_action: unlock_migration.next_action(),
+            destructive_migration_allowed,
+            raw_path_returned,
+            passphrase_returned,
+            key_material_exposed,
+            rollback_prevention_claimed,
+            secure_media_deletion_claimed,
+            boundary_closed,
         }
     }
 
@@ -2450,6 +2576,38 @@ pub mod production {
             );
             assert!(!summary.secure_deletion_from_media());
             assert!(summary.session_transport_persistence_allowed());
+        }
+
+        #[test]
+        fn production_storage_migration_redaction_boundary_distinguishes_migration_corruption_and_redacts_secrets(
+        ) {
+            let summary = production_storage_migration_redaction_boundary_summary();
+
+            assert_eq!(
+                summary.current_kdf_params_version(),
+                PROFILE_KDF_PARAMS_VERSION
+            );
+            assert!(summary.forward_only_schema_migration());
+            assert!(summary.migration_failure_distinct_from_corrupt_store());
+            assert_eq!(
+                summary.migration_retry_action(),
+                "retry-supported-local-store-migration"
+            );
+            assert_eq!(
+                summary.corrupt_store_rebuild_action(),
+                "inspect-local-store-or-create-new-profile"
+            );
+            assert_eq!(
+                summary.unlock_migration_action(),
+                "run-supported-local-store-migration"
+            );
+            assert!(!summary.destructive_migration_allowed());
+            assert!(!summary.raw_path_returned());
+            assert!(!summary.passphrase_returned());
+            assert!(!summary.key_material_exposed());
+            assert!(!summary.rollback_prevention_claimed());
+            assert!(!summary.secure_media_deletion_claimed());
+            assert!(summary.boundary_closed());
         }
 
         #[test]

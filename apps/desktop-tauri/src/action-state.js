@@ -1022,6 +1022,89 @@ export function productionLocalDataRecoveryView(input = {}) {
   };
 }
 
+export function productionStorageKeyManagementHardeningView(input = {}) {
+  const passphraseFirstRequired = input.passphraseFirstRequired !== false;
+  const osKeystoreOnlyRejected = input.osKeystoreOnlyRejected !== false;
+  const kdfParamsVersioned = input.kdfParamsVersioned !== false;
+  const profileRootKeyReady = input.profileRootKeyReady !== false;
+  const sessionKeyHierarchyReady = input.sessionKeyHierarchyReady !== false;
+  const messageKeyHierarchyReady = input.messageKeyHierarchyReady !== false;
+  const transportKeyPolicyReady = input.transportKeyPolicyReady !== false;
+  const lockScopeSeparated = input.lockScopeSeparated !== false;
+  const autoLockScopeSeparated = input.autoLockScopeSeparated !== false;
+  const panicLockMitigationOnly = input.panicLockMitigationOnly !== false;
+  const rekeyReady = input.rekeyReady !== false;
+  const migrationFailureDistinctFromCorruptStore =
+    input.migrationFailureDistinctFromCorruptStore !== false;
+  const rollbackMarkerPolicyReady = input.rollbackMarkerPolicyReady !== false;
+  const supportRedactionReady = input.supportRedactionReady !== false;
+  const rawPathReturned = input.rawPathReturned === true;
+  const passphraseReturned = input.passphraseReturned === true;
+  const keyMaterialExposed = input.keyMaterialExposed === true;
+  const backupRecoveryClaimed = input.backupRecoveryClaimed === true;
+  const rollbackPreventionClaimed = input.rollbackPreventionClaimed === true;
+  const secureMediaDeletionClaimed = input.secureMediaDeletionClaimed === true;
+  const productionKeyManagementReady =
+    passphraseFirstRequired &&
+    osKeystoreOnlyRejected &&
+    kdfParamsVersioned &&
+    profileRootKeyReady &&
+    sessionKeyHierarchyReady &&
+    messageKeyHierarchyReady &&
+    transportKeyPolicyReady &&
+    rekeyReady &&
+    supportRedactionReady &&
+    !rawPathReturned &&
+    !passphraseReturned &&
+    !keyMaterialExposed;
+  const boundaryClosed =
+    productionKeyManagementReady &&
+    lockScopeSeparated &&
+    autoLockScopeSeparated &&
+    panicLockMitigationOnly &&
+    migrationFailureDistinctFromCorruptStore &&
+    rollbackMarkerPolicyReady &&
+    !backupRecoveryClaimed &&
+    !rollbackPreventionClaimed &&
+    !secureMediaDeletionClaimed;
+  const summary = [
+    `production_key_management_ready=${productionKeyManagementReady}`,
+    `boundary_closed=${boundaryClosed}`,
+    `passphrase_first_required=${passphraseFirstRequired}`,
+    `os_keystore_only_rejected=${osKeystoreOnlyRejected}`,
+    `kdf_params_versioned=${kdfParamsVersioned}`,
+    `profile_root_key_ready=${profileRootKeyReady}`,
+    `session_key_hierarchy_ready=${sessionKeyHierarchyReady}`,
+    `message_key_hierarchy_ready=${messageKeyHierarchyReady}`,
+    `transport_key_policy_ready=${transportKeyPolicyReady}`,
+    `lock_scope_separated=${lockScopeSeparated}`,
+    `auto_lock_scope_separated=${autoLockScopeSeparated}`,
+    `panic_lock_mitigation_only=${panicLockMitigationOnly}`,
+    `rekey_ready=${rekeyReady}`,
+    `migration_failure_distinct_from_corrupt_store=${migrationFailureDistinctFromCorruptStore}`,
+    `rollback_marker_policy_ready=${rollbackMarkerPolicyReady}`,
+    `support_redaction_ready=${supportRedactionReady}`,
+    `raw_path_returned=${rawPathReturned}`,
+    `passphrase_returned=${passphraseReturned}`,
+    `key_material_exposed=${keyMaterialExposed}`,
+    `backup_recovery_claimed=${backupRecoveryClaimed}`,
+    `rollback_prevention_claimed=${rollbackPreventionClaimed}`,
+    `secure_media_deletion_claimed=${secureMediaDeletionClaimed}`,
+  ].join(" ");
+  return {
+    productionKeyManagementReady,
+    boundaryClosed,
+    rawPathReturned,
+    passphraseReturned,
+    keyMaterialExposed,
+    backupRecoveryClaimed,
+    rollbackPreventionClaimed,
+    secureMediaDeletionClaimed,
+    summary,
+    boundary: `${summary} ui_error_private_fields_allowed=false support_report_redacted=true`,
+  };
+}
+
 function normalizedProfileUnlockRecoveryKind(value) {
   const text = String(value?.failure_kind ?? value?.failureKind ?? value?.kind ?? value?.redacted_reason ?? value?.error ?? value ?? "")
     .trim()
