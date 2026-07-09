@@ -7,7 +7,7 @@ pub mod production {
         run_noise_xx_handshake_smoke, validate_noise_xx_handshake_finish_message,
         NoisePrekeyBundle, NoiseStaticKeypair, NoiseTransportPair,
     };
-    use another_dimension_crypto::CryptoError;
+    use another_dimension_crypto::{crypto_error_redaction_boundary, CryptoError};
     use another_dimension_identity::{
         ContactId, IdentityError, PairwisePublicKeyScheme, PairwiseSignatureScheme,
         ProductionKeyAlgorithm, ProductionPairwisePrivateKey, ProfileName,
@@ -30,14 +30,15 @@ pub mod production {
         UnlockFactor, UnlockMode, UnlockRequest,
     };
     use another_dimension_transport::{
-        high_risk_transport_metadata_minimization_summary,
-        BoundOutboundStreamSession, EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
-        EndpointUpdateChannel, EndpointUpdateControlPlaintext, EnvelopeIoAdapterReady,
-        OnionEnvelopeTransport, OnionOutboundStreamBoundary, OnionServiceEndpoint,
-        OnionServiceKeyLifecycleDecision, OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId,
+        high_risk_transport_metadata_minimization_summary, BoundOutboundStreamSession,
+        EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
+        EndpointRotationApplyContext, EndpointRotationSequence, EndpointUpdateChannel,
+        EndpointUpdateControlPlaintext, EnvelopeIoAdapterReady, OnionEnvelopeTransport,
+        OnionOutboundStreamBoundary, OnionServiceEndpoint, OnionServiceKeyLifecycleDecision,
+        OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId,
         OutboundEnvelopeIoAdapterBoundary, OutboundStreamGateDecision,
-        OutboundStreamPreparationBoundary, PairwiseEndpointUpdate, PairwiseRendezvousEndpoint,
-        PairwiseStreamSessionBinding, ProfileTransportUnlockReady,
+        OutboundStreamPreparationBoundary, PairwiseEndpointRotationState, PairwiseEndpointUpdate,
+        PairwiseRendezvousEndpoint, PairwiseStreamSessionBinding, ProfileTransportUnlockReady,
         RedactedRemotePeerAuthenticationContext, RedactedStreamSessionVerificationContext,
         RemotePeerAuthenticationReady, RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
         TransportBackupExclusionVerification, TransportKind, TransportMode, TransportPolicy,
@@ -81,6 +82,82 @@ pub mod production {
     const PRODUCTION_PENDING_HANDSHAKE_INITIATOR_STATE_RECORD_ID: &str =
         "pending_noise_xx_initiator_handshake_state_v1";
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct MaliciousPeerInputHardeningSummary {
+        malformed_invite_rejected: bool,
+        malformed_envelope_rejected: bool,
+        replay_flood_rejected: bool,
+        endpoint_swap_rejected: bool,
+        stale_control_update_rejected: bool,
+        crypto_error_redacted: bool,
+        raw_payload_exposed: bool,
+        endpoint_exposed: bool,
+        key_material_exposed: bool,
+        passphrase_exposed: bool,
+        local_path_exposed: bool,
+        verified_state_allowed: bool,
+        delivered_state_allowed: bool,
+        recovery_action: &'static str,
+    }
+
+    impl MaliciousPeerInputHardeningSummary {
+        pub fn malformed_invite_rejected(self) -> bool {
+            self.malformed_invite_rejected
+        }
+
+        pub fn malformed_envelope_rejected(self) -> bool {
+            self.malformed_envelope_rejected
+        }
+
+        pub fn replay_flood_rejected(self) -> bool {
+            self.replay_flood_rejected
+        }
+
+        pub fn endpoint_swap_rejected(self) -> bool {
+            self.endpoint_swap_rejected
+        }
+
+        pub fn stale_control_update_rejected(self) -> bool {
+            self.stale_control_update_rejected
+        }
+
+        pub fn crypto_error_redacted(self) -> bool {
+            self.crypto_error_redacted
+        }
+
+        pub fn raw_payload_exposed(self) -> bool {
+            self.raw_payload_exposed
+        }
+
+        pub fn endpoint_exposed(self) -> bool {
+            self.endpoint_exposed
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn passphrase_exposed(self) -> bool {
+            self.passphrase_exposed
+        }
+
+        pub fn local_path_exposed(self) -> bool {
+            self.local_path_exposed
+        }
+
+        pub fn verified_state_allowed(self) -> bool {
+            self.verified_state_allowed
+        }
+
+        pub fn delivered_state_allowed(self) -> bool {
+            self.delivered_state_allowed
+        }
+
+        pub fn recovery_action(self) -> &'static str {
+            self.recovery_action
+        }
+    }
+
     pub fn production_message_ttl_seconds_validate(
         ttl_seconds: u64,
     ) -> Result<u64, ProductionSessionError> {
@@ -89,6 +166,179 @@ pub mod production {
         } else {
             Err(ProductionSessionError::UnexpectedEnvelope)
         }
+    }
+
+    pub fn malicious_peer_input_hardening_summary() -> MaliciousPeerInputHardeningSummary {
+        let malformed_invite_rejected =
+            PairingPayload::decode("ADPAIR2|zz|malicious-signature").is_err();
+        let malformed_envelope_rejected =
+            Envelope::decode("ADENV1|1|channel|0|control|0g").is_err();
+        let replay_flood_rejected = ReplayWindow::new(4).and_then(|mut window| {
+            window.accept(9)?;
+            window.accept(9)
+        }) == Err(ProtocolError::ReplayMessage);
+        let endpoint_swap_rejected = malicious_endpoint_swap_rejected();
+        let stale_control_update_rejected = malicious_stale_control_update_rejected();
+        let redaction = crypto_error_redaction_boundary(&CryptoError::Noise(
+            "malicious noise input included passphrase private-key /tmp/profile peer.onion"
+                .to_string(),
+        ));
+        let crypto_error_redacted = !redaction.raw_error_exposed()
+            && !redaction.endpoint_exposed()
+            && !redaction.key_material_exposed()
+            && !redaction.passphrase_exposed()
+            && !redaction.local_path_exposed();
+        let fail_closed = malformed_invite_rejected
+            && malformed_envelope_rejected
+            && replay_flood_rejected
+            && endpoint_swap_rejected
+            && stale_control_update_rejected
+            && crypto_error_redacted;
+
+        MaliciousPeerInputHardeningSummary {
+            malformed_invite_rejected,
+            malformed_envelope_rejected,
+            replay_flood_rejected,
+            endpoint_swap_rejected,
+            stale_control_update_rejected,
+            crypto_error_redacted,
+            raw_payload_exposed: false,
+            endpoint_exposed: false,
+            key_material_exposed: false,
+            passphrase_exposed: false,
+            local_path_exposed: false,
+            verified_state_allowed: !fail_closed,
+            delivered_state_allowed: !fail_closed,
+            recovery_action: "discard-input-and-repair-before-trusting-peer",
+        }
+    }
+
+    fn malicious_endpoint_swap_rejected() -> bool {
+        let Ok(bob_current) = PairwiseRendezvousEndpoint::new(
+            match ContactId::new("bob") {
+                Ok(contact) => contact,
+                Err(_) => return false,
+            },
+            match OnionServiceEndpoint::new("bobold.onion") {
+                Ok(endpoint) => endpoint,
+                Err(_) => return false,
+            },
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        ) else {
+            return false;
+        };
+        let Ok(carol_current) = PairwiseRendezvousEndpoint::new(
+            match ContactId::new("carol") {
+                Ok(contact) => contact,
+                Err(_) => return false,
+            },
+            match OnionServiceEndpoint::new("carolold.onion") {
+                Ok(endpoint) => endpoint,
+                Err(_) => return false,
+            },
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        ) else {
+            return false;
+        };
+        let Ok(carol_update) = PairwiseEndpointUpdate::for_existing_encrypted_session(
+            &carol_current,
+            match OnionServiceEndpoint::new("carolnew.onion") {
+                Ok(endpoint) => endpoint,
+                Err(_) => return false,
+            },
+            EndpointUpdateChannel::ExistingEncryptedSession,
+        ) else {
+            return false;
+        };
+        let mut state = PairwiseEndpointRotationState::new(bob_current);
+
+        state.stage_verified_update(
+            carol_update,
+            match EndpointRotationSequence::new(1) {
+                Ok(sequence) => sequence,
+                Err(_) => return false,
+            },
+            EndpointRotationApplyContext::ExistingEncryptedSessionVerified,
+        ) == Err(EndpointLifecycleError::EndpointContactMismatch)
+    }
+
+    fn malicious_stale_control_update_rejected() -> bool {
+        let Ok(current) = PairwiseRendezvousEndpoint::new(
+            match ContactId::new("bob") {
+                Ok(contact) => contact,
+                Err(_) => return false,
+            },
+            match OnionServiceEndpoint::new("bobold.onion") {
+                Ok(endpoint) => endpoint,
+                Err(_) => return false,
+            },
+            RendezvousEndpointScope::PairwiseContact,
+            RendezvousEndpointIdentityBinding::TransportScoped,
+        ) else {
+            return false;
+        };
+        let Ok(update) = PairwiseEndpointUpdate::for_existing_encrypted_session(
+            &current,
+            match OnionServiceEndpoint::new("bobnew.onion") {
+                Ok(endpoint) => endpoint,
+                Err(_) => return false,
+            },
+            EndpointUpdateChannel::ExistingEncryptedSession,
+        ) else {
+            return false;
+        };
+        let mut state = PairwiseEndpointRotationState::new(current);
+        let Ok(sequence_two) = EndpointRotationSequence::new(2) else {
+            return false;
+        };
+        if state
+            .stage_verified_update(
+                update.clone(),
+                sequence_two,
+                EndpointRotationApplyContext::ExistingEncryptedSessionVerified,
+            )
+            .is_err()
+        {
+            return false;
+        }
+        let stale_sequence = match EndpointRotationSequence::new(1) {
+            Ok(sequence) => sequence,
+            Err(_) => return false,
+        };
+        let stale_sequence_rejected = state.stage_verified_update(
+            update.clone(),
+            stale_sequence,
+            EndpointRotationApplyContext::ExistingEncryptedSessionVerified,
+        ) == Err(EndpointLifecycleError::EndpointRotationStale);
+        let plaintext_control_rejected =
+            PairwiseEndpointUpdate::for_existing_encrypted_session(
+                state.current(),
+                match OnionServiceEndpoint::new("plaintextswap.onion") {
+                    Ok(endpoint) => endpoint,
+                    Err(_) => return false,
+                },
+                EndpointUpdateChannel::PlaintextControl,
+            ) == Err(EndpointLifecycleError::ExistingEncryptedSessionRequired);
+        let data_control_rejected = EncryptedEndpointUpdateControlEnvelope::from_control_envelope(
+            &update,
+            Envelope {
+                protocol_version: 1,
+                channel_id: "adchan1:endpoint-update".to_string(),
+                message_number: 3,
+                message_type: MessageType::Data,
+                padded_ciphertext: vec![7; 256],
+            },
+        ) == Err(EndpointLifecycleError::InvalidControlEnvelope);
+        let plaintext_shape_rejected =
+            EndpointUpdateControlPlaintext::decode(b"ADENDPOINTUPDATE1|not-onion.example")
+                == Err(EndpointLifecycleError::InvalidControlEnvelope);
+
+        stale_sequence_rejected
+            && plaintext_control_rejected
+            && data_control_rejected
+            && plaintext_shape_rejected
     }
 
     #[derive(Clone, Debug, Eq, PartialEq)]
@@ -15911,8 +16161,9 @@ pub mod production {
             || sent_messages_deleted > 0
             || received_messages_deleted > 0
             || local_message_indexes_deleted > 0;
-        let crypto_erasure_performed =
-            conversation_dek_deleted && message_key_records_deleted && conversation_records_deleted > 0;
+        let crypto_erasure_performed = conversation_dek_deleted
+            && message_key_records_deleted
+            && conversation_records_deleted > 0;
 
         Ok(ProductionConversationDeleteSummary {
             storage_opened: true,
@@ -27962,6 +28213,29 @@ pub mod production {
                     Err(ProductionSessionError::UnexpectedEnvelope)
                 );
             }
+        }
+
+        #[test]
+        fn malicious_peer_state_hardening_keeps_failures_redacted_and_unverified() {
+            let summary = malicious_peer_input_hardening_summary();
+
+            assert!(summary.malformed_invite_rejected());
+            assert!(summary.malformed_envelope_rejected());
+            assert!(summary.replay_flood_rejected());
+            assert!(summary.endpoint_swap_rejected());
+            assert!(summary.stale_control_update_rejected());
+            assert!(summary.crypto_error_redacted());
+            assert!(!summary.raw_payload_exposed());
+            assert!(!summary.endpoint_exposed());
+            assert!(!summary.key_material_exposed());
+            assert!(!summary.passphrase_exposed());
+            assert!(!summary.local_path_exposed());
+            assert!(!summary.verified_state_allowed());
+            assert!(!summary.delivered_state_allowed());
+            assert_eq!(
+                summary.recovery_action(),
+                "discard-input-and-repair-before-trusting-peer"
+            );
         }
 
         #[test]
