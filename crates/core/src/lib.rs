@@ -3604,6 +3604,95 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionManualEnvelopeOutboundState {
+        ReadyToExport,
+        Exported,
+        WaitingForReply,
+        DuplicateImport,
+        StaleOrReplayedImport,
+        Canceled,
+    }
+
+    impl ProductionManualEnvelopeOutboundState {
+        pub fn as_str(self) -> &'static str {
+            match self {
+                Self::ReadyToExport => "ready_to_export",
+                Self::Exported => "exported",
+                Self::WaitingForReply => "waiting_for_reply",
+                Self::DuplicateImport => "duplicate_import",
+                Self::StaleOrReplayedImport => "stale_or_replayed_import",
+                Self::Canceled => "canceled",
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionManualEnvelopeOutboundDecision {
+        state: ProductionManualEnvelopeOutboundState,
+        export_allowed: bool,
+        import_allowed: bool,
+        retry_allowed: bool,
+        cancel_allowed: bool,
+        reply_allowed: bool,
+        terminal: bool,
+        plaintext_returned: bool,
+        payload_returned_to_support: bool,
+        path_returned: bool,
+        key_material_exposed: bool,
+        next_action: &'static str,
+    }
+
+    impl ProductionManualEnvelopeOutboundDecision {
+        pub fn state(self) -> ProductionManualEnvelopeOutboundState {
+            self.state
+        }
+
+        pub fn export_allowed(self) -> bool {
+            self.export_allowed
+        }
+
+        pub fn import_allowed(self) -> bool {
+            self.import_allowed
+        }
+
+        pub fn retry_allowed(self) -> bool {
+            self.retry_allowed
+        }
+
+        pub fn cancel_allowed(self) -> bool {
+            self.cancel_allowed
+        }
+
+        pub fn reply_allowed(self) -> bool {
+            self.reply_allowed
+        }
+
+        pub fn terminal(self) -> bool {
+            self.terminal
+        }
+
+        pub fn plaintext_returned(self) -> bool {
+            self.plaintext_returned
+        }
+
+        pub fn payload_returned_to_support(self) -> bool {
+            self.payload_returned_to_support
+        }
+
+        pub fn path_returned(self) -> bool {
+            self.path_returned
+        }
+
+        pub fn key_material_exposed(self) -> bool {
+            self.key_material_exposed
+        }
+
+        pub fn next_action(self) -> &'static str {
+            self.next_action
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionSupplyChainIntegrityBoundarySummary {
         policies: &'static [&'static str],
         manual_github_release_download_required: bool,
@@ -19294,6 +19383,64 @@ pub mod production {
         }
     }
 
+    pub fn production_manual_envelope_outbound_decision(
+        encrypted_envelope_exported: bool,
+        sent_copy_present: bool,
+        received_copy_present: bool,
+        duplicate_import: bool,
+        stale_or_replayed_import: bool,
+        canceled: bool,
+    ) -> ProductionManualEnvelopeOutboundDecision {
+        let state = if canceled {
+            ProductionManualEnvelopeOutboundState::Canceled
+        } else if duplicate_import {
+            ProductionManualEnvelopeOutboundState::DuplicateImport
+        } else if stale_or_replayed_import {
+            ProductionManualEnvelopeOutboundState::StaleOrReplayedImport
+        } else if !encrypted_envelope_exported {
+            ProductionManualEnvelopeOutboundState::ReadyToExport
+        } else if !sent_copy_present {
+            ProductionManualEnvelopeOutboundState::Exported
+        } else {
+            ProductionManualEnvelopeOutboundState::WaitingForReply
+        };
+        let terminal = state == ProductionManualEnvelopeOutboundState::Canceled;
+        ProductionManualEnvelopeOutboundDecision {
+            state,
+            export_allowed: state == ProductionManualEnvelopeOutboundState::ReadyToExport,
+            import_allowed: state == ProductionManualEnvelopeOutboundState::Exported,
+            retry_allowed: matches!(
+                state,
+                ProductionManualEnvelopeOutboundState::DuplicateImport
+                    | ProductionManualEnvelopeOutboundState::StaleOrReplayedImport
+            ),
+            cancel_allowed: matches!(
+                state,
+                ProductionManualEnvelopeOutboundState::ReadyToExport
+                    | ProductionManualEnvelopeOutboundState::Exported
+                    | ProductionManualEnvelopeOutboundState::WaitingForReply
+                    | ProductionManualEnvelopeOutboundState::DuplicateImport
+                    | ProductionManualEnvelopeOutboundState::StaleOrReplayedImport
+            ),
+            reply_allowed: received_copy_present && !terminal,
+            terminal,
+            plaintext_returned: false,
+            payload_returned_to_support: false,
+            path_returned: false,
+            key_material_exposed: false,
+            next_action: match state {
+                ProductionManualEnvelopeOutboundState::ReadyToExport => "export_envelope",
+                ProductionManualEnvelopeOutboundState::Exported => "share_outside_app_then_import",
+                ProductionManualEnvelopeOutboundState::WaitingForReply => "wait_for_reply_or_cancel",
+                ProductionManualEnvelopeOutboundState::DuplicateImport => "ignore_duplicate_import",
+                ProductionManualEnvelopeOutboundState::StaleOrReplayedImport => {
+                    "ignore_stale_or_replayed_import"
+                }
+                ProductionManualEnvelopeOutboundState::Canceled => "write_new_message",
+            },
+        }
+    }
+
     pub fn production_supply_chain_integrity_boundary_summary(
     ) -> ProductionSupplyChainIntegrityBoundarySummary {
         let manual_github_release_download_required = true;
@@ -26013,6 +26160,58 @@ pub mod production {
             assert!(accepted.imported());
             assert!(accepted.delivered());
             assert_eq!(accepted.failure_kind(), None);
+        }
+
+        #[test]
+        fn production_manual_envelope_outbound_decision_separates_pending_states_without_payload_claims(
+        ) {
+            let ready = production_manual_envelope_outbound_decision(
+                false, false, false, false, false, false,
+            );
+            let exported = production_manual_envelope_outbound_decision(
+                true, false, false, false, false, false,
+            );
+            let waiting =
+                production_manual_envelope_outbound_decision(true, true, false, false, false, false);
+            let duplicate =
+                production_manual_envelope_outbound_decision(true, true, false, true, false, false);
+            let stale =
+                production_manual_envelope_outbound_decision(true, true, false, false, true, false);
+            let canceled =
+                production_manual_envelope_outbound_decision(true, true, false, false, false, true);
+
+            assert_eq!(
+                ready.state(),
+                ProductionManualEnvelopeOutboundState::ReadyToExport
+            );
+            assert!(ready.export_allowed());
+            assert_eq!(exported.state(), ProductionManualEnvelopeOutboundState::Exported);
+            assert!(exported.import_allowed());
+            assert_eq!(
+                waiting.state(),
+                ProductionManualEnvelopeOutboundState::WaitingForReply
+            );
+            assert_eq!(
+                duplicate.state(),
+                ProductionManualEnvelopeOutboundState::DuplicateImport
+            );
+            assert!(duplicate.retry_allowed());
+            assert_eq!(
+                stale.state(),
+                ProductionManualEnvelopeOutboundState::StaleOrReplayedImport
+            );
+            assert!(stale.retry_allowed());
+            assert_eq!(canceled.state(), ProductionManualEnvelopeOutboundState::Canceled);
+            assert!(canceled.terminal());
+            assert_eq!(canceled.next_action(), "write_new_message");
+
+            for decision in [ready, exported, waiting, duplicate, stale, canceled] {
+                assert!(!decision.plaintext_returned());
+                assert!(!decision.payload_returned_to_support());
+                assert!(!decision.path_returned());
+                assert!(!decision.key_material_exposed());
+                assert_ne!(decision.next_action(), "generic_error");
+            }
         }
 
         #[test]
