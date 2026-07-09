@@ -24,9 +24,10 @@ pub mod production {
         production_message_storage_boundary_summary, protection_for,
         require_encrypted_record_allowed, require_persistence_allowed, EncryptedRecord,
         EncryptedRecordId, EncryptedRecordScope, LockedProfileStore, ProductionRecordKind,
-        ProductionStorageError, ProductionStoragePolicyError, ProfilePassphrase,
-        ProfileStoreUnlockFailureKind, ReplayRollbackProtection, SqlCipherRecordStore,
-        StorageBackendKind, StorageProtection, UnlockFactor, UnlockMode, UnlockRequest,
+        LocalProfileRecoveryFailureKind, ProductionStorageError, ProductionStoragePolicyError,
+        ProfilePassphrase, ProfileStoreUnlockFailureKind, ReplayRollbackProtection,
+        SqlCipherRecordStore, StorageBackendKind, StorageProtection, UnlockFactor, UnlockMode,
+        UnlockRequest,
     };
     use another_dimension_transport::{
         BoundOutboundStreamSession, EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
@@ -11719,6 +11720,94 @@ pub mod production {
         }
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionLocalDataRecoveryKind {
+        PassphraseLoss,
+        CorruptStore,
+        MigrationFailure,
+    }
+
+    impl From<LocalProfileRecoveryFailureKind> for ProductionLocalDataRecoveryKind {
+        fn from(value: LocalProfileRecoveryFailureKind) -> Self {
+            match value {
+                LocalProfileRecoveryFailureKind::PassphraseLoss => Self::PassphraseLoss,
+                LocalProfileRecoveryFailureKind::CorruptStore => Self::CorruptStore,
+                LocalProfileRecoveryFailureKind::MigrationFailure => Self::MigrationFailure,
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionLocalDataRecoveryDecision {
+        kind: ProductionLocalDataRecoveryKind,
+        encrypted_local_export_only: bool,
+        restore_requires_profile_passphrase: bool,
+        cloud_backup_or_sync_available: bool,
+        backup_recovery_claimed: bool,
+        migration_required: bool,
+        migration_retry_allowed: bool,
+        destructive_migration_allowed: bool,
+        silent_data_loss_allowed: bool,
+        rollback_prevention_claimed: bool,
+        secure_media_deletion_claimed: bool,
+        create_new_profile_allowed: bool,
+        next_action: &'static str,
+    }
+
+    impl ProductionLocalDataRecoveryDecision {
+        pub fn kind(self) -> ProductionLocalDataRecoveryKind {
+            self.kind
+        }
+
+        pub fn encrypted_local_export_only(self) -> bool {
+            self.encrypted_local_export_only
+        }
+
+        pub fn restore_requires_profile_passphrase(self) -> bool {
+            self.restore_requires_profile_passphrase
+        }
+
+        pub fn cloud_backup_or_sync_available(self) -> bool {
+            self.cloud_backup_or_sync_available
+        }
+
+        pub fn backup_recovery_claimed(self) -> bool {
+            self.backup_recovery_claimed
+        }
+
+        pub fn migration_required(self) -> bool {
+            self.migration_required
+        }
+
+        pub fn migration_retry_allowed(self) -> bool {
+            self.migration_retry_allowed
+        }
+
+        pub fn destructive_migration_allowed(self) -> bool {
+            self.destructive_migration_allowed
+        }
+
+        pub fn silent_data_loss_allowed(self) -> bool {
+            self.silent_data_loss_allowed
+        }
+
+        pub fn rollback_prevention_claimed(self) -> bool {
+            self.rollback_prevention_claimed
+        }
+
+        pub fn secure_media_deletion_claimed(self) -> bool {
+            self.secure_media_deletion_claimed
+        }
+
+        pub fn create_new_profile_allowed(self) -> bool {
+            self.create_new_profile_allowed
+        }
+
+        pub fn next_action(self) -> &'static str {
+            self.next_action
+        }
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub struct LocalMessageIndexEntry {
         contact_id: ContactId,
@@ -20808,6 +20897,39 @@ pub mod production {
         }
     }
 
+    pub fn production_local_data_recovery_decision(
+        kind: ProductionLocalDataRecoveryKind,
+    ) -> ProductionLocalDataRecoveryDecision {
+        let (migration_required, migration_retry_allowed, create_new_profile_allowed, next_action) =
+            match kind {
+                ProductionLocalDataRecoveryKind::PassphraseLoss => {
+                    (false, false, true, "create-new-local-profile")
+                }
+                ProductionLocalDataRecoveryKind::CorruptStore => {
+                    (false, false, true, "inspect-local-store-or-create-new-profile")
+                }
+                ProductionLocalDataRecoveryKind::MigrationFailure => {
+                    (true, true, false, "retry-supported-local-store-migration")
+                }
+            };
+
+        ProductionLocalDataRecoveryDecision {
+            kind,
+            encrypted_local_export_only: true,
+            restore_requires_profile_passphrase: true,
+            cloud_backup_or_sync_available: false,
+            backup_recovery_claimed: false,
+            migration_required,
+            migration_retry_allowed,
+            destructive_migration_allowed: false,
+            silent_data_loss_allowed: false,
+            rollback_prevention_claimed: false,
+            secure_media_deletion_claimed: false,
+            create_new_profile_allowed,
+            next_action,
+        }
+    }
+
     pub fn plan_session_from_verified_pairing_payloads(
         local: &PairingPayload,
         remote: &PairingPayload,
@@ -21973,7 +22095,8 @@ pub mod production {
         };
         use another_dimension_protocol::trim_padding;
         use another_dimension_storage::production::{
-            LockedProfileStore, ProfilePassphrase, ProfileStoreUnlockFailureKind,
+            LocalProfileRecoveryFailureKind, LockedProfileStore, ProfilePassphrase,
+            ProfileStoreUnlockFailureKind,
         };
         use another_dimension_transport::{
             EndpointUpdateChannel, OnionServiceEndpoint, PairwiseRendezvousEndpoint,
@@ -22182,6 +22305,62 @@ pub mod production {
                 assert!(!decision.secure_media_deletion_claimed());
                 assert!(!decision.generic_error());
                 assert!(decision.not_protected_device_compromise());
+            }
+        }
+
+        #[test]
+        fn production_local_data_recovery_decision_separates_passphrase_corrupt_and_migration_limits(
+        ) {
+            let cases = [
+                (
+                    LocalProfileRecoveryFailureKind::PassphraseLoss,
+                    ProductionLocalDataRecoveryKind::PassphraseLoss,
+                    false,
+                    false,
+                    true,
+                    "create-new-local-profile",
+                ),
+                (
+                    LocalProfileRecoveryFailureKind::CorruptStore,
+                    ProductionLocalDataRecoveryKind::CorruptStore,
+                    false,
+                    false,
+                    true,
+                    "inspect-local-store-or-create-new-profile",
+                ),
+                (
+                    LocalProfileRecoveryFailureKind::MigrationFailure,
+                    ProductionLocalDataRecoveryKind::MigrationFailure,
+                    true,
+                    true,
+                    false,
+                    "retry-supported-local-store-migration",
+                ),
+            ];
+
+            for (
+                storage_kind,
+                expected_kind,
+                migration_required,
+                migration_retry_allowed,
+                create_new_profile_allowed,
+                next_action,
+            ) in cases
+            {
+                let decision = production_local_data_recovery_decision(storage_kind.into());
+                assert_eq!(decision.kind(), expected_kind);
+                assert!(decision.encrypted_local_export_only());
+                assert!(decision.restore_requires_profile_passphrase());
+                assert!(!decision.cloud_backup_or_sync_available());
+                assert!(!decision.backup_recovery_claimed());
+                assert_eq!(decision.migration_required(), migration_required);
+                assert_eq!(decision.migration_retry_allowed(), migration_retry_allowed);
+                assert!(!decision.destructive_migration_allowed());
+                assert!(!decision.silent_data_loss_allowed());
+                assert!(!decision.rollback_prevention_claimed());
+                assert!(!decision.secure_media_deletion_claimed());
+                assert_eq!(decision.create_new_profile_allowed(), create_new_profile_allowed);
+                assert_eq!(decision.next_action(), next_action);
             }
         }
 
