@@ -1,0 +1,55 @@
+# Windows Public Artifact Candidate Gate
+
+Status: Windows public artifact candidate contract is source-defined, but no
+public Windows artifact, installer, signing result, upload authorization, or
+production claim is available from this gate.
+
+This gate keeps Windows packaging semantics aligned with shared core product
+semantics before any generated artifact exists. It is not a release artifact
+and does not allow sensitive communication claims.
+
+## Candidate Contract
+
+- windows_public_artifact_candidate=true
+- artifact_type=windows-nsis-exe-installer-candidate
+- bundle_target=nsis
+- default_extension=.exe
+- portable_default_allowed=false
+- msi_alternative_allowed=true
+- webview2_runtime_required=true
+- webview2_failure_class_redacted=true
+- app_data_resolver=tauri-app-data
+- app_data_resolver_shared_storage_semantics=true
+- raw_local_path_returned=false
+- support_report_raw_path_allowed=false
+- shared_core_bypass_allowed=false
+- profile_session_message_storage_bypass_allowed=false
+- manifest_checksum_provenance_required=true
+- manifest_validates_version_commit_installer_webview2_no_auto_update=true
+- runtime_result_external_peer_evidence_separated=true
+- local_runtime_promoted_to_delivery_proof=false
+- smartscreen_security_boundary_claimed=false
+- code_signing_security_boundary_claimed=false
+- store_reputation_security_boundary_claimed=false
+- auto_update_claimed=false
+- windows_public_artifact_ready=false
+- windows_installer_ready=false
+- windows_signing_ready=false
+- windows_public_artifact_upload_allowed=false
+- windows_production_claim_allowed=false
+
+## Source Owners
+
+- `crates/core/src/lib.rs` owns the shared core candidate summary.
+- `apps/desktop-tauri/src/action-state.js` owns the desktop state view.
+- `reference/WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md` owns artifact byte,
+  checksum, provenance, and manifest consistency.
+- `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md` owns real Windows runtime
+  result evidence and keeps it separate from external peer delivery evidence.
+
+## Non-Claims
+
+SmartScreen, Microsoft Store reputation, installer success, WebView2 presence,
+and code signing are distribution or integrity aids only. They are not protocol
+security, message confidentiality, peer authentication, high-risk transport,
+or production readiness boundaries.
