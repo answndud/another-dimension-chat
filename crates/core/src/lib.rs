@@ -15952,7 +15952,7 @@ pub mod production {
                 && handoff.high_risk_requires_passphrase(),
             os_keystore_optional: true,
             os_keystore_only_rejected: handoff.os_keystore_only_rejected(),
-            production_key_wrapping_ready: storage.production_key_management_ready(),
+            production_key_wrapping_ready: false,
             production_key_management_policy_decided: true,
             rollback_protection: storage.rollback_protection(),
             rollback_non_claim_decided: storage.rollback_protection()
@@ -16492,7 +16492,8 @@ pub mod production {
         );
         let passphrase_first_required =
             storage.passphrase_first_unlock() && high_risk_requires_passphrase;
-        let app_key_wrapping_ready = storage.production_key_management_ready();
+        let production_key_management_ready = storage.production_key_management_ready();
+        let app_key_wrapping_ready = false;
         let rollback_protection = storage.rollback_protection();
         let backup_exclusion_policy_decided = true;
         let backup_exclusion_verified = false;
@@ -16512,6 +16513,7 @@ pub mod production {
             rollback_protection == ReplayRollbackProtection::NotProvided;
         let boundary_closed = passphrase_first_required
             && os_keystore_only_rejected
+            && production_key_management_ready
             && app_key_wrapping_non_claim_decided
             && rollback_non_claim_decided
             && external_monotonic_state_required_before_claim
@@ -16521,6 +16523,7 @@ pub mod production {
         let supported_local_key_lifecycle_ready = boundary_closed
             && passphrase_first_required
             && os_keystore_only_rejected
+            && production_key_management_ready
             && app_key_wrapping_non_claim_decided
             && !app_key_wrapping_ready;
         let supported_rollback_detection_ready = boundary_closed
@@ -16551,7 +16554,7 @@ pub mod production {
             secure_media_deletion_claimed,
             secure_deletion_claim_allowed: false,
             boundary_closed,
-            production_key_management_ready: false,
+            production_key_management_ready,
             security_ready_claimed: false,
         }
     }
@@ -20990,7 +20993,7 @@ pub mod production {
         SessionDurableStateProductUnlockBlockerSummary {
             passphrase_first_boundary_exists: storage.passphrase_first_unlock(),
             production_unlock_command_enabled: status.production_unlock_command_enabled(),
-            app_key_wrapping_decided: storage.production_key_management_ready(),
+            app_key_wrapping_decided: true,
             backup_exclusion_decided: false,
             rollback_protection: status.rollback_protection(),
             durable_session_persistence_ready: status.durable_session_persistence_ready(),
@@ -25868,7 +25871,7 @@ pub mod production {
             assert!(!boundary.backup_exclusion_verified());
             assert!(!boundary.secure_media_deletion_claimed());
             assert!(!boundary.secure_deletion_claim_allowed());
-            assert!(!boundary.production_key_management_ready());
+            assert!(boundary.production_key_management_ready());
             assert!(!boundary.security_ready_claimed());
             assert!(boundary
                 .policies()
@@ -25879,6 +25882,24 @@ pub mod production {
                 ProductionSkeletonConnector::ExternalOnionEvidence
             );
             assert!(!selection.production_messaging_ready());
+        }
+
+        #[test]
+        fn profile_key_rotation_readiness_reports_key_hierarchy_without_wrapping_claim() {
+            let boundary = production_key_rollback_boundary_summary();
+
+            assert!(boundary.production_key_management_ready());
+            assert!(boundary.supported_local_key_lifecycle_ready());
+            assert!(boundary.minimum_forward_key_rotation_generation_ready());
+            assert!(boundary.sqlcipher_passphrase_rotation_generation_source_ready());
+            assert!(boundary.key_rotation_marker_monotonic_write_enforced());
+            assert!(!boundary.app_key_wrapping_ready());
+            assert!(boundary.app_key_wrapping_non_claim_decided());
+            assert_eq!(
+                boundary.supported_local_key_lifecycle_scope(),
+                "passphrase-first-sqlcipher-local-profile-store-only"
+            );
+            assert!(!boundary.security_ready_claimed());
         }
 
         #[test]

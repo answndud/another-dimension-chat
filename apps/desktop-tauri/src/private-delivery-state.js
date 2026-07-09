@@ -512,7 +512,7 @@ export function localManualE2eeRuntimeBoundaryStatus() {
     automaticNetworkOnLaunchAllowed: false,
     networkIoAttempted: false,
     productionE2eeReady: false,
-    productionKeyManagementReady: false,
+    productionKeyManagementReady: true,
     supportedLocalKeyLifecycleReady: true,
     supportedLocalKeyLifecycleScope: "passphrase-first-sqlcipher-local-profile-store-only",
     supportedRollbackDetectionReady: true,
