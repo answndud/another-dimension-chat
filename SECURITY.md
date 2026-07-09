@@ -258,6 +258,9 @@ Do not use this project to communicate sensitive information.
 High-Risk Mode uses a defined threat-model matrix rather than a broad
 "high-risk safe" claim.
 
+The source copy of this matrix is
+`reference/HIGH_RISK_THREAT_MODEL.md`.
+
 | Attacker class | Status | Boundary |
 | --- | --- | --- |
 | Remote passive observer | mitigated | Message content uses encrypted manual envelopes and network work is explicit, but metadata and global traffic correlation are not fully hidden. |

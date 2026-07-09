@@ -100,6 +100,7 @@ const fields = {
   firstRunPrimaryNextAction: document.querySelector("#first-run-primary-next-action"),
   versionIntegrityStatus: document.querySelector("#version-integrity-status"),
   windowsRuntimeParityStatus: document.querySelector("#windows-runtime-parity-status"),
+  highRiskThreatModelStatus: document.querySelector("#high-risk-threat-model-status"),
   messaging: document.querySelector("#messaging"),
   localDevPeerLabel: document.querySelector("#local-dev-peer-label"),
   localPeerTestHint: document.querySelector("#local-peer-test-hint"),
@@ -1516,6 +1517,7 @@ function applyLanguage(language) {
   renderPrototypeStatus();
   renderVersionIntegrityStatus();
   renderWindowsRuntimeParityStatus();
+  renderHighRiskThreatModelStatus();
   renderMessageTtlControlOptions();
   renderProductionTwoProfileFlow(productionTwoProfileInput());
   renderProductionTwoProfileDirection(productionTwoProfileInput());
@@ -3236,6 +3238,12 @@ function renderWindowsRuntimeParityStatus(input = {}) {
     ...input,
   });
   setText(fields.windowsRuntimeParityStatus, view.summary);
+  return view;
+}
+
+function renderHighRiskThreatModelStatus() {
+  const view = productionHighRiskThreatModelBoundaryView();
+  setText(fields.highRiskThreatModelStatus, view.boundary);
   return view;
 }
 
