@@ -941,6 +941,7 @@ const dictionaries = {
     useBob: "Use Bob",
     unlockProfile: "Unlock profile",
     lockProfile: "Lock profile",
+    panicLock: "Panic lock",
     checkUnlock: "Check unlock",
     unlockState: "Unlock",
     dataLifecycle: "Data lifecycle",
@@ -950,6 +951,8 @@ const dictionaries = {
     deleteProfile: "Delete profile",
     fullWipeConfirm: "Type WIPE LOCAL DATA to wipe local app data",
     wipeLocalData: "Wipe local data",
+    emergencyWipeConfirm: "Type EMERGENCY WIPE LOCAL DATA for emergency local wipe",
+    emergencyWipe: "Emergency wipe",
     localDataLifecycleGuideTitle: "Local data lifecycle scope",
     localDataLifecycleGuideConversation:
       "Conversation delete removes local message records and preserves session records.",
@@ -971,6 +974,8 @@ const dictionaries = {
       "Deletes the local profile store and clears affected room runtime only; no cloud backup recovery is performed.",
     fullWipeScopeNote:
       "Deletes owned local app data on this device only; secure deletion from storage media and rollback prevention are not claimed.",
+    emergencyWipeScopeNote:
+      "Panic lock mitigation and emergency local wipe hide private surfaces and clear local app state; they do not claim coercion-safe or compromised-device-safe protection.",
     dataLifecycleStatusNext: "Next: continue only after the local lifecycle status matches the room action you want.",
     dataLifecyclePreparedNext:
       "Next: retry unlock or room resume locally; this does not claim rollback prevention or backup recovery.",
@@ -2107,6 +2112,7 @@ const dictionaries = {
     useBob: "Bob 사용",
     unlockProfile: "프로필 열기",
     lockProfile: "프로필 잠금",
+    panicLock: "패닉 잠금",
     checkUnlock: "열림 상태 확인",
     unlockState: "열림 상태",
     dataLifecycle: "데이터 생명주기",
@@ -2116,6 +2122,8 @@ const dictionaries = {
     deleteProfile: "프로필 삭제",
     fullWipeConfirm: "로컬 앱 데이터를 지우려면 WIPE LOCAL DATA를 입력하세요",
     wipeLocalData: "로컬 데이터 삭제",
+    emergencyWipeConfirm: "긴급 로컬 삭제를 실행하려면 EMERGENCY WIPE LOCAL DATA를 입력하세요",
+    emergencyWipe: "긴급 삭제",
     localDataLifecycleGuideTitle: "로컬 데이터 생명주기 범위",
     localDataLifecycleGuideConversation:
       "대화 삭제는 로컬 메시지 기록을 지우고 세션 기록은 보존합니다.",
@@ -2137,6 +2145,8 @@ const dictionaries = {
       "로컬 프로필 저장소와 영향을 받은 채팅방 실행 상태만 지웁니다. 클라우드 백업 복구는 수행하지 않습니다.",
     fullWipeScopeNote:
       "이 기기의 앱 소유 로컬 데이터만 지웁니다. 저장 매체 보안 삭제와 롤백 방지는 주장하지 않습니다.",
+    emergencyWipeScopeNote:
+      "패닉 잠금 완화와 긴급 로컬 삭제는 비공개 화면을 숨기고 로컬 앱 상태를 정리합니다. 강압 안전이나 감염 기기 안전은 주장하지 않습니다.",
     dataLifecycleStatusNext: "다음: 원하는 채팅방 작업과 로컬 생명주기 상태가 맞을 때만 계속하세요.",
     dataLifecyclePreparedNext:
       "다음: 로컬에서 잠금 해제나 채팅방 재개를 다시 시도하세요. 롤백 보호나 백업 복구 주장은 하지 않습니다.",

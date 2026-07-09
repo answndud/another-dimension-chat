@@ -1193,6 +1193,9 @@
                   <button id="lock-production-profile" type="button" class="flow-control is-secondary" data-i18n="lockProfile">
                     Lock profile
                   </button>
+                  <button id="panic-lock-production-profile" type="button" class="flow-control is-secondary" data-i18n="panicLock">
+                    Panic lock
+                  </button>
                   <button id="check-production-product-unlock" type="button" class="flow-control is-secondary" data-i18n="checkUnlock">
                     Check unlock
                   </button>
@@ -1282,6 +1285,18 @@
                   </div>
                   <p class="lifecycle-action-note" data-i18n="fullWipeScopeNote">
                     Deletes owned local app data on this device only; secure deletion from storage media and rollback prevention are not claimed.
+                  </p>
+                  <label class="loop-label" for="production-emergency-wipe-confirmation" data-i18n="emergencyWipeConfirm">
+                    Type EMERGENCY WIPE LOCAL DATA for emergency local wipe
+                  </label>
+                  <input id="production-emergency-wipe-confirmation" type="text" autocomplete="off" />
+                  <div class="loop-actions">
+                    <button id="emergency-wipe-production-local-data" type="button" class="flow-control is-secondary" data-i18n="emergencyWipe">
+                      Emergency wipe
+                    </button>
+                  </div>
+                  <p class="lifecycle-action-note" data-i18n="emergencyWipeScopeNote">
+                    Panic lock mitigation and emergency local wipe hide private surfaces and clear local app state; they do not claim coercion-safe or compromised-device-safe protection.
                   </p>
                 </div>
               </section>

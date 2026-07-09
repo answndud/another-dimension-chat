@@ -10,6 +10,7 @@ import {
   productionHighRiskThreatModelBoundaryView,
   productionHighRiskThreatModelClaimMatrix,
   productionHighRiskTransportMetadataBoundaryView,
+  productionPanicLockMitigationView,
   productionVersionIntegrityView,
   productionWindowsRuntimeParityView,
   productionInviteCodeProfiles,
@@ -187,6 +188,29 @@ test("version integrity view keeps manual update and rollback claims bounded", (
   assert.match(view.boundary, /rollback_prevention_claimed=false/);
   assert.match(view.boundary, /branch_source_release_authority_allowed=false/);
   assert.doesNotMatch(view.boundary, /auto_update_ready=true|rollback_prevention_claimed=true|security_ready_claim=true/);
+});
+
+test("panic lock mitigation view keeps coercion and compromised-device claims bounded", () => {
+  const view = productionPanicLockMitigationView({ clipboardTtlMs: 5000 });
+
+  assert.equal(view.panicLockReachable, true);
+  assert.equal(view.emergencyWipeReachable, true);
+  assert.equal(view.emergencyConfirmation, "EMERGENCY WIPE LOCAL DATA");
+  assert.match(view.boundary, /panic_lock=true/);
+  assert.match(view.boundary, /memory_state_clear=true/);
+  assert.match(view.boundary, /private_view_hidden=true/);
+  assert.match(view.boundary, /clipboard_clear=true/);
+  assert.match(view.boundary, /clipboard_ttl_ms=5000/);
+  assert.match(view.boundary, /pending_secret_action_cancel=true/);
+  assert.match(view.boundary, /emergency_wipe_separate_from_standard_wipe=true/);
+  assert.match(view.boundary, /transcript_visible_when_locked=false/);
+  assert.match(view.boundary, /invite_visible_when_locked=false/);
+  assert.match(view.boundary, /endpoint_visible_when_locked=false/);
+  assert.match(view.boundary, /payload_visible_when_locked=false/);
+  assert.match(view.boundary, /copied_secret_in_diagnostics=false/);
+  assert.match(view.boundary, /coercion_safe_claim=false/);
+  assert.match(view.boundary, /compromised_device_safe_claim=false/);
+  assert.match(view.boundary, /mitigation_only=true/);
 });
 
 test("windows runtime parity view keeps shared core and redacted local path boundaries", () => {

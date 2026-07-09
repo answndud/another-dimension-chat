@@ -1318,6 +1318,18 @@ test("product unlock lockout shows local-only recovery actions", () => {
 
   const lockBody = functionBody(mainJs, "lockProductionProfile");
   assert.match(lockBody, /renderProductionProductUnlockRecovery\(result, \{ lockedByUser: true \}\)/);
+
+  const panicBody = functionBody(mainJs, "panicLockProductionProfile");
+  assert.match(indexHtml, /id="panic-lock-production-profile"/);
+  assert.match(panicBody, /productionPanicLockMitigationView\(\)/);
+  assert.match(panicBody, /clearProductionSensitiveMemoryState\(\)/);
+  assert.match(panicBody, /clearProductionSensitiveFields\(\)/);
+  assert.match(panicBody, /classList\.add\("is-panic-locked"\)/);
+  assert.match(panicBody, /clearClipboardBestEffort\(\)/);
+  assert.match(panicBody, /production_product_lock/);
+  assert.match(stylesCss, /body\.is-panic-locked [\s\S]*#production-two-profile-transcript/);
+  assert.match(stylesCss, /body\.is-panic-locked [\s\S]*#production-pairing-payload/);
+  assert.match(stylesCss, /body\.is-panic-locked [\s\S]*#production-pairing-endpoint/);
 });
 
 test("desktop accessibility polish keeps disabled reasons focus and overflow explicit", () => {
@@ -1390,6 +1402,8 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(i18nJs, /Type DELETE CONVERSATION to delete local messages/);
   assert.match(i18nJs, /Full local wipe removes owned app data on this device after WIPE LOCAL DATA confirmation/);
   assert.match(i18nJs, /No cloud backup recovery, rollback prevention, or secure deletion from storage media is claimed/);
+  assert.match(i18nJs, /Type EMERGENCY WIPE LOCAL DATA for emergency local wipe/);
+  assert.match(i18nJs, /coercion-safe or compromised-device-safe protection/);
   assert.match(stylesCss, /\.lifecycle-guide/);
   assert.match(stylesCss, /\.lifecycle-action-note/);
 
@@ -1408,6 +1422,7 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(viewBody, /secure_delete_claim=false/);
   assert.match(viewBody, /profile_deleted/);
   assert.match(viewBody, /full_local_data_wiped/);
+  assert.match(viewBody, /action === "emergency-local-wipe"/);
 
   const preflightBody = functionBody(mainJs, "dataLifecycleDestructivePreflightView");
   assert.match(preflightBody, /destructive_preflight=true/);
@@ -1446,6 +1461,17 @@ test("local data lifecycle actions expose destructive local-only boundaries", ()
   assert.match(wipeBody, /dataLifecycleWipeRunning/);
   assert.match(wipeBody, /renderProductionDataLifecycleAction\(result, "full-local-wipe"\)/);
   assert.match(wipeBody, /await checkProductionProductUnlockStatus\(\)/);
+  const emergencyWipeBody = functionBody(mainJs, "emergencyWipeProductionLocalData");
+  assert.match(indexHtml, /id="emergency-wipe-production-local-data"/);
+  assert.match(indexHtml, /id="production-emergency-wipe-confirmation"/);
+  assert.match(emergencyWipeBody, /confirmation !== boundary\.emergencyConfirmation/);
+  assert.match(emergencyWipeBody, /clearProductionSensitiveMemoryState\(\)/);
+  assert.match(emergencyWipeBody, /clearProductionSensitiveFields\(\)/);
+  assert.match(emergencyWipeBody, /classList\.add\("is-panic-locked"\)/);
+  assert.match(emergencyWipeBody, /production_emergency_local_data_wipe/);
+  assert.match(emergencyWipeBody, /renderProductionDataLifecycleAction\(result, "emergency-local-wipe"\)/);
+  assert.match(mainJs, /writeClipboardWithTtl/);
+  assert.doesNotMatch(mainJs, /navigator\.clipboard\.writeText\(payload\)/);
   const sessionDeleteBody = functionBody(mainJs, "deleteProductionSessionLifecycle");
   assert.match(sessionDeleteBody, /renderDataLifecycleDestructivePreflight\("session-delete"/);
   assert.match(sessionDeleteBody, /confirmation === "DELETE SESSION"/);
@@ -1990,7 +2016,7 @@ test("field test report is redacted and copyable from room diagnostics", () => {
   assert.match(functionBody(mainJs, "fieldTestReportCopyPayload"), /fieldTestNextActionKey\(report, peerReport\)/);
   assert.match(functionBody(mainJs, "fieldTestReportCopyPayload"), /next_action=/);
   assert.match(functionBody(mainJs, "copyFieldTestReport"), /const payload = fieldTestReportCopyPayload\(report\)/);
-  assert.match(functionBody(mainJs, "copyFieldTestReport"), /navigator\.clipboard\.writeText\(payload\)/);
+  assert.match(functionBody(mainJs, "copyFieldTestReport"), /writeClipboardWithTtl\(payload\)/);
   assert.match(mainJs, /fields\.peerFieldTestReport\.addEventListener\("input", renderFieldTestReportComparison\)/);
   assert.match(reportBody, /route_ready=/);
   assert.match(reportBody, /app_version=/);
