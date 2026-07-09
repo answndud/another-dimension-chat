@@ -10,6 +10,7 @@ import {
   productionHighRiskThreatModelBoundaryView,
   productionHighRiskThreatModelClaimMatrix,
   productionHighRiskReadinessGateView,
+  productionFinalReleaseAcceptanceView,
   productionHighRiskTransportMetadataBoundaryView,
   productionPanicLockMitigationView,
   productionVersionIntegrityView,
@@ -214,6 +215,55 @@ test("high-risk readiness gate separates not ready limited and ready claims", ()
   assert.equal(ready.nextAction, "ready");
   assert.equal(ready.highRiskReadyClaimAllowed, true);
   assert.match(ready.summary, /high_risk_ready_claim_allowed=true/);
+});
+
+test("final release acceptance separates stable and high-risk readiness", () => {
+  const hold = productionFinalReleaseAcceptanceView({
+    p0P1LocalBugAuditComplete: false,
+    p0P1LocalBugsPresent: true,
+    sourceAcceptanceSuitePassed: true,
+    releaseArtifactConsistencyVerified: true,
+    publicCopyClaimsReviewed: true,
+    supportRedactionVerified: true,
+    highRiskReadiness: "ready",
+  });
+
+  assert.equal(hold.acceptanceBarItems, 27);
+  assert.equal(hold.acceptanceBarCovered, true);
+  assert.equal(hold.payloadRecorded, false);
+  assert.equal(hold.passphraseRecorded, false);
+  assert.equal(hold.localPathRecorded, false);
+  assert.equal(hold.keyMaterialRecorded, false);
+  assert.equal(hold.p0P1LocalBugAuditComplete, false);
+  assert.equal(hold.p0P1LocalBugsPresent, true);
+  assert.equal(hold.stablePublicAppReady, false);
+  assert.equal(hold.highRiskModeReady, false);
+  assert.equal(hold.releaseDecision, "hold");
+  assert.match(hold.summary, /acceptance_bar_items=27/);
+  assert.match(hold.summary, /stable_public_app_ready=false/);
+  assert.match(hold.summary, /high_risk_mode_ready=false/);
+  assert.match(hold.summary, /payload_recorded=false/);
+  assert.match(hold.summary, /passphrase_recorded=false/);
+  assert.match(hold.summary, /local_path_recorded=false/);
+  assert.match(hold.summary, /key_material_recorded=false/);
+  assert.doesNotMatch(
+    hold.summary,
+    /audited_claim=true|compromised_device_safe_claim=true|coercion_safe_claim=true|full_global_correlation_safe_claim=true/,
+  );
+
+  const stableOnly = productionFinalReleaseAcceptanceView({
+    p0P1LocalBugAuditComplete: true,
+    p0P1LocalBugsPresent: false,
+    sourceAcceptanceSuitePassed: true,
+    releaseArtifactConsistencyVerified: true,
+    publicCopyClaimsReviewed: true,
+    supportRedactionVerified: true,
+    highRiskReadiness: "limited",
+  });
+  assert.equal(stableOnly.stablePublicAppReady, true);
+  assert.equal(stableOnly.highRiskModeReady, false);
+  assert.equal(stableOnly.releaseDecision, "stable-ready-high-risk-hold");
+  assert.match(stableOnly.boundary, /readiness_streams=stable_public_app#high_risk_mode/);
 });
 
 test("version integrity view keeps manual update and rollback claims bounded", () => {

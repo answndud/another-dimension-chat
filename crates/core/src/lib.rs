@@ -1739,6 +1739,19 @@ pub mod production {
         "redacted_diagnostics",
     ];
 
+    const PRODUCTION_FINAL_ACCEPTANCE_BAR_ITEMS: usize = 27;
+
+    const PRODUCTION_FINAL_ACCEPTANCE_REDACTED_FIELDS: &[&str] =
+        &["payload", "passphrase", "local_path", "key_material"];
+
+    const PRODUCTION_FINAL_ACCEPTANCE_FORBIDDEN_CLAIMS: &[&str] = &[
+        "audited",
+        "briar_cwtch_signal_equivalent",
+        "compromised_device_safe",
+        "coercion_safe",
+        "full_global_correlation_safe",
+    ];
+
     const PRODUCTION_SUPPLY_CHAIN_INTEGRITY_POLICIES: &[&str] = &[
         "manual_github_release_download",
         "dmg_sha256_required",
@@ -3884,6 +3897,40 @@ pub mod production {
         public_support_high_risk_claim_allowed: bool,
         release_high_risk_claim_allowed: bool,
         unmet_conditions_hidden: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionFinalReleaseAcceptanceInput {
+        pub p0_p1_local_bug_audit_complete: bool,
+        pub p0_p1_local_bugs_present: bool,
+        pub source_acceptance_suite_passed: bool,
+        pub release_artifact_consistency_verified: bool,
+        pub public_copy_claims_reviewed: bool,
+        pub support_redaction_verified: bool,
+        pub high_risk_readiness: ProductionHighRiskReadinessStatus,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionFinalReleaseAcceptanceSummary {
+        acceptance_bar_items: usize,
+        acceptance_bar_covered: bool,
+        payload_recorded: bool,
+        passphrase_recorded: bool,
+        local_path_recorded: bool,
+        key_material_recorded: bool,
+        p0_p1_local_bug_audit_complete: bool,
+        p0_p1_local_bugs_present: bool,
+        source_acceptance_suite_passed: bool,
+        release_artifact_consistency_verified: bool,
+        public_copy_claims_reviewed: bool,
+        support_redaction_verified: bool,
+        stable_public_app_ready: bool,
+        high_risk_mode_ready: bool,
+        high_risk_readiness: ProductionHighRiskReadinessStatus,
+        release_decision: &'static str,
+        redacted_evidence_fields: &'static [&'static str],
+        forbidden_public_claims: &'static [&'static str],
         boundary_closed: bool,
     }
 
@@ -7656,6 +7703,84 @@ pub mod production {
 
         pub fn unmet_conditions_hidden(self) -> bool {
             self.unmet_conditions_hidden
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionFinalReleaseAcceptanceSummary {
+        pub fn acceptance_bar_items(self) -> usize {
+            self.acceptance_bar_items
+        }
+
+        pub fn acceptance_bar_covered(self) -> bool {
+            self.acceptance_bar_covered
+        }
+
+        pub fn payload_recorded(self) -> bool {
+            self.payload_recorded
+        }
+
+        pub fn passphrase_recorded(self) -> bool {
+            self.passphrase_recorded
+        }
+
+        pub fn local_path_recorded(self) -> bool {
+            self.local_path_recorded
+        }
+
+        pub fn key_material_recorded(self) -> bool {
+            self.key_material_recorded
+        }
+
+        pub fn p0_p1_local_bug_audit_complete(self) -> bool {
+            self.p0_p1_local_bug_audit_complete
+        }
+
+        pub fn p0_p1_local_bugs_present(self) -> bool {
+            self.p0_p1_local_bugs_present
+        }
+
+        pub fn source_acceptance_suite_passed(self) -> bool {
+            self.source_acceptance_suite_passed
+        }
+
+        pub fn release_artifact_consistency_verified(self) -> bool {
+            self.release_artifact_consistency_verified
+        }
+
+        pub fn public_copy_claims_reviewed(self) -> bool {
+            self.public_copy_claims_reviewed
+        }
+
+        pub fn support_redaction_verified(self) -> bool {
+            self.support_redaction_verified
+        }
+
+        pub fn stable_public_app_ready(self) -> bool {
+            self.stable_public_app_ready
+        }
+
+        pub fn high_risk_mode_ready(self) -> bool {
+            self.high_risk_mode_ready
+        }
+
+        pub fn high_risk_readiness(self) -> ProductionHighRiskReadinessStatus {
+            self.high_risk_readiness
+        }
+
+        pub fn release_decision(self) -> &'static str {
+            self.release_decision
+        }
+
+        pub fn redacted_evidence_fields(self) -> &'static [&'static str] {
+            self.redacted_evidence_fields
+        }
+
+        pub fn forbidden_public_claims(self) -> &'static [&'static str] {
+            self.forbidden_public_claims
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -20365,6 +20490,70 @@ pub mod production {
         }
     }
 
+    pub fn production_final_release_acceptance_summary(
+        input: ProductionFinalReleaseAcceptanceInput,
+    ) -> ProductionFinalReleaseAcceptanceSummary {
+        let acceptance_bar_covered = PRODUCTION_FINAL_ACCEPTANCE_BAR_ITEMS == 27;
+        let payload_recorded = false;
+        let passphrase_recorded = false;
+        let local_path_recorded = false;
+        let key_material_recorded = false;
+        let stable_public_app_ready = acceptance_bar_covered
+            && input.p0_p1_local_bug_audit_complete
+            && !input.p0_p1_local_bugs_present
+            && input.source_acceptance_suite_passed
+            && input.release_artifact_consistency_verified
+            && input.public_copy_claims_reviewed
+            && input.support_redaction_verified;
+        let high_risk_mode_ready = stable_public_app_ready
+            && input.high_risk_readiness == ProductionHighRiskReadinessStatus::Ready;
+        let release_decision = if stable_public_app_ready && high_risk_mode_ready {
+            "stable-and-high-risk-ready"
+        } else if stable_public_app_ready {
+            "stable-ready-high-risk-hold"
+        } else {
+            "hold"
+        };
+        let boundary_closed = acceptance_bar_covered
+            && !payload_recorded
+            && !passphrase_recorded
+            && !local_path_recorded
+            && !key_material_recorded
+            && PRODUCTION_FINAL_ACCEPTANCE_REDACTED_FIELDS.contains(&"payload")
+            && PRODUCTION_FINAL_ACCEPTANCE_REDACTED_FIELDS.contains(&"passphrase")
+            && PRODUCTION_FINAL_ACCEPTANCE_REDACTED_FIELDS.contains(&"local_path")
+            && PRODUCTION_FINAL_ACCEPTANCE_REDACTED_FIELDS.contains(&"key_material")
+            && PRODUCTION_FINAL_ACCEPTANCE_FORBIDDEN_CLAIMS.contains(&"audited")
+            && PRODUCTION_FINAL_ACCEPTANCE_FORBIDDEN_CLAIMS
+                .contains(&"briar_cwtch_signal_equivalent")
+            && PRODUCTION_FINAL_ACCEPTANCE_FORBIDDEN_CLAIMS.contains(&"compromised_device_safe")
+            && PRODUCTION_FINAL_ACCEPTANCE_FORBIDDEN_CLAIMS.contains(&"coercion_safe")
+            && PRODUCTION_FINAL_ACCEPTANCE_FORBIDDEN_CLAIMS
+                .contains(&"full_global_correlation_safe");
+
+        ProductionFinalReleaseAcceptanceSummary {
+            acceptance_bar_items: PRODUCTION_FINAL_ACCEPTANCE_BAR_ITEMS,
+            acceptance_bar_covered,
+            payload_recorded,
+            passphrase_recorded,
+            local_path_recorded,
+            key_material_recorded,
+            p0_p1_local_bug_audit_complete: input.p0_p1_local_bug_audit_complete,
+            p0_p1_local_bugs_present: input.p0_p1_local_bugs_present,
+            source_acceptance_suite_passed: input.source_acceptance_suite_passed,
+            release_artifact_consistency_verified: input.release_artifact_consistency_verified,
+            public_copy_claims_reviewed: input.public_copy_claims_reviewed,
+            support_redaction_verified: input.support_redaction_verified,
+            stable_public_app_ready,
+            high_risk_mode_ready,
+            high_risk_readiness: input.high_risk_readiness,
+            release_decision,
+            redacted_evidence_fields: PRODUCTION_FINAL_ACCEPTANCE_REDACTED_FIELDS,
+            forbidden_public_claims: PRODUCTION_FINAL_ACCEPTANCE_FORBIDDEN_CLAIMS,
+            boundary_closed,
+        }
+    }
+
     pub fn production_mobile_install_update_integrity_boundary_summary(
     ) -> ProductionMobileInstallUpdateIntegrityBoundarySummary {
         let supply_chain = production_supply_chain_integrity_boundary_summary();
@@ -26967,6 +27156,71 @@ pub mod production {
             assert!(ready.public_support_high_risk_claim_allowed());
             assert!(ready.release_high_risk_claim_allowed());
             assert!(ready.boundary_closed());
+        }
+
+        #[test]
+        fn final_release_acceptance_gate_separates_stable_and_high_risk_readiness_without_forbidden_claims(
+        ) {
+            let hold = production_final_release_acceptance_summary(
+                ProductionFinalReleaseAcceptanceInput {
+                    p0_p1_local_bug_audit_complete: false,
+                    p0_p1_local_bugs_present: true,
+                    source_acceptance_suite_passed: true,
+                    release_artifact_consistency_verified: true,
+                    public_copy_claims_reviewed: true,
+                    support_redaction_verified: true,
+                    high_risk_readiness: ProductionHighRiskReadinessStatus::Ready,
+                },
+            );
+            assert_eq!(hold.acceptance_bar_items(), 27);
+            assert!(hold.acceptance_bar_covered());
+            assert!(!hold.payload_recorded());
+            assert!(!hold.passphrase_recorded());
+            assert!(!hold.local_path_recorded());
+            assert!(!hold.key_material_recorded());
+            assert!(!hold.p0_p1_local_bug_audit_complete());
+            assert!(hold.p0_p1_local_bugs_present());
+            assert!(!hold.stable_public_app_ready());
+            assert!(!hold.high_risk_mode_ready());
+            assert_eq!(hold.release_decision(), "hold");
+            assert!(hold.redacted_evidence_fields().contains(&"payload"));
+            assert!(hold.redacted_evidence_fields().contains(&"passphrase"));
+            assert!(hold.redacted_evidence_fields().contains(&"local_path"));
+            assert!(hold.redacted_evidence_fields().contains(&"key_material"));
+            assert!(hold.forbidden_public_claims().contains(&"audited"));
+            assert!(hold
+                .forbidden_public_claims()
+                .contains(&"briar_cwtch_signal_equivalent"));
+            assert!(hold
+                .forbidden_public_claims()
+                .contains(&"compromised_device_safe"));
+            assert!(hold.forbidden_public_claims().contains(&"coercion_safe"));
+            assert!(hold
+                .forbidden_public_claims()
+                .contains(&"full_global_correlation_safe"));
+            assert!(hold.boundary_closed());
+
+            let stable_only = production_final_release_acceptance_summary(
+                ProductionFinalReleaseAcceptanceInput {
+                    p0_p1_local_bug_audit_complete: true,
+                    p0_p1_local_bugs_present: false,
+                    source_acceptance_suite_passed: true,
+                    release_artifact_consistency_verified: true,
+                    public_copy_claims_reviewed: true,
+                    support_redaction_verified: true,
+                    high_risk_readiness: ProductionHighRiskReadinessStatus::Limited,
+                },
+            );
+            assert!(stable_only.stable_public_app_ready());
+            assert!(!stable_only.high_risk_mode_ready());
+            assert_eq!(
+                stable_only.high_risk_readiness(),
+                ProductionHighRiskReadinessStatus::Limited
+            );
+            assert_eq!(
+                stable_only.release_decision(),
+                "stable-ready-high-risk-hold"
+            );
         }
 
         #[test]

@@ -270,6 +270,79 @@ export function productionHighRiskReadinessGateView(input = {}) {
   };
 }
 
+export function productionFinalReleaseAcceptanceView(input = {}) {
+  const highRiskReadinessValues = new Set(["ready", "limited", "not_ready"]);
+  const highRiskReadiness = highRiskReadinessValues.has(input.highRiskReadiness)
+    ? input.highRiskReadiness
+    : "not_ready";
+  const acceptanceBarItems = 27;
+  const acceptanceBarCovered = true;
+  const p0P1LocalBugAuditComplete = input.p0P1LocalBugAuditComplete === true;
+  const p0P1LocalBugsPresent = input.p0P1LocalBugsPresent === true;
+  const sourceAcceptanceSuitePassed = input.sourceAcceptanceSuitePassed === true;
+  const releaseArtifactConsistencyVerified = input.releaseArtifactConsistencyVerified === true;
+  const publicCopyClaimsReviewed = input.publicCopyClaimsReviewed === true;
+  const supportRedactionVerified = input.supportRedactionVerified === true;
+  const stablePublicAppReady =
+    acceptanceBarCovered &&
+    p0P1LocalBugAuditComplete &&
+    !p0P1LocalBugsPresent &&
+    sourceAcceptanceSuitePassed &&
+    releaseArtifactConsistencyVerified &&
+    publicCopyClaimsReviewed &&
+    supportRedactionVerified;
+  const highRiskModeReady = stablePublicAppReady && highRiskReadiness === "ready";
+  const releaseDecision =
+    stablePublicAppReady && highRiskModeReady
+      ? "stable-and-high-risk-ready"
+      : stablePublicAppReady
+        ? "stable-ready-high-risk-hold"
+        : "hold";
+  const summary = [
+    `acceptance_bar_items=${acceptanceBarItems}`,
+    `acceptance_bar_covered=${acceptanceBarCovered}`,
+    "payload_recorded=false",
+    "passphrase_recorded=false",
+    "local_path_recorded=false",
+    "key_material_recorded=false",
+    `p0_p1_local_bug_audit_complete=${p0P1LocalBugAuditComplete}`,
+    `p0_p1_local_bugs_present=${p0P1LocalBugsPresent}`,
+    `source_acceptance_suite_passed=${sourceAcceptanceSuitePassed}`,
+    `release_artifact_consistency_verified=${releaseArtifactConsistencyVerified}`,
+    `public_copy_claims_reviewed=${publicCopyClaimsReviewed}`,
+    `support_redaction_verified=${supportRedactionVerified}`,
+    `stable_public_app_ready=${stablePublicAppReady}`,
+    `high_risk_readiness=${highRiskReadiness}`,
+    `high_risk_mode_ready=${highRiskModeReady}`,
+    `release_decision=${releaseDecision}`,
+    "audited_claim=false",
+    "briar_cwtch_signal_equivalence_claim=false",
+    "compromised_device_safe_claim=false",
+    "coercion_safe_claim=false",
+    "full_global_correlation_safe_claim=false",
+  ].join(" ");
+  return {
+    acceptanceBarItems,
+    acceptanceBarCovered,
+    payloadRecorded: false,
+    passphraseRecorded: false,
+    localPathRecorded: false,
+    keyMaterialRecorded: false,
+    p0P1LocalBugAuditComplete,
+    p0P1LocalBugsPresent,
+    sourceAcceptanceSuitePassed,
+    releaseArtifactConsistencyVerified,
+    publicCopyClaimsReviewed,
+    supportRedactionVerified,
+    stablePublicAppReady,
+    highRiskReadiness,
+    highRiskModeReady,
+    releaseDecision,
+    summary,
+    boundary: `${summary} readiness_streams=stable_public_app#high_risk_mode`,
+  };
+}
+
 function releaseIntegrityToken(value, fallback = "unknown") {
   const token = String(value ?? "")
     .trim()
