@@ -111,6 +111,49 @@ function relativeSibling(baseFile, siblingName) {
   return path.join(path.dirname(baseFile), siblingName);
 }
 
+function validateArtifactStructure(prefix, artifactFile, extension) {
+  const issues = [];
+  const bytes = fs.readFileSync(artifactFile);
+  if (extension === ".exe") {
+    if (bytes.length < 0x40 || bytes[0] !== 0x4d || bytes[1] !== 0x5a) {
+      return [`${prefix}:invalid-pe-mz-header`];
+    }
+    const peOffset = bytes.readUInt32LE(0x3c);
+    if (peOffset <= 0 || peOffset + 4 > bytes.length) {
+      return [`${prefix}:invalid-pe-header-offset`];
+    }
+    if (
+      bytes[peOffset] !== 0x50 ||
+      bytes[peOffset + 1] !== 0x45 ||
+      bytes[peOffset + 2] !== 0x00 ||
+      bytes[peOffset + 3] !== 0x00
+    ) {
+      issues.push(`${prefix}:missing-pe-signature`);
+    }
+    return issues;
+  }
+  if (extension === ".msi") {
+    const msiMagic = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
+    if (bytes.length < msiMagic.length || !bytes.subarray(0, msiMagic.length).equals(msiMagic)) {
+      issues.push(`${prefix}:invalid-msi-compound-file-header`);
+    }
+    return issues;
+  }
+  if (extension === ".zip" || extension === ".msix") {
+    const validZipMagic =
+      bytes.length >= 4 &&
+      bytes[0] === 0x50 &&
+      bytes[1] === 0x4b &&
+      ((bytes[2] === 0x03 && bytes[3] === 0x04) ||
+        (bytes[2] === 0x05 && bytes[3] === 0x06) ||
+        (bytes[2] === 0x07 && bytes[3] === 0x08));
+    if (!validZipMagic) {
+      issues.push(`${prefix}:invalid-zip-header`);
+    }
+  }
+  return issues;
+}
+
 function validateChecksumFile(file, artifact, artifactFile, actualSha) {
   const checksumFile = relativeSibling(file, artifact.checksum_file);
   const issues = [];
@@ -205,6 +248,7 @@ function validateArtifact(file, manifest, artifact, index) {
   }
   const actualSha = sha256File(artifactFile);
   const actualSize = fs.statSync(artifactFile).size;
+  issues.push(...validateArtifactStructure(prefix, artifactFile, path.extname(artifact.filename).toLowerCase()));
   if (artifact.sha256 !== actualSha) issues.push(`${prefix}:artifact-sha-mismatch`);
   if (artifact.size_bytes !== actualSize) issues.push(`${prefix}:artifact-size-mismatch`);
   issues.push(...validateChecksumFile(file, artifact, artifactFile, actualSha));
@@ -282,6 +326,7 @@ if (failures > 0) {
 
 console.log(`accepted_windows_artifact_manifests=${files.length}`);
 console.log("windows_artifact_checksum_bytes_verified=true");
+console.log("windows_artifact_package_structure_verified=true");
 console.log("windows_artifact_provenance_consistency_verified=true");
 console.log("windows_public_artifact_ready=false");
 console.log("windows_installer_ready=false");

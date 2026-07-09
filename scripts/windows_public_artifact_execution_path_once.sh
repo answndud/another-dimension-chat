@@ -76,6 +76,10 @@ for flag in \
   "windows_result_requires_current_source_commit=true" \
   "windows_result_current_head_strict_mode_ready=true" \
   "windows_result_requires_checksum_provenance=true" \
+  "windows_result_requires_valid_artifact_manifest=true" \
+  "windows_result_artifact_manifest_sha_verified=true" \
+  "windows_result_artifact_provenance_sha_verified=true" \
+  "windows_result_artifact_bytes_sha_verified=true" \
   "windows_artifact_requires_same_release_authority=true" \
   "windows_artifact_checksum_bytes_verified_by_validator=true" \
   "windows_artifact_provenance_consistency_verified_by_validator=true" \
@@ -125,10 +129,17 @@ must_contain "$SCHEMA" "windows_real_runtime_result_schema_available=true"
 must_contain "$SCHEMA" "WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"
 must_contain "$SCHEMA" "windows_result_requires_current_source_commit=true"
 must_contain "$SCHEMA" "windows_result_current_head_strict_mode_ready=true"
+must_contain "$SCHEMA" "windows_result_requires_valid_artifact_manifest=true"
+must_contain "$SCHEMA" "windows_result_artifact_manifest_sha_verified=true"
+must_contain "$SCHEMA" "windows_result_artifact_provenance_sha_verified=true"
+must_contain "$SCHEMA" "windows_result_artifact_bytes_sha_verified=true"
 must_contain "$SCHEMA" "windows_result_rejects_private_docs_local_app_data_and_screenshots=true"
 must_contain "$SCHEMA" "windows_public_artifact_ready=false"
 must_contain "$VALIDATOR" "status=windows-public-artifact-candidate-requires-review"
 must_contain "$VALIDATOR" "windows_public_artifact_result_current_head_required="
+must_contain "$VALIDATOR" "windows_result_requires_valid_artifact_manifest=true"
+must_contain "$VALIDATOR" "artifact-manifest-sha-mismatch"
+must_contain "$VALIDATOR" "artifact-provenance-sha-mismatch"
 must_contain "$VALIDATOR" "source-commit-not-current-head"
 must_contain "$VALIDATOR" "private-docs"
 must_contain "$VALIDATOR" "windows-local-app-data"
@@ -160,6 +171,77 @@ printf '%s\n' "$empty_output" | grep -Fq "status=waiting-for-real-windows-public
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
+windows_artifact_name="Another Dimension Chat_0.1.0_x64-setup.exe"
+node - "$tmp_dir/$windows_artifact_name" <<'NODE'
+const fs = require("node:fs");
+const file = process.argv[2];
+const bytes = Buffer.alloc(512, 0);
+bytes.write("MZ", 0, "ascii");
+bytes.writeUInt32LE(0x80, 0x3c);
+bytes.write("PE\0\0", 0x80, "binary");
+fs.writeFileSync(file, bytes);
+NODE
+windows_artifact_sha="$(shasum -a 256 "$tmp_dir/$windows_artifact_name" | awk '{print $1}')"
+windows_artifact_size="$(wc -c <"$tmp_dir/$windows_artifact_name" | tr -d ' ')"
+printf '%s  %s\n' "$windows_artifact_sha" "$windows_artifact_name" >"$tmp_dir/$windows_artifact_name.sha256"
+cat >"$tmp_dir/$windows_artifact_name.provenance.json" <<JSON
+{
+  "schema_version": "windows-public-artifact-provenance-v1",
+  "repository": "answndud/another-dimension-chat",
+  "source_commit": "abcdef1234567890",
+  "artifact_filename": "$windows_artifact_name",
+  "artifact_sha256": "$windows_artifact_sha",
+  "release_class": "unsigned-windows-beta",
+  "bundle_target": "nsis",
+  "signing_status": "unsigned-hold",
+  "release_upload_authorized": false,
+  "windows_public_artifact_ready": false,
+  "generated_release_artifacts_commit_allowed": false
+}
+JSON
+windows_provenance_sha="$(shasum -a 256 "$tmp_dir/$windows_artifact_name.provenance.json" | awk '{print $1}')"
+cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
+{
+  "schema_version": "windows-public-artifact-manifest-v1",
+  "repository": "answndud/another-dimension-chat",
+  "source_commit": "abcdef1234567890",
+  "version": "0.1.0",
+  "release_class": "unsigned-windows-beta",
+  "same_release_asset_authority_required": true,
+  "release_upload_authorized": false,
+  "release_body_edit_authorized": false,
+  "windows_public_artifact_ready": false,
+  "windows_installer_ready": false,
+  "generated_release_artifacts_commit_allowed": false,
+  "public_non_claims": [
+    "unsigned experimental public beta",
+    "sensitive communication prohibited",
+    "not audited",
+    "not production-ready",
+    "no public Windows artifact",
+    "no Windows installer",
+    "no public artifact upload"
+  ],
+  "artifacts": [
+    {
+      "filename": "$windows_artifact_name",
+      "sha256": "$windows_artifact_sha",
+      "size_bytes": $windows_artifact_size,
+      "platform": "windows",
+      "architecture": "windows-x64",
+      "bundle_target": "nsis",
+      "signing_status": "unsigned-hold",
+      "checksum_file": "$windows_artifact_name.sha256",
+      "provenance_file": "$windows_artifact_name.provenance.json",
+      "webview2_runtime_required": true,
+      "smartscreen_reputation_claim": false,
+      "signing_trust_boundary": false
+    }
+  ]
+}
+JSON
+windows_manifest_sha="$(shasum -a 256 "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" | awk '{print $1}')"
+
 cat >"$tmp_dir/win-valid.md" <<'RESULT'
 schema_version=windows-public-artifact-result-v1
 result_id=WIN-0001
@@ -169,9 +251,10 @@ windows_version=Windows 11 23H2 redacted
 architecture=x64
 artifact_kind=tauri-bundle
 artifact_path_redacted=true
-artifact_sha256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-artifact_provenance_sha256=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-artifact_manifest_sha256=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+artifact_manifest_file=WINDOWS_ARTIFACT_MANIFEST.json
+artifact_sha256=__WINDOWS_ARTIFACT_SHA__
+artifact_provenance_sha256=__WINDOWS_PROVENANCE_SHA__
+artifact_manifest_sha256=__WINDOWS_MANIFEST_SHA__
 source_commit=abcdef1234567890
 webview2_rendered=pass
 app_data_root_redacted=pass
@@ -190,9 +273,17 @@ checksum_provenance_verified=true
 support_diagnostics_reviewed=true
 non_claims_confirmed=unsigned-experimental-public-beta#sensitive-communication-prohibited#not-audited#not-production-ready#no-public-windows-artifact#no-windows-installer#no-public-artifact-upload
 RESULT
+perl -0pi -e "s/__WINDOWS_ARTIFACT_SHA__/$windows_artifact_sha/g; s/__WINDOWS_PROVENANCE_SHA__/$windows_provenance_sha/g; s/__WINDOWS_MANIFEST_SHA__/$windows_manifest_sha/g" \
+  "$tmp_dir/win-valid.md"
 
 candidate_output="$(node "$VALIDATOR" "$tmp_dir/win-valid.md")"
 printf '%s\n' "$candidate_output" | grep -Fq "accepted_windows_public_artifact_results=1" || fail "candidate validator did not accept valid result"
+printf '%s\n' "$candidate_output" | grep -Fq "windows_result_artifact_manifest_sha_verified=true" ||
+  fail "candidate validator did not verify artifact manifest SHA"
+printf '%s\n' "$candidate_output" | grep -Fq "windows_result_artifact_provenance_sha_verified=true" ||
+  fail "candidate validator did not verify artifact provenance SHA"
+printf '%s\n' "$candidate_output" | grep -Fq "windows_result_artifact_bytes_sha_verified=true" ||
+  fail "candidate validator did not verify artifact bytes SHA"
 printf '%s\n' "$candidate_output" | grep -Fq "windows_public_artifact_ready=false" || fail "validator must not auto-open Windows artifact readiness"
 printf '%s\n' "$candidate_output" | grep -Fq "status=windows-public-artifact-candidate-requires-review" || fail "candidate validator did not require review"
 
@@ -201,6 +292,14 @@ if AD_REQUIRE_CURRENT_HEAD=1 node "$VALIDATOR" "$tmp_dir/win-valid.md" >"$tmp_di
 fi
 grep -Fq "source-commit-not-current-head" "$tmp_dir/stale-source.out" ||
   fail "strict Windows public artifact result validator did not report stale source commit"
+
+sed "s/artifact_manifest_sha256=$windows_manifest_sha/artifact_manifest_sha256=dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd/" \
+  "$tmp_dir/win-valid.md" >"$tmp_dir/mismatched-manifest-hash.md"
+if node "$VALIDATOR" "$tmp_dir/mismatched-manifest-hash.md" >"$tmp_dir/mismatched-manifest-hash.out" 2>&1; then
+  fail "validator accepted runtime result with mismatched artifact manifest SHA"
+fi
+grep -Fq "artifact-manifest-sha-mismatch" "$tmp_dir/mismatched-manifest-hash.out" ||
+  fail "runtime result validator did not report artifact manifest SHA mismatch"
 
 cat >"$tmp_dir/not-windows.md" <<'RESULT'
 schema_version=windows-public-artifact-result-v1
@@ -323,6 +422,10 @@ windows_support_diagnostics_requirements_defined=true
 windows_no_overclaim_gate_ready=true
 windows_result_requires_current_source_commit=true
 windows_result_current_head_strict_mode_ready=true
+windows_result_requires_valid_artifact_manifest=true
+windows_result_artifact_manifest_sha_verified=true
+windows_result_artifact_provenance_sha_verified=true
+windows_result_artifact_bytes_sha_verified=true
 windows_result_rejects_private_docs_local_app_data_and_screenshots=true
 windows_real_runtime_smoke_passed=false
 windows_public_artifact_ready=false
