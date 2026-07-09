@@ -292,6 +292,13 @@ present, source acceptance or artifact consistency is missing, or High-Risk
 required conditions are incomplete. It must not record payloads, passphrases,
 local paths, or key material in checklist output.
 
+Release acceptance uses separate `public_beta`, `stable_candidate`, and
+`stable` classes. Stable candidate requires redacted external two-machine
+evidence, macOS and Windows public artifact consistency, emergency advisory
+readiness, support redaction, public copy review, and no P0/P1 local bug hold.
+This release class gate is not an audited, production-ready, or sensitive-use
+security claim.
+
 ## Reporting Security Issues
 
 If you find a security issue, please use GitHub's private vulnerability reporting feature if it is enabled for the repository.
