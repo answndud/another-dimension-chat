@@ -33,6 +33,7 @@ import {
   productionPairwiseInviteImportFailureView,
   productionPairwiseSafetyVerificationFlowView,
   productionPairingPayloadView,
+  productionProfileUnlockRecoveryView,
   productionProfileMessageReadiness,
   productionProfilePreset,
   productionProfileUnlockView,
@@ -18106,13 +18107,14 @@ function productionProductUnlockRecoveryView(result, options = {}) {
     };
   }
 
+  const profileRecovery = productionProfileUnlockRecoveryView(result);
   return {
     state: "Profile locked",
-    warning: t("profileRecoveryLocked"),
-    storage: `Locked reason=${reason} local_recovery=retry-passphrase-or-new-local-profile`,
+    warning: profileRecovery.warning || t("profileRecoveryLocked"),
+    storage: `Locked reason=${reason} local_recovery=${profileRecovery.kind}`,
     identity: "Not opened; no raw storage error exposed",
-    next: t("profileRecoveryLockedNext"),
-    boundary: `${boundary} recovery=passphrase-first-lockout rollback_suspicion=false resume_blocked=false`,
+    next: profileRecovery.nextAction || t("profileRecoveryLockedNext"),
+    boundary: `${boundary} ${profileRecovery.boundary} recovery=passphrase-first-lockout rollback_suspicion=false resume_blocked=false`,
   };
 }
 
@@ -18696,12 +18698,13 @@ async function unlockProductionProfile() {
     if (!productionProfileInputStillCurrent(input)) {
       return;
     }
+    const recovery = productionProfileUnlockRecoveryView({ error });
     setProductionProfileState("Profile unlock failed");
-    setText(fields.productionProfileWarning, String(error));
-    setText(fields.productionProfileStorage, "Failed");
-    setText(fields.productionProfileIdentity, "Failed");
-    setText(fields.productionProfileBoundary, "Failed");
-    setText(fields.productionProfileNextAction, t("profileRecoveryStatusFailedNext"));
+    setText(fields.productionProfileWarning, recovery.warning);
+    setText(fields.productionProfileStorage, `Failed local_recovery=${recovery.kind}`);
+    setText(fields.productionProfileIdentity, "Not opened; no raw storage error exposed");
+    setText(fields.productionProfileBoundary, recovery.boundary);
+    setText(fields.productionProfileNextAction, recovery.nextAction);
   } finally {
     clearProductionBusyAction("profile-unlock");
     if (fields.unlockProductionProfile) {
