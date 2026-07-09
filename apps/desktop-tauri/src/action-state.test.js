@@ -328,7 +328,12 @@ test("pairwise invite import failure view splits non-generic recovery kinds", ()
   assert.equal(unsupported.kind, "unsupported");
   assert.equal(revoked.kind, "revoked_re_pair_required");
   for (const view of [malformed, duplicate, paired, mismatch, unsupported, revoked]) {
+    assert.match(view.boundary, /malicious_input_fail_closed=true/);
+    assert.match(view.boundary, /success_state=false/);
+    assert.match(view.boundary, /verified_state=false/);
+    assert.match(view.boundary, /delivered_state=false/);
     assert.match(view.boundary, /generic_error=false/);
+    assert.match(view.boundary, /endpoint_returned=false/);
     assert.doesNotMatch(view.message, /ADPAIR2|\/tmp|passphrase|private key/i);
   }
 });
@@ -355,6 +360,8 @@ test("pairwise safety verification flow routes mismatch and revoked to re-pair",
   assert.match(confirmed.boundary, /compare_required=false/);
   assert.equal(mismatch.state, "marked_mismatch");
   assert.equal(mismatch.rePairRequired, true);
+  assert.match(mismatch.boundary, /malicious_input_fail_closed=true/);
+  assert.match(mismatch.boundary, /false_verified_state=blocked/);
   assert.equal(revoked.state, "revoked_re_pair_required");
   assert.equal(revoked.rePairRequired, true);
   assert.match(revoked.boundary, /generic_error=false/);

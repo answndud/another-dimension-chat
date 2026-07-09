@@ -896,6 +896,43 @@ mod tests {
         );
     }
 
+    #[test]
+    fn malicious_invite_corpus_fails_closed() {
+        let valid = production_signed_payload([11_u8; 32]);
+        let encoded = valid.encode().expect("payload encodes");
+        let mut wrong_key_payload = valid.clone();
+        wrong_key_payload.pairwise_public_key = production_signed_payload([12_u8; 32])
+            .pairwise_public_key
+            .clone();
+
+        let corpus = [
+            String::new(),
+            "ADPAIR1|legacy|signature".to_string(),
+            "ADPAIR2|zz|sig".to_string(),
+            "ADPAIR2|00|".to_string(),
+            "ADPAIR2|414450414952322d43414e4f4e4943414c00|sig".to_string(),
+            encoded.replacen("616c696365", "626f62626965", 1),
+            wrong_key_payload
+                .encode()
+                .expect("wrong key payload encodes"),
+        ];
+
+        for sample in corpus {
+            assert!(
+                PairingPayload::decode(&sample).is_err(),
+                "malicious invite must fail closed"
+            );
+        }
+
+        let alice = sample_payload("alice", "alice-nonce", "alice-pub", "alice.onion", 1_000);
+        let mut swapped = alice.clone();
+        swapped.prekey_bundle = "attacker-prekey".to_string();
+        assert_ne!(
+            transcript(&alice, &swapped).expect("transcript"),
+            transcript(&alice, &alice).expect("original transcript")
+        );
+    }
+
     fn sample_payload(
         owner: &str,
         nonce: &str,
