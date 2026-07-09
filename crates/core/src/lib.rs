@@ -1752,6 +1752,35 @@ pub mod production {
         "full_global_correlation_safe",
     ];
 
+    const PRODUCTION_EXTERNAL_TWO_MACHINE_ALLOWED_FIELDS: &[&str] = &[
+        "schema_version",
+        "app_version",
+        "build_commit",
+        "platform_pair",
+        "checksum_status",
+        "machine_a_report_present",
+        "machine_b_report_present",
+        "invite_created",
+        "safety_compared",
+        "outbound_exported",
+        "inbound_imported",
+        "retry_cancel_delete_verified",
+        "broad_failure_class",
+    ];
+
+    const PRODUCTION_EXTERNAL_TWO_MACHINE_FORBIDDEN_FIELDS: &[&str] = &[
+        "invite_body",
+        "envelope_payload",
+        "onion_endpoint",
+        "local_path",
+        "profile_name",
+        "message_body",
+        "passphrase",
+        "private_key",
+        "key_material",
+        "raw_logs",
+    ];
+
     const PRODUCTION_SUPPLY_CHAIN_INTEGRITY_POLICIES: &[&str] = &[
         "manual_github_release_download",
         "dmg_sha256_required",
@@ -3897,6 +3926,52 @@ pub mod production {
         public_support_high_risk_claim_allowed: bool,
         release_high_risk_claim_allowed: bool,
         unmet_conditions_hidden: bool,
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionExternalTwoMachineEvidenceInput {
+        pub machine_a_report_present: bool,
+        pub machine_b_report_present: bool,
+        pub app_version_match: bool,
+        pub build_commit_match: bool,
+        pub checksum_match: bool,
+        pub invite_created: bool,
+        pub safety_compared: bool,
+        pub outbound_exported: bool,
+        pub inbound_imported: bool,
+        pub retry_cancel_delete_verified: bool,
+        pub broad_failure_class_redacted: bool,
+        pub forbidden_fields_present: bool,
+        pub local_only_rehearsal: bool,
+        pub fabricated_evidence: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionExternalTwoMachineEvidenceSummary {
+        accepted: bool,
+        primary_blocker: &'static str,
+        next_action: &'static str,
+        machine_a_report_present: bool,
+        machine_b_report_present: bool,
+        app_version_match: bool,
+        build_commit_match: bool,
+        checksum_match: bool,
+        invite_created: bool,
+        safety_compared: bool,
+        outbound_exported: bool,
+        inbound_imported: bool,
+        retry_cancel_delete_verified: bool,
+        broad_failure_class_redacted: bool,
+        forbidden_fields_present: bool,
+        local_only_rehearsal: bool,
+        fabricated_evidence: bool,
+        stable_candidate_evidence_present: bool,
+        local_only_promoted_to_external: bool,
+        reliable_delivery_claim_allowed: bool,
+        audited_claim_allowed: bool,
+        allowed_fields: &'static [&'static str],
+        forbidden_fields: &'static [&'static str],
         boundary_closed: bool,
     }
 
@@ -7731,6 +7806,104 @@ pub mod production {
 
         pub fn unmet_conditions_hidden(self) -> bool {
             self.unmet_conditions_hidden
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionExternalTwoMachineEvidenceSummary {
+        pub fn accepted(self) -> bool {
+            self.accepted
+        }
+
+        pub fn primary_blocker(self) -> &'static str {
+            self.primary_blocker
+        }
+
+        pub fn next_action(self) -> &'static str {
+            self.next_action
+        }
+
+        pub fn machine_a_report_present(self) -> bool {
+            self.machine_a_report_present
+        }
+
+        pub fn machine_b_report_present(self) -> bool {
+            self.machine_b_report_present
+        }
+
+        pub fn app_version_match(self) -> bool {
+            self.app_version_match
+        }
+
+        pub fn build_commit_match(self) -> bool {
+            self.build_commit_match
+        }
+
+        pub fn checksum_match(self) -> bool {
+            self.checksum_match
+        }
+
+        pub fn invite_created(self) -> bool {
+            self.invite_created
+        }
+
+        pub fn safety_compared(self) -> bool {
+            self.safety_compared
+        }
+
+        pub fn outbound_exported(self) -> bool {
+            self.outbound_exported
+        }
+
+        pub fn inbound_imported(self) -> bool {
+            self.inbound_imported
+        }
+
+        pub fn retry_cancel_delete_verified(self) -> bool {
+            self.retry_cancel_delete_verified
+        }
+
+        pub fn broad_failure_class_redacted(self) -> bool {
+            self.broad_failure_class_redacted
+        }
+
+        pub fn forbidden_fields_present(self) -> bool {
+            self.forbidden_fields_present
+        }
+
+        pub fn local_only_rehearsal(self) -> bool {
+            self.local_only_rehearsal
+        }
+
+        pub fn fabricated_evidence(self) -> bool {
+            self.fabricated_evidence
+        }
+
+        pub fn stable_candidate_evidence_present(self) -> bool {
+            self.stable_candidate_evidence_present
+        }
+
+        pub fn local_only_promoted_to_external(self) -> bool {
+            self.local_only_promoted_to_external
+        }
+
+        pub fn reliable_delivery_claim_allowed(self) -> bool {
+            self.reliable_delivery_claim_allowed
+        }
+
+        pub fn audited_claim_allowed(self) -> bool {
+            self.audited_claim_allowed
+        }
+
+        pub fn allowed_fields(self) -> &'static [&'static str] {
+            self.allowed_fields
+        }
+
+        pub fn forbidden_fields(self) -> &'static [&'static str] {
+            self.forbidden_fields
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -20546,6 +20719,103 @@ pub mod production {
         }
     }
 
+    pub fn production_external_two_machine_evidence_summary(
+        input: ProductionExternalTwoMachineEvidenceInput,
+    ) -> ProductionExternalTwoMachineEvidenceSummary {
+        let reports_present = input.machine_a_report_present && input.machine_b_report_present;
+        let flow_complete = input.invite_created
+            && input.safety_compared
+            && input.outbound_exported
+            && input.inbound_imported
+            && input.retry_cancel_delete_verified;
+        let accepted = reports_present
+            && input.app_version_match
+            && input.build_commit_match
+            && input.checksum_match
+            && flow_complete
+            && input.broad_failure_class_redacted
+            && !input.forbidden_fields_present
+            && !input.local_only_rehearsal
+            && !input.fabricated_evidence;
+        let (primary_blocker, next_action) = if input.fabricated_evidence {
+            (
+                "fabricated-evidence",
+                "discard-evidence-and-run-real-peer-test",
+            )
+        } else if input.local_only_rehearsal {
+            (
+                "local-only-rehearsal",
+                "collect-real-two-machine-peer-reports",
+            )
+        } else if !reports_present {
+            ("missing-peer-report", "collect-both-machine-reports")
+        } else if !input.app_version_match || !input.build_commit_match || !input.checksum_match {
+            (
+                "build-or-checksum-mismatch",
+                "rerun-with-matching-release-artifacts",
+            )
+        } else if input.forbidden_fields_present {
+            ("forbidden-field-present", "redact-and-regenerate-evidence")
+        } else if !flow_complete {
+            (
+                "flow-incomplete",
+                "complete-invite-safety-envelope-retry-delete-flow",
+            )
+        } else if !input.broad_failure_class_redacted {
+            (
+                "failure-class-not-redacted",
+                "replace-detail-with-broad-failure-class",
+            )
+        } else {
+            ("none", "ready-for-maintainer-review")
+        };
+        let local_only_promoted_to_external = false;
+        let reliable_delivery_claim_allowed = false;
+        let audited_claim_allowed = false;
+        let boundary_closed = PRODUCTION_EXTERNAL_TWO_MACHINE_ALLOWED_FIELDS
+            .contains(&"app_version")
+            && PRODUCTION_EXTERNAL_TWO_MACHINE_ALLOWED_FIELDS.contains(&"build_commit")
+            && PRODUCTION_EXTERNAL_TWO_MACHINE_ALLOWED_FIELDS.contains(&"platform_pair")
+            && PRODUCTION_EXTERNAL_TWO_MACHINE_ALLOWED_FIELDS.contains(&"checksum_status")
+            && PRODUCTION_EXTERNAL_TWO_MACHINE_FORBIDDEN_FIELDS.contains(&"invite_body")
+            && PRODUCTION_EXTERNAL_TWO_MACHINE_FORBIDDEN_FIELDS.contains(&"envelope_payload")
+            && PRODUCTION_EXTERNAL_TWO_MACHINE_FORBIDDEN_FIELDS.contains(&"onion_endpoint")
+            && PRODUCTION_EXTERNAL_TWO_MACHINE_FORBIDDEN_FIELDS.contains(&"local_path")
+            && PRODUCTION_EXTERNAL_TWO_MACHINE_FORBIDDEN_FIELDS.contains(&"message_body")
+            && PRODUCTION_EXTERNAL_TWO_MACHINE_FORBIDDEN_FIELDS.contains(&"passphrase")
+            && PRODUCTION_EXTERNAL_TWO_MACHINE_FORBIDDEN_FIELDS.contains(&"key_material")
+            && !local_only_promoted_to_external
+            && !reliable_delivery_claim_allowed
+            && !audited_claim_allowed;
+
+        ProductionExternalTwoMachineEvidenceSummary {
+            accepted,
+            primary_blocker,
+            next_action,
+            machine_a_report_present: input.machine_a_report_present,
+            machine_b_report_present: input.machine_b_report_present,
+            app_version_match: input.app_version_match,
+            build_commit_match: input.build_commit_match,
+            checksum_match: input.checksum_match,
+            invite_created: input.invite_created,
+            safety_compared: input.safety_compared,
+            outbound_exported: input.outbound_exported,
+            inbound_imported: input.inbound_imported,
+            retry_cancel_delete_verified: input.retry_cancel_delete_verified,
+            broad_failure_class_redacted: input.broad_failure_class_redacted,
+            forbidden_fields_present: input.forbidden_fields_present,
+            local_only_rehearsal: input.local_only_rehearsal,
+            fabricated_evidence: input.fabricated_evidence,
+            stable_candidate_evidence_present: accepted,
+            local_only_promoted_to_external,
+            reliable_delivery_claim_allowed,
+            audited_claim_allowed,
+            allowed_fields: PRODUCTION_EXTERNAL_TWO_MACHINE_ALLOWED_FIELDS,
+            forbidden_fields: PRODUCTION_EXTERNAL_TWO_MACHINE_FORBIDDEN_FIELDS,
+            boundary_closed,
+        }
+    }
+
     pub fn production_final_release_acceptance_summary(
         input: ProductionFinalReleaseAcceptanceInput,
     ) -> ProductionFinalReleaseAcceptanceSummary {
@@ -27319,6 +27589,84 @@ pub mod production {
                 stable_only.release_decision(),
                 "stable-candidate-ready-high-risk-hold"
             );
+        }
+
+        #[test]
+        fn external_two_machine_evidence_accepts_only_redacted_real_peer_reports() {
+            let base = ProductionExternalTwoMachineEvidenceInput {
+                machine_a_report_present: true,
+                machine_b_report_present: true,
+                app_version_match: true,
+                build_commit_match: true,
+                checksum_match: true,
+                invite_created: true,
+                safety_compared: true,
+                outbound_exported: true,
+                inbound_imported: true,
+                retry_cancel_delete_verified: true,
+                broad_failure_class_redacted: true,
+                forbidden_fields_present: false,
+                local_only_rehearsal: false,
+                fabricated_evidence: false,
+            };
+
+            let local_only = production_external_two_machine_evidence_summary(
+                ProductionExternalTwoMachineEvidenceInput {
+                    local_only_rehearsal: true,
+                    ..base
+                },
+            );
+            assert!(!local_only.accepted());
+            assert!(!local_only.stable_candidate_evidence_present());
+            assert_eq!(local_only.primary_blocker(), "local-only-rehearsal");
+            assert_eq!(
+                local_only.next_action(),
+                "collect-real-two-machine-peer-reports"
+            );
+            assert!(local_only.local_only_rehearsal());
+            assert!(!local_only.local_only_promoted_to_external());
+            assert!(!local_only.reliable_delivery_claim_allowed());
+            assert!(!local_only.audited_claim_allowed());
+            assert!(local_only.boundary_closed());
+
+            let forbidden = production_external_two_machine_evidence_summary(
+                ProductionExternalTwoMachineEvidenceInput {
+                    forbidden_fields_present: true,
+                    ..base
+                },
+            );
+            assert!(!forbidden.accepted());
+            assert_eq!(forbidden.primary_blocker(), "forbidden-field-present");
+            assert!(forbidden.forbidden_fields_present());
+            assert!(forbidden.forbidden_fields().contains(&"invite_body"));
+            assert!(forbidden.forbidden_fields().contains(&"envelope_payload"));
+            assert!(forbidden.forbidden_fields().contains(&"onion_endpoint"));
+            assert!(forbidden.forbidden_fields().contains(&"local_path"));
+            assert!(forbidden.forbidden_fields().contains(&"message_body"));
+            assert!(forbidden.forbidden_fields().contains(&"passphrase"));
+            assert!(forbidden.forbidden_fields().contains(&"key_material"));
+
+            let accepted = production_external_two_machine_evidence_summary(base);
+            assert!(accepted.accepted());
+            assert!(accepted.stable_candidate_evidence_present());
+            assert_eq!(accepted.primary_blocker(), "none");
+            assert_eq!(accepted.next_action(), "ready-for-maintainer-review");
+            assert!(accepted.machine_a_report_present());
+            assert!(accepted.machine_b_report_present());
+            assert!(accepted.app_version_match());
+            assert!(accepted.build_commit_match());
+            assert!(accepted.checksum_match());
+            assert!(accepted.invite_created());
+            assert!(accepted.safety_compared());
+            assert!(accepted.outbound_exported());
+            assert!(accepted.inbound_imported());
+            assert!(accepted.retry_cancel_delete_verified());
+            assert!(accepted.broad_failure_class_redacted());
+            assert!(!accepted.fabricated_evidence());
+            assert!(accepted.allowed_fields().contains(&"app_version"));
+            assert!(accepted.allowed_fields().contains(&"broad_failure_class"));
+            assert!(!accepted.reliable_delivery_claim_allowed());
+            assert!(!accepted.audited_claim_allowed());
         }
 
         #[test]

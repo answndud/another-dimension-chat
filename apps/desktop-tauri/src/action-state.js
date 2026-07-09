@@ -376,6 +376,115 @@ export function productionFinalReleaseAcceptanceView(input = {}) {
   };
 }
 
+export function productionExternalTwoMachineEvidenceView(input = {}) {
+  const machineAReportPresent = input.machineAReportPresent === true;
+  const machineBReportPresent = input.machineBReportPresent === true;
+  const appVersionMatch = input.appVersionMatch === true;
+  const buildCommitMatch = input.buildCommitMatch === true;
+  const checksumMatch = input.checksumMatch === true;
+  const inviteCreated = input.inviteCreated === true;
+  const safetyCompared = input.safetyCompared === true;
+  const outboundExported = input.outboundExported === true;
+  const inboundImported = input.inboundImported === true;
+  const retryCancelDeleteVerified = input.retryCancelDeleteVerified === true;
+  const broadFailureClass = releaseIntegrityToken(input.broadFailureClass, "none-redacted");
+  const broadFailureClassRedacted = broadFailureClass !== "raw" && !/[/.@]/.test(broadFailureClass);
+  const forbiddenFieldsPresent = input.forbiddenFieldsPresent === true;
+  const localOnlyRehearsal = input.localOnlyRehearsal === true;
+  const fabricatedEvidence = input.fabricatedEvidence === true;
+  const reportsPresent = machineAReportPresent && machineBReportPresent;
+  const flowComplete =
+    inviteCreated &&
+    safetyCompared &&
+    outboundExported &&
+    inboundImported &&
+    retryCancelDeleteVerified;
+  const accepted =
+    reportsPresent &&
+    appVersionMatch &&
+    buildCommitMatch &&
+    checksumMatch &&
+    flowComplete &&
+    broadFailureClassRedacted &&
+    !forbiddenFieldsPresent &&
+    !localOnlyRehearsal &&
+    !fabricatedEvidence;
+  const primaryBlocker = fabricatedEvidence
+    ? "fabricated-evidence"
+    : localOnlyRehearsal
+      ? "local-only-rehearsal"
+      : !reportsPresent
+        ? "missing-peer-report"
+        : !appVersionMatch || !buildCommitMatch || !checksumMatch
+          ? "build-or-checksum-mismatch"
+          : forbiddenFieldsPresent
+            ? "forbidden-field-present"
+            : !flowComplete
+              ? "flow-incomplete"
+              : !broadFailureClassRedacted
+                ? "failure-class-not-redacted"
+                : "none";
+  const nextAction = accepted ? "ready-for-maintainer-review" : "collect-real-two-machine-peer-reports";
+  const allowedFields =
+    "schema_version#app_version#build_commit#platform_pair#checksum_status#machine_a_report_present#machine_b_report_present#invite_created#safety_compared#outbound_exported#inbound_imported#retry_cancel_delete_verified#broad_failure_class";
+  const forbiddenFields =
+    "invite_body#envelope_payload#onion_endpoint#local_path#profile_name#message_body#passphrase#private_key#key_material#raw_logs";
+  const summary = [
+    `external_two_machine_evidence_present=${accepted}`,
+    `stable_candidate_evidence_present=${accepted}`,
+    `primary_blocker=${primaryBlocker}`,
+    `next_action=${nextAction}`,
+    `machine_a_report_present=${machineAReportPresent}`,
+    `machine_b_report_present=${machineBReportPresent}`,
+    `app_version_match=${appVersionMatch}`,
+    `build_commit_match=${buildCommitMatch}`,
+    `checksum_match=${checksumMatch}`,
+    `invite_created=${inviteCreated}`,
+    `safety_compared=${safetyCompared}`,
+    `outbound_exported=${outboundExported}`,
+    `inbound_imported=${inboundImported}`,
+    `retry_cancel_delete_verified=${retryCancelDeleteVerified}`,
+    `broad_failure_class=${broadFailureClass}`,
+    `broad_failure_class_redacted=${broadFailureClassRedacted}`,
+    `forbidden_fields_present=${forbiddenFieldsPresent}`,
+    `local_only_rehearsal=${localOnlyRehearsal}`,
+    `fabricated_evidence=${fabricatedEvidence}`,
+    "local_only_promoted_to_external=false",
+    "reliable_delivery_claim_allowed=false",
+    "audited_claim_allowed=false",
+    `allowed_fields=${allowedFields}`,
+    `forbidden_fields=${forbiddenFields}`,
+  ].join(" ");
+  return {
+    accepted,
+    stableCandidateEvidencePresent: accepted,
+    primaryBlocker,
+    nextAction,
+    machineAReportPresent,
+    machineBReportPresent,
+    appVersionMatch,
+    buildCommitMatch,
+    checksumMatch,
+    inviteCreated,
+    safetyCompared,
+    outboundExported,
+    inboundImported,
+    retryCancelDeleteVerified,
+    broadFailureClass,
+    broadFailureClassRedacted,
+    forbiddenFieldsPresent,
+    localOnlyRehearsal,
+    fabricatedEvidence,
+    localOnlyPromotedToExternal: false,
+    reliableDeliveryClaimAllowed: false,
+    auditedClaimAllowed: false,
+    allowedFields,
+    forbiddenFields,
+    summary,
+    boundary: `${summary} evidence_scope=real-two-machine-redacted-peer-reports-only`,
+  };
+}
+
 function releaseIntegrityToken(value, fallback = "unknown") {
   const token = String(value ?? "")
     .trim()
