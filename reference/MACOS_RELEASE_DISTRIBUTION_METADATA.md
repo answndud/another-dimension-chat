@@ -23,8 +23,9 @@ checksum, provenance, and public copy all use the same architecture value.
 
 The generator writes only under ignored generated artifact directories and
 copies the selected artifact beside the generated checksum, provenance, release
-body, and manifest so validation uses one same-release asset authority
-directory. For signed/notarized or stable candidates it requires
+body, install guide, release notes, update integrity guide, and manifest so
+validation uses one same-release asset authority directory. For
+signed/notarized or stable candidates it requires
 `AD_MACOS_SIGNED_RC_PROVENANCE_IN` from the signed build/notarization path and
 binds that provenance to the artifact filename, artifact SHA-256, source
 commit, target architecture, signed/notarized/stapled status, Gatekeeper
@@ -42,6 +43,9 @@ Each macOS release distribution manifest uses
 - version and release class,
 - artifact filename, SHA-256, size, platform, architecture, signing status,
   notarization status, stapled status, checksum file, and provenance file,
+- support files for install guide, release notes, update integrity guide, and
+  GitHub release body, each bound to the same version, source commit, artifact
+  filename, SHA-256, signing status, and notarization status,
 - for signed/notarized or stable candidates, signed-build provenance proving
   the DMG-contained app verifier was available, the app mounted, contained-app
   codesign passed, contained-app Gatekeeper execute assessment passed, and the
@@ -51,12 +55,12 @@ Each macOS release distribution manifest uses
 - release upload, release body edit, and generated artifact commit flags.
 
 The manifest validator also checks sibling artifact bytes, the `.sha256` file,
-the provenance JSON, signed RC provenance binding, and signed/notarized
-contained-app evidence before accepting a candidate. For signed/notarized or
-stable candidates, it also runs live `codesign`, `spctl`, and `stapler`
-validation against the artifact; a text file with forged JSON is rejected.
-Acceptance still does not mean release upload authorization or public artifact
-readiness.
+the provenance JSON, support file identity consistency, signed RC provenance
+binding, and signed/notarized contained-app evidence before accepting a
+candidate. For signed/notarized or stable candidates, it also runs live
+`codesign`, `spctl`, and `stapler` validation against the artifact; a text file
+with forged JSON is rejected. Acceptance still does not mean release upload
+authorization or public artifact readiness.
 
 ## Current Gate Flags
 
@@ -64,6 +68,7 @@ readiness.
 - macos_release_distribution_manifest_validator_available=true
 - macos_release_distribution_checksum_bytes_verified=true
 - macos_release_distribution_provenance_consistency_verified=true
+- macos_release_distribution_support_files_consistent=true
 - macos_release_distribution_dmg_contained_app_evidence_required=true
 - macos_release_distribution_signed_artifact_tools_verified=true
 - macos_dmg_contained_app_verifier_available=false
