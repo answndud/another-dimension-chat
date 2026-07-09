@@ -1754,6 +1754,28 @@ pub mod production {
         "full_global_correlation_safe",
     ];
 
+    const PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_REQUIRED_FIELDS: &[&str] = &[
+        "artifact_filename",
+        "artifact_sha256",
+        "source_commit",
+        "version",
+        "bundle_target",
+        "webview2_runtime_required",
+        "checksum_file",
+        "provenance_file",
+        "manifest_sha256",
+    ];
+
+    const PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_FORBIDDEN_CLAIMS: &[&str] = &[
+        "windows_public_artifact_ready",
+        "windows_installer_ready",
+        "windows_signing_ready",
+        "windows_public_artifact_upload_allowed",
+        "windows_production_claim_allowed",
+        "smartscreen_security_boundary_claimed",
+        "local_runtime_promoted_to_delivery_proof",
+    ];
+
     const PRODUCTION_EXTERNAL_TWO_MACHINE_ALLOWED_FIELDS: &[&str] = &[
         "schema_version",
         "app_version",
@@ -4089,6 +4111,39 @@ pub mod production {
         release_decision: &'static str,
         redacted_evidence_fields: &'static [&'static str],
         forbidden_public_claims: &'static [&'static str],
+        boundary_closed: bool,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ProductionWindowsPublicArtifactCandidateSummary {
+        artifact_type: &'static str,
+        bundle_target: &'static str,
+        default_extension: &'static str,
+        portable_default_allowed: bool,
+        msi_alternative_allowed: bool,
+        webview2_runtime_required: bool,
+        webview2_failure_class_redacted: bool,
+        app_data_resolver: &'static str,
+        app_data_resolver_shared_storage_semantics: bool,
+        raw_local_path_returned: bool,
+        support_report_raw_path_allowed: bool,
+        shared_core_bypass_allowed: bool,
+        profile_session_message_storage_bypass_allowed: bool,
+        manifest_checksum_provenance_required: bool,
+        manifest_validates_version_commit_installer_webview2_no_auto_update: bool,
+        runtime_result_external_peer_evidence_separated: bool,
+        local_runtime_promoted_to_delivery_proof: bool,
+        smartscreen_security_boundary_claimed: bool,
+        code_signing_security_boundary_claimed: bool,
+        store_reputation_security_boundary_claimed: bool,
+        auto_update_claimed: bool,
+        windows_public_artifact_ready: bool,
+        windows_installer_ready: bool,
+        windows_signing_ready: bool,
+        windows_public_artifact_upload_allowed: bool,
+        windows_production_claim_allowed: bool,
+        required_fields: &'static [&'static str],
+        forbidden_claims: &'static [&'static str],
         boundary_closed: bool,
     }
 
@@ -8384,6 +8439,124 @@ pub mod production {
 
         pub fn forbidden_public_claims(self) -> &'static [&'static str] {
             self.forbidden_public_claims
+        }
+
+        pub fn boundary_closed(self) -> bool {
+            self.boundary_closed
+        }
+    }
+
+    impl ProductionWindowsPublicArtifactCandidateSummary {
+        pub fn artifact_type(self) -> &'static str {
+            self.artifact_type
+        }
+
+        pub fn bundle_target(self) -> &'static str {
+            self.bundle_target
+        }
+
+        pub fn default_extension(self) -> &'static str {
+            self.default_extension
+        }
+
+        pub fn portable_default_allowed(self) -> bool {
+            self.portable_default_allowed
+        }
+
+        pub fn msi_alternative_allowed(self) -> bool {
+            self.msi_alternative_allowed
+        }
+
+        pub fn webview2_runtime_required(self) -> bool {
+            self.webview2_runtime_required
+        }
+
+        pub fn webview2_failure_class_redacted(self) -> bool {
+            self.webview2_failure_class_redacted
+        }
+
+        pub fn app_data_resolver(self) -> &'static str {
+            self.app_data_resolver
+        }
+
+        pub fn app_data_resolver_shared_storage_semantics(self) -> bool {
+            self.app_data_resolver_shared_storage_semantics
+        }
+
+        pub fn raw_local_path_returned(self) -> bool {
+            self.raw_local_path_returned
+        }
+
+        pub fn support_report_raw_path_allowed(self) -> bool {
+            self.support_report_raw_path_allowed
+        }
+
+        pub fn shared_core_bypass_allowed(self) -> bool {
+            self.shared_core_bypass_allowed
+        }
+
+        pub fn profile_session_message_storage_bypass_allowed(self) -> bool {
+            self.profile_session_message_storage_bypass_allowed
+        }
+
+        pub fn manifest_checksum_provenance_required(self) -> bool {
+            self.manifest_checksum_provenance_required
+        }
+
+        pub fn manifest_validates_version_commit_installer_webview2_no_auto_update(self) -> bool {
+            self.manifest_validates_version_commit_installer_webview2_no_auto_update
+        }
+
+        pub fn runtime_result_external_peer_evidence_separated(self) -> bool {
+            self.runtime_result_external_peer_evidence_separated
+        }
+
+        pub fn local_runtime_promoted_to_delivery_proof(self) -> bool {
+            self.local_runtime_promoted_to_delivery_proof
+        }
+
+        pub fn smartscreen_security_boundary_claimed(self) -> bool {
+            self.smartscreen_security_boundary_claimed
+        }
+
+        pub fn code_signing_security_boundary_claimed(self) -> bool {
+            self.code_signing_security_boundary_claimed
+        }
+
+        pub fn store_reputation_security_boundary_claimed(self) -> bool {
+            self.store_reputation_security_boundary_claimed
+        }
+
+        pub fn auto_update_claimed(self) -> bool {
+            self.auto_update_claimed
+        }
+
+        pub fn windows_public_artifact_ready(self) -> bool {
+            self.windows_public_artifact_ready
+        }
+
+        pub fn windows_installer_ready(self) -> bool {
+            self.windows_installer_ready
+        }
+
+        pub fn windows_signing_ready(self) -> bool {
+            self.windows_signing_ready
+        }
+
+        pub fn windows_public_artifact_upload_allowed(self) -> bool {
+            self.windows_public_artifact_upload_allowed
+        }
+
+        pub fn windows_production_claim_allowed(self) -> bool {
+            self.windows_production_claim_allowed
+        }
+
+        pub fn required_fields(self) -> &'static [&'static str] {
+            self.required_fields
+        }
+
+        pub fn forbidden_claims(self) -> &'static [&'static str] {
+            self.forbidden_claims
         }
 
         pub fn boundary_closed(self) -> bool {
@@ -21514,6 +21687,105 @@ pub mod production {
         }
     }
 
+    pub fn production_windows_public_artifact_candidate_summary(
+    ) -> ProductionWindowsPublicArtifactCandidateSummary {
+        let artifact_type = "windows-nsis-exe-installer-candidate";
+        let bundle_target = "nsis";
+        let default_extension = ".exe";
+        let portable_default_allowed = false;
+        let msi_alternative_allowed = true;
+        let webview2_runtime_required = true;
+        let webview2_failure_class_redacted = true;
+        let app_data_resolver = "tauri-app-data";
+        let app_data_resolver_shared_storage_semantics = true;
+        let raw_local_path_returned = false;
+        let support_report_raw_path_allowed = false;
+        let shared_core_bypass_allowed = false;
+        let profile_session_message_storage_bypass_allowed = false;
+        let manifest_checksum_provenance_required = true;
+        let manifest_validates_version_commit_installer_webview2_no_auto_update = true;
+        let runtime_result_external_peer_evidence_separated = true;
+        let local_runtime_promoted_to_delivery_proof = false;
+        let smartscreen_security_boundary_claimed = false;
+        let code_signing_security_boundary_claimed = false;
+        let store_reputation_security_boundary_claimed = false;
+        let auto_update_claimed = false;
+        let windows_public_artifact_ready = false;
+        let windows_installer_ready = false;
+        let windows_signing_ready = false;
+        let windows_public_artifact_upload_allowed = false;
+        let windows_production_claim_allowed = false;
+        let boundary_closed = PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_REQUIRED_FIELDS
+            .contains(&"artifact_sha256")
+            && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_REQUIRED_FIELDS.contains(&"source_commit")
+            && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_REQUIRED_FIELDS.contains(&"bundle_target")
+            && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_REQUIRED_FIELDS
+                .contains(&"webview2_runtime_required")
+            && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_FORBIDDEN_CLAIMS
+                .contains(&"windows_public_artifact_ready")
+            && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_FORBIDDEN_CLAIMS
+                .contains(&"smartscreen_security_boundary_claimed")
+            && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_FORBIDDEN_CLAIMS
+                .contains(&"local_runtime_promoted_to_delivery_proof")
+            && artifact_type == "windows-nsis-exe-installer-candidate"
+            && bundle_target == "nsis"
+            && default_extension == ".exe"
+            && !portable_default_allowed
+            && msi_alternative_allowed
+            && webview2_runtime_required
+            && webview2_failure_class_redacted
+            && app_data_resolver_shared_storage_semantics
+            && !raw_local_path_returned
+            && !support_report_raw_path_allowed
+            && !shared_core_bypass_allowed
+            && !profile_session_message_storage_bypass_allowed
+            && manifest_checksum_provenance_required
+            && manifest_validates_version_commit_installer_webview2_no_auto_update
+            && runtime_result_external_peer_evidence_separated
+            && !local_runtime_promoted_to_delivery_proof
+            && !smartscreen_security_boundary_claimed
+            && !code_signing_security_boundary_claimed
+            && !store_reputation_security_boundary_claimed
+            && !auto_update_claimed
+            && !windows_public_artifact_ready
+            && !windows_installer_ready
+            && !windows_signing_ready
+            && !windows_public_artifact_upload_allowed
+            && !windows_production_claim_allowed;
+
+        ProductionWindowsPublicArtifactCandidateSummary {
+            artifact_type,
+            bundle_target,
+            default_extension,
+            portable_default_allowed,
+            msi_alternative_allowed,
+            webview2_runtime_required,
+            webview2_failure_class_redacted,
+            app_data_resolver,
+            app_data_resolver_shared_storage_semantics,
+            raw_local_path_returned,
+            support_report_raw_path_allowed,
+            shared_core_bypass_allowed,
+            profile_session_message_storage_bypass_allowed,
+            manifest_checksum_provenance_required,
+            manifest_validates_version_commit_installer_webview2_no_auto_update,
+            runtime_result_external_peer_evidence_separated,
+            local_runtime_promoted_to_delivery_proof,
+            smartscreen_security_boundary_claimed,
+            code_signing_security_boundary_claimed,
+            store_reputation_security_boundary_claimed,
+            auto_update_claimed,
+            windows_public_artifact_ready,
+            windows_installer_ready,
+            windows_signing_ready,
+            windows_public_artifact_upload_allowed,
+            windows_production_claim_allowed,
+            required_fields: PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_REQUIRED_FIELDS,
+            forbidden_claims: PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_FORBIDDEN_CLAIMS,
+            boundary_closed,
+        }
+    }
+
     pub fn production_mobile_install_update_integrity_boundary_summary(
     ) -> ProductionMobileInstallUpdateIntegrityBoundarySummary {
         let supply_chain = production_supply_chain_integrity_boundary_summary();
@@ -28275,6 +28547,56 @@ pub mod production {
                 stable_only.release_decision(),
                 "stable-candidate-ready-high-risk-hold"
             );
+        }
+
+        #[test]
+        fn windows_public_artifact_candidate_keeps_claims_false_and_shared_core_bound() {
+            let summary = production_windows_public_artifact_candidate_summary();
+
+            assert_eq!(
+                summary.artifact_type(),
+                "windows-nsis-exe-installer-candidate"
+            );
+            assert_eq!(summary.bundle_target(), "nsis");
+            assert_eq!(summary.default_extension(), ".exe");
+            assert!(!summary.portable_default_allowed());
+            assert!(summary.msi_alternative_allowed());
+            assert!(summary.webview2_runtime_required());
+            assert!(summary.webview2_failure_class_redacted());
+            assert_eq!(summary.app_data_resolver(), "tauri-app-data");
+            assert!(summary.app_data_resolver_shared_storage_semantics());
+            assert!(!summary.raw_local_path_returned());
+            assert!(!summary.support_report_raw_path_allowed());
+            assert!(!summary.shared_core_bypass_allowed());
+            assert!(!summary.profile_session_message_storage_bypass_allowed());
+            assert!(summary.manifest_checksum_provenance_required());
+            assert!(summary.manifest_validates_version_commit_installer_webview2_no_auto_update());
+            assert!(summary.runtime_result_external_peer_evidence_separated());
+            assert!(!summary.local_runtime_promoted_to_delivery_proof());
+            assert!(!summary.smartscreen_security_boundary_claimed());
+            assert!(!summary.code_signing_security_boundary_claimed());
+            assert!(!summary.store_reputation_security_boundary_claimed());
+            assert!(!summary.auto_update_claimed());
+            assert!(!summary.windows_public_artifact_ready());
+            assert!(!summary.windows_installer_ready());
+            assert!(!summary.windows_signing_ready());
+            assert!(!summary.windows_public_artifact_upload_allowed());
+            assert!(!summary.windows_production_claim_allowed());
+            assert!(summary.required_fields().contains(&"artifact_sha256"));
+            assert!(summary.required_fields().contains(&"source_commit"));
+            assert!(summary
+                .required_fields()
+                .contains(&"webview2_runtime_required"));
+            assert!(summary
+                .forbidden_claims()
+                .contains(&"windows_public_artifact_ready"));
+            assert!(summary
+                .forbidden_claims()
+                .contains(&"smartscreen_security_boundary_claimed"));
+            assert!(summary
+                .forbidden_claims()
+                .contains(&"local_runtime_promoted_to_delivery_proof"));
+            assert!(summary.boundary_closed());
         }
 
         #[test]

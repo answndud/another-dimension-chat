@@ -684,6 +684,76 @@ export function productionWindowsRuntimeParityView(input = {}) {
   };
 }
 
+export function productionWindowsPublicArtifactCandidateView(input = {}) {
+  const platform = releaseIntegrityToken(input.platform, "unknown-platform");
+  const artifactType = releaseIntegrityToken(
+    input.artifactType,
+    "windows-nsis-exe-installer-candidate",
+  );
+  const bundleTarget = releaseIntegrityToken(input.bundleTarget, "nsis");
+  const summary = [
+    "windows_public_artifact_candidate=true",
+    `artifact_type=${artifactType}`,
+    `bundle_target=${bundleTarget}`,
+    "default_extension=.exe",
+    "portable_default_allowed=false",
+    "msi_alternative_allowed=true",
+    "webview2_runtime_required=true",
+    "webview2_failure_class_redacted=true",
+    "app_data_resolver=tauri-app-data",
+    "app_data_resolver_shared_storage_semantics=true",
+    "raw_local_path_returned=false",
+    "support_report_raw_path_allowed=false",
+    "shared_core_bypass_allowed=false",
+    "profile_session_message_storage_bypass_allowed=false",
+    "manifest_checksum_provenance_required=true",
+    "manifest_validates_version_commit_installer_webview2_no_auto_update=true",
+    "runtime_result_external_peer_evidence_separated=true",
+    "local_runtime_promoted_to_delivery_proof=false",
+    "smartscreen_security_boundary_claimed=false",
+    "code_signing_security_boundary_claimed=false",
+    "store_reputation_security_boundary_claimed=false",
+    "auto_update_claimed=false",
+    "windows_public_artifact_ready=false",
+    "windows_installer_ready=false",
+    "windows_signing_ready=false",
+    "windows_public_artifact_upload_allowed=false",
+    "windows_production_claim_allowed=false",
+    `observed_platform=${platform}`,
+  ].join(" ");
+  return {
+    platform,
+    artifactType,
+    bundleTarget,
+    defaultExtension: ".exe",
+    portableDefaultAllowed: false,
+    msiAlternativeAllowed: true,
+    webview2RuntimeRequired: true,
+    webview2FailureClassRedacted: true,
+    appDataResolver: "tauri-app-data",
+    appDataResolverSharedStorageSemantics: true,
+    rawLocalPathReturned: false,
+    supportReportRawPathAllowed: false,
+    sharedCoreBypassAllowed: false,
+    profileSessionMessageStorageBypassAllowed: false,
+    manifestChecksumProvenanceRequired: true,
+    manifestValidatesVersionCommitInstallerWebview2NoAutoUpdate: true,
+    runtimeResultExternalPeerEvidenceSeparated: true,
+    localRuntimePromotedToDeliveryProof: false,
+    smartscreenSecurityBoundaryClaimed: false,
+    codeSigningSecurityBoundaryClaimed: false,
+    storeReputationSecurityBoundaryClaimed: false,
+    autoUpdateClaimed: false,
+    windowsPublicArtifactReady: false,
+    windowsInstallerReady: false,
+    windowsSigningReady: false,
+    windowsPublicArtifactUploadAllowed: false,
+    windowsProductionClaimAllowed: false,
+    summary,
+    boundary: summary,
+  };
+}
+
 export function productionFirstRunDesktopSummaryView(input = {}) {
   const profileInputPresent = Boolean(input.profileInputPresent);
   const profileUnlocked = Boolean(input.profileUnlocked);
