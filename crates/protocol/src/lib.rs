@@ -1,5 +1,9 @@
 use std::collections::BTreeSet;
 
+pub const MAX_ENVELOPE_CHANNEL_ID_BYTES: usize = 128;
+pub const MAX_ENVELOPE_CIPHERTEXT_BYTES: usize = 8192;
+pub const MAX_ENVELOPE_ENCODED_BYTES: usize = 17_000;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MessageType {
     Data,
@@ -48,20 +52,42 @@ impl Envelope {
     }
 
     pub fn decode(value: &str) -> Result<Self, ProtocolError> {
-        let parts = value.trim().split('|').collect::<Vec<_>>();
+        let value = value.trim();
+        if value.len() > MAX_ENVELOPE_ENCODED_BYTES {
+            return Err(ProtocolError::PayloadTooLarge);
+        }
+        let parts = value.split('|').collect::<Vec<_>>();
         if parts.len() != 6 || parts[0] != "ADENV1" {
             return Err(ProtocolError::InvalidEnvelope);
         }
+        if parts[2].is_empty() || parts[2].len() > MAX_ENVELOPE_CHANNEL_ID_BYTES {
+            return Err(ProtocolError::InvalidEnvelope);
+        }
+        if parts[5].len() > MAX_ENVELOPE_CIPHERTEXT_BYTES * 2 {
+            return Err(ProtocolError::PayloadTooLarge);
+        }
+        let protocol_version = parts[1]
+            .parse()
+            .map_err(|_| ProtocolError::InvalidEnvelope)?;
+        if protocol_version != 1 {
+            return Err(ProtocolError::InvalidEnvelope);
+        }
+        let message_number = parts[3]
+            .parse()
+            .map_err(|_| ProtocolError::InvalidEnvelope)?;
+        if message_number == 0 {
+            return Err(ProtocolError::InvalidMessageNumber);
+        }
+        let padded_ciphertext = decode_hex(parts[5])?;
+        if padded_ciphertext.len() > MAX_ENVELOPE_CIPHERTEXT_BYTES {
+            return Err(ProtocolError::PayloadTooLarge);
+        }
         Ok(Self {
-            protocol_version: parts[1]
-                .parse()
-                .map_err(|_| ProtocolError::InvalidEnvelope)?,
+            protocol_version,
             channel_id: parts[2].to_string(),
-            message_number: parts[3]
-                .parse()
-                .map_err(|_| ProtocolError::InvalidEnvelope)?,
+            message_number,
             message_type: MessageType::parse(parts[4])?,
-            padded_ciphertext: decode_hex(parts[5])?,
+            padded_ciphertext,
         })
     }
 }
@@ -265,6 +291,52 @@ mod tests {
     fn rejects_payloads_over_max_bucket() {
         let payload = vec![1_u8; 8193];
         assert_eq!(pad_to_bucket(&payload), Err(ProtocolError::PayloadTooLarge));
+    }
+
+    #[test]
+    fn envelope_decode_rejects_malformed_wrong_type_and_oversized_inputs() {
+        let valid = Envelope {
+            protocol_version: 1,
+            channel_id: "chan".to_string(),
+            message_number: 1,
+            message_type: MessageType::Data,
+            padded_ciphertext: vec![1, 2, 3],
+        };
+        assert_eq!(Envelope::decode(&valid.encode()), Ok(valid));
+        assert_eq!(
+            Envelope::decode("not-json"),
+            Err(ProtocolError::InvalidEnvelope)
+        );
+        assert_eq!(
+            Envelope::decode("ADENV1|1|chan|1|unknown|00"),
+            Err(ProtocolError::InvalidMessageType)
+        );
+        assert_eq!(
+            Envelope::decode("ADENV1|2|chan|1|data|00"),
+            Err(ProtocolError::InvalidEnvelope)
+        );
+        assert_eq!(
+            Envelope::decode("ADENV1|1|chan|0|data|00"),
+            Err(ProtocolError::InvalidMessageNumber)
+        );
+        assert_eq!(
+            Envelope::decode("ADENV1|1|chan|1|data|0"),
+            Err(ProtocolError::InvalidHex)
+        );
+        assert_eq!(
+            Envelope::decode(&format!(
+                "ADENV1|1|chan|1|data|{}",
+                "00".repeat(MAX_ENVELOPE_CIPHERTEXT_BYTES + 1)
+            )),
+            Err(ProtocolError::PayloadTooLarge)
+        );
+        assert_eq!(
+            Envelope::decode(&format!(
+                "ADENV1|1|{}|1|data|00",
+                "c".repeat(MAX_ENVELOPE_CHANNEL_ID_BYTES + 1)
+            )),
+            Err(ProtocolError::InvalidEnvelope)
+        );
     }
 
     #[test]
