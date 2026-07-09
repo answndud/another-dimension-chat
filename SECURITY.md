@@ -30,6 +30,15 @@ request redacted status and explicit user-triggered actions only; they must not
 define separate security-sensitive protocol, storage, transport, pairing, or
 contact-discovery behavior.
 
+Public launch copy may describe the implemented app as accountless 1:1 private
+messaging with pairwise invites, mandatory safety comparison, encrypted
+user-mediated exchange, local data ownership, and redacted support diagnostics.
+High-Risk Mode copy may mention its defined threat model, onion-only advanced
+transport, local-at-rest hardening, and update-integrity checks. It must still
+say that audited security, full censorship resistance, Briar/Cwtch equivalence,
+compromised-device safety, coercion safety, and full global traffic-correlation
+defense are not claimed.
+
 Default-build production code now includes narrow decision boundaries for pairing, session setup, durable local session lifecycle records, local data lifecycle controls, forward-only schema versioning, marker-only rollback detection, envelope handling, explicit manual envelope export/import runtime gating, local manual E2EE runtime failure-model gating, passphrase-first key and rollback non-claim policy gating, explicit transport envelope I/O non-claim gating, replay rejection, transport policy, fail-closed onion transport behavior, pre-network transport blockers, backup-exclusion verification boundaries, onion service key lifecycle policy boundaries, onion service launch preflight boundaries, bridge/censorship readiness policy boundaries, bootstrap execution boundaries, bounded Arti adapter spikes, local-only manual bootstrap gates, profile-scoped transport directory resolution, persistent Arti client lifecycle ownership, storage policy tests, SQLCipher-backed storage work, passphrase unlock tests, high-risk unlock policy tests, replay-window persistence tests, receive-flow replay commit-order tests, session-scoped opaque replay record-id derivation, and desktop beta recovery UI checks. These are implementation guardrails, not a secure messenger release.
 
 The public cross-component replacement inventory is tracked in `reference/COMPONENT_BOUNDARIES.md`. It is a boundary map for future work, not a production-readiness statement.

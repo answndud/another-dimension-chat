@@ -13,13 +13,15 @@
         <h1 id="app-title">Another Dimension Chat</h1>
         <p id="local-dev-peer-label" class="local-dev-peer-label" hidden></p>
         <section class="public-beta-warning" aria-labelledby="public-beta-warning-title">
-          <p class="eyebrow" data-i18n="publicBetaEyebrow">Unsigned public beta</p>
-          <h2 id="public-beta-warning-title" data-i18n="publicBetaWarningTitle">Experimental beta only</h2>
+          <p class="eyebrow" data-i18n="publicBetaEyebrow">No-account private messenger beta</p>
+          <h2 id="public-beta-warning-title" data-i18n="publicBetaWarningTitle">
+            Private 1:1 chat without a central trusted server
+          </h2>
           <p data-i18n="publicBetaWarningBody">
-            This build is unsigned, not notarized, not audited, not production-ready, and must not be used for sensitive communication. High-Risk Mode has a defined threat matrix; compromised endpoints, direct coercion, and full global traffic correlation are not protected.
+            Use this unsigned experimental public beta for pairwise invites, mandatory safety comparison, encrypted manual envelope exchange, local data ownership, and redacted support diagnostics. It is not notarized, not audited, not production-ready, and sensitive communication prohibited.
           </p>
           <p data-i18n="publicBetaNetworkBody">
-            Network and onion delivery stay off on launch. They require manual permission and an explicit delivery action.
+            Default exchange is manual encrypted envelopes. Network and onion delivery stay off on launch and require manual permission plus an explicit delivery action.
           </p>
           <ul class="public-beta-gate" aria-label="Public beta use boundary" data-i18n-aria-label="publicBetaGateLabel">
             <li data-i18n="publicBetaChecksumBody">
@@ -29,7 +31,7 @@
               If macOS blocks the unsigned app, use Privacy & Security manual allow only after the checksum matches.
             </li>
             <li data-i18n="publicBetaNoUpdateBody">
-              There is no auto-update, signing, notarization, completed review, Briar/Cwtch-equivalence claim, coercion-safe claim, or secure messenger readiness claim.
+              High-Risk Mode has a defined threat model, onion-only advanced transport, local-at-rest hardening, and redacted support. There is no auto-update, signing, notarization, completed review, full censorship-resistance claim, external onion delivery claim, Briar/Cwtch-equivalence claim, compromised-device-safe claim, coercion-safe claim, or secure messenger readiness claim.
             </li>
           </ul>
           <p
@@ -52,13 +54,13 @@
             data-i18n-aria-label="firstRunChecklistLabel"
           >
             <li data-i18n="firstRunProfileStep">
-              Unlock, create, or reopen a local profile before room actions.
+              Create, unlock, or reopen your local profile before room actions.
             </li>
             <li data-i18n="firstRunRoomStep">
-              Create an invite room or paste the invite code you received.
+              Create a pairwise invite room or paste the invite code you received.
             </li>
             <li data-i18n="firstRunVerifyStep">
-              Compare the safety phrase, then write a message.
+              Compare the mandatory safety phrase, then write a message.
             </li>
             <li data-i18n="firstRunManualMessageStep">
               Export/import the manual encrypted envelope, then reply, retry, cancel, or delete locally.
@@ -72,7 +74,7 @@
             class="first-run-primary-next-action"
             data-i18n="firstRunPrimaryNextAction"
           >
-            Next: enter a local profile and passphrase.
+            Next: create or unlock your local profile.
           </p>
         </section>
         <details class="system-settings-panel" role="dialog" aria-modal="true" aria-labelledby="app-settings-title">
