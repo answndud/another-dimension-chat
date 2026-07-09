@@ -137,6 +137,21 @@ pub const DESKTOP_PLATFORM_BOUNDARY_POLICIES: [&str; 16] = [
     "signing_notarization_or_store_not_trusted_security_boundary",
 ];
 
+pub const WINDOWS_PUBLIC_ARTIFACT_ADAPTER_POLICIES: [&str; 12] = [
+    "windows_public_artifact_candidate_source_gate",
+    "tauri_app_data_resolver_only_selects_private_root",
+    "app_data_resolver_does_not_return_raw_path_to_frontend",
+    "support_diagnostics_forbid_raw_local_path",
+    "shared_core_profile_session_message_semantics_required",
+    "encrypted_store_required",
+    "profile_session_message_storage_bypass_rejected",
+    "local_delete_wipe_semantics_shared_core",
+    "webview2_failure_class_redacted",
+    "runtime_result_not_external_peer_delivery_evidence",
+    "smartscreen_signing_store_not_security_boundary",
+    "no_auto_update_channel",
+];
+
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct DesktopPlatformBoundarySummary {
     pub desktop_shell: &'static str,
@@ -163,6 +178,32 @@ pub struct DesktopPlatformBoundarySummary {
     pub windows_dpapi_required: bool,
     pub public_beta_security_ready_claimed: bool,
     pub sensitive_communication_allowed: bool,
+    pub policies: &'static [&'static str],
+}
+
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct WindowsPublicArtifactAdapterBoundarySummary {
+    pub artifact_type: &'static str,
+    pub bundle_target: &'static str,
+    pub app_data_resolver: &'static str,
+    pub app_data_resolver_shared_storage_semantics: bool,
+    pub app_data_resolver_public_support_safe: bool,
+    pub raw_local_path_returned: bool,
+    pub support_report_raw_path_allowed: bool,
+    pub encrypted_store_required: bool,
+    pub profile_session_message_storage_bypass_allowed: bool,
+    pub local_delete_wipe_semantics_shared_core: bool,
+    pub diagnostics_redacted: bool,
+    pub webview2_failure_class_redacted: bool,
+    pub runtime_result_external_peer_evidence_separated: bool,
+    pub smartscreen_security_boundary_claimed: bool,
+    pub code_signing_security_boundary_claimed: bool,
+    pub store_reputation_security_boundary_claimed: bool,
+    pub auto_update_claimed: bool,
+    pub windows_app_data_path_review_required: bool,
+    pub windows_redacted_diagnostics_behavior_review_required: bool,
+    pub windows_public_artifact_ready: bool,
+    pub windows_production_claim_allowed: bool,
     pub policies: &'static [&'static str],
 }
 
@@ -193,6 +234,34 @@ pub fn desktop_platform_boundary_summary() -> DesktopPlatformBoundarySummary {
         public_beta_security_ready_claimed: false,
         sensitive_communication_allowed: false,
         policies: &DESKTOP_PLATFORM_BOUNDARY_POLICIES,
+    }
+}
+
+pub fn windows_public_artifact_adapter_boundary_summary(
+) -> WindowsPublicArtifactAdapterBoundarySummary {
+    WindowsPublicArtifactAdapterBoundarySummary {
+        artifact_type: "windows-nsis-exe-installer-candidate",
+        bundle_target: "nsis",
+        app_data_resolver: "tauri-app-data",
+        app_data_resolver_shared_storage_semantics: true,
+        app_data_resolver_public_support_safe: true,
+        raw_local_path_returned: false,
+        support_report_raw_path_allowed: false,
+        encrypted_store_required: true,
+        profile_session_message_storage_bypass_allowed: false,
+        local_delete_wipe_semantics_shared_core: true,
+        diagnostics_redacted: true,
+        webview2_failure_class_redacted: true,
+        runtime_result_external_peer_evidence_separated: true,
+        smartscreen_security_boundary_claimed: false,
+        code_signing_security_boundary_claimed: false,
+        store_reputation_security_boundary_claimed: false,
+        auto_update_claimed: false,
+        windows_app_data_path_review_required: false,
+        windows_redacted_diagnostics_behavior_review_required: false,
+        windows_public_artifact_ready: false,
+        windows_production_claim_allowed: false,
+        policies: &WINDOWS_PUBLIC_ARTIFACT_ADAPTER_POLICIES,
     }
 }
 
@@ -3238,17 +3307,17 @@ fn production_emergency_local_data_wipe(
     }
     let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production emergency wipe failed without exposing local path details")?;
-    let app_cache_root = production_app_cache_dir(&app)
-        .map_err(|_| "production emergency wipe failed without exposing local cache path details")?;
-    let result =
-        run_production_full_local_data_wipe(
-            app_data_root,
-            app_cache_root,
-            "WIPE LOCAL DATA".to_string(),
-        )
-            .map_err(|_| {
-                "production emergency wipe failed without exposing path or key details".to_string()
-            })?;
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
+        "production emergency wipe failed without exposing local cache path details"
+    })?;
+    let result = run_production_full_local_data_wipe(
+        app_data_root,
+        app_cache_root,
+        "WIPE LOCAL DATA".to_string(),
+    )
+    .map_err(|_| {
+        "production emergency wipe failed without exposing path or key details".to_string()
+    })?;
     let _ = state.lock("emergency-local-data-wipe", now_unix_ms());
     Ok(result)
 }
@@ -13502,9 +13571,9 @@ mod tests {
         sanitize_handshake_payload, sanitize_loop_messages, sanitize_pairing_payload,
         sanitize_pairing_rendezvous_endpoint, sanitize_production_message_text,
         sanitize_production_profile, sanitize_production_roundtrip_message,
-        unique_production_roundtrip_dir, ProductUnlockRuntimeState,
-        ProductionOnionClientRuntimeState, ProductionOnionInboundEnvelopeReceiveAttemptResult,
-        PRODUCT_UNLOCK_IDLE_TIMEOUT_MS,
+        unique_production_roundtrip_dir, windows_public_artifact_adapter_boundary_summary,
+        ProductUnlockRuntimeState, ProductionOnionClientRuntimeState,
+        ProductionOnionInboundEnvelopeReceiveAttemptResult, PRODUCT_UNLOCK_IDLE_TIMEOUT_MS,
     };
     static DEV_RENDEZVOUS_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
@@ -17423,6 +17492,48 @@ replay check: no replayed messages after message 2
         assert!(summary
             .policies
             .contains(&"public_diagnostics_redacted_on_all_desktop_platforms"));
+    }
+
+    #[test]
+    fn windows_public_artifact_adapter_keeps_app_data_shared_core_and_redacted() {
+        let summary = windows_public_artifact_adapter_boundary_summary();
+
+        assert_eq!(
+            summary.artifact_type,
+            "windows-nsis-exe-installer-candidate"
+        );
+        assert_eq!(summary.bundle_target, "nsis");
+        assert_eq!(summary.app_data_resolver, "tauri-app-data");
+        assert!(summary.app_data_resolver_shared_storage_semantics);
+        assert!(summary.app_data_resolver_public_support_safe);
+        assert!(!summary.raw_local_path_returned);
+        assert!(!summary.support_report_raw_path_allowed);
+        assert!(summary.encrypted_store_required);
+        assert!(!summary.profile_session_message_storage_bypass_allowed);
+        assert!(summary.local_delete_wipe_semantics_shared_core);
+        assert!(summary.diagnostics_redacted);
+        assert!(summary.webview2_failure_class_redacted);
+        assert!(summary.runtime_result_external_peer_evidence_separated);
+        assert!(!summary.smartscreen_security_boundary_claimed);
+        assert!(!summary.code_signing_security_boundary_claimed);
+        assert!(!summary.store_reputation_security_boundary_claimed);
+        assert!(!summary.auto_update_claimed);
+        assert!(!summary.windows_app_data_path_review_required);
+        assert!(!summary.windows_redacted_diagnostics_behavior_review_required);
+        assert!(!summary.windows_public_artifact_ready);
+        assert!(!summary.windows_production_claim_allowed);
+        assert!(summary
+            .policies
+            .contains(&"tauri_app_data_resolver_only_selects_private_root"));
+        assert!(summary
+            .policies
+            .contains(&"support_diagnostics_forbid_raw_local_path"));
+        assert!(summary
+            .policies
+            .contains(&"shared_core_profile_session_message_semantics_required"));
+        assert!(summary
+            .policies
+            .contains(&"runtime_result_not_external_peer_delivery_evidence"));
     }
 
     #[test]
