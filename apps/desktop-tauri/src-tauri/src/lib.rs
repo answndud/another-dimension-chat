@@ -11,7 +11,10 @@ fn debug_repo_root_from_current_dir() -> Option<std::path::PathBuf> {
     {
         return cwd.parent()?.parent().map(std::path::Path::to_path_buf);
     }
-    if cwd.file_name().is_some_and(|name| name == "another-dimension") {
+    if cwd
+        .file_name()
+        .is_some_and(|name| name == "another-dimension")
+    {
         return Some(cwd);
     }
     None
@@ -214,7 +217,10 @@ fn dev_invite_room_record_path(token: &str) -> Option<std::path::PathBuf> {
     dev_rendezvous_dir().map(|dir| dir.join(invite_token_file_name(token)))
 }
 
-fn dev_invite_room_messages_path(token: &str, receiver_profile: &str) -> Option<std::path::PathBuf> {
+fn dev_invite_room_messages_path(
+    token: &str,
+    receiver_profile: &str,
+) -> Option<std::path::PathBuf> {
     dev_rendezvous_dir().map(|dir| {
         dir.join(format!(
             "messages-{}-{}.json",
@@ -295,10 +301,13 @@ fn register_dev_invite_room(
 
 fn ensure_dev_invite_room_open(token: &str) -> Result<DevInviteRoomRecord, String> {
     if !dev_invite_room_is_enabled() {
-        return Err("invite code cannot be checked because no room rendezvous is running".to_string());
+        return Err(
+            "invite code cannot be checked because no room rendezvous is running".to_string(),
+        );
     }
-    let record = read_dev_invite_room_record(token)?
-        .ok_or_else(|| "invite code is not open; keep the room creator app connected".to_string())?;
+    let record = read_dev_invite_room_record(token)?.ok_or_else(|| {
+        "invite code is not open; keep the room creator app connected".to_string()
+    })?;
     if record.expires_at_ms <= now_unix_ms() {
         return Err("invite code is not open; keep the room creator app connected".to_string());
     }
@@ -378,7 +387,9 @@ struct ProductionOnionClientRuntimeState {
     receive_loop_last_next_blocker: std::sync::Mutex<Option<String>>,
     receive_loop_profile: std::sync::Mutex<Option<String>>,
     #[cfg(feature = "manual-onion-client-attempt")]
-    owner: std::sync::Mutex<Option<another_dimension_transport::arti_adapter_spike::PersistentArtiClientOwner>>,
+    owner: std::sync::Mutex<
+        Option<another_dimension_transport::arti_adapter_spike::PersistentArtiClientOwner>,
+    >,
     #[cfg(feature = "manual-onion-client-attempt")]
     owner_profile: std::sync::Mutex<Option<String>>,
     #[cfg(feature = "manual-onion-client-attempt")]
@@ -418,7 +429,11 @@ struct ProductUnlockRuntimeState {
 }
 
 impl ProductUnlockRuntimeState {
-    fn record_unlocked(&self, profile: String, now_ms: u128) -> ProductionProductUnlockStatusResult {
+    fn record_unlocked(
+        &self,
+        profile: String,
+        now_ms: u128,
+    ) -> ProductionProductUnlockStatusResult {
         let session = ProductUnlockSession {
             profile,
             unlocked_at_ms: now_ms,
@@ -2048,9 +2063,10 @@ fn prototype_status() -> PrototypeStatus {
 #[tauri::command]
 fn production_message_retention_policy() -> ProductionMessageRetentionPolicyResult {
     ProductionMessageRetentionPolicyResult {
-        default_ttl_seconds: another_dimension_core::production::PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
-        allowed_ttl_seconds: another_dimension_core::production::PRODUCTION_ALLOWED_MESSAGE_TTL_SECONDS
-            .to_vec(),
+        default_ttl_seconds:
+            another_dimension_core::production::PRODUCTION_DEFAULT_MESSAGE_TTL_SECONDS,
+        allowed_ttl_seconds:
+            another_dimension_core::production::PRODUCTION_ALLOWED_MESSAGE_TTL_SECONDS.to_vec(),
     }
 }
 
@@ -2175,10 +2191,12 @@ fn production_onion_preflight_check(
 fn production_onion_bootstrap_preflight_check(
     app: tauri::AppHandle,
 ) -> Result<ProductionOnionBootstrapPreflightCheckResult, String> {
-    let app_data_root = production_app_data_dir(&app)
-        .map_err(|_| "production onion bootstrap preflight failed without exposing local path details")?;
-    let app_cache_root = production_app_cache_dir(&app)
-        .map_err(|_| "production onion bootstrap preflight failed without exposing local path details")?;
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production onion bootstrap preflight failed without exposing local path details"
+    })?;
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
+        "production onion bootstrap preflight failed without exposing local path details"
+    })?;
     Ok(run_production_onion_bootstrap_preflight_check(
         app_data_root,
         app_cache_root,
@@ -2190,10 +2208,12 @@ async fn production_onion_client_bootstrap_once(
     app: tauri::AppHandle,
     manual_network_permission: bool,
 ) -> Result<ProductionOnionClientBootstrapOnceResult, String> {
-    let app_data_root = production_app_data_dir(&app)
-        .map_err(|_| "production onion client attempt failed without exposing local path details")?;
-    let app_cache_root = production_app_cache_dir(&app)
-        .map_err(|_| "production onion client attempt failed without exposing local path details")?;
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production onion client attempt failed without exposing local path details"
+    })?;
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
+        "production onion client attempt failed without exposing local path details"
+    })?;
     Ok(run_production_onion_client_bootstrap_once(
         app_data_root,
         app_cache_root,
@@ -2240,11 +2260,7 @@ async fn production_onion_client_attempt_gate_check(
     let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
         "production onion client attempt gate failed without exposing local path details"
     })?;
-    Ok(run_production_onion_client_attempt_gate_check(
-        app_data_root,
-        app_cache_root,
-    )
-    .await)
+    Ok(run_production_onion_client_attempt_gate_check(app_data_root, app_cache_root).await)
 }
 
 #[tauri::command]
@@ -2254,10 +2270,12 @@ fn production_onion_launch_preflight_check(
     profile: String,
     passphrase: String,
 ) -> Result<ProductionOnionLaunchPreflightCheckResult, String> {
-    let app_data_root = production_app_data_dir(&app)
-        .map_err(|_| "production onion launch preflight failed without exposing local path details")?;
-    let app_cache_root = production_app_cache_dir(&app)
-        .map_err(|_| "production onion launch preflight failed without exposing local path details")?;
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production onion launch preflight failed without exposing local path details"
+    })?;
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
+        "production onion launch preflight failed without exposing local path details"
+    })?;
     let persistent_client_ready = run_production_onion_persistent_client_ready(&state)?;
     run_production_onion_launch_preflight_check_with_persistent_client(
         app_data_root,
@@ -2267,9 +2285,9 @@ fn production_onion_launch_preflight_check(
         persistent_client_ready,
     )
     .map_err(|_| {
-            "production onion launch preflight failed without exposing profile, path, or key details"
-                .to_string()
-	    })
+        "production onion launch preflight failed without exposing profile, path, or key details"
+            .to_string()
+    })
 }
 
 #[tauri::command]
@@ -2280,10 +2298,12 @@ fn production_onion_service_launch_attempt(
     passphrase: String,
     manual_network_permission: bool,
 ) -> Result<ProductionOnionServiceLaunchAttemptResult, String> {
-    let app_data_root = production_app_data_dir(&app)
-        .map_err(|_| "production onion service launch failed without exposing local path details")?;
-    let app_cache_root = production_app_cache_dir(&app)
-        .map_err(|_| "production onion service launch failed without exposing local path details")?;
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production onion service launch failed without exposing local path details"
+    })?;
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
+        "production onion service launch failed without exposing local path details"
+    })?;
     run_production_onion_service_launch_attempt(
         app_data_root,
         app_cache_root,
@@ -2644,8 +2664,8 @@ async fn production_onion_outbound_envelope_send_stored_endpoint_attempt(
         "production onion outbound envelope send stored-endpoint attempt blocked without exposing rollback marker details"
             .to_string()
     })?;
-    let persistent_client_ready = run_production_onion_persistent_client_ready(&state)
-        .unwrap_or(false);
+    let persistent_client_ready =
+        run_production_onion_persistent_client_ready(&state).unwrap_or(false);
     let rendezvous_endpoint = match run_production_pairing_session_remote_endpoint_for_transport(
         &app_data_root,
         profile.clone(),
@@ -2798,10 +2818,12 @@ fn production_onion_key_record_prepare(
     profile: String,
     passphrase: String,
 ) -> Result<ProductionOnionKeyRecordPrepareResult, String> {
-    let app_data_root = production_app_data_dir(&app)
-        .map_err(|_| "production onion key record prepare failed without exposing local path details")?;
-    let app_cache_root = production_app_cache_dir(&app)
-        .map_err(|_| "production onion key record prepare failed without exposing local path details")?;
+    let app_data_root = production_app_data_dir(&app).map_err(|_| {
+        "production onion key record prepare failed without exposing local path details"
+    })?;
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
+        "production onion key record prepare failed without exposing local path details"
+    })?;
     run_production_onion_key_record_prepare(app_data_root, app_cache_root, profile, passphrase)
         .map_err(|_| {
             "production onion key record prepare failed without exposing profile, path, or key details"
@@ -2861,27 +2883,35 @@ fn production_product_unlock(
     passphrase: String,
 ) -> Result<ProductionProductUnlockStatusResult, String> {
     let Ok(profile) = sanitize_production_profile(profile) else {
-        return Ok(product_unlock_locked_status("profile-required", now_unix_ms()));
+        return Ok(product_unlock_locked_status(
+            "profile-required",
+            now_unix_ms(),
+        ));
     };
     if passphrase.trim().is_empty() {
-        return Ok(product_unlock_locked_status("passphrase-required", now_unix_ms()));
+        return Ok(product_unlock_locked_status(
+            "passphrase-required",
+            now_unix_ms(),
+        ));
     }
     let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "product unlock failed without exposing local path details")?;
     let app_cache_root = production_app_cache_dir(&app)
         .map_err(|_| "product unlock failed without exposing local cache path details")?;
-    let preflight_gate =
-        run_production_runtime_key_policy_status(&app_data_root, &app_cache_root).map_err(|_| {
+    let preflight_gate = run_production_runtime_key_policy_status(&app_data_root, &app_cache_root)
+        .map_err(|_| {
             "product unlock failed without exposing local path or key policy details".to_string()
         })?;
     if preflight_gate.rollback_suspicion_detected {
-        return Ok(preflight_gate.apply_to_unlock_status(product_unlock_locked_status(
-            "rollback-suspicion-detected",
-            now_unix_ms(),
-        )));
+        return Ok(
+            preflight_gate.apply_to_unlock_status(product_unlock_locked_status(
+                "rollback-suspicion-detected",
+                now_unix_ms(),
+            )),
+        );
     }
-    let prepared_gate =
-        run_production_runtime_key_policy_prepare(&app_data_root, &app_cache_root).map_err(|_| {
+    let prepared_gate = run_production_runtime_key_policy_prepare(&app_data_root, &app_cache_root)
+        .map_err(|_| {
             "product unlock failed without exposing local path or key policy details".to_string()
         })?;
     let profile = profile.as_str().to_string();
@@ -2890,18 +2920,21 @@ fn production_product_unlock(
             let post_unlock_gate =
                 run_production_runtime_key_policy_prepare(&app_data_root, &app_cache_root)
                     .unwrap_or(prepared_gate);
-            Ok(post_unlock_gate.apply_to_unlock_status(
-                state.record_unlocked(profile, now_unix_ms()),
-            ))
+            Ok(post_unlock_gate
+                .apply_to_unlock_status(state.record_unlocked(profile, now_unix_ms())))
         }
-        Ok(_) => Ok(prepared_gate.apply_to_unlock_status(product_unlock_locked_status(
-            "unlock-boundary-not-ready",
-            now_unix_ms(),
-        ))),
-        Err(_) => Ok(prepared_gate.apply_to_unlock_status(product_unlock_locked_status(
-            "wrong-passphrase",
-            now_unix_ms(),
-        ))),
+        Ok(_) => Ok(
+            prepared_gate.apply_to_unlock_status(product_unlock_locked_status(
+                "unlock-boundary-not-ready",
+                now_unix_ms(),
+            )),
+        ),
+        Err(_) => Ok(
+            prepared_gate.apply_to_unlock_status(product_unlock_locked_status(
+                "wrong-passphrase",
+                now_unix_ms(),
+            )),
+        ),
     }
 }
 
@@ -3090,14 +3123,16 @@ fn production_session_lifecycle_delete(
     app: tauri::AppHandle,
     profile: String,
     passphrase: String,
+    confirmation: String,
 ) -> Result<ProductionSessionLifecycleResult, String> {
     let app_data_root = production_app_data_dir(&app).map_err(|_| {
         "production session lifecycle delete failed without exposing local path details"
     })?;
-    run_production_session_lifecycle_delete(app_data_root, profile, passphrase).map_err(|_| {
-        "production session lifecycle delete failed without exposing profile, path, or key details"
-            .to_string()
-    })
+    run_production_session_lifecycle_delete(app_data_root, profile, passphrase, confirmation)
+        .map_err(|_| {
+            "production session lifecycle delete failed without exposing profile, path, or key details"
+                .to_string()
+        })
 }
 
 #[tauri::command]
@@ -3105,13 +3140,16 @@ fn production_conversation_delete(
     app: tauri::AppHandle,
     profile: String,
     passphrase: String,
+    confirmation: String,
 ) -> Result<ProductionConversationDeleteResult, String> {
     let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production conversation delete failed without exposing local path details")?;
-    run_production_conversation_delete(app_data_root, profile, passphrase).map_err(|_| {
-        "production conversation delete failed without exposing profile, path, message, or key details"
-            .to_string()
-    })
+    run_production_conversation_delete(app_data_root, profile, passphrase, confirmation).map_err(
+        |_| {
+            "production conversation delete failed without exposing profile, path, message, or key details"
+                .to_string()
+        },
+    )
 }
 
 #[tauri::command]
@@ -3123,10 +3161,11 @@ fn production_profile_delete(
 ) -> Result<ProductionProfileDeleteResult, String> {
     let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production profile delete failed without exposing local path details")?;
-    let result = run_production_profile_delete(app_data_root, profile, confirmation).map_err(|_| {
-        "production profile delete failed without exposing profile store path or key details"
-            .to_string()
-    })?;
+    let result =
+        run_production_profile_delete(app_data_root, profile, confirmation).map_err(|_| {
+            "production profile delete failed without exposing profile store path or key details"
+                .to_string()
+        })?;
     let _ = state.lock("profile-delete", now_unix_ms());
     Ok(ProductionProfileDeleteResult {
         product_unlock_locked: true,
@@ -3174,10 +3213,10 @@ fn production_full_local_data_wipe(
         .map_err(|_| "production full wipe failed without exposing local path details")?;
     let app_cache_root = production_app_cache_dir(&app)
         .map_err(|_| "production full wipe failed without exposing local cache path details")?;
-    let result =
-        run_production_full_local_data_wipe(app_data_root, app_cache_root, confirmation).map_err(
-            |_| "production full wipe failed without exposing path or key details".to_string(),
-        )?;
+    let result = run_production_full_local_data_wipe(app_data_root, app_cache_root, confirmation)
+        .map_err(|_| {
+        "production full wipe failed without exposing path or key details".to_string()
+    })?;
     let _ = state.lock("full-local-data-wipe", now_unix_ms());
     Ok(result)
 }
@@ -3317,8 +3356,9 @@ fn production_message_envelope_export(
 ) -> Result<ProductionMessageEnvelopeExportResult, String> {
     let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production message export failed without exposing local path details")?;
-    let app_cache_root = production_app_cache_dir(&app)
-        .map_err(|_| "production message export failed without exposing local cache path details")?;
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
+        "production message export failed without exposing local cache path details"
+    })?;
     ensure_runtime_key_policy_allows_actions(&app_data_root, &app_cache_root).map_err(|_| {
         "production message export blocked without exposing rollback marker details".to_string()
     })?;
@@ -3348,8 +3388,9 @@ fn production_message_envelope_import(
 ) -> Result<ProductionMessageEnvelopeImportResult, String> {
     let app_data_root = production_app_data_dir(&app)
         .map_err(|_| "production message import failed without exposing local path details")?;
-    let app_cache_root = production_app_cache_dir(&app)
-        .map_err(|_| "production message import failed without exposing local cache path details")?;
+    let app_cache_root = production_app_cache_dir(&app).map_err(|_| {
+        "production message import failed without exposing local cache path details"
+    })?;
     ensure_runtime_key_policy_allows_actions(&app_data_root, &app_cache_root).map_err(|_| {
         "production message import blocked without exposing rollback marker details".to_string()
     })?;
@@ -3466,9 +3507,8 @@ fn production_message_outbound_cancel_pending(
     passphrase: String,
     message_number: u64,
 ) -> Result<(), String> {
-    let app_data_root = production_app_data_dir(&app).map_err(|_| {
-        "production outbound cancel failed without exposing local path details"
-    })?;
+    let app_data_root = production_app_data_dir(&app)
+        .map_err(|_| "production outbound cancel failed without exposing local path details")?;
     run_production_message_outbound_cancel_pending(
         app_data_root,
         profile,
@@ -3579,9 +3619,9 @@ fn production_two_profile_roundtrip(
         message_ttl_seconds,
     )
     .map_err(|_| {
-            "production two-profile roundtrip failed without exposing profile, path, or key details"
-                .to_string()
-        })
+        "production two-profile roundtrip failed without exposing profile, path, or key details"
+            .to_string()
+    })
 }
 
 #[tauri::command]
@@ -3608,9 +3648,8 @@ fn production_invite_room_setup(
     peer_profile: String,
     passphrase: String,
 ) -> Result<ProductionTwoProfileRoomSetupResult, String> {
-    let app_data_root = production_app_data_dir(&app).map_err(|_| {
-        "production invite room setup failed without exposing local path details"
-    })?;
+    let app_data_root = production_app_data_dir(&app)
+        .map_err(|_| "production invite room setup failed without exposing local path details")?;
     let role = production_invite_role(&local_profile);
     let open_record = if role == "joiner" {
         Some(ensure_dev_invite_room_open(&passphrase).map_err(|_| {
@@ -3625,10 +3664,10 @@ fn production_invite_room_setup(
         peer_profile.clone(),
         passphrase.clone(),
     )
-        .map_err(|_| {
-            "production invite room setup failed without exposing profile, path, or key details"
-                .to_string()
-        })?;
+    .map_err(|_| {
+        "production invite room setup failed without exposing profile, path, or key details"
+            .to_string()
+    })?;
     if role == "inviter" {
         register_dev_invite_room(&passphrase, &local_profile, &peer_profile).map_err(|_| {
             "production invite room setup failed because the invite room could not be opened"
@@ -3805,11 +3844,7 @@ async fn production_two_profile_real_onion_roundtrip(
         Some(&cancel_scope),
     )
     .await
-    .map_err(|error| {
-        format!(
-            "production real onion roundtrip stopped at redacted stage: {error}"
-        )
-    });
+    .map_err(|error| format!("production real onion roundtrip stopped at redacted stage: {error}"));
     #[cfg(feature = "manual-onion-client-attempt")]
     {
         state
@@ -3829,11 +3864,7 @@ async fn production_two_profile_real_onion_roundtrip(
         bootstrap_retry_limit,
     )
     .await
-    .map_err(|error| {
-        format!(
-            "production real onion roundtrip stopped at redacted stage: {error}"
-        )
-    });
+    .map_err(|error| format!("production real onion roundtrip stopped at redacted stage: {error}"));
     result
 }
 
@@ -3878,7 +3909,8 @@ fn production_two_profile_real_onion_wait_cancel(
     {
         let _ = state;
         Ok(ProductionTwoProfileRealOnionWaitCancelResult {
-            warning: "Real onion wait cancel is unavailable in this build. No network work was started.",
+            warning:
+                "Real onion wait cancel is unavailable in this build. No network work was started.",
             roundtrip_in_progress: false,
             cancel_requested: false,
             generation: 0,
@@ -4240,8 +4272,10 @@ fn run_production_profile_passphrase_rekey(
 
     let profile = sanitize_production_profile(profile)?;
     if confirmation.trim() != profile.as_str() {
-        return Err("production profile passphrase change confirmation must match the profile name"
-            .to_string());
+        return Err(
+            "production profile passphrase change confirmation must match the profile name"
+                .to_string(),
+        );
     }
     let current_passphrase = ProfilePassphrase::new(current_passphrase.trim())
         .map_err(|_| "invalid current production profile passphrase")?;
@@ -4592,8 +4626,7 @@ async fn run_production_onion_client_attempt_gate_check(
     app_data_root: impl AsRef<std::path::Path>,
     app_cache_root: impl AsRef<std::path::Path>,
 ) -> ProductionOnionClientAttemptGateResult {
-    let preflight =
-        run_production_onion_bootstrap_preflight_check(&app_data_root, &app_cache_root);
+    let preflight = run_production_onion_bootstrap_preflight_check(&app_data_root, &app_cache_root);
     let mut blockers = preflight.blockers.clone();
     let event_summary = preflight.event_summary.clone();
 
@@ -4644,9 +4677,9 @@ async fn run_production_onion_client_attempt_gate_check(
                 &state_dir, &cache_dir,
             )
             .ok();
-            let backup_exclusion = dirs
-                .as_ref()
-                .and_then(|dirs| another_dimension_transport::verify_transport_backup_exclusion(dirs).ok());
+            let backup_exclusion = dirs.as_ref().and_then(|dirs| {
+                another_dimension_transport::verify_transport_backup_exclusion(dirs).ok()
+            });
             let bridge_ready = another_dimension_transport::BridgeCensorshipConfiguration::NoBridgeRequired
                 .check(another_dimension_transport::BridgeRequirement::ExplicitlyNotRequiredForThisBuild)
                 .ok();
@@ -4725,8 +4758,7 @@ async fn run_production_onion_client_bootstrap_once(
     app_cache_root: impl AsRef<std::path::Path>,
     manual_network_permission: bool,
 ) -> ProductionOnionClientBootstrapOnceResult {
-    let preflight =
-        run_production_onion_bootstrap_preflight_check(&app_data_root, &app_cache_root);
+    let preflight = run_production_onion_bootstrap_preflight_check(&app_data_root, &app_cache_root);
     let mut blockers = preflight.blockers.clone();
     let event_summary = preflight.event_summary.clone();
 
@@ -4954,8 +4986,7 @@ async fn run_production_onion_persistent_client_start(
     state: &ProductionOnionClientRuntimeState,
     manual_network_permission: bool,
 ) -> ProductionOnionPersistentClientStartResult {
-    let preflight =
-        run_production_onion_bootstrap_preflight_check(&app_data_root, &app_cache_root);
+    let preflight = run_production_onion_bootstrap_preflight_check(&app_data_root, &app_cache_root);
     let mut blockers = preflight.blockers.clone();
     let event_summary = preflight.event_summary.clone();
 
@@ -5063,8 +5094,10 @@ async fn run_production_onion_persistent_client_start(
                 };
                 owner = match (runtime_ready, dirs) {
                     (Some(runtime_ready), Some(dirs)) => {
-                        let skeleton =
-                            TransportBootstrapExecutionSkeleton::new(runtime_ready, interactive_policy);
+                        let skeleton = TransportBootstrapExecutionSkeleton::new(
+                            runtime_ready,
+                            interactive_policy,
+                        );
                         arti_adapter_spike::ArtiAppPrivateDirs::new(
                             dirs.state_dir().to_path_buf(),
                             dirs.cache_dir().to_path_buf(),
@@ -5362,9 +5395,9 @@ fn run_production_onion_launch_preflight_check_with_persistent_client(
     use another_dimension_storage::production::ProfilePassphrase;
     use another_dimension_transport::{
         probe_app_private_state_cache_dirs, verify_transport_backup_exclusion,
-        OnionEndpointPublicationPolicy, OnionEndpointUpdatePolicy, OnionServiceKeyLifecycleDecision,
-        OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId, OnionServiceLaunchPreflight,
-        ProfileTransportUnlockReady,
+        OnionEndpointPublicationPolicy, OnionEndpointUpdatePolicy,
+        OnionServiceKeyLifecycleDecision, OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId,
+        OnionServiceLaunchPreflight, ProfileTransportUnlockReady,
     };
 
     let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
@@ -5386,8 +5419,9 @@ fn run_production_onion_launch_preflight_check_with_persistent_client(
     let passphrase = ProfilePassphrase::new(passphrase.trim())
         .map_err(|_| "invalid production profile passphrase")?;
     let store_path = production_profile_store_path(&app_data_root, &profile)?;
-    let status = production_onion_service_key_record_status(&store_path, profile.clone(), &passphrase)
-        .map_err(|_| "onion service key record status failed")?;
+    let status =
+        production_onion_service_key_record_status(&store_path, profile.clone(), &passphrase)
+            .map_err(|_| "onion service key record status failed")?;
 
     let profile_transport_unlock_ready = status.profile_transport_unlock_ready();
     let key_record_present = status.key_record_present();
@@ -5510,8 +5544,9 @@ fn run_production_onion_service_launch_attempt(
     let passphrase = ProfilePassphrase::new(passphrase.trim())
         .map_err(|_| "invalid production profile passphrase")?;
     let store_path = production_profile_store_path(&app_data_root, &profile)?;
-    let status = production_onion_service_key_record_status(&store_path, profile.clone(), &passphrase)
-        .map_err(|_| "onion service key record status failed")?;
+    let status =
+        production_onion_service_key_record_status(&store_path, profile.clone(), &passphrase)
+            .map_err(|_| "onion service key record status failed")?;
 
     let profile_transport_unlock_ready = status.profile_transport_unlock_ready();
     let key_record_present = status.key_record_present();
@@ -5764,15 +5799,16 @@ fn run_production_onion_descriptor_publication_prepare(
         runtime_preflight.first_runtime_blocker(),
         Some(TransportRuntimeError::RuntimeNetworkDisabled)
     ) {
-        blockers.push("runtime preflight did not fail closed before descriptor preparation".to_string());
+        blockers.push(
+            "runtime preflight did not fail closed before descriptor preparation".to_string(),
+        );
     }
 
     let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
     let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
-    let dirs = another_dimension_transport::probe_app_private_state_cache_dirs(
-        &state_dir, &cache_dir,
-    )
-    .ok();
+    let dirs =
+        another_dimension_transport::probe_app_private_state_cache_dirs(&state_dir, &cache_dir)
+            .ok();
     let backup_exclusion = dirs
         .as_ref()
         .and_then(|dirs| another_dimension_transport::verify_transport_backup_exclusion(dirs).ok());
@@ -5856,32 +5892,32 @@ fn run_production_onion_descriptor_publication_prepare(
     )
     .check()
     .map_err(|error| format!("{error:?}"))?;
-    let transport_next_boundary_ready =
-        transport_phase_closeout_ready.next_boundary() == TransportNextRiskBoundary::OnionHostingGate;
+    let transport_next_boundary_ready = transport_phase_closeout_ready.next_boundary()
+        == TransportNextRiskBoundary::OnionHostingGate;
     if !transport_next_boundary_ready {
         blockers.push("transport phase closeout did not select onion hosting gate".to_string());
     }
 
     #[cfg(feature = "manual-onion-client-attempt")]
-    let (manual_client_attempt_feature_compiled, feature_state) = (
-        true,
-        OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
-    );
+    let (manual_client_attempt_feature_compiled, feature_state) =
+        (true, OnionHostingGateFeatureState::ArtiAdapterSpikeFeature);
     #[cfg(not(feature = "manual-onion-client-attempt"))]
     let (manual_client_attempt_feature_compiled, feature_state) =
         (false, OnionHostingGateFeatureState::NotCompiled);
 
     let hosting_gate_result = match (launch_result, key_material_ready.as_ref()) {
-        (Some(Ok(launch_ready)), Some(key_material_ready)) => OnionHostingGateDecision::from_ready_boundaries(
-            transport_phase_closeout_ready,
-            launch_ready,
-            key_material_ready,
-            NetworkExperimentManualGate::FeatureGatedManualOnly,
-            feature_state,
-            persistent_client_ready,
-        )
-        .check()
-        .map_err(|error| format!("{error:?}")),
+        (Some(Ok(launch_ready)), Some(key_material_ready)) => {
+            OnionHostingGateDecision::from_ready_boundaries(
+                transport_phase_closeout_ready,
+                launch_ready,
+                key_material_ready,
+                NetworkExperimentManualGate::FeatureGatedManualOnly,
+                feature_state,
+                persistent_client_ready,
+            )
+            .check()
+            .map_err(|error| format!("{error:?}"))
+        }
         (Some(Err(error)), _) => Err(format!("{error:?}")),
         (Some(Ok(_)), None) => Err("onion service key material readiness not verified".to_string()),
         (None, _) => Err(blockers
@@ -5916,10 +5952,9 @@ fn run_production_onion_descriptor_publication_prepare(
     };
     let fail_closed_adapter_ready = adapter_result.is_ok();
 
-    let redacted_context =
-        RedactedDescriptorPublicationContext::pairwise_rendezvous_only(
-            OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
-        );
+    let redacted_context = RedactedDescriptorPublicationContext::pairwise_rendezvous_only(
+        OnionEndpointPublicationPolicy::PairwiseRendezvousOnly,
+    );
     let redacted_context_ready = redacted_context.is_redacted();
 
     let preparation_result = adapter_result
@@ -5984,13 +6019,14 @@ fn run_production_onion_descriptor_publication_attempt(
         BootstrapOnlyExperimentDecision, BootstrapOnlyExperimentFeatureState,
         DescriptorPublicationFailClosedAdapter, DescriptorPublicationGateDecision,
         DescriptorPublicationPreparationBoundary, InMemoryTransportRuntimeEventSink,
-        NetworkExperimentGateProposal, NetworkExperimentManualGate, NetworkExperimentOperatorConsent,
-        NetworkExperimentTargetCachePolicy, NetworkExperimentVerificationPolicy,
-        OnionEndpointPublicationPolicy, OnionEndpointUpdatePolicy, OnionHostingGateDecision,
-        OnionHostingGateFeatureState, OnionServiceKeyLifecycleDecision,
-        OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId, OnionServiceLaunchPreflight,
-        ProfileTransportUnlockReady, RedactedDescriptorPublicationContext,
-        TransportPhaseCloseoutDecision, TransportPreNetworkCloseout,
+        NetworkExperimentGateProposal, NetworkExperimentManualGate,
+        NetworkExperimentOperatorConsent, NetworkExperimentTargetCachePolicy,
+        NetworkExperimentVerificationPolicy, OnionEndpointPublicationPolicy,
+        OnionEndpointUpdatePolicy, OnionHostingGateDecision, OnionHostingGateFeatureState,
+        OnionServiceKeyLifecycleDecision, OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId,
+        OnionServiceLaunchPreflight, ProfileTransportUnlockReady,
+        RedactedDescriptorPublicationContext, TransportPhaseCloseoutDecision,
+        TransportPreNetworkCloseout,
     };
 
     let prepare = run_production_onion_descriptor_publication_prepare(
@@ -6013,13 +6049,12 @@ fn run_production_onion_descriptor_publication_attempt(
     } else {
         let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
         let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
-        let dirs = another_dimension_transport::probe_app_private_state_cache_dirs(
-            &state_dir, &cache_dir,
-        )
-        .ok();
-        let backup_exclusion = dirs
-            .as_ref()
-            .and_then(|dirs| another_dimension_transport::verify_transport_backup_exclusion(dirs).ok());
+        let dirs =
+            another_dimension_transport::probe_app_private_state_cache_dirs(&state_dir, &cache_dir)
+                .ok();
+        let backup_exclusion = dirs.as_ref().and_then(|dirs| {
+            another_dimension_transport::verify_transport_backup_exclusion(dirs).ok()
+        });
         let profile = sanitize_production_profile(profile)?;
         let passphrase = ProfilePassphrase::new(passphrase.trim())
             .map_err(|_| "invalid production profile passphrase")?;
@@ -6168,16 +6203,16 @@ fn run_production_onion_inbound_stream_prepare(
         BootstrapOnlyExperimentDecision, BootstrapOnlyExperimentFeatureState,
         DescriptorPublicationFailClosedAdapter, DescriptorPublicationGateDecision,
         DescriptorPublicationPreparationBoundary, InboundStreamFailClosedAdapter,
-        InboundStreamGateDecision, InboundStreamPreparationBoundary,
-        NetworkExperimentGateProposal, NetworkExperimentManualGate,
-        NetworkExperimentOperatorConsent, NetworkExperimentTargetCachePolicy,
-        NetworkExperimentVerificationPolicy, OnionEndpointPublicationPolicy,
-        OnionEndpointUpdatePolicy, OnionHostingGateDecision, OnionHostingGateFeatureState,
-        OnionServiceDescriptorPublicationReady, OnionServiceKeyLifecycleDecision,
-        OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId, OnionServiceLaunchPreflight,
-        ProfileTransportUnlockReady, RedactedDescriptorPublicationContext,
-        TransportNextRiskBoundary, TransportPhaseCloseoutDecision, TransportPreNetworkCloseout,
-        TransportRuntimeError, TransportRuntimePreflight,
+        InboundStreamGateDecision, InboundStreamPreparationBoundary, NetworkExperimentGateProposal,
+        NetworkExperimentManualGate, NetworkExperimentOperatorConsent,
+        NetworkExperimentTargetCachePolicy, NetworkExperimentVerificationPolicy,
+        OnionEndpointPublicationPolicy, OnionEndpointUpdatePolicy, OnionHostingGateDecision,
+        OnionHostingGateFeatureState, OnionServiceDescriptorPublicationReady,
+        OnionServiceKeyLifecycleDecision, OnionServiceKeyMaterialDecision, OnionServiceKeyRecordId,
+        OnionServiceLaunchPreflight, ProfileTransportUnlockReady,
+        RedactedDescriptorPublicationContext, TransportNextRiskBoundary,
+        TransportPhaseCloseoutDecision, TransportPreNetworkCloseout, TransportRuntimeError,
+        TransportRuntimePreflight,
     };
 
     let mut blockers = Vec::new();
@@ -6185,15 +6220,16 @@ fn run_production_onion_inbound_stream_prepare(
         TransportRuntimePreflight::disabled_by_default().first_runtime_blocker(),
         Some(TransportRuntimeError::RuntimeNetworkDisabled)
     ) {
-        blockers.push("runtime preflight did not fail closed before inbound stream preparation".to_string());
+        blockers.push(
+            "runtime preflight did not fail closed before inbound stream preparation".to_string(),
+        );
     }
 
     let state_dir = app_data_root.as_ref().join("transport").join("arti-state");
     let cache_dir = app_cache_root.as_ref().join("transport").join("arti-cache");
-    let dirs = another_dimension_transport::probe_app_private_state_cache_dirs(
-        &state_dir, &cache_dir,
-    )
-    .ok();
+    let dirs =
+        another_dimension_transport::probe_app_private_state_cache_dirs(&state_dir, &cache_dir)
+            .ok();
     let backup_exclusion = dirs
         .as_ref()
         .and_then(|dirs| another_dimension_transport::verify_transport_backup_exclusion(dirs).ok());
@@ -6281,10 +6317,8 @@ fn run_production_onion_inbound_stream_prepare(
     }
 
     #[cfg(feature = "manual-onion-client-attempt")]
-    let (manual_client_attempt_feature_compiled, feature_state) = (
-        true,
-        OnionHostingGateFeatureState::ArtiAdapterSpikeFeature,
-    );
+    let (manual_client_attempt_feature_compiled, feature_state) =
+        (true, OnionHostingGateFeatureState::ArtiAdapterSpikeFeature);
     #[cfg(not(feature = "manual-onion-client-attempt"))]
     let (manual_client_attempt_feature_compiled, feature_state) =
         (false, OnionHostingGateFeatureState::NotCompiled);
@@ -6387,8 +6421,7 @@ fn run_production_onion_inbound_stream_prepare(
         Ok(_) => "none".to_string(),
         Err(error) => error,
     };
-    if !inbound_stream_preparation_ready
-        && !blockers.iter().any(|blocker| blocker == &next_blocker)
+    if !inbound_stream_preparation_ready && !blockers.iter().any(|blocker| blocker == &next_blocker)
     {
         blockers.push(next_blocker.clone());
     }
@@ -6431,14 +6464,19 @@ fn run_production_onion_receive_loop_status(
         .and_then(|guard| guard.clone());
     let profile_selected = selected_profile.is_some();
     #[cfg(feature = "manual-onion-client-attempt")]
-    let owner_profile = state.owner_profile.lock().ok().and_then(|guard| guard.clone());
+    let owner_profile = state
+        .owner_profile
+        .lock()
+        .ok()
+        .and_then(|guard| guard.clone());
     #[cfg(not(feature = "manual-onion-client-attempt"))]
     let owner_profile: Option<String> = None;
     let owner_profile_bound = owner_profile.is_some();
-    let owner_matches_receive_profile = match (owner_profile.as_deref(), selected_profile.as_deref()) {
-        (Some(owner_profile), Some(selected_profile)) => owner_profile == selected_profile,
-        _ => false,
-    };
+    let owner_matches_receive_profile =
+        match (owner_profile.as_deref(), selected_profile.as_deref()) {
+            (Some(owner_profile), Some(selected_profile)) => owner_profile == selected_profile,
+            _ => false,
+        };
     let last_next_blocker = state
         .receive_loop_last_next_blocker
         .lock()
@@ -6672,9 +6710,7 @@ fn run_production_onion_receive_loop_start(
     run_production_onion_receive_loop_status(state, false)
 }
 
-fn production_onion_receive_loop_failure_view(
-    next_blocker: Option<&str>,
-) -> (&'static str, bool) {
+fn production_onion_receive_loop_failure_view(next_blocker: Option<&str>) -> (&'static str, bool) {
     match next_blocker.unwrap_or("none") {
         "none" => ("none", false),
         "ManualNetworkPermissionMissing" => ("manual-permission", true),
@@ -6724,7 +6760,10 @@ fn production_onion_receive_loop_runtime_view(
         return ("stopped", "Receive mode stopped");
     }
     if last_attempt_succeeded || last_endpoint_update_applied {
-        return ("message-imported", "Receive mode imported message or endpoint update");
+        return (
+            "message-imported",
+            "Receive mode imported message or endpoint update",
+        );
     }
     if receive_attempt_in_flight {
         return ("peer-connected", "Receive mode peer connected");
@@ -6748,7 +6787,10 @@ fn production_onion_receive_loop_runtime_view(
         })
         .unwrap_or(false)
     {
-        return ("launching-service", "Receive mode waiting for onion service");
+        return (
+            "launching-service",
+            "Receive mode waiting for onion service",
+        );
     }
     if last_failure_retryable {
         return ("failed-retryable", "Receive mode retryable failure");
@@ -6824,9 +6866,10 @@ fn run_production_onion_receive_loop_record_attempt_result(
     state: &ProductionOnionClientRuntimeState,
     result: &ProductionOnionInboundEnvelopeReceiveAttemptResult,
 ) {
-    state
-        .receive_loop_last_attempt_started
-        .store(result.receive_attempt_started, std::sync::atomic::Ordering::Release);
+    state.receive_loop_last_attempt_started.store(
+        result.receive_attempt_started,
+        std::sync::atomic::Ordering::Release,
+    );
     state.receive_loop_last_attempt_succeeded.store(
         result.receive_attempt_succeeded,
         std::sync::atomic::Ordering::Release,
@@ -6918,9 +6961,7 @@ fn production_onion_receive_loop_should_continue(
             .load(std::sync::atomic::Ordering::Acquire)
 }
 
-fn production_onion_receive_loop_retry_wait_millis(
-    last_failure_kind: &str,
-) -> u64 {
+fn production_onion_receive_loop_retry_wait_millis(last_failure_kind: &str) -> u64 {
     match last_failure_kind {
         "manual-permission" | "persistent-client" => 1_000,
         "busy" => 500,
@@ -6971,7 +7012,9 @@ fn spawn_production_onion_receive_loop_worker(
             )
             .await
             {
-                Ok(result) => run_production_onion_receive_loop_record_attempt_result(&state, &result),
+                Ok(result) => {
+                    run_production_onion_receive_loop_record_attempt_result(&state, &result)
+                }
                 Err(_) => run_production_onion_receive_loop_record_attempt_error(&state),
             }
 
@@ -7188,7 +7231,11 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
                         arti_adapter_spike::ManualArtiBootstrapNetworkPermission::ExplicitlyEnabledForManualSpike,
                         &mut sink,
                     ).await;
-                    event_summary.extend(sink.events()[recorded_event_count..].iter().map(ToString::to_string));
+                    event_summary.extend(
+                        sink.events()[recorded_event_count..]
+                            .iter()
+                            .map(ToString::to_string),
+                    );
                     recorded_event_count = sink.events().len();
                     match result {
                         Ok(()) => {
@@ -7210,7 +7257,11 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
                                 4096,
                                 &mut sink,
                             ).await;
-                            event_summary.extend(sink.events()[recorded_event_count..].iter().map(ToString::to_string));
+                            event_summary.extend(
+                                sink.events()[recorded_event_count..]
+                                    .iter()
+                                    .map(ToString::to_string),
+                            );
                             match read_result {
                                 Ok(envelope_bytes) => {
                                     event_summary.push(format!(
@@ -7219,8 +7270,7 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
                                     ));
                                     stream_request_accepted = true;
                                     stream_bytes_read = !envelope_bytes.is_empty();
-                                    let envelope_payload = match String::from_utf8(envelope_bytes)
-                                    {
+                                    let envelope_payload = match String::from_utf8(envelope_bytes) {
                                         Ok(payload) => match sanitize_envelope_payload(payload) {
                                             Ok(payload) => Some(payload),
                                             Err(_) => {
@@ -7230,8 +7280,7 @@ async fn run_production_onion_inbound_envelope_receive_attempt(
                                             }
                                         },
                                         Err(_) => {
-                                            next_blocker =
-                                                "InboundEnvelopeUtf8Failed".to_string();
+                                            next_blocker = "InboundEnvelopeUtf8Failed".to_string();
                                             None
                                         }
                                     };
@@ -7430,24 +7479,19 @@ fn run_production_onion_outbound_stream_prepare(
     })?;
 
     let policy = TransportPolicy::high_risk_default();
-    let gate_result =
-        OutboundStreamGateDecision::from_pairwise_endpoint_and_policy(
-            pairwise_endpoint.clone(),
-            policy.clone(),
-        )
-        .check()
-        .map_err(|error| format!("{error:?}"));
+    let gate_result = OutboundStreamGateDecision::from_pairwise_endpoint_and_policy(
+        pairwise_endpoint.clone(),
+        policy.clone(),
+    )
+    .check()
+    .map_err(|error| format!("{error:?}"));
     let outbound_stream_gate_ready = gate_result.is_ok();
 
     let adapter_result = gate_result
         .map(|gate_ready| {
-            OutboundStreamFailClosedAdapter::from_gate_ready(
-                gate_ready,
-                pairwise_endpoint,
-                policy,
-            )
-            .map_err(|error| format!("{error:?}"))
-            .map(|adapter| (gate_ready, adapter))
+            OutboundStreamFailClosedAdapter::from_gate_ready(gate_ready, pairwise_endpoint, policy)
+                .map_err(|error| format!("{error:?}"))
+                .map(|adapter| (gate_ready, adapter))
         })
         .and_then(|result| result);
     let fail_closed_adapter_ready = adapter_result.is_ok();
@@ -7507,8 +7551,8 @@ fn run_production_onion_stream_adapter_closeout_prepare(
         OnionServiceDescriptorPublicationReady, OnionServiceEndpoint,
         OutboundStreamFailClosedAdapter, OutboundStreamGateDecision,
         OutboundStreamPreparationBoundary, PairwiseRendezvousEndpoint,
-        RendezvousEndpointIdentityBinding, RendezvousEndpointScope,
-        StreamAdapterCloseoutDecision, StreamCloseoutIntegrationOrder, TransportPolicy,
+        RendezvousEndpointIdentityBinding, RendezvousEndpointScope, StreamAdapterCloseoutDecision,
+        StreamCloseoutIntegrationOrder, TransportPolicy,
     };
 
     #[cfg(feature = "manual-onion-client-attempt")]
@@ -7540,13 +7584,12 @@ fn run_production_onion_stream_adapter_closeout_prepare(
             inbound_gate_ready,
             OnionServiceDescriptorPublicationReady,
         );
-        let inbound_preparation =
-            InboundStreamPreparationBoundary::from_fail_closed_adapter(
-                inbound_gate_ready,
-                &inbound_adapter,
-            )
-            .check()
-            .map_err(|error| format!("{error:?}"))?;
+        let inbound_preparation = InboundStreamPreparationBoundary::from_fail_closed_adapter(
+            inbound_gate_ready,
+            &inbound_adapter,
+        )
+        .check()
+        .map_err(|error| format!("{error:?}"))?;
 
         let endpoint = sanitize_pairing_rendezvous_endpoint(rendezvous_endpoint)?;
         let onion_endpoint = OnionServiceEndpoint::new(endpoint).map_err(|_| {
@@ -7580,13 +7623,12 @@ fn run_production_onion_stream_adapter_closeout_prepare(
             policy,
         )
         .map_err(|error| format!("{error:?}"))?;
-        let outbound_preparation =
-            OutboundStreamPreparationBoundary::from_fail_closed_adapter(
-                outbound_gate_ready,
-                &outbound_adapter,
-            )
-            .check()
-            .map_err(|error| format!("{error:?}"))?;
+        let outbound_preparation = OutboundStreamPreparationBoundary::from_fail_closed_adapter(
+            outbound_gate_ready,
+            &outbound_adapter,
+        )
+        .check()
+        .map_err(|error| format!("{error:?}"))?;
 
         StreamAdapterCloseoutDecision::from_fail_closed_adapters(
             &inbound_adapter,
@@ -7685,17 +7727,16 @@ fn run_production_onion_remote_peer_authentication_prepare(
     let outbound_envelope_io_boundary_ready = session_runtime
         .as_ref()
         .is_some_and(|runtime| runtime.outbound_envelope_io_ready());
-    let fallback_authentication_result = if closeout.stream_adapter_closeout_ready
-        && !stored_pairwise_session_ready
-    {
-        RemotePeerAuthenticationReady::from_missing_peer_proof()
-            .map(|_| ())
-            .map_err(|error| format!("{error:?}"))
-    } else if closeout.stream_adapter_closeout_ready {
-        Ok(())
-    } else {
-        Err(closeout.next_blocker.clone())
-    };
+    let fallback_authentication_result =
+        if closeout.stream_adapter_closeout_ready && !stored_pairwise_session_ready {
+            RemotePeerAuthenticationReady::from_missing_peer_proof()
+                .map(|_| ())
+                .map_err(|error| format!("{error:?}"))
+        } else if closeout.stream_adapter_closeout_ready {
+            Ok(())
+        } else {
+            Err(closeout.next_blocker.clone())
+        };
     let remote_peer_authentication_ready = closeout.stream_adapter_closeout_ready
         && stored_pairwise_session_ready
         && fallback_authentication_result.is_ok();
@@ -7907,7 +7948,11 @@ async fn run_production_onion_outbound_envelope_send_attempt(
         .ok()
         .map(|profile| profile.as_str().to_string());
     #[cfg(feature = "manual-onion-client-attempt")]
-    let owner_profile = state.owner_profile.lock().ok().and_then(|guard| guard.clone());
+    let owner_profile = state
+        .owner_profile
+        .lock()
+        .ok()
+        .and_then(|guard| guard.clone());
     #[cfg(feature = "manual-onion-client-attempt")]
     let owner_profile_bound = owner_profile.is_some();
     #[cfg(feature = "manual-onion-client-attempt")]
@@ -7989,20 +8034,18 @@ async fn run_production_onion_outbound_envelope_send_attempt(
         {
             next_blocker = "OutboundEnvelopeSendAlreadyInProgress".to_string();
         } else {
-            let envelope = sanitize_production_profile(profile)
-                .and_then(|sanitized_profile| {
-                    let passphrase = ProfilePassphrase::new(passphrase.trim())
-                        .map_err(|_| "invalid production profile passphrase".to_string())?;
-                    let store_path =
-                        production_profile_store_path(&app_data_root, &sanitized_profile)?;
-                    production_message_outbound_envelope_export(
-                        &store_path,
-                        sanitized_profile,
-                        &passphrase,
-                        message_number,
-                    )
-                    .map_err(|_| "stored outbound envelope unavailable".to_string())
-                });
+            let envelope = sanitize_production_profile(profile).and_then(|sanitized_profile| {
+                let passphrase = ProfilePassphrase::new(passphrase.trim())
+                    .map_err(|_| "invalid production profile passphrase".to_string())?;
+                let store_path = production_profile_store_path(&app_data_root, &sanitized_profile)?;
+                production_message_outbound_envelope_export(
+                    &store_path,
+                    sanitized_profile,
+                    &passphrase,
+                    message_number,
+                )
+                .map_err(|_| "stored outbound envelope unavailable".to_string())
+            });
             match envelope {
                 Ok(envelope) => {
                     let mut owner = match state.owner.lock() {
@@ -8278,7 +8321,8 @@ async fn run_production_onion_endpoint_update_control_send_stored_endpoint_attem
                                                 "send_diagnostic phase=control_stream_write_ok profile=redacted"
                                                     .to_string(),
                                             );
-                                            next_blocker = "AwaitingRemoteControlImport".to_string();
+                                            next_blocker =
+                                                "AwaitingRemoteControlImport".to_string();
                                         }
                                         Err(error) => {
                                             next_blocker =
@@ -8472,9 +8516,9 @@ fn run_production_pairing_session_draft_save(
     safety_confirmed: bool,
 ) -> Result<ProductionPairingSessionDraftResult, String> {
     use another_dimension_core::production::{
+        production_pairing_session_save_draft, production_pairing_session_status,
         production_pairwise_invite_import_decision,
         production_pairwise_safety_verification_decision,
-        production_pairing_session_save_draft, production_pairing_session_status,
     };
     use another_dimension_storage::production::ProfilePassphrase;
 
@@ -8653,9 +8697,9 @@ fn redacted_pairwise_pairing_error(error: another_dimension_pairing::PairingErro
     use another_dimension_pairing::PairingError;
 
     let kind = match error {
-        PairingError::InvalidPayload | PairingError::PayloadTooLarge | PairingError::ExpiredPayload => {
-            ProductionPairwiseInviteImportFailureKind::Malformed
-        }
+        PairingError::InvalidPayload
+        | PairingError::PayloadTooLarge
+        | PairingError::ExpiredPayload => ProductionPairwiseInviteImportFailureKind::Malformed,
         PairingError::RandomnessUnavailable | PairingError::ClockUnavailable => {
             ProductionPairwiseInviteImportFailureKind::Unsupported
         }
@@ -8734,9 +8778,12 @@ fn run_production_session_state_check(
     let store_path = production_profile_store_path(app_data_root, &profile)?;
     let status = production_pairing_session_status(&store_path, profile.clone(), &passphrase)
         .map_err(|_| "session state status failed")?;
-    let remote_endpoint_status =
-        production_pairing_session_remote_endpoint_status(&store_path, profile.clone(), &passphrase)
-            .ok();
+    let remote_endpoint_status = production_pairing_session_remote_endpoint_status(
+        &store_path,
+        profile.clone(),
+        &passphrase,
+    )
+    .ok();
     let runtime =
         production_pairing_session_open_runtime(&store_path, profile.clone(), &passphrase).ok();
 
@@ -8844,10 +8891,14 @@ fn run_production_session_lifecycle_delete(
     app_data_root: impl AsRef<std::path::Path>,
     profile: String,
     passphrase: String,
+    confirmation: String,
 ) -> Result<ProductionSessionLifecycleResult, String> {
     use another_dimension_core::production::production_pairing_session_delete;
     use another_dimension_storage::production::ProfilePassphrase;
 
+    if confirmation.trim() != "DELETE SESSION" {
+        return Err("session delete confirmation required".to_string());
+    }
     let profile = sanitize_production_profile(profile)?;
     let passphrase = ProfilePassphrase::new(passphrase.trim())
         .map_err(|_| "invalid production profile passphrase")?;
@@ -8884,10 +8935,14 @@ fn run_production_conversation_delete(
     app_data_root: impl AsRef<std::path::Path>,
     profile: String,
     passphrase: String,
+    confirmation: String,
 ) -> Result<ProductionConversationDeleteResult, String> {
     use another_dimension_core::production::production_conversation_delete;
     use another_dimension_storage::production::ProfilePassphrase;
 
+    if confirmation.trim() != "DELETE CONVERSATION" {
+        return Err("conversation delete confirmation required".to_string());
+    }
     let profile = sanitize_production_profile(profile)?;
     let passphrase = ProfilePassphrase::new(passphrase.trim())
         .map_err(|_| "invalid production profile passphrase")?;
@@ -8958,10 +9013,7 @@ const DATA_LIFECYCLE_PROFILE_SNAPSHOT_MARKER: &str = "profile-snapshot-v1.marker
 const DATA_LIFECYCLE_ROLLBACK_MARKER: &str = "rollback-detection-v1.marker";
 
 fn encode_profile_snapshot_marker(profiles: &[String]) -> String {
-    format!(
-        "AD-PROFILE-SNAPSHOT-V1\nprofiles={}\n",
-        profiles.join(",")
-    )
+    format!("AD-PROFILE-SNAPSHOT-V1\nprofiles={}\n", profiles.join(","))
 }
 
 fn profile_snapshot_marker_matches(marker: &str, profiles: &[String]) -> bool {
@@ -9035,8 +9087,8 @@ fn run_production_data_lifecycle_status(
     } else {
         false
     };
-    let transport_data_present = app_data_root.join("transport").exists()
-        || app_cache_root.join("transport").exists();
+    let transport_data_present =
+        app_data_root.join("transport").exists() || app_cache_root.join("transport").exists();
     let marker_family_present = lifecycle_marker.exists()
         || migration_marker.exists()
         || profile_snapshot_marker_present
@@ -9167,9 +9219,12 @@ fn run_production_pairing_session_remote_endpoint_for_transport(
     let passphrase = ProfilePassphrase::new(passphrase.trim())
         .map_err(|_| "invalid production profile passphrase")?;
     let store_path = production_profile_store_path(app_data_root, &profile)?;
-    let endpoint_status =
-        production_pairing_session_remote_endpoint_status(&store_path, profile.clone(), &passphrase)
-            .map_err(|_| "stored remote endpoint unavailable".to_string())?;
+    let endpoint_status = production_pairing_session_remote_endpoint_status(
+        &store_path,
+        profile.clone(),
+        &passphrase,
+    )
+    .map_err(|_| "stored remote endpoint unavailable".to_string())?;
     if !endpoint_status.remote_endpoint_state_present() {
         return Err("stored remote endpoint unavailable".to_string());
     }
@@ -9376,24 +9431,28 @@ fn run_production_two_profile_session_status(
     let profile_b_name = profile_b.as_str().to_string();
 
     let app_data_root = app_data_root.as_ref();
-    let profile_a_state =
-        run_production_session_state_check(app_data_root, profile_a_name.clone(), passphrase.clone())?;
-    let profile_b_state =
-        run_production_session_state_check(app_data_root, profile_b_name.clone(), passphrase.clone())?;
-    let profile_a_endpoint_invite_placeholder =
-        production_remote_endpoint_matches_redacted_value(
-            app_data_root,
-            profile_a_name.clone(),
-            passphrase.clone(),
-            &format!("{profile_b_name}.onion"),
-        );
-    let profile_b_endpoint_invite_placeholder =
-        production_remote_endpoint_matches_redacted_value(
-            app_data_root,
-            profile_b_name.clone(),
-            passphrase,
-            &format!("{profile_a_name}.onion"),
-        );
+    let profile_a_state = run_production_session_state_check(
+        app_data_root,
+        profile_a_name.clone(),
+        passphrase.clone(),
+    )?;
+    let profile_b_state = run_production_session_state_check(
+        app_data_root,
+        profile_b_name.clone(),
+        passphrase.clone(),
+    )?;
+    let profile_a_endpoint_invite_placeholder = production_remote_endpoint_matches_redacted_value(
+        app_data_root,
+        profile_a_name.clone(),
+        passphrase.clone(),
+        &format!("{profile_b_name}.onion"),
+    );
+    let profile_b_endpoint_invite_placeholder = production_remote_endpoint_matches_redacted_value(
+        app_data_root,
+        profile_b_name.clone(),
+        passphrase,
+        &format!("{profile_a_name}.onion"),
+    );
     let key_material_exposed =
         profile_a_state.key_material_exposed || profile_b_state.key_material_exposed;
     let transport_io_opened =
@@ -9469,8 +9528,11 @@ fn run_production_two_profile_runtime_resume_status(
         profile_a_name.clone(),
         passphrase.clone(),
     )?;
-    let profile_b_transcript =
-        run_production_message_transcript_export(app_data_root, profile_b_name.clone(), passphrase)?;
+    let profile_b_transcript = run_production_message_transcript_export(
+        app_data_root,
+        profile_b_name.clone(),
+        passphrase,
+    )?;
     let profile_a_transcript_entries = profile_a_transcript.entries.len();
     let profile_b_transcript_entries = profile_b_transcript.entries.len();
     let total_transcript_entries = profile_a_transcript_entries + profile_b_transcript_entries;
@@ -9488,8 +9550,8 @@ fn run_production_two_profile_runtime_resume_status(
     .into_iter()
     .flatten()
     .max_by_key(|(_, entry)| (entry.created_at_ms, entry.message_number));
-    let (latest_retryable_profile, latest_retryable_message_number) =
-        latest_retryable.map_or((None, None), |(profile, entry)| {
+    let (latest_retryable_profile, latest_retryable_message_number) = latest_retryable
+        .map_or((None, None), |(profile, entry)| {
             (Some(profile), Some(entry.message_number))
         });
     let expired_messages_purged =
@@ -9589,12 +9651,8 @@ fn production_remote_endpoint_matches_redacted_value(
     passphrase: String,
     expected_endpoint: &str,
 ) -> bool {
-    run_production_pairing_session_remote_endpoint_for_transport(
-        app_data_root,
-        profile,
-        passphrase,
-    )
-    .is_ok_and(|endpoint| endpoint == expected_endpoint)
+    run_production_pairing_session_remote_endpoint_for_transport(app_data_root, profile, passphrase)
+        .is_ok_and(|endpoint| endpoint == expected_endpoint)
 }
 
 fn run_production_handshake_init_export(
@@ -9790,9 +9848,9 @@ fn run_production_message_envelope_export(
     message_ttl_seconds: u64,
 ) -> Result<ProductionMessageEnvelopeExportResult, String> {
     use another_dimension_core::production::{
-        production_message_next_number_reserve,
-        production_message_outbound_encrypt_prepare, production_message_outbound_envelope_export,
-        production_message_pending_status, production_message_send_prepare,
+        production_message_next_number_reserve, production_message_outbound_encrypt_prepare,
+        production_message_outbound_envelope_export, production_message_pending_status,
+        production_message_send_prepare,
     };
     use another_dimension_storage::production::ProfilePassphrase;
 
@@ -9850,10 +9908,10 @@ fn run_production_message_envelope_export(
     let auto_counter_written = reservation.is_some_and(|summary| summary.counter_record_written());
     let existing_message_slot_skipped =
         reservation.is_some_and(|summary| summary.existing_message_slot_skipped());
-    let expired_outbound_messages_purged =
-        reservation.map_or(0, |summary| summary.expired_outbound_messages_purged())
-            + usize::from(pending.expired_outbound_message_purged())
-            + usize::from(encrypt.expired_outbound_message_purged());
+    let expired_outbound_messages_purged = reservation
+        .map_or(0, |summary| summary.expired_outbound_messages_purged())
+        + usize::from(pending.expired_outbound_message_purged())
+        + usize::from(encrypt.expired_outbound_message_purged());
 
     Ok(ProductionMessageEnvelopeExportResult {
         warning:
@@ -9981,7 +10039,8 @@ fn run_production_endpoint_update_control_envelope_export(
     let profile = sanitize_production_profile(profile)?;
     let passphrase = ProfilePassphrase::new(passphrase.trim())
         .map_err(|_| "invalid production profile passphrase")?;
-    let local_rendezvous_endpoint = sanitize_pairing_rendezvous_endpoint(local_rendezvous_endpoint)?;
+    let local_rendezvous_endpoint =
+        sanitize_pairing_rendezvous_endpoint(local_rendezvous_endpoint)?;
     if message_number == 0 {
         return Err("endpoint update message number is required".to_string());
     }
@@ -10076,8 +10135,13 @@ fn run_production_message_received_export(
     let passphrase = ProfilePassphrase::new(passphrase.trim())
         .map_err(|_| "invalid production profile passphrase")?;
     let store_path = production_profile_store_path(app_data_root, &profile)?;
-    let status = production_message_received_status(&store_path, profile.clone(), &passphrase, message_number)
-        .map_err(|_| "received message status failed")?;
+    let status = production_message_received_status(
+        &store_path,
+        profile.clone(),
+        &passphrase,
+        message_number,
+    )
+    .map_err(|_| "received message status failed")?;
     if status.expired_received_message_purged() {
         return Ok(ProductionMessageReceivedExportResult {
             warning: "received message expired and was purged after local unlock; plaintext was not returned",
@@ -10198,7 +10262,8 @@ fn run_production_message_transcript_export(
     }
 
     Ok(ProductionMessageTranscriptExportResult {
-        warning: "message transcript exported after local unlock; no network or transport IO opened",
+        warning:
+            "message transcript exported after local unlock; no network or transport IO opened",
         storage_opened: export.storage_opened(),
         runtime_material_reconstructable: export.runtime_material_reconstructable(),
         entries,
@@ -10264,14 +10329,14 @@ fn real_onion_bridge_capable_build() -> bool {
 }
 
 #[cfg(feature = "manual-onion-bridge-client")]
-fn app_private_real_onion_bridge_config_path(app_data_root: &std::path::Path) -> std::path::PathBuf {
+fn app_private_real_onion_bridge_config_path(
+    app_data_root: &std::path::Path,
+) -> std::path::PathBuf {
     app_data_root.join("transport").join("bridge-lines.txt")
 }
 
 #[cfg(feature = "manual-onion-bridge-client")]
-fn app_private_real_onion_pt_binary_path(
-    app_data_root: &std::path::Path,
-) -> std::path::PathBuf {
+fn app_private_real_onion_pt_binary_path(app_data_root: &std::path::Path) -> std::path::PathBuf {
     app_data_root.join("transport").join("pt-binary-path.txt")
 }
 
@@ -10285,9 +10350,7 @@ fn app_private_real_onion_legacy_obfs4_transport_binary_path(
 }
 
 #[cfg(all(feature = "manual-onion-bridge-client", unix))]
-fn set_app_private_bridge_config_permissions(
-    bridge_path: &std::path::Path,
-) -> Result<(), String> {
+fn set_app_private_bridge_config_permissions(bridge_path: &std::path::Path) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
 
     let parent = bridge_path
@@ -10300,9 +10363,7 @@ fn set_app_private_bridge_config_permissions(
 }
 
 #[cfg(all(feature = "manual-onion-bridge-client", not(unix)))]
-fn set_app_private_bridge_config_permissions(
-    bridge_path: &std::path::Path,
-) -> Result<(), String> {
+fn set_app_private_bridge_config_permissions(bridge_path: &std::path::Path) -> Result<(), String> {
     let _ = bridge_path;
     Ok(())
 }
@@ -10332,10 +10393,7 @@ fn load_app_private_pt_binary_path(
     let contents = std::fs::read_to_string(pt_path)
         .map_err(|_| "production onion obfs4 transport status failed".to_string())?;
     let binary_path = std::path::PathBuf::from(contents.trim());
-    if binary_path.as_os_str().is_empty()
-        || !binary_path.is_absolute()
-        || !binary_path.is_file()
-    {
+    if binary_path.as_os_str().is_empty() || !binary_path.is_absolute() || !binary_path.is_file() {
         return Err("production onion obfs4 transport invalid".to_string());
     }
     Ok(Some(binary_path))
@@ -10349,8 +10407,7 @@ fn load_app_private_real_onion_pt_binary_path(
     match load_app_private_pt_binary_path(&primary)? {
         Some(path) => Ok(Some(path)),
         None => {
-            let legacy =
-                app_private_real_onion_legacy_obfs4_transport_binary_path(app_data_root);
+            let legacy = app_private_real_onion_legacy_obfs4_transport_binary_path(app_data_root);
             load_app_private_pt_binary_path(&legacy)
         }
     }
@@ -10414,16 +10471,16 @@ fn run_production_onion_bridge_config_save(
     }
     #[cfg(feature = "manual-onion-bridge-client")]
     {
-    let bridge_path = app_private_real_onion_bridge_config_path(app_data_root.as_ref());
-    let bridge_config =
+        let bridge_path = app_private_real_onion_bridge_config_path(app_data_root.as_ref());
+        let bridge_config =
         another_dimension_transport::arti_adapter_spike::AppPrivateBridgeConfig::from_app_private_lines(
             bridge_lines.lines(),
         )
         .map_err(|_| "production onion bridge config invalid")?;
-    write_app_private_bridge_config_file(&bridge_path, bridge_lines)?;
-    let _ = bridge_config;
+        write_app_private_bridge_config_file(&bridge_path, bridge_lines)?;
+        let _ = bridge_config;
 
-    run_production_onion_bridge_config_status(app_data_root)
+        run_production_onion_bridge_config_status(app_data_root)
     }
     #[cfg(not(feature = "manual-onion-bridge-client"))]
     {
@@ -10451,10 +10508,7 @@ fn run_production_onion_pt_binary_save(
             return Err("production onion pluggable transport invalid".to_string());
         }
         let pt_path = app_private_real_onion_pt_binary_path(app_data_root.as_ref());
-        write_app_private_bridge_config_file(
-            &pt_path,
-            binary_path.to_string_lossy().into_owned(),
-        )?;
+        write_app_private_bridge_config_file(&pt_path, binary_path.to_string_lossy().into_owned())?;
         run_production_onion_bridge_config_status(app_data_root)
     }
     #[cfg(not(feature = "manual-onion-bridge-client"))]
@@ -10562,7 +10616,9 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
     message_ttl_seconds: u64,
     manual_network_permission: bool,
     bootstrap_retry_limit: Option<u8>,
-    #[cfg(feature = "manual-onion-client-attempt")] cancel_scope: Option<&RealOnionRoundtripCancelScope<'_>>,
+    #[cfg(feature = "manual-onion-client-attempt")] cancel_scope: Option<
+        &RealOnionRoundtripCancelScope<'_>,
+    >,
     #[cfg(not(feature = "manual-onion-client-attempt"))] _cancel_scope: Option<&()>,
 ) -> Result<ProductionTwoProfileRealOnionRoundtripResult, String> {
     let profile_a = sanitize_production_profile(profile_a)?;
@@ -10671,9 +10727,7 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
 
     #[cfg(feature = "manual-onion-client-attempt")]
     {
-        use another_dimension_transport::{
-            arti_adapter_spike, InMemoryTransportRuntimeEventSink,
-        };
+        use another_dimension_transport::{arti_adapter_spike, InMemoryTransportRuntimeEventSink};
 
         if !manual_network_permission {
             return Ok(ProductionTwoProfileRealOnionRoundtripResult {
@@ -10757,26 +10811,27 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
         {
             Ok(config) => config,
             Err(error) => {
-                let (warning, event_summary, next_blocker) =
-                    if error.contains("obfs4 transport binary missing") {
-                        (
+                let (warning, event_summary, next_blocker) = if error
+                    .contains("obfs4 transport binary missing")
+                {
+                    (
                             "Real onion roundtrip stopped because the app-private obfs4 transport binary is missing. Configure the transport binary before retrying network; result is redacted and no network work was attempted.",
                             vec!["obfs4-transport-missing".to_string()],
                             "Obfs4TransportMissing",
                         )
-                    } else if error.contains("obfs4 transport binary invalid") {
-                        (
+                } else if error.contains("obfs4 transport binary invalid") {
+                    (
                             "Real onion roundtrip stopped because the app-private obfs4 transport binary is invalid. Replace the transport binary path before retrying network; result is redacted and no network work was attempted.",
                             vec!["obfs4-transport-invalid".to_string()],
                             "Obfs4TransportInvalid",
                         )
-                    } else {
-                        (
+                } else {
+                    (
                             "Real onion roundtrip stopped because the app-private bridge config is invalid. Replace the bridge config before retrying network; result is redacted and no network work was attempted.",
                             vec!["bridge-config-invalid".to_string()],
                             "BridgeConfigInvalid",
                         )
-                    };
+                };
                 return Ok(ProductionTwoProfileRealOnionRoundtripResult {
                     warning,
                     manual_client_attempt_feature_compiled: true,
@@ -11253,38 +11308,37 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             sender_endpoint,
             receiver_endpoint,
             init_payload,
-        ) =
-            if profile_a_init.output_payload_created {
-                (
-                    profile_a_name.clone(),
-                    profile_b_name.clone(),
-                    profile_a_owner,
-                    profile_b_owner,
-                    profile_a_endpoint,
-                    profile_b_endpoint,
-                    profile_a_init.output_payload,
-                )
-            } else {
-                let init = run_production_handshake_init_export(
-                    &_app_data_root,
-                    profile_b_name.clone(),
-                    passphrase.clone(),
-                )?;
-                if !init.output_payload_created {
-                    return Err("real onion handshake init was not created".to_string());
-                }
-                let output_payload = init.output_payload.clone();
-                profile_b_init = Some(init);
-                (
-                    profile_b_name.clone(),
-                    profile_a_name.clone(),
-                    profile_b_owner,
-                    profile_a_owner,
-                    profile_b_endpoint,
-                    profile_a_endpoint,
-                    output_payload,
-                )
-            };
+        ) = if profile_a_init.output_payload_created {
+            (
+                profile_a_name.clone(),
+                profile_b_name.clone(),
+                profile_a_owner,
+                profile_b_owner,
+                profile_a_endpoint,
+                profile_b_endpoint,
+                profile_a_init.output_payload,
+            )
+        } else {
+            let init = run_production_handshake_init_export(
+                &_app_data_root,
+                profile_b_name.clone(),
+                passphrase.clone(),
+            )?;
+            if !init.output_payload_created {
+                return Err("real onion handshake init was not created".to_string());
+            }
+            let output_payload = init.output_payload.clone();
+            profile_b_init = Some(init);
+            (
+                profile_b_name.clone(),
+                profile_a_name.clone(),
+                profile_b_owner,
+                profile_a_owner,
+                profile_b_endpoint,
+                profile_a_endpoint,
+                output_payload,
+            )
+        };
 
         let reply = run_production_handshake_reply_export(
             &_app_data_root,
@@ -11602,7 +11656,9 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
         if !send_attempt.send_attempt_succeeded {
             let mut blockers = vec!["SendAttemptFailed".to_string()];
             if send_attempt.next_blocker != "none"
-                && !blockers.iter().any(|blocker| blocker == &send_attempt.next_blocker)
+                && !blockers
+                    .iter()
+                    .any(|blocker| blocker == &send_attempt.next_blocker)
             {
                 blockers.push(send_attempt.next_blocker.clone());
             }
@@ -11798,21 +11854,21 @@ async fn run_production_two_profile_real_onion_roundtrip_with_cancel(
             + receiver_receive_mode_status.import_sequence;
         let receive_mode_endpoint_update_count = sender_receive_mode_status.endpoint_update_count
             + receiver_receive_mode_status.endpoint_update_count;
-        let receive_mode_last_network_io_attempted =
-            sender_receive_mode_status.last_network_io_attempted
-                || receiver_receive_mode_status.last_network_io_attempted;
-        let receive_mode_last_stream_accept_attempted =
-            sender_receive_mode_status.last_stream_accept_attempted
-                || receiver_receive_mode_status.last_stream_accept_attempted;
-        let receive_mode_last_stream_read_write_attempted =
-            sender_receive_mode_status.last_stream_read_write_attempted
-                || receiver_receive_mode_status.last_stream_read_write_attempted;
-        let receive_mode_last_envelope_io_opened =
-            sender_receive_mode_status.last_envelope_io_opened
-                || receiver_receive_mode_status.last_envelope_io_opened;
-        let receive_mode_last_runtime_messaging_enabled =
-            sender_receive_mode_status.last_runtime_messaging_enabled
-                || receiver_receive_mode_status.last_runtime_messaging_enabled;
+        let receive_mode_last_network_io_attempted = sender_receive_mode_status
+            .last_network_io_attempted
+            || receiver_receive_mode_status.last_network_io_attempted;
+        let receive_mode_last_stream_accept_attempted = sender_receive_mode_status
+            .last_stream_accept_attempted
+            || receiver_receive_mode_status.last_stream_accept_attempted;
+        let receive_mode_last_stream_read_write_attempted = sender_receive_mode_status
+            .last_stream_read_write_attempted
+            || receiver_receive_mode_status.last_stream_read_write_attempted;
+        let receive_mode_last_envelope_io_opened = sender_receive_mode_status
+            .last_envelope_io_opened
+            || receiver_receive_mode_status.last_envelope_io_opened;
+        let receive_mode_last_runtime_messaging_enabled = sender_receive_mode_status
+            .last_runtime_messaging_enabled
+            || receiver_receive_mode_status.last_runtime_messaging_enabled;
         let receive_mode_recorder_verified = consecutive_receive_attempts == 2
             && receive_mode_import_sequence == 2
             && consecutive_messages_imported == 2
@@ -11967,7 +12023,10 @@ fn classify_real_onion_bootstrap_blocker(
     } else {
         "BootstrapFailed"
     };
-    (format!("{profile_prefix}{blocker}"), vec![blocker.to_string()])
+    (
+        format!("{profile_prefix}{blocker}"),
+        vec![blocker.to_string()],
+    )
 }
 
 #[cfg(feature = "manual-onion-client-attempt")]
@@ -11986,11 +12045,9 @@ fn managed_bridge_bootstrap_error_retryable(
     if real_onion_bootstrap_error_retryable(redacted_bootstrap_error) {
         return true;
     }
-    let managed_bridge_with_transport = bridge_config
-        .is_some_and(|config| {
-            config.requires_pluggable_transport_binary()
-                && config.obfs4_transport_binary_configured()
-        });
+    let managed_bridge_with_transport = bridge_config.is_some_and(|config| {
+        config.requires_pluggable_transport_binary() && config.obfs4_transport_binary_configured()
+    });
     managed_bridge_with_transport
         && (redacted_bootstrap_error.contains("BootstrapUnsupported")
             || redacted_bootstrap_error.contains("BootstrapProtocolFailed"))
@@ -12119,7 +12176,11 @@ fn promote_cached_real_onion_roundtrip_owner_to_persistent_owner(
     app_cache_root: &std::path::Path,
     profile: &str,
 ) -> bool {
-    let owner_profile = state.owner_profile.lock().ok().and_then(|guard| guard.clone());
+    let owner_profile = state
+        .owner_profile
+        .lock()
+        .ok()
+        .and_then(|guard| guard.clone());
     let mut displaced_owner = None;
     if let Ok(mut guard) = state.owner.lock() {
         let persistent_owner_ready = guard
@@ -12240,16 +12301,21 @@ async fn build_real_onion_roundtrip_owner_with_retries(
     ),
     (String, u8),
 > {
-    if let Some(owner) =
-        take_cached_real_onion_roundtrip_owner(runtime_state, app_data_root, app_cache_root, profile)
-    {
+    if let Some(owner) = take_cached_real_onion_roundtrip_owner(
+        runtime_state,
+        app_data_root,
+        app_cache_root,
+        profile,
+    ) {
         event_summary.push("bootstrap_reuse profile=redacted".to_string());
         return Ok((owner, 0, true));
     }
     let attempts = bootstrap_retry_limit.max(1);
     let mut last_error = String::new();
     for attempt in 1..=attempts {
-        event_summary.push(format!("bootstrap_attempt profile=redacted attempt={attempt}"));
+        event_summary.push(format!(
+            "bootstrap_attempt profile=redacted attempt={attempt}"
+        ));
         match build_real_onion_roundtrip_owner(
             app_data_root,
             app_cache_root,
@@ -12302,9 +12368,10 @@ async fn build_real_onion_roundtrip_owner(
     use another_dimension_transport::{
         arti_adapter_spike, probe_app_private_state_cache_dirs, verify_transport_backup_exclusion,
         BridgeCensorshipConfiguration, BridgeRequirement, InMemoryTransportRuntimeEventSink,
-        TransportBootstrapExecutionSkeleton, TransportBootstrapPolicy, TransportBootstrapRetryPolicy,
-        TransportBootstrapTimeoutPolicy, TransportCrashRedactionPolicy,
-        TransportLogRedactionPolicy, TransportRuntimePermissionPreflight,
+        TransportBootstrapExecutionSkeleton, TransportBootstrapPolicy,
+        TransportBootstrapRetryPolicy, TransportBootstrapTimeoutPolicy,
+        TransportCrashRedactionPolicy, TransportLogRedactionPolicy,
+        TransportRuntimePermissionPreflight,
     };
 
     let transport_root = app_data_root
@@ -12315,12 +12382,14 @@ async fn build_real_onion_roundtrip_owner(
         .join("profiles")
         .join(profile)
         .join("real-onion-roundtrip");
-    let dirs =
-        probe_app_private_state_cache_dirs(transport_root.join("arti-state"), cache_root.join("arti-cache"))
-            .map_err(|_| "real onion state/cache dirs unavailable")?;
+    let dirs = probe_app_private_state_cache_dirs(
+        transport_root.join("arti-state"),
+        cache_root.join("arti-cache"),
+    )
+    .map_err(|_| "real onion state/cache dirs unavailable")?;
     let _ = mark_transport_backup_exclusion(&dirs);
-    let backup_exclusion =
-        verify_transport_backup_exclusion(&dirs).map_err(|_| "real onion backup exclusion not verified")?;
+    let backup_exclusion = verify_transport_backup_exclusion(&dirs)
+        .map_err(|_| "real onion backup exclusion not verified")?;
     let bridge_ready = if bridge_config.is_some() {
         BridgeCensorshipConfiguration::BridgeConfigured {
             redacted_bridge_config_id: "app-private-bridge-config".to_string(),
@@ -12343,8 +12412,7 @@ async fn build_real_onion_roundtrip_owner(
     .map_err(|_| "real onion runtime preflight failed")?;
     let bootstrap_timeout_seconds = if bridge_config.is_some_and(|config| {
         config.requires_pluggable_transport_binary() && config.obfs4_transport_binary_configured()
-    })
-    {
+    }) {
         120
     } else {
         12
@@ -12396,9 +12464,7 @@ async fn build_real_onion_roundtrip_owner(
         tokio::pin!(timeout_future);
         let cancel_future = async {
             loop {
-                if cancel_scope
-                    .is_some_and(RealOnionRoundtripCancelScope::is_cancel_requested)
-                {
+                if cancel_scope.is_some_and(RealOnionRoundtripCancelScope::is_cancel_requested) {
                     return;
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -12812,11 +12878,8 @@ fn run_production_two_profile_room_setup(
         profile_a_name.clone(),
         passphrase.clone(),
     )?;
-    let profile_b_state = run_production_session_state_check(
-        &app_data_root,
-        profile_b_name.clone(),
-        passphrase,
-    )?;
+    let profile_b_state =
+        run_production_session_state_check(&app_data_root, profile_b_name.clone(), passphrase)?;
 
     Ok(ProductionTwoProfileRoomSetupResult {
         warning: "two-profile room setup completed locally; no message, network, Tor, or secure-release claim",
@@ -12932,12 +12995,20 @@ fn run_production_two_profile_message_roundtrip(
     let sender_profile = profile_a_name.clone();
     let receiver_profile = profile_b_name.clone();
 
-    let sender_state =
-        run_production_session_state_check(&app_data_root, sender_profile.clone(), passphrase.clone())?;
-    let receiver_state =
-        run_production_session_state_check(&app_data_root, receiver_profile.clone(), passphrase.clone())?;
+    let sender_state = run_production_session_state_check(
+        &app_data_root,
+        sender_profile.clone(),
+        passphrase.clone(),
+    )?;
+    let receiver_state = run_production_session_state_check(
+        &app_data_root,
+        receiver_profile.clone(),
+        passphrase.clone(),
+    )?;
     if !sender_state.ready_for_message_envelope || !receiver_state.ready_for_message_envelope {
-        return Err("stored-session message roundtrip requires both profiles message-ready".to_string());
+        return Err(
+            "stored-session message roundtrip requires both profiles message-ready".to_string(),
+        );
     }
     let sender_profile_result = sender_profile.clone();
     let receiver_profile_result = receiver_profile.clone();
@@ -12964,8 +13035,12 @@ fn run_production_two_profile_message_roundtrip(
         outbound.envelope_payload,
         message_ttl_seconds,
     )?;
-    let received =
-        run_production_message_received_export(&app_data_root, receiver_profile, passphrase, message_number)?;
+    let received = run_production_message_received_export(
+        &app_data_root,
+        receiver_profile,
+        passphrase,
+        message_number,
+    )?;
 
     Ok(ProductionTwoProfileMessageRoundtripResult {
         warning:
@@ -13339,60 +13414,55 @@ fn install_manual_onion_tls_provider() {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_demo_simulation, parse_demo_steps, parse_loop_messages,
-        desktop_platform_boundary_summary,
-        production_message_retention_policy,
-        run_production_conversation_delete,
+        build_demo_simulation, desktop_platform_boundary_summary, parse_demo_steps,
+        parse_loop_messages, production_message_retention_policy,
+        production_onion_receive_loop_retry_wait_millis,
+        production_onion_receive_loop_should_continue, production_onion_receive_loop_wait_or_stop,
+        production_profile_store_path, run_production_conversation_delete,
         run_production_data_lifecycle_status,
         run_production_endpoint_update_control_envelope_export,
         run_production_endpoint_update_control_envelope_import,
-        run_production_full_local_data_wipe,
-        production_profile_store_path, run_production_handshake_finish_export,
+        run_production_full_local_data_wipe, run_production_handshake_finish_export,
         run_production_handshake_finish_import, run_production_handshake_init_export,
         run_production_handshake_reply_export, run_production_local_roundtrip,
         run_production_message_envelope_export, run_production_message_envelope_import,
-        run_production_message_outbound_cancel_pending, run_production_message_retention_preference_get,
-        run_production_message_retention_preference_set,
-        run_production_message_received_export, run_production_message_transcript_export,
+        run_production_message_outbound_cancel_pending, run_production_message_received_export,
+        run_production_message_retention_preference_get,
+        run_production_message_retention_preference_set, run_production_message_transcript_export,
         run_production_onion_backup_exclusion_prepare,
-        run_production_onion_bootstrap_preflight_check, run_production_onion_client_bootstrap_once,
-        run_production_onion_client_attempt_gate_check,
+        run_production_onion_bootstrap_preflight_check,
+        run_production_onion_client_attempt_gate_check, run_production_onion_client_bootstrap_once,
         run_production_onion_descriptor_publication_attempt,
         run_production_onion_descriptor_publication_prepare,
         run_production_onion_inbound_stream_prepare, run_production_onion_key_record_prepare,
         run_production_onion_launch_preflight_check,
         run_production_onion_launch_preflight_check_with_persistent_client,
-        run_production_onion_outbound_stream_prepare,
-        run_production_onion_persistent_client_start, run_production_onion_persistent_client_status,
-        run_production_onion_preflight_check, run_production_onion_receive_loop_start,
+        run_production_onion_outbound_stream_prepare, run_production_onion_persistent_client_start,
+        run_production_onion_persistent_client_status, run_production_onion_preflight_check,
         run_production_onion_receive_loop_record_attempt_error,
         run_production_onion_receive_loop_record_attempt_result,
-        run_production_onion_receive_loop_status, run_production_onion_receive_loop_stop,
-        run_production_onion_receive_loop_worker_finished,
+        run_production_onion_receive_loop_start, run_production_onion_receive_loop_status,
+        run_production_onion_receive_loop_stop, run_production_onion_receive_loop_worker_finished,
         run_production_onion_receive_loop_worker_started,
-        production_onion_receive_loop_wait_or_stop,
-        production_onion_receive_loop_retry_wait_millis,
-        production_onion_receive_loop_should_continue,
-        run_production_onion_service_launch_attempt, run_production_onion_stream_adapter_closeout_prepare,
+        run_production_onion_service_launch_attempt,
+        run_production_onion_stream_adapter_closeout_prepare,
         run_production_pairing_payload_export, run_production_pairing_safety_preview,
         run_production_pairing_session_draft_save,
         run_production_pairing_session_remote_endpoint_mark_send_failure,
-        run_production_pairing_session_remote_endpoint_update, run_production_profile_list,
-        run_production_profile_delete, run_production_profile_passphrase_rekey,
-        run_production_profile_unlock,
-        run_production_runtime_command_surface_status, ProductUnlockRuntimeState,
-        PRODUCT_UNLOCK_IDLE_TIMEOUT_MS,
+        run_production_pairing_session_remote_endpoint_update, run_production_profile_delete,
+        run_production_profile_list, run_production_profile_passphrase_rekey,
+        run_production_profile_unlock, run_production_runtime_command_surface_status,
         run_production_session_lifecycle_delete, run_production_session_lifecycle_status,
-        run_production_session_state_check, ProductionOnionClientRuntimeState,
-        ProductionOnionInboundEnvelopeReceiveAttemptResult,
-        run_production_two_profile_message_roundtrip, run_production_two_profile_real_onion_roundtrip,
-        run_production_two_profile_room_setup, run_production_two_profile_roundtrip,
-        run_production_two_profile_runtime_resume_status, run_production_two_profile_session_status,
-        sanitize_envelope_payload,
+        run_production_session_state_check, run_production_two_profile_message_roundtrip,
+        run_production_two_profile_real_onion_roundtrip, run_production_two_profile_room_setup,
+        run_production_two_profile_roundtrip, run_production_two_profile_runtime_resume_status,
+        run_production_two_profile_session_status, sanitize_envelope_payload,
         sanitize_handshake_payload, sanitize_loop_messages, sanitize_pairing_payload,
         sanitize_pairing_rendezvous_endpoint, sanitize_production_message_text,
         sanitize_production_profile, sanitize_production_roundtrip_message,
-        unique_production_roundtrip_dir,
+        unique_production_roundtrip_dir, ProductUnlockRuntimeState,
+        ProductionOnionClientRuntimeState, ProductionOnionInboundEnvelopeReceiveAttemptResult,
+        PRODUCT_UNLOCK_IDLE_TIMEOUT_MS,
     };
     static DEV_RENDEZVOUS_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
@@ -13623,10 +13693,7 @@ replay check: no replayed messages after message 2
         assert!(!saved.bridge_configured_for_bootstrap);
         assert!(!status.bridge_configured_for_bootstrap);
         assert_eq!(saved.bridge_config_state, "transport-missing");
-        assert_eq!(
-            saved.bridge_config_next_action,
-            "configure-obfs4-transport"
-        );
+        assert_eq!(saved.bridge_config_next_action, "configure-obfs4-transport");
         assert_eq!(status.bridge_config_state, "transport-missing");
 
         let pt_binary = root.join("test-lyrebird");
@@ -13683,9 +13750,8 @@ replay check: no replayed messages after message 2
         let root = unique_production_roundtrip_dir().expect("root");
         let bridge_line = "Bridge 38.229.33.83:80 0BAC39417268B96B9F514E7F63FA6FBA1A788955";
 
-        let status =
-            super::run_production_onion_bridge_config_save(&root, bridge_line.to_string())
-                .expect("direct bridge config saved");
+        let status = super::run_production_onion_bridge_config_save(&root, bridge_line.to_string())
+            .expect("direct bridge config saved");
 
         assert!(status.bridge_capable_build);
         assert!(status.bridge_configured_for_bootstrap);
@@ -13708,8 +13774,11 @@ replay check: no replayed messages after message 2
             .expect("bridge config saved");
         assert!(saved.bridge_configured_for_bootstrap);
         let legacy_pt_path = root.join("transport").join("obfs4-pt-binary-path.txt");
-        std::fs::write(&legacy_pt_path, root.join("legacy-pt").to_string_lossy().as_bytes())
-            .expect("legacy pt path written");
+        std::fs::write(
+            &legacy_pt_path,
+            root.join("legacy-pt").to_string_lossy().as_bytes(),
+        )
+        .expect("legacy pt path written");
 
         let cleared =
             super::run_production_onion_bridge_config_clear(&root).expect("bridge config cleared");
@@ -13769,8 +13838,8 @@ replay check: no replayed messages after message 2
             .expect("bridge parent created");
         std::fs::write(&bridge_path, "# no bridge lines\n").expect("invalid bridge config written");
 
-        let result = tauri::async_runtime::block_on(
-            super::run_production_two_profile_real_onion_roundtrip(
+        let result =
+            tauri::async_runtime::block_on(super::run_production_two_profile_real_onion_roundtrip(
                 &data_root,
                 &cache_root,
                 "alice".to_string(),
@@ -13780,9 +13849,8 @@ replay check: no replayed messages after message 2
                 3600,
                 true,
                 Some(1),
-            ),
-        )
-        .expect("real onion result");
+            ))
+            .expect("real onion result");
 
         assert_eq!(result.next_blocker, "BridgeConfigInvalid");
         assert!(!result.bridge_configured_for_bootstrap);
@@ -13844,8 +13912,10 @@ replay check: no replayed messages after message 2
         super::write_app_private_bridge_config_file(&bridge_path, contents)
             .map_err(|_| "real onion smoke bridge config write failed".to_string())?;
         if bridge_config.requires_pluggable_transport_binary() {
-            let Some(pt_binary_path) = std::env::var_os("ANOTHER_DIMENSION_REAL_ONION_SMOKE_PT_BINARY")
-                .or_else(|| std::env::var_os("ANOTHER_DIMENSION_REAL_ONION_SMOKE_OBFS4_PT_BINARY"))
+            let Some(pt_binary_path) =
+                std::env::var_os("ANOTHER_DIMENSION_REAL_ONION_SMOKE_PT_BINARY").or_else(|| {
+                    std::env::var_os("ANOTHER_DIMENSION_REAL_ONION_SMOKE_OBFS4_PT_BINARY")
+                })
             else {
                 return Err(
                     "real onion smoke pluggable transport binary required but unavailable"
@@ -13882,18 +13952,19 @@ replay check: no replayed messages after message 2
         let passphrase = "correct-passphrase";
         let message = "manual permission required";
 
-        let result = tauri::async_runtime::block_on(run_production_two_profile_real_onion_roundtrip(
-            &data_root,
-            &cache_root,
-            "alice".to_string(),
-            "bob".to_string(),
-            passphrase.to_string(),
-            message.to_string(),
-            3600,
-            false,
-            None,
-        ))
-        .expect("real onion roundtrip permission gate");
+        let result =
+            tauri::async_runtime::block_on(run_production_two_profile_real_onion_roundtrip(
+                &data_root,
+                &cache_root,
+                "alice".to_string(),
+                "bob".to_string(),
+                passphrase.to_string(),
+                message.to_string(),
+                3600,
+                false,
+                None,
+            ))
+            .expect("real onion roundtrip permission gate");
 
         #[cfg(feature = "manual-onion-client-attempt")]
         {
@@ -13975,22 +14046,22 @@ replay check: no replayed messages after message 2
         let root = unique_production_roundtrip_dir().expect("temp root");
         let data_root = root.join("data");
         let cache_root = root.join("cache");
-        let bridge_config_prepared =
-            prepare_real_onion_smoke_bridge_config_from_env(&data_root)
-                .expect("real onion smoke bridge config prepared");
+        let bridge_config_prepared = prepare_real_onion_smoke_bridge_config_from_env(&data_root)
+            .expect("real onion smoke bridge config prepared");
 
-        let result = tauri::async_runtime::block_on(run_production_two_profile_real_onion_roundtrip(
-            &data_root,
-            &cache_root,
-            "alice".to_string(),
-            "bob".to_string(),
-            "correct-passphrase".to_string(),
-            "real onion smoke".to_string(),
-            3600,
-            true,
-            Some(3),
-        ))
-        .expect("real onion roundtrip smoke");
+        let result =
+            tauri::async_runtime::block_on(run_production_two_profile_real_onion_roundtrip(
+                &data_root,
+                &cache_root,
+                "alice".to_string(),
+                "bob".to_string(),
+                "correct-passphrase".to_string(),
+                "real onion smoke".to_string(),
+                3600,
+                true,
+                Some(3),
+            ))
+            .expect("real onion roundtrip smoke");
 
         eprintln!(
             "real_onion_field_smoke next={} blockers={} retry_limit={} attempts_a={} attempts_b={} bridge_capable={} bridge_config_prepared={} bridge_config_used={} bootstrap_a={} bootstrap_b={} launch_a={} launch_b={} endpoint_a={} endpoint_b={} handshake={} first_send_started={} first_send_ok={} first_receive_started={} first_receive_ok={} second_send_ok={} second_receive_ok={} imports={} network={} transport={} runtime={} events={}",
@@ -14091,7 +14162,9 @@ replay check: no replayed messages after message 2
                         .contains(&"OnionServiceLaunchFailed".to_string())
                     || result.blockers.contains(&"EndpointUnavailable".to_string())
                     || result.blockers.contains(&"SendAttemptFailed".to_string())
-                    || result.blockers.contains(&"ReceiveAttemptFailed".to_string())
+                    || result
+                        .blockers
+                        .contains(&"ReceiveAttemptFailed".to_string())
                     || result
                         .blockers
                         .contains(&"SecondSendAttemptFailed".to_string())
@@ -14359,9 +14432,7 @@ replay check: no replayed messages after message 2
     #[test]
     #[ignore = "requires explicit Tor bootstrap, local onion stream I/O, and two isolated app roots"]
     fn production_isolated_invite_roots_real_onion_field_driver_delivers_or_fails_closed() {
-        use another_dimension_transport::{
-            arti_adapter_spike, InMemoryTransportRuntimeEventSink,
-        };
+        use another_dimension_transport::{arti_adapter_spike, InMemoryTransportRuntimeEventSink};
 
         fn print_field_driver_blocker(
             next: &str,
@@ -14454,7 +14525,8 @@ replay check: no replayed messages after message 2
             }
             Err((error, attempts)) => {
                 attempts_a = attempts;
-                let (next, blockers) = super::classify_real_onion_bootstrap_blocker("ProfileA", &error);
+                let (next, blockers) =
+                    super::classify_real_onion_bootstrap_blocker("ProfileA", &error);
                 events.push(format!("redacted_stage={error}"));
                 print_field_driver_blocker(
                     &next, &blockers, &events, bridge_a, bridge_b, attempts_a, attempts_b,
@@ -14485,7 +14557,8 @@ replay check: no replayed messages after message 2
             }
             Err((error, attempts)) => {
                 attempts_b = attempts;
-                let (next, blockers) = super::classify_real_onion_bootstrap_blocker("ProfileB", &error);
+                let (next, blockers) =
+                    super::classify_real_onion_bootstrap_blocker("ProfileB", &error);
                 events.push(format!("redacted_stage={error}"));
                 print_field_driver_blocker(
                     &next, &blockers, &events, bridge_a, bridge_b, attempts_a, attempts_b,
@@ -14499,7 +14572,8 @@ replay check: no replayed messages after message 2
             }
         };
 
-        let inviter_profile = sanitize_production_profile(inviter.clone()).expect("inviter profile");
+        let inviter_profile =
+            sanitize_production_profile(inviter.clone()).expect("inviter profile");
         let joiner_profile = sanitize_production_profile(joiner.clone()).expect("joiner profile");
         let mut launch_sink = InMemoryTransportRuntimeEventSink::default();
         if owner_a
@@ -14969,21 +15043,24 @@ replay check: no replayed messages after message 2
         let transcript_b =
             run_production_message_transcript_export(&data_b, joiner.clone(), passphrase.clone())
                 .expect("joiner transcript");
-        assert!(transcript_a.entries.iter().any(|entry| {
-            entry.direction == "sent" && entry.message_number == first_number
-        }));
+        assert!(transcript_a
+            .entries
+            .iter()
+            .any(|entry| { entry.direction == "sent" && entry.message_number == first_number }));
         assert!(transcript_a.entries.iter().any(|entry| {
             entry.direction == "received" && entry.message_number == second_number
         }));
-        assert!(transcript_a.entries.iter().any(|entry| {
-            entry.direction == "sent" && entry.message_number == third_number
-        }));
+        assert!(transcript_a
+            .entries
+            .iter()
+            .any(|entry| { entry.direction == "sent" && entry.message_number == third_number }));
         assert!(transcript_b.entries.iter().any(|entry| {
             entry.direction == "received" && entry.message_number == first_number
         }));
-        assert!(transcript_b.entries.iter().any(|entry| {
-            entry.direction == "sent" && entry.message_number == second_number
-        }));
+        assert!(transcript_b
+            .entries
+            .iter()
+            .any(|entry| { entry.direction == "sent" && entry.message_number == second_number }));
         assert!(transcript_b.entries.iter().any(|entry| {
             entry.direction == "received" && entry.message_number == third_number
         }));
@@ -15097,10 +15174,9 @@ replay check: no replayed messages after message 2
         let data_root = root.join("data");
         let cache_root = root.join("cache");
 
-        let result = tauri::async_runtime::block_on(run_production_onion_client_attempt_gate_check(
-            &data_root,
-            &cache_root,
-        ));
+        let result = tauri::async_runtime::block_on(
+            run_production_onion_client_attempt_gate_check(&data_root, &cache_root),
+        );
 
         assert!(result.attempt_gate_only);
         assert!(!result.manual_network_permission_enabled);
@@ -15738,9 +15814,8 @@ replay check: no replayed messages after message 2
 
     #[test]
     fn production_onion_outbound_stream_prepare_reaches_gate_without_dial_or_send() {
-        let result =
-            run_production_onion_outbound_stream_prepare("alice.onion".to_string())
-                .expect("outbound stream prepare");
+        let result = run_production_onion_outbound_stream_prepare("alice.onion".to_string())
+            .expect("outbound stream prepare");
 
         assert!(result.preparation_only);
         assert!(result.endpoint_accepted);
@@ -15766,10 +15841,7 @@ replay check: no replayed messages after message 2
 
     #[test]
     fn production_onion_outbound_stream_prepare_rejects_non_onion_endpoint() {
-        assert!(run_production_onion_outbound_stream_prepare(
-            "alice.example".to_string()
-        )
-        .is_err());
+        assert!(run_production_onion_outbound_stream_prepare("alice.example".to_string()).is_err());
     }
 
     #[cfg(target_os = "macos")]
@@ -16014,8 +16086,7 @@ replay check: no replayed messages after message 2
         assert!(
             result.remote_peer_authentication_ready,
             "next_blocker={}; blockers={:?}",
-            result.next_blocker,
-            result.blockers
+            result.next_blocker, result.blockers
         );
         assert!(result.verified_pairwise_session_binding_ready);
         assert!(result.bound_stream_session_ready);
@@ -16090,8 +16161,7 @@ replay check: no replayed messages after message 2
         assert!(
             result.remote_peer_authentication_ready,
             "next_blocker={}; blockers={:?}",
-            result.next_blocker,
-            result.blockers
+            result.next_blocker, result.blockers
         );
         assert!(result.bound_stream_session_ready);
         assert!(result.outbound_envelope_io_boundary_ready);
@@ -16150,8 +16220,8 @@ replay check: no replayed messages after message 2
         assert_eq!(roundtrip.message_number, 1);
         assert!(roundtrip.encrypted_envelope_exported);
 
-        let result =
-            tauri::async_runtime::block_on(super::run_production_onion_outbound_envelope_send_attempt(
+        let result = tauri::async_runtime::block_on(
+            super::run_production_onion_outbound_envelope_send_attempt(
                 &data_root,
                 &cache_root,
                 &state,
@@ -16160,8 +16230,9 @@ replay check: no replayed messages after message 2
                 format!("{}.onion", roundtrip.receiver_profile),
                 1,
                 false,
-            ))
-            .expect("outbound envelope send attempt");
+            ),
+        )
+        .expect("outbound envelope send attempt");
 
         assert!(!result.preparation_only);
         assert!(result.manual_client_attempt_feature_compiled);
@@ -16169,7 +16240,9 @@ replay check: no replayed messages after message 2
         assert!(!result.send_attempt_started);
         assert!(!result.send_attempt_succeeded);
         assert_eq!(result.next_blocker, "ManualNetworkPermissionMissing");
-        assert!(result.blockers.contains(&"ManualNetworkPermissionMissing".to_string()));
+        assert!(result
+            .blockers
+            .contains(&"ManualNetworkPermissionMissing".to_string()));
         assert!(result.event_summary.is_empty());
         assert!(!result.raw_endpoint_returned);
         assert!(!result.raw_path_returned);
@@ -16310,19 +16383,11 @@ replay check: no replayed messages after message 2
         assert!(!initial.transport_io_opened);
         assert!(!initial.runtime_messaging_enabled);
 
-        let blocked = run_production_onion_receive_loop_start(
-            &state,
-            "alice".to_string(),
-            false,
-        );
+        let blocked = run_production_onion_receive_loop_start(&state, "alice".to_string(), false);
         assert!(!blocked.enabled);
         assert!(!blocked.profile_selected);
 
-        let started = run_production_onion_receive_loop_start(
-            &state,
-            "alice".to_string(),
-            true,
-        );
+        let started = run_production_onion_receive_loop_start(&state, "alice".to_string(), true);
         assert!(started.enabled);
         assert!(started.profile_selected);
         assert!(!started.worker_running);
@@ -16343,11 +16408,7 @@ replay check: no replayed messages after message 2
         assert_eq!(worker_started.runtime_state, "receiving");
         assert_eq!(worker_started.worker_start_count, 1);
 
-        let duplicate = run_production_onion_receive_loop_start(
-            &state,
-            "bob".to_string(),
-            true,
-        );
+        let duplicate = run_production_onion_receive_loop_start(&state, "bob".to_string(), true);
         assert!(duplicate.enabled);
         assert!(duplicate.profile_selected);
         assert!(duplicate.worker_running);
@@ -16384,17 +16445,17 @@ replay check: no replayed messages after message 2
         assert_eq!(stopped.duplicate_start_block_count, 1);
         assert!(!stopped.starts_network_on_app_launch);
 
-        let blocked_restart_while_stopping = run_production_onion_receive_loop_start(
-            &state,
-            "alice".to_string(),
-            true,
-        );
+        let blocked_restart_while_stopping =
+            run_production_onion_receive_loop_start(&state, "alice".to_string(), true);
         assert!(!blocked_restart_while_stopping.enabled);
         assert!(blocked_restart_while_stopping.stop_requested);
         assert!(blocked_restart_while_stopping.worker_running);
         assert!(blocked_restart_while_stopping.duplicate_loop_blocked);
         assert_eq!(blocked_restart_while_stopping.worker_start_count, 1);
-        assert_eq!(blocked_restart_while_stopping.duplicate_start_block_count, 2);
+        assert_eq!(
+            blocked_restart_while_stopping.duplicate_start_block_count,
+            2
+        );
         assert!(!blocked_restart_while_stopping.starts_network_on_app_launch);
 
         run_production_onion_receive_loop_worker_finished(&state);
@@ -16408,11 +16469,7 @@ replay check: no replayed messages after message 2
         assert_eq!(finished.worker_start_count, 1);
         assert_eq!(finished.duplicate_start_block_count, 2);
 
-        let restarted = run_production_onion_receive_loop_start(
-            &state,
-            "alice".to_string(),
-            true,
-        );
+        let restarted = run_production_onion_receive_loop_start(&state, "alice".to_string(), true);
         assert!(restarted.enabled);
         assert!(!restarted.stop_requested);
         assert!(restarted.profile_selected);
@@ -16482,7 +16539,10 @@ replay check: no replayed messages after message 2
         run_production_onion_receive_loop_record_attempt_result(&state, &retry_result);
         let retry = run_production_onion_receive_loop_status(&state, false);
         assert_eq!(retry.import_sequence, 0);
-        assert_eq!(retry.last_next_blocker.as_deref(), Some("PersistentClientNotReady"));
+        assert_eq!(
+            retry.last_next_blocker.as_deref(),
+            Some("PersistentClientNotReady")
+        );
         assert_eq!(retry.last_failure_kind, "persistent-client");
         assert!(retry.last_failure_retryable);
         assert_eq!(retry.runtime_state, "bootstrapping");
@@ -16801,12 +16861,8 @@ replay check: no replayed messages after message 2
     #[test]
     fn production_profile_passphrase_rekey_is_redacted_and_invalidates_old_passphrase() {
         let root = unique_production_roundtrip_dir().expect("temp root");
-        run_production_profile_unlock(
-            &root,
-            "alice".to_string(),
-            "correct-passphrase".to_string(),
-        )
-        .expect("profile unlock");
+        run_production_profile_unlock(&root, "alice".to_string(), "correct-passphrase".to_string())
+            .expect("profile unlock");
 
         let result = run_production_profile_passphrase_rekey(
             &root,
@@ -17119,11 +17175,19 @@ replay check: no replayed messages after message 2
         assert!(!status.network_io_attempted);
         assert!(!status.transport_io_opened);
         assert!(!status.runtime_messaging_enabled);
+        assert!(run_production_session_lifecycle_delete(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "bad".to_string(),
+        )
+        .is_err());
 
         let deleted = run_production_session_lifecycle_delete(
             &root,
             "alice".to_string(),
             "correct-passphrase".to_string(),
+            "DELETE SESSION".to_string(),
         )
         .expect("lifecycle delete");
         assert!(deleted.storage_opened);
@@ -17173,6 +17237,7 @@ replay check: no replayed messages after message 2
             &root,
             "alice".to_string(),
             "correct-passphrase".to_string(),
+            "DELETE CONVERSATION".to_string(),
         )
         .expect("conversation delete");
         assert!(conversation_delete.storage_opened);
@@ -17189,6 +17254,13 @@ replay check: no replayed messages after message 2
         )
         .expect("transcript after delete");
         assert!(empty.entries.is_empty());
+        assert!(run_production_conversation_delete(
+            &root,
+            "alice".to_string(),
+            "correct-passphrase".to_string(),
+            "bad".to_string(),
+        )
+        .is_err());
 
         let prepared = run_production_data_lifecycle_status(&root, &cache, true)
             .expect("prepare data lifecycle");
@@ -17210,12 +17282,9 @@ replay check: no replayed messages after message 2
         assert!(!prepared.store_path_returned);
         assert!(!prepared.key_material_exposed);
 
-        let profile_delete = run_production_profile_delete(
-            &root,
-            "bob".to_string(),
-            "bob".to_string(),
-        )
-        .expect("profile delete");
+        let profile_delete =
+            run_production_profile_delete(&root, "bob".to_string(), "bob".to_string())
+                .expect("profile delete");
         assert!(profile_delete.profile_deleted);
         assert!(profile_delete.profile_existed_before_delete);
         assert!(!profile_delete.profile_exists_after_delete);
@@ -17228,12 +17297,9 @@ replay check: no replayed messages after message 2
         assert!(!profile_delete.secure_deletion_from_media_claimed);
         assert!(!profile_delete.store_path_returned);
 
-        let wiped = run_production_full_local_data_wipe(
-            &root,
-            &cache,
-            "WIPE LOCAL DATA".to_string(),
-        )
-        .expect("full local data wipe");
+        let wiped =
+            run_production_full_local_data_wipe(&root, &cache, "WIPE LOCAL DATA".to_string())
+                .expect("full local data wipe");
         assert!(wiped.full_local_data_wiped);
         assert!(!wiped.profiles_present);
         assert!(!wiped.transport_data_present);
@@ -17285,9 +17351,7 @@ replay check: no replayed messages after message 2
         assert!(summary
             .policies
             .contains(&"windows_is_local_build_candidate_only"));
-        assert!(summary
-            .policies
-            .contains(&"same_tauri_app_data_semantics"));
+        assert!(summary.policies.contains(&"same_tauri_app_data_semantics"));
         assert!(summary
             .policies
             .contains(&"platform_private_app_data_and_cache_roots"));
@@ -17864,7 +17928,8 @@ replay check: no replayed messages after message 2
         assert!(!receive_started.passphrase_retained);
 
         let restarted_runtime = ProductionOnionClientRuntimeState::default();
-        let receive_after_restart = run_production_onion_receive_loop_status(&restarted_runtime, false);
+        let receive_after_restart =
+            run_production_onion_receive_loop_status(&restarted_runtime, false);
         assert!(!receive_after_restart.enabled);
         assert!(!receive_after_restart.worker_running);
         assert_eq!(receive_after_restart.runtime_state, "stopped");
@@ -18059,10 +18124,7 @@ replay check: no replayed messages after message 2
             envelope_io_opened: true,
             runtime_messaging_enabled: true,
         };
-        run_production_onion_receive_loop_record_attempt_result(
-            &receive_state,
-            &imported_result,
-        );
+        run_production_onion_receive_loop_record_attempt_result(&receive_state, &imported_result);
         let receive_status = run_production_onion_receive_loop_status(&receive_state, false);
         assert_eq!(receive_status.import_sequence, 1);
         assert_eq!(receive_status.message_import_count, 1);
@@ -18235,12 +18297,13 @@ replay check: no replayed messages after message 2
             refreshed_status.profile_a_remote_endpoint_last_failed_message_number,
             None
         );
-        let refreshed_endpoint = super::run_production_pairing_session_remote_endpoint_for_transport(
-            &root,
-            "alice".to_string(),
-            "correct-passphrase".to_string(),
-        )
-        .expect("refreshed endpoint for transport");
+        let refreshed_endpoint =
+            super::run_production_pairing_session_remote_endpoint_for_transport(
+                &root,
+                "alice".to_string(),
+                "correct-passphrase".to_string(),
+            )
+            .expect("refreshed endpoint for transport");
         assert_eq!(refreshed_endpoint, "bob-rerotated.onion");
         let _ = std::fs::remove_dir_all(root);
     }
@@ -18623,16 +18686,17 @@ replay check: no replayed messages after message 2
             604_800,
         )
         .expect("endpoint blocked outbound message");
-        let mut endpoint_refresh_attempt = super::ProductionOnionOutboundEnvelopeSendAttemptResult {
-            next_blocker: "stored remote endpoint refresh required".to_string(),
-            blockers: vec!["stored remote endpoint refresh required".to_string()],
-            send_attempt_started: true,
-            send_attempt_succeeded: false,
-            peer_endpoint_failure_recorded: false,
-            peer_endpoint_refresh_recommended: false,
-            retry_recommended_after_endpoint_refresh: false,
-            ..blocked_attempt
-        };
+        let mut endpoint_refresh_attempt =
+            super::ProductionOnionOutboundEnvelopeSendAttemptResult {
+                next_blocker: "stored remote endpoint refresh required".to_string(),
+                blockers: vec!["stored remote endpoint refresh required".to_string()],
+                send_attempt_started: true,
+                send_attempt_succeeded: false,
+                peer_endpoint_failure_recorded: false,
+                peer_endpoint_refresh_recommended: false,
+                retry_recommended_after_endpoint_refresh: false,
+                ..blocked_attempt
+            };
         super::apply_peer_endpoint_send_failure_result(
             &mut endpoint_refresh_attempt,
             &root,
@@ -18997,9 +19061,9 @@ replay check: no replayed messages after message 2
         assert_eq!(sender_transcript.entries[0].ttl_seconds, 86_400);
         assert!(sender_transcript.entries[0].expires_at_ms.is_some());
         assert!(!sender_transcript.entries[0].expired);
-        assert!(sender_transcript
-            .transcript_tsv
-            .starts_with("direction\tmessage_number\tcreated_at_ms\tttl_seconds\texpires_at_ms\tmessage\n"));
+        assert!(sender_transcript.transcript_tsv.starts_with(
+            "direction\tmessage_number\tcreated_at_ms\tttl_seconds\texpires_at_ms\tmessage\n"
+        ));
         assert!(sender_transcript.transcript_tsv.contains("sent\t1\t"));
         assert!(sender_transcript
             .transcript_tsv
@@ -19026,9 +19090,7 @@ replay check: no replayed messages after message 2
         assert_eq!(receiver_transcript.entries[0].ttl_seconds, 86_400);
         assert!(receiver_transcript.entries[0].expires_at_ms.is_some());
         assert!(!receiver_transcript.entries[0].expired);
-        assert!(receiver_transcript
-            .transcript_tsv
-            .contains("received\t1\t"));
+        assert!(receiver_transcript.transcript_tsv.contains("received\t1\t"));
         assert!(receiver_transcript
             .transcript_tsv
             .contains("persistent hello\n"));
@@ -19315,7 +19377,10 @@ replay check: no replayed messages after message 2
             86_400,
         )
         .expect("stored-session message roundtrip");
-        assert_ne!(stored_message.sender_profile, stored_message.receiver_profile);
+        assert_ne!(
+            stored_message.sender_profile,
+            stored_message.receiver_profile
+        );
         assert!(["alice", "bob"].contains(&stored_message.sender_profile.as_str()));
         assert!(["alice", "bob"].contains(&stored_message.receiver_profile.as_str()));
         assert!(stored_message.message_number >= 1);
@@ -19709,22 +19774,20 @@ replay check: no replayed messages after message 2
             .expect("invite-derived key record prepare");
             assert!(key_record.key_material_ready);
 
-            let canceled_send_prepare =
-                super::run_production_onion_outbound_envelope_send_prepare(
-                    &root,
-                    &cache_root,
-                    "inviter-abcd-2345".to_string(),
-                    "shared-invite-passphrase".to_string(),
-                    "joiner-abcd-2345.onion".to_string(),
-                    outbound.selected_message_number,
-                    true,
-                )
-                .expect("canceled send prepare");
+            let canceled_send_prepare = super::run_production_onion_outbound_envelope_send_prepare(
+                &root,
+                &cache_root,
+                "inviter-abcd-2345".to_string(),
+                "shared-invite-passphrase".to_string(),
+                "joiner-abcd-2345.onion".to_string(),
+                outbound.selected_message_number,
+                true,
+            )
+            .expect("canceled send prepare");
             assert!(
                 canceled_send_prepare.remote_peer_authentication_ready,
                 "next_blocker={}; blockers={:?}",
-                canceled_send_prepare.next_blocker,
-                canceled_send_prepare.blockers
+                canceled_send_prepare.next_blocker, canceled_send_prepare.blockers
             );
             assert!(canceled_send_prepare.bound_stream_session_ready);
             assert!(canceled_send_prepare.outbound_envelope_io_boundary_ready);
@@ -19778,7 +19841,9 @@ replay check: no replayed messages after message 2
 
     #[test]
     fn dev_invite_room_token_stays_open_after_join_and_presence_refresh() {
-        let _guard = DEV_RENDEZVOUS_ENV_LOCK.lock().expect("dev rendezvous env lock");
+        let _guard = DEV_RENDEZVOUS_ENV_LOCK
+            .lock()
+            .expect("dev rendezvous env lock");
         let previous = std::env::var_os("ANOTHER_DIMENSION_DEV_RENDEZVOUS_DIR");
         let root = unique_production_roundtrip_dir().expect("temp root");
         std::env::set_var("ANOTHER_DIMENSION_DEV_RENDEZVOUS_DIR", &root);
@@ -19904,9 +19969,12 @@ replay check: no replayed messages after message 2
                     inviter_init.output_payload,
                 )
             } else {
-                let joiner_init =
-                    run_production_handshake_init_export(&root_b, joiner.clone(), passphrase.clone())
-                        .expect("joiner init");
+                let joiner_init = run_production_handshake_init_export(
+                    &root_b,
+                    joiner.clone(),
+                    passphrase.clone(),
+                )
+                .expect("joiner init");
                 assert!(joiner_init.output_payload_created);
                 (
                     &root_b,
@@ -19941,12 +20009,9 @@ replay check: no replayed messages after message 2
         .expect("joiner finish import");
         assert!(finish_import.transport_state_persisted);
 
-        let inviter_state = run_production_session_state_check(
-            &root_a,
-            inviter.clone(),
-            passphrase.clone(),
-        )
-        .expect("inviter state");
+        let inviter_state =
+            run_production_session_state_check(&root_a, inviter.clone(), passphrase.clone())
+                .expect("inviter state");
         let joiner_state =
             run_production_session_state_check(&root_b, joiner.clone(), passphrase.clone())
                 .expect("joiner state");
@@ -19974,9 +20039,12 @@ replay check: no replayed messages after message 2
         )
         .expect("isolated inbound");
         assert!(inbound.received_message_written);
-        let receiver_transcript =
-            run_production_message_transcript_export(responder_root, responder_profile, passphrase.clone())
-                .expect("isolated receiver transcript");
+        let receiver_transcript = run_production_message_transcript_export(
+            responder_root,
+            responder_profile,
+            passphrase.clone(),
+        )
+        .expect("isolated receiver transcript");
         assert!(receiver_transcript.entries.iter().any(|entry| {
             entry.direction == "received"
                 && entry.message_number == outbound.selected_message_number
@@ -20002,7 +20070,10 @@ replay check: no replayed messages after message 2
             .iter()
             .find(|entry| entry.message_number == outbound.selected_message_number)
             .expect("isolated failed sender entry");
-        assert_eq!(failed_entry.outbound_delivery_state.as_deref(), Some("failed"));
+        assert_eq!(
+            failed_entry.outbound_delivery_state.as_deref(),
+            Some("failed")
+        );
         assert_eq!(
             failed_entry.outbound_failure_kind.as_deref(),
             Some("peer-endpoint-missing")
@@ -20040,12 +20111,9 @@ replay check: no replayed messages after message 2
             outbound.selected_message_number,
         )
         .expect("cancel isolated failed outbound");
-        let canceled_transcript = run_production_message_transcript_export(
-            initiator_root,
-            initiator_profile,
-            passphrase,
-        )
-        .expect("isolated canceled sender transcript");
+        let canceled_transcript =
+            run_production_message_transcript_export(initiator_root, initiator_profile, passphrase)
+                .expect("isolated canceled sender transcript");
         let canceled_entry = canceled_transcript
             .entries
             .iter()

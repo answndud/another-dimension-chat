@@ -23,11 +23,11 @@ pub mod production {
     use another_dimension_storage::production::{
         production_message_storage_boundary_summary, protection_for,
         require_encrypted_record_allowed, require_persistence_allowed, EncryptedRecord,
-        EncryptedRecordId, EncryptedRecordScope, LockedProfileStore, ProductionRecordKind,
-        LocalProfileRecoveryFailureKind, ProductionStorageError, ProductionStoragePolicyError,
-        ProfilePassphrase, ProfileStoreUnlockFailureKind, ReplayRollbackProtection,
-        SqlCipherRecordStore, StorageBackendKind, StorageProtection, UnlockFactor, UnlockMode,
-        UnlockRequest,
+        EncryptedRecordId, EncryptedRecordScope, LocalProfileRecoveryFailureKind,
+        LockedProfileStore, ProductionRecordKind, ProductionStorageError,
+        ProductionStoragePolicyError, ProfilePassphrase, ProfileStoreUnlockFailureKind,
+        ReplayRollbackProtection, SqlCipherRecordStore, StorageBackendKind, StorageProtection,
+        UnlockFactor, UnlockMode, UnlockRequest,
     };
     use another_dimension_transport::{
         BoundOutboundStreamSession, EncryptedEndpointUpdateControlEnvelope, EndpointLifecycleError,
@@ -44,6 +44,10 @@ pub mod production {
     };
     use sha2::{Digest, Sha256};
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    pub use another_dimension_storage::production::{
+        ProductionLocalDestructiveAction, ProductionLocalDestructiveActionDecision,
+    };
 
     const CANONICAL_DIALER_DOMAIN: &[u8] = b"AD-SESSION-CANONICAL-DIALER-V1";
     const PRODUCTION_CHANNEL_DOMAIN: &[u8] = b"AD-PRODUCTION-CHANNEL-V1";
@@ -15805,6 +15809,12 @@ pub mod production {
         }
     }
 
+    pub fn production_local_destructive_action_decision(
+        action: ProductionLocalDestructiveAction,
+    ) -> ProductionLocalDestructiveActionDecision {
+        another_dimension_storage::production::production_local_destructive_action_decision(action)
+    }
+
     pub fn production_protocol_decision_summary() -> ProductionProtocolDecisionSummary {
         ProductionProtocolDecisionSummary {
             selected_session_protocol: "snow Noise XX synchronous 1:1 invite-code boundary",
@@ -19431,7 +19441,9 @@ pub mod production {
             next_action: match state {
                 ProductionManualEnvelopeOutboundState::ReadyToExport => "export_envelope",
                 ProductionManualEnvelopeOutboundState::Exported => "share_outside_app_then_import",
-                ProductionManualEnvelopeOutboundState::WaitingForReply => "wait_for_reply_or_cancel",
+                ProductionManualEnvelopeOutboundState::WaitingForReply => {
+                    "wait_for_reply_or_cancel"
+                }
                 ProductionManualEnvelopeOutboundState::DuplicateImport => "ignore_duplicate_import",
                 ProductionManualEnvelopeOutboundState::StaleOrReplayedImport => {
                     "ignore_stale_or_replayed_import"
@@ -21014,9 +21026,12 @@ pub mod production {
             ProductionProfileUnlockRecoveryKind::MissingStore => {
                 (false, true, false, "create-new-local-profile")
             }
-            ProductionProfileUnlockRecoveryKind::CorruptStore => {
-                (false, true, false, "inspect-local-store-or-create-new-profile")
-            }
+            ProductionProfileUnlockRecoveryKind::CorruptStore => (
+                false,
+                true,
+                false,
+                "inspect-local-store-or-create-new-profile",
+            ),
             ProductionProfileUnlockRecoveryKind::MigrationNeeded => {
                 (false, false, true, "run-supported-local-store-migration")
             }
@@ -21052,9 +21067,12 @@ pub mod production {
                 ProductionLocalDataRecoveryKind::PassphraseLoss => {
                     (false, false, true, "create-new-local-profile")
                 }
-                ProductionLocalDataRecoveryKind::CorruptStore => {
-                    (false, false, true, "inspect-local-store-or-create-new-profile")
-                }
+                ProductionLocalDataRecoveryKind::CorruptStore => (
+                    false,
+                    false,
+                    true,
+                    "inspect-local-store-or-create-new-profile",
+                ),
                 ProductionLocalDataRecoveryKind::MigrationFailure => {
                     (true, true, false, "retry-supported-local-store-migration")
                 }
@@ -22439,7 +22457,10 @@ pub mod production {
                     decision.retry_with_passphrase_allowed(),
                     retry_with_passphrase_allowed
                 );
-                assert_eq!(decision.create_new_profile_allowed(), create_new_profile_allowed);
+                assert_eq!(
+                    decision.create_new_profile_allowed(),
+                    create_new_profile_allowed
+                );
                 assert_eq!(decision.migration_required(), migration_required);
                 assert_eq!(decision.next_action(), next_action);
                 assert!(decision.passphrase_required());
@@ -22506,7 +22527,10 @@ pub mod production {
                 assert!(!decision.silent_data_loss_allowed());
                 assert!(!decision.rollback_prevention_claimed());
                 assert!(!decision.secure_media_deletion_claimed());
-                assert_eq!(decision.create_new_profile_allowed(), create_new_profile_allowed);
+                assert_eq!(
+                    decision.create_new_profile_allowed(),
+                    create_new_profile_allowed
+                );
                 assert_eq!(decision.next_action(), next_action);
             }
         }
@@ -22928,6 +22952,42 @@ pub mod production {
             assert!(lifecycle
                 .scopes()
                 .contains(&"rollback_detection_is_marker_only_not_prevention"));
+        }
+
+        #[test]
+        fn production_local_destructive_action_decision_inherits_storage_scopes() {
+            let conversation = production_local_destructive_action_decision(
+                ProductionLocalDestructiveAction::ConversationDelete,
+            );
+            let session = production_local_destructive_action_decision(
+                ProductionLocalDestructiveAction::SessionDelete,
+            );
+            let profile = production_local_destructive_action_decision(
+                ProductionLocalDestructiveAction::ProfileDelete,
+            );
+            let wipe = production_local_destructive_action_decision(
+                ProductionLocalDestructiveAction::FullLocalWipe,
+            );
+
+            assert_eq!(conversation.scope(), "local-message-records-only");
+            assert!(conversation.removes_message_records());
+            assert!(conversation.preserves_session_records());
+            assert_eq!(session.scope(), "local-session-resume-records-only");
+            assert!(session.removes_session_resume_records());
+            assert!(session.preserves_message_records());
+            assert_eq!(profile.confirmation(), "exact-profile-name");
+            assert!(profile.removes_profile_store());
+            assert_eq!(wipe.confirmation(), "WIPE LOCAL DATA");
+            assert!(wipe.removes_owned_app_data());
+
+            for decision in [conversation, session, profile, wipe] {
+                assert!(decision.redacted_result());
+                assert!(!decision.backup_recovery_claimed());
+                assert!(!decision.cloud_backup_sync_claimed());
+                assert!(!decision.rollback_prevention_claimed());
+                assert!(!decision.secure_media_deletion_claimed());
+                assert!(!decision.network_io_attempted());
+            }
         }
 
         #[test]
@@ -26171,8 +26231,9 @@ pub mod production {
             let exported = production_manual_envelope_outbound_decision(
                 true, false, false, false, false, false,
             );
-            let waiting =
-                production_manual_envelope_outbound_decision(true, true, false, false, false, false);
+            let waiting = production_manual_envelope_outbound_decision(
+                true, true, false, false, false, false,
+            );
             let duplicate =
                 production_manual_envelope_outbound_decision(true, true, false, true, false, false);
             let stale =
@@ -26185,7 +26246,10 @@ pub mod production {
                 ProductionManualEnvelopeOutboundState::ReadyToExport
             );
             assert!(ready.export_allowed());
-            assert_eq!(exported.state(), ProductionManualEnvelopeOutboundState::Exported);
+            assert_eq!(
+                exported.state(),
+                ProductionManualEnvelopeOutboundState::Exported
+            );
             assert!(exported.import_allowed());
             assert_eq!(
                 waiting.state(),
@@ -26201,7 +26265,10 @@ pub mod production {
                 ProductionManualEnvelopeOutboundState::StaleOrReplayedImport
             );
             assert!(stale.retry_allowed());
-            assert_eq!(canceled.state(), ProductionManualEnvelopeOutboundState::Canceled);
+            assert_eq!(
+                canceled.state(),
+                ProductionManualEnvelopeOutboundState::Canceled
+            );
             assert!(canceled.terminal());
             assert_eq!(canceled.next_action(), "write_new_message");
 
