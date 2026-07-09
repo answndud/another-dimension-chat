@@ -70,6 +70,7 @@ import {
   productionTwoProfileSessionSummaryView,
   productionTwoProfileSessionStatusView,
   productionVersionIntegrityView,
+  productionWindowsRuntimeParityView,
 } from "./action-state.js";
 import {
   createMessageEnvelopeSlot,
@@ -98,6 +99,7 @@ const fields = {
   releaseClaim: document.querySelector("#release-claim"),
   firstRunPrimaryNextAction: document.querySelector("#first-run-primary-next-action"),
   versionIntegrityStatus: document.querySelector("#version-integrity-status"),
+  windowsRuntimeParityStatus: document.querySelector("#windows-runtime-parity-status"),
   messaging: document.querySelector("#messaging"),
   localDevPeerLabel: document.querySelector("#local-dev-peer-label"),
   localPeerTestHint: document.querySelector("#local-peer-test-hint"),
@@ -1513,6 +1515,7 @@ function applyLanguage(language) {
   renderRoomStatusSummary(productionTwoProfileInput(), twoProfileSessionsReadyForInput(productionTwoProfileInput()));
   renderPrototypeStatus();
   renderVersionIntegrityStatus();
+  renderWindowsRuntimeParityStatus();
   renderMessageTtlControlOptions();
   renderProductionTwoProfileFlow(productionTwoProfileInput());
   renderProductionTwoProfileDirection(productionTwoProfileInput());
@@ -3224,6 +3227,15 @@ function renderVersionIntegrityStatus(input = {}) {
     ...input,
   });
   setText(fields.versionIntegrityStatus, view.summary);
+  return view;
+}
+
+function renderWindowsRuntimeParityStatus(input = {}) {
+  const view = productionWindowsRuntimeParityView({
+    platform: globalThis.navigator?.platform,
+    ...input,
+  });
+  setText(fields.windowsRuntimeParityStatus, view.summary);
   return view;
 }
 
