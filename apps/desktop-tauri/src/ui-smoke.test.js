@@ -1263,6 +1263,24 @@ test("product unlock lockout shows local-only recovery actions", () => {
   assert.match(lockBody, /renderProductionProductUnlockRecovery\(result, \{ lockedByUser: true \}\)/);
 });
 
+test("desktop accessibility polish keeps disabled reasons focus and overflow explicit", () => {
+  const setDisabledBody = functionBody(mainJs, "setDisabled");
+  const buttonStateBody = functionBody(mainJs, "setActionButtonState");
+
+  assert.match(setDisabledBody, /aria-disabled/);
+  assert.match(buttonStateBody, /aria-disabled/);
+  assert.match(buttonStateBody, /dataset\.disabledReason/);
+  assert.match(buttonStateBody, /aria-description/);
+  assert.match(stylesCss, /button:focus-visible/);
+  assert.match(stylesCss, /summary:focus-visible/);
+  assert.match(stylesCss, /input:focus-visible/);
+  assert.match(stylesCss, /prefers-reduced-motion: reduce/);
+  assert.match(stylesCss, /scroll-behavior: auto !important/);
+  assert.match(stylesCss, /\.demo-state,[\s\S]*\.demo-hint,[\s\S]*\.demo-warning/);
+  assert.match(stylesCss, /overflow-wrap: anywhere/);
+  assert.match(stylesCss, /cursor: not-allowed/);
+});
+
 test("runtime resume rollback block routes users to local data recovery", () => {
   const recoveryBody = functionBody(mainJs, "runtimeResumeRollbackRecoveryView");
   assert.match(recoveryBody, /local_recovery=check-data-lifecycle/);

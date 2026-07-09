@@ -2524,6 +2524,7 @@ function setOnionOutboundEnvelopeSendState(message) {
 function setDisabled(node, disabled) {
   if (node) {
     node.disabled = disabled;
+    node.setAttribute("aria-disabled", disabled ? "true" : "false");
   }
 }
 
@@ -2533,6 +2534,14 @@ function setActionButtonState(node, disabled, reason, current = false) {
   }
   node.disabled = disabled;
   node.title = disabled ? reason : "";
+  node.setAttribute("aria-disabled", disabled ? "true" : "false");
+  if (disabled && reason) {
+    node.dataset.disabledReason = reason;
+    node.setAttribute("aria-description", reason);
+  } else {
+    delete node.dataset.disabledReason;
+    node.removeAttribute("aria-description");
+  }
   node.classList.toggle("is-current-action", !disabled && current);
 }
 
