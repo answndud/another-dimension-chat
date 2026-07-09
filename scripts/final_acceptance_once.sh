@@ -3,6 +3,7 @@ set -euo pipefail
 
 echo "FAIL final security-ready acceptance is outside the v0.1 public product claim" >&2
 echo "status=final-acceptance-out-of-v0_1-scope" >&2
+echo "release_class=public_beta" >&2
 echo "acceptance_bar_items=27" >&2
 echo "acceptance_bar_covered=true" >&2
 echo "payload_recorded=false" >&2
@@ -13,12 +14,19 @@ echo "p0_p1_local_bug_audit_complete=false" >&2
 echo "p0_p1_local_bugs_present=unverified" >&2
 echo "source_acceptance_suite_passed=false" >&2
 echo "release_artifact_consistency_verified=false" >&2
+echo "external_two_machine_evidence_present=false" >&2
+echo "macos_public_artifact_consistency_verified=false" >&2
+echo "windows_public_artifact_consistency_verified=false" >&2
+echo "emergency_advisory_path_ready=false" >&2
 echo "public_copy_claims_reviewed=true" >&2
 echo "support_redaction_verified=true" >&2
+echo "public_beta_ready=false" >&2
+echo "stable_candidate_ready=false" >&2
 echo "stable_public_app_ready=false" >&2
 echo "high_risk_readiness=not_ready" >&2
 echo "high_risk_mode_ready=false" >&2
 echo "release_decision=hold" >&2
+echo "missing_stable_candidate_conditions=p0_p1_audit#source_acceptance#external_two_machine_evidence#macos_artifact#windows_artifact#emergency_advisory#release_artifact_consistency" >&2
 echo "external_delivery_claim=false" >&2
 echo "audited_claim=false" >&2
 echo "briar_cwtch_signal_equivalence_claim=false" >&2

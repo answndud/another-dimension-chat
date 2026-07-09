@@ -3901,11 +3901,32 @@ pub mod production {
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum ProductionReleaseClass {
+        PublicBeta,
+        StableCandidate,
+        Stable,
+    }
+
+    impl ProductionReleaseClass {
+        pub fn as_str(self) -> &'static str {
+            match self {
+                Self::PublicBeta => "public_beta",
+                Self::StableCandidate => "stable_candidate",
+                Self::Stable => "stable",
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ProductionFinalReleaseAcceptanceInput {
         pub p0_p1_local_bug_audit_complete: bool,
         pub p0_p1_local_bugs_present: bool,
         pub source_acceptance_suite_passed: bool,
         pub release_artifact_consistency_verified: bool,
+        pub external_two_machine_evidence_present: bool,
+        pub macos_public_artifact_consistency_verified: bool,
+        pub windows_public_artifact_consistency_verified: bool,
+        pub emergency_advisory_path_ready: bool,
         pub public_copy_claims_reviewed: bool,
         pub support_redaction_verified: bool,
         pub high_risk_readiness: ProductionHighRiskReadinessStatus,
@@ -3923,11 +3944,18 @@ pub mod production {
         p0_p1_local_bugs_present: bool,
         source_acceptance_suite_passed: bool,
         release_artifact_consistency_verified: bool,
+        external_two_machine_evidence_present: bool,
+        macos_public_artifact_consistency_verified: bool,
+        windows_public_artifact_consistency_verified: bool,
+        emergency_advisory_path_ready: bool,
         public_copy_claims_reviewed: bool,
         support_redaction_verified: bool,
+        public_beta_ready: bool,
+        stable_candidate_ready: bool,
         stable_public_app_ready: bool,
         high_risk_mode_ready: bool,
         high_risk_readiness: ProductionHighRiskReadinessStatus,
+        release_class: ProductionReleaseClass,
         release_decision: &'static str,
         redacted_evidence_fields: &'static [&'static str],
         forbidden_public_claims: &'static [&'static str],
@@ -7751,12 +7779,36 @@ pub mod production {
             self.release_artifact_consistency_verified
         }
 
+        pub fn external_two_machine_evidence_present(self) -> bool {
+            self.external_two_machine_evidence_present
+        }
+
+        pub fn macos_public_artifact_consistency_verified(self) -> bool {
+            self.macos_public_artifact_consistency_verified
+        }
+
+        pub fn windows_public_artifact_consistency_verified(self) -> bool {
+            self.windows_public_artifact_consistency_verified
+        }
+
+        pub fn emergency_advisory_path_ready(self) -> bool {
+            self.emergency_advisory_path_ready
+        }
+
         pub fn public_copy_claims_reviewed(self) -> bool {
             self.public_copy_claims_reviewed
         }
 
         pub fn support_redaction_verified(self) -> bool {
             self.support_redaction_verified
+        }
+
+        pub fn public_beta_ready(self) -> bool {
+            self.public_beta_ready
+        }
+
+        pub fn stable_candidate_ready(self) -> bool {
+            self.stable_candidate_ready
         }
 
         pub fn stable_public_app_ready(self) -> bool {
@@ -7769,6 +7821,10 @@ pub mod production {
 
         pub fn high_risk_readiness(self) -> ProductionHighRiskReadinessStatus {
             self.high_risk_readiness
+        }
+
+        pub fn release_class(self) -> ProductionReleaseClass {
+            self.release_class
         }
 
         pub fn release_decision(self) -> &'static str {
@@ -20498,19 +20554,36 @@ pub mod production {
         let passphrase_recorded = false;
         let local_path_recorded = false;
         let key_material_recorded = false;
-        let stable_public_app_ready = acceptance_bar_covered
+        let public_beta_ready = acceptance_bar_covered
             && input.p0_p1_local_bug_audit_complete
             && !input.p0_p1_local_bugs_present
             && input.source_acceptance_suite_passed
-            && input.release_artifact_consistency_verified
             && input.public_copy_claims_reviewed
             && input.support_redaction_verified;
-        let high_risk_mode_ready = stable_public_app_ready
-            && input.high_risk_readiness == ProductionHighRiskReadinessStatus::Ready;
+        let stable_candidate_ready = public_beta_ready
+            && input.external_two_machine_evidence_present
+            && input.macos_public_artifact_consistency_verified
+            && input.windows_public_artifact_consistency_verified
+            && input.emergency_advisory_path_ready;
+        let stable_public_app_ready =
+            stable_candidate_ready && input.release_artifact_consistency_verified;
+        let high_risk_mode_ready =
+            input.high_risk_readiness == ProductionHighRiskReadinessStatus::Ready;
+        let release_class = if stable_public_app_ready {
+            ProductionReleaseClass::Stable
+        } else if stable_candidate_ready {
+            ProductionReleaseClass::StableCandidate
+        } else {
+            ProductionReleaseClass::PublicBeta
+        };
         let release_decision = if stable_public_app_ready && high_risk_mode_ready {
             "stable-and-high-risk-ready"
         } else if stable_public_app_ready {
             "stable-ready-high-risk-hold"
+        } else if stable_candidate_ready && high_risk_mode_ready {
+            "stable-candidate-ready-high-risk-ready"
+        } else if stable_candidate_ready {
+            "stable-candidate-ready-high-risk-hold"
         } else {
             "hold"
         };
@@ -20542,11 +20615,20 @@ pub mod production {
             p0_p1_local_bugs_present: input.p0_p1_local_bugs_present,
             source_acceptance_suite_passed: input.source_acceptance_suite_passed,
             release_artifact_consistency_verified: input.release_artifact_consistency_verified,
+            external_two_machine_evidence_present: input.external_two_machine_evidence_present,
+            macos_public_artifact_consistency_verified: input
+                .macos_public_artifact_consistency_verified,
+            windows_public_artifact_consistency_verified: input
+                .windows_public_artifact_consistency_verified,
+            emergency_advisory_path_ready: input.emergency_advisory_path_ready,
             public_copy_claims_reviewed: input.public_copy_claims_reviewed,
             support_redaction_verified: input.support_redaction_verified,
+            public_beta_ready,
+            stable_candidate_ready,
             stable_public_app_ready,
             high_risk_mode_ready,
             high_risk_readiness: input.high_risk_readiness,
+            release_class,
             release_decision,
             redacted_evidence_fields: PRODUCTION_FINAL_ACCEPTANCE_REDACTED_FIELDS,
             forbidden_public_claims: PRODUCTION_FINAL_ACCEPTANCE_FORBIDDEN_CLAIMS,
@@ -27159,14 +27241,17 @@ pub mod production {
         }
 
         #[test]
-        fn final_release_acceptance_gate_separates_stable_and_high_risk_readiness_without_forbidden_claims(
-        ) {
+        fn final_release_class_gate_separates_beta_candidate_stable_and_high_risk_readiness() {
             let hold = production_final_release_acceptance_summary(
                 ProductionFinalReleaseAcceptanceInput {
                     p0_p1_local_bug_audit_complete: false,
                     p0_p1_local_bugs_present: true,
                     source_acceptance_suite_passed: true,
                     release_artifact_consistency_verified: true,
+                    external_two_machine_evidence_present: true,
+                    macos_public_artifact_consistency_verified: true,
+                    windows_public_artifact_consistency_verified: true,
+                    emergency_advisory_path_ready: true,
                     public_copy_claims_reviewed: true,
                     support_redaction_verified: true,
                     high_risk_readiness: ProductionHighRiskReadinessStatus::Ready,
@@ -27181,7 +27266,10 @@ pub mod production {
             assert!(!hold.p0_p1_local_bug_audit_complete());
             assert!(hold.p0_p1_local_bugs_present());
             assert!(!hold.stable_public_app_ready());
-            assert!(!hold.high_risk_mode_ready());
+            assert!(!hold.stable_candidate_ready());
+            assert_eq!(hold.release_class(), ProductionReleaseClass::PublicBeta);
+            assert_eq!(hold.release_class().as_str(), "public_beta");
+            assert!(hold.high_risk_mode_ready());
             assert_eq!(hold.release_decision(), "hold");
             assert!(hold.redacted_evidence_fields().contains(&"payload"));
             assert!(hold.redacted_evidence_fields().contains(&"passphrase"));
@@ -27205,21 +27293,31 @@ pub mod production {
                     p0_p1_local_bug_audit_complete: true,
                     p0_p1_local_bugs_present: false,
                     source_acceptance_suite_passed: true,
-                    release_artifact_consistency_verified: true,
+                    release_artifact_consistency_verified: false,
+                    external_two_machine_evidence_present: true,
+                    macos_public_artifact_consistency_verified: true,
+                    windows_public_artifact_consistency_verified: true,
+                    emergency_advisory_path_ready: true,
                     public_copy_claims_reviewed: true,
                     support_redaction_verified: true,
                     high_risk_readiness: ProductionHighRiskReadinessStatus::Limited,
                 },
             );
-            assert!(stable_only.stable_public_app_ready());
+            assert!(stable_only.public_beta_ready());
+            assert!(stable_only.stable_candidate_ready());
+            assert!(!stable_only.stable_public_app_ready());
             assert!(!stable_only.high_risk_mode_ready());
             assert_eq!(
                 stable_only.high_risk_readiness(),
                 ProductionHighRiskReadinessStatus::Limited
             );
             assert_eq!(
+                stable_only.release_class(),
+                ProductionReleaseClass::StableCandidate
+            );
+            assert_eq!(
                 stable_only.release_decision(),
-                "stable-ready-high-risk-hold"
+                "stable-candidate-ready-high-risk-hold"
             );
         }
 

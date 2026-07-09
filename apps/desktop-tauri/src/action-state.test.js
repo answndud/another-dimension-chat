@@ -217,12 +217,16 @@ test("high-risk readiness gate separates not ready limited and ready claims", ()
   assert.match(ready.summary, /high_risk_ready_claim_allowed=true/);
 });
 
-test("final release acceptance separates stable and high-risk readiness", () => {
+test("final release acceptance separates beta candidate stable and high-risk readiness", () => {
   const hold = productionFinalReleaseAcceptanceView({
     p0P1LocalBugAuditComplete: false,
     p0P1LocalBugsPresent: true,
     sourceAcceptanceSuitePassed: true,
     releaseArtifactConsistencyVerified: true,
+    externalTwoMachineEvidencePresent: true,
+    macosPublicArtifactConsistencyVerified: true,
+    windowsPublicArtifactConsistencyVerified: true,
+    emergencyAdvisoryPathReady: true,
     publicCopyClaimsReviewed: true,
     supportRedactionVerified: true,
     highRiskReadiness: "ready",
@@ -236,12 +240,17 @@ test("final release acceptance separates stable and high-risk readiness", () => 
   assert.equal(hold.keyMaterialRecorded, false);
   assert.equal(hold.p0P1LocalBugAuditComplete, false);
   assert.equal(hold.p0P1LocalBugsPresent, true);
+  assert.equal(hold.publicBetaReady, false);
+  assert.equal(hold.stableCandidateReady, false);
   assert.equal(hold.stablePublicAppReady, false);
-  assert.equal(hold.highRiskModeReady, false);
+  assert.equal(hold.highRiskModeReady, true);
+  assert.equal(hold.releaseClass, "public_beta");
   assert.equal(hold.releaseDecision, "hold");
+  assert.match(hold.summary, /release_class=public_beta/);
   assert.match(hold.summary, /acceptance_bar_items=27/);
+  assert.match(hold.summary, /stable_candidate_ready=false/);
   assert.match(hold.summary, /stable_public_app_ready=false/);
-  assert.match(hold.summary, /high_risk_mode_ready=false/);
+  assert.match(hold.summary, /high_risk_mode_ready=true/);
   assert.match(hold.summary, /payload_recorded=false/);
   assert.match(hold.summary, /passphrase_recorded=false/);
   assert.match(hold.summary, /local_path_recorded=false/);
@@ -255,15 +264,22 @@ test("final release acceptance separates stable and high-risk readiness", () => 
     p0P1LocalBugAuditComplete: true,
     p0P1LocalBugsPresent: false,
     sourceAcceptanceSuitePassed: true,
-    releaseArtifactConsistencyVerified: true,
+    releaseArtifactConsistencyVerified: false,
+    externalTwoMachineEvidencePresent: true,
+    macosPublicArtifactConsistencyVerified: true,
+    windowsPublicArtifactConsistencyVerified: true,
+    emergencyAdvisoryPathReady: true,
     publicCopyClaimsReviewed: true,
     supportRedactionVerified: true,
     highRiskReadiness: "limited",
   });
-  assert.equal(stableOnly.stablePublicAppReady, true);
+  assert.equal(stableOnly.publicBetaReady, true);
+  assert.equal(stableOnly.stableCandidateReady, true);
+  assert.equal(stableOnly.stablePublicAppReady, false);
   assert.equal(stableOnly.highRiskModeReady, false);
-  assert.equal(stableOnly.releaseDecision, "stable-ready-high-risk-hold");
-  assert.match(stableOnly.boundary, /readiness_streams=stable_public_app#high_risk_mode/);
+  assert.equal(stableOnly.releaseClass, "stable_candidate");
+  assert.equal(stableOnly.releaseDecision, "stable-candidate-ready-high-risk-hold");
+  assert.match(stableOnly.boundary, /readiness_streams=public_beta#stable_candidate#stable_public_app#high_risk_mode/);
 });
 
 test("version integrity view keeps manual update and rollback claims bounded", () => {
