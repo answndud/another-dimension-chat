@@ -1077,6 +1077,9 @@ pub struct ProductionSessionLifecycleResult {
     ready_for_message_envelope: bool,
     session_resume_ready: bool,
     session_deleted: bool,
+    session_dek_records_deleted: bool,
+    session_key_records_deleted: bool,
+    crypto_erasure_performed: bool,
     session_resume_closed: bool,
     message_records_preserved: bool,
     store_path_returned: bool,
@@ -1098,6 +1101,9 @@ pub struct ProductionConversationDeleteResult {
     local_message_indexes_deleted: usize,
     message_counter_deleted: bool,
     conversation_records_deleted: usize,
+    conversation_dek_deleted: bool,
+    message_key_records_deleted: bool,
+    crypto_erasure_performed: bool,
     session_records_preserved: bool,
     store_path_returned: bool,
     passphrase_retained: bool,
@@ -8876,6 +8882,9 @@ fn run_production_session_lifecycle_status(
         ready_for_message_envelope: status.ready_for_message_envelope(),
         session_resume_ready: status.session_resume_ready(),
         session_deleted: false,
+        session_dek_records_deleted: false,
+        session_key_records_deleted: false,
+        crypto_erasure_performed: false,
         session_resume_closed: !status.session_resume_ready(),
         message_records_preserved: true,
         store_path_returned: false,
@@ -8920,6 +8929,9 @@ fn run_production_session_lifecycle_delete(
         ready_for_message_envelope: false,
         session_resume_ready: false,
         session_deleted: delete.session_records_deleted(),
+        session_dek_records_deleted: delete.session_dek_records_deleted(),
+        session_key_records_deleted: delete.session_key_records_deleted(),
+        crypto_erasure_performed: delete.crypto_erasure_performed(),
         session_resume_closed: delete.session_resume_closed(),
         message_records_preserved: delete.message_records_preserved(),
         store_path_returned: false,
@@ -8960,6 +8972,9 @@ fn run_production_conversation_delete(
         local_message_indexes_deleted: deleted.local_message_indexes_deleted(),
         message_counter_deleted: deleted.message_counter_deleted(),
         conversation_records_deleted: deleted.conversation_records_deleted(),
+        conversation_dek_deleted: deleted.conversation_dek_deleted(),
+        message_key_records_deleted: deleted.message_key_records_deleted(),
+        crypto_erasure_performed: deleted.crypto_erasure_performed(),
         session_records_preserved: deleted.session_records_preserved(),
         store_path_returned: false,
         passphrase_retained: false,
@@ -17192,6 +17207,9 @@ replay check: no replayed messages after message 2
         .expect("lifecycle delete");
         assert!(deleted.storage_opened);
         assert!(deleted.session_deleted);
+        assert!(deleted.session_dek_records_deleted);
+        assert!(deleted.session_key_records_deleted);
+        assert!(deleted.crypto_erasure_performed);
         assert!(deleted.session_resume_closed);
         assert!(deleted.message_records_preserved);
         assert!(!deleted.session_draft_present);
@@ -17244,6 +17262,9 @@ replay check: no replayed messages after message 2
         assert!(conversation_delete.runtime_material_reconstructable);
         assert!(conversation_delete.sent_messages_deleted >= 1);
         assert!(conversation_delete.conversation_records_deleted >= 1);
+        assert!(conversation_delete.conversation_dek_deleted);
+        assert!(conversation_delete.message_key_records_deleted);
+        assert!(conversation_delete.crypto_erasure_performed);
         assert!(conversation_delete.session_records_preserved);
         assert!(!conversation_delete.plaintext_exposed);
         assert!(!conversation_delete.key_material_exposed);

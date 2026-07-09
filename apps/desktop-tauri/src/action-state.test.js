@@ -574,12 +574,17 @@ test("local lifecycle boundary keeps backup recovery and secure delete as non-cl
     runtime_messaging_enabled: false,
     rollback_prevention_claimed: false,
     secure_deletion_from_media_claimed: false,
+    crypto_erasure_performed: true,
+    conversation_dek_deleted: true,
+    message_key_records_deleted: true,
   });
 
   assert.match(boundary, /local_only=true/);
   assert.match(boundary, /cloud_backup_sync=false/);
   assert.match(boundary, /backup_recovery=false/);
   assert.match(boundary, /marker_only_rollback=true/);
+  assert.match(boundary, /crypto_erasure=true/);
+  assert.match(boundary, /key_record_deletion=true/);
   assert.match(boundary, /rollback_prevention=false/);
   assert.match(boundary, /secure_delete_claim=false/);
   assert.match(boundary, /path_returned=false/);
@@ -596,6 +601,9 @@ test("session lifecycle view exposes local-only lifecycle non-claims", () => {
     session_transport_state_present: true,
     session_resume_ready: true,
     session_deleted: false,
+    session_dek_records_deleted: false,
+    session_key_records_deleted: false,
+    crypto_erasure_performed: false,
     session_resume_closed: false,
     message_records_preserved: true,
     store_path_returned: false,
@@ -611,6 +619,8 @@ test("session lifecycle view exposes local-only lifecycle non-claims", () => {
   assert.match(view.boundary, /local_only=true/);
   assert.match(view.boundary, /backup_recovery=false/);
   assert.match(view.boundary, /cloud_backup_sync=false/);
+  assert.match(view.boundary, /crypto_erasure=false/);
+  assert.match(view.boundary, /key_record_deletion=false/);
   assert.match(view.boundary, /secure_delete_claim=false/);
 });
 
