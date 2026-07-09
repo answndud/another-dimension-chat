@@ -852,7 +852,12 @@ test("same-profile invite rooms are scoped by invite code", () => {
   assert.match(actionStateJs, /export function productionVersionIntegrityView/);
   assert.match(actionStateJs, /export function productionWindowsRuntimeParityView/);
   assert.match(actionStateJs, /const emergencyAdvisoryPath = "scripts\/prepare_macos_emergency_release_advisory_packet\.sh"/);
+  assert.match(actionStateJs, /const highRiskReleaseIntegrityGatePath = "scripts\/high_risk_release_integrity_gate_once\.sh"/);
   assert.match(actionStateJs, /emergency_advisory_path=\$\{emergencyAdvisoryPath\}/);
+  assert.match(actionStateJs, /high_risk_release_integrity_gate_path=\$\{highRiskReleaseIntegrityGatePath\}/);
+  assert.match(actionStateJs, /dependency_inventory_lockfile_hash_bound=true/);
+  assert.match(actionStateJs, /tauri_csp_permissions_remote_code_boundary=true/);
+  assert.match(actionStateJs, /high_risk_release_claim_allowed=false/);
   assert.match(actionStateJs, /rollback_warning_policy=manual-warning-only/);
   assert.match(actionStateJs, /rollback_prevention_claimed=false/);
   assert.match(actionStateJs, /windows_distribution=local-build-candidate-only/);
