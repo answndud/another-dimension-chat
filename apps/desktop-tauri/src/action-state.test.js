@@ -19,6 +19,7 @@ import {
   productionInviteCodeProfiles,
   productionInviteIdentityBoundaryView,
   productionLocalDataRecoveryView,
+  productionMessageDeliveryProductizationView,
   productionPairwiseInviteCreateView,
   productionPairwiseInviteImportFailureView,
   productionPairwiseInviteGuidanceView,
@@ -1096,6 +1097,102 @@ test("manual envelope stepper and pending outbound states stay support-safe", ()
     assert.match(view.boundary, /path_returned=false/);
     assert.match(view.boundary, /key_material=false/);
     assert.match(view.boundary, /plaintext_returned=false/);
+  }
+});
+
+test("message delivery productization view blocks false ready and private support leaks", () => {
+  const locked = productionMessageDeliveryProductizationView({
+    currentRoomOwnsState: true,
+    currentProfileOwnsState: true,
+    duplicateOrReplayRejected: true,
+    peerMismatchBlocksVerified: true,
+    supportRedacted: true,
+  });
+  assert.equal(locked.primaryAction, "unlock-profile");
+  assert.equal(locked.firstMessageRoundTripReady, false);
+
+  const ready = productionMessageDeliveryProductizationView({
+    profileUnlocked: true,
+    pairwiseInviteReady: true,
+    mandatorySafetyVerified: true,
+    composeReady: true,
+    outboundExported: true,
+    inboundImported: true,
+    replyReady: true,
+    retryAvailable: true,
+    cancelAvailable: true,
+    localDeleteAvailable: true,
+    currentRoomOwnsState: true,
+    currentProfileOwnsState: true,
+    duplicateOrReplayRejected: true,
+    peerMismatchBlocksVerified: true,
+    supportRedacted: true,
+  });
+  assert.equal(ready.primaryAction, "delete-or-rebuild");
+  assert.equal(ready.firstMessageRoundTripReady, true);
+  assert.equal(ready.recoveryReady, true);
+  assert.equal(ready.boundaryClosed, true);
+
+  const staleOwner = productionMessageDeliveryProductizationView({
+    profileUnlocked: true,
+    pairwiseInviteReady: true,
+    mandatorySafetyVerified: true,
+    composeReady: true,
+    outboundExported: true,
+    inboundImported: true,
+    replyReady: true,
+    retryAvailable: true,
+    cancelAvailable: true,
+    localDeleteAvailable: true,
+    currentRoomOwnsState: false,
+    currentProfileOwnsState: true,
+    duplicateOrReplayRejected: true,
+    peerMismatchBlocksVerified: true,
+    supportRedacted: true,
+  });
+  assert.equal(staleOwner.primaryAction, "delete-or-rebuild");
+  assert.equal(staleOwner.firstMessageRoundTripReady, false);
+  assert.equal(staleOwner.currentInputOwned, false);
+  assert.equal(staleOwner.boundaryClosed, false);
+
+  const mismatchOrReplayOpen = productionMessageDeliveryProductizationView({
+    profileUnlocked: true,
+    pairwiseInviteReady: true,
+    mandatorySafetyVerified: true,
+    composeReady: true,
+    outboundExported: true,
+    inboundImported: true,
+    replyReady: true,
+    retryAvailable: true,
+    cancelAvailable: true,
+    localDeleteAvailable: true,
+    currentRoomOwnsState: true,
+    currentProfileOwnsState: true,
+    duplicateOrReplayRejected: false,
+    peerMismatchBlocksVerified: false,
+    supportRedacted: true,
+  });
+  assert.equal(mismatchOrReplayOpen.primaryAction, "verify-safety");
+  assert.equal(mismatchOrReplayOpen.firstMessageRoundTripReady, false);
+  assert.equal(mismatchOrReplayOpen.boundaryClosed, false);
+
+  for (const view of [locked, ready, staleOwner, mismatchOrReplayOpen]) {
+    assert.equal(view.falseDeliveredAllowed, false);
+    assert.equal(view.falseVerifiedAllowed, false);
+    assert.equal(view.falseReadyAllowed, false);
+    assert.equal(view.supportPrivateFieldsAllowed, false);
+    assert.match(view.boundary, /false_delivered_allowed=false/);
+    assert.match(view.boundary, /false_verified_allowed=false/);
+    assert.match(view.boundary, /false_ready_allowed=false/);
+    assert.match(view.boundary, /message_body_in_support=false/);
+    assert.match(view.boundary, /envelope_payload_in_support=false/);
+    assert.match(view.boundary, /invite_body_in_support=false/);
+    assert.match(view.boundary, /local_path_in_support=false/);
+    assert.match(view.boundary, /key_or_passphrase_in_support=false/);
+    assert.doesNotMatch(
+      view.boundary,
+      /secret text|raw-envelope|invite body|\/Users\/alex|hunter2|PRIVATE_KEY_BYTES/,
+    );
   }
 });
 

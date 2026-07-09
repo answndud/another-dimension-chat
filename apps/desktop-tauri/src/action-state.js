@@ -1237,6 +1237,98 @@ export function productionRedactedSupportReportView(input = {}) {
   };
 }
 
+export function productionMessageDeliveryProductizationView(input = {}) {
+  const profileUnlocked = input.profileUnlocked === true;
+  const pairwiseInviteReady = input.pairwiseInviteReady === true;
+  const mandatorySafetyVerified = input.mandatorySafetyVerified === true;
+  const composeReady = input.composeReady === true;
+  const outboundExported = input.outboundExported === true;
+  const inboundImported = input.inboundImported === true;
+  const replyReady = input.replyReady === true;
+  const retryAvailable = input.retryAvailable === true;
+  const cancelAvailable = input.cancelAvailable === true;
+  const localDeleteAvailable = input.localDeleteAvailable === true;
+  const currentRoomOwnsState = input.currentRoomOwnsState === true;
+  const currentProfileOwnsState = input.currentProfileOwnsState === true;
+  const duplicateOrReplayRejected = input.duplicateOrReplayRejected === true;
+  const peerMismatchBlocksVerified = input.peerMismatchBlocksVerified === true;
+  const supportRedacted = input.supportRedacted === true;
+  const currentInputOwned = currentRoomOwnsState && currentProfileOwnsState;
+  const recoveryReady = retryAvailable && cancelAvailable && localDeleteAvailable;
+  const failClosed = duplicateOrReplayRejected && peerMismatchBlocksVerified;
+  const firstMessageRoundTripReady =
+    profileUnlocked &&
+    pairwiseInviteReady &&
+    mandatorySafetyVerified &&
+    composeReady &&
+    outboundExported &&
+    inboundImported &&
+    replyReady &&
+    currentInputOwned &&
+    failClosed &&
+    supportRedacted;
+  const primaryAction = !currentInputOwned
+    ? "delete-or-rebuild"
+    : !profileUnlocked
+      ? "unlock-profile"
+      : !pairwiseInviteReady
+        ? "create-or-join-room"
+        : !mandatorySafetyVerified || !peerMismatchBlocksVerified
+          ? "verify-safety"
+          : !composeReady
+            ? "write-message"
+            : !outboundExported
+              ? "export-envelope"
+              : !inboundImported
+                ? "import-reply"
+                : !replyReady || !duplicateOrReplayRejected || !recoveryReady
+                  ? "reply-or-recover"
+                  : "delete-or-rebuild";
+  const boundaryClosed = currentInputOwned && failClosed && supportRedacted;
+  const summary = [
+    `primary_action=${primaryAction}`,
+    `first_message_round_trip_ready=${firstMessageRoundTripReady}`,
+    `recovery_ready=${recoveryReady}`,
+    `current_input_owned=${currentInputOwned}`,
+    `profile_unlocked=${profileUnlocked}`,
+    `pairwise_invite_ready=${pairwiseInviteReady}`,
+    `mandatory_safety_verified=${mandatorySafetyVerified}`,
+    `compose_ready=${composeReady}`,
+    `outbound_exported=${outboundExported}`,
+    `inbound_imported=${inboundImported}`,
+    `reply_ready=${replyReady}`,
+    `retry_available=${retryAvailable}`,
+    `cancel_available=${cancelAvailable}`,
+    `local_delete_available=${localDeleteAvailable}`,
+    `duplicate_or_replay_rejected=${duplicateOrReplayRejected}`,
+    `peer_mismatch_blocks_verified=${peerMismatchBlocksVerified}`,
+    `support_redacted=${supportRedacted}`,
+    "false_delivered_allowed=false",
+    "false_verified_allowed=false",
+    "false_ready_allowed=false",
+    "message_body_in_support=false",
+    "envelope_payload_in_support=false",
+    "invite_body_in_support=false",
+    "local_path_in_support=false",
+    "key_or_passphrase_in_support=false",
+    "support_private_fields_allowed=false",
+    `boundary_closed=${boundaryClosed}`,
+  ].join(" ");
+  return {
+    primaryAction,
+    firstMessageRoundTripReady,
+    recoveryReady,
+    currentInputOwned,
+    falseDeliveredAllowed: false,
+    falseVerifiedAllowed: false,
+    falseReadyAllowed: false,
+    supportPrivateFieldsAllowed: false,
+    boundaryClosed,
+    summary,
+    boundary: `${summary} vocabulary=unlock-profile#create-or-join-room#verify-safety#write-message#export-envelope#import-reply#reply-or-recover#delete-or-rebuild`,
+  };
+}
+
 export function productionTwoProfileCurrentAction(state) {
   const input = state?.input ?? {};
   if (state?.busy) {
