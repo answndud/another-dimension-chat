@@ -277,6 +277,14 @@ feature targets. It must not claim audited security, Briar/Cwtch equivalence,
 compromised-device safety, coercion safety, full censorship resistance, full
 global-correlation safety, or reliable external onion delivery.
 
+The app readiness output uses `ready`, `limited`, and `not_ready`. High-Risk
+ready, public-support High-Risk, and release High-Risk claims remain false until
+the threat matrix is accepted, pairwise safety is verified, High-Risk transport
+is ready, production key management is ready, rollback markers are healthy,
+diagnostics are redacted, and release integrity evidence is available. If
+transport is explicitly disabled, the app may show `limited`, but not
+High-Risk-ready.
+
 ## Reporting Security Issues
 
 If you find a security issue, please use GitHub's private vulnerability reporting feature if it is enabled for the repository.

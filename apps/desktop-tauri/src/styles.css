@@ -221,6 +221,16 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+.high-risk-readiness-status[data-readiness="limited"] {
+  border-color: color-mix(in srgb, var(--warning) 34%, var(--panel-border));
+  color: var(--text-primary);
+}
+
+.high-risk-readiness-status[data-readiness="ready"] {
+  border-color: color-mix(in srgb, var(--success) 34%, var(--panel-border));
+  color: var(--text-primary);
+}
+
 .lifecycle-guide {
   display: grid;
   gap: 6px;

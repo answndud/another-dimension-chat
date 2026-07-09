@@ -201,6 +201,75 @@ export function productionHighRiskTransportMetadataBoundaryView() {
   };
 }
 
+export function productionHighRiskReadinessGateView(input = {}) {
+  const threatMatrixAccepted = input.threatMatrixAccepted === true;
+  const pairwiseSafetyVerified = input.pairwiseSafetyVerified === true;
+  const highRiskTransportReady = input.highRiskTransportReady === true;
+  const highRiskTransportExplicitlyDisabled = input.highRiskTransportExplicitlyDisabled === true;
+  const productionKeyManagementReady = input.productionKeyManagementReady === true;
+  const rollbackMarkerHealthy = input.rollbackMarkerHealthy === true;
+  const diagnosticsRedacted = input.diagnosticsRedacted === true;
+  const releaseIntegrityAvailable = input.releaseIntegrityAvailable === true;
+  const missing = [];
+  if (!threatMatrixAccepted) missing.push(["threat-matrix-not-accepted", "accept-threat-model"]);
+  if (!pairwiseSafetyVerified) missing.push(["safety-not-verified", "verify-safety-number"]);
+  if (!productionKeyManagementReady) {
+    missing.push(["key-management-not-ready", "unlock-profile-with-production-key-management"]);
+  }
+  if (!rollbackMarkerHealthy) missing.push(["rollback-marker-not-healthy", "check-local-data-lifecycle"]);
+  if (!diagnosticsRedacted) missing.push(["diagnostics-not-redacted", "use-redacted-support-report"]);
+  if (!releaseIntegrityAvailable) missing.push(["release-integrity-missing", "run-release-integrity-gate"]);
+  if (!highRiskTransportReady && !highRiskTransportExplicitlyDisabled) {
+    missing.push(["transport-neither-ready-nor-disabled", "enable-high-risk-transport-or-mark-disabled"]);
+  }
+  const baseReady = missing.length === 0;
+  const status = baseReady && highRiskTransportReady
+    ? "ready"
+    : baseReady && highRiskTransportExplicitlyDisabled
+      ? "limited"
+      : "not_ready";
+  const primary = status === "ready"
+    ? ["none", "ready"]
+    : status === "limited"
+      ? ["transport-explicitly-disabled", "enable-high-risk-transport-for-ready"]
+      : missing[0] ?? ["unknown", "review-high-risk-checklist"];
+  const reasonCodes = status === "limited" ? [primary[0]] : missing.map(([code]) => code);
+  const nextActions = status === "limited" ? [primary[1]] : missing.map(([, action]) => action);
+  const highRiskReadyClaimAllowed = status === "ready";
+  const summary = [
+    `high_risk_readiness=${status}`,
+    `primary_reason_code=${primary[0]}`,
+    `next_action=${primary[1]}`,
+    `reason_codes=${reasonCodes.join("#") || "none"}`,
+    `next_actions=${nextActions.join("#") || "none"}`,
+    `threat_matrix_accepted=${threatMatrixAccepted}`,
+    `pairwise_safety_verified=${pairwiseSafetyVerified}`,
+    `high_risk_transport_ready=${highRiskTransportReady}`,
+    `high_risk_transport_explicitly_disabled=${highRiskTransportExplicitlyDisabled}`,
+    `production_key_management_ready=${productionKeyManagementReady}`,
+    `rollback_marker_healthy=${rollbackMarkerHealthy}`,
+    `diagnostics_redacted=${diagnosticsRedacted}`,
+    `release_integrity_available=${releaseIntegrityAvailable}`,
+    `high_risk_ready_claim_allowed=${highRiskReadyClaimAllowed}`,
+    `public_support_high_risk_claim_allowed=${highRiskReadyClaimAllowed}`,
+    `release_high_risk_claim_allowed=${highRiskReadyClaimAllowed}`,
+    "unmet_conditions_hidden=false",
+  ].join(" ");
+  return {
+    status,
+    primaryReasonCode: primary[0],
+    nextAction: primary[1],
+    reasonCodes,
+    nextActions,
+    highRiskReadyClaimAllowed,
+    publicSupportHighRiskClaimAllowed: highRiskReadyClaimAllowed,
+    releaseHighRiskClaimAllowed: highRiskReadyClaimAllowed,
+    unmetConditionsHidden: false,
+    summary,
+    boundary: `${summary} status_values=ready#limited#not_ready`,
+  };
+}
+
 function releaseIntegrityToken(value, fallback = "unknown") {
   const token = String(value ?? "")
     .trim()
