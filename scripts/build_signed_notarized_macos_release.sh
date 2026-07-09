@@ -12,6 +12,7 @@ json_escape() {
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+set +x
 
 CONFIG="apps/desktop-tauri/src-tauri/tauri.conf.json"
 ENTITLEMENTS="${AD_MACOS_ENTITLEMENTS:-$ROOT/apps/desktop-tauri/src-tauri/Entitlements.plist}"
@@ -30,7 +31,12 @@ DMG_CONTAINED_APP_VERIFIER="$ROOT/scripts/verify_macos_dmg_contained_app.sh"
 [ -f "$DMG_CONTAINED_APP_VERIFIER" ] || fail "missing DMG contained app verifier: $DMG_CONTAINED_APP_VERIFIER"
 
 case "$TARGET_ARCH" in
-  aarch64-apple-darwin|x86_64-apple-darwin) ;;
+  aarch64-apple-darwin)
+    PUBLIC_ARCHITECTURE="macos-aarch64"
+    ;;
+  x86_64-apple-darwin)
+    PUBLIC_ARCHITECTURE="macos-x64"
+    ;;
   *) fail "AD_MACOS_TARGET_ARCH must be aarch64-apple-darwin or x86_64-apple-darwin" ;;
 esac
 
@@ -110,7 +116,7 @@ fi
 DMG_REBUILD_AUTHORIZED_BOOL=true
 
 APP_VERSION="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
-DMG_NAME="another-dimension-chat-${APP_VERSION}-${BUILD_CHANNEL}-${TARGET_ARCH}-signed-notarized.dmg"
+DMG_NAME="another-dimension-chat-${APP_VERSION}-${BUILD_CHANNEL}-${PUBLIC_ARCHITECTURE}-signed-notarized.dmg"
 BUILD_TARGET_DIR="${CARGO_TARGET_DIR:-${AD_BUILD_CACHE_DIR:-$ROOT/.build-cache}/cargo-target}"
 APP_BUNDLE="$BUILD_TARGET_DIR/$TARGET_ARCH/release/bundle/macos/Another Dimension Chat.app"
 DMG_PATH="$OUT_DIR/$DMG_NAME"
@@ -180,6 +186,7 @@ cat >"$PROVENANCE_OUT" <<JSON
   "sha256": "$sha256",
   "source_commit": "$(git rev-parse HEAD)",
   "target_arch": "$TARGET_ARCH",
+  "public_architecture": "$PUBLIC_ARCHITECTURE",
   "build_channel": "$BUILD_CHANNEL",
   "signed": true,
   "notarized": true,
