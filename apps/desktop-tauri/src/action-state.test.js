@@ -9,6 +9,7 @@ import {
   productionBridgeCensorshipBoundaryView,
   productionHighRiskThreatModelBoundaryView,
   productionHighRiskThreatModelClaimMatrix,
+  productionHighRiskReadinessGateView,
   productionHighRiskTransportMetadataBoundaryView,
   productionPanicLockMitigationView,
   productionVersionIntegrityView,
@@ -160,6 +161,59 @@ test("high-risk transport metadata boundary stays onion-only and redacted", () =
   assert.match(view.boundary, /high_risk_transport_redacted_contact_id=true/);
   assert.match(view.boundary, /high_risk_transport_redacted_session_id=true/);
   assert.match(view.boundary, /high_risk_transport_ready=false/);
+});
+
+test("high-risk readiness gate separates not ready limited and ready claims", () => {
+  const missingSafety = productionHighRiskReadinessGateView({
+    threatMatrixAccepted: true,
+    pairwiseSafetyVerified: false,
+    highRiskTransportReady: false,
+    highRiskTransportExplicitlyDisabled: true,
+    productionKeyManagementReady: true,
+    rollbackMarkerHealthy: true,
+    diagnosticsRedacted: true,
+    releaseIntegrityAvailable: true,
+  });
+
+  assert.equal(missingSafety.status, "not_ready");
+  assert.equal(missingSafety.primaryReasonCode, "safety-not-verified");
+  assert.equal(missingSafety.nextAction, "verify-safety-number");
+  assert.equal(missingSafety.highRiskReadyClaimAllowed, false);
+  assert.equal(missingSafety.publicSupportHighRiskClaimAllowed, false);
+  assert.equal(missingSafety.releaseHighRiskClaimAllowed, false);
+  assert.equal(missingSafety.unmetConditionsHidden, false);
+  assert.match(missingSafety.summary, /reason_codes=safety-not-verified/);
+  assert.doesNotMatch(missingSafety.summary, /high_risk_ready_claim_allowed=true/);
+
+  const limited = productionHighRiskReadinessGateView({
+    threatMatrixAccepted: true,
+    pairwiseSafetyVerified: true,
+    highRiskTransportReady: false,
+    highRiskTransportExplicitlyDisabled: true,
+    productionKeyManagementReady: true,
+    rollbackMarkerHealthy: true,
+    diagnosticsRedacted: true,
+    releaseIntegrityAvailable: true,
+  });
+  assert.equal(limited.status, "limited");
+  assert.equal(limited.primaryReasonCode, "transport-explicitly-disabled");
+  assert.equal(limited.highRiskReadyClaimAllowed, false);
+  assert.match(limited.boundary, /status_values=ready#limited#not_ready/);
+
+  const ready = productionHighRiskReadinessGateView({
+    threatMatrixAccepted: true,
+    pairwiseSafetyVerified: true,
+    highRiskTransportReady: true,
+    productionKeyManagementReady: true,
+    rollbackMarkerHealthy: true,
+    diagnosticsRedacted: true,
+    releaseIntegrityAvailable: true,
+  });
+  assert.equal(ready.status, "ready");
+  assert.equal(ready.primaryReasonCode, "none");
+  assert.equal(ready.nextAction, "ready");
+  assert.equal(ready.highRiskReadyClaimAllowed, true);
+  assert.match(ready.summary, /high_risk_ready_claim_allowed=true/);
 });
 
 test("version integrity view keeps manual update and rollback claims bounded", () => {
