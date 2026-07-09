@@ -299,6 +299,16 @@ readiness, support redaction, public copy review, and no P0/P1 local bug hold.
 This release class gate is not an audited, production-ready, or sensitive-use
 security claim.
 
+External two-machine evidence uses the source schema in
+`reference/EXTERNAL_TWO_MACHINE_EVIDENCE_SCHEMA.md` and the local validators
+`scripts/external_two_machine_evidence_prepare.sh` and
+`scripts/external_two_machine_evidence_validate.sh`. Accepted evidence may only
+contain redacted version, build, platform, checksum, flow-completion, and broad
+failure-class fields. It must not contain invite bodies, envelope payloads,
+onion endpoints, local paths, profile names, message bodies, passphrases,
+private keys, key material, or raw logs. Validator acceptance is not a reliable
+delivery claim, not audited status, and not a production-ready claim.
+
 ## Reporting Security Issues
 
 If you find a security issue, please use GitHub's private vulnerability reporting feature if it is enabled for the repository.
