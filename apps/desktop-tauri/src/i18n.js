@@ -16,6 +16,8 @@ const dictionaries = {
       "There is no auto-update, signing, notarization, completed review, external onion delivery claim, Briar/Cwtch-equivalence claim, coercion-safe claim, or secure messenger readiness claim.",
     versionIntegrityStatusInitial:
       "current_version=unknown release_authority=same-github-release-assets checksum_verification=matching-sha256-before-open auto_update_ready=false rollback_prevention_claimed=false",
+    windowsRuntimeParityStatusInitial:
+      "platform_scope=desktop-shared-core windows_distribution=local-build-candidate-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false",
     firstRunChecklistLabel: "First-run local desktop flow",
     firstRunProfileStep: "Unlock, create, or reopen a local profile before room actions.",
     firstRunRoomStep: "Create an invite room or paste the invite code you received.",
@@ -1180,6 +1182,8 @@ const dictionaries = {
       "auto-update, signing, notarization, 완료된 review, external onion delivery claim, Briar/Cwtch 동급 claim, 강압 안전 claim, secure messenger readiness 주장은 없습니다.",
     versionIntegrityStatusInitial:
       "current_version=unknown release_authority=same-github-release-assets checksum_verification=matching-sha256-before-open auto_update_ready=false rollback_prevention_claimed=false",
+    windowsRuntimeParityStatusInitial:
+      "platform_scope=desktop-shared-core windows_distribution=local-build-candidate-only raw_local_path_returned=false windows_public_artifact_ready=false shared_core_bypass_allowed=false",
     firstRunChecklistLabel: "첫 실행 로컬 desktop 흐름",
     firstRunProfileStep: "방 작업 전에 로컬 profile을 unlock, create, reopen 합니다.",
     firstRunRoomStep: "invite room을 만들거나 받은 invite code를 붙여넣습니다.",
