@@ -146,6 +146,11 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_candidate=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_candidate_gate=source-ready"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_candidate_gate_script=scripts/windows_public_artifact_candidate_gate_once.sh"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "artifact_consistency_sequence=macos-release-distribution-manifest#windows-public-artifact-candidate-gate#final-claim-acceptance"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "macos_artifact_consistency_verified=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_artifact_consistency_verified=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_evidence_presence=false"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "external_evidence_required_for_stable_candidate=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_artifact_type=windows-nsis-exe-installer-candidate"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_bundle_target=nsis"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_ready=false"
@@ -430,6 +435,22 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "windows_public_artifact_candidate_gate=source-ready" || {
     echo "FAIL release readiness preflight missing Windows candidate source gate" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "artifact_consistency_sequence=macos-release-distribution-manifest#windows-public-artifact-candidate-gate#final-claim-acceptance" || {
+    echo "FAIL release readiness preflight missing artifact consistency sequence" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "macos_artifact_consistency_verified=false" || {
+    echo "FAIL release readiness preflight missing macOS artifact consistency blocker" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "windows_artifact_consistency_verified=false" || {
+    echo "FAIL release readiness preflight missing Windows artifact consistency blocker" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "external_evidence_presence=false" || {
+    echo "FAIL release readiness preflight missing external evidence blocker" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "windows_public_artifact_ready=false" || {
