@@ -21,12 +21,14 @@ require_output() {
 require_file "$ROOT_DIR/scripts/final_acceptance_once.sh"
 require_file "$ROOT_DIR/scripts/android_public_app_candidate_once.sh"
 require_file "$ROOT_DIR/scripts/ios_public_app_candidate_once.sh"
+require_file "$ROOT_DIR/scripts/external_review_audit_readiness_once.sh"
 require_file "$ROOT_DIR/scripts/public_forbidden_claim_scanner_once.sh"
 require_file "$ROOT_DIR/scripts/public_release_readiness_preflight.sh"
 
 bash -n "$ROOT_DIR/scripts/final_acceptance_once.sh"
 bash -n "$ROOT_DIR/scripts/android_public_app_candidate_once.sh"
 bash -n "$ROOT_DIR/scripts/ios_public_app_candidate_once.sh"
+bash -n "$ROOT_DIR/scripts/external_review_audit_readiness_once.sh"
 bash -n "$ROOT_DIR/scripts/public_forbidden_claim_scanner_once.sh"
 bash -n "$ROOT_DIR/scripts/public_release_readiness_preflight.sh"
 
@@ -55,6 +57,15 @@ require_output "$scanner_output" "forbidden_positive_claims_found=false"
 require_output "$scanner_output" "stable_candidate_claim_allowed=false"
 require_output "$scanner_output" "high_risk_public_claim_allowed=false"
 
+external_review_output="$("$ROOT_DIR/scripts/external_review_audit_readiness_once.sh")"
+require_output "$external_review_output" "independent_review_packet_source_ready=true"
+require_output "$external_review_output" "independent_review_packet_public_safe=true"
+require_output "$external_review_output" "stable_candidate_evidence_required_before_external_review=true"
+require_output "$external_review_output" "external_review_not_local_source_progress_blocker=true"
+require_output "$external_review_output" "external_review_completed=false"
+require_output "$external_review_output" "audit_completed=false"
+require_output "$external_review_output" "audited_claim_allowed=false"
+
 if final_output="$("$ROOT_DIR/scripts/final_acceptance_once.sh" 2>&1)"; then
   fail "final acceptance unexpectedly opened stable/public claim"
 fi
@@ -65,6 +76,13 @@ require_output "$final_output" "high_risk_mode_ready=false"
 require_output "$final_output" "release_decision=hold"
 require_output "$final_output" "forbidden_positive_public_claims_found=false"
 require_output "$final_output" "external_two_machine_evidence_present=false"
+require_output "$final_output" "independent_review_packet_source_ready=true"
+require_output "$final_output" "stable_candidate_evidence_required_before_external_review=true"
+require_output "$final_output" "external_review_not_local_source_progress_blocker=true"
+require_output "$final_output" "external_review_complete=false"
+require_output "$final_output" "external_review_claim_allowed=false"
+require_output "$final_output" "audited_claim_allowed=false"
+require_output "$final_output" "stable_candidate_blocked_by_external_review_evidence=true"
 require_output "$final_output" "macos_public_artifact_consistency_verified=false"
 require_output "$final_output" "windows_public_artifact_consistency_verified=false"
 require_output "$final_output" "android_public_app_candidate_source_ready=true"
@@ -101,6 +119,12 @@ high_risk_mode_ready=false
 release_decision=hold
 forbidden_positive_claims_found=false
 external_evidence_presence=false
+independent_review_packet_source_ready=true
+stable_candidate_evidence_required_before_external_review=true
+external_review_not_local_source_progress_blocker=true
+external_review_complete=false
+external_review_claim_allowed=false
+audited_claim_allowed=false
 artifact_consistency_verified=false
 android_public_app_candidate_source_ready=true
 android_apk_aab_artifact_ready=false

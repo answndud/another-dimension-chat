@@ -128,6 +128,11 @@ audit, field evidence, usability evidence, or any production claim.
 - audit_finding_closure_claim_allowed=false
 - review_packet_synced_to_latest_source_gates=true
 - review_packet_finding_tracker_synced=true
+- independent_review_packet_source_ready=true
+- independent_review_packet_public_safe=true
+- independent_review_packet_waits_for_stable_candidate_evidence=true
+- stable_candidate_evidence_required_before_external_review=true
+- external_review_not_local_source_progress_blocker=true
 - d100_4_external_evidence_intake_execution_reviewed=true
 - external_evidence_intake_operator_ready=true
 - external_review_intake_runbook_available=true
