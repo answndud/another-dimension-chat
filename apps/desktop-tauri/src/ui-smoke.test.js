@@ -2668,6 +2668,27 @@ test("public diagnostics recovery guide keeps support-safe next actions visible"
   assert.match(functionBody(mainJs, "deleteProductionConversation"), /rememberFailureSupportReport\(/);
 });
 
+test("empty loading and error states keep UI error details redacted", () => {
+  assert.match(mainJs, /function redactedUiErrorClass/);
+  assert.match(mainJs, /function redactedUiErrorMessage/);
+  assert.match(
+    functionBody(mainJs, "redactedUiErrorMessage"),
+    /No private payloads, local paths, keys, passphrases, endpoints, or message bodies are shown/,
+  );
+  assert.match(functionBody(mainJs, "twoProfileRecoveryMessage"), /error_class=\$\{redactedUiErrorClass\(error\)\}/);
+  assert.match(functionBody(mainJs, "loadProductionTwoProfileTranscript"), /redactedUiErrorMessage\("conversation-load", error\)/);
+  assert.match(functionBody(mainJs, "exportProductionMessageEnvelope"), /redactedUiErrorMessage\("message-export", error\)/);
+  assert.match(functionBody(mainJs, "importProductionMessageEnvelope"), /redactedUiErrorMessage\("message-import", error\)/);
+  assert.match(functionBody(mainJs, "exportProductionReceivedMessage"), /redactedUiErrorMessage\("received-export", error\)/);
+  assert.match(functionBody(mainJs, "loadProductionMessageTranscript"), /redactedUiErrorMessage\("transcript-load", error\)/);
+  assert.match(functionBody(mainJs, "exportProductionHandshakeInit"), /redactedUiErrorMessage\("handshake-init", error\)/);
+  assert.match(functionBody(mainJs, "importProductionHandshakeFinish"), /redactedUiErrorMessage\("handshake-finish-import", error\)/);
+  assert.match(functionBody(mainJs, "runLocalDemo"), /Local demo failed:\\n\$\{redactedUiErrorMessage\("local-command", error\)\}/);
+  assert.doesNotMatch(mainJs, /setText\([^;]*String\(error\)/);
+  assert.doesNotMatch(mainJs, /renderDemoSteps\([^;]*String\(error\)/);
+  assert.doesNotMatch(mainJs, /renderLoopResults\([^;]*String\(error\)/);
+});
+
 test("safety mismatch revokes the saved room verification", () => {
   assert.match(mainJs, /function clearTwoProfileSafetyConfirmationForInput/);
   assert.match(functionBody(mainJs, "clearTwoProfileSafetyConfirmationForInput"), /twoProfileSafetyStorageKeys\(input\)/);
