@@ -53,14 +53,14 @@
             class="version-integrity-status"
             data-i18n="highRiskThreatModelStatusInitial"
           >
-            high_risk_matrix=remote_passive_observer:mitigated,remote_active_attacker:mitigated,malicious_peer:mitigated,local_at_rest_attacker:mitigated,supply_chain_update_attacker:mitigated,compromised_endpoint:not_protected,direct_coercion:not_protected,global_traffic_correlation:not_protected claimable_statuses=protected,mitigated not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation
+            High-Risk threat model: protected=none / mitigated=remote_passive_observer,remote_active_attacker,malicious_peer,local_at_rest_attacker,supply_chain_update_attacker / not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation / claims: audited=false briar_cwtch_equivalent=false compromised_endpoint_safe=false coercion_safe=false global_correlation_safe=false
           </p>
           <p
             id="high-risk-transport-metadata-status"
             class="version-integrity-status"
             data-i18n="highRiskTransportMetadataStatusInitial"
           >
-            high_risk_transport_mode=onion-only high_risk_transport_onion_only=true high_risk_transport_direct_fallback=false high_risk_transport_dns_endpoint=false high_risk_transport_ip_endpoint=false high_risk_transport_app_launch_bootstrap=false high_risk_transport_not_ready_reason=runtime-network-disabled-until-explicit-user-action
+            High-Risk transport: mitigated=onion-only-explicit-action#no-direct-fallback#no-dns-ip-endpoint#redacted-runtime-events / status=not-ready / not_ready_reason=runtime-network-disabled-until-explicit-user-action / not_protected=global-traffic-correlation-complete-defense
           </p>
           <p
             id="high-risk-readiness-status"
@@ -68,7 +68,7 @@
             data-readiness="not_ready"
             data-i18n="highRiskReadinessStatusInitial"
           >
-            high_risk_readiness=not_ready primary_reason_code=safety-not-verified next_action=verify-safety-number high_risk_ready_claim_allowed=false unmet_conditions_hidden=false
+            High-Risk Mode status=not_ready / primary_blocker=safety-not-verified / next=verify-safety-number / ready_claim_allowed=false / unmet_hidden=false
           </p>
           <ol
             class="first-run-checklist"

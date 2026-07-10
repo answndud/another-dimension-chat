@@ -243,6 +243,11 @@ h1 {
   color: var(--text-primary);
 }
 
+.high-risk-readiness-status[data-readiness="not_ready"] {
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--panel-border));
+  color: var(--text-secondary);
+}
+
 .high-risk-readiness-status[data-readiness="ready"] {
   border-color: color-mix(in srgb, var(--success) 34%, var(--panel-border));
   color: var(--text-primary);
