@@ -11540,7 +11540,7 @@ async function loadProductionMessageRetentionPreference(profile, passphrase, opt
     return result;
   } catch (error) {
     if (options.quiet !== true) {
-      setText(fields.productionMessageWarning, String(error));
+      setText(fields.productionMessageWarning, redactedUiErrorMessage("two-profile-roundtrip", error));
     }
     return null;
   }
@@ -11628,7 +11628,7 @@ function twoProfileComposePrompt(input = productionTwoProfileInput()) {
 
 function twoProfileRecoveryMessage(action, error, input = productionTwoProfileInput(), options = {}) {
   const detail = String(error ?? "").trim();
-  const suffix = options.includeDetail && detail ? ` ${t("boundaryDetailPrefix")}: ${detail}` : "";
+  const suffix = options.includeDetail && detail ? ` ${t("boundaryDetailPrefix")}: error_class=${redactedUiErrorClass(error)}` : "";
   if (!input.profileA || !input.profileB || input.profileA === input.profileB) {
     return t("recoveryNeedProfiles");
   }
@@ -11655,6 +11655,51 @@ function twoProfileRecoveryMessage(action, error, input = productionTwoProfileIn
 
 function isInviteRoomNotOpenError(error) {
   return /invite code is not open/i.test(String(error ?? ""));
+}
+
+function redactedUiErrorClass(error) {
+  const text = String(error ?? "").toLowerCase();
+  if (!text) {
+    return "unknown";
+  }
+  if (text.includes("passphrase") || text.includes("unlock") || text.includes("auth")) {
+    return "profile-unlock";
+  }
+  if (text.includes("replay") || text.includes("malformed") || text.includes("decode") || text.includes("payload")) {
+    return "payload-rejected";
+  }
+  if (text.includes("path") || text.includes("store") || text.includes("database") || text.includes("migration")) {
+    return "local-store";
+  }
+  if (text.includes("network") || text.includes("onion") || text.includes("route") || text.includes("endpoint")) {
+    return "transport-unavailable";
+  }
+  if (text.includes("timeout") || text.includes("timed out")) {
+    return "timeout";
+  }
+  return "operation-failed";
+}
+
+function redactedUiErrorNextAction(action, errorClass) {
+  if (action.includes("session") || action.includes("conversation") || errorClass === "local-store") {
+    return "check the local room state and retry the visible action";
+  }
+  if (action.includes("handshake") || action.includes("message-import") || errorClass === "payload-rejected") {
+    return "ask for a fresh payload and import only the active pending row";
+  }
+  if (action.includes("receive") || action.includes("roundtrip") || errorClass === "transport-unavailable") {
+    return "stay on manual encrypted exchange or retry private delivery after checking the route";
+  }
+  if (errorClass === "profile-unlock") {
+    return "retry the local profile passphrase or create a new local profile";
+  }
+  return "retry the visible action or use the redacted support report";
+}
+
+function redactedUiErrorMessage(action, error) {
+  const errorClass = redactedUiErrorClass(error);
+  const nextAction = redactedUiErrorNextAction(action, errorClass);
+  return `Action failed. error_class=${errorClass}. No private payloads, local paths, keys, passphrases, endpoints, or message bodies are shown. Next: ${nextAction}.`;
 }
 
 function twoProfileSessionRebuildMessage(input = productionTwoProfileInput()) {
@@ -14856,9 +14901,9 @@ async function runLocalDemo() {
     setDemoState("failed", "Demo failed");
     setText(fields.demoHint, "Check Cargo, Rust, and Tauri prerequisites before running again.");
     setText(fields.demoWarning, "Local demo command failed.");
-    renderDemoSteps([{ label: "Local command", status: "failed", detail: String(error) }]);
+    renderDemoSteps([{ label: "Local command", status: "failed", detail: redactedUiErrorMessage("local-command", error) }]);
     resetSimulationView();
-    setText(fields.demoOutput, `Local demo failed:\n${error}`);
+    setText(fields.demoOutput, `Local demo failed:\n${redactedUiErrorMessage("local-command", error)}`);
   } finally {
     if (fields.runDemo) {
       fields.runDemo.disabled = false;
@@ -14892,7 +14937,9 @@ async function runLocalLoop() {
   } catch (error) {
     setLoopState("Loop failed");
     setText(fields.loopWarning, "Local message loop command failed.");
-    renderLoopResults([{ index: 1, sent: "failed", received: "failed", replay_check: String(error) }]);
+    renderLoopResults([
+      { index: 1, sent: "failed", received: "failed", replay_check: redactedUiErrorMessage("local-loop", error) },
+    ]);
   } finally {
     if (fields.runLoop) {
       fields.runLoop.disabled = false;
@@ -14934,7 +14981,7 @@ async function checkOnionPreflight() {
     );
   } catch (error) {
     setOnionPreflightState("Onion preflight failed");
-    setText(fields.onionPreflightWarning, String(error));
+    setText(fields.onionPreflightWarning, redactedUiErrorMessage("onion-preflight", error));
     setText(fields.onionPreflightRuntime, "Failed without returning local path details");
     setText(fields.onionPreflightLaunch, "Failed closed");
     setText(fields.onionPreflightEvents, "No raw transport details returned");
@@ -15787,7 +15834,7 @@ async function prepareInviteRoomPrivateRouteExchange(input = productionTwoProfil
       return false;
     }
     setProductionTwoProfileState("Delivery code failed");
-    setText(fields.productionTwoProfileWarning, `${t("privateRouteCodeFailed")} ${String(error)}`);
+    setText(fields.productionTwoProfileWarning, redactedUiErrorMessage("private-route-code-create", error));
     setChatDeliveryNoticeByKey("privateRouteCodeFailed", "warning", input);
     return false;
   } finally {
@@ -15869,7 +15916,7 @@ async function applyPeerPrivateRouteCode(options = {}) {
       return false;
     }
     setProductionTwoProfileState("Peer delivery failed");
-    setText(fields.productionTwoProfileWarning, `${t("peerPrivateRouteCodeFailed")} ${String(error)}`);
+    setText(fields.productionTwoProfileWarning, redactedUiErrorMessage("peer-private-route-code-save", error));
     setChatDeliveryNoticeByKey("peerPrivateRouteCodeFailed", "warning", input);
     fields.peerPrivateRouteCode?.focus();
     return false;
@@ -17279,7 +17326,7 @@ async function cancelTwoProfileOutboundEntry(entry) {
       return;
     }
     setProductionTwoProfileState("Cancel send failed");
-    setText(fields.productionTwoProfileWarning, `${t("sendCancelFailed")} ${String(error)}`);
+    setText(fields.productionTwoProfileWarning, redactedUiErrorMessage("send-cancel", error));
     setChatDeliveryNoticeByKey("sendCancelFailed", "warning", input);
   } finally {
     clearTwoProfileOutboundCancelBusy(input);
@@ -17918,7 +17965,8 @@ async function runProductionTwoProfileRoundtrip() {
     try {
       await saveProductionMessageRetentionPreference(profileA, passphrase, messageTtlSeconds);
     } catch (error) {
-      retentionPreferenceWarning = `Roundtrip completed, but retention preference was not saved: ${String(error)}`;
+      retentionPreferenceWarning =
+        `Roundtrip completed, but retention preference was not saved. ${redactedUiErrorMessage("retention-preference", error)}`;
     }
     setProductionTwoProfileState("Connection setup completed");
     const view = renderProductionTwoProfileRoomSetupResult(result);
@@ -18437,7 +18485,7 @@ async function runProductionRoundtrip() {
     );
   } catch (error) {
     setProductionRoundtripState("Roundtrip failed");
-    setText(fields.productionRoundtripWarning, String(error));
+    setText(fields.productionRoundtripWarning, redactedUiErrorMessage("profile-roundtrip", error));
     setText(fields.productionRoundtripSession, "Failed");
     setText(fields.productionRoundtripEnvelope, "Failed");
     setText(fields.productionRoundtripReceive, "Failed");
@@ -18545,7 +18593,7 @@ async function checkProductionProductUnlockStatus() {
     return result;
   } catch (error) {
     setProductionProfileState("Profile unlock status failed");
-    setText(fields.productionProfileWarning, String(error));
+    setText(fields.productionProfileWarning, redactedUiErrorMessage("profile-create", error));
     setText(fields.productionProductUnlockState, "status failed without exposing local path details");
     setText(fields.productionProfileNextAction, t("profileRecoveryStatusFailedNext"));
     return null;
@@ -18564,7 +18612,7 @@ async function lockProductionProfile() {
     return result;
   } catch (error) {
     setProductionProfileState("Profile lock failed");
-    setText(fields.productionProfileWarning, String(error));
+    setText(fields.productionProfileWarning, redactedUiErrorMessage("profile-unlock", error));
     return null;
   }
 }
@@ -18969,7 +19017,7 @@ async function checkProductionDataLifecycle() {
     return result;
   } catch (error) {
     setProductionProfileState("Data lifecycle check failed");
-    setText(fields.productionProfileWarning, String(error));
+    setText(fields.productionProfileWarning, redactedUiErrorMessage("profile-delete", error));
     setText(fields.productionDataLifecycle, "Failed");
     setText(fields.productionProfileNextAction, t("dataLifecycleFailedNext"));
     return null;
@@ -18992,7 +19040,7 @@ async function prepareProductionDataLifecycle() {
     return result;
   } catch (error) {
     setProductionProfileState("Data lifecycle prepare failed");
-    setText(fields.productionProfileWarning, String(error));
+    setText(fields.productionProfileWarning, redactedUiErrorMessage("local-data-wipe", error));
     setText(fields.productionDataLifecycle, "Failed");
     setText(fields.productionProfileNextAction, t("dataLifecycleFailedNext"));
     return null;
@@ -19040,7 +19088,7 @@ async function deleteProductionProfile() {
     return result;
   } catch (error) {
     setProductionProfileState("Profile delete failed");
-    setText(fields.productionProfileWarning, String(error));
+    setText(fields.productionProfileWarning, redactedUiErrorMessage("profile-recovery-status", error));
     setText(fields.productionProfileNextAction, t("dataLifecycleFailedNext"));
     rememberFailureSupportReport(
       "profile-delete",
@@ -19087,7 +19135,7 @@ async function wipeProductionLocalData() {
     return result;
   } catch (error) {
     setProductionProfileState("Local data wipe failed");
-    setText(fields.productionProfileWarning, String(error));
+    setText(fields.productionProfileWarning, redactedUiErrorMessage("profile-recovery-unlock", error));
     setText(fields.productionProfileNextAction, t("dataLifecycleFailedNext"));
     rememberFailureSupportReport(
       "full-local-wipe",
@@ -19141,7 +19189,7 @@ async function emergencyWipeProductionLocalData() {
     return result;
   } catch (error) {
     setProductionProfileState("Emergency local wipe failed");
-    setText(fields.productionProfileWarning, String(error));
+    setText(fields.productionProfileWarning, redactedUiErrorMessage("profile-recovery-create", error));
     setText(fields.productionProfileNextAction, t("dataLifecycleFailedNext"));
     rememberFailureSupportReport(
       "emergency-local-wipe",
@@ -19427,7 +19475,7 @@ async function exportProductionPairingPayload() {
       return;
     }
     setProductionPairingState("Pairing payload export failed");
-    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionPairingWarning, redactedUiErrorMessage("pairing-export", error));
     if (fields.productionPairingPayload) {
       fields.productionPairingPayload.value = "";
     }
@@ -19609,7 +19657,7 @@ async function checkProductionSessionState(input = productionPairingInput()) {
     }
     rememberProductionSessionState(input, null);
     setProductionPairingState("Session state check failed");
-    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionPairingWarning, redactedUiErrorMessage("pairing-import", error));
     setText(fields.productionPairingSession, "Failed");
   } finally {
     clearProductionBusyAction("session-state");
@@ -19651,7 +19699,7 @@ async function checkProductionSessionLifecycle(input = productionPairingInput())
       return;
     }
     setProductionPairingState("Session lifecycle check failed");
-    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionPairingWarning, redactedUiErrorMessage("session-save", error));
     setText(fields.productionSessionLifecycle, "Failed");
   } finally {
     clearProductionBusyAction("session-lifecycle");
@@ -19724,7 +19772,7 @@ async function deleteProductionSessionLifecycle(input = productionPairingInput()
       return;
     }
     setProductionPairingState("Session lifecycle delete failed");
-    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionPairingWarning, redactedUiErrorMessage("session-delete", error));
     setText(fields.productionSessionLifecycle, "Failed");
     rememberFailureSupportReport(
       "session-delete",
@@ -19840,7 +19888,7 @@ async function checkProductionTwoProfileSessionStatus() {
     setProductionTwoProfileState("Session check failed");
     setText(fields.productionTwoProfileSessionStatus, "Saved connection check failed");
     setText(fields.productionTwoProfileWarning, twoProfileRecoveryMessage("session-status", error));
-    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionPairingWarning, redactedUiErrorMessage("session-status", error));
     postCheckFocus = fields.checkProductionTwoProfileSessionStatusInline;
   } finally {
     clearTwoProfileSessionStatusBusy(sessionCheckInput);
@@ -20043,7 +20091,7 @@ async function loadProductionTwoProfileTranscript(options = {}) {
   } catch (error) {
     if (!quiet) {
       setProductionTwoProfileState("Conversation load failed");
-      setText(fields.productionTwoProfileWarning, String(error));
+      setText(fields.productionTwoProfileWarning, redactedUiErrorMessage("conversation-load", error));
     } else if (autoResume) {
       latestProductionTwoProfileSessionStatus = null;
       setProductionTwoProfileState("Resume needs review");
@@ -20091,7 +20139,7 @@ async function refreshTwoProfileConversationAfterManualImport(
     setProductionTwoProfileState("Conversation reload skipped");
     setText(
       fields.productionTwoProfileWarning,
-      `Manual import for ${importedProfile} completed, but conversation reload failed: ${String(error)}`,
+      `Manual import for ${importedProfile} completed, but conversation reload failed. ${redactedUiErrorMessage("conversation-reload", error)}`,
     );
     return false;
   }
@@ -20353,7 +20401,7 @@ async function exportProductionHandshakeInit() {
       return;
     }
     setProductionPairingState("Handshake init failed");
-    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionPairingWarning, redactedUiErrorMessage("handshake-init", error));
     setText(fields.productionHandshakeState, "Failed");
   } finally {
     clearProductionBusyAction("handshake-init");
@@ -20394,7 +20442,7 @@ async function exportProductionHandshakeReply() {
       return;
     }
     setProductionPairingState("Handshake reply failed");
-    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionPairingWarning, redactedUiErrorMessage("handshake-reply", error));
     setText(fields.productionHandshakeState, "Failed");
   } finally {
     clearProductionBusyAction("handshake-reply");
@@ -20435,7 +20483,7 @@ async function exportProductionHandshakeFinish() {
       return;
     }
     setProductionPairingState("Handshake finish failed");
-    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionPairingWarning, redactedUiErrorMessage("handshake-finish", error));
     setText(fields.productionHandshakeState, "Failed");
   } finally {
     clearProductionBusyAction("handshake-finish");
@@ -20490,7 +20538,7 @@ async function importProductionHandshakeFinish() {
       return;
     }
     setProductionPairingState("Handshake finish import failed");
-    setText(fields.productionPairingWarning, String(error));
+    setText(fields.productionPairingWarning, redactedUiErrorMessage("handshake-finish-import", error));
     setText(fields.productionHandshakeState, "Failed");
   } finally {
     clearProductionBusyAction("handshake-finish-import");
@@ -20599,7 +20647,7 @@ async function exportProductionMessageEnvelope() {
       return;
     }
     setProductionMessageState("Message envelope export failed");
-    setText(fields.productionMessageWarning, String(error));
+    setText(fields.productionMessageWarning, redactedUiErrorMessage("message-export", error));
     setText(fields.productionMessageOutbound, "Failed");
     rememberFailureSupportReport(
       "message-envelope-export",
@@ -20678,7 +20726,7 @@ async function deleteProductionConversation() {
       return;
     }
     setProductionMessageState("Conversation delete failed");
-    setText(fields.productionMessageWarning, String(error));
+    setText(fields.productionMessageWarning, redactedUiErrorMessage("conversation-delete", error));
     rememberFailureSupportReport(
       "conversation-delete",
       "destructive_action_failed",
@@ -20788,7 +20836,7 @@ async function importProductionMessageEnvelope() {
       return;
     }
     setProductionMessageState("Message envelope import failed");
-    setText(fields.productionMessageWarning, String(error));
+    setText(fields.productionMessageWarning, redactedUiErrorMessage("message-import", error));
     setText(fields.productionMessageInbound, "Failed");
     rememberFailureSupportReport(
       "message-envelope-import",
@@ -20886,7 +20934,7 @@ async function exportProductionReceivedMessage() {
       return;
     }
     setProductionMessageState("Received message export failed");
-    setText(fields.productionMessageWarning, String(error));
+    setText(fields.productionMessageWarning, redactedUiErrorMessage("received-export", error));
     setText(fields.productionMessageInbound, "Failed");
   } finally {
     clearProductionBusyAction("received-export");
@@ -20934,7 +20982,7 @@ async function loadProductionMessageTranscript() {
       return;
     }
     setProductionMessageState("Transcript load failed");
-    setText(fields.productionMessageWarning, String(error));
+    setText(fields.productionMessageWarning, redactedUiErrorMessage("transcript-load", error));
   } finally {
     clearProductionBusyAction("transcript-load");
     if (fields.loadProductionMessageTranscript) {
