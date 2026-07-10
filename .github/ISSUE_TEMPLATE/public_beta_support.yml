@@ -8,7 +8,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Do not post bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, profile names, message text, local paths, raw logs, crash dumps, passphrases, private keys, key material, private planning notes, files from docs/, or local app data.
+        Do not post bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, profile names, message text, local paths, raw logs, crash dumps, screenshots of private room data, support bundles, passphrases, private keys, key material, private planning notes, files from docs/, or local app data.
 
         This beta is unsigned, not notarized, not audited, not production-ready, and sensitive communication prohibited.
   - type: checkboxes
@@ -16,7 +16,7 @@ body:
     attributes:
       label: Redaction checklist
       options:
-        - label: I removed bridge lines, onion endpoints, invite codes, payloads, safety phrases, profile names, message text, local paths, raw logs, crash dumps, passphrases, private keys, and key material.
+        - label: I removed bridge lines, onion endpoints, invite codes, payloads, safety phrases, profile names, message text, local paths, raw logs, crash dumps, screenshots of private room data, support bundles, passphrases, private keys, and key material.
           required: true
         - label: I understand this is an unsigned experimental public beta and not safe for sensitive communication.
           required: true
@@ -126,6 +126,6 @@ body:
     id: description
     attributes:
       label: Redacted description
-      description: Describe what happened without private identifiers, logs, payloads, paths, endpoints, messages, screenshots of private data, or secrets.
+      description: Describe what happened without private identifiers, logs, crash artifacts, support bundles, payloads, paths, endpoints, messages, screenshots of private data, or secrets.
     validations:
       required: true
