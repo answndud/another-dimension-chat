@@ -375,11 +375,11 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only/);
   assert.match(
     diagnostics,
-    /allowed_public_intake_fields=app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network/,
+    /allowed_public_intake_fields=app-status#app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network#release-class-readiness/,
   );
   assert.match(
     diagnostics,
-    /forbidden_public_intake_fields=raw-logs#endpoints#invite-codes#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#key-material#private-planning-notes/,
+    /forbidden_public_intake_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles/,
   );
   assert.match(diagnostics, /app_version=0.1.0/);
   assert.match(diagnostics, /build_channel=beta-onion/);
@@ -452,7 +452,7 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /automated_log_collection=false/);
   assert.match(diagnostics, /support_bundle_export=false/);
   assert.match(diagnostics, /raw_diagnostic_file_export=false/);
-  assert.match(diagnostics, /excluded_fields=codes,endpoints,messages,profiles,paths,logs,crash_dumps,screenshots,passphrases,key_material,private_planning_notes/);
+  assert.match(diagnostics, /excluded_fields=codes,endpoints,messages,profiles,paths,logs,crash_dumps,screenshots,passphrases,private_keys,key_material,private_planning_notes,support_bundles/);
   assert.doesNotMatch(diagnostics, /^bridge_line=/m);
   assert.doesNotMatch(diagnostics, /^onion_endpoint=/m);
   assert.doesNotMatch(diagnostics, /^invite_code=/m);
