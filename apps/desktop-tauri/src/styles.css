@@ -195,7 +195,24 @@ h1 {
 }
 
 .first-run-checklist li {
+  border-left: 2px solid transparent;
+  padding-block: 1px;
   padding-left: 2px;
+  overflow-wrap: anywhere;
+}
+
+.first-run-checklist li[data-step-status="complete"] {
+  color: var(--text-primary);
+}
+
+.first-run-checklist li[data-step-status="current"] {
+  border-left-color: var(--accent-hot);
+  color: var(--text-primary);
+  font-weight: 760;
+}
+
+.first-run-checklist li[data-step-status="pending"] {
+  color: var(--text-muted);
 }
 
 .first-run-primary-next-action {
