@@ -18706,8 +18706,8 @@ function dataLifecycleSummary(result) {
   );
 }
 
-function dataLifecycleBoundary(result) {
-  return productionLocalLifecycleBoundaryView(result);
+function dataLifecycleBoundary(result, action = "status") {
+  return productionLocalLifecycleBoundaryView(result, { action });
 }
 
 function dataLifecycleActionView(result = {}, action = "status") {
@@ -18763,7 +18763,7 @@ function dataLifecycleActionView(result = {}, action = "status") {
   return {
     summary: summaryParts.join(" "),
     boundary:
-      `${dataLifecycleBoundary(result)} action=${action} destructive_action=${destructiveAction} ` +
+      `${dataLifecycleBoundary(result, action)} action=${action} destructive_action=${destructiveAction} ` +
       `redacted_result=true backup_recovery=false cloud_backup_sync=false rollback_detection=${rollbackDetection} ` +
       `crypto_erasure=${cryptoErasure} key_record_deletion=${keyRecordDeletion} ` +
       `rollback_prevention=false secure_delete_claim=false security_ready=false`,
@@ -18789,6 +18789,29 @@ function dataLifecycleDestructivePreflightView(action, options = {}) {
   const summary = [
     `destructive_preflight=true`,
     `action=${action}`,
+    `destructive_scope=${
+      conversationDelete
+        ? "conversation-message-records"
+        : sessionDelete
+          ? "session-resume-records"
+          : profileDelete
+            ? "local-profile-store"
+            : fullWipe
+              ? "owned-local-app-data"
+              : "local-lifecycle-readiness"
+    }`,
+    `confirmation_phrase=${
+      conversationDelete
+        ? "DELETE_CONVERSATION"
+        : sessionDelete
+          ? "DELETE_SESSION"
+          : profileDelete
+            ? "exact_profile_name"
+            : fullWipe
+              ? "WIPE_LOCAL_DATA"
+              : "none"
+    }`,
+    "confirmation_matches_scope=true",
     `profile_target_present=${profilePresent}`,
     `confirmation_matched=${confirmationMatched}`,
     `conversation_delete=${conversationDelete}`,
@@ -19740,7 +19763,7 @@ async function checkProductionSessionLifecycle(input = productionPairingInput())
     if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
       return;
     }
-    const view = productionSessionLifecycleView(result);
+    const view = productionSessionLifecycleView(result, { action: "status" });
     setProductionPairingState(
       result.session_resume_ready ? "Session lifecycle resumable" : "Session lifecycle incomplete",
     );
@@ -19803,7 +19826,7 @@ async function deleteProductionSessionLifecycle(input = productionPairingInput()
     if (!productionPairingInputStillCurrent(input, ["profile", "passphrase"])) {
       return;
     }
-    const view = productionSessionLifecycleView(result);
+    const view = productionSessionLifecycleView(result, { action: "session-delete" });
     rememberProductionSessionState(input, null);
     if (result.session_resume_closed) {
       applyPostDestructiveLifecycleRebuildGuidance("session-delete", {
@@ -20772,7 +20795,7 @@ async function deleteProductionConversation() {
       fields.productionMessageInbound,
       `received_deleted=${result.received_messages_deleted} total_records=${result.conversation_records_deleted} session_preserved=${result.session_records_preserved} saved_rooms_cleared=${savedRoomsCleared} active_room_cleared=${activeRoomCleared}`,
     );
-    setText(fields.productionMessageBoundary, productionLocalLifecycleBoundaryView(result));
+    setText(fields.productionMessageBoundary, productionLocalLifecycleBoundaryView(result, { action: "conversation-delete" }));
     await checkProductionSessionState(input);
   } catch (error) {
     if (!productionProfileInputStillCurrent(input)) {
