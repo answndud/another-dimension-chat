@@ -6,6 +6,10 @@ fail() {
   exit 1
 }
 
+json_escape() {
+  node -e 'process.stdout.write(JSON.stringify(process.argv[1]))' "$1"
+}
+
 must_contain() {
   local file="$1"
   local needle="$2"
@@ -65,6 +69,9 @@ for flag in \
   "stapler_staple_validate_path_ready=true" \
   "gatekeeper_assessment_path_ready=true" \
   "macos_dmg_contained_app_verifier_available=true" \
+  "signed_rc_provenance_identity_fields_ready=true" \
+  "signed_rc_provenance_artifact_identity_ready=true" \
+  "signed_rc_provenance_signing_identity_hash_ready=true" \
   "dmg_mounted_app_found=false" \
   "dmg_contained_app_codesign_verify_passed=false" \
   "dmg_contained_app_gatekeeper_assess_passed=false" \
@@ -100,6 +107,10 @@ must_contain "$TAURI_CONFIG" '"signingIdentity": null'
 must_contain "$TAURI_CONFIG" '"providerShortName": null'
 must_contain "$ENTITLEMENTS" "<dict/>"
 must_contain "$SIGNED_BUILD_SCRIPT" "AD_BUILD_MACOS_SIGNED_RC"
+must_contain "$SIGNED_BUILD_SCRIPT" "app_version"
+must_contain "$SIGNED_BUILD_SCRIPT" "app_bundle_id"
+must_contain "$SIGNED_BUILD_SCRIPT" "artifact_size_bytes"
+must_contain "$SIGNED_BUILD_SCRIPT" "signing_identity_sha256"
 must_contain "$SIGNED_BUILD_SCRIPT" "hdiutil create"
 must_contain "$SIGNED_BUILD_SCRIPT" "verify_macos_dmg_contained_app.sh"
 must_contain "$SIGNED_BUILD_SCRIPT" "xcrun notarytool submit"
@@ -151,6 +162,18 @@ APP_BUNDLE="${AD_RC_APP_BUNDLE:-}"
 RC_DMG="${AD_RC_DMG:-${AD_SIGNED_RC_DMG:-}}"
 EXECUTE="${AD_EXECUTE_MACOS_SIGN_NOTARY:-0}"
 PROVENANCE_OUT="${AD_SIGNED_RC_PROVENANCE_OUT:-}"
+TARGET_ARCH="${AD_MACOS_TARGET_ARCH:-${AD_RC_TARGET_ARCH:-aarch64-apple-darwin}}"
+BUILD_CHANNEL="${AD_MACOS_BUILD_CHANNEL:-${AD_RC_BUILD_CHANNEL:-operator-provided}}"
+
+case "$TARGET_ARCH" in
+  aarch64-apple-darwin)
+    PUBLIC_ARCHITECTURE="macos-aarch64"
+    ;;
+  x86_64-apple-darwin)
+    PUBLIC_ARCHITECTURE="macos-x64"
+    ;;
+  *) fail "AD_MACOS_TARGET_ARCH or AD_RC_TARGET_ARCH must be aarch64-apple-darwin or x86_64-apple-darwin" ;;
+esac
 
 NOTARY_PROFILE="${AD_RELEASE_NOTARYTOOL_PROFILE:-${NOTARYTOOL_PROFILE:-}}"
 NOTARY_API_KEY_CONFIGURED=false
@@ -195,6 +218,9 @@ notary_submit_wait_path_ready=true
 stapler_staple_validate_path_ready=true
 gatekeeper_assessment_path_ready=true
 macos_dmg_contained_app_verifier_available=true
+signed_rc_provenance_identity_fields_ready=true
+signed_rc_provenance_artifact_identity_ready=true
+signed_rc_provenance_signing_identity_hash_ready=true
 dmg_mounted_app_found=false
 dmg_contained_app_codesign_verify_passed=false
 dmg_contained_app_gatekeeper_assess_passed=false
@@ -265,6 +291,12 @@ printf '%s\n' "$contained_app_output" | grep -Fq "dmg_contained_app_gatekeeper_a
 printf '%s\n' "$contained_app_output" | grep -Fq "dmg_contained_app_matches_signed_source_app=true" ||
   fail "DMG contained app does not match the signed source app bundle"
 rc_sha="$(shasum -a 256 "$RC_DMG" | awk '{print $1}')"
+rc_size_bytes="$(wc -c <"$RC_DMG" | tr -d ' ')"
+app_version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
+app_bundle_id="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.identifier)')"
+signing_identity_sha256="$(printf '%s' "$IDENTITY" | shasum -a 256 | awk '{print $1}')"
+source_commit="$(git rev-parse HEAD)"
+artifact_basename="$(basename "$RC_DMG")"
 
 generated_provenance_written=false
 if [ -n "$PROVENANCE_OUT" ]; then
@@ -273,8 +305,38 @@ if [ -n "$PROVENANCE_OUT" ]; then
     *) fail "AD_SIGNED_RC_PROVENANCE_OUT must be under ignored generated artifact directories" ;;
   esac
   mkdir -p "$(dirname "$PROVENANCE_OUT")"
-  printf '{"artifact":"%s","sha256":"%s","macos_dmg_contained_app_verifier_available":true,"dmg_mounted_app_found":true,"dmg_contained_app_codesign_verify_passed":true,"dmg_contained_app_gatekeeper_assess_passed":true,"dmg_contained_app_matches_signed_source_app":true,"release_upload_authorized":false}\n' \
-    "$RC_DMG" "$rc_sha" >"$PROVENANCE_OUT"
+  cat >"$PROVENANCE_OUT" <<JSON
+{
+  "schema_version": "macos-signed-notarized-rc-provenance-v1",
+  "artifact": $(json_escape "$artifact_basename"),
+  "sha256": "$rc_sha",
+  "artifact_size_bytes": $rc_size_bytes,
+  "source_commit": "$source_commit",
+  "app_version": $(json_escape "$app_version"),
+  "app_bundle_id": $(json_escape "$app_bundle_id"),
+  "release_class": "signed-notarized-rc",
+  "target_arch": "$TARGET_ARCH",
+  "public_architecture": "$PUBLIC_ARCHITECTURE",
+  "build_channel": $(json_escape "$BUILD_CHANNEL"),
+  "signing_identity_sha256": "$signing_identity_sha256",
+  "signing_status": "signed",
+  "notarization_status": "notarized",
+  "signed": true,
+  "notarized": true,
+  "stapled": true,
+  "stapled_status": "stapled",
+  "gatekeeper_assessed": true,
+  "gatekeeper_open_assessed": true,
+  "gatekeeper_execute_assessed": true,
+  "macos_dmg_contained_app_verifier_available": true,
+  "dmg_mounted_app_found": true,
+  "dmg_contained_app_codesign_verify_passed": true,
+  "dmg_contained_app_gatekeeper_assess_passed": true,
+  "dmg_contained_app_matches_signed_source_app": true,
+  "release_upload_authorized": false,
+  "dmg_rebuild_authorized": false
+}
+JSON
   generated_provenance_written=true
 fi
 
@@ -289,6 +351,9 @@ macos_entitlements_minimal=true
 macos_signed_notarized_release_build_script_ready=true
 signed_app_build_path_ready=true
 dmg_create_from_signed_app_path_ready=true
+signed_rc_provenance_identity_fields_ready=true
+signed_rc_provenance_artifact_identity_ready=true
+signed_rc_provenance_signing_identity_hash_ready=true
 developer_id_signing_available=true
 notarization_credential_available=true
 signed_notarized_rc_execution_ready=true

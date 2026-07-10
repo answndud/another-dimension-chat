@@ -22,6 +22,13 @@ creates a DMG with `hdiutil create`, signs/notarizes/staples the DMG, mounts
 the DMG to verify the contained `.app`, and records checksum/provenance under
 ignored generated artifact directories.
 
+Both execution paths write signed RC provenance with source commit, app
+version, bundle id, release class, artifact filename, artifact SHA-256,
+artifact size, target/public architecture, signing identity SHA-256,
+signing/notarization/stapling status, Gatekeeper open/execute assessment, and
+contained-app verifier results. The build-owned path also records the concrete
+build channel; the one-shot path records the provided channel label when set.
+
 ## Execution Inputs
 
 Actual execution requires all of these:
@@ -87,6 +94,9 @@ The script must not reuse a DMG that already contains an unsigned app bundle.
 - stapler_staple_validate_path_ready=true
 - gatekeeper_assessment_path_ready=true
 - macos_dmg_contained_app_verifier_available=true
+- signed_rc_provenance_identity_fields_ready=true
+- signed_rc_provenance_artifact_identity_ready=true
+- signed_rc_provenance_signing_identity_hash_ready=true
 - dmg_mounted_app_found=false
 - dmg_contained_app_codesign_verify_passed=false
 - dmg_contained_app_gatekeeper_assess_passed=false
