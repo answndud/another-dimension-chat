@@ -80,6 +80,8 @@ for flag in \
   "windows_result_artifact_manifest_sha_verified=true" \
   "windows_result_artifact_provenance_sha_verified=true" \
   "windows_result_artifact_bytes_sha_verified=true" \
+  "windows_result_artifact_identity_verified=true" \
+  "windows_result_runtime_boundary_verified=true" \
   "windows_artifact_requires_same_release_authority=true" \
   "windows_artifact_checksum_bytes_verified_by_validator=true" \
   "windows_artifact_provenance_consistency_verified_by_validator=true" \
@@ -133,6 +135,8 @@ must_contain "$SCHEMA" "windows_result_requires_valid_artifact_manifest=true"
 must_contain "$SCHEMA" "windows_result_artifact_manifest_sha_verified=true"
 must_contain "$SCHEMA" "windows_result_artifact_provenance_sha_verified=true"
 must_contain "$SCHEMA" "windows_result_artifact_bytes_sha_verified=true"
+must_contain "$SCHEMA" "windows_result_artifact_identity_verified=true"
+must_contain "$SCHEMA" "windows_result_runtime_boundary_verified=true"
 must_contain "$SCHEMA" "windows_result_rejects_private_docs_local_app_data_and_screenshots=true"
 must_contain "$SCHEMA" "windows_public_artifact_ready=false"
 must_contain "$VALIDATOR" "status=windows-public-artifact-candidate-requires-review"
@@ -140,6 +144,9 @@ must_contain "$VALIDATOR" "windows_public_artifact_result_current_head_required=
 must_contain "$VALIDATOR" "windows_result_requires_valid_artifact_manifest=true"
 must_contain "$VALIDATOR" "artifact-manifest-sha-mismatch"
 must_contain "$VALIDATOR" "artifact-provenance-sha-mismatch"
+must_contain "$VALIDATOR" "artifact-manifest-version-mismatch"
+must_contain "$VALIDATOR" "artifact-manifest-release-class-mismatch"
+must_contain "$VALIDATOR" "app_launch_network"
 must_contain "$VALIDATOR" "source-commit-not-current-head"
 must_contain "$VALIDATOR" "private-docs"
 must_contain "$VALIDATOR" "windows-local-app-data"
@@ -207,6 +214,14 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
   "source_commit": "abcdef1234567890",
   "version": "0.1.0",
   "release_class": "unsigned-windows-beta",
+  "manifest_file": "WINDOWS_ARTIFACT_MANIFEST.json",
+  "manifest_sha256_file": "WINDOWS_ARTIFACT_MANIFEST.json.sha256",
+  "default_bundle_target": "nsis",
+  "default_artifact_extension": ".exe",
+  "webview2_runtime_required": true,
+  "app_data_resolver": "tauri-app-data",
+  "redacted_diagnostics_required": true,
+  "auto_update": false,
   "same_release_asset_authority_required": true,
   "release_upload_authorized": false,
   "release_body_edit_authorized": false,
@@ -225,6 +240,7 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
   "artifacts": [
     {
       "filename": "$windows_artifact_name",
+      "artifact_basename": "$windows_artifact_name",
       "sha256": "$windows_artifact_sha",
       "size_bytes": $windows_artifact_size,
       "platform": "windows",
@@ -232,14 +248,22 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
       "bundle_target": "nsis",
       "signing_status": "unsigned-hold",
       "checksum_file": "$windows_artifact_name.sha256",
+      "checksum_sidecar": "$windows_artifact_name.sha256",
       "provenance_file": "$windows_artifact_name.provenance.json",
+      "provenance_path": "$windows_artifact_name.provenance.json",
+      "artifact_path_class": "generated-release-directory-relative-basename",
       "webview2_runtime_required": true,
+      "app_data_resolver": "tauri-app-data",
+      "encrypted_store_required": true,
+      "redacted_diagnostics_required": true,
+      "auto_update": false,
       "smartscreen_reputation_claim": false,
       "signing_trust_boundary": false
     }
   ]
 }
 JSON
+shasum -a 256 "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" | sed 's#'"$tmp_dir"'/##' >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json.sha256"
 windows_manifest_sha="$(shasum -a 256 "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" | awk '{print $1}')"
 
 cat >"$tmp_dir/win-valid.md" <<'RESULT'
@@ -250,7 +274,11 @@ platform=windows
 windows_version=Windows 11 23H2 redacted
 architecture=x64
 artifact_kind=tauri-bundle
+artifact_app_version=0.1.0
+artifact_release_class=unsigned-windows-beta
 artifact_path_redacted=true
+install_path_class=redacted-standard-user-install
+app_data_resolver_class=tauri-app-data
 artifact_manifest_file=WINDOWS_ARTIFACT_MANIFEST.json
 artifact_sha256=__WINDOWS_ARTIFACT_SHA__
 artifact_provenance_sha256=__WINDOWS_PROVENANCE_SHA__
@@ -260,9 +288,12 @@ webview2_rendered=pass
 app_data_root_redacted=pass
 path_separator_behavior=pass
 encrypted_store_profile_unlock=pass
+profile_create_unlock=pass
 local_deletion_behavior=pass
 redacted_diagnostics_only=pass
+redacted_diagnostics_copy=pass
 explicit_user_action_before_network=pass
+app_launch_network=false
 local_manual_envelope_default_path=pass
 auto_update_channel_absent=pass
 public_non_claims_visible=pass
@@ -284,6 +315,10 @@ printf '%s\n' "$candidate_output" | grep -Fq "windows_result_artifact_provenance
   fail "candidate validator did not verify artifact provenance SHA"
 printf '%s\n' "$candidate_output" | grep -Fq "windows_result_artifact_bytes_sha_verified=true" ||
   fail "candidate validator did not verify artifact bytes SHA"
+printf '%s\n' "$candidate_output" | grep -Fq "windows_result_artifact_identity_verified=true" ||
+  fail "candidate validator did not verify artifact identity"
+printf '%s\n' "$candidate_output" | grep -Fq "windows_result_runtime_boundary_verified=true" ||
+  fail "candidate validator did not verify runtime boundary"
 printf '%s\n' "$candidate_output" | grep -Fq "windows_public_artifact_ready=false" || fail "validator must not auto-open Windows artifact readiness"
 printf '%s\n' "$candidate_output" | grep -Fq "status=windows-public-artifact-candidate-requires-review" || fail "candidate validator did not require review"
 
@@ -426,6 +461,8 @@ windows_result_requires_valid_artifact_manifest=true
 windows_result_artifact_manifest_sha_verified=true
 windows_result_artifact_provenance_sha_verified=true
 windows_result_artifact_bytes_sha_verified=true
+windows_result_artifact_identity_verified=true
+windows_result_runtime_boundary_verified=true
 windows_result_rejects_private_docs_local_app_data_and_screenshots=true
 windows_real_runtime_smoke_passed=false
 windows_public_artifact_ready=false

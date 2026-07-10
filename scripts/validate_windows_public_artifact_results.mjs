@@ -14,7 +14,11 @@ const REQUIRED_FIELDS = Object.freeze([
   "windows_version",
   "architecture",
   "artifact_kind",
+  "artifact_app_version",
+  "artifact_release_class",
   "artifact_path_redacted",
+  "install_path_class",
+  "app_data_resolver_class",
   "artifact_manifest_file",
   "artifact_sha256",
   "artifact_provenance_sha256",
@@ -24,9 +28,12 @@ const REQUIRED_FIELDS = Object.freeze([
   "app_data_root_redacted",
   "path_separator_behavior",
   "encrypted_store_profile_unlock",
+  "profile_create_unlock",
   "local_deletion_behavior",
   "redacted_diagnostics_only",
+  "redacted_diagnostics_copy",
   "explicit_user_action_before_network",
+  "app_launch_network",
   "local_manual_envelope_default_path",
   "auto_update_channel_absent",
   "public_non_claims_visible",
@@ -43,8 +50,10 @@ const PASS_FIELDS = Object.freeze([
   "app_data_root_redacted",
   "path_separator_behavior",
   "encrypted_store_profile_unlock",
+  "profile_create_unlock",
   "local_deletion_behavior",
   "redacted_diagnostics_only",
+  "redacted_diagnostics_copy",
   "explicit_user_action_before_network",
   "local_manual_envelope_default_path",
   "auto_update_channel_absent",
@@ -57,9 +66,13 @@ const ALLOWED_VALUES = new Map([
   ["platform", new Set(["windows"])],
   ["architecture", new Set(["x64", "arm64"])],
   ["artifact_kind", new Set(["installer", "portable-archive", "msix", "nsis", "tauri-bundle"])],
+  ["artifact_release_class", new Set(["unsigned-windows-beta", "signed-windows-rc", "stable"])],
   ["artifact_path_redacted", new Set(["true"])],
+  ["install_path_class", new Set(["redacted-standard-user-install", "redacted-portable-run", "redacted-installer-default"])],
+  ["app_data_resolver_class", new Set(["tauri-app-data"])],
   ["installer_signing_decision", new Set(["unsigned-hold", "signtool-signed", "store-signed", "not-applicable"])],
   ["smartscreen_reputation_claim", new Set(["false"])],
+  ["app_launch_network", new Set(["false"])],
   ["public_copy_reviewed", new Set(["true", "false"])],
   ["checksum_provenance_verified", new Set(["true", "false"])],
   ["support_diagnostics_reviewed", new Set(["true", "false"])],
@@ -210,6 +223,18 @@ function validateArtifactEvidenceBundle(file, fields, { requireCurrentHead = fal
     issues.push("artifact-manifest-invalid-json");
     return issues;
   }
+  if (manifest.source_commit !== fields.get("source_commit")) {
+    issues.push("artifact-manifest-source-commit-mismatch");
+  }
+  if (manifest.version !== fields.get("artifact_app_version")) {
+    issues.push("artifact-manifest-version-mismatch");
+  }
+  if (manifest.release_class !== fields.get("artifact_release_class")) {
+    issues.push("artifact-manifest-release-class-mismatch");
+  }
+  if (manifest.app_data_resolver !== fields.get("app_data_resolver_class")) {
+    issues.push("artifact-manifest-app-data-resolver-mismatch");
+  }
   const artifact = manifest.artifacts.find((entry) => entry?.sha256 === fields.get("artifact_sha256"));
   if (!artifact) {
     issues.push("artifact-sha-not-found-in-manifest");
@@ -230,6 +255,21 @@ function validateArtifactEvidenceBundle(file, fields, { requireCurrentHead = fal
   const signingDecision = fields.get("installer_signing_decision");
   if (signingDecision !== "not-applicable" && artifact.signing_status !== signingDecision) {
     issues.push("installer-signing-decision-mismatch");
+  }
+  if (artifact.webview2_runtime_required !== true) {
+    issues.push("artifact-webview2-requirement-missing");
+  }
+  if (artifact.app_data_resolver !== fields.get("app_data_resolver_class")) {
+    issues.push("artifact-app-data-resolver-mismatch");
+  }
+  if (artifact.encrypted_store_required !== true) {
+    issues.push("artifact-encrypted-store-requirement-missing");
+  }
+  if (artifact.redacted_diagnostics_required !== true) {
+    issues.push("artifact-redacted-diagnostics-requirement-missing");
+  }
+  if (artifact.auto_update !== false) {
+    issues.push("artifact-auto-update-must-stay-false");
   }
   return issues;
 }
@@ -263,6 +303,9 @@ function validateResult(file, { requireCurrentHead = false, head = "" } = {}) {
   }
   if (!/^[0-9a-f]{7,40}$/i.test(fields.get("source_commit") ?? "")) {
     issues.push("invalid-source-commit");
+  }
+  if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(fields.get("artifact_app_version") ?? "")) {
+    issues.push("invalid-artifact-app-version");
   }
   if (requireCurrentHead && fields.get("source_commit") !== head) {
     issues.push("source-commit-not-current-head");
@@ -332,6 +375,8 @@ console.log(`accepted_windows_public_artifact_results=${validated.length}`);
 console.log("windows_result_artifact_manifest_sha_verified=true");
 console.log("windows_result_artifact_provenance_sha_verified=true");
 console.log("windows_result_artifact_bytes_sha_verified=true");
+console.log("windows_result_artifact_identity_verified=true");
+console.log("windows_result_runtime_boundary_verified=true");
 console.log(`windows_real_runtime_smoke_passed=${allPass}`);
 console.log(`windows_public_artifact_candidate_requires_review=${allPass && reviewComplete}`);
 console.log("windows_public_artifact_ready=false");
