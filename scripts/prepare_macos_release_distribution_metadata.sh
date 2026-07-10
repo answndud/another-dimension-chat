@@ -69,6 +69,7 @@ artifact_name="$(basename "$ARTIFACT")"
 sha256="$(shasum -a 256 "$ARTIFACT" | awk '{print $1}')"
 size_bytes="$(wc -c <"$ARTIFACT" | tr -d ' ')"
 version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
+app_bundle_id="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.identifier)')"
 source_commit="$(git rev-parse HEAD)"
 signed_rc_provenance_json_fields=""
 
@@ -87,7 +88,7 @@ else
     "$ROOT"/apps/desktop-tauri/public-release/*|"$ROOT"/apps/desktop-tauri/beta-artifacts/*) ;;
     *) fail "AD_MACOS_SIGNED_RC_PROVENANCE_IN must be under an ignored generated artifact directory" ;;
   esac
-  contained_app_output="$(node - "$SIGNED_RC_PROVENANCE_IN" "$artifact_name" "$sha256" "$source_commit" "$ARCHITECTURE" <<'NODE'
+  contained_app_output="$(node - "$SIGNED_RC_PROVENANCE_IN" "$artifact_name" "$sha256" "$source_commit" "$ARCHITECTURE" "$version" "$app_bundle_id" "$RELEASE_CLASS" <<'NODE'
 const fs = require("node:fs");
 const expectedTargetArch = (architecture) => {
   if (architecture === "macos-aarch64") return "aarch64-apple-darwin";
@@ -100,23 +101,37 @@ const artifactName = process.argv[3];
 const artifactSha = process.argv[4];
 const sourceCommit = process.argv[5];
 const architecture = process.argv[6];
+const appVersion = process.argv[7];
+const appBundleId = process.argv[8];
+const releaseClass = process.argv[9];
 const provenance = JSON.parse(fs.readFileSync(file, "utf8"));
 const expected = {
   schema_version: "macos-signed-notarized-rc-provenance-v1",
   artifact: artifactName,
   sha256: artifactSha,
   source_commit: sourceCommit,
+  app_version: appVersion,
+  app_bundle_id: appBundleId,
+  release_class: releaseClass,
   target_arch: expectedTargetArch(architecture),
+  signing_status: "signed",
+  notarization_status: "notarized",
   signed: true,
   notarized: true,
   stapled: true,
+  stapled_status: "stapled",
   gatekeeper_assessed: true,
+  gatekeeper_open_assessed: true,
+  gatekeeper_execute_assessed: true,
   release_upload_authorized: false,
 };
 for (const [field, value] of Object.entries(expected)) {
   if (provenance[field] !== value) {
     throw new Error(`signed RC provenance ${field} mismatch`);
   }
+}
+if (!/^[0-9a-f]{64}$/i.test(provenance.signing_identity_sha256 ?? "")) {
+  throw new Error("signed RC provenance signing_identity_sha256 mismatch");
 }
 const fields = [
   "macos_dmg_contained_app_verifier_available",
@@ -143,6 +158,10 @@ console.log(provenance.notarized);
 console.log(provenance.stapled);
 console.log(provenance.gatekeeper_assessed);
 console.log(provenance.dmg_rebuild_authorized === true ? "true" : "false");
+console.log(provenance.app_version);
+console.log(provenance.app_bundle_id);
+console.log(provenance.release_class);
+console.log(provenance.signing_identity_sha256);
 NODE
   )"
   DMG_CONTAINED_APP_VERIFIER_AVAILABLE="$(printf '%s\n' "$contained_app_output" | sed -n '1p')"
@@ -160,6 +179,10 @@ NODE
   SIGNED_RC_STAPLED="$(printf '%s\n' "$contained_app_output" | sed -n '13p')"
   SIGNED_RC_GATEKEEPER_ASSESSED="$(printf '%s\n' "$contained_app_output" | sed -n '14p')"
   SIGNED_RC_DMG_REBUILD_AUTHORIZED="$(printf '%s\n' "$contained_app_output" | sed -n '15p')"
+  SIGNED_RC_APP_VERSION="$(printf '%s\n' "$contained_app_output" | sed -n '16p')"
+  SIGNED_RC_APP_BUNDLE_ID="$(printf '%s\n' "$contained_app_output" | sed -n '17p')"
+  SIGNED_RC_RELEASE_CLASS="$(printf '%s\n' "$contained_app_output" | sed -n '18p')"
+  SIGNED_RC_SIGNING_IDENTITY_SHA256="$(printf '%s\n' "$contained_app_output" | sed -n '19p')"
   [ "$DMG_CONTAINED_APP_VERIFIER_AVAILABLE" = "true" ] ||
     fail "signed RC provenance did not verify macOS DMG contained-app verifier availability"
   [ "$DMG_MOUNTED_APP_FOUND" = "true" ] ||
@@ -175,7 +198,11 @@ NODE
   \"signed_rc_artifact\": \"$SIGNED_RC_ARTIFACT\",
   \"signed_rc_sha256\": \"$SIGNED_RC_SHA256\",
   \"signed_rc_source_commit\": \"$SIGNED_RC_SOURCE_COMMIT\",
+  \"signed_rc_app_version\": \"$SIGNED_RC_APP_VERSION\",
+  \"signed_rc_app_bundle_id\": \"$SIGNED_RC_APP_BUNDLE_ID\",
+  \"signed_rc_release_class\": \"$SIGNED_RC_RELEASE_CLASS\",
   \"signed_rc_target_arch\": \"$SIGNED_RC_TARGET_ARCH\",
+  \"signed_rc_signing_identity_sha256\": \"$SIGNED_RC_SIGNING_IDENTITY_SHA256\",
   \"signed_rc_signed\": $SIGNED_RC_SIGNED,
   \"signed_rc_notarized\": $SIGNED_RC_NOTARIZED,
   \"signed_rc_stapled\": $SIGNED_RC_STAPLED,
@@ -200,6 +227,8 @@ cat >"$OUT_DIR/$provenance_file" <<JSON
   "schema_version": "macos-release-distribution-provenance-v1",
   "repository": "answndud/another-dimension-chat",
   "source_commit": "$source_commit",
+  "app_version": "$version",
+  "app_bundle_id": "$app_bundle_id",
   "artifact_filename": "$artifact_name",
   "artifact_sha256": "$sha256",
   "release_class": "$RELEASE_CLASS",
@@ -224,6 +253,7 @@ cat >"$manifest_file" <<JSON
   "repository": "answndud/another-dimension-chat",
   "source_commit": "$source_commit",
   "version": "$version",
+  "app_bundle_id": "$app_bundle_id",
   "release_class": "$RELEASE_CLASS",
   "same_release_asset_authority_required": true,
   "release_upload_authorized": false,

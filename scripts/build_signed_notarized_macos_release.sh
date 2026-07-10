@@ -65,6 +65,9 @@ notary_submit_wait_path_ready=true
 stapler_staple_validate_path_ready=true
 gatekeeper_assessment_path_ready=true
 macos_dmg_contained_app_verifier_available=true
+signed_rc_provenance_identity_fields_ready=true
+signed_rc_provenance_artifact_identity_ready=true
+signed_rc_provenance_signing_identity_hash_ready=true
 dmg_mounted_app_found=false
 dmg_contained_app_codesign_verify_passed=false
 dmg_contained_app_gatekeeper_assess_passed=false
@@ -116,6 +119,7 @@ fi
 DMG_REBUILD_AUTHORIZED_BOOL=true
 
 APP_VERSION="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
+APP_BUNDLE_ID="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.identifier)')"
 DMG_NAME="another-dimension-chat-${APP_VERSION}-${BUILD_CHANNEL}-${PUBLIC_ARCHITECTURE}-signed-notarized.dmg"
 BUILD_TARGET_DIR="${CARGO_TARGET_DIR:-${AD_BUILD_CACHE_DIR:-$ROOT/.build-cache}/cargo-target}"
 APP_BUNDLE="$BUILD_TARGET_DIR/$TARGET_ARCH/release/bundle/macos/Another Dimension Chat.app"
@@ -174,6 +178,8 @@ printf '%s\n' "$contained_app_output" | grep -Fq "dmg_contained_app_matches_sign
 
 sha256="$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')"
 printf '%s  %s\n' "$sha256" "$(basename "$DMG_PATH")" >"$DMG_PATH.sha256"
+artifact_size_bytes="$(wc -c <"$DMG_PATH" | tr -d ' ')"
+signing_identity_sha256="$(printf '%s' "$IDENTITY" | shasum -a 256 | awk '{print $1}')"
 
 if [ -z "$PROVENANCE_OUT" ]; then
   PROVENANCE_OUT="$DMG_PATH.provenance.json"
@@ -184,14 +190,24 @@ cat >"$PROVENANCE_OUT" <<JSON
   "schema_version": "macos-signed-notarized-rc-provenance-v1",
   "artifact": $(json_escape "$(basename "$DMG_PATH")"),
   "sha256": "$sha256",
+  "artifact_size_bytes": $artifact_size_bytes,
   "source_commit": "$(git rev-parse HEAD)",
+  "app_version": $(json_escape "$APP_VERSION"),
+  "app_bundle_id": $(json_escape "$APP_BUNDLE_ID"),
+  "release_class": "signed-notarized-rc",
   "target_arch": "$TARGET_ARCH",
   "public_architecture": "$PUBLIC_ARCHITECTURE",
   "build_channel": "$BUILD_CHANNEL",
+  "signing_identity_sha256": "$signing_identity_sha256",
+  "signing_status": "signed",
+  "notarization_status": "notarized",
   "signed": true,
   "notarized": true,
   "stapled": true,
+  "stapled_status": "stapled",
   "gatekeeper_assessed": true,
+  "gatekeeper_open_assessed": true,
+  "gatekeeper_execute_assessed": true,
   "macos_dmg_contained_app_verifier_available": true,
   "dmg_mounted_app_found": true,
   "dmg_contained_app_codesign_verify_passed": true,
@@ -213,6 +229,9 @@ notary_submit_executed=true
 stapler_staple_executed=true
 gatekeeper_assess_executed=true
 dmg_mounted_app_found=true
+signed_rc_provenance_identity_fields_ready=true
+signed_rc_provenance_artifact_identity_ready=true
+signed_rc_provenance_signing_identity_hash_ready=true
 dmg_contained_app_codesign_verify_passed=true
 dmg_contained_app_gatekeeper_assess_passed=true
 dmg_contained_app_matches_signed_source_app=true

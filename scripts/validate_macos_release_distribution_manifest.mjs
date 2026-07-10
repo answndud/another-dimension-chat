@@ -204,6 +204,12 @@ function validateProvenanceFile(file, manifest, artifact, actualSha) {
   if (provenance.source_commit !== manifest.source_commit) {
     issues.push(`artifact:${artifact.filename}:provenance-source-commit-mismatch`);
   }
+  if (provenance.app_version !== manifest.version) {
+    issues.push(`artifact:${artifact.filename}:provenance-app-version-mismatch`);
+  }
+  if (provenance.app_bundle_id !== manifest.app_bundle_id) {
+    issues.push(`artifact:${artifact.filename}:provenance-app-bundle-id-mismatch`);
+  }
   if (provenance.release_class !== manifest.release_class) {
     issues.push(`artifact:${artifact.filename}:provenance-release-class-mismatch`);
   }
@@ -235,6 +241,9 @@ function validateProvenanceFile(file, manifest, artifact, actualSha) {
       ["signed_rc_artifact", artifact.filename],
       ["signed_rc_sha256", actualSha],
       ["signed_rc_source_commit", manifest.source_commit],
+      ["signed_rc_app_version", manifest.version],
+      ["signed_rc_app_bundle_id", manifest.app_bundle_id],
+      ["signed_rc_release_class", manifest.release_class],
       ["signed_rc_target_arch", expectedTargetArch(artifact.architecture)],
     ];
     for (const [field, expected] of signedRcChecks) {
@@ -251,6 +260,9 @@ function validateProvenanceFile(file, manifest, artifact, actualSha) {
       if (provenance[field] !== true) {
         issues.push(`artifact:${artifact.filename}:provenance-${field}-not-true`);
       }
+    }
+    if (!/^[0-9a-f]{64}$/i.test(provenance.signed_rc_signing_identity_sha256 ?? "")) {
+      issues.push(`artifact:${artifact.filename}:provenance-signed-rc-signing-identity-sha256-invalid`);
     }
   }
   if (provenance.release_upload_authorized !== false) {
@@ -375,6 +387,7 @@ function validateManifest(file, { requireCurrentHead, head }) {
   if (!/^[0-9a-f]{7,40}$/i.test(manifest.source_commit ?? "")) issues.push("invalid-source-commit");
   if (requireCurrentHead && manifest.source_commit !== head) issues.push("source-commit-not-current-head");
   if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(manifest.version ?? "")) issues.push("invalid-version");
+  if (!/^[A-Za-z0-9.-]+$/.test(manifest.app_bundle_id ?? "")) issues.push("invalid-app-bundle-id");
   if (!ALLOWED_RELEASE_CLASSES.has(manifest.release_class)) issues.push("invalid-release-class");
   if (manifest.release_upload_authorized !== false) issues.push("release-upload-must-stay-false");
   if (manifest.release_body_edit_authorized !== false) issues.push("release-body-edit-must-stay-false");
