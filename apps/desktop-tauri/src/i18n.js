@@ -250,7 +250,7 @@ const dictionaries = {
     bridgeConfigReady: "Bridge config is ready.",
     bridgeConfigMissing: "Bridge config is not configured.",
     bridgeConfigUnsupported: "This build does not support bridge config.",
-    bridgeConfigSaved: "Bridge config saved locally. Do not paste bridge lines into public diagnostics or issues.",
+    bridgeConfigSaved: "Bridge config saved locally. Do not include bridge lines in public diagnostics or issues.",
     bridgeConfigCleared: "Bridge config cleared.",
     bridgeConfigClearFailed: "Bridge config was not cleared.",
     bridgeConfigInvalid: "Bridge config was not saved. Check the bridge lines.",
@@ -987,7 +987,7 @@ const dictionaries = {
       "Next: recreate the profile locally if needed; no cloud or backup recovery was performed.",
     dataLifecycleWipedNext:
       "Next: restart setup from local profiles; no secure deletion from storage media is claimed.",
-    dataLifecycleFailedNext: "Next: retry the local lifecycle action; do not paste raw local logs publicly.",
+    dataLifecycleFailedNext: "Next: retry the local lifecycle action; do not include raw local logs in public reports.",
     dataLifecycleDeleteConfirmWarning:
       "Type the exact profile name before deleting. This is local-only and does not provide backup recovery.",
     dataLifecycleDeleteConfirmNext: "Next: type the profile name exactly or cancel this local destructive action.",
@@ -1075,7 +1075,7 @@ const dictionaries = {
       "Next: check data lifecycle, restore only from a trusted local copy if needed, then unlock again before retrying the room.",
     profileRecoveryNeedsInputNext: "Next: enter the local profile name and passphrase.",
     profileRecoveryStatusFailedNext:
-      "Next: retry locally; do not paste raw logs publicly and do not use cloud recovery.",
+      "Next: retry locally; do not include raw logs in public reports and do not use cloud recovery.",
     identity: "Identity",
     productionPairing: "Pairing details",
     publicPayloadExport: "Public payload export",
@@ -1427,7 +1427,7 @@ const dictionaries = {
     bridgeConfigReady: "Bridge 설정이 준비됐습니다.",
     bridgeConfigMissing: "Bridge 설정이 없습니다.",
     bridgeConfigUnsupported: "이 빌드는 bridge 설정을 지원하지 않습니다.",
-    bridgeConfigSaved: "Bridge 설정을 로컬에 저장했습니다. public diagnostics나 issue에 bridge line을 붙여넣지 마세요.",
+    bridgeConfigSaved: "Bridge 설정을 로컬에 저장했습니다. public diagnostics나 issue에 bridge line을 포함하지 마세요.",
     bridgeConfigCleared: "Bridge 설정을 지웠습니다.",
     bridgeConfigClearFailed: "Bridge 설정을 지우지 못했습니다.",
     bridgeConfigInvalid: "Bridge 설정을 저장하지 못했습니다. bridge line을 확인하세요.",
@@ -2160,7 +2160,7 @@ const dictionaries = {
       "다음: 필요하면 프로필을 로컬에서 다시 만드세요. 클라우드나 백업 복구는 수행하지 않았습니다.",
     dataLifecycleWipedNext:
       "다음: 로컬 프로필부터 다시 설정하세요. 저장 매체에서의 보안 삭제는 주장하지 않습니다.",
-    dataLifecycleFailedNext: "다음: 로컬 생명주기 작업을 다시 시도하세요. 원본 로컬 로그를 공개로 붙여넣지 마세요.",
+    dataLifecycleFailedNext: "다음: 로컬 생명주기 작업을 다시 시도하세요. 원본 로컬 로그를 공개 보고에 포함하지 마세요.",
     dataLifecycleDeleteConfirmWarning:
       "삭제 전에 정확한 프로필 이름을 입력하세요. 이 작업은 로컬-only이며 백업 복구를 제공하지 않습니다.",
     dataLifecycleDeleteConfirmNext: "다음: 프로필 이름을 정확히 입력하거나 이 로컬 파괴 작업을 취소하세요.",
@@ -2248,7 +2248,7 @@ const dictionaries = {
       "다음: 데이터 생명주기를 확인하고 필요하면 신뢰할 수 있는 로컬 사본에서만 복구한 뒤 다시 잠금 해제하고 채팅방을 재시도하세요.",
     profileRecoveryNeedsInputNext: "다음: 로컬 프로필 이름과 패스프레이즈를 입력하세요.",
     profileRecoveryStatusFailedNext:
-      "다음: 로컬에서 다시 시도하세요. 원본 로그를 공개로 붙여넣지 말고 클라우드 복구를 쓰지 마세요.",
+      "다음: 로컬에서 다시 시도하세요. 원본 로그를 공개 보고에 포함하지 말고 클라우드 복구를 쓰지 마세요.",
     identity: "신원",
     productionPairing: "페어링 세부 정보",
     publicPayloadExport: "공개 페어링 정보 내보내기",
