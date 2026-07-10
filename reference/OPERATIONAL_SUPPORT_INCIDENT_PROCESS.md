@@ -28,6 +28,8 @@ triage, and key-compromise guidance without collecting private user data.
 - Suspected key compromise or leaked passphrase/key material.
 - Release artifact checksum, provenance, manifest, or same-release authority
   mismatch.
+- Release artifact identity mismatch across release tag, artifact filename,
+  platform, release class, checksum, provenance, or manifest.
 - Dependency vulnerability affecting a locked Rust, Tauri, or npm dependency.
 - Public claim drift toward production-ready, audited, secure messenger,
   sensitive-use, reliable external delivery, or Briar/Cwtch-equivalent wording.
@@ -69,6 +71,9 @@ payload, endpoint payload, envelope payload, or safety phrase:
 There is no auto-update channel. Emergency distribution is manual GitHub
 Release publication with matching artifact, checksum, provenance, manifest,
 release notes, update-integrity note, dependency evidence, and advisory text.
+The advisory packet must bind affected release tag, artifact filename,
+platform, release class, artifact SHA-256, provenance SHA-256, and distribution
+manifest SHA-256 as one release artifact identity before any public action.
 
 Rollback means telling users to stop using a bad artifact and install a specific
 same-release-authorized replacement or earlier release after verifying its

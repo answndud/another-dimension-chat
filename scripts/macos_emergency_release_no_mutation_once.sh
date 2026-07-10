@@ -37,6 +37,8 @@ for flag in \
   "emergency_release_advisory_packet_script_available=true" \
   "emergency_release_no_artifact_mutation_verifier_ready=true" \
   "emergency_advisory_requires_affected_release_artifact_binding=true" \
+  "emergency_advisory_requires_platform_release_class_binding=true" \
+  "emergency_advisory_requires_release_artifact_identity_tuple=true" \
   "emergency_advisory_requires_distribution_manifest_sha256=true" \
   "emergency_advisory_requires_signed_false_hold_flags=true" \
   "emergency_release_generates_app_artifact=false" \
@@ -66,8 +68,13 @@ must_contain "$OPS_DOC" "Any release upload, release edit, DMG rebuild, asset de
 must_contain "$SCRIPT" "AD_EXECUTE_MACOS_EMERGENCY_ADVISORY"
 must_contain "$SCRIPT" "AD_OWNER_APPROVED_EMERGENCY_ADVISORY"
 must_contain "$SCRIPT" "AD_AFFECTED_ARTIFACT_SHA256"
+must_contain "$SCRIPT" "AD_AFFECTED_PLATFORM"
+must_contain "$SCRIPT" "AD_AFFECTED_RELEASE_CLASS"
 must_contain "$SCRIPT" "AD_AFFECTED_PROVENANCE_SHA256"
 must_contain "$SCRIPT" "AD_AFFECTED_DISTRIBUTION_MANIFEST_SHA256"
+must_contain "$SCRIPT" "release_artifact_identity"
+must_contain "$SCRIPT" "release_artifact_identity_binding_required=true"
+must_contain "$SCRIPT" "manual_verification_required=true"
 must_contain "$SCRIPT" "hold_flags"
 must_contain "$SCRIPT" "emergency_release_generates_app_artifact=false"
 must_contain "$SCRIPT" "emergency_release_upload_authorized=false"
@@ -111,10 +118,12 @@ grep -Fq "AD_AFFECTED_RELEASE_TAG must be a concrete release tag" "$tmp_dir/miss
 AD_EXECUTE_MACOS_EMERGENCY_ADVISORY=1 \
 AD_OWNER_APPROVED_EMERGENCY_ADVISORY=1 \
 AD_EMERGENCY_OUTPUT_DIR="$tmp_dir" \
-AD_EMERGENCY_INCIDENT_CLASS=dependency-vulnerability \
+AD_EMERGENCY_INCIDENT_CLASS=bad-release \
 AD_EMERGENCY_DECISION=rebuild \
 AD_AFFECTED_RELEASE_TAG=v0.1.1-rc.1 \
 AD_AFFECTED_ARTIFACT=another-dimension-chat-0.1.1-rc.1-macos-aarch64.dmg \
+AD_AFFECTED_PLATFORM=macos \
+AD_AFFECTED_RELEASE_CLASS=unsigned-public-beta \
 AD_AFFECTED_ARTIFACT_SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
 AD_AFFECTED_PROVENANCE_SHA256=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb \
 AD_AFFECTED_DISTRIBUTION_MANIFEST_SHA256=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc \
@@ -133,6 +142,11 @@ fi
 must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"emergency_release_generates_app_artifact": false'
 must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"emergency_release_upload_authorized": false'
 must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"emergency_release_dmg_rebuild_authorized": false'
+must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"affected_platform": "macos"'
+must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"affected_release_class": "unsigned-public-beta"'
+must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"release_artifact_identity": {'
+must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"release_artifact_identity_binding_required": true'
+must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"manual_verification_required": true'
 must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"affected_artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"'
 must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"affected_provenance_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"'
 must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"affected_distribution_manifest_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"'
@@ -140,7 +154,10 @@ must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"hold_fl
 must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"production_ready_claim_allowed": false'
 must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY_MANIFEST.json" '"rollback_prevention_claimed": false'
 must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY.md" "Affected artifact SHA-256"
-must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY.md" "Branch files and source archives are not release authority."
+must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY.md" "Affected platform"
+must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY.md" "Affected release class"
+must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY.md" "Treat the affected release tag, artifact filename, platform, release"
+must_contain "$tmp_dir/MACOS_EMERGENCY_RELEASE_ADVISORY.md" "Branch files and source archives are not release"
 
 cat <<'STATUS'
 status=macos-emergency-release-no-mutation-ready
@@ -148,6 +165,8 @@ macos_emergency_release_integrity_available=true
 emergency_release_advisory_packet_script_available=true
 emergency_release_no_artifact_mutation_verifier_ready=true
 emergency_advisory_requires_affected_release_artifact_binding=true
+emergency_advisory_requires_platform_release_class_binding=true
+emergency_advisory_requires_release_artifact_identity_tuple=true
 emergency_advisory_requires_distribution_manifest_sha256=true
 emergency_advisory_requires_signed_false_hold_flags=true
 emergency_release_generates_app_artifact=false
