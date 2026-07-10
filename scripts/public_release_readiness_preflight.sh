@@ -224,6 +224,14 @@ check_final_claim_acceptance_hold() {
     echo "FAIL final acceptance missing High-Risk hold" >&2
     exit 1
   }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "high_risk_required_conditions_missing=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-encryption-evidence#release-integrity" || {
+    echo "FAIL final acceptance missing High-Risk required condition blockers" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "high_risk_blocked_by_missing_required_conditions=true" || {
+    echo "FAIL final acceptance missing High-Risk condition blocker" >&2
+    exit 1
+  }
   printf '%s\n' "$final_acceptance_output" | grep -Fq -- "forbidden_positive_public_claims_found=false" || {
     echo "FAIL final acceptance missing forbidden public claim scan result" >&2
     exit 1
@@ -253,6 +261,8 @@ check_final_claim_acceptance_hold() {
   echo "final_claim_stable_candidate_ready=false"
   echo "final_claim_stable_public_app_ready=false"
   echo "final_claim_high_risk_mode_ready=false"
+  echo "final_claim_high_risk_required_conditions_missing=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-encryption-evidence#release-integrity"
+  echo "final_claim_high_risk_blocked_by_missing_required_conditions=true"
   echo "final_claim_external_evidence_present=false"
   echo "final_claim_macos_artifact_consistency=false"
   echo "final_claim_windows_artifact_consistency=false"
@@ -358,6 +368,8 @@ echo "final_claim_stable_public_app_blocked_by_p0_p1_audit=true"
 echo "final_claim_stable_candidate_ready=false"
 echo "final_claim_stable_public_app_ready=false"
 echo "final_claim_high_risk_mode_ready=false"
+echo "final_claim_high_risk_required_conditions_missing=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-encryption-evidence#release-integrity"
+echo "final_claim_high_risk_blocked_by_missing_required_conditions=true"
 echo "final_claim_external_evidence_present=false"
 echo "final_claim_macos_artifact_consistency=false"
 echo "final_claim_windows_artifact_consistency=false"
