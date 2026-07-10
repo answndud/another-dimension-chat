@@ -372,9 +372,21 @@ test("version integrity view keeps manual update and rollback claims bounded", (
   assert.equal(view.signedUpdateManifestReady, false);
   assert.equal(view.rollbackPreventionClaimed, false);
   assert.equal(view.manualUpdateRequired, true);
+  assert.equal(view.emergencyNoticeMode, "manual-release-identity-verification");
+  assert.equal(view.emergencyNoticeManualVerificationOnly, true);
+  assert.equal(view.emergencyNoticeUpdateAvailabilityClaimed, false);
+  assert.equal(view.backgroundUpdateCheck, false);
+  assert.equal(view.pushUpdateNotice, false);
+  assert.equal(view.forcedUpgrade, false);
   assert.equal(view.badReleaseAdvisoryPathReady, true);
   assert.equal(view.highRiskReleaseIntegrityGatePath, "scripts/high_risk_release_integrity_gate_once.sh");
   assert.match(view.summary, /emergency_advisory_path=scripts\/prepare_macos_emergency_release_advisory_packet\.sh/);
+  assert.match(view.summary, /emergency_notice_mode=manual-release-identity-verification/);
+  assert.match(view.summary, /emergency_notice_manual_verification_only=true/);
+  assert.match(view.summary, /emergency_notice_update_availability_claim=false/);
+  assert.match(view.summary, /background_update_check=false/);
+  assert.match(view.summary, /push_update_notice=false/);
+  assert.match(view.summary, /forced_upgrade=false/);
   assert.match(view.summary, /high_risk_release_integrity_gate_path=scripts\/high_risk_release_integrity_gate_once\.sh/);
   assert.match(view.summary, /dependency_lockfile_hash_inputs=3/);
   assert.match(view.summary, /tauri_csp_permissions_remote_code_boundary=true/);
@@ -382,12 +394,18 @@ test("version integrity view keeps manual update and rollback claims bounded", (
   assert.match(view.boundary, /auto_update_ready=false/);
   assert.match(view.boundary, /rollback_warning_policy=manual-warning-only/);
   assert.match(view.boundary, /rollback_prevention_claimed=false/);
+  assert.match(view.boundary, /emergency_notice_manual_verification_only=true/);
+  assert.match(view.boundary, /emergency_notice_update_availability_claim=false/);
+  assert.match(view.boundary, /emergency_notice_auto_update_claim=false/);
+  assert.match(view.boundary, /background_update_check=false/);
+  assert.match(view.boundary, /push_update_notice=false/);
+  assert.match(view.boundary, /forced_upgrade=false/);
   assert.match(view.boundary, /release_artifact_checksum_policy=same-release-sha256-required/);
   assert.match(view.boundary, /signed_manifest_source_gate=true/);
   assert.match(view.boundary, /dependency_inventory_lockfile_hash_bound=true/);
   assert.match(view.boundary, /high_risk_release_claim_allowed=false/);
   assert.match(view.boundary, /branch_source_release_authority_allowed=false/);
-  assert.doesNotMatch(view.boundary, /auto_update_ready=true|rollback_prevention_claimed=true|high_risk_release_claim_allowed=true|security_ready_claim=true/);
+  assert.doesNotMatch(view.boundary, /auto_update_ready=true|emergency_notice_update_availability_claim=true|push_update_notice=true|forced_upgrade=true|rollback_prevention_claimed=true|high_risk_release_claim_allowed=true|security_ready_claim=true/);
 });
 
 test("panic lock mitigation view keeps coercion and compromised-device claims bounded", () => {
