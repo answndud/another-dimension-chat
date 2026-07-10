@@ -1475,6 +1475,9 @@ export function productionRedactedSupportReportView(input = {}) {
     "raw_logs_requested=false",
     "crash_dumps_requested=false",
     "screenshots_requested=false",
+    "support_bundle_requested=false",
+    "diagnostic_upload_requested=false",
+    "telemetry_upload_requested=false",
     "support_bundle_export=false",
     "audit_evidence_claim=false",
     "external_delivery_evidence_claim=false",
@@ -3072,6 +3075,33 @@ export function productionProfileUnlockView(result) {
 
 export function productionLocalLifecycleBoundaryView(result = {}, options = {}) {
   const includePaths = options.includePaths !== false;
+  const action = String(options.action ?? result.action ?? "status");
+  const scopeByAction = {
+    "conversation-delete": "conversation-message-records",
+    "session-delete": "session-resume-records",
+    "profile-delete": "local-profile-store",
+    "full-local-wipe": "owned-local-app-data",
+    "emergency-local-wipe": "panic-lock-owned-local-app-data",
+    prepare: "local-lifecycle-readiness",
+    status: "local-lifecycle-readiness",
+  };
+  const confirmationByAction = {
+    "conversation-delete": "DELETE_CONVERSATION",
+    "session-delete": "DELETE_SESSION",
+    "profile-delete": "exact_profile_name",
+    "full-local-wipe": "WIPE_LOCAL_DATA",
+    "emergency-local-wipe": "EMERGENCY_WIPE_LOCAL_DATA",
+  };
+  const destructiveAction = Object.hasOwn(scopeByAction, action) && !new Set(["status", "prepare"]).has(action);
+  const destructiveScope = scopeByAction[action] ?? "local-lifecycle-readiness";
+  const confirmationPhrase = confirmationByAction[action] ?? "none";
+  const messageRecordsPreserved =
+    action === "session-delete" || result.message_records_preserved === true || result.session_records_preserved === true;
+  const sessionRecordsPreserved =
+    action === "conversation-delete" || result.session_records_preserved === true;
+  const profileStoreRemoved = action === "profile-delete" && result.profile_deleted === true;
+  const ownedAppDataRemoved =
+    (action === "full-local-wipe" || action === "emergency-local-wipe") && result.full_local_data_wiped === true;
   const localOnly = true;
   const cloudBackupSync = false;
   const backupRecovery = false;
@@ -3098,6 +3128,14 @@ export function productionLocalLifecycleBoundaryView(result = {}, options = {}) 
     result.plaintext_returned_to_frontend === true;
 
   const privacyFlags = [
+    `destructive_action=${destructiveAction}`,
+    `destructive_scope=${destructiveScope}`,
+    `confirmation_phrase=${confirmationPhrase}`,
+    `result_scope=${destructiveScope}`,
+    `message_records_preserved=${messageRecordsPreserved}`,
+    `session_records_preserved=${sessionRecordsPreserved}`,
+    `profile_store_removed=${profileStoreRemoved}`,
+    `owned_app_data_removed=${ownedAppDataRemoved}`,
     `local_only=${localOnly}`,
     `cloud_backup_sync=${cloudBackupSync}`,
     `backup_recovery=${backupRecovery}`,
@@ -3864,7 +3902,8 @@ export function productionSessionStateView(result) {
   };
 }
 
-export function productionSessionLifecycleView(result) {
+export function productionSessionLifecycleView(result, options = {}) {
+  const action = options.action ?? (result.session_deleted || result.session_resume_closed ? "session-delete" : "status");
   return {
     lifecycle:
       `draft=${result.session_draft_present} endpoint=${result.remote_endpoint_state_present} ` +
@@ -3874,7 +3913,7 @@ export function productionSessionLifecycleView(result) {
       `deleted=${result.session_deleted} closed=${result.session_resume_closed}`,
     boundary:
       `message_records_preserved=${result.message_records_preserved} ` +
-      productionLocalLifecycleBoundaryView(result),
+      productionLocalLifecycleBoundaryView(result, { action }),
   };
 }
 
