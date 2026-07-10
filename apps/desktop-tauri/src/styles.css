@@ -1297,6 +1297,11 @@ body.is-room-list-mode .room-list-panel {
   background: color-mix(in srgb, var(--panel) 68%, transparent);
 }
 
+.saved-room-list-item:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .saved-room-list-item.is-current {
   border-color: color-mix(in srgb, var(--accent-cyan) 48%, var(--panel-border));
 }
@@ -3487,6 +3492,11 @@ body.is-chat-active .chat-primary-actions.is-send-mode:not(.has-message-draft) {
 
 .message-transcript li[role="button"]:focus-visible {
   outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.message-transcript li[data-transcript-row-selectable="false"]:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--panel-border) 72%, var(--accent));
   outline-offset: 2px;
 }
 

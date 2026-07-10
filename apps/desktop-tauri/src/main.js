@@ -6072,6 +6072,11 @@ function renderSavedInviteRooms() {
     item.classList.toggle("needs-receive-restart", view.receiveState === "paused");
     item.classList.toggle("is-waiting-peer-code", view.waitingPeerCode);
     item.classList.toggle("has-retryable-send", view.hasRetryableSend);
+    item.tabIndex = 0;
+    item.dataset.roomRowState = view.state.key;
+    item.dataset.roomRowCurrent = view.current ? "true" : "false";
+    item.dataset.roomRowAction = view.nextAction?.action ?? "open-room";
+    item.setAttribute("aria-keyshortcuts", "Enter Space");
     const summary = document.createElement("span");
     summary.className = "saved-room-summary";
     const title = document.createElement("span");
@@ -6101,6 +6106,22 @@ function renderSavedInviteRooms() {
     readinessMeta.className = "saved-room-readiness-meta";
     readinessMeta.textContent = `next=${t(view.readinessReview.nextLabelKey)} / detail=${t(view.readinessReview.nextDetailKey)} / blocker=${view.readinessReview.blockerKey} / ${t(view.readinessReview.boundaryKey)}`;
     readiness.append(readinessTitle, readinessStatus, readinessMeta);
+    item.setAttribute(
+      "aria-label",
+      [
+        savedInviteRoomLabel(displayRoom),
+        view.state.label,
+        t(view.readinessReview.statusKey),
+        view.nextAction ? t(view.nextAction.labelKey) : t("openRoom"),
+      ].join(" / "),
+    );
+    const runRowPrimaryAction = () => {
+      if (view.nextAction) {
+        runSavedInviteRoomListAction(view.room ?? room, view.nextAction.action, { actionOrigin: view.nextAction.origin });
+        return;
+      }
+      openSavedInviteRoom(displayRoom);
+    };
     const primaryAction = document.createElement("button");
     primaryAction.type = "button";
     primaryAction.className = [
@@ -6110,11 +6131,14 @@ function renderSavedInviteRooms() {
     ].join(" ");
     primaryAction.textContent = view.nextAction ? t(view.nextAction.labelKey) : t("openRoom");
     primaryAction.addEventListener("click", () => {
-      if (view.nextAction) {
-        runSavedInviteRoomListAction(view.room ?? room, view.nextAction.action, { actionOrigin: view.nextAction.origin });
+      runRowPrimaryAction();
+    });
+    item.addEventListener("keydown", (event) => {
+      if (event.target !== item || (event.key !== "Enter" && event.key !== " ")) {
         return;
       }
-      openSavedInviteRoom(displayRoom);
+      event.preventDefault();
+      runRowPrimaryAction();
     });
     const remove = document.createElement("button");
     remove.type = "button";
@@ -10136,6 +10160,17 @@ function renderProductionTwoProfileConversationList() {
     item.classList.toggle("is-reply-target", currentReplyTarget);
     item.classList.toggle("is-review-target", currentReviewTarget);
     item.classList.toggle("is-send-recovery", Boolean(primaryAction));
+    item.dataset.transcriptRowState = delivered
+      ? "delivered"
+      : inboundOnly
+        ? "inbound-only"
+        : outboundCanceled
+          ? "canceled"
+          : outboundPending
+            ? "pending-send"
+            : "pending-receive";
+    item.dataset.transcriptRowSelectable = selectable ? "true" : "false";
+    item.dataset.transcriptRowAction = primaryAction ?? (replyable ? "reply" : reviewable ? "review" : "none");
     if (selectable) {
       item.tabIndex = 0;
       item.setAttribute("role", "button");
@@ -10273,8 +10308,7 @@ function renderProductionTwoProfileConversationList() {
       const retry = document.createElement("button");
       retry.type = "button";
       retry.className = "transcript-retry";
-      retry.disabled = !outboundActionState.canRunNow;
-      retry.title = outboundActionState.disabledReason || "";
+      setActionButtonState(retry, !outboundActionState.canRunNow, outboundActionState.disabledReason || "", false);
       retry.textContent = outboundPrimaryActionLabel(primaryAction);
       retry.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -10286,8 +10320,7 @@ function renderProductionTwoProfileConversationList() {
       const cancel = document.createElement("button");
       cancel.type = "button";
       cancel.className = "transcript-cancel";
-      cancel.disabled = !outboundActionState.canCancelNow;
-      cancel.title = outboundActionState.cancelDisabledReason || "";
+      setActionButtonState(cancel, !outboundActionState.canCancelNow, outboundActionState.cancelDisabledReason || "", false);
       cancel.textContent = t("cancelSend");
       cancel.addEventListener("click", (event) => {
         event.stopPropagation();
