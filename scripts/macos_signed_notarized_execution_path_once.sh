@@ -65,6 +65,7 @@ for flag in \
   "release_build_expected_output_path_declared=true" \
   "release_build_generated_file_set_declared=true" \
   "release_build_failure_classes_declared=true" \
+  "release_distribution_metadata_generator_path_ready=true" \
   "credential_material_redacted_from_output=true" \
   "signed_app_build_path_ready=true" \
   "dmg_create_from_signed_app_path_ready=true" \
@@ -117,8 +118,12 @@ must_contain "$SIGNED_BUILD_SCRIPT" "app_bundle_id"
 must_contain "$SIGNED_BUILD_SCRIPT" "artifact_size_bytes"
 must_contain "$SIGNED_BUILD_SCRIPT" "signing_identity_sha256"
 must_contain "$SIGNED_BUILD_SCRIPT" "release_build_operator_runbook_ready=true"
+must_contain "$SIGNED_BUILD_SCRIPT" "prepare_macos_release_distribution_metadata.sh"
+must_contain "$SIGNED_BUILD_SCRIPT" "AD_PREPARE_MACOS_RELEASE_DISTRIBUTION_METADATA=1"
+must_contain "$SIGNED_BUILD_SCRIPT" 'AD_MACOS_SIGNED_RC_PROVENANCE_IN="$PROVENANCE_OUT"'
+must_contain "$SIGNED_BUILD_SCRIPT" "macos_release_distribution_metadata_prepared=true"
 must_contain "$SIGNED_BUILD_SCRIPT" "signed_macos_release_artifact_name_template=another-dimension-chat-<app-version>-<build-channel>-<public-architecture>-signed-notarized.dmg"
-must_contain "$SIGNED_BUILD_SCRIPT" "signed_macos_release_generated_files=dmg,sha256,provenance-json"
+must_contain "$SIGNED_BUILD_SCRIPT" "signed_macos_release_generated_files=dmg,sha256,signed-provenance-json,distribution-manifest-packet"
 must_contain "$SIGNED_BUILD_SCRIPT" "notary_credential_modes_supported=keychain-profile,app-store-connect-api-key,apple-id-app-specific-password"
 must_contain "$SIGNED_BUILD_SCRIPT" "release_build_failure_classes=missing-explicit-env,missing-developer-id,missing-notary-credential,missing-tooling,contained-app-mismatch,gatekeeper-failure"
 must_contain "$SIGNED_BUILD_SCRIPT" "hdiutil create"
@@ -224,6 +229,7 @@ release_build_operator_runbook_ready=true
 release_build_expected_output_path_declared=true
 release_build_generated_file_set_declared=true
 release_build_failure_classes_declared=true
+release_distribution_metadata_generator_path_ready=true
 credential_material_redacted_from_output=true
 signed_app_build_path_ready=true
 dmg_create_from_signed_app_path_ready=true
@@ -368,6 +374,7 @@ release_build_operator_runbook_ready=true
 release_build_expected_output_path_declared=true
 release_build_generated_file_set_declared=true
 release_build_failure_classes_declared=true
+release_distribution_metadata_generator_path_ready=true
 credential_material_redacted_from_output=true
 signed_app_build_path_ready=true
 dmg_create_from_signed_app_path_ready=true

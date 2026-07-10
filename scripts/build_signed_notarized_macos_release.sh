@@ -24,18 +24,23 @@ TARGET_ARCH="${AD_MACOS_TARGET_ARCH:-aarch64-apple-darwin}"
 BUILD_CHANNEL="${AD_MACOS_BUILD_CHANNEL:-beta-onion}"
 OUT_DIR="${AD_SIGNED_MACOS_RELEASE_OUT_DIR:-$ROOT/apps/desktop-tauri/public-release/signed-notarized-rc}"
 PROVENANCE_OUT="${AD_SIGNED_RC_PROVENANCE_OUT:-}"
+DISTRIBUTION_METADATA_OUT_DIR="${AD_SIGNED_MACOS_DISTRIBUTION_METADATA_OUT_DIR:-$OUT_DIR/distribution-metadata}"
 DMG_CONTAINED_APP_VERIFIER="$ROOT/scripts/verify_macos_dmg_contained_app.sh"
+METADATA_GENERATOR="$ROOT/scripts/prepare_macos_release_distribution_metadata.sh"
 
 [ -f "$CONFIG" ] || fail "missing Tauri config: $CONFIG"
 [ -f "$ENTITLEMENTS" ] || fail "missing macOS entitlements: $ENTITLEMENTS"
 [ -f "$DMG_CONTAINED_APP_VERIFIER" ] || fail "missing DMG contained app verifier: $DMG_CONTAINED_APP_VERIFIER"
+[ -f "$METADATA_GENERATOR" ] || fail "missing macOS distribution metadata generator: $METADATA_GENERATOR"
 
 case "$TARGET_ARCH" in
   aarch64-apple-darwin)
     PUBLIC_ARCHITECTURE="macos-aarch64"
+    METADATA_ARCHITECTURE="macos-aarch64"
     ;;
   x86_64-apple-darwin)
     PUBLIC_ARCHITECTURE="macos-x64"
+    METADATA_ARCHITECTURE="macos-x86_64"
     ;;
   *) fail "AD_MACOS_TARGET_ARCH must be aarch64-apple-darwin or x86_64-apple-darwin" ;;
 esac
@@ -43,6 +48,10 @@ esac
 case "$OUT_DIR" in
   "$ROOT"/apps/desktop-tauri/public-release/*|"$ROOT"/apps/desktop-tauri/beta-artifacts/*) ;;
   *) fail "AD_SIGNED_MACOS_RELEASE_OUT_DIR must be under an ignored generated artifact directory" ;;
+esac
+case "$DISTRIBUTION_METADATA_OUT_DIR" in
+  "$ROOT"/apps/desktop-tauri/public-release/*|"$ROOT"/apps/desktop-tauri/beta-artifacts/*) ;;
+  *) fail "AD_SIGNED_MACOS_DISTRIBUTION_METADATA_OUT_DIR must be under an ignored generated artifact directory" ;;
 esac
 
 if [ -n "$PROVENANCE_OUT" ]; then
@@ -61,6 +70,7 @@ release_build_operator_runbook_ready=true
 release_build_expected_output_path_declared=true
 release_build_generated_file_set_declared=true
 release_build_failure_classes_declared=true
+release_distribution_metadata_generator_path_ready=true
 credential_material_redacted_from_output=true
 signed_app_build_path_ready=true
 signed_app_codesign_path_ready=true
@@ -82,8 +92,9 @@ ad_execute_macos_sign_notary_required=true
 ad_build_macos_signed_rc_required=true
 ad_dmg_rebuild_authorized_required=true
 signed_macos_release_default_out_dir=$OUT_DIR
+signed_macos_distribution_metadata_default_out_dir=$DISTRIBUTION_METADATA_OUT_DIR
 signed_macos_release_artifact_name_template=another-dimension-chat-<app-version>-<build-channel>-<public-architecture>-signed-notarized.dmg
-signed_macos_release_generated_files=dmg,sha256,provenance-json
+signed_macos_release_generated_files=dmg,sha256,signed-provenance-json,distribution-manifest-packet
 notary_credential_modes_supported=keychain-profile,app-store-connect-api-key,apple-id-app-specific-password
 release_build_failure_classes=missing-explicit-env,missing-developer-id,missing-notary-credential,missing-tooling,contained-app-mismatch,gatekeeper-failure
 actual_release_build_executed=false
@@ -228,9 +239,29 @@ cat >"$PROVENANCE_OUT" <<JSON
 }
 JSON
 
+metadata_output="$(
+  AD_PREPARE_MACOS_RELEASE_DISTRIBUTION_METADATA=1 \
+    AD_MACOS_RELEASE_ARTIFACT="$DMG_PATH" \
+    AD_MACOS_RELEASE_CLASS="signed-notarized-rc" \
+    AD_MACOS_ARTIFACT_ARCHITECTURE="$METADATA_ARCHITECTURE" \
+    AD_MACOS_ARTIFACT_SIGNING_STATUS="signed" \
+    AD_MACOS_ARTIFACT_NOTARIZATION_STATUS="notarized" \
+    AD_MACOS_ARTIFACT_STAPLED="true" \
+    AD_MACOS_SIGNED_RC_PROVENANCE_IN="$PROVENANCE_OUT" \
+    AD_MACOS_RELEASE_METADATA_OUT_DIR="$DISTRIBUTION_METADATA_OUT_DIR" \
+    "$METADATA_GENERATOR"
+)"
+printf '%s\n' "$metadata_output" | grep -Fq "status=macos-release-distribution-metadata-prepared" ||
+  fail "macOS distribution metadata generator did not prepare metadata"
+printf '%s\n' "$metadata_output" | grep -Fq "macos_release_distribution_dmg_contained_app_evidence_verified=true" ||
+  fail "macOS distribution metadata did not verify contained-app evidence"
+distribution_manifest="$(printf '%s\n' "$metadata_output" | sed -n 's/^manifest=//p')"
+[ -n "$distribution_manifest" ] || fail "macOS distribution metadata manifest path missing"
+
 cat <<STATUS
 status=macos-signed-notarized-release-build-verified
 macos_signed_notarized_release_build_script_ready=true
+release_distribution_metadata_generator_path_ready=true
 signed_app_build_path_ready=true
 signed_app_codesign_path_ready=true
 dmg_create_from_signed_app_path_ready=true
@@ -248,6 +279,8 @@ dmg_contained_app_matches_signed_source_app=true
 signed_notarized_rc_dmg=$DMG_PATH
 rc_artifact_sha256=$sha256
 provenance_out=$PROVENANCE_OUT
+distribution_manifest=$distribution_manifest
+macos_release_distribution_metadata_prepared=true
 release_upload_authorized=false
 dmg_rebuild_authorized=$DMG_REBUILD_AUTHORIZED_BOOL
 STATUS
