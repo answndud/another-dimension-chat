@@ -22,6 +22,19 @@ creates a DMG with `hdiutil create`, signs/notarizes/staples the DMG, mounts
 the DMG to verify the contained `.app`, and records checksum/provenance under
 ignored generated artifact directories.
 
+The build script declares its operator contract without secrets:
+
+- default output directory:
+  `apps/desktop-tauri/public-release/signed-notarized-rc`
+- artifact name template:
+  `another-dimension-chat-<app-version>-<build-channel>-<public-architecture>-signed-notarized.dmg`
+- generated files: DMG, `.sha256`, provenance JSON
+- supported notary credential modes: keychain profile, App Store Connect API
+  key, or Apple ID app-specific password
+- expected failure classes: missing explicit env, missing Developer ID,
+  missing notary credential, missing tooling, contained-app mismatch,
+  Gatekeeper failure
+
 Both execution paths write signed RC provenance with source commit, app
 version, bundle id, release class, artifact filename, artifact SHA-256,
 artifact size, target/public architecture, signing identity SHA-256,
@@ -86,6 +99,11 @@ The script must not reuse a DMG that already contains an unsigned app bundle.
 - macos_entitlements_configured=true
 - macos_entitlements_minimal=true
 - macos_signed_notarized_release_build_script_ready=true
+- release_build_operator_runbook_ready=true
+- release_build_expected_output_path_declared=true
+- release_build_generated_file_set_declared=true
+- release_build_failure_classes_declared=true
+- credential_material_redacted_from_output=true
 - signed_app_build_path_ready=true
 - dmg_create_from_signed_app_path_ready=true
 - credential_probe_path_ready=true
