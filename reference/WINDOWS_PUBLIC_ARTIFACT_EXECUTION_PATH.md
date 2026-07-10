@@ -41,9 +41,11 @@ Actual Windows artifact execution requires:
 5. Validate artifact bytes against the Windows manifest, `.sha256` sidecar,
    provenance JSON, and minimal package/container structure.
 6. Bind the real Windows runtime result to that validated manifest through
-   relative `artifact_manifest_file`, artifact SHA-256, provenance SHA-256, and
-   manifest SHA-256 values.
-7. Validate redacted support diagnostics and public non-claim copy.
+   relative `artifact_manifest_file`, app version, release class, source commit,
+   artifact SHA-256, provenance SHA-256, and manifest SHA-256 values.
+7. Validate redacted install path class, Tauri app-data resolver class, profile
+   create/unlock, redacted diagnostics copy, app-launch network false, support
+   diagnostics, and public non-claim copy.
 8. Validate the result with
    `scripts/validate_windows_public_artifact_results.mjs`.
    Use `--require-current-head` or `AD_REQUIRE_CURRENT_HEAD=1` before any
@@ -77,6 +79,8 @@ Actual Windows artifact execution requires:
 - windows_result_artifact_manifest_sha_verified=true
 - windows_result_artifact_provenance_sha_verified=true
 - windows_result_artifact_bytes_sha_verified=true
+- windows_result_artifact_identity_verified=true
+- windows_result_runtime_boundary_verified=true
 - windows_artifact_requires_same_release_authority=true
 - windows_artifact_checksum_bytes_verified_by_validator=true
 - windows_artifact_package_structure_verified_by_validator=true

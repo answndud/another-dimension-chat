@@ -23,7 +23,11 @@ The D100-5 runbook is
 - `windows_version`
 - `architecture=x64|arm64`
 - `artifact_kind=installer|portable-archive|msix|nsis|tauri-bundle`
+- `artifact_app_version`
+- `artifact_release_class=unsigned-windows-beta|signed-windows-rc|stable`
 - `artifact_path_redacted=true`
+- `install_path_class=redacted-standard-user-install|redacted-portable-run|redacted-installer-default`
+- `app_data_resolver_class=tauri-app-data`
 - `artifact_manifest_file`
   - Relative to the result file directory. It must point to the same Windows
     artifact manifest that validates with
@@ -38,9 +42,12 @@ The D100-5 runbook is
 - `app_data_root_redacted=pass|fail`
 - `path_separator_behavior=pass|fail`
 - `encrypted_store_profile_unlock=pass|fail`
+- `profile_create_unlock=pass|fail`
 - `local_deletion_behavior=pass|fail`
 - `redacted_diagnostics_only=pass|fail`
+- `redacted_diagnostics_copy=pass|fail`
 - `explicit_user_action_before_network=pass|fail`
+- `app_launch_network=false`
 - `local_manual_envelope_default_path=pass|fail`
 - `auto_update_channel_absent=pass|fail`
 - `public_non_claims_visible=pass|fail`
@@ -77,6 +84,8 @@ that describe private room/message/profile/invite content.
 - windows_result_artifact_manifest_sha_verified=true
 - windows_result_artifact_provenance_sha_verified=true
 - windows_result_artifact_bytes_sha_verified=true
+- windows_result_artifact_identity_verified=true
+- windows_result_runtime_boundary_verified=true
 - windows_result_requires_support_diagnostics_review=true
 - windows_result_requires_public_non_claims=true
 - windows_result_rejects_local_only_or_private_data=true
