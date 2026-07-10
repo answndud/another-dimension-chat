@@ -12,10 +12,14 @@ inventing evidence or mutating a live release from a source-side gate.
 ## Emergency Response Scope
 
 - Use a public-safe advisory packet with incident class, affected release tag,
-  affected artifact, affected artifact SHA-256, affected provenance SHA-256,
-  affected distribution manifest SHA-256, same-release authority status,
-  replacement release pointer when one exists, user stop/verify/install
-  guidance, and public non-claims.
+  affected artifact filename, affected platform, affected release class,
+  affected artifact SHA-256, affected provenance SHA-256, affected distribution
+  manifest SHA-256, same-release authority status, replacement release pointer
+  when one exists, user stop/verify/install guidance, and public non-claims.
+- Treat release tag, artifact filename, platform, release class, artifact
+  SHA-256, provenance SHA-256, and distribution manifest SHA-256 as one bound
+  release artifact identity. Do not publish or act on an advisory packet where
+  any one of these fields is missing or copied from a different release source.
 - Generate only advisory/checklist/manifest material until a separate explicit
   release task authorizes artifact creation, release edit, upload, asset
   deletion, or advisory publication.
@@ -32,6 +36,7 @@ inventing evidence or mutating a live release from a source-side gate.
 | Vulnerability affects shipped dependency but no exploit path is identified | advisory | Public-safe advisory/checklist only unless owner authorizes a release task. |
 | Vulnerability affects shipped runtime path and patch is available | rebuild | Source fix and focused verifier first; artifact rebuild requires explicit release task. |
 | Artifact, signing material, checksum, provenance, or release authority is compromised | revoke | Tell users to stop using the bad artifact; release edit/asset deletion requires explicit release task. |
+| Release artifact identity is inconsistent across tag, filename, platform, release class, checksum, provenance, or manifest | hold | Do not publish an advisory as release evidence; rebuild the packet from same-release artifacts. |
 
 ## Current Gate Flags
 
@@ -39,6 +44,8 @@ inventing evidence or mutating a live release from a source-side gate.
 - emergency_release_advisory_packet_script_available=true
 - emergency_release_no_artifact_mutation_verifier_ready=true
 - emergency_advisory_requires_affected_release_artifact_binding=true
+- emergency_advisory_requires_platform_release_class_binding=true
+- emergency_advisory_requires_release_artifact_identity_tuple=true
 - emergency_advisory_requires_distribution_manifest_sha256=true
 - emergency_advisory_requires_signed_false_hold_flags=true
 - emergency_release_generates_app_artifact=false
