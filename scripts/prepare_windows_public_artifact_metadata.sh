@@ -62,6 +62,12 @@ case "$SIGNING_STATUS" in
   unsigned-hold|signtool-signed|store-signed) ;;
   *) fail "unsupported AD_WINDOWS_ARTIFACT_SIGNING_STATUS" ;;
 esac
+case "$BUNDLE_TARGET" in
+  msi) default_artifact_extension=".msi" ;;
+  nsis) default_artifact_extension=".exe" ;;
+  portable-archive) default_artifact_extension=".zip" ;;
+  msix) default_artifact_extension=".msix" ;;
+esac
 
 mkdir -p "$OUT_DIR"
 artifact_name="$(basename "$ARTIFACT")"
@@ -78,6 +84,7 @@ esac
 source_commit="$(git rev-parse HEAD)"
 checksum_file="$artifact_name.sha256"
 manifest_file="$OUT_DIR/WINDOWS_ARTIFACT_MANIFEST.json"
+manifest_checksum_file="WINDOWS_ARTIFACT_MANIFEST.json.sha256"
 release_body_file="$OUT_DIR/WINDOWS_RELEASE_BODY.md"
 provenance_file="$artifact_name.provenance.json"
 
@@ -107,6 +114,14 @@ cat >"$manifest_file" <<JSON
   "source_commit": "$source_commit",
   "version": "$version",
   "release_class": "$RELEASE_CLASS",
+  "manifest_file": "WINDOWS_ARTIFACT_MANIFEST.json",
+  "manifest_sha256_file": "$manifest_checksum_file",
+  "default_bundle_target": "$BUNDLE_TARGET",
+  "default_artifact_extension": "$default_artifact_extension",
+  "webview2_runtime_required": true,
+  "app_data_resolver": "tauri-app-data",
+  "redacted_diagnostics_required": true,
+  "auto_update": false,
   "same_release_asset_authority_required": true,
   "release_upload_authorized": false,
   "release_body_edit_authorized": false,
@@ -125,6 +140,7 @@ cat >"$manifest_file" <<JSON
   "artifacts": [
     {
       "filename": "$artifact_name",
+      "artifact_basename": "$artifact_name",
       "sha256": "$sha256",
       "size_bytes": $size_bytes,
       "platform": "windows",
@@ -132,14 +148,26 @@ cat >"$manifest_file" <<JSON
       "bundle_target": "$BUNDLE_TARGET",
       "signing_status": "$SIGNING_STATUS",
       "checksum_file": "$checksum_file",
+      "checksum_sidecar": "$checksum_file",
       "provenance_file": "$provenance_file",
+      "provenance_path": "$provenance_file",
+      "artifact_path_class": "generated-release-directory-relative-basename",
       "webview2_runtime_required": true,
+      "app_data_resolver": "tauri-app-data",
+      "encrypted_store_required": true,
+      "redacted_diagnostics_required": true,
+      "auto_update": false,
       "smartscreen_reputation_claim": false,
       "signing_trust_boundary": false
     }
   ]
 }
 JSON
+
+(
+  cd "$OUT_DIR"
+  shasum -a 256 "$(basename "$manifest_file")" >"$manifest_checksum_file"
+)
 
 cat >"$release_body_file" <<BODY
 # Another Dimension Chat Windows $RELEASE_CLASS
@@ -159,6 +187,10 @@ the app.
 - Architecture: \`$ARCHITECTURE\`
 - Bundle target: \`$BUNDLE_TARGET\`
 - Signing status: \`$SIGNING_STATUS\`
+- Manifest: \`$(basename "$manifest_file")\`
+- Manifest SHA-256 sidecar: \`$manifest_checksum_file\`
+- WebView2 runtime required: true
+- App data resolver: \`tauri-app-data\`
 - Release upload authorized by this metadata script: false
 BODY
 

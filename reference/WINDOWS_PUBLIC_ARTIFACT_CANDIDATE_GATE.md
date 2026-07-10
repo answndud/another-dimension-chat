@@ -12,6 +12,7 @@ and does not allow sensitive communication claims.
 
 - windows_public_artifact_candidate=true
 - artifact_type=windows-nsis-exe-installer-candidate
+- build_command=npm --prefix apps/desktop-tauri run tauri:build:windows-nsis:beta-onion
 - bundle_target=nsis
 - default_extension=.exe
 - portable_default_allowed=false
@@ -28,6 +29,8 @@ and does not allow sensitive communication claims.
 - profile_session_message_storage_bypass_allowed=false
 - local_delete_wipe_semantics_shared_core=true
 - manifest_checksum_provenance_required=true
+- manifest_sha256_sidecar_required=true
+- artifact_basename_path_boundary_required=true
 - manifest_validates_version_commit_installer_webview2_no_auto_update=true
 - runtime_result_external_peer_evidence_separated=true
 - local_runtime_promoted_to_delivery_proof=false

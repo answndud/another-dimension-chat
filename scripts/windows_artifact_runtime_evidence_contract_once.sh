@@ -67,6 +67,14 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
   "source_commit": "abcdef1234567890",
   "version": "0.1.0",
   "release_class": "unsigned-windows-beta",
+  "manifest_file": "WINDOWS_ARTIFACT_MANIFEST.json",
+  "manifest_sha256_file": "WINDOWS_ARTIFACT_MANIFEST.json.sha256",
+  "default_bundle_target": "nsis",
+  "default_artifact_extension": ".exe",
+  "webview2_runtime_required": true,
+  "app_data_resolver": "tauri-app-data",
+  "redacted_diagnostics_required": true,
+  "auto_update": false,
   "same_release_asset_authority_required": true,
   "release_upload_authorized": false,
   "release_body_edit_authorized": false,
@@ -85,6 +93,7 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
   "artifacts": [
     {
       "filename": "$artifact_name",
+      "artifact_basename": "$artifact_name",
       "sha256": "$artifact_sha",
       "size_bytes": $artifact_size,
       "platform": "windows",
@@ -92,14 +101,22 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
       "bundle_target": "nsis",
       "signing_status": "unsigned-hold",
       "checksum_file": "$artifact_name.sha256",
+      "checksum_sidecar": "$artifact_name.sha256",
       "provenance_file": "$artifact_name.provenance.json",
+      "provenance_path": "$artifact_name.provenance.json",
+      "artifact_path_class": "generated-release-directory-relative-basename",
       "webview2_runtime_required": true,
+      "app_data_resolver": "tauri-app-data",
+      "encrypted_store_required": true,
+      "redacted_diagnostics_required": true,
+      "auto_update": false,
       "smartscreen_reputation_claim": false,
       "signing_trust_boundary": false
     }
   ]
 }
 JSON
+shasum -a 256 "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" | sed 's#'"$tmp_dir"'/##' >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json.sha256"
 manifest_sha="$(shasum -a 256 "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" | awk '{print $1}')"
 
 manifest_output="$(node "$MANIFEST_VALIDATOR" "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json")"
