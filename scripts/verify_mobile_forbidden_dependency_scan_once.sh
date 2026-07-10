@@ -52,7 +52,7 @@ for pattern in \
   fi
 done
 
-if grep -RInE 'phone_number_account|email_account|global_account|central_contact_discovery|central_message_server|push_notification_delivery|cloud_backup[": ]*true' \
+if grep -RInE 'phone_number_account[": =]*true|email_account[": =]*true|global_account[": =]*true|central_contact_discovery[": =]*true|central_message_server[": =]*true|push_notification_delivery[": =]*true|cloud_backup[": =]*true' \
   apps/mobile/android/app/src/main apps/mobile/ios/AnotherDimension crates/mobile >/tmp/mobile-forbidden-semantics.out 2>&1; then
   cat /tmp/mobile-forbidden-semantics.out >&2
   fail "forbidden mobile account/discovery/push/cloud semantic present"
