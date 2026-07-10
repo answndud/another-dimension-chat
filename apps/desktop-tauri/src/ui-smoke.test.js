@@ -1449,6 +1449,8 @@ test("desktop accessibility polish keeps disabled reasons focus and overflow exp
   const buttonStateBody = functionBody(mainJs, "setActionButtonState");
   const singlePrimaryBody = functionBody(mainJs, "enforceSingleCurrentPrimaryAction");
   const focusCurrentBody = functionBody(mainJs, "focusProductionCurrentAction");
+  const savedRoomBody = functionBody(mainJs, "renderSavedInviteRooms");
+  const transcriptBody = functionBody(mainJs, "renderProductionTwoProfileConversationList");
 
   assert.match(setDisabledBody, /aria-disabled/);
   assert.match(buttonStateBody, /aria-disabled/);
@@ -1461,9 +1463,20 @@ test("desktop accessibility polish keeps disabled reasons focus and overflow exp
   assert.match(singlePrimaryBody, /dataset\.currentPrimaryAction/);
   assert.match(focusCurrentBody, /latestProductionCurrentPrimaryActionNode/);
   assert.match(functionBody(mainJs, "applyProductionActionState"), /enforceSingleCurrentPrimaryAction/);
+  assert.match(savedRoomBody, /item\.tabIndex = 0/);
+  assert.match(savedRoomBody, /dataset\.roomRowState = view\.state\.key/);
+  assert.match(savedRoomBody, /dataset\.roomRowAction = view\.nextAction\?\.action \?\? "open-room"/);
+  assert.match(savedRoomBody, /aria-keyshortcuts", "Enter Space"/);
+  assert.match(savedRoomBody, /event\.target !== item/);
+  assert.match(transcriptBody, /dataset\.transcriptRowState/);
+  assert.match(transcriptBody, /dataset\.transcriptRowSelectable = selectable \? "true" : "false"/);
+  assert.match(transcriptBody, /setActionButtonState\(retry, !outboundActionState\.canRunNow/);
+  assert.match(transcriptBody, /setActionButtonState\(cancel, !outboundActionState\.canCancelNow/);
   assert.match(stylesCss, /button:focus-visible/);
   assert.match(stylesCss, /summary:focus-visible/);
   assert.match(stylesCss, /input:focus-visible/);
+  assert.match(stylesCss, /\.saved-room-list-item:focus-visible/);
+  assert.match(stylesCss, /\.message-transcript li\[data-transcript-row-selectable="false"\]:focus-visible/);
   assert.match(stylesCss, /prefers-reduced-motion: reduce/);
   assert.match(stylesCss, /scroll-behavior: auto !important/);
   assert.match(stylesCss, /\.demo-state,[\s\S]*\.demo-hint,[\s\S]*\.demo-warning/);
@@ -2453,7 +2466,7 @@ test("message send retry and cancel results stay scoped to the current room", ()
   assert.match(retryBody, /setChatDeliveryNoticeByKey\("sendRetrying", "progress", input\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /currentTwoProfileOutboundAction\(entry, \{ requireCurrentInput: true \}\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /runTwoProfileOutboundPrimaryAction\(current\.entry, current\.primaryAction\)/);
-  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /cancel\.disabled = !outboundActionState\.canCancelNow/);
+  assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /setActionButtonState\(cancel, !outboundActionState\.canCancelNow/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /currentTwoProfileOutboundCancelableEntry\(entry, \{ requireCurrentInput: true \}\)/);
   assert.match(functionBody(mainJs, "renderProductionTwoProfileConversationList"), /cancelTwoProfileOutboundEntry\(currentEntry\)/);
 
