@@ -57,7 +57,7 @@ body:
     id: checksum_result
     attributes:
       label: Checksum result
-      description: Report only pass/fail/not checked. Do not paste local paths.
+      description: Report only pass/fail/not checked. Do not include local paths.
       placeholder: "pass / fail / not checked"
     validations:
       required: true
@@ -102,7 +102,7 @@ body:
     id: public_diagnostics
     attributes:
       label: Public diagnostics only
-      description: Paste only the app's Public diagnostics output. Do not paste field-test reports if they contain private data.
+      description: Copy only the app's redacted Public diagnostics output. Do not include field-test reports if they contain private data.
       placeholder: |
         Another Dimension Chat public beta diagnostics
         diagnostic_version=1
