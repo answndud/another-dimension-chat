@@ -1270,40 +1270,40 @@
                       Prepare lifecycle
                     </button>
                   </div>
-                  <label class="loop-label" for="production-profile-delete-confirmation" data-i18n="profileDeleteConfirm">
+                  <label class="loop-label" for="production-profile-delete-confirmation" data-destructive-scope="profile-delete" data-i18n="profileDeleteConfirm">
                     Type profile name to delete profile
                   </label>
-                  <input id="production-profile-delete-confirmation" type="text" autocomplete="off" />
+                  <input id="production-profile-delete-confirmation" type="text" autocomplete="off" data-destructive-scope="profile-delete" aria-describedby="profile-delete-scope-note" />
                   <div class="loop-actions">
-                    <button id="delete-production-profile" type="button" class="flow-control is-secondary" data-i18n="deleteProfile">
+                    <button id="delete-production-profile" type="button" class="flow-control is-secondary" data-destructive-scope="profile-delete" aria-describedby="profile-delete-scope-note" data-i18n="deleteProfile">
                       Delete profile
                     </button>
                   </div>
-                  <p class="lifecycle-action-note" data-i18n="profileDeleteScopeNote">
+                  <p id="profile-delete-scope-note" class="lifecycle-action-note" data-destructive-scope="profile-delete" data-i18n="profileDeleteScopeNote">
                     Deletes the local profile store and clears affected room runtime only; no cloud backup recovery is performed.
                   </p>
-                  <label class="loop-label" for="production-full-wipe-confirmation" data-i18n="fullWipeConfirm">
+                  <label class="loop-label" for="production-full-wipe-confirmation" data-destructive-scope="full-local-wipe" data-i18n="fullWipeConfirm">
                     Type WIPE LOCAL DATA to wipe local app data
                   </label>
-                  <input id="production-full-wipe-confirmation" type="text" autocomplete="off" />
+                  <input id="production-full-wipe-confirmation" type="text" autocomplete="off" data-destructive-scope="full-local-wipe" aria-describedby="full-wipe-scope-note" />
                   <div class="loop-actions">
-                    <button id="wipe-production-local-data" type="button" class="flow-control is-secondary" data-i18n="wipeLocalData">
+                    <button id="wipe-production-local-data" type="button" class="flow-control is-secondary" data-destructive-scope="full-local-wipe" aria-describedby="full-wipe-scope-note" data-i18n="wipeLocalData">
                       Wipe local data
                     </button>
                   </div>
-                  <p class="lifecycle-action-note" data-i18n="fullWipeScopeNote">
+                  <p id="full-wipe-scope-note" class="lifecycle-action-note" data-destructive-scope="full-local-wipe" data-i18n="fullWipeScopeNote">
                     Deletes owned local app data on this device only; secure deletion from storage media and rollback prevention are not claimed.
                   </p>
-                  <label class="loop-label" for="production-emergency-wipe-confirmation" data-i18n="emergencyWipeConfirm">
+                  <label class="loop-label" for="production-emergency-wipe-confirmation" data-destructive-scope="emergency-local-wipe" data-i18n="emergencyWipeConfirm">
                     Type EMERGENCY WIPE LOCAL DATA for emergency local wipe
                   </label>
-                  <input id="production-emergency-wipe-confirmation" type="text" autocomplete="off" />
+                  <input id="production-emergency-wipe-confirmation" type="text" autocomplete="off" data-destructive-scope="emergency-local-wipe" aria-describedby="emergency-wipe-scope-note" />
                   <div class="loop-actions">
-                    <button id="emergency-wipe-production-local-data" type="button" class="flow-control is-secondary" data-i18n="emergencyWipe">
+                    <button id="emergency-wipe-production-local-data" type="button" class="flow-control is-secondary" data-destructive-scope="emergency-local-wipe" aria-describedby="emergency-wipe-scope-note" data-i18n="emergencyWipe">
                       Emergency wipe
                     </button>
                   </div>
-                  <p class="lifecycle-action-note" data-i18n="emergencyWipeScopeNote">
+                  <p id="emergency-wipe-scope-note" class="lifecycle-action-note" data-destructive-scope="emergency-local-wipe" data-i18n="emergencyWipeScopeNote">
                     Panic lock mitigation and emergency local wipe hide private surfaces and clear local app state; they do not claim coercion-safe or compromised-device-safe protection.
                   </p>
                 </div>
@@ -1420,10 +1420,10 @@
                     Remote handshake finish
                   </label>
                   <textarea id="production-remote-handshake-finish-payload" rows="3"></textarea>
-                  <label class="loop-label" for="production-session-delete-confirmation" data-i18n="sessionDeleteConfirm">
+                  <label class="loop-label" for="production-session-delete-confirmation" data-destructive-scope="session-delete" data-i18n="sessionDeleteConfirm">
                     Type DELETE SESSION to delete session records
                   </label>
-                  <input id="production-session-delete-confirmation" type="text" autocomplete="off" />
+                  <input id="production-session-delete-confirmation" type="text" autocomplete="off" data-destructive-scope="session-delete" aria-describedby="session-delete-scope-note" />
                   <div class="loop-actions">
                     <button id="export-production-handshake-init" type="button" data-i18n="exportInit">Export init</button>
                     <button id="export-production-handshake-reply" type="button" data-i18n="exportReply">Export reply</button>
@@ -1431,9 +1431,9 @@
                     <button id="import-production-handshake-finish" type="button" data-i18n="importFinish">Import finish</button>
                     <button id="check-production-session-state" type="button" data-i18n="checkSession">Check session</button>
                     <button id="check-production-session-lifecycle" type="button" class="flow-control is-secondary" data-i18n="checkLifecycle">Check lifecycle</button>
-                    <button id="delete-production-session-lifecycle" type="button" class="flow-control is-secondary" data-i18n="deleteSession">Delete session</button>
+                    <button id="delete-production-session-lifecycle" type="button" class="flow-control is-secondary" data-destructive-scope="session-delete" aria-describedby="session-delete-scope-note" data-i18n="deleteSession">Delete session</button>
                   </div>
-                  <p class="lifecycle-action-note" data-i18n="sessionDeleteScopeNote">
+                  <p id="session-delete-scope-note" class="lifecycle-action-note" data-destructive-scope="session-delete" data-i18n="sessionDeleteScopeNote">
                     Deletes local session resume records only; conversation message records are preserved.
                   </p>
                 </div>
@@ -1478,15 +1478,15 @@
                   </select>
                   <label class="loop-label" for="production-message-body" data-i18n="message">Message</label>
                   <textarea id="production-message-body" rows="3">hello over stored transport</textarea>
-                  <label class="loop-label" for="production-conversation-delete-confirmation" data-i18n="conversationDeleteConfirm">
+                  <label class="loop-label" for="production-conversation-delete-confirmation" data-destructive-scope="conversation-delete" data-i18n="conversationDeleteConfirm">
                     Type DELETE CONVERSATION to delete local messages
                   </label>
-                  <input id="production-conversation-delete-confirmation" type="text" autocomplete="off" />
+                  <input id="production-conversation-delete-confirmation" type="text" autocomplete="off" data-destructive-scope="conversation-delete" aria-describedby="conversation-delete-scope-note" />
                   <div class="loop-actions">
                     <button id="export-production-message-envelope" type="button" data-i18n="exportEnvelope">Export envelope</button>
-                    <button id="delete-production-conversation" type="button" class="flow-control is-secondary" data-i18n="deleteConversation">Delete conversation</button>
+                    <button id="delete-production-conversation" type="button" class="flow-control is-secondary" data-destructive-scope="conversation-delete" aria-describedby="conversation-delete-scope-note" data-i18n="deleteConversation">Delete conversation</button>
                   </div>
-                  <p class="lifecycle-action-note" data-i18n="conversationDeleteScopeNote">
+                  <p id="conversation-delete-scope-note" class="lifecycle-action-note" data-destructive-scope="conversation-delete" data-i18n="conversationDeleteScopeNote">
                     Deletes local conversation message records only; session resume records are preserved.
                   </p>
                   <p id="production-message-state" class="demo-state" aria-live="polite" data-i18n="messageFlowIdle">
