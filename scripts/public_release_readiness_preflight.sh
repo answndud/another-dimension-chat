@@ -240,6 +240,30 @@ check_final_claim_acceptance_hold() {
     echo "FAIL final acceptance missing external evidence blocker" >&2
     exit 1
   }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "independent_review_packet_source_ready=true" || {
+    echo "FAIL final acceptance missing independent review packet source readiness" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "stable_candidate_evidence_required_before_external_review=true" || {
+    echo "FAIL final acceptance missing stable evidence external review ordering" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "external_review_not_local_source_progress_blocker=true" || {
+    echo "FAIL final acceptance missing external review non-blocking source policy" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "external_review_complete=false" || {
+    echo "FAIL final acceptance missing external review completion hold" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "external_review_claim_allowed=false" || {
+    echo "FAIL final acceptance missing external review claim hold" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "stable_candidate_blocked_by_external_review_evidence=true" || {
+    echo "FAIL final acceptance missing stable candidate external review evidence blocker" >&2
+    exit 1
+  }
   printf '%s\n' "$final_acceptance_output" | grep -Fq -- "macos_public_artifact_consistency_verified=false" || {
     echo "FAIL final acceptance missing macOS artifact blocker" >&2
     exit 1
@@ -264,6 +288,12 @@ check_final_claim_acceptance_hold() {
   echo "final_claim_high_risk_required_conditions_missing=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-encryption-evidence#release-integrity"
   echo "final_claim_high_risk_blocked_by_missing_required_conditions=true"
   echo "final_claim_external_evidence_present=false"
+  echo "final_claim_independent_review_packet_source_ready=true"
+  echo "final_claim_stable_candidate_evidence_required_before_external_review=true"
+  echo "final_claim_external_review_not_local_source_progress_blocker=true"
+  echo "final_claim_external_review_complete=false"
+  echo "final_claim_external_review_claim_allowed=false"
+  echo "final_claim_stable_candidate_blocked_by_external_review_evidence=true"
   echo "final_claim_macos_artifact_consistency=false"
   echo "final_claim_windows_artifact_consistency=false"
   echo "final_claim_support_redaction_verified=true"
@@ -327,6 +357,12 @@ echo "macos_artifact_consistency_verified=false"
 echo "windows_artifact_consistency_verified=false"
 echo "external_evidence_presence=false"
 echo "external_evidence_required_for_stable_candidate=true"
+echo "independent_review_packet_source_ready=true"
+echo "stable_candidate_evidence_required_before_external_review=true"
+echo "external_review_not_local_source_progress_blocker=true"
+echo "external_review_complete=false"
+echo "external_review_claim_allowed=false"
+echo "stable_candidate_blocked_by_external_review_evidence=true"
 echo "windows_artifact_type=windows-nsis-exe-installer-candidate"
 echo "windows_bundle_target=nsis"
 echo "windows_desktop_parity_intake=source-boundary-only"
@@ -372,6 +408,12 @@ echo "final_claim_high_risk_mode_ready=false"
 echo "final_claim_high_risk_required_conditions_missing=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-encryption-evidence#release-integrity"
 echo "final_claim_high_risk_blocked_by_missing_required_conditions=true"
 echo "final_claim_external_evidence_present=false"
+echo "final_claim_independent_review_packet_source_ready=true"
+echo "final_claim_stable_candidate_evidence_required_before_external_review=true"
+echo "final_claim_external_review_not_local_source_progress_blocker=true"
+echo "final_claim_external_review_complete=false"
+echo "final_claim_external_review_claim_allowed=false"
+echo "final_claim_stable_candidate_blocked_by_external_review_evidence=true"
 echo "final_claim_macos_artifact_consistency=false"
 echo "final_claim_windows_artifact_consistency=false"
 echo "final_claim_forbidden_positive_public_claims_found=false"

@@ -159,6 +159,11 @@ Public wording must still say `not audited`, `not production-ready`, and
 - rb_6_external_review_release_class_scope_down_reviewed=true
 - review_packet_public_safe=true
 - review_packet_complete_for_current_source=true
+- independent_review_packet_source_ready=true
+- independent_review_packet_public_safe=true
+- independent_review_packet_waits_for_stable_candidate_evidence=true
+- stable_candidate_evidence_required_before_external_review=true
+- external_review_not_local_source_progress_blocker=true
 - audit_finding_tracker_available=true
 - finding_triage_process_defined=true
 - private_security_reporting_boundary_defined=true
