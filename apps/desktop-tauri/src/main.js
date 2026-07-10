@@ -3355,13 +3355,44 @@ function renderWindowsRuntimeParityStatus(input = {}) {
 
 function renderHighRiskThreatModelStatus() {
   const view = productionHighRiskThreatModelBoundaryView();
-  setText(fields.highRiskThreatModelStatus, view.boundary);
+  const protectedClasses = view.matrix
+    .filter((entry) => entry.status === "protected")
+    .map((entry) => entry.attackerClass);
+  const mitigatedClasses = view.matrix
+    .filter((entry) => entry.status === "mitigated")
+    .map((entry) => entry.attackerClass);
+  const notProtectedClasses = view.notProtected;
+  setText(
+    fields.highRiskThreatModelStatus,
+    [
+      `High-Risk threat model: protected=${protectedClasses.join(",") || "none"}`,
+      `mitigated=${mitigatedClasses.join(",") || "none"}`,
+      `not_protected=${notProtectedClasses.join(",") || "none"}`,
+      "claims: audited=false briar_cwtch_equivalent=false compromised_endpoint_safe=false coercion_safe=false global_correlation_safe=false",
+    ].join(" / "),
+  );
+  fields.highRiskThreatModelStatus?.setAttribute("data-protected", protectedClasses.join(",") || "none");
+  fields.highRiskThreatModelStatus?.setAttribute("data-mitigated", mitigatedClasses.join(",") || "none");
+  fields.highRiskThreatModelStatus?.setAttribute("data-not-protected", notProtectedClasses.join(",") || "none");
+  fields.highRiskThreatModelStatus?.setAttribute("data-high-risk-claim-boundary", "defined-threat-model-only");
   return view;
 }
 
 function renderHighRiskTransportMetadataStatus() {
   const view = productionHighRiskTransportMetadataBoundaryView();
-  setText(fields.highRiskTransportMetadataStatus, view.boundary);
+  setText(
+    fields.highRiskTransportMetadataStatus,
+    [
+      "High-Risk transport: mitigated=onion-only-explicit-action#no-direct-fallback#no-dns-ip-endpoint#redacted-runtime-events",
+      `status=${view.status}`,
+      `not_ready_reason=${view.notReadyReason}`,
+      "not_protected=global-traffic-correlation-complete-defense",
+    ].join(" / "),
+  );
+  fields.highRiskTransportMetadataStatus?.setAttribute("data-transport-status", view.status);
+  fields.highRiskTransportMetadataStatus?.setAttribute("data-not-ready-reason", view.notReadyReason);
+  fields.highRiskTransportMetadataStatus?.setAttribute("data-direct-fallback", "false");
+  fields.highRiskTransportMetadataStatus?.setAttribute("data-app-launch-bootstrap", "false");
   return view;
 }
 
@@ -3381,8 +3412,23 @@ function renderHighRiskReadinessStatus() {
     diagnosticsRedacted: true,
     releaseIntegrityAvailable: true,
   });
-  setText(fields.highRiskReadinessStatus, view.summary);
+  setText(
+    fields.highRiskReadinessStatus,
+    [
+      `High-Risk Mode status=${view.status}`,
+      `primary_blocker=${view.primaryReasonCode}`,
+      `next=${view.nextAction}`,
+      `ready_claim_allowed=${view.highRiskReadyClaimAllowed}`,
+      "unmet_hidden=false",
+    ].join(" / "),
+  );
   fields.highRiskReadinessStatus?.setAttribute("data-readiness", view.status);
+  fields.highRiskReadinessStatus?.setAttribute(
+    "data-high-risk-ready-claim-allowed",
+    view.highRiskReadyClaimAllowed ? "true" : "false",
+  );
+  fields.highRiskReadinessStatus?.setAttribute("data-primary-reason-code", view.primaryReasonCode);
+  fields.highRiskReadinessStatus?.setAttribute("data-next-action", view.nextAction);
   return view;
 }
 
