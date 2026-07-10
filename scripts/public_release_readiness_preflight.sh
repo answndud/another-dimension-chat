@@ -204,6 +204,18 @@ check_final_claim_acceptance_hold() {
     echo "FAIL final acceptance missing stable candidate hold" >&2
     exit 1
   }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "p0_p1_local_bug_audit_complete=false" || {
+    echo "FAIL final acceptance missing P0/P1 audit blocker" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "stable_candidate_blocked_by_p0_p1_audit=true" || {
+    echo "FAIL final acceptance missing stable candidate P0/P1 blocker" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "stable_public_app_blocked_by_p0_p1_audit=true" || {
+    echo "FAIL final acceptance missing stable app P0/P1 blocker" >&2
+    exit 1
+  }
   printf '%s\n' "$final_acceptance_output" | grep -Fq -- "stable_public_app_ready=false" || {
     echo "FAIL final acceptance missing stable app hold" >&2
     exit 1
@@ -234,6 +246,10 @@ check_final_claim_acceptance_hold() {
   }
 
   echo "final_claim_acceptance=hold-expected"
+  echo "final_claim_p0_p1_local_bug_audit_complete=false"
+  echo "final_claim_p0_p1_local_bug_blocker=missing-audit-or-unverified-bugs"
+  echo "final_claim_stable_candidate_blocked_by_p0_p1_audit=true"
+  echo "final_claim_stable_public_app_blocked_by_p0_p1_audit=true"
   echo "final_claim_stable_candidate_ready=false"
   echo "final_claim_stable_public_app_ready=false"
   echo "final_claim_high_risk_mode_ready=false"
@@ -335,6 +351,10 @@ echo "windows_public_artifact_upload_allowed=false"
 echo "windows_local_runtime_smoke_passed=false"
 echo "support_redaction_verified=true"
 echo "final_claim_acceptance=hold-expected"
+echo "final_claim_p0_p1_local_bug_audit_complete=false"
+echo "final_claim_p0_p1_local_bug_blocker=missing-audit-or-unverified-bugs"
+echo "final_claim_stable_candidate_blocked_by_p0_p1_audit=true"
+echo "final_claim_stable_public_app_blocked_by_p0_p1_audit=true"
 echo "final_claim_stable_candidate_ready=false"
 echo "final_claim_stable_public_app_ready=false"
 echo "final_claim_high_risk_mode_ready=false"
