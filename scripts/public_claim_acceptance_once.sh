@@ -135,6 +135,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks=a
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "checks_run=artifact-boundary,update-integrity-policy,high-risk-release-integrity-gate,macos-release-distribution-manifest,public-release-source-path,desktop-supply-chain-surface,desktop-beta-acceptance-matrix,desktop-public-beta-source-freeze,desktop-windows-parity-intake,desktop-windows-local-runtime-smoke-handoff,desktop-windows-readiness-source-audit,desktop-windows-local-runtime-smoke-boundary,windows-public-artifact-candidate-gate,public-support-readiness,desktop-real-user-test-prep,desktop-default-transport-boundary,public-beta-gap,public-claim-acceptance,final-claim-acceptance"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "run_step final-claim-acceptance check_final_claim_acceptance_hold"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_acceptance=hold-expected"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "final_claim_stable_candidate_blocked_by_p0_p1_audit=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "generated_artifacts_created=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "release_artifact_generation=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "source_freeze=desktop-public-beta-source-candidate"
@@ -583,6 +584,14 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_acceptance=hold-expected" || {
     echo "FAIL release readiness preflight missing final claim hold status" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_stable_candidate_blocked_by_p0_p1_audit=true" || {
+    echo "FAIL release readiness preflight missing P0/P1 stable candidate blocker" >&2
+    exit 1
+  }
+  printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_stable_public_app_blocked_by_p0_p1_audit=true" || {
+    echo "FAIL release readiness preflight missing P0/P1 stable app blocker" >&2
     exit 1
   }
   printf '%s\n' "$preflight_output" | grep -Fq -- "final_claim_high_risk_mode_ready=false" || {
