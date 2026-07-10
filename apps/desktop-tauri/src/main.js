@@ -3322,7 +3322,14 @@ function renderFirstRunDesktopSummary(input = {}) {
   fields.firstRunChecklistItems?.forEach((item) => {
     const step = item.dataset.firstRunStep;
     const status = view.stepStatuses?.[step] ?? "pending";
+    const detail = view.stepDetails?.[step] ?? {};
     item.dataset.stepStatus = status;
+    item.setAttribute("data-next-action", detail.nextAction ?? "review-next-action");
+    item.setAttribute("data-blocked-reason", detail.blockedReason ?? "unknown");
+    item.setAttribute(
+      "aria-label",
+      `${item.textContent.trim()} Status: ${status}. Next: ${item.getAttribute("data-next-action")}. Blocked reason: ${item.getAttribute("data-blocked-reason")}.`,
+    );
     if (status === "current") {
       item.setAttribute("aria-current", "step");
     } else {
