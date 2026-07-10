@@ -782,6 +782,17 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
   const messageFlowReady = Boolean(input.messageFlowReady);
   const purpose = "No-central-trusted-server 1:1 private messenger";
   const releaseStatus = "Unsigned public beta; no production security claim";
+  const stepStatuses = {
+    profile: profileUnlocked ? "complete" : "current",
+    room: !profileUnlocked ? "pending" : roomPresent ? "complete" : "current",
+    safety: !roomPresent ? "pending" : safetyVerified ? "complete" : "current",
+    message: !safetyVerified ? "pending" : messageFlowReady ? "complete" : "current",
+    diagnostics: messageFlowReady ? "current" : "pending",
+  };
+  const stepOrder = ["profile", "room", "safety", "message", "diagnostics"];
+  const currentStep = stepOrder.find((step) => stepStatuses[step] === "current") ?? "diagnostics";
+  const currentStepIndex = stepOrder.indexOf(currentStep) + 1;
+  const progressLabel = `Step ${currentStepIndex} of ${stepOrder.length}: ${currentStep}`;
   const primaryNextAction = !profileInputPresent
     ? "Enter a local profile and passphrase."
     : !profileUnlocked
@@ -796,9 +807,18 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
   return {
     purpose,
     releaseStatus,
+    currentStep,
+    currentStepIndex,
+    stepCount: stepOrder.length,
+    stepStatuses,
+    progressLabel,
     primaryNextAction,
     boundary: [
       "first_run_summary=true",
+      `first_run_current_step=${currentStep}`,
+      `first_run_current_step_index=${currentStepIndex}`,
+      "first_run_step_count=5",
+      "first_run_progress_visible=true",
       "purpose=no-central-trusted-server-1:1-private-messenger",
       "release_status=unsigned-public-beta",
       "primary_next_action_visible=true",

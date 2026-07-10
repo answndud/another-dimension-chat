@@ -102,6 +102,7 @@ const fields = {
   mainBlockerSummary: document.querySelector("#main-blocker-summary"),
   privacyModelSummary: document.querySelector("#privacy-model-summary"),
   releaseClaim: document.querySelector("#release-claim"),
+  firstRunChecklistItems: document.querySelectorAll(".first-run-checklist [data-first-run-step]"),
   firstRunPrimaryNextAction: document.querySelector("#first-run-primary-next-action"),
   versionIntegrityStatus: document.querySelector("#version-integrity-status"),
   windowsRuntimeParityStatus: document.querySelector("#windows-runtime-parity-status"),
@@ -3294,6 +3295,18 @@ function productionSessionReadyForMessages() {
 function renderFirstRunDesktopSummary(input = {}) {
   const view = productionFirstRunDesktopSummaryView(input);
   setText(fields.firstRunPrimaryNextAction, `Next: ${view.primaryNextAction}`);
+  fields.firstRunPrimaryNextAction?.setAttribute("data-current-step", view.currentStep);
+  fields.firstRunPrimaryNextAction?.setAttribute("aria-label", `${view.progressLabel}. Next: ${view.primaryNextAction}`);
+  fields.firstRunChecklistItems?.forEach((item) => {
+    const step = item.dataset.firstRunStep;
+    const status = view.stepStatuses?.[step] ?? "pending";
+    item.dataset.stepStatus = status;
+    if (status === "current") {
+      item.setAttribute("aria-current", "step");
+    } else {
+      item.removeAttribute("aria-current");
+    }
+  });
   return view;
 }
 
