@@ -10,7 +10,7 @@ body:
       value: |
         Use this only when private vulnerability reporting is unavailable or inaccessible.
 
-        Do not post exploit details, bridge lines, onion endpoints, invite codes, payloads, safety phrases, profile names, message text, local paths, raw logs, crash dumps, passphrases, private keys, key material, private planning notes, files from docs/, or local app data.
+        Do not post exploit details, bridge lines, onion endpoints, invite codes, payloads, safety phrases, profile names, message text, local paths, raw logs, crash dumps, screenshots of private room data, support bundles, passphrases, private keys, key material, private planning notes, files from docs/, or local app data.
 
         Public support triage must not request exploit details. This template is only for asking maintainers to provide a private contact path.
   - type: checkboxes

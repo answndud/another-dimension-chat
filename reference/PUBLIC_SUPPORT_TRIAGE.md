@@ -11,11 +11,13 @@ claim, or permission to use the beta for sensitive communication.
 Ask for public support diagnostics only. Do not ask for raw logs, local paths,
 onion endpoints, invite codes, delivery codes, payloads, safety phrases,
 profile names, message text, passphrases, private keys, key material, crash
-dumps, screenshots of private room data, files from `docs/`, or local app data.
+dumps, screenshots of private room data, support bundles, files from `docs/`, or
+local app data.
 
-If the report may contain an exploitable security issue, route to private
-vulnerability reporting or a minimal security contact request. Do not request
-exploit details in a public issue.
+If the report may contain an exploitable security issue, route to GitHub
+private vulnerability reporting or a minimal security contact request. Do not request
+exploit details, crash dumps, screenshots, payload samples, endpoint details, or
+support bundles in a public issue.
 
 ## Triage Routing Matrix
 
@@ -52,6 +54,7 @@ exploit details in a public issue.
 - Do not request raw logs, crash dumps, local paths, endpoints, invite codes,
   payloads, message text, passphrases, private keys, key material, or private
   screenshots.
+- Do not request support bundles or crash artifacts in public issues.
 - Do not ask for external two-machine success evidence as a v0.1 acceptance
   requirement.
 - Do not claim that manual envelope exchange, diagnostics, or a field report

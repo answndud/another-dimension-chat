@@ -129,7 +129,7 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_explicit_user_action_review_required=true"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "windows_public_artifact_upload_allowed=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_prep=redacted-intake-ready"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_forbidden_fields=raw-logs#endpoints#invite-codes#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#key-material#private-planning-notes"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_forbidden_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_external_success_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_hold_criteria=missing-redacted-diagnostics#forbidden-private-data#network-before-explicit-action#checksum-mismatch"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_abort_criteria=secrets-exposed#raw-logs-requested#external-success-claim-requested#sensitive-use-requested"
