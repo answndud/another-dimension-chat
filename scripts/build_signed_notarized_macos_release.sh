@@ -66,6 +66,9 @@ if [ "$EXECUTE" != "1" ] || [ "$BUILD_EXECUTE" != "1" ] ||
   cat <<STATUS
 status=macos-signed-notarized-release-build-held
 macos_signed_notarized_release_build_script_ready=true
+signed_notarized_path_optional=true
+unsigned_oss_public_distribution_primary_path=true
+apple_developer_program_required_for_public_beta=false
 release_build_operator_runbook_ready=true
 release_build_expected_output_path_declared=true
 release_build_generated_file_set_declared=true

@@ -1,9 +1,10 @@
 # macOS Signed And Notarized Execution Path
 
-Status: D100-3 signed/notarized execution path is source-ready and currently
-held on missing Developer ID and notarization credentials. This is not a signed
-artifact, not a notarized artifact, not a stable release, not release upload
-authorization, not production-ready, not audited, and not permission for
+Status: D100-3 signed/notarized execution path is source-ready as an optional
+non-goal path. The v0.1 public beta target is the Apple-independent unsigned OSS
+distribution path, not Developer ID signing or notarization. This file is not a
+signed artifact, not a notarized artifact, not a stable release, not release
+upload authorization, not production-ready, not audited, and not permission for
 sensitive communication.
 
 The focused verifier is
@@ -100,6 +101,9 @@ The script must not reuse a DMG that already contains an unsigned app bundle.
 
 - d100_3_signed_notarized_execution_path_reviewed=true
 - macos_signed_notarized_execution_path_available=true
+- signed_notarized_path_optional=true
+- unsigned_oss_public_distribution_primary_path=true
+- apple_developer_program_required_for_public_beta=false
 - macos_tauri_signing_config_ready=true
 - macos_hardened_runtime_configured=true
 - macos_entitlements_configured=true

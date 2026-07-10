@@ -56,6 +56,9 @@ fi
 for flag in \
   "d100_3_signed_notarized_execution_path_reviewed=true" \
   "macos_signed_notarized_execution_path_available=true" \
+  "signed_notarized_path_optional=true" \
+  "unsigned_oss_public_distribution_primary_path=true" \
+  "apple_developer_program_required_for_public_beta=false" \
   "macos_tauri_signing_config_ready=true" \
   "macos_hardened_runtime_configured=true" \
   "macos_entitlements_configured=true" \
@@ -114,6 +117,9 @@ must_contain "$TAURI_CONFIG" '"signingIdentity": null'
 must_contain "$TAURI_CONFIG" '"providerShortName": null'
 must_contain "$ENTITLEMENTS" "<dict/>"
 must_contain "$SIGNED_BUILD_SCRIPT" "AD_BUILD_MACOS_SIGNED_RC"
+must_contain "$SIGNED_BUILD_SCRIPT" "signed_notarized_path_optional=true"
+must_contain "$SIGNED_BUILD_SCRIPT" "unsigned_oss_public_distribution_primary_path=true"
+must_contain "$SIGNED_BUILD_SCRIPT" "apple_developer_program_required_for_public_beta=false"
 must_contain "$SIGNED_BUILD_SCRIPT" "app_version"
 must_contain "$SIGNED_BUILD_SCRIPT" "app_bundle_id"
 must_contain "$SIGNED_BUILD_SCRIPT" "artifact_size_bytes"
@@ -223,6 +229,9 @@ if [ "$EXECUTE" != "1" ]; then
 status=macos-signed-notarized-execution-path-held
 d100_3_signed_notarized_execution_path_reviewed=true
 macos_signed_notarized_execution_path_available=true
+signed_notarized_path_optional=true
+unsigned_oss_public_distribution_primary_path=true
+apple_developer_program_required_for_public_beta=false
 macos_tauri_signing_config_ready=true
 macos_hardened_runtime_configured=true
 macos_entitlements_configured=true
@@ -369,6 +378,9 @@ cat <<STATUS
 status=macos-signed-notarized-execution-path-verified
 d100_3_signed_notarized_execution_path_reviewed=true
 macos_signed_notarized_execution_path_available=true
+signed_notarized_path_optional=true
+unsigned_oss_public_distribution_primary_path=true
+apple_developer_program_required_for_public_beta=false
 macos_tauri_signing_config_ready=true
 macos_hardened_runtime_configured=true
 macos_entitlements_configured=true

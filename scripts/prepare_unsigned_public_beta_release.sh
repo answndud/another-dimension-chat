@@ -157,20 +157,29 @@ check_artifact_boundary() {
 }
 
 check_release_integrity_policy() {
-  require_text "$ROOT_DIR/README.md" "Future public Windows, Android, and iOS artifacts must follow the same manual"
-  require_text "$ROOT_DIR/README.md" "GitHub Release integrity model"
-  require_text "$ROOT_DIR/README.md" "matching checksum, public provenance, manifest,"
-  require_text "$ROOT_DIR/README.md" "release notes, update-integrity note, and dependency evidence attached to the"
-  require_text "$ROOT_DIR/README.md" "same GitHub Release as the artifact"
+  require_text "$ROOT_DIR/README.md" "The current public artifact is attached to this GitHub Release"
+  require_text "$ROOT_DIR/README.md" "Verify the DMG before opening it"
+  require_text "$ROOT_DIR/README.md" "Security only after the checksum matches"
+  require_text "$ROOT_DIR/README.md" "The release authority for a DMG is the matching set of assets attached to the"
+  require_text "$ROOT_DIR/README.md" "same GitHub Release"
   require_text "$ROOT_DIR/README.md" "Signing, notarization, app-store approval,"
-  require_text "$ROOT_DIR/README.md" "Play Store approval, TestFlight, Developer ID, SmartScreen reputation, or mobile"
-  require_text "$ROOT_DIR/README.md" "security boundary for v0.1."
+  require_text "$ROOT_DIR/README.md" "TestFlight, APNs, FCM, iCloud, or cloud backup may affect distribution"
+  require_text "$ROOT_DIR/README.md" "trusted security boundary"
   require_text "$ROOT_DIR/SECURITY.md" "Future public Windows, Android, and iOS artifacts must use the same manual"
   require_text "$ROOT_DIR/SECURITY.md" "GitHub Release download, same-release checksum, public provenance, manifest, and"
   require_text "$ROOT_DIR/SECURITY.md" "no-auto-update boundary"
   require_text "$ROOT_DIR/SECURITY.md" "Platform signing, notarization, app-store approval,"
   require_text "$ROOT_DIR/SECURITY.md" "Play Store approval, TestFlight, Developer ID, SmartScreen reputation, or mobile"
   require_text "$ROOT_DIR/SECURITY.md" "store review is not a trusted security boundary for v0.1."
+  require_text "$ROOT_DIR/SECURITY.md" "Apple Developer Program, Developer ID, notarization, App Store, and TestFlight"
+  require_text "$ROOT_DIR/SECURITY.md" "credentials are not used or required for this v0.1 public beta"
+  require_text "$ROOT_DIR/SECURITY.md" "does not ask users to disable"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" "Apple Developer Program, Developer ID, notarization, App Store, and TestFlight"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" "Do not disable Gatekeeper globally"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "credentials are not used or required for this OSS public beta"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_RELEASE_NOTES.md" "Do not disable Gatekeeper"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "credentials are not used or required for this OSS public beta"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "Do not disable Gatekeeper globally"
   require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "Future Platform Artifacts"
   require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "Every future public Windows, Android, or iOS artifact must be attached to a"
   require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "GitHub Release with its own matching checksum and provenance file."
@@ -313,6 +322,11 @@ cat > "$RELEASE_DIR/$RELEASE_PROVENANCE" <<EOF
   "upload_forbidden": "docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data",
   "install_allow_path": "macos-privacy-security-manual-allow-after-checksum",
   "terminal_quarantine_removal_install_step": false,
+  "gatekeeper_global_disable_install_step": false,
+  "apple_developer_program_used": false,
+  "developer_id_required": false,
+  "notary_credential_required": false,
+  "app_store_or_testflight_required": false,
   "notarized": false,
   "signed": false,
   "auto_update": false,
@@ -476,6 +490,11 @@ This folder is for a GitHub Release upload.
 - Packaging fallback: return-to-desktop-hardening-if-source-preflight-fails
 - Install allow path: macos-privacy-security-manual-allow-after-checksum
 - Terminal quarantine-removal install step: false
+- Gatekeeper global disable install step: false
+- Apple Developer Program used: false
+- Developer ID required: false
+- Notary credential required: false
+- App Store or TestFlight required: false
 - Public provenance: \`$RELEASE_PROVENANCE\`
 - Source provenance SHA-256: \`$source_provenance_sha\`
 - Dependency inventory: \`DEPENDENCY_INVENTORY.md\`
@@ -802,6 +821,11 @@ require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"auto_update\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"auto_update_manifest_trusted\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"signed\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"notarized\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"apple_developer_program_used\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"developer_id_required\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"notary_credential_required\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"app_store_or_testflight_required\": false"
+require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"gatekeeper_global_disable_install_step\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"platform_signing_trust_boundary\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"notarization_trust_boundary\": false"
 require_text "$RELEASE_DIR/$RELEASE_PROVENANCE" "\"store_trust_boundary\": false"
@@ -833,6 +857,11 @@ require_text "$RELEASE_DIR/MANIFEST.md" "Do not upload \`docs/\`, \`beta-artifac
 require_text "$RELEASE_DIR/MANIFEST.md" "branch files, source archives, raw logs, crash dumps"
 require_text "$RELEASE_DIR/MANIFEST.md" "any file not listed in"
 require_text "$RELEASE_DIR/MANIFEST.md" "Install allow path: macos-privacy-security-manual-allow-after-checksum"
+require_text "$RELEASE_DIR/MANIFEST.md" "Apple Developer Program used: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Developer ID required: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Notary credential required: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "App Store or TestFlight required: false"
+require_text "$RELEASE_DIR/MANIFEST.md" "Gatekeeper global disable install step: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Terminal quarantine-removal install step: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Independent review complete: false"
 require_text "$RELEASE_DIR/MANIFEST.md" "Public review gap published: true"

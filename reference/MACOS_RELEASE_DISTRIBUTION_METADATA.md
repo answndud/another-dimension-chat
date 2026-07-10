@@ -1,10 +1,10 @@
 # macOS Release Distribution Metadata
 
-Status: source-ready for macOS release metadata generation and validation, but
-held on actual signed/notarized distribution artifact evidence and owner upload
-approval. This is not a release upload, not a DMG rebuild, not a stable release,
-not an audit result, not production-ready, and not permission for sensitive
-communication.
+Status: source-ready for Apple-independent unsigned OSS macOS release metadata
+generation and validation, but held on owner upload approval. This is not a
+release upload, not a DMG rebuild, not a signed artifact, not a notarized
+artifact, not a stable release, not an audit result, not production-ready, and
+not permission for sensitive communication.
 
 The current public macOS support scope remains Apple Silicon aarch64 only. A
 universal or Intel artifact must not be claimed until the matching artifact,
@@ -24,8 +24,10 @@ checksum, provenance, and public copy all use the same architecture value.
 The generator writes only under ignored generated artifact directories and
 copies the selected artifact beside the generated checksum, provenance, release
 body, install guide, release notes, update integrity guide, and manifest so
-validation uses one same-release asset authority directory. For
-signed/notarized or stable candidates it requires
+validation uses one same-release asset authority directory. The primary v0.1
+public path is `unsigned-public-beta`: Apple Developer Program, Developer ID,
+notary credentials, App Store, and TestFlight are not required. For optional
+future signed/notarized or stable candidates it requires
 `AD_MACOS_SIGNED_RC_PROVENANCE_IN` from the signed build/notarization path and
 binds that provenance to the artifact filename, artifact SHA-256, source
 commit, app version, bundle id, release class, target architecture,
@@ -47,7 +49,11 @@ Each macOS release distribution manifest uses
 - support files for install guide, release notes, update integrity guide, and
   GitHub release body, each bound to the same version, source commit, artifact
   filename, SHA-256, signing status, and notarization status,
-- for signed/notarized or stable candidates, signed-build provenance proving
+- for unsigned public beta candidates, explicit `signed=false`,
+  `notarization_status=not-notarized`, Apple-independent release authority,
+  no terminal quarantine-removal install step, and same-release checksum/
+  provenance/manifest binding,
+- for optional signed/notarized or stable candidates, signed-build provenance proving
   the DMG-contained app verifier was available, the app mounted, contained-app
   codesign passed, contained-app Gatekeeper execute assessment passed, and the
   mounted app matched the signed source app,
