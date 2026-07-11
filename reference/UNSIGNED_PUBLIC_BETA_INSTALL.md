@@ -43,6 +43,16 @@ Use the files attached to that GitHub Release as the release authority. The
 verify the downloaded DMG against branch files copied from GitHub's source
 browser, GitHub source archives, or files from a different release.
 
+## Shared Packet Boundary
+
+These values must stay identical across the install guide, release notes,
+GitHub Release body, and beta checklist:
+
+- `artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#macos-aarch64`
+- `trust_model=same-github-release-assets#same-release-sha256#manual-privacy-security-allow-after-checksum#no-auto-update`
+- `support_intake=redacted-diagnostics-only#no-raw-logs#no-crash-dumps#no-private-room-data#no-payloads#no-key-material`
+- `generated_artifact_boundary=do-not-commit-public-release-or-beta-artifacts#no-dmg-rebuild#no-release-upload-or-edit`
+
 ## Verify The Download
 
 Put the `.dmg` and `.sha256` in the same folder. Use the `.sha256` attached to
