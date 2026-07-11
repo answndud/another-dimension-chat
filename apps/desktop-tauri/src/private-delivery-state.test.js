@@ -16,6 +16,7 @@ import {
   fieldTestReportTriageState,
   highRiskTransportMetadataBoundaryStatus,
   localManualE2eeRuntimeBoundaryStatus,
+  localStorageRuntimeEvidenceView,
   manualEnvelopeExchangePanelView,
   noSilentNetworkBoundaryStatus,
   parseFieldTestReport,
@@ -748,7 +749,23 @@ test("local manual E2EE runtime boundary exposes key lifecycle guardrails withou
     networkIoAttempted: boundary.networkIoAttempted,
     productionE2eeReady: boundary.productionE2eeReady,
     productionKeyManagementReady: boundary.productionKeyManagementReady,
+    localStorageRuntimeEvidenceReady: boundary.localStorageRuntimeEvidenceReady,
+    localStorageRuntimeEvidenceBoundary: boundary.localStorageRuntimeEvidenceBoundary,
+    localAtRestMitigationReady: boundary.localAtRestMitigationReady,
+    lockedStateNoPlaintextAccess: boundary.lockedStateNoPlaintextAccess,
+    lockedStateNoKeyMaterialAccess: boundary.lockedStateNoKeyMaterialAccess,
+    lockedStateNoRuntimeMessaging: boundary.lockedStateNoRuntimeMessaging,
+    rollbackMarkerStatus: boundary.rollbackMarkerStatus,
+    rollbackMarkerPresent: boundary.rollbackMarkerPresent,
+    rollbackSuspicionDetected: boundary.rollbackSuspicionDetected,
+    rollbackResumeBlocked: boundary.rollbackResumeBlocked,
+    localDeleteConfirmationRequired: boundary.localDeleteConfirmationRequired,
+    localDeleteConfirmation: boundary.localDeleteConfirmation,
+    backupExclusionPolicyDecided: boundary.backupExclusionPolicyDecided,
+    backupExclusionVerified: boundary.backupExclusionVerified,
+    backupExclusionStatus: boundary.backupExclusionStatus,
     appKeyWrappingReady: boundary.appKeyWrappingReady,
+    secureDeletionClaimAllowed: boundary.secureDeletionClaimAllowed,
     securityReadyClaimed: boundary.securityReadyClaimed,
   }, {
     boundary: "noise-xx-session-key-replay-reviewed",
@@ -766,9 +783,70 @@ test("local manual E2EE runtime boundary exposes key lifecycle guardrails withou
     networkIoAttempted: false,
     productionE2eeReady: false,
     productionKeyManagementReady: true,
+    localStorageRuntimeEvidenceReady: true,
+    localStorageRuntimeEvidenceBoundary: "passphrase-first-locked-state-rollback-marker-local-delete-backup-exclusion-v1",
+    localAtRestMitigationReady: true,
+    lockedStateNoPlaintextAccess: true,
+    lockedStateNoKeyMaterialAccess: true,
+    lockedStateNoRuntimeMessaging: true,
+    rollbackMarkerStatus: "passphrase-first-runtime-unlock-with-marker-based-rollback-detection",
+    rollbackMarkerPresent: true,
+    rollbackSuspicionDetected: false,
+    rollbackResumeBlocked: false,
+    localDeleteConfirmationRequired: true,
+    localDeleteConfirmation: "WIPE_LOCAL_DATA",
+    backupExclusionPolicyDecided: true,
+    backupExclusionVerified: false,
+    backupExclusionStatus: "policy-decided-verification-required",
     appKeyWrappingReady: false,
+    secureDeletionClaimAllowed: false,
     securityReadyClaimed: false,
   });
+});
+
+test("local storage runtime evidence links unlock delete rollback and backup without unsafe claims", () => {
+  const evidence = localStorageRuntimeEvidenceView();
+
+  assert.equal(evidence.localAtRestMitigationReady, true);
+  assert.equal(evidence.passphraseFirstUnlockRequired, true);
+  assert.equal(evidence.osKeystoreOnlyUnlockRejected, true);
+  assert.equal(evidence.lockedStateNoPlaintextAccess, true);
+  assert.equal(evidence.lockedStateNoKeyMaterialAccess, true);
+  assert.equal(evidence.lockedStateNoRuntimeMessaging, true);
+  assert.equal(evidence.rollbackMarkerStatus, "passphrase-first-runtime-unlock-with-marker-based-rollback-detection");
+  assert.equal(evidence.rollbackMarkerPresent, true);
+  assert.equal(evidence.rollbackSuspicionDetected, false);
+  assert.equal(evidence.rollbackResumeBlocked, false);
+  assert.equal(evidence.rollbackPreventionClaimed, false);
+  assert.equal(evidence.localDeleteConfirmationRequired, true);
+  assert.equal(evidence.localDeleteConfirmation, "WIPE_LOCAL_DATA");
+  assert.equal(evidence.localDeleteScope, "owned-app-data-on-this-device");
+  assert.equal(evidence.backupExclusionPolicyDecided, true);
+  assert.equal(evidence.backupExclusionVerified, false);
+  assert.equal(evidence.backupExclusionStatus, "policy-decided-verification-required");
+  assert.equal(evidence.cloudBackupOrSyncEnabled, false);
+  assert.equal(evidence.backupRecoveryClaimed, false);
+  assert.equal(evidence.appKeyWrappingReady, false);
+  assert.equal(evidence.secureDeletionClaimAllowed, false);
+  assert.equal(evidence.compromisedEndpointProtected, false);
+  assert.match(evidence.summary, /local_at_rest_mitigation_ready=true/);
+  assert.match(evidence.summary, /compromised_endpoint_protected=false/);
+
+  const unsafe = localStorageRuntimeEvidenceView({
+    rollbackSuspicionDetected: true,
+    cloudBackupOrSyncEnabled: true,
+    backupRecoveryClaimed: true,
+    rollbackPreventionClaimed: true,
+    appKeyWrappingReady: true,
+    secureDeletionClaimAllowed: true,
+  });
+  assert.equal(unsafe.localAtRestMitigationReady, false);
+  assert.equal(unsafe.rollbackResumeBlocked, true);
+  assert.match(unsafe.summary, /cloud_backup_or_sync_enabled=true/);
+  assert.match(unsafe.summary, /backup_recovery_claimed=true/);
+  assert.match(unsafe.summary, /rollback_prevention_claimed=true/);
+  assert.match(unsafe.summary, /app_key_wrapping_ready=true/);
+  assert.match(unsafe.summary, /secure_deletion_claim_allowed=true/);
 });
 
 test("no silent network boundary keeps default manual and advanced onion explicit", () => {
@@ -836,7 +914,23 @@ test("desktop-first completion reports local private flow readiness without secu
     productionMessagingReady: readyStatus.productionMessagingReady,
     productionE2eeReady: readyStatus.productionE2eeReady,
     productionKeyManagementReady: readyStatus.productionKeyManagementReady,
+    localStorageRuntimeEvidenceReady: readyStatus.localStorageRuntimeEvidenceReady,
+    localStorageRuntimeEvidenceBoundary: readyStatus.localStorageRuntimeEvidenceBoundary,
+    localAtRestMitigationReady: readyStatus.localAtRestMitigationReady,
+    lockedStateNoPlaintextAccess: readyStatus.lockedStateNoPlaintextAccess,
+    lockedStateNoKeyMaterialAccess: readyStatus.lockedStateNoKeyMaterialAccess,
+    lockedStateNoRuntimeMessaging: readyStatus.lockedStateNoRuntimeMessaging,
+    rollbackMarkerStatus: readyStatus.rollbackMarkerStatus,
+    rollbackMarkerPresent: readyStatus.rollbackMarkerPresent,
+    rollbackSuspicionDetected: readyStatus.rollbackSuspicionDetected,
+    rollbackResumeBlocked: readyStatus.rollbackResumeBlocked,
+    localDeleteConfirmationRequired: readyStatus.localDeleteConfirmationRequired,
+    localDeleteConfirmation: readyStatus.localDeleteConfirmation,
+    backupExclusionPolicyDecided: readyStatus.backupExclusionPolicyDecided,
+    backupExclusionVerified: readyStatus.backupExclusionVerified,
+    backupExclusionStatus: readyStatus.backupExclusionStatus,
     appKeyWrappingReady: readyStatus.appKeyWrappingReady,
+    secureDeletionClaimAllowed: readyStatus.secureDeletionClaimAllowed,
     securityReadyClaimed: readyStatus.securityReadyClaimed,
     sensitiveCommunicationAllowed: readyStatus.sensitiveCommunicationAllowed,
   }, {
@@ -853,7 +947,23 @@ test("desktop-first completion reports local private flow readiness without secu
     productionMessagingReady: false,
     productionE2eeReady: false,
     productionKeyManagementReady: true,
+    localStorageRuntimeEvidenceReady: true,
+    localStorageRuntimeEvidenceBoundary: "passphrase-first-locked-state-rollback-marker-local-delete-backup-exclusion-v1",
+    localAtRestMitigationReady: true,
+    lockedStateNoPlaintextAccess: true,
+    lockedStateNoKeyMaterialAccess: true,
+    lockedStateNoRuntimeMessaging: true,
+    rollbackMarkerStatus: "passphrase-first-runtime-unlock-with-marker-based-rollback-detection",
+    rollbackMarkerPresent: true,
+    rollbackSuspicionDetected: false,
+    rollbackResumeBlocked: false,
+    localDeleteConfirmationRequired: true,
+    localDeleteConfirmation: "WIPE_LOCAL_DATA",
+    backupExclusionPolicyDecided: true,
+    backupExclusionVerified: false,
+    backupExclusionStatus: "policy-decided-verification-required",
     appKeyWrappingReady: false,
+    secureDeletionClaimAllowed: false,
     securityReadyClaimed: false,
     sensitiveCommunicationAllowed: false,
   });
@@ -872,7 +982,11 @@ test("desktop-first completion reports local private flow readiness without secu
     productionMessagingReady: blockedStatus.productionMessagingReady,
     productionE2eeReady: blockedStatus.productionE2eeReady,
     productionKeyManagementReady: blockedStatus.productionKeyManagementReady,
+    localStorageRuntimeEvidenceReady: blockedStatus.localStorageRuntimeEvidenceReady,
+    localAtRestMitigationReady: blockedStatus.localAtRestMitigationReady,
+    backupExclusionStatus: blockedStatus.backupExclusionStatus,
     appKeyWrappingReady: blockedStatus.appKeyWrappingReady,
+    secureDeletionClaimAllowed: blockedStatus.secureDeletionClaimAllowed,
     securityReadyClaimed: blockedStatus.securityReadyClaimed,
     sensitiveCommunicationAllowed: blockedStatus.sensitiveCommunicationAllowed,
   }, {
@@ -889,7 +1003,11 @@ test("desktop-first completion reports local private flow readiness without secu
     productionMessagingReady: false,
     productionE2eeReady: false,
     productionKeyManagementReady: true,
+    localStorageRuntimeEvidenceReady: true,
+    localAtRestMitigationReady: true,
+    backupExclusionStatus: "policy-decided-verification-required",
     appKeyWrappingReady: false,
+    secureDeletionClaimAllowed: false,
     securityReadyClaimed: false,
     sensitiveCommunicationAllowed: false,
   });
@@ -907,7 +1025,30 @@ test("desktop-first completion reports local private flow readiness without secu
   assert.match(diagnostics, /passphrase_first_storage_required=true/);
   assert.match(diagnostics, /production_e2ee_ready=false/);
   assert.match(diagnostics, /production_key_management_ready=true/);
+  assert.match(diagnostics, /local_storage_runtime_evidence_ready=true/);
+  assert.match(
+    diagnostics,
+    /local_storage_runtime_evidence_boundary=passphrase-first-locked-state-rollback-marker-local-delete-backup-exclusion-v1/,
+  );
+  assert.match(diagnostics, /local_at_rest_mitigation_ready=true/);
+  assert.match(diagnostics, /locked_state_no_plaintext_access=true/);
+  assert.match(diagnostics, /locked_state_no_key_material_access=true/);
+  assert.match(diagnostics, /locked_state_no_runtime_messaging=true/);
+  assert.match(diagnostics, /rollback_marker_status=passphrase-first-runtime-unlock-with-marker-based-rollback-detection/);
+  assert.match(diagnostics, /rollback_marker_present=true/);
+  assert.match(diagnostics, /rollback_suspicion_detected=false/);
+  assert.match(diagnostics, /rollback_resume_blocked=false/);
+  assert.match(diagnostics, /local_delete_confirmation_required=true/);
+  assert.match(diagnostics, /local_delete_confirmation=WIPE_LOCAL_DATA/);
+  assert.match(diagnostics, /backup_exclusion_policy_decided=true/);
+  assert.match(diagnostics, /backup_exclusion_verified=false/);
+  assert.match(diagnostics, /backup_exclusion_status=policy-decided-verification-required/);
   assert.match(diagnostics, /app_key_wrapping_ready=false/);
+  assert.match(diagnostics, /cloud_backup_or_sync_enabled=false/);
+  assert.match(diagnostics, /backup_recovery_claimed=false/);
+  assert.match(diagnostics, /rollback_prevention_claimed=false/);
+  assert.match(diagnostics, /secure_deletion_claim_allowed=false/);
+  assert.match(diagnostics, /compromised_endpoint_protected=false/);
   assert.match(diagnostics, /desktop_acceptance_external_delivery_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_production_claim=false/);
   assert.match(diagnostics, /desktop_acceptance_sensitive_use_claim=false/);
