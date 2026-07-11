@@ -44,8 +44,10 @@ another-dimension-storage = { path = "../../../crates/storage", optional = true 
 another-dimension-transport = { path = "../../../crates/transport", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Public release baseline: rustls = { version = "0.23.40", default-features = false, features = ["ring"] }
 rustls = { version = "0.23.40", default-features = false, features = ["ring"], optional = true }
 tauri = { version = "2", features = [] }
+# Public release baseline: tokio = { version = "1.52.3", default-features = false, features = ["macros", "time"] }
 tokio = { version = "1.52.3", default-features = false, features = ["macros", "time"], optional = true }
 
 [lints.rust]
