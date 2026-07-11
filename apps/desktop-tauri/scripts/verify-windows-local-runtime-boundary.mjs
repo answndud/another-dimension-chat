@@ -17,6 +17,13 @@ function requireText(path, text) {
   }
 }
 
+function requireAnyText(path, label, texts) {
+  const body = read(path);
+  if (!texts.some((text) => body.includes(text))) {
+    throw new Error(`missing Windows local runtime boundary text in ${path}: ${label}`);
+  }
+}
+
 function rejectText(path, text) {
   const body = read(path);
   if (body.includes(text)) {
@@ -63,8 +70,19 @@ for (const file of ["SECURITY.md", "apps/desktop-tauri/README.md"]) {
 }
 
 requireText("README.md", "Windows");
-requireText("README.md", "Local build candidate only");
-requireText("README.md", "no public artifact or installer");
+requireAnyText("README.md", "Windows local build candidate", [
+  "Local build candidate only",
+  "local desktop build candidate only",
+  "Windows remains a local build candidate",
+]);
+requireAnyText("README.md", "no public Windows artifact or installer", [
+  "no public artifact or installer",
+  "no public Windows artifact",
+]);
+requireAnyText("README.md", "no Windows installer", [
+  "no public artifact or installer",
+  "no Windows installer",
+]);
 requireText("README.md", "not production-ready");
 requireSensitivePublicNonclaim("README.md");
 rejectText("README.md", "Windows local runtime smoke passed=true");
@@ -90,13 +108,13 @@ requireText("apps/desktop-tauri/src-tauri/src/lib.rs", "auto_update_channel: fal
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_runtime_smoke_required=true");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_local_runtime_smoke_status=source-boundary-only");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows");
-requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_app_data_path_review_required=true");
-requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_path_separator_review_required=true");
-requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_local_deletion_behavior_review_required=true");
-requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_redacted_diagnostics_behavior_review_required=true");
+requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_app_data_path_review_required=false");
+requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_path_separator_review_required=false");
+requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_local_deletion_behavior_review_required=false");
+requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_redacted_diagnostics_behavior_review_required=false");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_explicit_user_action_review_required=true");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "public_artifact_upload_allowed=false");
-requireText("apps/desktop-tauri/src-tauri/src/status.rs", "remaining_blocker=windows-local-build-smoke-and-release-boundary-review");
+requireText("apps/desktop-tauri/src-tauri/src/status.rs", "remaining_blocker=real-windows-artifact-runtime-manifest-evidence");
 
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_app_data_path_review_required=true");
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_path_separator_review_required=true");
