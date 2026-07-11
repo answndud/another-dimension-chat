@@ -26,6 +26,7 @@ import {
   productionPairwiseInviteCreateView,
   productionPairwiseInviteImportFailureView,
   productionPairwiseInviteGuidanceView,
+  productionPairwiseSafetyActionGateView,
   productionPairwiseSafetyVerificationFlowView,
   productionProfileUnlockRecoveryView,
   productionProfileRecoveryActionsView,
@@ -770,6 +771,9 @@ test("pairwise invite import failure view splits non-generic recovery kinds", ()
   const unsupported = productionPairwiseInviteImportFailureView({
     error: "ProductionSessionError::NonProductionPairingPayload",
   });
+  const stale = productionPairwiseInviteImportFailureView({
+    error: "PairingError::ExpiredPayload",
+  });
   const revoked = productionPairwiseInviteImportFailureView({
     error: "pairwise_invite_import_failure=revoked_re_pair_required",
   });
@@ -777,10 +781,11 @@ test("pairwise invite import failure view splits non-generic recovery kinds", ()
   assert.equal(malformed.kind, "malformed");
   assert.equal(duplicate.kind, "duplicate");
   assert.equal(paired.kind, "already_paired");
+  assert.equal(stale.kind, "stale");
   assert.equal(mismatch.kind, "identity_mismatch");
   assert.equal(unsupported.kind, "unsupported");
   assert.equal(revoked.kind, "revoked_re_pair_required");
-  for (const view of [malformed, duplicate, paired, mismatch, unsupported, revoked]) {
+  for (const view of [malformed, duplicate, paired, stale, mismatch, unsupported, revoked]) {
     assert.match(view.boundary, /malicious_input_fail_closed=true/);
     assert.match(view.boundary, /success_state=false/);
     assert.match(view.boundary, /verified_state=false/);
@@ -813,11 +818,58 @@ test("pairwise safety verification flow routes mismatch and revoked to re-pair",
   assert.match(confirmed.boundary, /compare_required=false/);
   assert.equal(mismatch.state, "marked_mismatch");
   assert.equal(mismatch.rePairRequired, true);
+  assert.equal(mismatch.sendAllowed, false);
+  assert.equal(mismatch.exportAllowed, false);
+  assert.equal(mismatch.importAllowed, false);
+  assert.equal(mismatch.failureClass, "safety_mismatch");
   assert.match(mismatch.boundary, /malicious_input_fail_closed=true/);
   assert.match(mismatch.boundary, /false_verified_state=blocked/);
   assert.equal(revoked.state, "revoked_re_pair_required");
   assert.equal(revoked.rePairRequired, true);
+  assert.equal(revoked.sendAllowed, false);
+  assert.equal(revoked.exportAllowed, false);
+  assert.equal(revoked.importAllowed, false);
+  assert.equal(revoked.failureClass, "revoked_room");
   assert.match(revoked.boundary, /generic_error=false/);
+});
+
+test("pairwise safety action gate blocks send export import for unsafe peer states", () => {
+  const ready = productionPairwiseSafetyActionGateView({
+    safetyVerified: true,
+  });
+  assert.equal(ready.failureClass, "none");
+  assert.equal(ready.sendAllowed, true);
+  assert.equal(ready.exportAllowed, true);
+  assert.equal(ready.importAllowed, true);
+
+  const unsafe = [
+    productionPairwiseSafetyActionGateView({ safetyVerified: false }),
+    productionPairwiseSafetyActionGateView({ failureClass: "identity_mismatch", safetyVerified: true }),
+    productionPairwiseSafetyActionGateView({ failureClass: "duplicate", safetyVerified: true }),
+    productionPairwiseSafetyActionGateView({ failureClass: "PairingError::ExpiredPayload", safetyVerified: true }),
+    productionPairwiseSafetyActionGateView({ failureClass: "revoked_re_pair_required", safetyVerified: true }),
+  ];
+  assert.deepEqual(unsafe.map((view) => view.failureClass), [
+    "safety_not_verified",
+    "safety_mismatch",
+    "duplicate_invite",
+    "stale_invite",
+    "revoked_room",
+  ]);
+  for (const view of unsafe) {
+    assert.equal(view.sendAllowed, false);
+    assert.equal(view.exportAllowed, false);
+    assert.equal(view.importAllowed, false);
+    assert.equal(view.verifiedStateAllowed, false);
+    assert.equal(view.deliveredStateAllowed, false);
+    assert.match(view.boundary, /mismatch_blocks_message_actions=true/);
+    assert.match(view.boundary, /duplicate_invite_blocks_message_actions=true/);
+    assert.match(view.boundary, /stale_invite_blocks_message_actions=true/);
+    assert.match(view.boundary, /revoked_room_blocks_message_actions=true/);
+    assert.match(view.boundary, /safety_number_in_diagnostics=false/);
+    assert.match(view.boundary, /safety_phrase_in_diagnostics=false/);
+    assert.match(view.boundary, /invite_payload_in_diagnostics=false/);
+  }
 });
 
 test("profile unlock recovery view splits passphrase store and migration failures", () => {
@@ -1504,6 +1556,10 @@ test("message delivery productization view blocks false ready and private suppor
     supportRedacted: true,
   });
   assert.equal(mismatchOrReplayOpen.primaryAction, "verify-safety");
+  assert.match(mismatchOrReplayOpen.summary, /pairwise_safety_failure_class=safety_mismatch/);
+  assert.match(mismatchOrReplayOpen.summary, /send_action_allowed=false/);
+  assert.match(mismatchOrReplayOpen.summary, /export_action_allowed=false/);
+  assert.match(mismatchOrReplayOpen.summary, /import_action_allowed=false/);
   assert.equal(mismatchOrReplayOpen.firstMessageRoundTripReady, false);
   assert.equal(mismatchOrReplayOpen.boundaryClosed, false);
 
