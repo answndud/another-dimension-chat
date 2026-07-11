@@ -51,6 +51,26 @@ const highRiskRuntimeEvidenceSchema = readFileSync(
   join(appRoot, "..", "..", "reference", "HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md"),
   "utf8",
 );
+const crossPlatformPublicBetaPacketScript = readFileSync(
+  join(appRoot, "..", "..", "scripts", "cross_platform_public_beta_packet_once.sh"),
+  "utf8",
+);
+const macosUnsignedPublicReleasePacketScript = readFileSync(
+  join(appRoot, "..", "..", "scripts", "macos_unsigned_public_release_packet_once.sh"),
+  "utf8",
+);
+const publicReleaseReadinessPreflightScript = readFileSync(
+  join(appRoot, "..", "..", "scripts", "public_release_readiness_preflight.sh"),
+  "utf8",
+);
+const crossPlatformPublicBetaPacketReference = readFileSync(
+  join(appRoot, "..", "..", "reference", "CROSS_PLATFORM_UNSIGNED_PUBLIC_BETA_PACKET.md"),
+  "utf8",
+);
+const unsignedPublicBetaGithubReleaseBody = readFileSync(
+  join(appRoot, "..", "..", "reference", "UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md"),
+  "utf8",
+);
 const functionBodyCache = new Map();
 
 function functionBody(source, name) {
@@ -293,6 +313,20 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(finalAcceptanceScript, /high_risk_ready_claim_allowed=false/);
   assert.match(finalAcceptanceScript, /scripts\/high_risk_runtime_evidence_validate_once\.sh/);
   assert.match(finalAcceptanceScript, /reference\/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA\.md/);
+  assert.match(crossPlatformPublicBetaPacketScript, /high_risk_runtime_evidence_validator_ready=true/);
+  assert.match(crossPlatformPublicBetaPacketScript, /high_risk_runtime_evidence_claim_separated=true/);
+  assert.match(crossPlatformPublicBetaPacketScript, /high_risk_ready_claim_allowed=false/);
+  assert.match(macosUnsignedPublicReleasePacketScript, /High-Risk runtime evidence validator is a redacted evidence-format gate/);
+  assert.match(macosUnsignedPublicReleasePacketScript, /high_risk_runtime_evidence_validator_ready=true/);
+  assert.match(macosUnsignedPublicReleasePacketScript, /high_risk_ready_claim_allowed=false/);
+  assert.match(publicReleaseReadinessPreflightScript, /final_claim_high_risk_runtime_evidence_validator_ready=true/);
+  assert.match(publicReleaseReadinessPreflightScript, /final_claim_high_risk_ready_claim_allowed=false/);
+  assert.match(crossPlatformPublicBetaPacketReference, /High-Risk runtime evidence validator is a redacted evidence-format gate/);
+  assert.match(crossPlatformPublicBetaPacketReference, /high_risk_public_claim_allowed=false/);
+  assert.match(crossPlatformPublicBetaPacketReference, /high_risk_ready_claim_allowed=false/);
+  assert.match(unsignedPublicBetaGithubReleaseBody, /High-Risk runtime evidence validator is a redacted evidence-format gate/);
+  assert.match(unsignedPublicBetaGithubReleaseBody, /high_risk_public_claim_allowed=false/);
+  assert.match(unsignedPublicBetaGithubReleaseBody, /high_risk_ready_claim_allowed=false/);
   assert.match(externalEvidenceValidateScript, /reliable_delivery_claim_allowed=false/);
   assert.match(externalEvidenceValidateScript, /audited_claim_allowed=false/);
   assert.match(privateDeliveryStateJs, /high-risk-runtime-evidence-source/);
