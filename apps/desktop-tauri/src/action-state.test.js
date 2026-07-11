@@ -673,6 +673,10 @@ test("first-run desktop summary keeps purpose release status and next action vis
   assert.equal(initial.currentStepIndex, 1);
   assert.equal(initial.stepCount, 5);
   assert.equal(initial.stepStatuses.profile, "current");
+  assert.equal(initial.stepStatuses.room, "blocked");
+  assert.equal(initial.stepStatuses.safety, "blocked");
+  assert.equal(initial.stepStatuses.message, "blocked");
+  assert.equal(initial.stepStatuses.diagnostics, "blocked");
   assert.equal(noRoom.currentStep, "room");
   assert.equal(unverified.currentStep, "safety");
   assert.equal(readyToWrite.currentStep, "message");
@@ -697,6 +701,7 @@ test("first-run desktop summary keeps purpose release status and next action vis
   assert.match(initial.boundary, /first_run_summary=true/);
   assert.match(initial.boundary, /first_run_current_step=profile/);
   assert.match(initial.boundary, /first_run_progress_visible=true/);
+  assert.match(initial.boundary, /first_run_status_values=complete#current#blocked/);
   assert.match(initial.boundary, /primary_next_action_visible=true/);
   assert.match(active.boundary, /first_run_step_next_actions=/);
   assert.match(active.boundary, /diagnostics:copy-redacted-support-report-if-needed/);

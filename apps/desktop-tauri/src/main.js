@@ -3328,12 +3328,36 @@ function renderFirstRunDesktopSummary(input = {}) {
     const step = item.dataset.firstRunStep;
     const status = view.stepStatuses?.[step] ?? "pending";
     const detail = view.stepDetails?.[step] ?? {};
+    const baseLabel = item.dataset.i18n ? t(item.dataset.i18n) : item.textContent.trim();
+    let detailNode = item.querySelector(".first-run-step-detail");
+    if (!detailNode) {
+      detailNode = document.createElement("span");
+      detailNode.className = "first-run-step-detail";
+      item.append(document.createTextNode(" "));
+      item.append(detailNode);
+    }
+    const statusLabel =
+      status === "complete"
+        ? t("firstRunStatusDone")
+        : status === "current"
+          ? t("firstRunStatusNow")
+          : status === "blocked"
+            ? t("firstRunStatusBlocked")
+            : t("firstRunStatusPending");
+    const nextAction = detail.nextAction ?? "review-next-action";
+    const blockedReason = detail.blockedReason ?? "unknown";
+    const detailText =
+      status === "blocked"
+        ? `${statusLabel}: ${t("firstRunStepReasonPrefix")} ${blockedReason}; ${t("firstRunStepNextPrefix")} ${nextAction}.`
+        : `${statusLabel}: ${t("firstRunStepNextPrefix")} ${nextAction}.`;
     item.dataset.stepStatus = status;
-    item.setAttribute("data-next-action", detail.nextAction ?? "review-next-action");
-    item.setAttribute("data-blocked-reason", detail.blockedReason ?? "unknown");
+    item.setAttribute("data-next-action", nextAction);
+    item.setAttribute("data-blocked-reason", blockedReason);
+    detailNode.textContent = detailText;
+    detailNode.setAttribute("data-step-detail-status", status);
     item.setAttribute(
       "aria-label",
-      `${item.textContent.trim()} Status: ${status}. Next: ${item.getAttribute("data-next-action")}. Blocked reason: ${item.getAttribute("data-blocked-reason")}.`,
+      `${baseLabel} Status: ${status}. Next: ${nextAction}. Blocked reason: ${blockedReason}.`,
     );
     if (status === "current") {
       item.setAttribute("aria-current", "step");
