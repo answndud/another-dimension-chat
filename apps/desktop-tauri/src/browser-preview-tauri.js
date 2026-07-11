@@ -341,7 +341,83 @@ if (previewHost && (forcedBrowserPreviewPeer || !hasUsableTauriInvoke)) {
     transport_io_status: "transport_io=false runtime=false",
     storage_status: "browser localStorage preview only",
     verification_status: "browser UI preview only",
+    engine_sidecar_required: true,
+    engine_sidecar_present: true,
+    engine_sidecar_packaged: true,
+    engine_sidecar_contract_version: 1,
+    engine_sidecar_protocol: "ad-engine-json-stdio-v1",
+    engine_sidecar_status_command: "status",
+    engine_sidecar_manual_self_test_command: "manual-self-test",
+    engine_sidecar_probe_supported: true,
+    engine_sidecar_spawn_supported: true,
+    engine_sidecar_raw_path_returned: false,
+    engine_sidecar_stdout_returned: false,
+    engine_sidecar_stderr_returned: false,
     local_dev_peer_label: peerLabel,
+  });
+
+  const engineSidecarStatus = () => ({
+    command: "status",
+    attempted: true,
+    engine_sidecar_present: true,
+    exit_success: true,
+    failure_class: "none",
+    schema_valid: true,
+    protocol_valid: true,
+    contract_version_valid: true,
+    runtime_mode: "contract-only-engine-sidecar",
+    manual_e2ee_runtime_available: true,
+    onion_runtime_compiled: false,
+    app_launch_network_allowed: false,
+    room_open_network_allowed: false,
+    redacted_diagnostics_only: true,
+    raw_local_path_returned: false,
+    key_material_exposed: false,
+    passphrase_exposed: false,
+    runtime_result_external_peer_evidence_separated: true,
+    windows_public_artifact_ready: false,
+    windows_installer_ready: false,
+    public_artifact_upload_allowed: false,
+    production_ready_claim: false,
+    high_risk_claim: false,
+    sensitive_communication_allowed: false,
+    stdout_returned: false,
+    stderr_returned: false,
+    sidecar_path_returned: false,
+  });
+
+  const engineSidecarManualSelfTest = () => ({
+    command: "manual-self-test",
+    attempted: true,
+    engine_sidecar_present: true,
+    exit_success: true,
+    failure_class: "none",
+    schema_valid: true,
+    protocol_valid: true,
+    contract_version_valid: true,
+    runtime_mode: "manual-e2ee-runtime",
+    manual_e2ee_runtime_available: true,
+    storage_runtime_compiled: true,
+    onion_runtime_compiled: false,
+    app_launch_network_allowed: false,
+    room_open_network_allowed: false,
+    pairing_payload_roundtrip: true,
+    safety_transcript_bound: true,
+    noise_handshake_roundtrip: true,
+    envelope_roundtrip: true,
+    replay_duplicate_rejected: true,
+    plaintext_returned: false,
+    ciphertext_returned: false,
+    invite_code_returned: false,
+    endpoint_returned: false,
+    key_material_exposed: false,
+    passphrase_exposed: false,
+    production_ready_claim: false,
+    high_risk_claim: false,
+    sensitive_communication_allowed: false,
+    stdout_returned: false,
+    stderr_returned: false,
+    sidecar_path_returned: false,
   });
 
   window.__TAURI_INTERNALS__ = {
@@ -350,6 +426,10 @@ if (previewHost && (forcedBrowserPreviewPeer || !hasUsableTauriInvoke)) {
       switch (cmd) {
         case "prototype_status":
           return prototypeStatus();
+        case "engine_sidecar_status":
+          return engineSidecarStatus();
+        case "engine_sidecar_manual_self_test":
+          return engineSidecarManualSelfTest();
         case "production_message_retention_policy":
           return { default_ttl_seconds: 86400, allowed_ttl_seconds: [3600, 86400, 604800] };
         case "production_message_retention_preference_set":

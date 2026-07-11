@@ -353,6 +353,22 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
     "receive_enabled=false",
     "receive_state=stopped",
     "manual_network_permission=true",
+    "engine_sidecar_status_runtime_checked=true",
+    "engine_sidecar_status_failure_class=none",
+    "engine_sidecar_status_contract_valid=true",
+    "engine_sidecar_status_redacted_diagnostics_only=true",
+    "engine_sidecar_status_runtime_mode=contract-only-engine-sidecar",
+    "engine_sidecar_manual_self_test_runtime_checked=true",
+    "engine_sidecar_manual_self_test_failure_class=none",
+    "engine_sidecar_manual_self_test_contract_valid=true",
+    "engine_sidecar_manual_self_test_passed=true",
+    "engine_sidecar_manual_self_test_runtime_available=true",
+    "engine_sidecar_raw_path_returned=false",
+    "engine_sidecar_stdout_returned=false",
+    "engine_sidecar_stderr_returned=false",
+    "engine_sidecar_app_launch_network_allowed=false",
+    "engine_sidecar_room_open_network_allowed=false",
+    "engine_sidecar_local_runtime_promoted_to_delivery_proof=false",
     "real_onion_attempted=true",
     "real_onion_next_blocker=BootstrapTimeout",
     "bridge_line=obfs4 198.51.100.4:443 SECRET",
@@ -377,6 +393,7 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
     diagnostics,
     /allowed_public_intake_fields=app-status#app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network#release-class-readiness/,
   );
+  assert.match(diagnostics, /engine-sidecar-status-failure-class#engine-sidecar-manual-self-test-failure-class/);
   assert.match(
     diagnostics,
     /forbidden_public_intake_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles/,
@@ -436,6 +453,21 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.match(diagnostics, /windows_redacted_diagnostics_behavior_review_required=true/);
   assert.match(diagnostics, /windows_explicit_user_action_review_required=true/);
   assert.match(diagnostics, /windows_release_blocker=local-build-smoke-and-release-boundary-review/);
+  assert.match(diagnostics, /engine_sidecar_status_runtime_checked=true/);
+  assert.match(diagnostics, /engine_sidecar_status_failure_class=none/);
+  assert.match(diagnostics, /engine_sidecar_status_contract_valid=true/);
+  assert.match(diagnostics, /engine_sidecar_status_redacted_diagnostics_only=true/);
+  assert.match(diagnostics, /engine_sidecar_manual_self_test_runtime_checked=true/);
+  assert.match(diagnostics, /engine_sidecar_manual_self_test_failure_class=none/);
+  assert.match(diagnostics, /engine_sidecar_manual_self_test_contract_valid=true/);
+  assert.match(diagnostics, /engine_sidecar_manual_self_test_passed=true/);
+  assert.match(diagnostics, /engine_sidecar_manual_self_test_runtime_available=true/);
+  assert.match(diagnostics, /engine_sidecar_raw_path_returned=false/);
+  assert.match(diagnostics, /engine_sidecar_stdout_returned=false/);
+  assert.match(diagnostics, /engine_sidecar_stderr_returned=false/);
+  assert.match(diagnostics, /engine_sidecar_app_launch_network_allowed=false/);
+  assert.match(diagnostics, /engine_sidecar_room_open_network_allowed=false/);
+  assert.match(diagnostics, /engine_sidecar_local_runtime_promoted_to_delivery_proof=false/);
   assert.match(diagnostics, /external_onion_delivery_verified=false/);
   assert.match(diagnostics, /production_messaging_ready=false/);
   assert.match(diagnostics, /security_ready_claimed=false/);
@@ -469,6 +501,9 @@ test("public beta diagnostics keeps only support-safe status, build, failure cla
   assert.doesNotMatch(diagnostics, /^route_status=/m);
   assert.doesNotMatch(diagnostics, /^receive_status=/m);
   assert.doesNotMatch(diagnostics, /^manual_network_permission=/m);
+  assert.doesNotMatch(diagnostics, /engine_sidecar_raw_path_returned=true/);
+  assert.doesNotMatch(diagnostics, /engine_sidecar_stdout_returned=true/);
+  assert.doesNotMatch(diagnostics, /engine_sidecar_stderr_returned=true/);
   assert.doesNotMatch(diagnostics, /^real_onion_attempted=/m);
   assert.doesNotMatch(diagnostics, /^manual_rebuild_flow=/m);
   assert.doesNotMatch(diagnostics, /^rebuild_/m);
@@ -789,7 +824,7 @@ test("desktop-first completion reports local private flow readiness without secu
   assert.match(receiveBlockedDiagnostics, /desktop_completion_blockers=receive#send-or-recover/);
   assert.match(receiveBlockedDiagnostics, /recovery_next_action=start-receiving/);
   assert.match(receiveBlockedDiagnostics, /desktop_acceptance_next_action=start-receiving/);
-  assert.doesNotMatch(receiveBlockedDiagnostics, /failure_class=none/);
+  assert.doesNotMatch(receiveBlockedDiagnostics, /^failure_class=none$/m);
   assert.doesNotMatch(receiveBlockedDiagnostics, /desktop_acceptance_next_action=none/);
 
   const receiveStoppingDiagnostics = publicBetaDiagnosticsReport(receiveStoppingReport);
@@ -803,7 +838,7 @@ test("desktop-first completion reports local private flow readiness without secu
   assert.match(composeBlockedDiagnostics, /desktop_completion_blockers=send-or-recover/);
   assert.match(composeBlockedDiagnostics, /recovery_next_action=write-message/);
   assert.match(composeBlockedDiagnostics, /desktop_acceptance_next_action=write-message/);
-  assert.doesNotMatch(composeBlockedDiagnostics, /failure_class=none/);
+  assert.doesNotMatch(composeBlockedDiagnostics, /^failure_class=none$/m);
   assert.doesNotMatch(composeBlockedDiagnostics, /desktop_acceptance_next_action=none/);
 
   const rollbackRecoveryDiagnostics = publicBetaDiagnosticsReport(

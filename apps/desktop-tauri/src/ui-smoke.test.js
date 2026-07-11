@@ -22,6 +22,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = join(here, "..");
 const indexHtml = readFileSync(join(appRoot, "index.html"), "utf8");
 const mainJs = readFileSync(join(here, "main.js"), "utf8");
+const browserPreviewTauriJs = readFileSync(join(here, "browser-preview-tauri.js"), "utf8");
 const i18nJs = readFileSync(join(here, "i18n.js"), "utf8");
 const actionStateJs = readFileSync(join(here, "action-state.js"), "utf8");
 const privateDeliveryStateJs = readFileSync(join(here, "private-delivery-state.js"), "utf8");
@@ -3042,6 +3043,17 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_onion_path=explicit-user-triggered-fail-closed/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_transport_mode=\$\{highRiskTransportMode\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /high_risk_transport_not_ready_reason=\$\{highRiskTransportNotReadyReason\}/);
+  assert.match(mainJs, /invoke\("engine_sidecar_status"\)/);
+  assert.match(mainJs, /invoke\("engine_sidecar_manual_self_test"\)/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_status_runtime_checked=\$\{engineSidecarStatusRuntimeChecked\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_manual_self_test_failure_class=\$\{engineSidecarManualSelfTestFailureClass\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_raw_path_returned=\$\{engineSidecarRawPathReturned\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_stdout_returned=\$\{engineSidecarStdoutReturned\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /engine_sidecar_stderr_returned=\$\{engineSidecarStderrReturned\}/);
+  assert.match(privateDeliveryStateJs, /engine_sidecar_local_runtime_promoted_to_delivery_proof=false/);
+  assert.match(browserPreviewTauriJs, /case "engine_sidecar_status":/);
+  assert.match(browserPreviewTauriJs, /case "engine_sidecar_manual_self_test":/);
+  assert.doesNotMatch(mainJs, /sidecar_path_returned=true|stdout_returned=true|stderr_returned=true/);
   assert.match(privateDeliveryStateJs, /high_risk_transport_runtime_evidence_required_for_ready=true/);
   assert.match(privateDeliveryStateJs, /high_risk_transport_runtime_evidence_present=false/);
   assert.match(
