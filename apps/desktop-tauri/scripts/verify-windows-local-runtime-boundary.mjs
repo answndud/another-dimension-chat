@@ -94,6 +94,7 @@ requireText("apps/desktop-tauri/package.json", "verify-windows-local-runtime-bou
 requireText("apps/desktop-tauri/package.json", '"tauri:build:windows-nsis:shell"');
 requireText("apps/desktop-tauri/package.json", "windows-public-shell");
 requireText("apps/desktop-tauri/package.json", '"engine:prepare-sidecar:release"');
+requireText("apps/desktop-tauri/package.json", '"engine:prepare-sidecar:release:full"');
 requireText("apps/desktop-tauri/package.json", "prepare-engine-sidecar.mjs");
 requireText("apps/desktop-tauri/src-tauri/tauri.conf.json", '"targets": "all"');
 requireText("apps/desktop-tauri/src-tauri/tauri.sidecar.conf.json", '"externalBin"');
@@ -102,7 +103,10 @@ requireText("apps/desktop-tauri/scripts/prepare-engine-sidecar.mjs", "another-di
 requireText("apps/desktop-tauri/scripts/prepare-engine-sidecar.mjs", "x86_64-pc-windows-msvc");
 requireText("apps/engine/src/main.rs", "ad-engine-sidecar-status-v1");
 requireText("apps/engine/src/main.rs", "ad-engine-json-stdio-v1");
+requireText("apps/engine/Cargo.toml", "full-runtime = [\"dep:another-dimension-core\"]");
+requireText("apps/engine/src/main.rs", "contract-only-engine-sidecar");
 requireText("apps/engine/src/main.rs", "manual-e2ee-engine-sidecar");
+requireText("apps/engine/src/main.rs", "cfg!(feature = \"full-runtime\")");
 requireText("apps/engine/src/main.rs", "app_launch_network_allowed: false");
 requireText("apps/engine/src/main.rs", "room_open_network_allowed: false");
 requireText("apps/engine/src/main.rs", "production_ready_claim: false");
@@ -138,7 +142,7 @@ requireText("apps/desktop-tauri/src-tauri/src/status.rs", "remaining_blocker=rea
 requireText("apps/desktop-tauri/src-tauri/src/main.rs", "engine_sidecar_contract_version");
 requireText("apps/desktop-tauri/src-tauri/src/main.rs", "engine_sidecar_protocol");
 requireText("apps/desktop-tauri/src-tauri/src/main.rs", "engine_sidecar_raw_path_returned: false");
-requireText("apps/desktop-tauri/src-tauri/src/main.rs", "manual-e2ee-engine-sidecar");
+requireText("apps/desktop-tauri/src-tauri/src/main.rs", "contract-only-engine-sidecar");
 
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_app_data_path_review_required=true");
 requireText("apps/desktop-tauri/src/private-delivery-state.js", "windows_path_separator_review_required=true");
