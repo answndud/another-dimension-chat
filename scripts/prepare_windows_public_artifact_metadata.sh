@@ -6,6 +6,18 @@ fail() {
   exit 1
 }
 
+sha256_file() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+    return
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+    return
+  fi
+  fail "missing sha256 tool: expected shasum or sha256sum"
+}
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
@@ -71,7 +83,7 @@ esac
 
 mkdir -p "$OUT_DIR"
 artifact_name="$(basename "$ARTIFACT")"
-sha256="$(shasum -a 256 "$ARTIFACT" | awk '{print $1}')"
+sha256="$(sha256_file "$ARTIFACT")"
 size_bytes="$(wc -c <"$ARTIFACT" | tr -d ' ')"
 version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
 expected_artifact_prefix="another-dimension-chat-${version}-${RELEASE_CLASS}-${ARCHITECTURE}"
@@ -86,6 +98,9 @@ checksum_file="$artifact_name.sha256"
 manifest_file="$OUT_DIR/WINDOWS_ARTIFACT_MANIFEST.json"
 manifest_checksum_file="WINDOWS_ARTIFACT_MANIFEST.json.sha256"
 release_body_file="$OUT_DIR/WINDOWS_RELEASE_BODY.md"
+install_guide_file="$OUT_DIR/INSTALL_UNSIGNED_WINDOWS.md"
+release_notes_file="$OUT_DIR/WINDOWS_RELEASE_NOTES.md"
+runtime_status_file="$OUT_DIR/WINDOWS_RUNTIME_EVIDENCE_STATUS.md"
 provenance_file="$artifact_name.provenance.json"
 
 cp "$ARTIFACT" "$OUT_DIR/$artifact_name"
@@ -166,7 +181,8 @@ JSON
 
 (
   cd "$OUT_DIR"
-  shasum -a 256 "$(basename "$manifest_file")" >"$manifest_checksum_file"
+  manifest_sha="$(sha256_file "$(basename "$manifest_file")")"
+  printf '%s  %s\n' "$manifest_sha" "$(basename "$manifest_file")" >"$manifest_checksum_file"
 )
 
 cat >"$release_body_file" <<BODY
@@ -189,10 +205,78 @@ the app.
 - Signing status: \`$SIGNING_STATUS\`
 - Manifest: \`$(basename "$manifest_file")\`
 - Manifest SHA-256 sidecar: \`$manifest_checksum_file\`
+- Install guide: \`$(basename "$install_guide_file")\`
+- Release notes: \`$(basename "$release_notes_file")\`
+- Runtime evidence status: \`$(basename "$runtime_status_file")\`
 - WebView2 runtime required: true
 - App data resolver: \`tauri-app-data\`
 - Release upload authorized by this metadata script: false
+
+Do not publish this Windows packet as a public release asset until a real
+Windows runtime result packet passes
+\`scripts/validate_windows_public_artifact_results.mjs --require-current-head\`
+and a separate maintainer release gate explicitly authorizes upload.
 BODY
+
+cat >"$install_guide_file" <<GUIDE
+# Install Unsigned Windows Candidate
+
+This Windows packet is an unsigned experimental candidate. It is not audited,
+not production-ready, and sensitive communication prohibited.
+
+1. Download the Windows artifact and matching \`.sha256\` from the same release
+   packet.
+2. Verify the checksum before running the installer:
+
+   \`\`\`powershell
+   Get-FileHash .\\$artifact_name -Algorithm SHA256
+   \`\`\`
+
+   The result must match:
+
+   \`\`\`text
+   $sha256
+   \`\`\`
+
+3. Expect SmartScreen or unsigned-publisher warnings because this artifact is
+   unsigned. Code signing and SmartScreen reputation are distribution
+   ergonomics, not the messenger security boundary.
+4. Continue only for local testing. Do not use this candidate for real or
+   sensitive communication.
+
+This packet still requires a separate real-Windows runtime result before any
+public Windows artifact claim or upload claim is allowed.
+GUIDE
+
+cat >"$release_notes_file" <<NOTES
+# Windows $RELEASE_CLASS Candidate Notes
+
+- Artifact: \`$artifact_name\`
+- Architecture: \`$ARCHITECTURE\`
+- Bundle target: \`$BUNDLE_TARGET\`
+- Signing status: \`$SIGNING_STATUS\`
+- WebView2 runtime required: true
+- Auto-update channel: absent
+- App data resolver: \`tauri-app-data\`
+- Redacted diagnostics required: true
+
+Non-claims remain active: not audited, not production-ready, sensitive
+communication prohibited, no production Windows claim, and no high-risk public
+claim.
+NOTES
+
+cat >"$runtime_status_file" <<STATUS
+# Windows Runtime Evidence Status
+
+real_windows_runtime_result_present=false
+windows_real_runtime_smoke_passed=false
+windows_public_artifact_ready=false
+windows_installer_ready=false
+windows_public_artifact_upload_allowed=false
+
+This generated packet proves artifact/checksum/provenance/manifest consistency
+only. It is not a substitute for a real Windows GUI/runtime result packet.
+STATUS
 
 node "$VALIDATOR" "$manifest_file" >/dev/null
 
@@ -203,6 +287,9 @@ manifest=$manifest_file
 checksum=$OUT_DIR/$checksum_file
 provenance=$OUT_DIR/$provenance_file
 release_body=$release_body_file
+install_guide=$install_guide_file
+release_notes=$release_notes_file
+runtime_status=$runtime_status_file
 windows_public_artifact_ready=false
 windows_installer_ready=false
 windows_public_artifact_upload_allowed=false
