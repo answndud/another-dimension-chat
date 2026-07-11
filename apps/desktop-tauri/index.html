@@ -939,6 +939,37 @@
               <p data-i18n="manualFlowGuideBoundary">
                 Manual local/default path: no network I/O, no automatic delivery, and no external delivery claim.
               </p>
+              <dl
+                id="manual-envelope-status"
+                class="manual-envelope-status"
+                aria-label="Manual envelope status"
+                data-i18n-aria-label="manualEnvelopeStatusLabel"
+              >
+                <div data-manual-envelope-panel-item="current">
+                  <dt data-i18n="manualEnvelopeStatusCurrent">Current</dt>
+                  <dd id="manual-envelope-current">Waiting for room.</dd>
+                </div>
+                <div data-manual-envelope-panel-item="export">
+                  <dt data-i18n="manualEnvelopeStatusExport">Export</dt>
+                  <dd id="manual-envelope-export">Write a message, then export.</dd>
+                </div>
+                <div data-manual-envelope-panel-item="import">
+                  <dt data-i18n="manualEnvelopeStatusImport">Import</dt>
+                  <dd id="manual-envelope-import">Load the peer envelope.</dd>
+                </div>
+                <div data-manual-envelope-panel-item="reply">
+                  <dt data-i18n="manualEnvelopeStatusReply">Reply</dt>
+                  <dd id="manual-envelope-reply">Show plaintext locally, then reply.</dd>
+                </div>
+                <div data-manual-envelope-panel-item="recovery">
+                  <dt data-i18n="manualEnvelopeStatusRecovery">Retry / cancel</dt>
+                  <dd id="manual-envelope-recovery">No pending recovery.</dd>
+                </div>
+                <div data-manual-envelope-panel-item="failure">
+                  <dt data-i18n="manualEnvelopeStatusFailure">Failure class</dt>
+                  <dd id="manual-envelope-failure">failure_class=none recovery_next_action=continue-manual-envelope-flow</dd>
+                </div>
+              </dl>
             </section>
             <div class="chat-composer">
               <label class="loop-label chat-message-label" for="production-two-profile-message" data-i18n="writeMessage">Write message</label>

@@ -13,6 +13,7 @@ import {
   fieldTestReportTriageState,
   highRiskTransportMetadataBoundaryStatus,
   localManualE2eeRuntimeBoundaryStatus,
+  manualEnvelopeExchangePanelView,
   noSilentNetworkBoundaryStatus,
   parseFieldTestReport,
   publicBetaDiagnosticsReport,
@@ -22,6 +23,72 @@ import {
   savedInviteRoomReceiveOwnershipBlocksRecovery,
   savedInviteRoomRetryOnlyWithoutRetryableOrigin,
 } from "./private-delivery-state.js";
+
+test("manual envelope panel exposes only guided status for malformed replay and missing peer", () => {
+  const malformed = manualEnvelopeExchangePanelView({
+    sessionReady: true,
+    safetyVerified: true,
+    latestFailureClass: "malformed-envelope",
+    latestRecoveryNextAction: "ask-for-fresh-envelope",
+    envelopePayload: "ADENV1SECRET",
+    messageText: "secret message",
+    localPath: "/Users/alex/private",
+    passphrase: "correct horse battery staple",
+  });
+  const replay = manualEnvelopeExchangePanelView({
+    sessionReady: true,
+    safetyVerified: true,
+    slotMismatchReason: "payload-replay_rejected",
+  });
+  const missingPeer = manualEnvelopeExchangePanelView({
+    sessionReady: true,
+    safetyVerified: true,
+    selectedNeedsPeerImport: true,
+    hasRemoteMessageEnvelopeSlot: false,
+    slotMismatchReason: "empty-slot",
+  });
+
+  assert.equal(malformed.failureClass, "malformed-envelope");
+  assert.equal(malformed.recoveryNextAction, "ask-for-fresh-envelope");
+  assert.equal(replay.failureClass, "replay-rejected");
+  assert.equal(replay.recoveryNextAction, "ask-for-fresh-envelope");
+  assert.equal(missingPeer.failureClass, "missing-peer-envelope");
+  assert.equal(missingPeer.recoveryNextAction, "load-or-ask-for-peer-envelope");
+  for (const view of [malformed, replay, missingPeer]) {
+    const serialized = JSON.stringify(view);
+    assert.equal(view.rawEnvelopePayloadReturned, false);
+    assert.equal(view.pairingPayloadReturned, false);
+    assert.equal(view.supportPayloadAllowed, false);
+    assert.match(view.boundary, /raw_envelope_payload_returned=false/);
+    assert.match(view.boundary, /diagnostics_payload_allowed=false/);
+    assert.doesNotMatch(serialized, /ADENV1SECRET|secret message|correct horse|\/Users\/alex\/private/);
+  }
+});
+
+test("manual envelope panel keeps export import reply retry states in one view", () => {
+  const view = manualEnvelopeExchangePanelView({
+    currentStep: "Reply | Next: send stored-session reply.",
+    sessionReady: true,
+    safetyVerified: true,
+    hasLocalMessageEnvelope: true,
+    hasRemoteMessageEnvelopeSlot: true,
+    hasInboundEnvelopeInput: true,
+    hasImportedMessage: true,
+    hasReceivedMessage: true,
+    hasTwoProfileReplySelected: true,
+    hasTwoProfileReplyDraftInput: true,
+    retryAvailable: true,
+    cancelAvailable: true,
+  });
+
+  assert.equal(view.current.state, "ready");
+  assert.equal(view.export.state, "complete");
+  assert.equal(view.import.state, "complete");
+  assert.equal(view.reply.state, "ready");
+  assert.equal(view.recovery.state, "ready");
+  assert.match(view.recovery.text, /retry=true cancel=true/);
+  assert.equal(view.failure.text, "failure_class=none recovery_next_action=continue-manual-envelope-flow");
+});
 
 test("saved room retryable actions require retryable outbound origin", () => {
   assert.equal(savedInviteRoomActionCanUseRetryableOutbound("retry", "retryable-outbound"), true);

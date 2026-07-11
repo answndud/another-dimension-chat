@@ -1907,6 +1907,56 @@ body.is-room-detail-mode.is-chat-active .room-list-back:focus-visible {
   padding-left: 18px;
 }
 
+.manual-envelope-status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 4px 0 0;
+}
+
+.manual-envelope-status div {
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--panel-border) 78%, var(--accent-cyan));
+  border-radius: 6px;
+  padding: 8px;
+  background: color-mix(in srgb, var(--panel-strong) 84%, var(--panel));
+}
+
+.manual-envelope-status dt {
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.manual-envelope-status dd {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.manual-envelope-status [data-panel-state="ready"] dd {
+  color: var(--accent-cyan);
+}
+
+.manual-envelope-status [data-panel-state="complete"] dd {
+  color: var(--success);
+}
+
+.manual-envelope-status [data-panel-state="blocked"],
+.manual-envelope-status [data-panel-state="failed"] {
+  border-color: color-mix(in srgb, var(--danger) 42%, var(--panel-border));
+}
+
+.manual-envelope-status [data-panel-state="blocked"] dd,
+.manual-envelope-status [data-panel-state="failed"] dd {
+  color: var(--danger);
+}
+
 .chat-diagnostics[open] {
   border-top: 1px solid var(--panel-border);
   padding-top: 10px;

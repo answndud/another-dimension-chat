@@ -2795,12 +2795,29 @@ test("manual encrypted envelope guide keeps local default flow visible", () => {
   assert.match(indexHtml, /data-i18n="manualFlowGuideStepImport"/);
   assert.match(indexHtml, /data-i18n="manualFlowGuideStepRecovery"/);
   assert.match(indexHtml, /data-i18n="manualFlowGuideBoundary"/);
+  assert.match(indexHtml, /id="manual-envelope-status"/);
+  assert.match(indexHtml, /id="manual-envelope-current"/);
+  assert.match(indexHtml, /id="manual-envelope-export"/);
+  assert.match(indexHtml, /id="manual-envelope-import"/);
+  assert.match(indexHtml, /id="manual-envelope-reply"/);
+  assert.match(indexHtml, /id="manual-envelope-recovery"/);
+  assert.match(indexHtml, /id="manual-envelope-failure"/);
   assert.match(i18nJs, /Default path is local\/manual encrypted envelope exchange/);
   assert.match(i18nJs, /export, carry through your existing channel, import, then reply/);
   assert.match(i18nJs, /retry or cancel pending sends/);
   assert.match(i18nJs, /delete only local conversation records/);
   assert.match(i18nJs, /Manual local\/default path: no network I\/O, no automatic delivery, and no external delivery claim\./);
   assert.match(stylesCss, /\.manual-flow-guide/);
+  assert.match(stylesCss, /\.manual-envelope-status/);
+  assert.match(privateDeliveryStateJs, /export function manualEnvelopeExchangePanelView/);
+  assert.match(privateDeliveryStateJs, /rawEnvelopePayloadReturned: false/);
+  assert.match(privateDeliveryStateJs, /supportPayloadAllowed: false/);
+  assert.match(mainJs, /manualEnvelopeExchangePanelView/);
+  assert.match(functionBody(mainJs, "renderManualEnvelopePanel"), /fields\.manualEnvelopeStatus\.dataset\.failureClass/);
+  assert.match(functionBody(mainJs, "renderManualEnvelopePanel"), /rawEnvelopePayloadReturned/);
+  assert.match(functionBody(mainJs, "applyProductionActionState"), /renderManualEnvelopePanel\(\{/);
+  assert.match(functionBody(mainJs, "applyProductionActionState"), /slotMismatchReason: activePeerEnvelopeSlotMismatchReason/);
+  assert.match(functionBody(mainJs, "importProductionMessageEnvelope"), /rememberManualEnvelopePanelFailure\(error, "ask-for-fresh-envelope"\)/);
 });
 
 test("public diagnostics recovery guide keeps support-safe next actions visible", () => {

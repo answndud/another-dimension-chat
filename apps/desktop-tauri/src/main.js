@@ -85,6 +85,7 @@ import {
   messageEnvelopeSlotMatchesEntry,
   messageEnvelopeSlotPayload,
   messageEnvelopeSlotRecoveryHint,
+  messageEnvelopeSlotMismatchReason,
 } from "./message-envelope-slots.js";
 import { combinedTwoProfileTranscriptTsv } from "./transcript-export.js";
 import { transcriptRetentionView } from "./transcript-retention.js";
@@ -247,6 +248,13 @@ const fields = {
   productionManualMode: document.querySelector("#production-manual-mode"),
   productionManualPolicy: document.querySelector("#production-manual-policy"),
   productionManualCurrent: document.querySelector("#production-manual-current"),
+  manualEnvelopeStatus: document.querySelector("#manual-envelope-status"),
+  manualEnvelopeCurrent: document.querySelector("#manual-envelope-current"),
+  manualEnvelopeExport: document.querySelector("#manual-envelope-export"),
+  manualEnvelopeImport: document.querySelector("#manual-envelope-import"),
+  manualEnvelopeReply: document.querySelector("#manual-envelope-reply"),
+  manualEnvelopeRecovery: document.querySelector("#manual-envelope-recovery"),
+  manualEnvelopeFailure: document.querySelector("#manual-envelope-failure"),
   focusProductionCurrentAction: document.querySelector("#focus-production-current-action"),
   productionTwoProfileSessionStatus: document.querySelector("#production-two-profile-session-status"),
   checkProductionTwoProfileSessionStatus: document.querySelector(
@@ -560,6 +568,7 @@ let productionTwoProfileOnionReceiveMode = {
   ownerMatchesReceiveProfile: true,
 };
 let latestProductionMessageImport = null;
+let latestManualEnvelopePanelFailure = null;
 let latestProductionPairingSafety = null;
 let productionBusyAction = null;
 let activeInviteRoomOpenFingerprint = "";
@@ -10085,8 +10094,68 @@ function renderManualMessageStatus(state) {
   setProductionMessageManualCurrent(null);
 }
 
+function setManualEnvelopePanelItem(node, item) {
+  if (!node || !item) {
+    return;
+  }
+  setText(node, item.text);
+  node.dataset.panelState = item.state;
+  const container = node.closest("[data-manual-envelope-panel-item]");
+  if (container) {
+    container.dataset.panelState = item.state;
+  }
+}
+
+function renderManualEnvelopePanel(input) {
+  if (!fields.manualEnvelopeStatus) {
+    return null;
+  }
+  const view = privateDeliveryState.manualEnvelopeExchangePanelView(input);
+  setManualEnvelopePanelItem(fields.manualEnvelopeCurrent, view.current);
+  setManualEnvelopePanelItem(fields.manualEnvelopeExport, view.export);
+  setManualEnvelopePanelItem(fields.manualEnvelopeImport, view.import);
+  setManualEnvelopePanelItem(fields.manualEnvelopeReply, view.reply);
+  setManualEnvelopePanelItem(fields.manualEnvelopeRecovery, view.recovery);
+  setManualEnvelopePanelItem(fields.manualEnvelopeFailure, view.failure);
+  fields.manualEnvelopeStatus.dataset.failureClass = view.failureClass;
+  fields.manualEnvelopeStatus.dataset.recoveryNextAction = view.recoveryNextAction;
+  fields.manualEnvelopeStatus.dataset.rawEnvelopePayloadReturned = String(view.rawEnvelopePayloadReturned);
+  fields.manualEnvelopeStatus.dataset.pairingPayloadReturned = String(view.pairingPayloadReturned);
+  fields.manualEnvelopeStatus.dataset.supportPayloadAllowed = String(view.supportPayloadAllowed);
+  fields.manualEnvelopeStatus.dataset.boundary = view.boundary;
+  return view;
+}
+
+function clearManualEnvelopePanelFailure() {
+  latestManualEnvelopePanelFailure = null;
+}
+
+function manualEnvelopeFailureClassForError(error) {
+  const text = String(error ?? "").toLowerCase();
+  if (text.includes("replay")) {
+    return "replay-rejected";
+  }
+  if (
+    text.includes("malformed") ||
+    text.includes("decode") ||
+    text.includes("payload") ||
+    text.includes("envelope")
+  ) {
+    return "malformed-envelope";
+  }
+  return redactedUiErrorClass(error);
+}
+
+function rememberManualEnvelopePanelFailure(error, recoveryNextAction = "ask-for-fresh-envelope") {
+  latestManualEnvelopePanelFailure = {
+    failureClass: manualEnvelopeFailureClassForError(error),
+    recoveryNextAction,
+  };
+}
+
 function resetProductionMessageImportState() {
   latestProductionMessageImport = null;
+  clearManualEnvelopePanelFailure();
   if (fields.productionReceivedMessage) {
     fields.productionReceivedMessage.value = "";
   }
@@ -13791,6 +13860,41 @@ function applyProductionActionState() {
   const latestConversationHasSenderEnvelopeSlot = Boolean(
     latestConversation && messageEnvelopeSlotReadyForEntry(latestConversation.sender, latestConversation),
   );
+  const selectedConversationHasSenderEnvelopeSlot = Boolean(
+    selectedConversation && messageEnvelopeSlotReadyForEntry(selectedConversation.sender, selectedConversation),
+  );
+  const activePeerEnvelopeSlot = pendingMessageEnvelopeSlotForActiveProfile(activeProductionProfileName());
+  const activePeerEnvelopeSlotMismatchReason = activePeerEnvelopeSlot.entry
+    ? messageEnvelopeSlotMismatchReason(activePeerEnvelopeSlot.slot, activePeerEnvelopeSlot.entry)
+    : state.selectedNeedsPeerImport
+      ? "empty-slot"
+      : "none";
+  renderManualEnvelopePanel({
+    currentStep: fields.productionManualCurrent?.textContent || productionManualCurrentStepView(state),
+    sessionReady: Boolean(twoProfileSessionsReady || sessionReadyForMessages),
+    safetyVerified: Boolean(twoProfileSafetyConfirmed || pairingSafetyVerified),
+    hasOutboundMessageInput,
+    hasLocalMessageEnvelope,
+    senderEnvelopeSlotPresent: latestConversationHasSenderEnvelopeSlot || selectedConversationHasSenderEnvelopeSlot,
+    outboundExported: Boolean(latestConversation?.statuses?.has("sent") || selectedConversation?.statuses?.has("sent")),
+    hasRemoteMessageEnvelopeSlot,
+    hasInboundEnvelopeInput,
+    hasImportedMessage,
+    hasReceivedMessage,
+    inboundImported: Boolean(latestConversation?.statuses?.has("received") || selectedConversation?.statuses?.has("received")),
+    hasTwoProfileReplySelected: state.hasTwoProfileReplySelected,
+    hasTwoProfileReplyDraftInput: state.hasTwoProfileReplyDraftInput,
+    plaintextReviewPending,
+    selectedNeedsSenderExport,
+    selectedNeedsPeerImport,
+    selectedMessageInputMatches,
+    selectedMessageInputStale,
+    retryAvailable: Boolean(retryableOutboundConversation),
+    cancelAvailable: Boolean(pendingConversation || retryableOutboundConversation),
+    slotMismatchReason: activePeerEnvelopeSlotMismatchReason,
+    latestFailureClass: latestManualEnvelopePanelFailure?.failureClass,
+    latestRecoveryNextAction: latestManualEnvelopePanelFailure?.recoveryNextAction,
+  });
   const deliveryProductization = productionMessageDeliveryProductizationView({
     profileUnlocked: latestProductionProfileUnlocked || sessionReadyForMessages || twoProfileSessionsReady,
     pairwiseInviteReady: hasTwoProfileSessionStatusInput || hasTwoProfileSetupInput,
@@ -21163,6 +21267,7 @@ async function importProductionMessageEnvelope() {
     setProductionMessageState("Message envelope import failed");
     setText(fields.productionMessageWarning, redactedUiErrorMessage("message-import", error));
     setText(fields.productionMessageInbound, "Failed");
+    rememberManualEnvelopePanelFailure(error, "ask-for-fresh-envelope");
     rememberFailureSupportReport(
       "message-envelope-import",
       "message_exchange_failed",
