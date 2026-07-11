@@ -32,7 +32,13 @@ and does not allow sensitive communication claims.
 - manifest_sha256_sidecar_required=true
 - artifact_basename_path_boundary_required=true
 - manifest_validates_version_commit_installer_webview2_no_auto_update=true
+- windows_runtime_result_packet_required_for_public_artifact=true
+- windows_manifest_checksum_provenance_separate_from_runtime_result=true
 - runtime_result_external_peer_evidence_separated=true
+- real_windows_runtime_result_present=false
+- windows_runtime_result_fixture_promoted_to_public_artifact=false
+- windows_non_windows_runtime_result_promoted=false
+- windows_local_or_fabricated_runtime_result_promoted=false
 - local_runtime_promoted_to_delivery_proof=false
 - smartscreen_security_boundary_claimed=false
 - code_signing_security_boundary_claimed=false
@@ -42,6 +48,9 @@ and does not allow sensitive communication claims.
 - windows_installer_ready=false
 - windows_signing_ready=false
 - windows_public_artifact_upload_allowed=false
+- windows_public_artifact_claim_allowed=false
+- windows_installer_claim_allowed=false
+- windows_upload_claim_allowed=false
 - windows_production_claim_allowed=false
 
 ## Source Owners
