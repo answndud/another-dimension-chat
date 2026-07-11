@@ -15,6 +15,8 @@ body:
         `forbidden_public_intake_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles`
 
         This beta is unsigned, not notarized, not audited, not production-ready, and sensitive communication prohibited.
+
+        Public GitHub issues are support triage only. They are not accepted representative usability evidence, not accepted production field evidence, and not High-Risk readiness evidence. Missing real-user evidence is tracked as `next_owner_action`, not as a local/source blocker.
   - type: checkboxes
     id: redaction
     attributes:
@@ -23,6 +25,8 @@ body:
         - label: I removed bridge lines, onion endpoints, invite codes, payloads, safety phrases, profile names, message text, local paths, raw logs, crash dumps, screenshots of private room data, support bundles, passphrases, private keys, and key material.
           required: true
         - label: I understand this is an unsigned experimental public beta and not safe for sensitive communication.
+          required: true
+        - label: I understand this public issue is not accepted usability, field, production, or High-Risk evidence.
           required: true
   - type: input
     id: app_version
