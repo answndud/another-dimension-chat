@@ -138,6 +138,26 @@ test("browser preview keeps invite codes open long enough for manual join", () =
   assert.match(previewSource, /const invitePresenceTtlMs = 120_000;/);
 });
 
+test("browser preview supports passphrase-first product unlock mock", async () => {
+  const invoke = createPreviewRuntime();
+  const unlocked = await invoke("production_product_unlock", {
+    profile: "alice",
+    passphrase: "browser-preview-passphrase",
+  });
+  assert.equal(unlocked.profile, "alice");
+  assert.equal(unlocked.unlocked, true);
+  assert.equal(unlocked.passphrase_first, true);
+  assert.equal(unlocked.store_path_returned, false);
+  assert.equal(unlocked.passphrase_retained, false);
+  assert.equal(unlocked.key_material_exposed, false);
+  assert.equal(unlocked.network_io_attempted, false);
+
+  const locked = await invoke("production_product_unlock_status");
+  assert.equal(locked.unlocked, false);
+  assert.equal(locked.passphrase_first, true);
+  assert.equal(locked.raw_storage_error_exposed, false);
+});
+
 test("browser preview verifies peer A/B invite join, route exchange, and transcript delivery", async () => {
   const sharedPreviewApi = createPreviewApiFetch();
   const peerA = createPreviewRuntime({ storage: new Map(), peer: "peer-a", fetch: sharedPreviewApi });

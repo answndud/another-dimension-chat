@@ -21,10 +21,10 @@ Reviewed files:
 
 - `macos-public-beta-first-run-desktop.png`: first-run unsigned beta warning and checklist.
 - `macos-public-beta-first-run-mobile.png`: narrow first-run warning and invite entry layout.
-- `macos-public-beta-room-flow-desktop.png`: invite room and manual encrypted envelope flow with blank invite fields.
-- `macos-public-beta-manual-envelope-desktop.png`: manual/default path and blank envelope flow state.
-- `macos-public-beta-diagnostics-desktop.png`: public diagnostics and recovery guide with redacted-only fields.
-- `macos-public-beta-profile-lifecycle-desktop.png`: blank profile unlock/create inputs and local data lifecycle boundary.
+- `macos-public-beta-room-flow-desktop.png`: invite room, blank invite display, and manual envelope status summary.
+- `macos-public-beta-manual-envelope-desktop.png`: manual/default path with current export/import/reply/retry/failure guidance.
+- `macos-public-beta-diagnostics-desktop.png`: revealed public diagnostics and recovery guide with redacted-only fields.
+- `macos-public-beta-profile-lifecycle-desktop.png`: revealed profile/lifecycle controls with blank profile, passphrase, and confirmation inputs.
 
 Release boundary:
 
