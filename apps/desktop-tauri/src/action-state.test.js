@@ -604,7 +604,11 @@ test("windows public artifact candidate keeps installer and security claims fals
   assert.equal(view.engineSidecarContractVersion, 1);
   assert.equal(view.engineSidecarProtocol, "ad-engine-json-stdio-v1");
   assert.equal(view.engineSidecarStatusCommand, "status");
+  assert.equal(view.engineSidecarManualSelfTestCommand, "manual-self-test");
+  assert.equal(view.engineSidecarSpawnSupported, true);
   assert.equal(view.engineSidecarRawPathReturned, false);
+  assert.equal(view.engineSidecarStdoutReturned, false);
+  assert.equal(view.engineSidecarStderrReturned, false);
   assert.equal(view.engineRuntimeMode, "contract-only-engine-sidecar");
   assert.equal(view.localRuntimePromotedToDeliveryProof, false);
   assert.equal(view.smartscreenSecurityBoundaryClaimed, false);
@@ -622,10 +626,14 @@ test("windows public artifact candidate keeps installer and security claims fals
   assert.match(view.summary, /onion_runtime_compiled=false/);
   assert.match(view.summary, /runtime_result_external_peer_evidence_separated=true/);
   assert.match(view.summary, /engine_sidecar_protocol=ad-engine-json-stdio-v1/);
+  assert.match(view.summary, /engine_sidecar_manual_self_test_command=manual-self-test/);
+  assert.match(view.summary, /engine_sidecar_spawn_supported=true/);
   assert.match(view.summary, /engine_sidecar_raw_path_returned=false/);
+  assert.match(view.summary, /engine_sidecar_stdout_returned=false/);
+  assert.match(view.summary, /engine_sidecar_stderr_returned=false/);
   assert.doesNotMatch(
     view.boundary,
-    /windows_public_artifact_ready=true|windows_installer_ready=true|windows_signing_ready=true|smartscreen_security_boundary_claimed=true|shared_core_bypass_allowed=true|engine_sidecar_raw_path_returned=true/,
+    /windows_public_artifact_ready=true|windows_installer_ready=true|windows_signing_ready=true|smartscreen_security_boundary_claimed=true|shared_core_bypass_allowed=true|engine_sidecar_raw_path_returned=true|engine_sidecar_stdout_returned=true|engine_sidecar_stderr_returned=true/,
   );
 });
 
