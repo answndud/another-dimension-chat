@@ -212,6 +212,62 @@ export function productionHighRiskTransportMetadataBoundaryView() {
   };
 }
 
+export const HIGH_RISK_READINESS_CONDITION_SET = Object.freeze([
+  "safety-verification",
+  "high-risk-transport-runtime",
+  "emergency-controls",
+  "clipboard-expiry",
+  "local-storage-evidence",
+  "release-integrity",
+]);
+
+const HIGH_RISK_READINESS_CONDITION_FIELDS = Object.freeze({
+  "safety-verification": "safety_verification_ready",
+  "high-risk-transport-runtime": "high_risk_transport_runtime_ready",
+  "emergency-controls": "emergency_controls_ready",
+  "clipboard-expiry": "clipboard_expiry_ready",
+  "local-storage-evidence": "local_storage_evidence_ready",
+  "release-integrity": "release_integrity_ready",
+});
+
+const HIGH_RISK_READINESS_CONDITION_ACTIONS = Object.freeze({
+  "safety-verification": "verify-safety-number",
+  "high-risk-transport-runtime": "run-high-risk-transport-runtime-evidence",
+  "emergency-controls": "open-emergency-controls",
+  "clipboard-expiry": "enable-clipboard-expiry",
+  "local-storage-evidence": "check-local-storage-runtime-evidence",
+  "release-integrity": "run-release-integrity-gate",
+});
+
+function productionHighRiskReadinessConditionSnapshot(input = {}, runtime = {}) {
+  const highRiskTransportRuntimeReady = runtime.highRiskTransportRuntimeReady === true;
+  const conditionValues = {
+    "safety-verification": input.safetyVerificationReady === true || input.pairwiseSafetyVerified === true,
+    "high-risk-transport-runtime": highRiskTransportRuntimeReady,
+    "emergency-controls": input.emergencyControlsReady === true || input.emergencyControlsReachable === true,
+    "clipboard-expiry": input.clipboardExpiryReady === true,
+    "local-storage-evidence":
+      input.localStorageEvidenceReady === true || input.localStorageRuntimeEvidenceReady === true,
+    "release-integrity": input.releaseIntegrityReady === true || input.releaseIntegrityAvailable === true,
+  };
+  const missingConditions = HIGH_RISK_READINESS_CONDITION_SET.filter((code) => !conditionValues[code]);
+  return {
+    conditionSet: HIGH_RISK_READINESS_CONDITION_SET.join("#"),
+    conditionFields: HIGH_RISK_READINESS_CONDITION_SET.map(
+      (code) => HIGH_RISK_READINESS_CONDITION_FIELDS[code],
+    ).join("#"),
+    missingConditions,
+    missingConditionFields: missingConditions.map((code) => HIGH_RISK_READINESS_CONDITION_FIELDS[code]),
+    nextActions: missingConditions.map((code) => HIGH_RISK_READINESS_CONDITION_ACTIONS[code]),
+    safetyVerificationReady: conditionValues["safety-verification"],
+    highRiskTransportRuntimeReady: conditionValues["high-risk-transport-runtime"],
+    emergencyControlsReady: conditionValues["emergency-controls"],
+    clipboardExpiryReady: conditionValues["clipboard-expiry"],
+    localStorageEvidenceReady: conditionValues["local-storage-evidence"],
+    releaseIntegrityReady: conditionValues["release-integrity"],
+  };
+}
+
 export function productionHighRiskRuntimeEvidenceGateView(input = {}) {
   const allowedFailureClasses = new Set([
     "none",
@@ -268,6 +324,16 @@ export function productionHighRiskRuntimeEvidenceGateView(input = {}) {
   if (localOnlyEvidence) blockers.push("local-only-evidence");
   if (fabricatedEvidence) blockers.push("fabricated-evidence");
   if (forbiddenFieldsPresent) blockers.push("forbidden-field-present");
+  const readiness = productionHighRiskReadinessConditionSnapshot(
+    {
+      ...input,
+      clipboardExpiryReady,
+      emergencyControlsReady: emergencyControlsReachable,
+    },
+    {
+      highRiskTransportRuntimeReady: accepted,
+    },
+  );
   const primaryBlocker = blockers[0] ?? "none";
   const nextAction = accepted ? "keep-public-claim-closed" : "collect-real-redacted-runtime-report";
   const summary = [
@@ -288,6 +354,13 @@ export function productionHighRiskRuntimeEvidenceGateView(input = {}) {
     `clipboard_ttl_ms=${clipboardTtlMs}`,
     `clipboard_expiry_ready=${clipboardExpiryReady}`,
     `emergency_controls_reachable=${emergencyControlsReachable}`,
+    `readiness_condition_set=${readiness.conditionSet}`,
+    `readiness_missing_conditions=${readiness.missingConditions.join("#") || "none"}`,
+    `safety_verification_ready=${readiness.safetyVerificationReady}`,
+    `high_risk_transport_runtime_ready=${readiness.highRiskTransportRuntimeReady}`,
+    `emergency_controls_ready=${readiness.emergencyControlsReady}`,
+    `local_storage_evidence_ready=${readiness.localStorageEvidenceReady}`,
+    `release_integrity_ready=${readiness.releaseIntegrityReady}`,
     `local_only_evidence=${localOnlyEvidence}`,
     `local_only_evidence_promoted=false`,
     `fabricated_evidence=${fabricatedEvidence}`,
@@ -309,6 +382,8 @@ export function productionHighRiskRuntimeEvidenceGateView(input = {}) {
     primaryBlocker,
     blockers,
     nextAction,
+    readinessConditionSet: readiness.conditionSet,
+    readinessMissingConditions: readiness.missingConditions,
     failureClass,
     highRiskPublicClaimAllowed: false,
     highRiskReadyClaimAllowed: false,
@@ -417,34 +492,36 @@ export function productionHighRiskReadinessGateView(input = {}) {
   const rollbackMarkerHealthy = input.rollbackMarkerHealthy === true;
   const diagnosticsRedacted = input.diagnosticsRedacted === true;
   const releaseIntegrityAvailable = input.releaseIntegrityAvailable === true;
-  const missing = [];
-  if (!threatMatrixAccepted) missing.push(["threat-matrix-not-accepted", "accept-threat-model"]);
-  if (!pairwiseSafetyVerified) missing.push(["safety-not-verified", "verify-safety-number"]);
-  if (!productionKeyManagementReady) {
-    missing.push(["key-management-not-ready", "unlock-profile-with-production-key-management"]);
-  }
-  if (!rollbackMarkerHealthy) missing.push(["rollback-marker-not-healthy", "check-local-data-lifecycle"]);
-  if (!diagnosticsRedacted) missing.push(["diagnostics-not-redacted", "use-redacted-support-report"]);
-  if (!releaseIntegrityAvailable) missing.push(["release-integrity-missing", "run-release-integrity-gate"]);
-  if (input.highRiskTransportReady === true && !highRiskRuntimeEvidencePresent) {
-    missing.push(["transport-runtime-evidence-missing", "run-high-risk-transport-runtime-evidence"]);
-  }
-  if (!highRiskTransportReady && !highRiskTransportExplicitlyDisabled) {
-    missing.push(["transport-neither-ready-nor-disabled", "enable-high-risk-transport-or-mark-disabled"]);
-  }
-  const baseReady = missing.length === 0;
-  const status = baseReady && highRiskTransportReady
-    ? "ready"
-    : baseReady && highRiskTransportExplicitlyDisabled
-      ? "limited"
-      : "not_ready";
+  const localStorageEvidenceReady =
+    input.localStorageEvidenceReady === true ||
+    input.localStorageRuntimeEvidenceReady === true ||
+    (productionKeyManagementReady && rollbackMarkerHealthy && input.localStorageEvidenceInferredFromKeyLifecycle === true);
+  const readiness = productionHighRiskReadinessConditionSnapshot(
+    {
+      ...input,
+      pairwiseSafetyVerified,
+      localStorageEvidenceReady,
+      releaseIntegrityAvailable,
+    },
+    { highRiskTransportRuntimeReady: highRiskTransportReady },
+  );
+  const onlyRuntimeMissing =
+    readiness.missingConditions.length === 1 &&
+    readiness.missingConditions[0] === "high-risk-transport-runtime";
+  const status =
+    readiness.missingConditions.length === 0
+      ? "ready"
+      : onlyRuntimeMissing && highRiskTransportExplicitlyDisabled
+        ? "limited"
+        : "not_ready";
   const primary = status === "ready"
     ? ["none", "ready"]
-    : status === "limited"
-      ? ["transport-explicitly-disabled", "enable-high-risk-transport-for-ready"]
-      : missing[0] ?? ["unknown", "review-high-risk-checklist"];
-  const reasonCodes = status === "limited" ? [primary[0]] : missing.map(([code]) => code);
-  const nextActions = status === "limited" ? [primary[1]] : missing.map(([, action]) => action);
+    : [
+        readiness.missingConditions[0] ?? "unknown",
+        readiness.nextActions[0] ?? "review-high-risk-checklist",
+      ];
+  const reasonCodes = status === "ready" ? [] : readiness.missingConditions;
+  const nextActions = status === "ready" ? [] : readiness.nextActions;
   const highRiskOperationalReady = status === "ready";
   const highRiskReadyClaimAllowed = false;
   const summary = [
@@ -454,6 +531,16 @@ export function productionHighRiskReadinessGateView(input = {}) {
     `next_action=${primary[1]}`,
     `reason_codes=${reasonCodes.join("#") || "none"}`,
     `next_actions=${nextActions.join("#") || "none"}`,
+    `readiness_condition_set=${readiness.conditionSet}`,
+    `readiness_condition_fields=${readiness.conditionFields}`,
+    `readiness_missing_conditions=${readiness.missingConditions.join("#") || "none"}`,
+    `readiness_missing_condition_fields=${readiness.missingConditionFields.join("#") || "none"}`,
+    `safety_verification_ready=${readiness.safetyVerificationReady}`,
+    `high_risk_transport_runtime_ready=${readiness.highRiskTransportRuntimeReady}`,
+    `emergency_controls_ready=${readiness.emergencyControlsReady}`,
+    `clipboard_expiry_ready=${readiness.clipboardExpiryReady}`,
+    `local_storage_evidence_ready=${readiness.localStorageEvidenceReady}`,
+    `release_integrity_ready=${readiness.releaseIntegrityReady}`,
     `threat_matrix_accepted=${threatMatrixAccepted}`,
     `pairwise_safety_verified=${pairwiseSafetyVerified}`,
     `high_risk_transport_ready=${highRiskTransportReady}`,
@@ -477,6 +564,16 @@ export function productionHighRiskReadinessGateView(input = {}) {
     nextAction: primary[1],
     reasonCodes,
     nextActions,
+    readinessConditionSet: readiness.conditionSet,
+    readinessConditionFields: readiness.conditionFields,
+    readinessMissingConditions: readiness.missingConditions,
+    readinessMissingConditionFields: readiness.missingConditionFields,
+    safetyVerificationReady: readiness.safetyVerificationReady,
+    highRiskTransportRuntimeReady: readiness.highRiskTransportRuntimeReady,
+    emergencyControlsReady: readiness.emergencyControlsReady,
+    clipboardExpiryReady: readiness.clipboardExpiryReady,
+    localStorageEvidenceReady: readiness.localStorageEvidenceReady,
+    releaseIntegrityReady: readiness.releaseIntegrityReady,
     highRiskReadyClaimAllowed,
     publicSupportHighRiskClaimAllowed: false,
     releaseHighRiskClaimAllowed: false,

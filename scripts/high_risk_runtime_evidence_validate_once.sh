@@ -27,6 +27,13 @@ const allowed = new Set([
   "evidence_source",
   "runtime_evidence_accepted",
   "runtime_evidence_present",
+  "readiness_condition_set",
+  "readiness_missing_conditions",
+  "safety_verification_ready",
+  "high_risk_transport_runtime_ready",
+  "emergency_controls_ready",
+  "local_storage_evidence_ready",
+  "release_integrity_ready",
   "primary_blocker",
   "failure_class",
   "explicit_user_action",
@@ -103,9 +110,28 @@ const failureClasses = new Set([
   "unknown_redacted",
 ]);
 
+const readinessConditions = [
+  "safety-verification",
+  "high-risk-transport-runtime",
+  "emergency-controls",
+  "clipboard-expiry",
+  "local-storage-evidence",
+  "release-integrity",
+];
+const readinessConditionSet = readinessConditions.join("#");
+const readinessFields = {
+  "safety-verification": "safety_verification_ready",
+  "high-risk-transport-runtime": "high_risk_transport_runtime_ready",
+  "emergency-controls": "emergency_controls_ready",
+  "clipboard-expiry": "clipboard_expiry_ready",
+  "local-storage-evidence": "local_storage_evidence_ready",
+  "release-integrity": "release_integrity_ready",
+};
+
 const issues = [];
 const files = process.argv.slice(2);
 let acceptedCount = 0;
+const readinessMissing = new Set();
 
 function inspectForbidden(value, path = "") {
   if (Array.isArray(value)) {
@@ -157,6 +183,28 @@ for (const file of files) {
   if (report.high_risk_ready_claim_allowed !== false) {
     issues.push("invalid-value:high_risk_ready_claim_allowed");
   }
+  const computedMissingConditions = readinessConditions.filter((condition) => {
+    if (condition === "high-risk-transport-runtime") {
+      return !(
+        report.high_risk_transport_runtime_ready === true ||
+        (report.runtime_evidence_accepted === true && report.runtime_evidence_present === true)
+      );
+    }
+    if (condition === "emergency-controls") {
+      return !(report.emergency_controls_ready === true || report.emergency_controls_reachable === true);
+    }
+    return report[readinessFields[condition]] !== true;
+  });
+  for (const condition of computedMissingConditions) readinessMissing.add(condition);
+  if (report.readiness_condition_set !== undefined && report.readiness_condition_set !== readinessConditionSet) {
+    issues.push("invalid-value:readiness_condition_set");
+  }
+  if (
+    report.readiness_missing_conditions !== undefined &&
+    report.readiness_missing_conditions !== (computedMissingConditions.join("#") || "none")
+  ) {
+    issues.push("invalid-value:readiness_missing_conditions");
+  }
   if (report.runtime_evidence_accepted === true) {
     if (report.evidence_source !== "runtime-report") issues.push("invalid-value:evidence_source");
     for (const key of acceptedTrue) {
@@ -190,6 +238,8 @@ if (issues.length > 0) {
 console.log("status=high-risk-runtime-evidence-valid");
 console.log("high_risk_runtime_evidence_packet_valid=true");
 console.log(`high_risk_runtime_evidence_accepted=${acceptedCount > 0}`);
+console.log(`readiness_condition_set=${readinessConditionSet}`);
+console.log(`readiness_missing_conditions=${[...readinessMissing].join("#") || "none"}`);
 console.log("high_risk_public_claim_allowed=false");
 console.log("high_risk_ready_claim_allowed=false");
 NODE

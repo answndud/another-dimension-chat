@@ -25,6 +25,7 @@ Machine-readable boundary:
 high_risk_matrix=remote_passive_observer:mitigated,remote_active_attacker:mitigated,malicious_peer:mitigated,local_at_rest_attacker:mitigated,supply_chain_update_attacker:mitigated,compromised_endpoint:not_protected,direct_coercion:not_protected,global_traffic_correlation:not_protected
 claimable_statuses=protected,mitigated
 not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation
+readiness_condition_set=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity
 audited_security_claim=false
 full_censorship_resistance_claim=false
 briar_cwtch_equivalence_claim=false
@@ -33,3 +34,16 @@ coercion_safe_claim=false
 full_global_traffic_correlation_safe_claim=false
 reliable_external_onion_delivery_claim=false
 ```
+
+High-Risk Mode readiness must expose unmet local/source conditions with this
+same vocabulary:
+
+- `safety-verification`
+- `high-risk-transport-runtime`
+- `emergency-controls`
+- `clipboard-expiry`
+- `local-storage-evidence`
+- `release-integrity`
+
+Missing conditions are actionable status, not public permission to claim
+High-Risk readiness.
