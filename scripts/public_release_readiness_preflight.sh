@@ -288,6 +288,30 @@ check_final_claim_acceptance_hold() {
     echo "FAIL final acceptance missing Windows artifact blocker" >&2
     exit 1
   }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "real_windows_runtime_result_present=false" || {
+    echo "FAIL final acceptance missing real Windows runtime result absence" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_runtime_result_packet_required_for_public_artifact=true" || {
+    echo "FAIL final acceptance missing Windows runtime result packet requirement" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_manifest_checksum_provenance_separate_from_runtime_result=true" || {
+    echo "FAIL final acceptance missing Windows manifest/runtime evidence separation" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_public_artifact_claim_allowed=false" || {
+    echo "FAIL final acceptance missing Windows public artifact claim hold" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_installer_claim_allowed=false" || {
+    echo "FAIL final acceptance missing Windows installer claim hold" >&2
+    exit 1
+  }
+  printf '%s\n' "$final_acceptance_output" | grep -Fq -- "windows_upload_claim_allowed=false" || {
+    echo "FAIL final acceptance missing Windows upload claim hold" >&2
+    exit 1
+  }
   printf '%s\n' "$final_acceptance_output" | grep -Fq -- "support_redaction_verified=true" || {
     echo "FAIL final acceptance missing support redaction status" >&2
     exit 1
@@ -316,6 +340,12 @@ check_final_claim_acceptance_hold() {
   echo "final_claim_stable_candidate_blocked_by_external_review_evidence=true"
   echo "final_claim_macos_artifact_consistency=false"
   echo "final_claim_windows_artifact_consistency=false"
+  echo "final_claim_real_windows_runtime_result_present=false"
+  echo "final_claim_windows_runtime_result_packet_required_for_public_artifact=true"
+  echo "final_claim_windows_manifest_checksum_provenance_separate_from_runtime_result=true"
+  echo "final_claim_windows_public_artifact_claim_allowed=false"
+  echo "final_claim_windows_installer_claim_allowed=false"
+  echo "final_claim_windows_upload_claim_allowed=false"
   echo "final_claim_support_redaction_verified=true"
   echo "final_claim_forbidden_positive_public_claims_found=false"
 }
@@ -375,6 +405,11 @@ echo "windows_public_artifact_candidate_gate_script=scripts/windows_public_artif
 echo "artifact_consistency_sequence=macos-release-distribution-manifest#windows-public-artifact-candidate-gate#final-claim-acceptance"
 echo "macos_artifact_consistency_verified=false"
 echo "windows_artifact_consistency_verified=false"
+echo "real_windows_runtime_result_present=false"
+echo "windows_runtime_result_packet_required_for_public_artifact=true"
+echo "windows_manifest_checksum_provenance_separate_from_runtime_result=true"
+echo "windows_non_windows_runtime_result_promoted=false"
+echo "windows_local_or_fabricated_runtime_result_promoted=false"
 echo "external_evidence_presence=false"
 echo "external_evidence_required_for_stable_candidate=true"
 echo "independent_review_packet_source_ready=true"
@@ -415,6 +450,9 @@ echo "windows_redacted_diagnostics_behavior_review_required=false"
 echo "windows_runtime_result_external_peer_evidence_separated=true"
 echo "windows_explicit_user_action_review_required=true"
 echo "windows_public_artifact_upload_allowed=false"
+echo "windows_public_artifact_claim_allowed=false"
+echo "windows_installer_claim_allowed=false"
+echo "windows_upload_claim_allowed=false"
 echo "windows_local_runtime_smoke_passed=false"
 echo "support_redaction_verified=true"
 echo "final_claim_acceptance=hold-expected"
@@ -440,6 +478,12 @@ echo "final_claim_external_review_claim_allowed=false"
 echo "final_claim_stable_candidate_blocked_by_external_review_evidence=true"
 echo "final_claim_macos_artifact_consistency=false"
 echo "final_claim_windows_artifact_consistency=false"
+echo "final_claim_real_windows_runtime_result_present=false"
+echo "final_claim_windows_runtime_result_packet_required_for_public_artifact=true"
+echo "final_claim_windows_manifest_checksum_provenance_separate_from_runtime_result=true"
+echo "final_claim_windows_public_artifact_claim_allowed=false"
+echo "final_claim_windows_installer_claim_allowed=false"
+echo "final_claim_windows_upload_claim_allowed=false"
 echo "final_claim_forbidden_positive_public_claims_found=false"
 echo "stable_candidate_rehearsal=source-only-hold"
 echo "stable_candidate_rehearsal_generated_artifacts_created=false"

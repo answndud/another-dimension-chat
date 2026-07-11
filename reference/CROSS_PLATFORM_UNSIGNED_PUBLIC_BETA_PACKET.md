@@ -58,6 +58,17 @@ Platform claim matrix:
 | Android | source shell candidate only | no APK/AAB/public artifact claim |
 | iOS | source shell candidate only | no IPA/TestFlight/App Store/public artifact claim |
 
+Windows runtime evidence gate:
+
+```text
+real_windows_runtime_result_present=false
+windows_runtime_result_packet_required_for_public_artifact=true
+windows_manifest_checksum_provenance_separate_from_runtime_result=true
+windows_public_artifact_claim_allowed=false
+windows_installer_claim_allowed=false
+windows_upload_claim_allowed=false
+```
+
 High-Risk Mode remains a defined target. Public copy may describe the target
 and the not-protected boundary, but public High-Risk readiness remains false.
 High-Risk runtime evidence validator is a redacted evidence-format gate; it does
