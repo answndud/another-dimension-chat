@@ -6,6 +6,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: windows-public-artifact-candidate-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   windows-public-artifact-candidate:
     name: Build unsigned Windows candidate
@@ -13,7 +17,8 @@ jobs:
     timeout-minutes: 45
 
     env:
-      CARGO_INCREMENTAL: "0"
+      CARGO_INCREMENTAL: "1"
+      CARGO_TARGET_DIR: ${{ github.workspace }}/.build-cache/cargo-target
       VITE_AD_BUILD_CHANNEL: beta-onion
 
     steps:
@@ -23,6 +28,18 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache Rust registry, git, and target output
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            .build-cache/cargo-target/
+          key: windows-tauri-cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'apps/desktop-tauri/src-tauri/Cargo.toml', 'crates/**/Cargo.toml') }}
+          restore-keys: |
+            windows-tauri-cargo-${{ runner.os }}-
+
       - name: Install Node.js
         uses: actions/setup-node@v6
         with:
@@ -31,7 +48,7 @@ jobs:
           cache-dependency-path: apps/desktop-tauri/package-lock.json
 
       - name: Install desktop dependencies
-        run: npm ci --prefix apps/desktop-tauri
+        run: npm ci --prefix apps/desktop-tauri --prefer-offline
 
       - name: Check Windows source boundary
         shell: bash
@@ -49,8 +66,6 @@ jobs:
       - name: Build unsigned NSIS candidate
         shell: pwsh
         working-directory: apps/desktop-tauri
-        env:
-          CARGO_TARGET_DIR: ${{ github.workspace }}/.build-cache/cargo-target
         run: npm exec tauri -- build --features manual-onion-client-attempt --bundles nsis
 
       - name: Prepare ignored Windows release packet
