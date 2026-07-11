@@ -52,6 +52,20 @@ cat >"$tmp_dir/$artifact_name.provenance.json" <<JSON
   "artifact_sha256": "$artifact_sha",
   "release_class": "unsigned-windows-beta",
   "bundle_target": "nsis",
+  "engine_sidecar_required": true,
+  "engine_sidecar_packaged": true,
+  "engine_sidecar_runtime_mode": "manual-e2ee-engine-sidecar",
+  "engine_sidecar_protocol": "ad-engine-json-stdio-v1",
+  "engine_sidecar_contract_version": 1,
+  "engine_sidecar_status_command": "status",
+  "engine_sidecar_manual_self_test_command": "manual-self-test",
+  "engine_sidecar_manual_self_test_required": true,
+  "engine_sidecar_raw_path_returned": false,
+  "engine_sidecar_stdout_returned": false,
+  "engine_sidecar_stderr_returned": false,
+  "engine_sidecar_app_launch_network_allowed": false,
+  "engine_sidecar_room_open_network_allowed": false,
+  "engine_sidecar_local_runtime_promoted_to_delivery_proof": false,
   "signing_status": "unsigned-hold",
   "release_upload_authorized": false,
   "windows_public_artifact_ready": false,
@@ -71,6 +85,20 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
   "manifest_sha256_file": "WINDOWS_ARTIFACT_MANIFEST.json.sha256",
   "default_bundle_target": "nsis",
   "default_artifact_extension": ".exe",
+  "engine_sidecar_required": true,
+  "engine_sidecar_packaged": true,
+  "engine_sidecar_runtime_mode": "manual-e2ee-engine-sidecar",
+  "engine_sidecar_protocol": "ad-engine-json-stdio-v1",
+  "engine_sidecar_contract_version": 1,
+  "engine_sidecar_status_command": "status",
+  "engine_sidecar_manual_self_test_command": "manual-self-test",
+  "engine_sidecar_manual_self_test_required": true,
+  "engine_sidecar_raw_path_returned": false,
+  "engine_sidecar_stdout_returned": false,
+  "engine_sidecar_stderr_returned": false,
+  "engine_sidecar_app_launch_network_allowed": false,
+  "engine_sidecar_room_open_network_allowed": false,
+  "engine_sidecar_local_runtime_promoted_to_delivery_proof": false,
   "webview2_runtime_required": true,
   "app_data_resolver": "tauri-app-data",
   "redacted_diagnostics_required": true,
@@ -99,6 +127,20 @@ cat >"$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" <<JSON
       "platform": "windows",
       "architecture": "windows-x64",
       "bundle_target": "nsis",
+      "engine_sidecar_required": true,
+      "engine_sidecar_packaged": true,
+      "engine_sidecar_runtime_mode": "manual-e2ee-engine-sidecar",
+      "engine_sidecar_protocol": "ad-engine-json-stdio-v1",
+      "engine_sidecar_contract_version": 1,
+      "engine_sidecar_status_command": "status",
+      "engine_sidecar_manual_self_test_command": "manual-self-test",
+      "engine_sidecar_manual_self_test_required": true,
+      "engine_sidecar_raw_path_returned": false,
+      "engine_sidecar_stdout_returned": false,
+      "engine_sidecar_stderr_returned": false,
+      "engine_sidecar_app_launch_network_allowed": false,
+      "engine_sidecar_room_open_network_allowed": false,
+      "engine_sidecar_local_runtime_promoted_to_delivery_proof": false,
       "signing_status": "unsigned-hold",
       "checksum_file": "$artifact_name.sha256",
       "checksum_sidecar": "$artifact_name.sha256",
@@ -122,6 +164,7 @@ manifest_sha="$(shasum -a 256 "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json" | awk '{
 manifest_output="$(node "$MANIFEST_VALIDATOR" "$tmp_dir/WINDOWS_ARTIFACT_MANIFEST.json")"
 must_contain "$manifest_output" "accepted_windows_artifact_manifests=1"
 must_contain "$manifest_output" "windows_artifact_checksum_bytes_verified=true"
+must_contain "$manifest_output" "windows_artifact_engine_sidecar_packaged_verified=true"
 must_contain "$manifest_output" "windows_public_artifact_ready=false"
 must_contain "$manifest_output" "status=windows-artifact-manifest-candidate-requires-release-gate"
 
@@ -164,6 +207,21 @@ fi
   echo "local_deletion_behavior=pass"
   echo "redacted_diagnostics_only=pass"
   echo "redacted_diagnostics_copy=pass"
+  echo "engine_sidecar_status_runtime_checked=true"
+  echo "engine_sidecar_status_failure_class=none"
+  echo "engine_sidecar_status_contract_valid=true"
+  echo "engine_sidecar_status_redacted_diagnostics_only=true"
+  echo "engine_sidecar_manual_self_test_runtime_checked=true"
+  echo "engine_sidecar_manual_self_test_failure_class=none"
+  echo "engine_sidecar_manual_self_test_contract_valid=true"
+  echo "engine_sidecar_manual_self_test_passed=true"
+  echo "engine_sidecar_manual_self_test_runtime_available=true"
+  echo "engine_sidecar_raw_path_returned=false"
+  echo "engine_sidecar_stdout_returned=false"
+  echo "engine_sidecar_stderr_returned=false"
+  echo "engine_sidecar_app_launch_network_allowed=false"
+  echo "engine_sidecar_room_open_network_allowed=false"
+  echo "engine_sidecar_local_runtime_promoted_to_delivery_proof=false"
   echo "explicit_user_action_before_network=pass"
   echo "app_launch_network=false"
   echo "local_manual_envelope_default_path=pass"
@@ -179,6 +237,8 @@ fi
 
 result_output="$(node "$RESULT_VALIDATOR" "$tmp_dir/win-valid.md")"
 must_contain "$result_output" "accepted_windows_public_artifact_results=1"
+must_contain "$result_output" "windows_result_engine_sidecar_diagnostics_verified=true"
+must_contain "$result_output" "windows_result_engine_sidecar_manual_self_test_verified=true"
 must_contain "$result_output" "windows_public_artifact_ready=false"
 must_contain "$result_output" "status=windows-public-artifact-candidate-requires-review"
 
@@ -225,6 +285,14 @@ fi
 grep -Fq "unknown-field:fabricated_evidence" "$tmp_dir/fabricated-field.out" ||
   fail "fabricated evidence promotion field rejection was not reported"
 
+sed 's/engine_sidecar_stdout_returned=false/engine_sidecar_stdout_returned=true/' \
+  "$tmp_dir/win-valid.md" >"$tmp_dir/sidecar-stdout.md"
+if node "$RESULT_VALIDATOR" "$tmp_dir/sidecar-stdout.md" >"$tmp_dir/sidecar-stdout.out" 2>&1; then
+  fail "result validator accepted sidecar stdout exposure"
+fi
+grep -Fq "invalid-value:engine_sidecar_stdout_returned" "$tmp_dir/sidecar-stdout.out" ||
+  fail "sidecar stdout exposure rejection was not reported"
+
 echo "status=windows-artifact-runtime-evidence-contract-ready"
 echo "windows_artifact_manifest_fixture_accepted=true"
 echo "windows_runtime_result_fixture_accepted=true"
@@ -238,6 +306,9 @@ echo "windows_macos_runtime_result_promoted=false"
 echo "windows_linux_runtime_result_promoted=false"
 echo "windows_local_or_fabricated_runtime_result_promoted=false"
 echo "windows_result_rejects_private_local_app_data=true"
+echo "windows_result_engine_sidecar_diagnostics_verified=true"
+echo "windows_result_engine_sidecar_manual_self_test_verified=true"
+echo "windows_result_rejects_sidecar_raw_output=true"
 echo "windows_strict_current_head_rejects_stale_evidence=true"
 echo "windows_public_artifact_ready=false"
 echo "windows_public_artifact_claim_allowed=false"
