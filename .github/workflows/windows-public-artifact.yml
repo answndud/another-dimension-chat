@@ -76,9 +76,14 @@ jobs:
           set -euo pipefail
           version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
           source_exe="$(
-            find .build-cache/cargo-target/release/bundle/nsis \
-              apps/desktop-tauri/src-tauri/target/release/bundle/nsis \
-              -maxdepth 1 -type f -name '*.exe' 2>/dev/null | sort | head -n 1
+            for search_dir in \
+              .build-cache/cargo-target/release/bundle/nsis \
+              apps/desktop-tauri/src-tauri/target/release/bundle/nsis
+            do
+              if [ -d "$search_dir" ]; then
+                find "$search_dir" -maxdepth 1 -type f -name '*.exe'
+              fi
+            done | sort | head -n 1
           )"
           if [ -z "$source_exe" ]; then
             echo "missing NSIS .exe output" >&2
