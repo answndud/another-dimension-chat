@@ -281,8 +281,17 @@ request만 여세요.
 
 ## Engineering Notes
 
-왜 이 프로젝트를 만들었고 어떻게 설계했는지는 public-safe engineering notes인
-[blog/](blog/)에 정리되어 있습니다.
+공유용 public beta 소개글은 [blog/00-public-beta-launch.md](blog/00-public-beta-launch.md)에
+있습니다. 왜 이 프로젝트를 만들었고 어떻게 설계했는지는 public-safe engineering
+notes인 [blog/](blog/)에 정리되어 있습니다.
+
+짧은 소개 문구:
+
+> Another Dimension Chat은 중앙에서 신뢰해야 하는 계정/연락처 검색/메시지 서버 없이
+> pairwise invite, safety material 비교, 수동 encrypted envelope exchange, local data
+> ownership, redacted diagnostics를 실험하는 macOS Apple Silicon용 unsigned public
+> beta입니다. 현재 공개 artifact는 GitHub Release의 unsigned macOS DMG이며,
+> checksum 확인과 macOS Privacy & Security 수동 허용이 필요합니다.
 
 이 프로젝트에 사용된 보안, 통신, 저장소, transport, release 개념을 초보자도
 따라올 수 있게 설명한 guide는 [reference/learning/](reference/learning/)에

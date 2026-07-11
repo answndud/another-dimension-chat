@@ -20,6 +20,30 @@ README entry copy:
 > exchange manual encrypted envelopes, and copy only redacted diagnostics for
 > support.
 
+Launch article:
+
+- [blog/00-public-beta-launch.md](../blog/00-public-beta-launch.md)
+
+Long copy:
+
+> Another Dimension Chat is a no-central-trusted-server 1:1 private messenger
+> beta for macOS Apple Silicon. The v0.1 product model excludes phone numbers,
+> email identity, global accounts, searchable usernames, centralized contact
+> discovery, centralized message servers, push notifications, and cloud backup.
+> Users can test pairwise invite rooms, mandatory safety comparison, local
+> encrypted profile/session/message stores, manual encrypted envelope
+> export/import, explicit retry/cancel/recovery/delete actions, and redacted
+> diagnostics. The default transport is manual envelope exchange; onion/Tor
+> paths are explicit advanced attempts and not an external delivery claim.
+
+Korean short copy:
+
+> Another Dimension Chat은 중앙에서 신뢰해야 하는 계정/연락처 검색/메시지 서버 없이
+> pairwise invite, safety material 비교, manual encrypted envelope exchange,
+> local data ownership, redacted diagnostics를 실험하는 macOS Apple Silicon용
+> unsigned public beta입니다. GitHub Release에서 DMG와 `.sha256`을 함께 받고,
+> checksum이 일치할 때만 macOS Privacy & Security에서 수동으로 허용하세요.
+
 Required disclaimer:
 
 > Not audited, not production-ready, sensitive communication prohibited, not High-Risk-ready, and not a Signal/Briar/Cwtch-equivalent privacy or security claim.
