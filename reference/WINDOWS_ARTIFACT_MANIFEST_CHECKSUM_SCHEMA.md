@@ -24,9 +24,9 @@ directories.
   `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md`
 
 The default Windows public candidate package command is
-`npm --prefix apps/desktop-tauri run tauri:build:windows-nsis:manual-e2ee`; it
-selects the NSIS `.exe` bundle class and does not compile the Arti/Tor onion
-runtime. The generator holds unless
+`npm --prefix apps/desktop-tauri run tauri:build:windows-nsis:shell`; it
+selects the NSIS `.exe` bundle class and does not compile the engine sidecar
+or Arti/Tor onion runtime. The generator holds unless
 `AD_PREPARE_WINDOWS_PUBLIC_ARTIFACT_METADATA=1` is set and
 `AD_WINDOWS_ARTIFACT` points to an existing artifact under an ignored generated
 artifact directory. The validator checks the artifact bytes against the

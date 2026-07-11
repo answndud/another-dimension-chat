@@ -47,7 +47,7 @@ for file in "$CORE" "$STATE" "$STATE_TEST" "$SMOKE_TEST" "$TAURI_LIB" "$TAURI_ST
 done
 
 for file in "$CORE" "$STATE" "$REFERENCE"; do
-  must_contain "$file" "windows-manual-e2ee-nsis-exe-installer-candidate"
+  must_contain "$file" "windows-shell-nsis-exe-installer-candidate"
   must_contain "$file" "runtime_mode"
   must_contain "$file" "onion_runtime_compiled"
   must_contain "$file" "webview2_runtime_required"
@@ -69,7 +69,7 @@ must_contain "$STATE_TEST" "windows public artifact candidate keeps installer an
 must_contain "$SMOKE_TEST" "productionWindowsPublicArtifactCandidateView"
 must_contain "$TAURI_LIB" "windows_public_artifact_adapter_boundary_summary"
 must_contain "$TAURI_LIB" "WINDOWS_PUBLIC_ARTIFACT_ADAPTER_POLICIES"
-must_contain "$TAURI_LIB" "windows-manual-e2ee-nsis-exe-installer-candidate"
+must_contain "$TAURI_LIB" "windows-shell-nsis-exe-installer-candidate"
 must_contain "$TAURI_LIB" "runtime_mode"
 must_contain "$TAURI_LIB" "onion_runtime_compiled"
 must_contain "$TAURI_LIB" "tauri-app-data"
@@ -88,7 +88,7 @@ must_contain "$TAURI_STATUS" "windows_app_data_path_review_required={}"
 must_contain "$TAURI_STATUS" "remaining_blocker=real-windows-artifact-runtime-manifest-evidence"
 
 must_contain "$REFERENCE" "windows_public_artifact_candidate=true"
-must_contain "$REFERENCE" "runtime_mode=manual-e2ee"
+must_contain "$REFERENCE" "runtime_mode=shell-sidecar-pending"
 must_contain "$REFERENCE" "onion_runtime_compiled=false"
 must_contain "$REFERENCE" "bundle_target=nsis"
 must_contain "$REFERENCE" "default_extension=.exe"
@@ -159,9 +159,9 @@ done
 
 echo "status=windows-public-artifact-candidate-gate-ready"
 echo "windows_public_artifact_candidate=true"
-echo "artifact_type=windows-manual-e2ee-nsis-exe-installer-candidate"
+echo "artifact_type=windows-shell-nsis-exe-installer-candidate"
 echo "bundle_target=nsis"
-echo "runtime_mode=manual-e2ee"
+echo "runtime_mode=shell-sidecar-pending"
 echo "onion_runtime_compiled=false"
 echo "webview2_runtime_required=true"
 echo "app_data_resolver_shared_storage_semantics=true"

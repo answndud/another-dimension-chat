@@ -12,25 +12,41 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [features]
-manual-onion-client-attempt = ["another-dimension-transport/arti-manual-bootstrap"]
+default = ["full-runtime"]
+full-runtime = [
+    "dep:another-dimension-core",
+    "dep:another-dimension-crypto",
+    "dep:another-dimension-identity",
+    "dep:another-dimension-pairing",
+    "dep:another-dimension-protocol",
+    "dep:another-dimension-storage",
+    "dep:another-dimension-transport",
+    "dep:rustls",
+    "dep:tokio",
+]
+windows-public-shell = []
+manual-onion-client-attempt = [
+    "full-runtime",
+    "another-dimension-transport/arti-manual-bootstrap",
+]
 manual-onion-bridge-client = [
     "manual-onion-client-attempt",
     "another-dimension-transport/arti-bridge-client",
 ]
 
 [dependencies]
-another-dimension-core = { path = "../../../crates/core" }
-another-dimension-crypto = { path = "../../../crates/crypto" }
-another-dimension-identity = { path = "../../../crates/identity" }
-another-dimension-pairing = { path = "../../../crates/pairing" }
-another-dimension-protocol = { path = "../../../crates/protocol" }
-another-dimension-storage = { path = "../../../crates/storage" }
-another-dimension-transport = { path = "../../../crates/transport" }
+another-dimension-core = { path = "../../../crates/core", optional = true }
+another-dimension-crypto = { path = "../../../crates/crypto", optional = true }
+another-dimension-identity = { path = "../../../crates/identity", optional = true }
+another-dimension-pairing = { path = "../../../crates/pairing", optional = true }
+another-dimension-protocol = { path = "../../../crates/protocol", optional = true }
+another-dimension-storage = { path = "../../../crates/storage", optional = true }
+another-dimension-transport = { path = "../../../crates/transport", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-rustls = { version = "0.23.40", default-features = false, features = ["ring"] }
+rustls = { version = "0.23.40", default-features = false, features = ["ring"], optional = true }
 tauri = { version = "2", features = [] }
-tokio = { version = "1.52.3", default-features = false, features = ["macros", "time"] }
+tokio = { version = "1.52.3", default-features = false, features = ["macros", "time"], optional = true }
 
 [lints.rust]
 unsafe_code = "forbid"

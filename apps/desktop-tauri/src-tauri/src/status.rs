@@ -652,13 +652,13 @@ mod tests {
             .contains("desktop_platform_scope=macos-public-beta-windows-public-artifact-candidate-source-gate"));
         assert!(status
             .desktop_platform_readiness_boundary
-            .contains("artifact_type=windows-manual-e2ee-nsis-exe-installer-candidate"));
+            .contains("artifact_type=windows-shell-nsis-exe-installer-candidate"));
         assert!(status
             .desktop_platform_readiness_boundary
             .contains("bundle_target=nsis"));
         assert!(status
             .desktop_platform_readiness_boundary
-            .contains("runtime_mode=manual-e2ee"));
+            .contains("runtime_mode=shell-sidecar-pending"));
         assert!(status
             .desktop_platform_readiness_boundary
             .contains("onion_runtime_compiled=false"));
