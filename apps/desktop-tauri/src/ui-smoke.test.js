@@ -287,6 +287,14 @@ test("first launch public beta warning keeps release and network boundaries visi
   assert.match(highRiskRuntimeEvidenceValidateScript, /high_risk_public_claim_allowed=false/);
   assert.match(highRiskRuntimeEvidenceValidateScript, /high_risk_ready_claim_allowed=false/);
   assert.match(highRiskRuntimeEvidenceValidateScript, /forbidden-field:\$\{path\}\$\{key\}/);
+  assert.match(finalAcceptanceScript, /high_risk_runtime_evidence_validator_ready=true/);
+  assert.match(finalAcceptanceScript, /high_risk_runtime_evidence_claim_separated=true/);
+  assert.match(finalAcceptanceScript, /high_risk_runtime_evidence_accepted=false/);
+  assert.match(finalAcceptanceScript, /high_risk_ready_claim_allowed=false/);
+  assert.match(finalAcceptanceScript, /scripts\/high_risk_runtime_evidence_validate_once\.sh/);
+  assert.match(finalAcceptanceScript, /reference\/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA\.md/);
+  assert.match(externalEvidenceValidateScript, /reliable_delivery_claim_allowed=false/);
+  assert.match(externalEvidenceValidateScript, /audited_claim_allowed=false/);
   assert.match(privateDeliveryStateJs, /high-risk-runtime-evidence-source/);
   assert.match(privateDeliveryStateJs, /high-risk-runtime-failure-class/);
   assert.match(mainJs, /productionHighRiskReadinessGateView/);

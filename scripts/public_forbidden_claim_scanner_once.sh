@@ -43,6 +43,9 @@ for file in "${PUBLIC_COPY_FILES[@]}"; do
   require_file "$file"
 done
 
+require_file "$ROOT_DIR/reference/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md"
+require_file "$ROOT_DIR/scripts/high_risk_runtime_evidence_validate_once.sh"
+
 FORBIDDEN_POSITIVE_CLAIMS=(
   "production_ready_claim_allowed=true"
   "production-ready secure messenger"
@@ -90,6 +93,10 @@ require_text "$ROOT_DIR/SECURITY.md" "| Global traffic correlation | not_protect
 require_text "$ROOT_DIR/apps/desktop-tauri/index.html" "not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/i18n.js" "not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/i18n.js" "global_correlation_safe=false"
+require_text "$ROOT_DIR/reference/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md" "high_risk_public_claim_allowed=false"
+require_text "$ROOT_DIR/reference/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md" "high_risk_ready_claim_allowed=false"
+require_text "$ROOT_DIR/scripts/high_risk_runtime_evidence_validate_once.sh" "high_risk_public_claim_allowed=false"
+require_text "$ROOT_DIR/scripts/high_risk_runtime_evidence_validate_once.sh" "high_risk_ready_claim_allowed=false"
 
 set +e
 final_acceptance_output="$("$ROOT_DIR/scripts/final_acceptance_once.sh" 2>&1)"
@@ -109,8 +116,16 @@ printf '%s\n' "$final_acceptance_output" | grep -Fq -- "forbidden_positive_publi
   fail "final acceptance missing forbidden positive claim scanner result"
 printf '%s\n' "$final_acceptance_output" | grep -Fq -- "high_risk_mode_ready=false" ||
   fail "final acceptance missing high-risk readiness hold"
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "high_risk_runtime_evidence_validator_ready=true" ||
+  fail "final acceptance missing High-Risk runtime evidence validator ready status"
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "high_risk_runtime_evidence_claim_separated=true" ||
+  fail "final acceptance missing runtime evidence claim separation"
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "high_risk_runtime_evidence_accepted=false" ||
+  fail "final acceptance missing runtime evidence accepted hold"
 printf '%s\n' "$final_acceptance_output" | grep -Fq -- "high_risk_public_claim_allowed=false" ||
   fail "final acceptance missing high-risk public claim hold"
+printf '%s\n' "$final_acceptance_output" | grep -Fq -- "high_risk_ready_claim_allowed=false" ||
+  fail "final acceptance missing high-risk ready claim hold"
 printf '%s\n' "$final_acceptance_output" | grep -Fq -- "briar_cwtch_signal_equivalence_claim=false" ||
   fail "final acceptance missing Signal/Briar/Cwtch equivalence hold"
 printf '%s\n' "$final_acceptance_output" | grep -Fq -- "compromised_device_safe_claim=false" ||
@@ -128,4 +143,7 @@ allowed_public_claim_boundary_present=true
 high_risk_not_protected_boundary_present=true
 stable_candidate_claim_allowed=false
 high_risk_public_claim_allowed=false
+high_risk_ready_claim_allowed=false
+high_risk_runtime_evidence_validator_ready=true
+high_risk_runtime_evidence_claim_separated=true
 EOF
