@@ -8,6 +8,7 @@ members = [
     "crates/storage",
     "crates/core",
     "crates/mobile",
+    "apps/engine",
     "apps/cli",
 ]
 exclude = [
