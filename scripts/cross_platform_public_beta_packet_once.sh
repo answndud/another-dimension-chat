@@ -55,10 +55,12 @@ MACOS_REFERENCE="$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md
 WINDOWS_EXECUTION="$ROOT_DIR/reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md"
 WINDOWS_MANIFEST="$ROOT_DIR/reference/WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md"
 WINDOWS_RESULT="$ROOT_DIR/reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md"
+HIGH_RISK_RUNTIME_SCHEMA="$ROOT_DIR/reference/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md"
+HIGH_RISK_RUNTIME_VALIDATOR="$ROOT_DIR/scripts/high_risk_runtime_evidence_validate_once.sh"
 README="$ROOT_DIR/README.md"
 SECURITY="$ROOT_DIR/SECURITY.md"
 
-for file in "$REFERENCE" "$MACOS_REFERENCE" "$WINDOWS_EXECUTION" "$WINDOWS_MANIFEST" "$WINDOWS_RESULT" "$README" "$SECURITY"; do
+for file in "$REFERENCE" "$MACOS_REFERENCE" "$WINDOWS_EXECUTION" "$WINDOWS_MANIFEST" "$WINDOWS_RESULT" "$HIGH_RISK_RUNTIME_SCHEMA" "$HIGH_RISK_RUNTIME_VALIDATOR" "$README" "$SECURITY"; do
   require_file "$file"
 done
 
@@ -70,10 +72,17 @@ require_text "$REFERENCE" "Use only assets attached to the same GitHub Release"
 require_text "$REFERENCE" "explicit owner actions only"
 require_text "$REFERENCE" "Not audited, not production-ready, not for sensitive communication"
 require_text "$REFERENCE" "not High-Risk-ready"
+require_text "$REFERENCE" "High-Risk runtime evidence validator is a redacted evidence-format gate"
+require_text "$REFERENCE" "high_risk_public_claim_allowed=false"
+require_text "$REFERENCE" "high_risk_ready_claim_allowed=false"
 require_text "$REFERENCE" "compromised endpoint"
 require_text "$REFERENCE" "direct coercion"
 require_text "$REFERENCE" "full global traffic correlation"
 require_text "$REFERENCE" "scripts/cross_platform_public_beta_packet_once.sh"
+require_text "$HIGH_RISK_RUNTIME_SCHEMA" "high_risk_public_claim_allowed=false"
+require_text "$HIGH_RISK_RUNTIME_SCHEMA" "high_risk_ready_claim_allowed=false"
+require_text "$HIGH_RISK_RUNTIME_VALIDATOR" "high_risk_public_claim_allowed=false"
+require_text "$HIGH_RISK_RUNTIME_VALIDATOR" "high_risk_ready_claim_allowed=false"
 
 require_text "$MACOS_REFERENCE" "unsigned OSS public beta"
 require_text "$MACOS_REFERENCE" "not signed, not notarized, not audited"
@@ -103,7 +112,10 @@ require_output "$macos_output" "macos_unsigned_public_release_packet=ready"
 require_output "$macos_output" "release_class=unsigned-oss-public-beta"
 require_output "$macos_output" "release_upload_authorized=false"
 require_output "$macos_output" "production_ready_claim_allowed=false"
+require_output "$macos_output" "high_risk_runtime_evidence_validator_ready=true"
+require_output "$macos_output" "high_risk_runtime_evidence_claim_separated=true"
 require_output "$macos_output" "high_risk_public_claim_allowed=false"
+require_output "$macos_output" "high_risk_ready_claim_allowed=false"
 
 windows_manifest_output="$(run_and_capture "$ROOT_DIR/scripts/windows_artifact_manifest_checksum_once.sh")"
 require_output "$windows_manifest_output" "windows_artifact_manifest_checksum_schema_available=true"
@@ -126,7 +138,10 @@ require_output "$windows_execution_output" "windows_public_artifact_upload_allow
 public_claim_output="$(run_and_capture "$ROOT_DIR/scripts/public_forbidden_claim_scanner_once.sh")"
 require_output "$public_claim_output" "forbidden_positive_claims_found=false"
 require_output "$public_claim_output" "stable_candidate_claim_allowed=false"
+require_output "$public_claim_output" "high_risk_runtime_evidence_validator_ready=true"
+require_output "$public_claim_output" "high_risk_runtime_evidence_claim_separated=true"
 require_output "$public_claim_output" "high_risk_public_claim_allowed=false"
+require_output "$public_claim_output" "high_risk_ready_claim_allowed=false"
 
 cat <<'STATUS'
 cross_platform_public_beta_packet=source-ready
@@ -139,5 +154,8 @@ windows_public_artifact_upload_allowed=false
 same_github_release_asset_authority_required=true
 generated_release_artifacts_commit_allowed=false
 production_ready_claim_allowed=false
+high_risk_runtime_evidence_validator_ready=true
+high_risk_runtime_evidence_claim_separated=true
 high_risk_public_claim_allowed=false
+high_risk_ready_claim_allowed=false
 STATUS

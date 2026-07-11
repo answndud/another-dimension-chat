@@ -45,6 +45,8 @@ require_release_policy_sources() {
     "$ROOT_DIR/reference/UPDATE_INTEGRITY.md"
     "$ROOT_DIR/reference/SUPPLY_CHAIN_BASELINE.md"
     "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md"
+    "$ROOT_DIR/reference/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md"
+    "$ROOT_DIR/scripts/high_risk_runtime_evidence_validate_once.sh"
     "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh"
     "$ROOT_DIR/scripts/upload_macos_release_assets_approved.sh"
   )
@@ -92,6 +94,13 @@ require_release_policy_sources() {
   require_text "$ROOT_DIR/reference/UPDATE_INTEGRITY.md" "not a trusted security boundary"
   require_text "$ROOT_DIR/reference/SUPPLY_CHAIN_BASELINE.md" "not a supply-chain audit"
   require_text "$ROOT_DIR/reference/INDEPENDENT_REVIEW_PACKET.md" "not an external review result"
+  require_text "$ROOT_DIR/reference/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md" "high_risk_public_claim_allowed=false"
+  require_text "$ROOT_DIR/reference/HIGH_RISK_RUNTIME_EVIDENCE_SCHEMA.md" "high_risk_ready_claim_allowed=false"
+  require_text "$ROOT_DIR/scripts/high_risk_runtime_evidence_validate_once.sh" "high_risk_public_claim_allowed=false"
+  require_text "$ROOT_DIR/scripts/high_risk_runtime_evidence_validate_once.sh" "high_risk_ready_claim_allowed=false"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "High-Risk runtime evidence validator is a redacted evidence-format gate"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "high_risk_public_claim_allowed=false"
+  require_text "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md" "high_risk_ready_claim_allowed=false"
 
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"distribution\": \"unsigned-github-public-beta\""
   require_text "$ROOT_DIR/scripts/prepare_unsigned_public_beta_release.sh" "\"same_release_asset_set_authority_required\": true"
@@ -198,5 +207,8 @@ terminal_quarantine_removal_install_step=false
 same_release_asset_authority_required=true
 release_upload_authorized=false
 production_ready_claim_allowed=false
+high_risk_runtime_evidence_validator_ready=true
+high_risk_runtime_evidence_claim_separated=true
 high_risk_public_claim_allowed=false
+high_risk_ready_claim_allowed=false
 STATUS
