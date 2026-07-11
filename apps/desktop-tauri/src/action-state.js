@@ -1211,6 +1211,10 @@ const pairwiseInviteImportFailureCopy = {
     message: "This peer is already paired. Open the existing room or rebuild with a fresh invite.",
     nextAction: "Open the existing room.",
   },
+  stale: {
+    message: "This invite is stale. Ask for a fresh invite before trusting this peer.",
+    nextAction: "Ask for a fresh invite.",
+  },
   identity_mismatch: {
     message: "The invite identity does not match this room. Stop and rebuild with a fresh invite.",
     nextAction: "Stop and rebuild with a fresh invite.",
@@ -1237,6 +1241,15 @@ function normalizedPairwiseInviteImportFailureKind(value) {
   }
   if (text.includes("duplicate") || text.includes("pairingalreadypending") || text.includes("already pending")) {
     return "duplicate";
+  }
+  if (
+    text.includes("stale_invite") ||
+    text.includes("stale invite") ||
+    text.includes("expiredpayload") ||
+    text.includes("expired payload") ||
+    text.includes("invite expired")
+  ) {
+    return "stale";
   }
   if (
     text.includes("identity_mismatch") ||
@@ -1267,6 +1280,7 @@ export function productionPairwiseInviteImportFailureView(input = {}) {
       "malformed_split=true",
       "duplicate_split=true",
       "already_paired_split=true",
+      "stale_invite_split=true",
       "identity_mismatch_split=true",
       "unsupported_split=true",
       "revoked_re_pair_required_split=true",
@@ -1280,6 +1294,110 @@ export function productionPairwiseInviteImportFailureView(input = {}) {
       "endpoint_returned=false",
       "key_material=false",
     ].join(" "),
+  };
+}
+
+const pairwiseSafetyActionFailureCopy = {
+  none: "write-message",
+  safety_not_verified: "compare-safety-before-messaging",
+  malformed_invite: "ask-for-fresh-invite",
+  duplicate_invite: "open-existing-pending-pairing",
+  stale_invite: "ask-for-fresh-invite",
+  safety_mismatch: "stop-and-rebuild-with-fresh-invite",
+  revoked_room: "re-pair-with-fresh-invite",
+};
+
+function normalizedPairwiseSafetyFailureClass(value) {
+  const raw =
+    value?.failure_class ??
+    value?.failureClass ??
+    value?.failure_kind ??
+    value?.failureKind ??
+    value?.kind ??
+    value?.error ??
+    (typeof value === "string" ? value : "");
+  const text = String(raw)
+    .trim()
+    .toLowerCase();
+  if (!text || text === "none") {
+    return "none";
+  }
+  if (text.includes("safety_not_verified") || text.includes("safety-not-verified")) {
+    return "safety_not_verified";
+  }
+  if (text.includes("revoked_room") || text.includes("revoked_re_pair_required") || text.includes("revoked")) {
+    return "revoked_room";
+  }
+  if (
+    text.includes("stale_invite") ||
+    text.includes("stale invite") ||
+    text.includes("expiredpayload") ||
+    text.includes("expired payload") ||
+    text.includes("invite expired")
+  ) {
+    return "stale_invite";
+  }
+  if (text.includes("duplicate_invite") || text.includes("duplicate") || text.includes("already pending")) {
+    return "duplicate_invite";
+  }
+  if (
+    text.includes("safety_mismatch") ||
+    text.includes("identity_mismatch") ||
+    text.includes("localpairingpayloadmismatch") ||
+    text.includes("samepairwiseidentity") ||
+    text.includes("samerendezvousendpoint") ||
+    text.includes("noise static") ||
+    text.includes("mismatch")
+  ) {
+    return "safety_mismatch";
+  }
+  if (text.includes("malformed_invite") || text.includes("malformed") || text.includes("unsupported")) {
+    return "malformed_invite";
+  }
+  return "malformed_invite";
+}
+
+export function productionPairwiseSafetyActionGateView(input = {}) {
+  const rawFailureClass = normalizedPairwiseSafetyFailureClass(input);
+  const safetyVerified =
+    input.safetyVerified === true ||
+    input.safety_verified === true ||
+    input.confirmedMatch === true ||
+    input.safetyConfirmed === true ||
+    input.state === "confirmed_match";
+  const failureClass =
+    rawFailureClass === "none" && !safetyVerified ? "safety_not_verified" : rawFailureClass;
+  const allowed = failureClass === "none";
+  const nextAction = pairwiseSafetyActionFailureCopy[failureClass] ?? "ask-for-fresh-invite";
+  const boundary = [
+    "pairwise_safety_action_gate=true",
+    `failure_class=${failureClass}`,
+    `safety_verified=${safetyVerified}`,
+    `send_allowed=${allowed}`,
+    `export_allowed=${allowed}`,
+    `import_allowed=${allowed}`,
+    `verified_state_allowed=${allowed}`,
+    `delivered_state_allowed=${allowed}`,
+    `next_action=${nextAction}`,
+    "mismatch_blocks_message_actions=true",
+    "duplicate_invite_blocks_message_actions=true",
+    "stale_invite_blocks_message_actions=true",
+    "revoked_room_blocks_message_actions=true",
+    "safety_number_in_diagnostics=false",
+    "safety_phrase_in_diagnostics=false",
+    "invite_payload_in_diagnostics=false",
+    "generic_error=false",
+  ].join(" ");
+  return {
+    failureClass,
+    safetyVerified,
+    sendAllowed: allowed,
+    exportAllowed: allowed,
+    importAllowed: allowed,
+    verifiedStateAllowed: allowed,
+    deliveredStateAllowed: allowed,
+    nextAction,
+    boundary,
   };
 }
 
@@ -1308,18 +1426,30 @@ export function productionPairwiseSafetyVerificationFlowView(input = {}) {
       : rePairRequired
         ? "Rebuild with a fresh invite before trusting this peer."
         : "Compare the safety number and phrase out-of-band.";
+  const actionGate = productionPairwiseSafetyActionGateView({
+    failureClass: revoked ? "revoked_room" : markedMismatch ? "safety_mismatch" : "none",
+    safetyVerified: confirmedMatch,
+  });
   return {
     state,
     nextAction,
     compareRequired: state !== "confirmed_match",
     confirmMatchAllowed: transcriptPresent && !rePairRequired,
     rePairRequired,
+    sendAllowed: actionGate.sendAllowed,
+    exportAllowed: actionGate.exportAllowed,
+    importAllowed: actionGate.importAllowed,
+    failureClass: actionGate.failureClass,
     boundary: [
       "pairwise_safety_verification=true",
       `state=${state}`,
+      `failure_class=${actionGate.failureClass}`,
       `compare_required=${state !== "confirmed_match"}`,
       `confirm_match_allowed=${transcriptPresent && !rePairRequired}`,
       `re_pair_required=${rePairRequired}`,
+      `send_allowed=${actionGate.sendAllowed}`,
+      `export_allowed=${actionGate.exportAllowed}`,
+      `import_allowed=${actionGate.importAllowed}`,
       `malicious_input_fail_closed=${rePairRequired}`,
       `false_verified_state=${rePairRequired ? "blocked" : "not_applicable"}`,
       "generic_error=false",
@@ -1741,6 +1871,18 @@ export function productionMessageDeliveryProductizationView(input = {}) {
   const profileUnlocked = input.profileUnlocked === true;
   const pairwiseInviteReady = input.pairwiseInviteReady === true;
   const mandatorySafetyVerified = input.mandatorySafetyVerified === true;
+  const safetyActionGate = productionPairwiseSafetyActionGateView({
+    failureClass:
+      input.safetyFailureClass ??
+      input.failureClass ??
+      input.failureKind ??
+      (!mandatorySafetyVerified
+        ? "safety_not_verified"
+        : input.peerMismatchBlocksVerified === false
+          ? "safety_mismatch"
+          : "none"),
+    safetyVerified: mandatorySafetyVerified,
+  });
   const composeReady = input.composeReady === true;
   const outboundExported = input.outboundExported === true;
   const inboundImported = input.inboundImported === true;
@@ -1755,7 +1897,7 @@ export function productionMessageDeliveryProductizationView(input = {}) {
   const supportRedacted = input.supportRedacted === true;
   const currentInputOwned = currentRoomOwnsState && currentProfileOwnsState;
   const recoveryReady = retryAvailable && cancelAvailable && localDeleteAvailable;
-  const failClosed = duplicateOrReplayRejected && peerMismatchBlocksVerified;
+  const failClosed = duplicateOrReplayRejected && peerMismatchBlocksVerified && safetyActionGate.sendAllowed;
   const firstMessageRoundTripReady =
     profileUnlocked &&
     pairwiseInviteReady &&
@@ -1773,7 +1915,7 @@ export function productionMessageDeliveryProductizationView(input = {}) {
       ? "unlock-profile"
       : !pairwiseInviteReady
         ? "create-or-join-room"
-        : !mandatorySafetyVerified || !peerMismatchBlocksVerified
+        : !mandatorySafetyVerified || !peerMismatchBlocksVerified || !safetyActionGate.sendAllowed
           ? "verify-safety"
           : !composeReady
             ? "write-message"
@@ -1793,6 +1935,11 @@ export function productionMessageDeliveryProductizationView(input = {}) {
     `profile_unlocked=${profileUnlocked}`,
     `pairwise_invite_ready=${pairwiseInviteReady}`,
     `mandatory_safety_verified=${mandatorySafetyVerified}`,
+    `pairwise_safety_failure_class=${safetyActionGate.failureClass}`,
+    `pairwise_safety_gate_next_action=${safetyActionGate.nextAction}`,
+    `send_action_allowed=${safetyActionGate.sendAllowed}`,
+    `export_action_allowed=${safetyActionGate.exportAllowed}`,
+    `import_action_allowed=${safetyActionGate.importAllowed}`,
     `compose_ready=${composeReady}`,
     `outbound_exported=${outboundExported}`,
     `inbound_imported=${inboundImported}`,
