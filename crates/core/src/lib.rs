@@ -1762,6 +1762,10 @@ pub mod production {
         "bundle_target",
         "runtime_mode",
         "onion_runtime_compiled",
+        "engine_sidecar_required",
+        "engine_sidecar_packaged",
+        "engine_sidecar_manual_self_test_command",
+        "engine_sidecar_manual_self_test_required",
         "webview2_runtime_required",
         "checksum_file",
         "provenance_file",
@@ -4179,6 +4183,14 @@ pub mod production {
         manifest_checksum_provenance_required: bool,
         manifest_validates_version_commit_installer_webview2_no_auto_update: bool,
         runtime_result_external_peer_evidence_separated: bool,
+        engine_sidecar_required: bool,
+        engine_sidecar_packaged: bool,
+        engine_sidecar_runtime_mode: &'static str,
+        engine_sidecar_manual_self_test_command: &'static str,
+        engine_sidecar_manual_self_test_required: bool,
+        engine_sidecar_raw_path_returned: bool,
+        engine_sidecar_stdout_returned: bool,
+        engine_sidecar_stderr_returned: bool,
         local_runtime_promoted_to_delivery_proof: bool,
         smartscreen_security_boundary_claimed: bool,
         code_signing_security_boundary_claimed: bool,
@@ -8588,6 +8600,38 @@ pub mod production {
 
         pub fn runtime_result_external_peer_evidence_separated(self) -> bool {
             self.runtime_result_external_peer_evidence_separated
+        }
+
+        pub fn engine_sidecar_required(self) -> bool {
+            self.engine_sidecar_required
+        }
+
+        pub fn engine_sidecar_packaged(self) -> bool {
+            self.engine_sidecar_packaged
+        }
+
+        pub fn engine_sidecar_runtime_mode(self) -> &'static str {
+            self.engine_sidecar_runtime_mode
+        }
+
+        pub fn engine_sidecar_manual_self_test_command(self) -> &'static str {
+            self.engine_sidecar_manual_self_test_command
+        }
+
+        pub fn engine_sidecar_manual_self_test_required(self) -> bool {
+            self.engine_sidecar_manual_self_test_required
+        }
+
+        pub fn engine_sidecar_raw_path_returned(self) -> bool {
+            self.engine_sidecar_raw_path_returned
+        }
+
+        pub fn engine_sidecar_stdout_returned(self) -> bool {
+            self.engine_sidecar_stdout_returned
+        }
+
+        pub fn engine_sidecar_stderr_returned(self) -> bool {
+            self.engine_sidecar_stderr_returned
         }
 
         pub fn local_runtime_promoted_to_delivery_proof(self) -> bool {
@@ -21868,6 +21912,14 @@ pub mod production {
         let manifest_checksum_provenance_required = true;
         let manifest_validates_version_commit_installer_webview2_no_auto_update = true;
         let runtime_result_external_peer_evidence_separated = true;
+        let engine_sidecar_required = true;
+        let engine_sidecar_packaged = true;
+        let engine_sidecar_runtime_mode = "manual-e2ee-engine-sidecar";
+        let engine_sidecar_manual_self_test_command = "manual-self-test";
+        let engine_sidecar_manual_self_test_required = true;
+        let engine_sidecar_raw_path_returned = false;
+        let engine_sidecar_stdout_returned = false;
+        let engine_sidecar_stderr_returned = false;
         let local_runtime_promoted_to_delivery_proof = false;
         let smartscreen_security_boundary_claimed = false;
         let code_signing_security_boundary_claimed = false;
@@ -21885,6 +21937,12 @@ pub mod production {
             && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_REQUIRED_FIELDS.contains(&"runtime_mode")
             && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_REQUIRED_FIELDS
                 .contains(&"onion_runtime_compiled")
+            && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_REQUIRED_FIELDS
+                .contains(&"engine_sidecar_required")
+            && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_REQUIRED_FIELDS
+                .contains(&"engine_sidecar_packaged")
+            && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_REQUIRED_FIELDS
+                .contains(&"engine_sidecar_manual_self_test_required")
             && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_REQUIRED_FIELDS
                 .contains(&"webview2_runtime_required")
             && PRODUCTION_WINDOWS_PUBLIC_ARTIFACT_FORBIDDEN_CLAIMS
@@ -21910,6 +21968,14 @@ pub mod production {
             && manifest_checksum_provenance_required
             && manifest_validates_version_commit_installer_webview2_no_auto_update
             && runtime_result_external_peer_evidence_separated
+            && engine_sidecar_required
+            && engine_sidecar_packaged
+            && engine_sidecar_runtime_mode == "manual-e2ee-engine-sidecar"
+            && engine_sidecar_manual_self_test_command == "manual-self-test"
+            && engine_sidecar_manual_self_test_required
+            && !engine_sidecar_raw_path_returned
+            && !engine_sidecar_stdout_returned
+            && !engine_sidecar_stderr_returned
             && !local_runtime_promoted_to_delivery_proof
             && !smartscreen_security_boundary_claimed
             && !code_signing_security_boundary_claimed
@@ -21940,6 +22006,14 @@ pub mod production {
             manifest_checksum_provenance_required,
             manifest_validates_version_commit_installer_webview2_no_auto_update,
             runtime_result_external_peer_evidence_separated,
+            engine_sidecar_required,
+            engine_sidecar_packaged,
+            engine_sidecar_runtime_mode,
+            engine_sidecar_manual_self_test_command,
+            engine_sidecar_manual_self_test_required,
+            engine_sidecar_raw_path_returned,
+            engine_sidecar_stdout_returned,
+            engine_sidecar_stderr_returned,
             local_runtime_promoted_to_delivery_proof,
             smartscreen_security_boundary_claimed,
             code_signing_security_boundary_claimed,
@@ -22783,8 +22857,7 @@ pub mod production {
         let diagnostics_schema_ready = diagnostics.boundary_closed()
             && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS.contains(&"app_status")
             && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS.contains(&"build_commit")
-            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS
-                .contains(&"broad_failure_class")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS.contains(&"broad_failure_class")
             && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS
                 .contains(&"recovery_next_action")
             && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_ALLOWED_FIELDS
@@ -22794,7 +22867,8 @@ pub mod production {
         let public_issue_intake_allowed = true;
         let private_vulnerability_reporting_required = true;
         let minimal_public_security_contact_request_allowed = true;
-        let bad_release_advisory_path = "scripts/prepare_macos_emergency_release_advisory_packet.sh";
+        let bad_release_advisory_path =
+            "scripts/prepare_macos_emergency_release_advisory_packet.sh";
         let bad_release_advisory_bound_to_artifact_identity = true;
         let emergency_notice_manual_verification_only = true;
         let auto_update_notice_claimed = false;
@@ -22820,15 +22894,11 @@ pub mod production {
             && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"raw_logs")
             && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"crash_dumps")
             && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"screenshots")
-            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS
-                .contains(&"onion_endpoints")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"onion_endpoints")
             && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"invite_codes")
-            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS
-                .contains(&"pairing_payloads")
-            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS
-                .contains(&"envelope_payloads")
-            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS
-                .contains(&"endpoint_payloads")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"pairing_payloads")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"envelope_payloads")
+            && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"endpoint_payloads")
             && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"safety_phrases")
             && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"profile_names")
             && PRODUCTION_PUBLIC_SUPPORT_OPERATIONS_FORBIDDEN_FIELDS.contains(&"message_text")
@@ -28831,6 +28901,20 @@ pub mod production {
             assert!(summary.manifest_checksum_provenance_required());
             assert!(summary.manifest_validates_version_commit_installer_webview2_no_auto_update());
             assert!(summary.runtime_result_external_peer_evidence_separated());
+            assert!(summary.engine_sidecar_required());
+            assert!(summary.engine_sidecar_packaged());
+            assert_eq!(
+                summary.engine_sidecar_runtime_mode(),
+                "manual-e2ee-engine-sidecar"
+            );
+            assert_eq!(
+                summary.engine_sidecar_manual_self_test_command(),
+                "manual-self-test"
+            );
+            assert!(summary.engine_sidecar_manual_self_test_required());
+            assert!(!summary.engine_sidecar_raw_path_returned());
+            assert!(!summary.engine_sidecar_stdout_returned());
+            assert!(!summary.engine_sidecar_stderr_returned());
             assert!(!summary.local_runtime_promoted_to_delivery_proof());
             assert!(!summary.smartscreen_security_boundary_claimed());
             assert!(!summary.code_signing_security_boundary_claimed());
@@ -28846,6 +28930,9 @@ pub mod production {
             assert!(summary
                 .required_fields()
                 .contains(&"webview2_runtime_required"));
+            assert!(summary
+                .required_fields()
+                .contains(&"engine_sidecar_manual_self_test_required"));
             assert!(summary
                 .forbidden_claims()
                 .contains(&"windows_public_artifact_ready"));

@@ -32,6 +32,21 @@ const REQUIRED_FIELDS = Object.freeze([
   "local_deletion_behavior",
   "redacted_diagnostics_only",
   "redacted_diagnostics_copy",
+  "engine_sidecar_status_runtime_checked",
+  "engine_sidecar_status_failure_class",
+  "engine_sidecar_status_contract_valid",
+  "engine_sidecar_status_redacted_diagnostics_only",
+  "engine_sidecar_manual_self_test_runtime_checked",
+  "engine_sidecar_manual_self_test_failure_class",
+  "engine_sidecar_manual_self_test_contract_valid",
+  "engine_sidecar_manual_self_test_passed",
+  "engine_sidecar_manual_self_test_runtime_available",
+  "engine_sidecar_raw_path_returned",
+  "engine_sidecar_stdout_returned",
+  "engine_sidecar_stderr_returned",
+  "engine_sidecar_app_launch_network_allowed",
+  "engine_sidecar_room_open_network_allowed",
+  "engine_sidecar_local_runtime_promoted_to_delivery_proof",
   "explicit_user_action_before_network",
   "app_launch_network",
   "local_manual_envelope_default_path",
@@ -73,6 +88,21 @@ const ALLOWED_VALUES = new Map([
   ["installer_signing_decision", new Set(["unsigned-hold", "signtool-signed", "store-signed", "not-applicable"])],
   ["smartscreen_reputation_claim", new Set(["false"])],
   ["app_launch_network", new Set(["false"])],
+  ["engine_sidecar_status_runtime_checked", new Set(["true"])],
+  ["engine_sidecar_status_failure_class", new Set(["none"])],
+  ["engine_sidecar_status_contract_valid", new Set(["true"])],
+  ["engine_sidecar_status_redacted_diagnostics_only", new Set(["true"])],
+  ["engine_sidecar_manual_self_test_runtime_checked", new Set(["true"])],
+  ["engine_sidecar_manual_self_test_failure_class", new Set(["none"])],
+  ["engine_sidecar_manual_self_test_contract_valid", new Set(["true"])],
+  ["engine_sidecar_manual_self_test_passed", new Set(["true"])],
+  ["engine_sidecar_manual_self_test_runtime_available", new Set(["true"])],
+  ["engine_sidecar_raw_path_returned", new Set(["false"])],
+  ["engine_sidecar_stdout_returned", new Set(["false"])],
+  ["engine_sidecar_stderr_returned", new Set(["false"])],
+  ["engine_sidecar_app_launch_network_allowed", new Set(["false"])],
+  ["engine_sidecar_room_open_network_allowed", new Set(["false"])],
+  ["engine_sidecar_local_runtime_promoted_to_delivery_proof", new Set(["false"])],
   ["public_copy_reviewed", new Set(["true", "false"])],
   ["checksum_provenance_verified", new Set(["true", "false"])],
   ["support_diagnostics_reviewed", new Set(["true", "false"])],
@@ -271,6 +301,18 @@ function validateArtifactEvidenceBundle(file, fields, { requireCurrentHead = fal
   if (artifact.auto_update !== false) {
     issues.push("artifact-auto-update-must-stay-false");
   }
+  if (artifact.engine_sidecar_required !== true) {
+    issues.push("artifact-engine-sidecar-required");
+  }
+  if (artifact.engine_sidecar_packaged !== true) {
+    issues.push("artifact-engine-sidecar-not-packaged");
+  }
+  if (artifact.engine_sidecar_runtime_mode !== "manual-e2ee-engine-sidecar") {
+    issues.push("artifact-engine-sidecar-runtime-mode-mismatch");
+  }
+  if (artifact.engine_sidecar_manual_self_test_required !== true) {
+    issues.push("artifact-engine-sidecar-manual-self-test-not-required");
+  }
   return issues;
 }
 
@@ -377,6 +419,8 @@ console.log("windows_result_artifact_provenance_sha_verified=true");
 console.log("windows_result_artifact_bytes_sha_verified=true");
 console.log("windows_result_artifact_identity_verified=true");
 console.log("windows_result_runtime_boundary_verified=true");
+console.log("windows_result_engine_sidecar_diagnostics_verified=true");
+console.log("windows_result_engine_sidecar_manual_self_test_verified=true");
 console.log(`windows_real_runtime_smoke_passed=${allPass}`);
 console.log(`windows_public_artifact_candidate_requires_review=${allPass && reviewComplete}`);
 console.log("windows_public_artifact_ready=false");
