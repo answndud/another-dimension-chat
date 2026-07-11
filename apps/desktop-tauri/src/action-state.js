@@ -907,13 +907,16 @@ export function productionWindowsPublicArtifactCandidateView(input = {}) {
   const platform = releaseIntegrityToken(input.platform, "unknown-platform");
   const artifactType = releaseIntegrityToken(
     input.artifactType,
-    "windows-nsis-exe-installer-candidate",
+    "windows-manual-e2ee-nsis-exe-installer-candidate",
   );
   const bundleTarget = releaseIntegrityToken(input.bundleTarget, "nsis");
+  const runtimeMode = releaseIntegrityToken(input.runtimeMode, "manual-e2ee");
   const summary = [
     "windows_public_artifact_candidate=true",
     `artifact_type=${artifactType}`,
     `bundle_target=${bundleTarget}`,
+    `runtime_mode=${runtimeMode}`,
+    "onion_runtime_compiled=false",
     "default_extension=.exe",
     "portable_default_allowed=false",
     "msi_alternative_allowed=true",
@@ -944,6 +947,8 @@ export function productionWindowsPublicArtifactCandidateView(input = {}) {
     platform,
     artifactType,
     bundleTarget,
+    runtimeMode,
+    onionRuntimeCompiled: false,
     defaultExtension: ".exe",
     portableDefaultAllowed: false,
     msiAlternativeAllowed: true,

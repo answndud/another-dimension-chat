@@ -91,6 +91,8 @@ rejectText("README.md", "Windows production-ready");
 
 requireText("apps/desktop-tauri/package.json", '"test:windows-boundary"');
 requireText("apps/desktop-tauri/package.json", "verify-windows-local-runtime-boundary.mjs");
+requireText("apps/desktop-tauri/package.json", '"tauri:build:windows-nsis:manual-e2ee"');
+requireText("apps/desktop-tauri/package.json", "windows-manual-e2ee");
 requireText("apps/desktop-tauri/src-tauri/tauri.conf.json", '"targets": "all"');
 
 requireText("apps/desktop-tauri/src-tauri/src/lib.rs", "windows_is_local_build_candidate_only");
@@ -108,6 +110,9 @@ requireText("apps/desktop-tauri/src-tauri/src/lib.rs", "auto_update_channel: fal
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_runtime_smoke_required=true");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_local_runtime_smoke_status=source-boundary-only");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_local_runtime_recovery_action=run-test-windows-boundary-on-real-windows");
+requireText("apps/desktop-tauri/src-tauri/src/status.rs", "artifact_type=windows-manual-e2ee-nsis-exe-installer-candidate");
+requireText("apps/desktop-tauri/src-tauri/src/status.rs", "runtime_mode=manual-e2ee");
+requireText("apps/desktop-tauri/src-tauri/src/status.rs", "onion_runtime_compiled=false");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_app_data_path_review_required=false");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_path_separator_review_required=false");
 requireText("apps/desktop-tauri/src-tauri/src/status.rs", "windows_local_deletion_behavior_review_required=false");

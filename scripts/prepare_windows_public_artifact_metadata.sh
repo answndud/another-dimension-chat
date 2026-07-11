@@ -27,6 +27,8 @@ RELEASE_CLASS="${AD_WINDOWS_RELEASE_CLASS:-unsigned-windows-beta}"
 BUNDLE_TARGET="${AD_WINDOWS_BUNDLE_TARGET:-nsis}"
 ARCHITECTURE="${AD_WINDOWS_ARTIFACT_ARCHITECTURE:-windows-x64}"
 SIGNING_STATUS="${AD_WINDOWS_ARTIFACT_SIGNING_STATUS:-unsigned-hold}"
+RUNTIME_MODE="${AD_WINDOWS_RUNTIME_MODE:-manual-e2ee}"
+ONION_RUNTIME_COMPILED="${AD_WINDOWS_ONION_RUNTIME_COMPILED:-0}"
 OUT_DIR="${AD_WINDOWS_ARTIFACT_METADATA_OUT_DIR:-$ROOT/apps/desktop-tauri/public-release/windows-artifact-metadata}"
 VALIDATOR="scripts/validate_windows_artifact_manifest.mjs"
 
@@ -74,6 +76,19 @@ case "$SIGNING_STATUS" in
   unsigned-hold|signtool-signed|store-signed) ;;
   *) fail "unsupported AD_WINDOWS_ARTIFACT_SIGNING_STATUS" ;;
 esac
+case "$RUNTIME_MODE" in
+  manual-e2ee|onion-runtime) ;;
+  *) fail "unsupported AD_WINDOWS_RUNTIME_MODE" ;;
+esac
+case "$ONION_RUNTIME_COMPILED" in
+  0|1|false|true) ;;
+  *) fail "unsupported AD_WINDOWS_ONION_RUNTIME_COMPILED" ;;
+esac
+if [ "$ONION_RUNTIME_COMPILED" = "1" ] || [ "$ONION_RUNTIME_COMPILED" = "true" ]; then
+  onion_runtime_compiled_json=true
+else
+  onion_runtime_compiled_json=false
+fi
 case "$BUNDLE_TARGET" in
   msi) default_artifact_extension=".msi" ;;
   nsis) default_artifact_extension=".exe" ;;
@@ -115,6 +130,8 @@ cat >"$OUT_DIR/$provenance_file" <<JSON
   "artifact_sha256": "$sha256",
   "release_class": "$RELEASE_CLASS",
   "bundle_target": "$BUNDLE_TARGET",
+  "runtime_mode": "$RUNTIME_MODE",
+  "onion_runtime_compiled": $onion_runtime_compiled_json,
   "signing_status": "$SIGNING_STATUS",
   "release_upload_authorized": false,
   "windows_public_artifact_ready": false,
@@ -133,6 +150,8 @@ cat >"$manifest_file" <<JSON
   "manifest_sha256_file": "$manifest_checksum_file",
   "default_bundle_target": "$BUNDLE_TARGET",
   "default_artifact_extension": "$default_artifact_extension",
+  "runtime_mode": "$RUNTIME_MODE",
+  "onion_runtime_compiled": $onion_runtime_compiled_json,
   "webview2_runtime_required": true,
   "app_data_resolver": "tauri-app-data",
   "redacted_diagnostics_required": true,
@@ -161,6 +180,8 @@ cat >"$manifest_file" <<JSON
       "platform": "windows",
       "architecture": "$ARCHITECTURE",
       "bundle_target": "$BUNDLE_TARGET",
+      "runtime_mode": "$RUNTIME_MODE",
+      "onion_runtime_compiled": $onion_runtime_compiled_json,
       "signing_status": "$SIGNING_STATUS",
       "checksum_file": "$checksum_file",
       "checksum_sidecar": "$checksum_file",
@@ -202,6 +223,8 @@ the app.
 - SHA-256: \`$sha256\`
 - Architecture: \`$ARCHITECTURE\`
 - Bundle target: \`$BUNDLE_TARGET\`
+- Runtime mode: \`$RUNTIME_MODE\`
+- Onion runtime compiled: \`$onion_runtime_compiled_json\`
 - Signing status: \`$SIGNING_STATUS\`
 - Manifest: \`$(basename "$manifest_file")\`
 - Manifest SHA-256 sidecar: \`$manifest_checksum_file\`
@@ -212,8 +235,12 @@ the app.
 - App data resolver: \`tauri-app-data\`
 - Release upload authorized by this metadata script: false
 
+The default Windows candidate is the manual E2EE desktop slice. It does not
+compile the Arti/Tor onion runtime unless \`runtime_mode=onion-runtime\` and
+\`onion_runtime_compiled=true\` are present in the same-release manifest.
+
 Do not publish this Windows packet as a public release asset until a real
-Windows runtime result packet passes
+Windows runtime result packet for the declared runtime mode passes
 \`scripts/validate_windows_public_artifact_results.mjs --require-current-head\`
 and a separate maintainer release gate explicitly authorizes upload.
 BODY
@@ -244,8 +271,9 @@ not production-ready, and sensitive communication prohibited.
 4. Continue only for local testing. Do not use this candidate for real or
    sensitive communication.
 
-This packet still requires a separate real-Windows runtime result before any
-public Windows artifact claim or upload claim is allowed.
+This packet still requires a separate real-Windows runtime result for
+\`runtime_mode=$RUNTIME_MODE\` before any public Windows artifact claim or
+upload claim is allowed.
 GUIDE
 
 cat >"$release_notes_file" <<NOTES
@@ -254,6 +282,8 @@ cat >"$release_notes_file" <<NOTES
 - Artifact: \`$artifact_name\`
 - Architecture: \`$ARCHITECTURE\`
 - Bundle target: \`$BUNDLE_TARGET\`
+- Runtime mode: \`$RUNTIME_MODE\`
+- Onion runtime compiled: \`$onion_runtime_compiled_json\`
 - Signing status: \`$SIGNING_STATUS\`
 - WebView2 runtime required: true
 - Auto-update channel: absent
@@ -262,13 +292,16 @@ cat >"$release_notes_file" <<NOTES
 
 Non-claims remain active: not audited, not production-ready, sensitive
 communication prohibited, no production Windows claim, and no high-risk public
-claim.
+claim. The manual E2EE Windows slice is separate from the onion-runtime
+High-Risk Mode build.
 NOTES
 
 cat >"$runtime_status_file" <<STATUS
 # Windows Runtime Evidence Status
 
 real_windows_runtime_result_present=false
+runtime_mode=$RUNTIME_MODE
+onion_runtime_compiled=$onion_runtime_compiled_json
 windows_real_runtime_smoke_passed=false
 windows_public_artifact_ready=false
 windows_installer_ready=false
