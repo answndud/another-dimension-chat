@@ -10,6 +10,7 @@ apps/desktop-tauri/dist/
 apps/desktop-tauri/beta-artifacts/
 apps/desktop-tauri/public-release/
 apps/desktop-tauri/screenshot-candidates/
+apps/desktop-tauri/src-tauri/binaries/another-dimension-engine-*
 apps/desktop-tauri/src-tauri/gen/schemas/
 apps/desktop-tauri/src-tauri/target/
 

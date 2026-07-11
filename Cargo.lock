@@ -133,6 +133,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "another-dimension-engine"
+version = "0.1.0"
+dependencies = [
+ "another-dimension-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "another-dimension-identity"
 version = "0.1.0"
 dependencies = [
