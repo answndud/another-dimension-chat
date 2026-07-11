@@ -3009,6 +3009,9 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(privateDeliveryStateJs, /diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only/);
   assert.match(privateDeliveryStateJs, /PUBLIC_SUPPORT_DIAGNOSTICS_ALLOWED_FIELDS/);
   assert.match(privateDeliveryStateJs, /PUBLIC_SUPPORT_DIAGNOSTICS_FORBIDDEN_FIELDS/);
+  assert.match(privateDeliveryStateJs, /PUBLIC_SUPPORT_DIAGNOSTICS_POLICY_VERSION = "public-intake-v1"/);
+  assert.match(privateDeliveryStateJs, /PUBLIC_SUPPORT_DIAGNOSTICS_POLICY_ALIGNMENT =/);
+  assert.match(privateDeliveryStateJs, /public_intake_policy_fields_aligned=true/);
   assert.match(privateDeliveryStateJs, /allowed_public_intake_fields=\$\{publicSupportDiagnosticsAllowedFieldsValue\(\)\}/);
   assert.match(privateDeliveryStateJs, /forbidden_public_intake_fields=\$\{publicSupportDiagnosticsForbiddenFieldsValue\(\)\}/);
   assert.match(privateDeliveryStateJs, /excluded_fields=\$\{publicSupportDiagnosticsExcludedFieldsValue\(\)\}/);
@@ -3039,10 +3042,14 @@ test("public diagnostics summary includes desktop completion without production 
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.desktop_acceptance_next_action/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.allowed_public_intake_fields/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.forbidden_public_intake_fields/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.public_intake_policy_version/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.public_intake_policy_alignment/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /publicDiagnostics\.excluded_fields/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /payload_next_action_match=\$\{payloadNextActionMatchesSummary\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /raw_state_excluded=\$\{rawStateExcluded\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public_intake_policy_fields_aligned=\$\{publicIntakePolicyFieldsAligned\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public_intake_policy_version=\$\{publicIntakePolicyVersion\}/);
+  assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /public_intake_policy_alignment=\$\{publicIntakePolicyAlignment\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /allowed_public_intake_fields=\$\{allowedPublicIntakeFields\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /forbidden_public_intake_fields=\$\{forbiddenPublicIntakeFields\}/);
   assert.match(functionBody(mainJs, "refreshPublicBetaDiagnostics"), /local_manual_e2ee_runtime_boundary=\$\{localManualE2eeBoundary\}/);

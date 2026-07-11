@@ -10,6 +10,10 @@ body:
       value: |
         Do not post bridge lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads, safety phrases, profile names, message text, local paths, raw logs, crash dumps, screenshots of private room data, support bundles, passphrases, private keys, key material, private planning notes, files from docs/, or local app data.
 
+        Use only the same field set shown by the app's Public diagnostics:
+        `allowed_public_intake_fields=app-status#app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network#release-class-readiness#high-risk-runtime-evidence-source#high-risk-runtime-evidence-accepted#high-risk-runtime-primary-blocker#high-risk-runtime-failure-class#engine-sidecar-status-failure-class#engine-sidecar-manual-self-test-failure-class#engine-sidecar-redacted-runtime-status`
+        `forbidden_public_intake_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles`
+
         This beta is unsigned, not notarized, not audited, not production-ready, and sensitive communication prohibited.
   - type: checkboxes
     id: redaction
@@ -104,13 +108,17 @@ body:
       label: Public diagnostics only
       description: Copy only the app's redacted Public diagnostics output. Do not include field-test reports if they contain private data.
       placeholder: |
-        Another Dimension Chat public beta diagnostics
-        diagnostic_version=1
-        release_channel=unsigned-experimental-public-beta
-        security_claim=not-production-ready
-        sensitive_communication=sensitive-communication-prohibited
+        Another Dimension Chat public support diagnostics
+        diagnostic_version=2
+        diagnostic_scope=public-support
+        public_intake_policy_version=public-intake-v1
+        public_intake_policy_alignment=app-diagnostics#github-issue-template#reference-policy
+        public_intake_policy_fields_aligned=true
         app_version=0.1.0
         build_channel=beta-onion
+        build_commit=806ecad1
+        allowed_public_intake_fields=app-status#app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network#release-class-readiness#high-risk-runtime-evidence-source#high-risk-runtime-evidence-accepted#high-risk-runtime-primary-blocker#high-risk-runtime-failure-class#engine-sidecar-status-failure-class#engine-sidecar-manual-self-test-failure-class#engine-sidecar-redacted-runtime-status
+        forbidden_public_intake_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles
         failure_class=none
         recovery_next_action=none
         desktop_acceptance_status=not-claimed
