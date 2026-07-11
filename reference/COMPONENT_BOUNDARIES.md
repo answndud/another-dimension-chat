@@ -36,6 +36,27 @@ The project currently has a working local prototype loop:
 - Tauri `prototype_status` mirrors session durable-state and unlock-policy blockers as static read-only copy without executing unlock, writing session records, or opening runtime messaging.
 - Existing production-facing code is a set of guardrails and spikes, not a complete secure runtime.
 
+## Portfolio Architecture Map
+
+The project is easiest to review as a set of ownership boundaries rather than a
+single chat feature:
+
+| Boundary | Owner | Public meaning | Current claim state |
+| --- | --- | --- | --- |
+| Product trust model | README/SECURITY/reference | No phone, email, global account, central contact discovery, central message server, push notification, or cloud backup in v0.1. | Directional product boundary only. |
+| Identity and pairing | `crates/identity`, `crates/pairing` | Pairwise profile material, signed pairing payloads, and safety transcripts are Rust-owned. | Mitigation target; not audited identity safety. |
+| Message envelope and replay | `crates/protocol`, `crates/core` | Encrypted envelopes and replay-window semantics are explicit and testable. | Local source evidence only; not production E2EE readiness. |
+| Local data lifecycle | `crates/storage`, `crates/core`, desktop state | Passphrase-first local encrypted records, local lifecycle actions, and rollback/secure-deletion non-claims stay together. | Local-at-rest mitigation target; rollback prevention and secure deletion remain false. |
+| Transport | `crates/transport`, desktop explicit-action UI | Default manual envelope exchange; advanced onion/Tor paths are explicit and fail-closed. | No automatic delivery or reliable external onion delivery claim. |
+| Shell/UI | `apps/desktop-tauri` | UI displays redacted state and explicit actions; it does not invent protocol or storage meaning. | Product shell boundary only. |
+| Support and release | `SUPPORT.md`, release references, scripts | Public support uses redacted diagnostics; release authority is same GitHub Release assets and checksum. | Distribution/source hygiene only, not security readiness. |
+
+This map is the portfolio explanation path: first remove central trust from the
+default product model, then keep security-sensitive meaning in shared Rust code,
+then expose only redacted state and explicit user actions through the shell.
+It also explains why the current beta prefers manual envelope exchange: the
+tradeoff is weaker convenience for a clearer delivery and metadata boundary.
+
 ## Boundary Inventory
 
 | Area | Current boundary | Before security-ready claim |
