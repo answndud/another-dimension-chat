@@ -137,6 +137,10 @@ name = "another-dimension-engine"
 version = "0.1.0"
 dependencies = [
  "another-dimension-core",
+ "another-dimension-crypto",
+ "another-dimension-identity",
+ "another-dimension-pairing",
+ "another-dimension-protocol",
  "serde",
  "serde_json",
 ]
