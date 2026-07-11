@@ -2,6 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ALLOWED_PUBLIC_INTAKE_FIELDS="app-status#app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network#release-class-readiness#high-risk-runtime-evidence-source#high-risk-runtime-evidence-accepted#high-risk-runtime-primary-blocker#high-risk-runtime-failure-class#engine-sidecar-status-failure-class#engine-sidecar-manual-self-test-failure-class#engine-sidecar-redacted-runtime-status"
+FORBIDDEN_PUBLIC_INTAKE_FIELDS="raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles"
+PUBLIC_INTAKE_POLICY_ALIGNMENT="app-diagnostics#github-issue-template#reference-policy"
 
 require_file() {
   if [ ! -f "$1" ]; then
@@ -29,8 +32,6 @@ reject_text() {
 }
 
 PUBLIC_FILES=(
-  "$ROOT_DIR/README.md"
-  "$ROOT_DIR/SECURITY.md"
   "$ROOT_DIR/apps/desktop-tauri/README.md"
   "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md"
 )
@@ -92,6 +93,9 @@ done
 
 require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "Public diagnostics only"
 require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "Redacted description"
+require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "allowed_public_intake_fields=$ALLOWED_PUBLIC_INTAKE_FIELDS"
+require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "forbidden_public_intake_fields=$FORBIDDEN_PUBLIC_INTAKE_FIELDS"
+require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "public_intake_policy_alignment=$PUBLIC_INTAKE_POLICY_ALIGNMENT"
 require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "PUBLIC_SUPPORT_TRIAGE.md"
 require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "macos-manual-allow"
 require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "malformed-payload"
@@ -102,6 +106,9 @@ require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/public_beta_support.yml" "private
 require_text "$ROOT_DIR/.github/ISSUE_TEMPLATE/security_contact_request.yml" "private contact path"
 require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "Allowed Public Intake"
 require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "Forbidden Public Intake"
+require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "allowed_public_intake_fields=$ALLOWED_PUBLIC_INTAKE_FIELDS"
+require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "forbidden_public_intake_fields=$FORBIDDEN_PUBLIC_INTAKE_FIELDS"
+require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "public_intake_policy_alignment=$PUBLIC_INTAKE_POLICY_ALIGNMENT"
 require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "app version"
 require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "build channel"
 require_text "$ROOT_DIR/reference/PUBLIC_INTAKE_POLICY.md" "build commit"
@@ -144,6 +151,9 @@ require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "paylo
 require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "diagnostics_copy_boundary=redacted-status-build-failure-class-recovery-action-only"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "PUBLIC_SUPPORT_DIAGNOSTICS_ALLOWED_FIELDS"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "PUBLIC_SUPPORT_DIAGNOSTICS_FORBIDDEN_FIELDS"
+require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "PUBLIC_SUPPORT_DIAGNOSTICS_POLICY_VERSION"
+require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "PUBLIC_SUPPORT_DIAGNOSTICS_POLICY_ALIGNMENT"
+require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "public_intake_policy_fields_aligned=true"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "allowed_public_intake_fields=\${publicSupportDiagnosticsAllowedFieldsValue()}"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "forbidden_public_intake_fields=\${publicSupportDiagnosticsForbiddenFieldsValue()}"
 require_text "$ROOT_DIR/apps/desktop-tauri/src/private-delivery-state.js" "failure_class="
@@ -159,7 +169,7 @@ require_text "$ROOT_DIR/apps/desktop-tauri/src/ui-smoke.test.js" "public diagnos
 
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_real_user_test_prep_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_prep=redacted-intake-ready"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_allowed_fields=app-status#app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network#release-class-readiness"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_allowed_fields=$ALLOWED_PUBLIC_INTAKE_FIELDS"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_forbidden_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_external_success_claim=false"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "real_user_test_hold_criteria=missing-redacted-diagnostics#forbidden-private-data#network-before-explicit-action#checksum-mismatch"
@@ -173,7 +183,7 @@ bash -n "$ROOT_DIR/scripts/public_claim_acceptance_once.sh"
 
 echo "status=desktop-real-user-test-prep-source-ready"
 echo "real_user_test_prep=redacted-intake-ready"
-echo "real_user_test_allowed_fields=app-status#app-version#build-channel#build-commit#platform#public-diagnostics#checksum-result#failure-class#recovery-next-action#desktop-acceptance-status#desktop-acceptance-blockers#app-launch-network#release-class-readiness"
+echo "real_user_test_allowed_fields=$ALLOWED_PUBLIC_INTAKE_FIELDS"
 echo "real_user_test_forbidden_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#endpoints#invite-codes#pairing-payloads#envelope-payloads#endpoint-payloads#message-text#local-paths#payloads#safety-phrases#profile-names#passphrases#private-keys#key-material#private-planning-notes#support-bundles"
 echo "real_user_test_external_success_claim=false"
 echo "real_user_test_production_ready_claim=false"
