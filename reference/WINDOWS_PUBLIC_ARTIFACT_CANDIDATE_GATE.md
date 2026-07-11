@@ -11,9 +11,11 @@ and does not allow sensitive communication claims.
 ## Candidate Contract
 
 - windows_public_artifact_candidate=true
-- artifact_type=windows-nsis-exe-installer-candidate
-- build_command=npm --prefix apps/desktop-tauri run tauri:build:windows-nsis:beta-onion
+- artifact_type=windows-manual-e2ee-nsis-exe-installer-candidate
+- build_command=npm --prefix apps/desktop-tauri run tauri:build:windows-nsis:manual-e2ee
 - bundle_target=nsis
+- runtime_mode=manual-e2ee
+- onion_runtime_compiled=false
 - default_extension=.exe
 - portable_default_allowed=false
 - msi_alternative_allowed=true
@@ -69,4 +71,6 @@ and does not allow sensitive communication claims.
 SmartScreen, Microsoft Store reputation, installer success, WebView2 presence,
 and code signing are distribution or integrity aids only. They are not protocol
 security, message confidentiality, peer authentication, high-risk transport,
-or production readiness boundaries.
+or production readiness boundaries. The default Windows public candidate is
+the manual E2EE desktop slice; onion-runtime High-Risk Mode remains a separate
+build/runtime evidence path.
