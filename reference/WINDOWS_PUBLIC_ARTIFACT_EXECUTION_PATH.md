@@ -14,6 +14,9 @@ The result schema is `reference/WINDOWS_REAL_RUNTIME_RESULT_SCHEMA.md`.
 Artifact manifest/checksum consistency is tracked in
 `reference/WINDOWS_ARTIFACT_MANIFEST_CHECKSUM_SCHEMA.md` and verified by
 `scripts/validate_windows_artifact_manifest.mjs`.
+Runtime result evidence is a separate packet gate. Source fixtures may exercise
+the validator, but they keep `real_windows_runtime_result_present=false` and do
+not open public artifact, installer, upload, or production claims.
 
 ## Execution Inputs
 
@@ -71,6 +74,9 @@ Actual Windows artifact execution requires:
 - windows_public_copy_requirements_defined=true
 - windows_support_diagnostics_requirements_defined=true
 - windows_no_overclaim_gate_ready=true
+- real_windows_runtime_result_present=false
+- windows_runtime_result_packet_required_for_public_artifact=true
+- windows_manifest_checksum_provenance_separate_from_runtime_result=true
 - windows_result_requires_real_windows_machine=true
 - windows_result_requires_current_source_commit=true
 - windows_result_current_head_strict_mode_ready=true
@@ -90,6 +96,11 @@ Actual Windows artifact execution requires:
 - windows_result_requires_support_diagnostics_review=true
 - windows_result_requires_public_non_claims=true
 - windows_result_rejects_local_only_or_private_data=true
+- windows_non_windows_runtime_result_promoted=false
+- windows_macos_runtime_result_promoted=false
+- windows_linux_runtime_result_promoted=false
+- windows_local_or_fabricated_runtime_result_promoted=false
+- windows_runtime_result_fixture_promoted_to_public_artifact=false
 - windows_result_rejects_private_docs_local_app_data_and_screenshots=true
 - windows_public_artifact_candidate_requires_manual_review=true
 - windows_real_runtime_smoke_passed=false
@@ -99,6 +110,9 @@ Actual Windows artifact execution requires:
 - windows_artifact_release_upload_authorized=false
 - windows_artifact_release_body_edit_authorized=false
 - windows_public_artifact_upload_allowed=false
+- windows_public_artifact_claim_allowed=false
+- windows_installer_claim_allowed=false
+- windows_upload_claim_allowed=false
 - windows_release_packaging_allowed=false
 - windows_generated_artifact_commit_allowed=false
 - windows_public_copy_published=false
