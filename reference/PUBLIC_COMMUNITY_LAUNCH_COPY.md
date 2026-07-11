@@ -12,6 +12,14 @@ Allowed short copy:
 > redacted diagnostics. Current public artifact: unsigned macOS DMG from GitHub
 > Releases. Windows is source-gated only and not yet published.
 
+README entry copy:
+
+> A no-central-trusted-server 1:1 messenger beta for macOS Apple Silicon:
+> verify the same-release checksum, allow the unsigned app manually in
+> Gatekeeper, create or join a pairwise invite room, compare safety material,
+> exchange manual encrypted envelopes, and copy only redacted diagnostics for
+> support.
+
 Required disclaimer:
 
 > Not audited, not production-ready, sensitive communication prohibited, not High-Risk-ready, and not a Signal/Briar/Cwtch-equivalent privacy or security claim.
