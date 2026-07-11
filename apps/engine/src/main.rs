@@ -1,4 +1,3 @@
-use another_dimension_core::production::production_windows_public_artifact_candidate_summary;
 use serde::Serialize;
 
 const SCHEMA_VERSION: &str = "ad-engine-sidecar-status-v1";
@@ -33,14 +32,13 @@ struct EngineSidecarStatus {
 }
 
 fn engine_sidecar_status() -> EngineSidecarStatus {
-    let windows_artifact = production_windows_public_artifact_candidate_summary();
     EngineSidecarStatus {
         schema_version: SCHEMA_VERSION,
         sidecar_protocol: SIDECAR_PROTOCOL,
         contract_version: CONTRACT_VERSION,
         binary_name: BINARY_NAME,
-        runtime_mode: "manual-e2ee-engine-sidecar",
-        manual_e2ee_runtime_available: true,
+        runtime_mode: runtime_mode(),
+        manual_e2ee_runtime_available: full_runtime_compiled(),
         onion_runtime_compiled: false,
         app_launch_network_allowed: false,
         room_open_network_allowed: false,
@@ -48,11 +46,11 @@ fn engine_sidecar_status() -> EngineSidecarStatus {
         raw_local_path_returned: false,
         key_material_exposed: false,
         passphrase_exposed: false,
-        runtime_result_external_peer_evidence_separated: windows_artifact
-            .runtime_result_external_peer_evidence_separated(),
-        windows_public_artifact_ready: windows_artifact.windows_public_artifact_ready(),
-        windows_installer_ready: windows_artifact.windows_installer_ready(),
-        public_artifact_upload_allowed: windows_artifact.windows_public_artifact_upload_allowed(),
+        runtime_result_external_peer_evidence_separated:
+            runtime_result_external_peer_evidence_separated(),
+        windows_public_artifact_ready: windows_public_artifact_ready(),
+        windows_installer_ready: windows_installer_ready(),
+        public_artifact_upload_allowed: windows_public_artifact_upload_allowed(),
         production_ready_claim: false,
         high_risk_claim: false,
         sensitive_communication_allowed: false,
@@ -72,6 +70,62 @@ fn engine_sidecar_status() -> EngineSidecarStatus {
             "key_material",
         ],
     }
+}
+
+fn runtime_mode() -> &'static str {
+    if full_runtime_compiled() {
+        "manual-e2ee-engine-sidecar"
+    } else {
+        "contract-only-engine-sidecar"
+    }
+}
+
+fn full_runtime_compiled() -> bool {
+    cfg!(feature = "full-runtime")
+}
+
+#[cfg(feature = "full-runtime")]
+fn runtime_result_external_peer_evidence_separated() -> bool {
+    another_dimension_core::production::production_windows_public_artifact_candidate_summary()
+        .runtime_result_external_peer_evidence_separated()
+}
+
+#[cfg(not(feature = "full-runtime"))]
+fn runtime_result_external_peer_evidence_separated() -> bool {
+    true
+}
+
+#[cfg(feature = "full-runtime")]
+fn windows_public_artifact_ready() -> bool {
+    another_dimension_core::production::production_windows_public_artifact_candidate_summary()
+        .windows_public_artifact_ready()
+}
+
+#[cfg(not(feature = "full-runtime"))]
+fn windows_public_artifact_ready() -> bool {
+    false
+}
+
+#[cfg(feature = "full-runtime")]
+fn windows_installer_ready() -> bool {
+    another_dimension_core::production::production_windows_public_artifact_candidate_summary()
+        .windows_installer_ready()
+}
+
+#[cfg(not(feature = "full-runtime"))]
+fn windows_installer_ready() -> bool {
+    false
+}
+
+#[cfg(feature = "full-runtime")]
+fn windows_public_artifact_upload_allowed() -> bool {
+    another_dimension_core::production::production_windows_public_artifact_candidate_summary()
+        .windows_public_artifact_upload_allowed()
+}
+
+#[cfg(not(feature = "full-runtime"))]
+fn windows_public_artifact_upload_allowed() -> bool {
+    false
 }
 
 fn print_status() -> Result<(), String> {
@@ -119,7 +173,8 @@ mod tests {
         assert_eq!(status.schema_version, "ad-engine-sidecar-status-v1");
         assert_eq!(status.sidecar_protocol, "ad-engine-json-stdio-v1");
         assert_eq!(status.contract_version, 1);
-        assert!(status.manual_e2ee_runtime_available);
+        assert_eq!(status.runtime_mode, "contract-only-engine-sidecar");
+        assert!(!status.manual_e2ee_runtime_available);
         assert!(!status.onion_runtime_compiled);
         assert!(!status.app_launch_network_allowed);
         assert!(!status.room_open_network_allowed);
