@@ -77,7 +77,7 @@ case "$SIGNING_STATUS" in
   *) fail "unsupported AD_WINDOWS_ARTIFACT_SIGNING_STATUS" ;;
 esac
 case "$RUNTIME_MODE" in
-  manual-e2ee|onion-runtime) ;;
+  shell-sidecar-pending|manual-e2ee|onion-runtime) ;;
   *) fail "unsupported AD_WINDOWS_RUNTIME_MODE" ;;
 esac
 case "$ONION_RUNTIME_COMPILED" in
@@ -235,9 +235,10 @@ the app.
 - App data resolver: \`tauri-app-data\`
 - Release upload authorized by this metadata script: false
 
-The default Windows candidate is the manual E2EE desktop slice. It does not
-compile the Arti/Tor onion runtime unless \`runtime_mode=onion-runtime\` and
-\`onion_runtime_compiled=true\` are present in the same-release manifest.
+The default Windows candidate is a thin shell slice while the engine sidecar is
+split out of the Tauri package. It does not compile the Arti/Tor onion runtime
+unless \`runtime_mode=onion-runtime\` and \`onion_runtime_compiled=true\` are
+present in the same-release manifest.
 
 Do not publish this Windows packet as a public release asset until a real
 Windows runtime result packet for the declared runtime mode passes
@@ -292,8 +293,8 @@ cat >"$release_notes_file" <<NOTES
 
 Non-claims remain active: not audited, not production-ready, sensitive
 communication prohibited, no production Windows claim, and no high-risk public
-claim. The manual E2EE Windows slice is separate from the onion-runtime
-High-Risk Mode build.
+claim. The shell-sidecar Windows slice is separate from the engine and
+onion-runtime High-Risk Mode builds.
 NOTES
 
 cat >"$runtime_status_file" <<STATUS
