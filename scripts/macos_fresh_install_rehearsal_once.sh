@@ -64,6 +64,7 @@ for text in \
   "First-Run Warning" \
   "Profile Unlock Or Create" \
   "Invite Room And Verify" \
+  "Safety Compare" \
   "Manual Encrypted Envelope Export/Import" \
   "Reply, Retry, And Cancel" \
   "Local Deletion" \
@@ -82,8 +83,21 @@ require_text "$CHECKLIST" "reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md"
 require_text "$INSTALL_GUIDE" "Do not use terminal quarantine-removal commands as an install step"
 
 require_text "$RESULT" "Status: hold for manual GUI follow-through; source install authority passed."
-require_text "$RESULT" "checksum result: OK"
+require_text "$RESULT" "checksum_result: OK"
+require_text "$RESULT" "gatekeeper_manual_allow_result: hold"
+require_text "$RESULT" "first_launch_result: hold"
+require_text "$RESULT" "profile_unlock_result: hold"
+require_text "$RESULT" "invite_join_result: hold"
+require_text "$RESULT" "safety_compare_result: hold"
+require_text "$RESULT" "envelope_exchange_result: hold"
+require_text "$RESULT" "diagnostics_copy_result: hold"
+require_text "$RESULT" "local_delete_result: hold"
+require_text "$RESULT" "app_launch_network: false"
 require_text "$RESULT" "macos-gui-human-rehearsal-not-run"
+require_text "$RESULT" "clean_machine_execution=false"
+require_text "$RESULT" "clean_machine_result_accepted=false"
+require_text "$RESULT" "local_fixture_promoted_to_clean_install_pass=false"
+require_text "$RESULT" "next_owner_action=run-clean-macos-fresh-install-with-disposable-profile"
 require_text "$RESULT" "public beta non-claims confirmed: yes"
 require_text "$RESULT" "Fresh Download: pass"
 require_text "$RESULT" "Checksum: pass"
@@ -94,6 +108,7 @@ require_text "$RESULT" "manual Privacy & Security allow was not exercised"
 require_text "$RESULT" "First-Run Warning: hold"
 require_text "$RESULT" "Profile Unlock Or Create: hold"
 require_text "$RESULT" "Invite Room And Verify: hold"
+require_text "$RESULT" "Safety Compare: hold"
 require_text "$RESULT" "Manual Encrypted Envelope Export/Import: hold"
 require_text "$RESULT" "Reply, Retry, And Cancel: hold"
 require_text "$RESULT" "Local Deletion: hold"
@@ -114,8 +129,22 @@ else
 fi
 
 printf 'status=macos-fresh-install-rehearsal-source-ready\n'
-printf 'checklist_steps=fresh-download#checksum#mount-dmg#copy-app#first-launch-gatekeeper#first-run-warning#profile#invite#manual-envelope#reply-retry-cancel#local-deletion#redacted-diagnostics\n'
+printf 'checklist_steps=fresh-download#checksum#mount-dmg#copy-app#first-launch-gatekeeper#first-run-warning#profile#invite#safety-compare#manual-envelope#reply-retry-cancel#local-deletion#redacted-diagnostics\n'
 printf 'local_checksum_result=%s\n' "$local_checksum_result"
+printf 'clean_machine_execution=false\n'
+printf 'clean_machine_result_accepted=false\n'
+printf 'local_fixture_promoted_to_clean_install_pass=false\n'
+printf 'checksum_result=OK\n'
+printf 'gatekeeper_manual_allow_result=hold\n'
+printf 'first_launch_result=hold\n'
+printf 'profile_unlock_result=hold\n'
+printf 'invite_join_result=hold\n'
+printf 'safety_compare_result=hold\n'
+printf 'envelope_exchange_result=hold\n'
+printf 'diagnostics_copy_result=hold\n'
+printf 'local_delete_result=hold\n'
+printf 'app_launch_network=false\n'
+printf 'next_owner_action=run-clean-macos-fresh-install-with-disposable-profile\n'
 printf 'release_upload_performed=false\n'
 printf 'dmg_rebuild_performed=false\n'
 printf 'local_data_delete_performed=false\n'

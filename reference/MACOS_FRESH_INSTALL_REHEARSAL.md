@@ -18,11 +18,44 @@ Record only:
 
 - release tag
 - app artifact name
-- checksum result: OK, mismatch, or not run
+- checksum_result: OK, mismatch, or not_run
+- gatekeeper_manual_allow_result: pass, hold, fail, or not_run
+- first_launch_result: pass, hold, fail, or not_run
+- profile_unlock_result: pass, hold, fail, or not_run
+- invite_join_result: pass, hold, fail, or not_run
+- safety_compare_result: pass, hold, fail, or not_run
+- envelope_exchange_result: pass, hold, fail, or not_run
+- diagnostics_copy_result: pass, hold, fail, or not_run
+- local_delete_result: pass, hold, fail, or not_run
+- app_launch_network: false, true, or not_observed
 - platform: macOS Apple Silicon
 - broad failure class, if any
 - recovery next action, if any
 - public beta non-claims confirmed: yes or no
+
+Required machine-readable contract:
+
+```text
+clean_machine_execution=false
+clean_machine_result_accepted=false
+local_fixture_promoted_to_clean_install_pass=false
+checksum_result=OK
+gatekeeper_manual_allow_result=hold
+first_launch_result=hold
+profile_unlock_result=hold
+invite_join_result=hold
+safety_compare_result=hold
+envelope_exchange_result=hold
+diagnostics_copy_result=hold
+local_delete_result=hold
+app_launch_network=false
+next_owner_action=run-clean-macos-fresh-install-with-disposable-profile
+```
+
+Do not mark `clean_machine_result_accepted=true` until a real clean macOS
+machine has run the GUI flow with disposable data and the result stays
+public-safe. Local fixtures, ignored release packets, screenshots, or headless
+checks are source preparation only.
 
 ## Steps
 
@@ -114,6 +147,16 @@ surface.
 Failure recovery: if invite or verification is unclear, record the broad failure
 class and recovery next action. Do not publish invite codes, endpoints,
 payloads, or screenshots of private room data.
+
+### 8a. Safety Compare
+
+Action: compare the safety material for the disposable room before trusting it.
+
+Expected result: the UI makes the safety comparison state visible before any
+manual envelope exchange is treated as trusted.
+
+Failure recovery: if the safety comparison is missing, unclear, or bypassed,
+record broad failure class `safety-compare-blocked` and stop the rehearsal.
 
 ### 9. Manual Encrypted Envelope Export/Import
 
