@@ -114,14 +114,14 @@ The handoff checklist covers:
 It keeps no public Windows artifact, no Windows installer, no public artifact
 upload, not production-ready, and sensitive communication prohibited.
 
-Build the full-runtime beta with the manual onion networking attempt feature compiled in:
+Build the beta-onion desktop shell with the manual E2EE engine sidecar bundled:
 
 ```bash
 cd apps/desktop-tauri
 npm run tauri:build:beta-onion
 ```
 
-Build the full-runtime beta with the manual onion networking attempt and bridge-client feature compiled in:
+Build the beta-onion bridge channel shell with the same sidecar-first runtime boundary:
 
 ```bash
 cd apps/desktop-tauri
@@ -135,21 +135,21 @@ cd apps/desktop-tauri
 npm run tauri:dev
 ```
 
-Run the full-runtime local development shell with the manual onion networking attempt feature compiled in:
+Run the local beta-onion shell with the manual E2EE engine sidecar bundled:
 
 ```bash
 cd apps/desktop-tauri
 npm run tauri:dev:beta-onion
 ```
 
-Run the full-runtime local development shell with the manual onion networking attempt and bridge-client feature compiled in:
+Run the local beta-onion bridge channel shell with the same sidecar-first runtime boundary:
 
 ```bash
 cd apps/desktop-tauri
 npm run tauri:dev:beta-onion-bridge
 ```
 
-The `manual-onion-client-attempt` and `manual-onion-bridge-client` features only compile explicit onion attempt paths. They do not start Tor, launch an onion service, publish descriptors, receive, or send on app startup. Network work still requires the in-app manual network permission and an explicit user action.
+The default and beta-onion Tauri commands are sidecar-first public-shell builds. Legacy embedded runtime commands remain under `legacy:tauri:*` for compatibility work only. They do not start Tor, launch an onion service, publish descriptors, receive, or send on app startup. Network work still requires the in-app manual network permission and an explicit user action.
 
 Run two isolated local peer shells from separate terminals when testing one computer as two devices:
 
@@ -283,7 +283,7 @@ Expected local-only behavior:
 - Manual payload tools are behind the `Manual production payload tools` disclosure.
 - Dev-insecure diagnostics are behind developer diagnostics disclosures.
 - The public-shell first run avoids compiling the full Rust core/runtime stack.
-  Full-runtime commands still take longer from a cold Cargo target.
+  Legacy embedded runtime commands still take longer from a cold Cargo target.
 - The shell shows a dev-insecure warning separately from the transcript.
 - The shell shows structured local flow steps for profile creation, pairing, safety verification material, pairing confirmation, message send/receive, replay check, and demo completion.
 - The shell maps the local demo result into Alice/Bob peer panels and local flow controls for profile creation, pairing, safety display, contact confirmation, message send/receive, replay check, and completion.
