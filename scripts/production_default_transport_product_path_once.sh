@@ -57,6 +57,12 @@ must_contain "$DOC" "advanced_onion_controls_hidden_by_default=true"
 must_contain "$DOC" "startup_onion_status_only=true"
 must_contain "$DOC" "advanced_onion_direct_fallback=false"
 must_contain "$DOC" "advanced_onion_send_receive_available=false"
+must_contain "$DOC" "runtime_event_negative_corpus_redacts_sensitive_failure_context"
+must_contain "$DOC" "stream_fail_closed_negative_corpus_records_only_redacted_runtime_events"
+must_contain "$DOC" "transport_runtime_event_negative_corpus_ready=true"
+must_contain "$DOC" "transport_stream_fail_closed_negative_corpus_ready=true"
+must_contain "$DOC" "transport_runtime_event_identifiers_redacted=true"
+must_contain "$DOC" "transport_stream_failure_events_redacted=true"
 must_contain "$DOC" "automatic_network_on_launch_allowed=false"
 must_contain "$DOC" "external_two_machine_delivery_verified=false"
 must_contain "$DOC" "reliable_external_delivery_claim_allowed=false"
@@ -70,6 +76,11 @@ must_contain "reference/TRANSPORT_DECISION.md" "PRODUCTION_DEFAULT_TRANSPORT_PAT
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_4_default_transport_product_path_reviewed=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "production_transport_ready=false"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "transport_negative_corpus_source_gate_ready=true"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "production_ready_claim_allowed=false"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "security_ready_claimed=false"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "high_risk_public_claim_allowed=false"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "high_risk_ready_claim_allowed=false"
 
 must_contain "scripts/desktop_default_transport_boundary_once.sh" "status=desktop-default-transport-boundary-source-ready"
 must_contain "$RECOVERY_DOC" "manual_courier_envelope_recovery_available=true"
@@ -88,6 +99,8 @@ must_contain "crates/core/src/lib.rs" "production_practical_transport_split_summ
 must_contain "crates/core/src/lib.rs" "production_practical_transport_split_keeps_default_manual_and_onion_advanced"
 must_contain "crates/core/src/lib.rs" "production_transport_envelope_io_boundary_summary"
 must_contain "crates/core/src/lib.rs" "production_transport_envelope_io_boundary_closes_without_external_evidence_claim"
+must_contain "crates/transport/src/tests.rs" "runtime_event_negative_corpus_redacts_sensitive_failure_context"
+must_contain "crates/transport/src/tests.rs" "stream_fail_closed_negative_corpus_records_only_redacted_runtime_events"
 
 for file in "$DOC" "README.md" "SECURITY.md" "reference/TRANSPORT_DECISION.md"; do
   must_not_match "$file" "default_transport_network_io=true"
@@ -139,10 +152,17 @@ advanced_onion_controls_hidden_by_default=true
 startup_onion_status_only=true
 advanced_onion_direct_fallback=false
 advanced_onion_send_receive_available=false
+transport_negative_corpus_source_gate_ready=true
+transport_runtime_event_negative_corpus_ready=true
+transport_stream_fail_closed_negative_corpus_ready=true
+transport_runtime_event_identifiers_redacted=true
+transport_stream_failure_events_redacted=true
 automatic_network_on_launch_allowed=false
 external_two_machine_delivery_verified=false
 reliable_external_delivery_claim_allowed=false
 production_transport_ready=false
 security_ready_claimed=false
+high_risk_public_claim_allowed=false
+high_risk_ready_claim_allowed=false
 next_required_phase=Phase-O100-1-Operations-Incident-And-Vulnerability-Readiness
 STATUS
