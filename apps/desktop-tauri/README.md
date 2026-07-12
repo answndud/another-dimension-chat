@@ -84,6 +84,15 @@ provenance checked by `scripts/prepare_unsigned_public_beta_release.sh`; update
 that script's commit and SHA constants deliberately before changing the public
 release input.
 
+Build caches default to the OS user cache, not the repository. Inspect generated
+cache paths before deleting them:
+
+```bash
+cd ../..
+scripts/clean_build_cache.sh --dry-run
+scripts/clean_build_cache.sh --apply
+```
+
 Windows desktop cross-platform parity intake is source-only and tracked in
 `windows_desktop_parity_intake.json`.
 
@@ -343,6 +352,7 @@ Dependency/build gate:
 - `package-lock.json` is committed to pin the scaffold dependency graph.
 - `src-tauri/Cargo.lock` is committed to pin the local Tauri shell dependency graph.
 - `.npmrc` sets `workspaces=false` so local commands run as an isolated package even when the parent environment enables npm workspaces.
+- Build cache cleanup is dry-run by default; use `scripts/clean_build_cache.sh --apply` from the repository root only when deleting generated cache paths is intended.
 - Lightweight CI checks the scaffold shape and lockfile metadata only.
 - Full Tauri install/build is local-only until a separate heavy workflow decision.
 - Do not add network messaging, secure-release claims, or security-sensitive protocol logic to the frontend.
