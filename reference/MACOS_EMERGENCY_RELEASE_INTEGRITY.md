@@ -64,5 +64,17 @@ inventing evidence or mutating a live release from a source-side gate.
 - signed_update_manifest_ready=false
 - update_signature_ready=false
 - production_distribution_ready=false
+- high_risk_readiness_panel_emergency_controls_ready=true
+- high_risk_readiness_panel_clipboard_expiry_ready=true
+- panic_lock_ready=true
+- emergency_local_wipe_ready=true
+- emergency_wipe_confirmation=EMERGENCY_WIPE_LOCAL_DATA
+- standard_local_wipe_confirmation=WIPE_LOCAL_DATA
+- emergency_wipe_separate_from_standard_wipe=true
+- manual_emergency_release_notice_ready=true
+- clipboard_clear_ready=true
+- clipboard_ttl_ms=15000
+- coercion_safe_claim=false
+- compromised_device_safe_claim=false
 - security_ready_claimed=false
 - sensitive_communication_allowed=false
