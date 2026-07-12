@@ -73,12 +73,12 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_real_user_test_prep_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_beta_gap_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_claim_acceptance_once.sh"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_status=stale"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_status=current"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_file_list=manifest-allowlist-only"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_reference_copies=source-may-be-newer"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_reference_copies=current"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_public_intake=baseline-present-source-may-be-newer"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_lockfiles=current"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_next_owner_action=rebuild-or-republish-unsigned-public-beta-packet"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_next_owner_action=upload-current-unsigned-public-beta-packet"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output file list differs from MANIFEST allowlist"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing release output dependency lockfile evidence is stale"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "If any after-upload confirmation fails"
@@ -155,10 +155,10 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
 require_text "$ROOT_DIR/README.md" "scripts/public_release_readiness_preflight.sh"
-require_text "$ROOT_DIR/README.md" 'pinned public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`'
+require_text "$ROOT_DIR/README.md" 'source-prepared packet accepted by'
 require_text "$ROOT_DIR/SECURITY.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/SECURITY.md" "source-only preflight before staging artifacts"
-require_text "$ROOT_DIR/SECURITY.md" 'pinned ignored public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`'
+require_text "$ROOT_DIR/SECURITY.md" 'ignored public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`'
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "source-only preflight"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" 'upload only the files listed in the generated `MANIFEST.md`'

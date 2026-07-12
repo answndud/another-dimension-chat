@@ -58,6 +58,7 @@ Artifact identity gate:
 
 - `artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13#beta-onion#e724bd39#v0.1.0-beta-onion-unsigned#macos-aarch64`
 - `artifact_identity_fields=artifact#artifact_sha256#build_channel#build_commit#release_tag#platform`
+- `current-head unsigned public beta transition`
 - The artifact filename, SHA-256, build channel, build commit, release tag, and
   platform are read from the same provenance file when the generated packet is
   present.

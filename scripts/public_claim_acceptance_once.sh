@@ -103,12 +103,12 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "desktop_default_transport_boundary_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_beta_gap_acceptance_once.sh"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "public_claim_acceptance_once.sh"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_status=stale"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_status=current"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_file_list=manifest-allowlist-only"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_reference_copies=source-may-be-newer"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_reference_copies=current"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_public_intake=baseline-present-source-may-be-newer"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_lockfiles=current"
-require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_next_owner_action=rebuild-or-republish-unsigned-public-beta-packet"
+require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "existing_release_output_next_owner_action=upload-current-unsigned-public-beta-packet"
 require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "current_head_artifact_transition_gate_ready=true"
 require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "artifact_current_head_aligned=true"
 require_text "$ROOT_DIR/scripts/macos_public_beta_final_source_preflight_once.sh" "public_artifact_stale=false"
@@ -235,16 +235,16 @@ require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_forbidden=do not upload docs,beta-artifacts,public-release folder itself,branch files,source archives,raw logs,crash dumps,private data"
 require_text "$ROOT_DIR/scripts/public_release_readiness_preflight.sh" "operator_non_claims=unsigned experimental public beta; not audited; not production-ready; sensitive communication prohibited; external_delivery_claim=false; security_ready_claim=false"
 require_text "$ROOT_DIR/README.md" "scripts/public_release_readiness_preflight.sh"
-require_text "$ROOT_DIR/README.md" 'pinned public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`'
-require_text "$ROOT_DIR/README.md" 'artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#v0.1.0-beta-onion-unsigned#macos-aarch64'
-require_text "$ROOT_DIR/README.md" "artifact_current_head_aligned=false"
-require_text "$ROOT_DIR/README.md" "public_artifact_stale=true"
-require_text "$ROOT_DIR/README.md" "public_artifact_state=stale"
-require_text "$ROOT_DIR/README.md" "next_owner_action=rebuild-or-republish-unsigned-public-beta-packet"
-require_text "$ROOT_DIR/README.md" "The stale packet is not latest-source app evidence."
-require_text "$ROOT_DIR/README.ko.md" 'artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#v0.1.0-beta-onion-unsigned#macos-aarch64'
-require_text "$ROOT_DIR/README.ko.md" "public_artifact_stale=true"
-require_text "$ROOT_DIR/README.ko.md" "이 stale packet은 최신 source app evidence가 아닙니다."
+require_text "$ROOT_DIR/README.md" 'source-prepared packet accepted by'
+require_text "$ROOT_DIR/README.md" 'artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13#beta-onion#e724bd39#v0.1.0-beta-onion-unsigned#macos-aarch64'
+require_text "$ROOT_DIR/README.md" "artifact_current_head_aligned=true"
+require_text "$ROOT_DIR/README.md" "public_artifact_stale=false"
+require_text "$ROOT_DIR/README.md" "public_artifact_state=current"
+require_text "$ROOT_DIR/README.md" "next_owner_action=upload-current-unsigned-public-beta-packet"
+require_text "$ROOT_DIR/README.md" "The GitHub Release is not current until that upload owner action is complete."
+require_text "$ROOT_DIR/README.ko.md" 'artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13#beta-onion#e724bd39#v0.1.0-beta-onion-unsigned#macos-aarch64'
+require_text "$ROOT_DIR/README.ko.md" "public_artifact_stale=false"
+require_text "$ROOT_DIR/README.ko.md" "이 upload owner action이 끝나기 전까지 GitHub Release는 current 상태가 아닙니다."
 require_text "$ROOT_DIR/README.md" "This is not a packaging readiness, audit readiness, or release go signal."
 require_file "$ROOT_DIR/scripts/desktop_beta_acceptance_matrix_once.sh"
 require_file "$ROOT_DIR/scripts/desktop_public_beta_source_freeze_once.sh"
@@ -272,7 +272,7 @@ require_text "$ROOT_DIR/SECURITY.md" "Desktop-only v0.1 acceptance matrix"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "Desktop-only v0.1 acceptance matrix"
 require_text "$ROOT_DIR/SECURITY.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/SECURITY.md" "source-only preflight before staging artifacts"
-require_text "$ROOT_DIR/SECURITY.md" 'pinned ignored public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`'
+require_text "$ROOT_DIR/SECURITY.md" 'ignored public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`'
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "scripts/public_release_readiness_preflight.sh"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" "source-only preflight"
 require_text "$ROOT_DIR/apps/desktop-tauri/README.md" 'upload only the files listed in the generated `MANIFEST.md`'
@@ -394,8 +394,8 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
       echo "FAIL release readiness preflight missing exact file-list freshness" >&2
       exit 1
     }
-    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_reference_copies=source-may-be-newer" || {
-      echo "FAIL release readiness preflight missing reference-copy freshness" >&2
+    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_reference_copies=current" || {
+      echo "FAIL release readiness preflight missing current reference-copy freshness" >&2
       exit 1
     }
     printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_public_intake=baseline-present-source-may-be-newer" || {
@@ -406,12 +406,12 @@ if [ "${PUBLIC_RELEASE_PREFLIGHT_CHILD:-0}" != "1" ]; then
       echo "FAIL release readiness preflight missing lockfile freshness" >&2
       exit 1
     }
-    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_status=stale" || {
-      echo "FAIL release readiness preflight missing stale held-packet status" >&2
+    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_status=current" || {
+      echo "FAIL release readiness preflight missing current packet status" >&2
       exit 1
     }
-    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_next_owner_action=rebuild-or-republish-unsigned-public-beta-packet" || {
-      echo "FAIL release readiness preflight missing stale packet owner action" >&2
+    printf '%s\n' "$preflight_output" | grep -Fq -- "existing_release_output_next_owner_action=upload-current-unsigned-public-beta-packet" || {
+      echo "FAIL release readiness preflight missing current packet owner action" >&2
       exit 1
     }
   fi

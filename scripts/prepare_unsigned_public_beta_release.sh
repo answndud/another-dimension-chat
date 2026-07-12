@@ -168,7 +168,7 @@ check_artifact_boundary() {
 }
 
 check_release_integrity_policy() {
-  require_text "$ROOT_DIR/README.md" "The current public artifact is attached to this GitHub Release"
+  require_text "$ROOT_DIR/README.md" "The current source-prepared unsigned packet is staged for this GitHub Release"
   require_text "$ROOT_DIR/README.md" "Verify the DMG before opening it"
   require_text "$ROOT_DIR/README.md" "Security only after the checksum matches"
   require_text "$ROOT_DIR/README.md" "The release authority for a DMG is the matching set of assets attached to the"
