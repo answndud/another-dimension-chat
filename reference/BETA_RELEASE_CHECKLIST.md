@@ -151,20 +151,19 @@ Do not upload or commit `docs/`, local app data, bridge lines, onion endpoints, 
 These values must stay identical across the install guide, release notes,
 GitHub Release body, and beta checklist:
 
-- `artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#v0.1.0-beta-onion-unsigned#macos-aarch64`
+- `artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13#beta-onion#e724bd39#v0.1.0-beta-onion-unsigned#macos-aarch64`
 - `artifact_identity_fields=artifact#artifact_sha256#build_channel#build_commit#release_tag#platform`
-- `artifact_current_head_aligned=false`
-- `public_artifact_stale=true`
-- `public_artifact_state=stale`
-- `next_owner_action=rebuild-or-republish-unsigned-public-beta-packet`
+- `artifact_current_head_aligned=true`
+- `public_artifact_stale=false`
+- `public_artifact_state=current`
+- `next_owner_action=upload-current-unsigned-public-beta-packet`
 - `trust_model=same-github-release-assets#same-release-sha256#manual-privacy-security-allow-after-checksum#no-auto-update`
 - `support_intake=redacted-diagnostics-only#no-raw-logs#no-crash-dumps#no-private-room-data#no-payloads#no-key-material`
 - `generated_artifact_boundary=do-not-commit-public-release-or-beta-artifacts#no-dmg-rebuild#no-release-upload-or-edit`
 
-If `public_artifact_stale=true`, do not announce the DMG as evidence for the
-current source HEAD. Treat the next action as
-`rebuild-or-republish-unsigned-public-beta-packet` before making any latest-app
-artifact statement.
+If `public_artifact_stale=false`, the generated packet matches the current
+source HEAD. Do not announce it from GitHub until the explicit owner action
+`upload-current-unsigned-public-beta-packet` replaces the release assets.
 
 ## Clean macOS Fresh-Install Result Contract
 

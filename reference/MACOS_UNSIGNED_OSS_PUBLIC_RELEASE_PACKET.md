@@ -56,21 +56,14 @@ Release authority:
 
 Artifact identity gate:
 
-- `artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a#beta-onion#e8954df9#v0.1.0-beta-onion-unsigned#macos-aarch64`
+- `artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg#ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13#beta-onion#e724bd39#v0.1.0-beta-onion-unsigned#macos-aarch64`
 - `artifact_identity_fields=artifact#artifact_sha256#build_channel#build_commit#release_tag#platform`
 - The artifact filename, SHA-256, build channel, build commit, release tag, and
   platform are read from the same provenance file when the generated packet is
   present.
-- If the provenance `build_commit` differs from the current repository HEAD,
-  the source gates must emit `artifact_current_head_aligned=false`,
-  `public_artifact_stale=true`, `public_artifact_state=stale`, and
-  `next_owner_action=rebuild-or-republish-unsigned-public-beta-packet`.
-- A stale public artifact is a held release packet, not current app evidence.
-  It must not be promoted to latest source evidence without rebuilding or
-  republishing the unsigned public beta packet.
-- For a current-head unsigned public beta transition, the provenance
-  `build_commit` must match the current repository HEAD and the source gates
-  must emit `artifact_current_head_aligned=true`,
+- The provenance `build_commit` matches the current repository HEAD for this
+  regenerated packet, so the source gates must emit
+  `artifact_current_head_aligned=true`,
   `public_artifact_stale=false`, `public_artifact_state=current`,
   `stale_public_artifact_promoted_to_current=false`,
   `current_head_artifact_transition_gate_ready=true`,

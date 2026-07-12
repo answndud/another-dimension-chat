@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 APP_VERSION="0.1.0"
 BUILD_CHANNEL="beta-onion"
-BUILD_COMMIT="e8954df9"
+BUILD_COMMIT="e724bd39"
 PLATFORM="macos-aarch64"
 MACOS_PUBLIC_SUPPORT_SCOPE="apple-silicon-aarch64-only"
 MACOS_UNIVERSAL_ARTIFACT_READY=false
@@ -13,7 +13,7 @@ MACOS_INTEL_ARTIFACT_READY=false
 MACOS_MINIMUM_VERSION_CLAIMED=false
 RELEASE_TAG="v0.1.0-beta-onion-unsigned"
 RELEASE_URL="https://github.com/answndud/another-dimension-chat/releases/tag/$RELEASE_TAG"
-EXPECTED_DMG_SHA="7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a"
+EXPECTED_DMG_SHA="ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13"
 PUBLIC_ARTIFACT_STALE_ACTION="rebuild-or-republish-unsigned-public-beta-packet"
 PUBLIC_ARTIFACT_CURRENT_ACTION="upload-current-unsigned-public-beta-packet"
 
