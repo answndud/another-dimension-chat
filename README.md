@@ -267,11 +267,12 @@ Install Rust components:
 rustup component add rustfmt clippy
 ```
 
-Run the lightweight repository verification:
+Run the lightweight desktop shell verification (fast path):
 
 ```bash
-scripts/verify_all.sh
+scripts/verify_desktop_shell_fast.sh
 ```
+`scripts/verify_all.sh` now delegates to this fast verifier by default for routine desktop-path checks.
 
 Run the heavier local engineering pass before risky cross-cutting changes:
 

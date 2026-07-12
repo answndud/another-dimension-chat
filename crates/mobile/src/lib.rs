@@ -98,21 +98,15 @@ pub fn redacted_support_diagnostics_json(platform: MobilePlatform) -> String {
 
 pub fn mobile_command_result_json(command: &str, explicit_user_action: bool) -> String {
     let (status, failure_class, recovery_next_action) = match (command, explicit_user_action) {
-        ("shared_core_status_surface" | "redacted_support_diagnostics", _) => (
-            "ok",
-            "none",
-            "read shared core JSON bridge result",
-        ),
+        ("shared_core_status_surface" | "redacted_support_diagnostics", _) => {
+            ("ok", "none", "read shared core JSON bridge result")
+        }
         ("local_data_lifecycle", true) => (
             "blocked",
             "lifecycle_confirmation_required",
             "confirm lifecycle intent before local mutation",
         ),
-        ("profile_unlock_lock_status", true) => (
-            "blocked",
-            "locked_profile",
-            "enter passphrase",
-        ),
+        ("profile_unlock_lock_status", true) => ("blocked", "locked_profile", "enter passphrase"),
         (
             "invite_code_create_join"
             | "pairing_payload_export_import"
@@ -125,11 +119,7 @@ pub fn mobile_command_result_json(command: &str, explicit_user_action: bool) -> 
             "transport_unavailable",
             "runtime candidate exposes status and diagnostics first",
         ),
-        (_, false) => (
-            "blocked",
-            "policy_blocked",
-            "explicit user action required",
-        ),
+        (_, false) => ("blocked", "policy_blocked", "explicit user action required"),
         _ => (
             "blocked",
             "malformed_payload",
