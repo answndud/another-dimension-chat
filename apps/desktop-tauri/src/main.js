@@ -3511,6 +3511,9 @@ function renderHighRiskReadinessStatus() {
     pairwiseSafetyVerified: twoProfileSafetyConfirmedForInput(input),
     highRiskTransportReady: false,
     highRiskTransportExplicitlyDisabled: true,
+    clipboardTtlMs: 15000,
+    clipboardClearReady: true,
+    manualEmergencyReleaseNoticeReady: true,
     productionKeyManagementReady: unlock?.production_key_management_ready === true,
     rollbackMarkerHealthy:
       unlock?.rollback_detection_ready === true &&
@@ -3527,6 +3530,14 @@ function renderHighRiskReadinessStatus() {
       `next=${view.nextAction}`,
       `ready_claim_allowed=${view.highRiskReadyClaimAllowed}`,
       `operational_ready=${view.highRiskOperationalReady}`,
+      `emergency_controls=${view.emergencyControlsReady}`,
+      `panic_lock=${view.panicLockReady}`,
+      `emergency_wipe=${view.emergencyLocalWipeReady}`,
+      `emergency_wipe_separate=${view.emergencyWipeSeparateFromStandardWipe}`,
+      `clipboard_clear=${view.clipboardClearReady}`,
+      `clipboard_ttl_ms=${view.clipboardTtlMs}`,
+      `clipboard_expiry=${view.clipboardExpiryReady}`,
+      `manual_emergency_release_notice=${view.manualEmergencyReleaseNoticeReady}`,
       "unmet_hidden=false",
     ].join(" / "),
   );
@@ -3541,6 +3552,28 @@ function renderHighRiskReadinessStatus() {
   );
   fields.highRiskReadinessStatus?.setAttribute("data-primary-reason-code", view.primaryReasonCode);
   fields.highRiskReadinessStatus?.setAttribute("data-next-action", view.nextAction);
+  fields.highRiskReadinessStatus?.setAttribute(
+    "data-emergency-controls-ready",
+    view.emergencyControlsReady ? "true" : "false",
+  );
+  fields.highRiskReadinessStatus?.setAttribute("data-panic-lock-ready", view.panicLockReady ? "true" : "false");
+  fields.highRiskReadinessStatus?.setAttribute(
+    "data-emergency-local-wipe-ready",
+    view.emergencyLocalWipeReady ? "true" : "false",
+  );
+  fields.highRiskReadinessStatus?.setAttribute(
+    "data-emergency-wipe-separate",
+    view.emergencyWipeSeparateFromStandardWipe ? "true" : "false",
+  );
+  fields.highRiskReadinessStatus?.setAttribute(
+    "data-clipboard-expiry-ready",
+    view.clipboardExpiryReady ? "true" : "false",
+  );
+  fields.highRiskReadinessStatus?.setAttribute("data-clipboard-ttl-ms", String(view.clipboardTtlMs));
+  fields.highRiskReadinessStatus?.setAttribute(
+    "data-manual-emergency-release-notice-ready",
+    view.manualEmergencyReleaseNoticeReady ? "true" : "false",
+  );
   return view;
 }
 
