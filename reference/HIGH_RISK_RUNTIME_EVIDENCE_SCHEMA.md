@@ -28,6 +28,28 @@ high_risk_public_claim_allowed=false
 high_risk_ready_claim_allowed=false
 ```
 
+P5.1 app-copy summary input is also accepted by this validator. That summary
+uses exactly these redacted fields:
+
+- `readiness_condition_set`
+- `readiness_missing_conditions`
+- `evidence_source`
+- `failure_class`
+- `clipboard_expiry_ready`
+- `emergency_controls_ready`
+- `local_storage_evidence_ready`
+- `release_integrity_ready`
+
+The app-copy summary does not need to include raw runtime details,
+`schema_version`, endpoint values, descriptors, bridge lines, raw logs, local
+paths, payloads, or key material. The validator returns one of:
+
+- `high_risk_runtime_evidence_decision=accepted`
+- `high_risk_runtime_evidence_decision=rejected`
+- `high_risk_runtime_evidence_decision=waiting`
+
+Missing readiness conditions are returned with `next_owner_action`.
+
 ## Allowed Fields
 
 The report JSON may contain only these top-level fields:
@@ -106,6 +128,12 @@ The validator may print `high_risk_runtime_evidence_accepted=true` only when:
 Reports may still be valid with `runtime_evidence_accepted=false`, but they must
 not print an accepted evidence result.
 
+For P5.1 app-copy summaries, `evidence_source=runtime-report` can produce
+`high_risk_runtime_evidence_decision=accepted` only for the runtime evidence
+stream. `evidence_source=local-fixture` and `evidence_source=fabricated` must
+produce `high_risk_runtime_evidence_decision=rejected`, never accepted.
+`evidence_source=absent` must produce `high_risk_runtime_evidence_decision=waiting`.
+
 ## Readiness Conditions
 
 Runtime evidence acceptance is not the same as High-Risk Mode readiness. The
@@ -129,3 +157,18 @@ Accepted runtime evidence can still report readiness gaps such as
 `safety-verification`, `local-storage-evidence`, or `release-integrity`. Those
 gaps keep `high_risk_public_claim_allowed=false` and
 `high_risk_ready_claim_allowed=false`.
+
+For app-copy summaries, the validator checks the booleans it can observe:
+
+- `evidence_source=runtime-report` means `high-risk-transport-runtime` is not
+  missing.
+- `evidence_source=absent`, `local-fixture`, or `fabricated` means
+  `high-risk-transport-runtime` is missing.
+- `emergency_controls_ready=false` requires `emergency-controls`.
+- `clipboard_expiry_ready=false` requires `clipboard-expiry`.
+- `local_storage_evidence_ready=false` requires `local-storage-evidence`.
+- `release_integrity_ready=false` requires `release-integrity`.
+
+`safety-verification` is accepted only as a reported missing condition in
+app-copy summaries because the 8-field app summary intentionally does not copy
+safety material.
