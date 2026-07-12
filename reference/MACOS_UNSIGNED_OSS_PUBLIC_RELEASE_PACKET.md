@@ -69,10 +69,9 @@ Artifact identity gate:
   `stale_public_artifact_promoted_to_current=false`,
   `current_head_artifact_transition_gate_ready=true`,
   `release_upload_performed=false`, and
-  `next_owner_action=upload-current-unsigned-public-beta-packet`.
-- `release_upload_performed=false` means the generated current-head packet is
-  source-ready only. The GitHub Release asset mutation remains an explicit
-  owner action and must use the generated `MANIFEST.md` allowlist.
+  `next_owner_action=run-clean-macos-fresh-install-with-disposable-profile`.
+- The current GitHub Release asset set matches this packet. The next owner
+  action is `run-clean-macos-fresh-install-with-disposable-profile`.
 
 Forbidden public claims:
 
