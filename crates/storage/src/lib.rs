@@ -1945,6 +1945,46 @@ pub mod production {
         }
 
         #[test]
+        fn rollback_detection_negative_corpus_keeps_high_risk_and_delivery_claims_closed() {
+            let cases = [
+                (
+                    None,
+                    Some(1),
+                    RollbackMarkerComparisonStatus::MissingDatabaseMarker,
+                    "check-data-lifecycle-marker",
+                ),
+                (
+                    Some(1),
+                    None,
+                    RollbackMarkerComparisonStatus::MissingAppOwnedMarker,
+                    "check-data-lifecycle-marker",
+                ),
+                (
+                    Some(3),
+                    Some(2),
+                    RollbackMarkerComparisonStatus::DatabaseMarkerFuture,
+                    "reopen-or-rebuild-local-profile",
+                ),
+                (
+                    Some(1),
+                    Some(2),
+                    RollbackMarkerComparisonStatus::SnapshotRollbackSuspected,
+                    "reopen-or-rebuild-local-profile",
+                ),
+            ];
+
+            for (database, app_owned, expected_status, expected_action) in cases {
+                let comparison = compare_app_owned_rollback_marker(database, app_owned);
+                assert_eq!(comparison.status(), expected_status);
+                assert!(comparison.rollback_suspected());
+                assert!(!comparison.high_risk_ready());
+                assert!(!comparison.verified_or_delivered_state_allowed());
+                assert_eq!(comparison.recovery_action(), expected_action);
+                assert!(!comparison.rollback_prevention_claimed());
+            }
+        }
+
+        #[test]
         fn encrypted_record_round_trips_with_associated_data_scope() {
             let record = EncryptedRecord::new(
                 ProductionRecordKind::MessageEnvelope,
@@ -2537,6 +2577,100 @@ pub mod production {
                     .load_replay_window_for_scope(&record_id, &wrong_scope)
                     .expect_err("wrong replay scope must fail"),
                 ProductionStorageError::InvalidRecord
+            );
+        }
+
+        #[test]
+        fn sqlcipher_store_replay_negative_corpus_rejects_wrong_kind_scope_and_missing_records() {
+            let (_dir, path) = unique_test_database_path("replay-negative-corpus");
+            let passphrase = ProfilePassphrase::new("test-key").expect("passphrase");
+            let store = SqlCipherRecordStore::unlock_with_passphrase(&path, &passphrase)
+                .expect("open store");
+            let alice = ProfileName::new("alice").expect("profile");
+            let bob = ContactId::new("bob").expect("contact");
+            let mallory = ContactId::new("mallory").expect("contact");
+            let replay_scope = EncryptedRecordScope::contact(alice.clone(), bob);
+            let wrong_scope = EncryptedRecordScope::contact(alice.clone(), mallory);
+            let missing_id = EncryptedRecordId::new("missing_replay_negative").expect("record id");
+
+            assert_eq!(
+                store.load_replay_window(&missing_id).expect("missing"),
+                None
+            );
+            assert_eq!(
+                store
+                    .load_replay_window_for_scope(&missing_id, &replay_scope)
+                    .expect("missing scoped"),
+                None
+            );
+
+            let wrong_kind_id = EncryptedRecordId::new("replay_wrong_kind").expect("record id");
+            let wrong_kind_record = EncryptedRecord::new(
+                ProductionRecordKind::MessageEnvelope,
+                replay_scope.clone(),
+                b"sqlcipher-page-encryption-v1".to_vec(),
+                b"ADREPLAY1|4|2|1,2".to_vec(),
+            )
+            .expect("wrong kind record");
+            store
+                .put(&wrong_kind_id, &wrong_kind_record)
+                .expect("put wrong kind");
+            assert_eq!(
+                store.load_replay_window(&wrong_kind_id),
+                Err(ProductionStorageError::InvalidRecord)
+            );
+
+            let corrupt_id = EncryptedRecordId::new("replay_corrupt_state").expect("record id");
+            let corrupt_record = EncryptedRecord::new(
+                ProductionRecordKind::ReplayWindowState,
+                replay_scope.clone(),
+                b"sqlcipher-page-encryption-v1".to_vec(),
+                b"ADREPLAY1|4|6|4,5".to_vec(),
+            )
+            .expect("corrupt replay record");
+            store
+                .put(&corrupt_id, &corrupt_record)
+                .expect("put corrupt replay");
+            assert_eq!(
+                store.load_replay_window(&corrupt_id),
+                Err(ProductionStorageError::InvalidRecord)
+            );
+
+            let scoped_id = EncryptedRecordId::new("replay_scope_negative").expect("record id");
+            let mut replay_window = ReplayWindow::new(4).expect("replay window");
+            replay_window.accept(1).expect("accept first");
+            store
+                .save_replay_window(&scoped_id, replay_scope.clone(), &replay_window)
+                .expect("save scoped replay");
+            assert_eq!(
+                store
+                    .load_replay_window_for_scope(&scoped_id, &wrong_scope)
+                    .expect_err("wrong scope must fail"),
+                ProductionStorageError::InvalidRecord
+            );
+            assert_eq!(
+                store
+                    .load_replay_window_for_scope(&scoped_id, &replay_scope)
+                    .expect("right scope"),
+                Some(replay_window)
+            );
+
+            for delete in [
+                SqlCipherRecordStore::delete_replay_window,
+                SqlCipherRecordStore::delete_message_envelope,
+                SqlCipherRecordStore::delete_local_message_index,
+            ] {
+                delete(&store, &missing_id).expect("first missing delete");
+                delete(&store, &missing_id).expect("second missing delete");
+            }
+            store
+                .delete_replay_window(&scoped_id)
+                .expect("delete scoped replay");
+            assert_eq!(
+                store
+                    .load_replay_window_for_scope(&scoped_id, &replay_scope)
+                    .expect("deleted scoped replay"),
+                None
             );
         }
 
