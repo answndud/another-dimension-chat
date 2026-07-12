@@ -9,6 +9,12 @@ README="$ROOT_DIR/README.md"
 RELEASE_DIR="$ROOT_DIR/apps/desktop-tauri/public-release/unsigned-public-beta"
 DMG="another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg"
 SHA_FILE="$DMG.sha256"
+PROVENANCE="$DMG.provenance.json"
+ARTIFACT_SHA256="ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13"
+PROVENANCE_SHA256="6a872d104b47144d3e15b60c79be71e82d2a5973898c9b7198aba270dd9cdec0"
+RELEASE_TAG="v0.1.0-beta-onion-unsigned"
+BUILD_COMMIT="e724bd39"
+PLATFORM="macos-aarch64"
 
 require_file() {
   if [ ! -f "$1" ]; then
@@ -83,7 +89,21 @@ require_text "$CHECKLIST" "reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md"
 require_text "$INSTALL_GUIDE" "Do not use terminal quarantine-removal commands as an install step"
 
 require_text "$RESULT" "Status: hold for manual GUI follow-through; source install authority passed."
+require_text "$RESULT" "artifact_filename=$DMG"
+require_text "$RESULT" "artifact_sha256=$ARTIFACT_SHA256"
+require_text "$RESULT" "provenance_sha256=$PROVENANCE_SHA256"
+require_text "$RESULT" "release_tag=$RELEASE_TAG"
+require_text "$RESULT" "build_commit=$BUILD_COMMIT"
+require_text "$RESULT" "platform=$PLATFORM"
 require_text "$RESULT" "checksum_result: OK"
+require_text "$RESULT" "dmg_mount_result=pass"
+require_text "$RESULT" "manual_privacy_security_allow_result=hold"
+require_text "$RESULT" "profile_create_result=hold"
+require_text "$RESULT" "invite_join_safety_result=hold"
+require_text "$RESULT" "manual_envelope_exchange_result=hold"
+require_text "$RESULT" "diagnostics_redaction_result=hold"
+require_text "$RESULT" "network_before_explicit_action=false"
+require_text "$RESULT" "clean_install_evidence_source=owner-clean-mac"
 require_text "$RESULT" "gatekeeper_manual_allow_result: hold"
 require_text "$RESULT" "first_launch_result: hold"
 require_text "$RESULT" "profile_unlock_result: hold"
@@ -123,6 +143,13 @@ if [ -f "$RELEASE_DIR/$DMG" ] && [ -f "$RELEASE_DIR/$SHA_FILE" ]; then
     cd "$RELEASE_DIR"
     shasum -a 256 -c "$SHA_FILE"
   )
+  actual_provenance_sha="$(shasum -a 256 "$RELEASE_DIR/$PROVENANCE" | awk '{print $1}')"
+  if [ "$actual_provenance_sha" != "$PROVENANCE_SHA256" ]; then
+    echo "FAIL provenance SHA-256 mismatch" >&2
+    echo "expected: $PROVENANCE_SHA256" >&2
+    echo "actual:   $actual_provenance_sha" >&2
+    exit 1
+  fi
   local_checksum_result=ok
 else
   local_checksum_result=skipped_missing_local_ignored_release_files
@@ -134,15 +161,29 @@ printf 'local_checksum_result=%s\n' "$local_checksum_result"
 printf 'clean_machine_execution=false\n'
 printf 'clean_machine_result_accepted=false\n'
 printf 'local_fixture_promoted_to_clean_install_pass=false\n'
+printf 'artifact_filename=%s\n' "$DMG"
+printf 'artifact_sha256=%s\n' "$ARTIFACT_SHA256"
+printf 'provenance_sha256=%s\n' "$PROVENANCE_SHA256"
+printf 'release_tag=%s\n' "$RELEASE_TAG"
+printf 'build_commit=%s\n' "$BUILD_COMMIT"
+printf 'platform=%s\n' "$PLATFORM"
 printf 'checksum_result=OK\n'
+printf 'dmg_mount_result=pass\n'
+printf 'manual_privacy_security_allow_result=hold\n'
 printf 'gatekeeper_manual_allow_result=hold\n'
 printf 'first_launch_result=hold\n'
+printf 'profile_create_result=hold\n'
 printf 'profile_unlock_result=hold\n'
+printf 'invite_join_safety_result=hold\n'
 printf 'invite_join_result=hold\n'
 printf 'safety_compare_result=hold\n'
+printf 'manual_envelope_exchange_result=hold\n'
 printf 'envelope_exchange_result=hold\n'
+printf 'diagnostics_redaction_result=hold\n'
 printf 'diagnostics_copy_result=hold\n'
 printf 'local_delete_result=hold\n'
+printf 'network_before_explicit_action=false\n'
+printf 'clean_install_evidence_source=owner-clean-mac\n'
 printf 'app_launch_network=false\n'
 printf 'next_owner_action=run-clean-macos-fresh-install-with-disposable-profile\n'
 printf 'release_upload_performed=false\n'
