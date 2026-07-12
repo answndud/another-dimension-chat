@@ -59,8 +59,10 @@ next_owner_action=run-clean-macos-fresh-install-with-disposable-profile
 
 즉, generated packet은 현재 public packet source와 일치합니다. Matching DMG,
 checksum, provenance, manifest, release body는 GitHub Release에 업로드되어
-있습니다. 다음 owner evidence는 disposable profile로 clean macOS fresh-install을
-실행한 결과입니다.
+있습니다. 다음 owner action은 disposable profile로 clean macOS fresh-install을
+실행하는 것입니다. 그 pass가 accepted 되면 다음으로 유용한 evidence는
+representative redacted usability report이며, 이 단계들도 production/security/
+sensitive-use/High-Risk-ready claim을 열지 않습니다.
 
 이 빌드는 서명되지 않았기 때문에 macOS가 실행을 막을 수 있습니다. DMG를 열고
 앱 실행을 한 번 시도한 뒤, checksum이 일치할 때만 시스템 설정 > 개인정보 보호
@@ -136,8 +138,9 @@ desktop beta는 로컬 destructive action을 분리합니다.
 - Artifact status는 machine-checkable합니다: `artifact_current_head_aligned=true`,
   `public_artifact_stale=false`, `public_artifact_state=current`,
   `next_owner_action=run-clean-macos-fresh-install-with-disposable-profile`.
-  GitHub Release asset set은 current 상태이며, 다음 owner evidence는 clean macOS
-  fresh-install run입니다.
+  GitHub Release asset set은 current 상태이며, 다음 owner action은 disposable
+  profile clean macOS fresh-install run이고, pass가 accepted 되면 representative
+  redacted usability evidence가 다음 단계입니다.
 - 이 상태는 packaging readiness, audit readiness, release go signal이 아닙니다.
 - production claim 제거는
   [reference/PRODUCTION_READINESS_CLAIM_GATE.md](reference/PRODUCTION_READINESS_CLAIM_GATE.md)와

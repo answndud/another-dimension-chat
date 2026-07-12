@@ -495,7 +495,14 @@ operator-prepared peer packets as proof of real external onion delivery. No peer
 report is expected or required for this v0.1 claim, and no external delivery
 claim is made.
 
-The current public upload set is prepared from the ignored public-release source DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`: build channel `beta-onion`, commit `e724bd39`, and SHA-256 `ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13`. Uploading that packet to GitHub Releases remains an explicit owner action.
+The current GitHub Release asset set matches the ignored public-release source
+DMG accepted by `scripts/prepare_unsigned_public_beta_release.sh`: build
+channel `beta-onion`, commit `e724bd39`, and SHA-256
+`ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13`. The next
+owner action is a clean macOS fresh-install run with a disposable profile.
+After that pass, the useful next evidence is representative redacted usability
+reports. Production-ready, audited, sensitive-use, reliable-delivery, and
+High-Risk-ready claims remain false.
 
 Desktop public beta source freeze candidate means source-only candidate status:
 no DMG rebuild, no upload, and no generated release artifact commit. Final
