@@ -13,12 +13,40 @@ keys, key material, screenshots of private room data, or local app data.
 
 - release tag: `v0.1.0-beta-onion-unsigned`
 - app artifact name: `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
-- checksum result: OK
+- checksum_result: OK
+- gatekeeper_manual_allow_result: hold
+- first_launch_result: hold
+- profile_unlock_result: hold
+- invite_join_result: hold
+- safety_compare_result: hold
+- envelope_exchange_result: hold
+- diagnostics_copy_result: hold
+- local_delete_result: hold
+- app_launch_network: false
 - platform: macOS Apple Silicon
 - broad failure class: `macos-gui-human-rehearsal-not-run`
-- recovery next action: run the GUI checklist with disposable data before using
+- recovery next action: run-clean-macos-fresh-install-with-disposable-profile before using
   this result as a tester-facing pass record
 - public beta non-claims confirmed: yes
+
+## Machine Contract
+
+```text
+clean_machine_execution=false
+clean_machine_result_accepted=false
+local_fixture_promoted_to_clean_install_pass=false
+checksum_result=OK
+gatekeeper_manual_allow_result=hold
+first_launch_result=hold
+profile_unlock_result=hold
+invite_join_result=hold
+safety_compare_result=hold
+envelope_exchange_result=hold
+diagnostics_copy_result=hold
+local_delete_result=hold
+app_launch_network=false
+next_owner_action=run-clean-macos-fresh-install-with-disposable-profile
+```
 
 ## Step Results
 
@@ -30,6 +58,7 @@ keys, key material, screenshots of private room data, or local app data.
 - First-Run Warning: hold, GUI first-run was not opened in this agent session.
 - Profile Unlock Or Create: hold, disposable GUI profile flow was not run.
 - Invite Room And Verify: hold, disposable GUI invite flow was not run.
+- Safety Compare: hold, disposable GUI safety comparison was not run.
 - Manual Encrypted Envelope Export/Import: hold, disposable GUI envelope flow was not run.
 - Reply, Retry, And Cancel: hold, disposable GUI pending-state flow was not run.
 - Local Deletion: hold, disposable GUI deletion flow was not run.
