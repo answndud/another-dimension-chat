@@ -56,6 +56,13 @@ inventing evidence or mutating a live release from a source-side gate.
 - compromised_artifact_public_copy_ready=true
 - dependency_vulnerability_decision_table_available=true
 - dependency_vulnerability_decisions=hold#advisory#rebuild#revoke
+- readiness_condition=release-integrity
+- release_integrity_condition_set=checksum-provenance#manual-advisory#signed-update-manifest-candidate
+- release_integrity_checksum_provenance_ready=true
+- release_integrity_manual_advisory_ready=true
+- release_integrity_signed_update_manifest_candidate_ready=true
+- release_integrity_ready=true
+- readiness_missing_conditions=none
 - same_release_asset_authority_required=true
 - branch_source_release_authority_allowed=false
 - rollback_warning_policy_ready=true

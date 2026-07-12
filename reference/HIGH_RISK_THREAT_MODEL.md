@@ -26,6 +26,8 @@ high_risk_matrix=remote_passive_observer:mitigated,remote_active_attacker:mitiga
 claimable_statuses=protected,mitigated
 not_protected=compromised_endpoint,direct_coercion,global_traffic_correlation
 readiness_condition_set=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity
+release_integrity_condition_set=checksum-provenance#manual-advisory#signed-update-manifest-candidate
+release_integrity_ready_claim_requires=release_integrity_checksum_provenance_ready#release_integrity_manual_advisory_ready#release_integrity_signed_update_manifest_candidate_ready
 high_risk_runtime_evidence_decisions=accepted#rejected#waiting
 high_risk_runtime_evidence_app_summary_fields=readiness_condition_set#readiness_missing_conditions#evidence_source#failure_class#clipboard_expiry_ready#emergency_controls_ready#local_storage_evidence_ready#release_integrity_ready
 audited_security_claim=false
@@ -58,3 +60,12 @@ Validator `next_owner_action` values must use the same readiness vocabulary:
 - `clipboard-expiry` -> `enable-clipboard-expiry`
 - `local-storage-evidence` -> `check-local-storage-runtime-evidence`
 - `release-integrity` -> `run-release-integrity-gate`
+
+Release integrity is source-ready only when all subconditions are true:
+
+- `checksum-provenance`
+- `manual-advisory`
+- `signed-update-manifest-candidate`
+
+Those subconditions do not open auto-update, rollback-prevention, signed stable
+channel, or High-Risk public-ready claims.
