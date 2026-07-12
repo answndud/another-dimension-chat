@@ -88,13 +88,16 @@ require_text "$README" "reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md"
 require_text "$CHECKLIST" "reference/MACOS_FRESH_INSTALL_REHEARSAL_RESULT.md"
 require_text "$INSTALL_GUIDE" "Do not use terminal quarantine-removal commands as an install step"
 
-require_text "$RESULT" "Status: hold for manual GUI follow-through; source install authority passed."
+require_text "$RESULT" "Status: hold for manual GUI follow-through; same-release download and checksum passed."
 require_text "$RESULT" "artifact_filename=$DMG"
 require_text "$RESULT" "artifact_sha256=$ARTIFACT_SHA256"
 require_text "$RESULT" "provenance_sha256=$PROVENANCE_SHA256"
 require_text "$RESULT" "release_tag=$RELEASE_TAG"
 require_text "$RESULT" "build_commit=$BUILD_COMMIT"
 require_text "$RESULT" "platform=$PLATFORM"
+require_text "$RESULT" "release_download_source=github-release"
+require_text "$RESULT" "same_release_download_result=pass"
+require_text "$RESULT" "same_release_checksum_result=pass"
 require_text "$RESULT" "checksum_result: OK"
 require_text "$RESULT" "dmg_mount_result=pass"
 require_text "$RESULT" "manual_privacy_security_allow_result=hold"
@@ -167,6 +170,9 @@ printf 'provenance_sha256=%s\n' "$PROVENANCE_SHA256"
 printf 'release_tag=%s\n' "$RELEASE_TAG"
 printf 'build_commit=%s\n' "$BUILD_COMMIT"
 printf 'platform=%s\n' "$PLATFORM"
+printf 'release_download_source=github-release\n'
+printf 'same_release_download_result=pass\n'
+printf 'same_release_checksum_result=pass\n'
 printf 'checksum_result=OK\n'
 printf 'dmg_mount_result=pass\n'
 printf 'manual_privacy_security_allow_result=hold\n'
