@@ -37,6 +37,8 @@ The report JSON may contain only these top-level fields:
 - `outbound_exported`
 - `inbound_imported`
 - `retry_cancel_delete_verified`
+- `high_risk_readiness_condition_set`
+- `high_risk_readiness_condition_coverage`
 - `broad_failure_class`
 - `local_only_rehearsal`
 - `fabricated_evidence`
@@ -69,6 +71,27 @@ The validator may print `external_two_machine_evidence_present=true` only when:
 - local-only rehearsal is false
 - fabricated evidence is false
 - forbidden fields are absent
+- `high_risk_readiness_condition_set` matches
+  `safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity`
+- `high_risk_readiness_condition_coverage` is
+  `safety-verification#high-risk-transport-runtime`
 
 Even accepted evidence does not allow audited, production-ready, reliable
 external delivery, or sensitive-use claims.
+
+External reports cover only the peer field-observable conditions. They do not
+prove emergency controls, clipboard expiry, local storage evidence, release
+integrity, audited security, or High-Risk public readiness.
+
+```text
+high_risk_readiness_condition_set=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity
+field_report_high_risk_condition_coverage=none
+field_report_high_risk_missing_conditions=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity
+next_owner_action=collect-real-redacted-two-machine-field-reports
+missing_evidence_is_next_owner_action=true
+external_two_machine_evidence_present=false
+local_only_promoted_to_external=false
+reliable_delivery_claim_allowed=false
+high_risk_ready_claim_allowed=false
+audited_claim_allowed=false
+```
