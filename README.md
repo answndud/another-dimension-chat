@@ -318,6 +318,14 @@ That generic local build output is a public-shell artifact, not a public release
 upload artifact. Legacy embedded-runtime desktop builds are explicit opt-in
 compatibility commands and are not part of the normal UI loop.
 
+Build caches default to the OS user cache, not the repository. Inspect generated
+cache paths before deleting them:
+
+```bash
+scripts/clean_build_cache.sh --dry-run
+scripts/clean_build_cache.sh --apply
+```
+
 ## CLI Boundary Checks
 
 The default CLI build exposes boundary checks only. Here, "production" means
