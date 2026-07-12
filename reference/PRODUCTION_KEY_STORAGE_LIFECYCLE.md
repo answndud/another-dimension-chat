@@ -95,6 +95,8 @@ Targeted tests that anchor this gate:
 - `sqlcipher_store_key_rotation_generation_marker_is_monotonic`
 - `sqlcipher_store_rejects_key_rotation_marker_scope_mismatch`
 - `sqlcipher_store_rejects_replay_window_scope_mismatch`
+- `rollback_detection_negative_corpus_keeps_high_risk_and_delivery_claims_closed`
+- `sqlcipher_store_replay_negative_corpus_rejects_wrong_kind_scope_and_missing_records`
 - `storage_backend_integration_summary_keeps_non_ready_boundaries_explicit`
 - `production_message_storage_summary_allows_encrypted_session_transport`
 - `production_local_data_lifecycle_policy_is_passphrase_first_with_non_claims`
@@ -146,6 +148,10 @@ Targeted tests that anchor this gate:
 - key_rotation_marker_monotonic_write_enforced=true
 - key_rotation_marker_scope_bound=true
 - replay_window_scope_bound_loader_ready=true
+- rollback_marker_negative_corpus_ready=true
+- replay_window_negative_corpus_ready=true
+- missing_record_delete_idempotency_ready=true
+- locked_profile_no_plaintext_read_boundary_ready=true
 - minimum_forward_key_rotation_generation_ready=true
 - tauri_profile_passphrase_rekey_command_ready=true
 - project_owned_argon2_scrypt_kdf_ready=false
