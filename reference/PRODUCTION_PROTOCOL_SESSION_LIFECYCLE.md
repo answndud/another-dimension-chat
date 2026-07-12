@@ -113,6 +113,8 @@ The source gate relies on the following targeted tests and code boundaries:
 - `tampered_receive_does_not_persist_replay_before_valid_same_number`
 - `cancelled_pending_pairing_cannot_be_confirmed`
 - `ReplayWindow::accept_after_decrypt`
+- `envelope_decode_rejects_malformed_wrong_type_and_oversized_inputs`
+- `replay_window_rejects_replay_stale_and_tamper_corpus_without_state_advance`
 - `ProductionEnvelopeSession`
 - `production_local_manual_e2ee_runtime_summary`
 - `production_async_delivery_semantics_summary`
@@ -144,6 +146,9 @@ These questions remain unresolved and must stay in the external review packet:
 - production_e2ee_field_evidence_required_for_claims=true
 - local_manual_and_future_transport_semantics_shared=true
 - replay_duplicate_retry_cancel_edges_documented=true
+- protocol_malformed_envelope_negative_corpus_ready=true
+- protocol_replay_stale_message_negative_corpus_ready=true
+- protocol_tamper_after_decrypt_no_commit_corpus_ready=true
 - dev_insecure_surface_blocked_from_production_claim=true
 - production_e2ee_source_gate_reviewed=true
 - production_e2ee_source_ready=true
