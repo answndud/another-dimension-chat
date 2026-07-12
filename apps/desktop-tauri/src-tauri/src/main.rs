@@ -18,7 +18,7 @@ const ENGINE_SIDECAR_CONTRACT_COMMANDS: [&str; 8] = [
 
 #[cfg(feature = "public-shell")]
 fn main() {
-    run_windows_public_shell();
+    run_desktop_public_shell();
 }
 
 #[cfg(all(not(feature = "public-shell"), feature = "legacy-embedded-runtime"))]
@@ -28,7 +28,7 @@ fn main() {
 
 #[cfg(feature = "public-shell")]
 #[derive(serde::Serialize)]
-struct WindowsPublicShellStatus {
+struct DesktopPublicShellStatus {
     warning: &'static str,
     artifact_type: &'static str,
     runtime_mode: &'static str,
@@ -275,10 +275,10 @@ struct EngineCommandContractProbe {
 
 #[cfg(feature = "public-shell")]
 #[tauri::command]
-fn prototype_status(app: tauri::AppHandle) -> WindowsPublicShellStatus {
+fn prototype_status(app: tauri::AppHandle) -> DesktopPublicShellStatus {
     let engine_sidecar_basename = engine_sidecar_basename();
     let engine_sidecar_present = engine_sidecar_present(&app, &engine_sidecar_basename);
-    WindowsPublicShellStatus {
+    DesktopPublicShellStatus {
         warning:
             "desktop public shell; engine sidecar packaging does not open messaging or high-risk claims",
         artifact_type: public_shell_artifact_type(),
@@ -812,7 +812,7 @@ fn run_engine_sidecar_command_with_json_stdin(
 }
 
 #[cfg(feature = "public-shell")]
-fn run_windows_public_shell() {
+fn run_desktop_public_shell() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             prototype_status,
