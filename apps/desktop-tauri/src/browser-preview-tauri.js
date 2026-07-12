@@ -420,6 +420,46 @@ if (previewHost && (forcedBrowserPreviewPeer || !hasUsableTauriInvoke)) {
     sidecar_path_returned: false,
   });
 
+  const engineSidecarContractCommand = (args = {}) => ({
+    command: args.command || "redacted-support-diagnostics",
+    attempted: true,
+    engine_sidecar_present: true,
+    exit_success: true,
+    failure_class: "none",
+    recovery_action: "continue",
+    schema_valid: true,
+    protocol_valid: true,
+    contract_version_valid: true,
+    command_valid: true,
+    input_schema_valid: true,
+    output_schema_valid: true,
+    runtime_mode: "manual-e2ee-engine-sidecar",
+    status: "contract-ready",
+    required_fields: [],
+    missing_required_fields: [],
+    manual_e2ee_runtime_available: true,
+    storage_runtime_available: false,
+    runtime_action_performed: false,
+    state_mutated: false,
+    artifact_written: false,
+    raw_local_path_returned: false,
+    raw_payload_returned: false,
+    plaintext_returned: false,
+    ciphertext_returned: false,
+    invite_code_returned: false,
+    endpoint_returned: false,
+    key_material_exposed: false,
+    passphrase_exposed: false,
+    app_launch_network_allowed: false,
+    room_open_network_allowed: false,
+    production_ready_claim: false,
+    high_risk_claim: false,
+    sensitive_communication_allowed: false,
+    stdout_returned: false,
+    stderr_returned: false,
+    sidecar_path_returned: false,
+  });
+
   window.__TAURI_INTERNALS__ = {
     transformCallback: () => Math.floor(Math.random() * Number.MAX_SAFE_INTEGER),
     invoke: async (cmd, args = {}) => {
@@ -430,6 +470,8 @@ if (previewHost && (forcedBrowserPreviewPeer || !hasUsableTauriInvoke)) {
           return engineSidecarStatus();
         case "engine_sidecar_manual_self_test":
           return engineSidecarManualSelfTest();
+        case "engine_sidecar_contract_command":
+          return engineSidecarContractCommand(args);
         case "production_message_retention_policy":
           return { default_ttl_seconds: 86400, allowed_ttl_seconds: [3600, 86400, 604800] };
         case "production_message_retention_preference_set":

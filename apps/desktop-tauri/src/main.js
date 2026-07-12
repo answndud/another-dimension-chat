@@ -6616,10 +6616,42 @@ function engineSidecarDiagnosticsFallback(failureClass = "not-run") {
     appLaunchNetworkAllowed: false,
     roomOpenNetworkAllowed: false,
     localRuntimePromotedToDeliveryProof: false,
+    contractRuntimeChecked: false,
+    contractCommand: "redacted-support-diagnostics",
+    contractStatus: "unknown",
+    contractFailureClass: failureClass,
+    contractRecoveryAction: "retry-with-redacted-contract-input",
+    contractSchemaValid: false,
+    contractRejected: false,
+    contractRawPayloadReturned: false,
+    contractRuntimeActionPerformed: false,
+    contractStateMutated: false,
   };
 }
 
-function engineSidecarDiagnosticsFromProbes(statusProbe = {}, manualSelfTestProbe = {}) {
+function engineSidecarContractDiagnosticsFromProbe(contractProbe = {}) {
+  const contractSchemaValid =
+    contractProbe.schema_valid === true &&
+    contractProbe.protocol_valid === true &&
+    contractProbe.contract_version_valid === true &&
+    contractProbe.command_valid === true &&
+    contractProbe.input_schema_valid === true &&
+    contractProbe.output_schema_valid === true;
+  return {
+    contractRuntimeChecked: contractProbe.attempted === true,
+    contractCommand: fieldTestReportValue(contractProbe.command, "redacted-support-diagnostics"),
+    contractStatus: fieldTestReportValue(contractProbe.status, "unknown"),
+    contractFailureClass: fieldTestReportValue(contractProbe.failure_class, "unknown"),
+    contractRecoveryAction: fieldTestReportValue(contractProbe.recovery_action, "unknown"),
+    contractSchemaValid,
+    contractRejected: contractProbe.status === "rejected",
+    contractRawPayloadReturned: contractProbe.raw_payload_returned === true,
+    contractRuntimeActionPerformed: contractProbe.runtime_action_performed === true,
+    contractStateMutated: contractProbe.state_mutated === true,
+  };
+}
+
+function engineSidecarDiagnosticsFromProbes(statusProbe = {}, manualSelfTestProbe = {}, contractProbe = {}) {
   const manualSelfTestPassed =
     manualSelfTestProbe.failure_class === "none" &&
     manualSelfTestProbe.pairing_payload_roundtrip === true &&
@@ -6658,6 +6690,7 @@ function engineSidecarDiagnosticsFromProbes(statusProbe = {}, manualSelfTestProb
     roomOpenNetworkAllowed:
       statusProbe.room_open_network_allowed === true || manualSelfTestProbe.room_open_network_allowed === true,
     localRuntimePromotedToDeliveryProof: false,
+    ...engineSidecarContractDiagnosticsFromProbe(contractProbe),
   };
 }
 
@@ -6667,11 +6700,15 @@ async function updateEngineSidecarDiagnostics() {
     return latestEngineSidecarDiagnostics;
   }
   try {
-    const [statusProbe, manualSelfTestProbe] = await Promise.all([
+    const [statusProbe, manualSelfTestProbe, contractProbe] = await Promise.all([
       invoke("engine_sidecar_status"),
       invoke("engine_sidecar_manual_self_test"),
+      invoke("engine_sidecar_contract_command", {
+        command: "redacted-support-diagnostics",
+        input: { diagnostics_ref: "public-beta-diagnostics" },
+      }),
     ]);
-    latestEngineSidecarDiagnostics = engineSidecarDiagnosticsFromProbes(statusProbe, manualSelfTestProbe);
+    latestEngineSidecarDiagnostics = engineSidecarDiagnosticsFromProbes(statusProbe, manualSelfTestProbe, contractProbe);
   } catch {
     latestEngineSidecarDiagnostics = engineSidecarDiagnosticsFallback("sidecar-command-unavailable");
   }
@@ -6706,6 +6743,16 @@ function engineSidecarDiagnosticReportLines(diagnostics = latestEngineSidecarDia
     `engine_sidecar_app_launch_network_allowed=${diagnostics.appLaunchNetworkAllowed === true}`,
     `engine_sidecar_room_open_network_allowed=${diagnostics.roomOpenNetworkAllowed === true}`,
     `engine_sidecar_local_runtime_promoted_to_delivery_proof=${diagnostics.localRuntimePromotedToDeliveryProof === true}`,
+    `engine_sidecar_contract_runtime_checked=${diagnostics.contractRuntimeChecked === true}`,
+    `engine_sidecar_contract_command=${fieldTestReportValue(diagnostics.contractCommand, "redacted-support-diagnostics")}`,
+    `engine_sidecar_contract_status=${fieldTestReportValue(diagnostics.contractStatus, "unknown")}`,
+    `engine_sidecar_contract_failure_class=${fieldTestReportValue(diagnostics.contractFailureClass, "unknown")}`,
+    `engine_sidecar_contract_recovery_action=${fieldTestReportValue(diagnostics.contractRecoveryAction, "unknown")}`,
+    `engine_sidecar_contract_schema_valid=${diagnostics.contractSchemaValid === true}`,
+    `engine_sidecar_contract_rejected=${diagnostics.contractRejected === true}`,
+    `engine_sidecar_contract_raw_payload_returned=${diagnostics.contractRawPayloadReturned === true}`,
+    `engine_sidecar_contract_runtime_action_performed=${diagnostics.contractRuntimeActionPerformed === true}`,
+    `engine_sidecar_contract_state_mutated=${diagnostics.contractStateMutated === true}`,
   ];
 }
 
