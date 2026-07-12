@@ -26,12 +26,11 @@ notarization을 받지 않았고, 외부 감사를 완료하지 않았으며, pr
 
 ## 다운로드
 
-현재 source-prepared unsigned packet은 아래 GitHub Release tag에 게시할
-대상입니다. 실제 GitHub Release asset 교체는 아직 explicit owner action입니다.
+현재 unsigned packet은 아래 GitHub Release에 게시되어 있습니다.
 
 <https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned>
 
-그 upload가 끝난 뒤 같은 release에서 아래 두 파일을 모두 받으세요.
+같은 release에서 아래 두 파일을 모두 받으세요.
 
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
@@ -55,12 +54,13 @@ artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned
 artifact_current_head_aligned=true
 public_artifact_stale=false
 public_artifact_state=current
-next_owner_action=upload-current-unsigned-public-beta-packet
+next_owner_action=run-clean-macos-fresh-install-with-disposable-profile
 ```
 
-즉, generated packet은 현재 source HEAD와 일치합니다. 다만 matching DMG,
-checksum, provenance, manifest, release body를 업로드하는 explicit owner action이
-끝나기 전까지 GitHub Release를 current 상태로 설명하면 안 됩니다.
+즉, generated packet은 현재 public packet source와 일치합니다. Matching DMG,
+checksum, provenance, manifest, release body는 GitHub Release에 업로드되어
+있습니다. 다음 owner evidence는 disposable profile로 clean macOS fresh-install을
+실행한 결과입니다.
 
 이 빌드는 서명되지 않았기 때문에 macOS가 실행을 막을 수 있습니다. DMG를 열고
 앱 실행을 한 번 시도한 뒤, checksum이 일치할 때만 시스템 설정 > 개인정보 보호
@@ -135,8 +135,9 @@ desktop beta는 로컬 destructive action을 분리합니다.
   `ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13`.
 - Artifact status는 machine-checkable합니다: `artifact_current_head_aligned=true`,
   `public_artifact_stale=false`, `public_artifact_state=current`,
-  `next_owner_action=upload-current-unsigned-public-beta-packet`.
-  이 upload owner action이 끝나기 전까지 GitHub Release는 current 상태가 아닙니다.
+  `next_owner_action=run-clean-macos-fresh-install-with-disposable-profile`.
+  GitHub Release asset set은 current 상태이며, 다음 owner evidence는 clean macOS
+  fresh-install run입니다.
 - 이 상태는 packaging readiness, audit readiness, release go signal이 아닙니다.
 - production claim 제거는
   [reference/PRODUCTION_READINESS_CLAIM_GATE.md](reference/PRODUCTION_READINESS_CLAIM_GATE.md)와

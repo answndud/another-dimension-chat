@@ -35,7 +35,7 @@ action:
 
 <https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned>
 
-After that upload, download both files from the same release:
+Download both files from the same release:
 
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg`
 - `another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg.sha256`
@@ -59,12 +59,13 @@ artifact_identity=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned
 artifact_current_head_aligned=true
 public_artifact_stale=false
 public_artifact_state=current
-next_owner_action=upload-current-unsigned-public-beta-packet
+next_owner_action=run-clean-macos-fresh-install-with-disposable-profile
 ```
 
-This means the generated packet is aligned to current source HEAD. Do not treat
-the GitHub Release as current until the explicit owner action uploads the
-matching DMG, checksum, provenance, manifest, and release body.
+This means the generated packet is aligned to the current public packet source.
+The matching DMG, checksum, provenance, manifest, and release body are uploaded
+to the GitHub Release. The next owner evidence is a clean macOS fresh-install
+run with a disposable profile.
 
 Because this build is unsigned, macOS may block it. Open the DMG, try to open
 the app once, then allow the blocked app from System Settings > Privacy &
@@ -166,8 +167,9 @@ Read the full public security boundary in [SECURITY.md](SECURITY.md).
   `ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13`.
 - Artifact status is machine-checkable: `artifact_current_head_aligned=true`,
   `public_artifact_stale=false`, `public_artifact_state=current`, and
-  `next_owner_action=upload-current-unsigned-public-beta-packet`.
-  The GitHub Release is not current until that upload owner action is complete.
+  `next_owner_action=run-clean-macos-fresh-install-with-disposable-profile`.
+  The GitHub Release asset set is current; next owner evidence is a clean macOS
+  fresh-install run.
 - This is not a packaging readiness, audit readiness, or release go signal.
 - Production claim removal is blocked by
   [reference/PRODUCTION_READINESS_CLAIM_GATE.md](reference/PRODUCTION_READINESS_CLAIM_GATE.md)

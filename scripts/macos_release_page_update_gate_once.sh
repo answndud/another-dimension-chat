@@ -34,6 +34,16 @@ reject_text() {
   fi
 }
 
+normalized_body_sha() {
+  awk '
+    { lines[++n] = $0 }
+    END {
+      while (n > 0 && lines[n] == "") n--
+      for (i = 1; i <= n; i++) print lines[i]
+    }
+  ' "$1" | shasum -a 256 | awk '{print $1}'
+}
+
 require_file "$POLICY"
 require_file "$RELEASE_BODY"
 
@@ -121,8 +131,8 @@ comm -13 "$expected_assets" "$live_assets" > "$extra_assets"
 comm -23 "$live_body_assets" "$live_assets" > "$live_body_missing_assets"
 comm -13 "$live_body_assets" "$live_assets" > "$live_body_extra_assets"
 
-source_sha="$(shasum -a 256 "$RELEASE_BODY" | awk '{print $1}')"
-live_sha="$(shasum -a 256 "$live_body" | awk '{print $1}')"
+source_sha="$(normalized_body_sha "$RELEASE_BODY")"
+live_sha="$(normalized_body_sha "$live_body")"
 
 if [ "$source_sha" = "$live_sha" ]; then
   body_drift=false

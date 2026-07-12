@@ -15,7 +15,7 @@ RELEASE_TAG="v0.1.0-beta-onion-unsigned"
 RELEASE_URL="https://github.com/answndud/another-dimension-chat/releases/tag/$RELEASE_TAG"
 EXPECTED_DMG_SHA="ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13"
 PUBLIC_ARTIFACT_STALE_ACTION="rebuild-or-republish-unsigned-public-beta-packet"
-PUBLIC_ARTIFACT_CURRENT_ACTION="upload-current-unsigned-public-beta-packet"
+PUBLIC_ARTIFACT_CURRENT_ACTION="run-clean-macos-fresh-install-with-disposable-profile"
 
 SOURCE_DIR="$ROOT_DIR/apps/desktop-tauri/beta-artifacts"
 SOURCE_DMG="$SOURCE_DIR/Another Dimension Chat_0.1.0_aarch64.dmg"
