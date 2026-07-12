@@ -322,6 +322,7 @@ Build caches default to the OS user cache, not the repository. Inspect generated
 cache paths before deleting them:
 
 ```bash
+scripts/repo_size_guard_once.sh
 scripts/clean_build_cache.sh --dry-run
 scripts/clean_build_cache.sh --apply
 ```

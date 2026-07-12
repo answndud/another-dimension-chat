@@ -60,6 +60,7 @@ required_files=(
   "$APP_DIR/src/transcript-retention.js"
   "$APP_DIR/src/styles.css"
   "$APP_DIR/vite.config.js"
+  "$ROOT_DIR/scripts/repo_size_guard_once.sh"
   "$ROOT_DIR/scripts/smoke_tauri_two_profile.sh"
   "$TAURI_DIR/Cargo.toml"
   "$TAURI_DIR/build.rs"
@@ -782,5 +783,6 @@ cargo metadata --manifest-path "$TAURI_DIR/Cargo.toml" --no-deps --format-versio
 
 npm --prefix "$APP_DIR" run verify:ui-loop-scripts
 npm --prefix "$APP_DIR" run test:ui-fast
+bash "$ROOT_DIR/scripts/repo_size_guard_once.sh"
 
 printf 'tauri scaffold static and UI verification passed\n'
