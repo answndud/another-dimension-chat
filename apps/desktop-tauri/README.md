@@ -54,15 +54,24 @@ Current boundary:
 - No Tor bootstrap, onion hosting, descriptor publication, stream I/O, or envelope I/O starts on app launch. Push notifications, cloud backup, groups, file transfer, and multi-device support are out of scope.
 - `src-tauri` is excluded from the root Cargo workspace until the Tauri dependency and platform build costs are accepted as a separate phase.
 
-Local commands after dependency installation:
+Local Vite-first commands after dependency installation:
 
 ```bash
 npm ci --workspaces=false
 npm run dev
+npm run test:ui-fast
 npm run build
 ```
 
-Build a local-only lightweight desktop public shell:
+Native shell checks are separate and only needed for packaging or platform
+integration work:
+
+```bash
+npm run test:native-shell
+npm run tauri:dev
+```
+
+Build a local-only lightweight desktop public shell for packaging checks:
 
 ```bash
 cd apps/desktop-tauri
@@ -128,7 +137,8 @@ cd apps/desktop-tauri
 npm run tauri:build:beta-onion-bridge
 ```
 
-Run the lightweight local development shell:
+Run the native desktop shell only when packaging or platform integration needs
+the Tauri wrapper:
 
 ```bash
 cd apps/desktop-tauri
@@ -269,11 +279,13 @@ This matrix is not external onion delivery evidence, an audit result, a
 production-ready claim, a security-ready claim, or permission for sensitive
 communication.
 
-Run the lightweight local desktop shell during development:
+Run the Vite-first UI loop during normal development:
 
 ```bash
 cd apps/desktop-tauri
-npm run tauri:dev
+npm run dev
+npm run test:ui-fast
+npm run build
 ```
 
 Expected local-only behavior:
@@ -315,11 +327,14 @@ From the repository root:
 cd apps/desktop-tauri
 npm ci --workspaces=false
 npm run dev
+npm run test:ui-fast
+npm run build
 ```
 
-For a local desktop shell run after the frontend dependencies are installed:
+For a local desktop shell check after the frontend dependencies are installed:
 
 ```bash
+npm run test:native-shell
 npm run tauri:dev
 ```
 
