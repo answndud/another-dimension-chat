@@ -55,6 +55,10 @@ must_contain "$DOC" "sqlcipher_passphrase_rotation_generation_source_ready=true"
 must_contain "$DOC" "key_rotation_marker_monotonic_write_enforced=true"
 must_contain "$DOC" "key_rotation_marker_scope_bound=true"
 must_contain "$DOC" "replay_window_scope_bound_loader_ready=true"
+must_contain "$DOC" "rollback_marker_negative_corpus_ready=true"
+must_contain "$DOC" "replay_window_negative_corpus_ready=true"
+must_contain "$DOC" "missing_record_delete_idempotency_ready=true"
+must_contain "$DOC" "locked_profile_no_plaintext_read_boundary_ready=true"
 must_contain "$DOC" "minimum_forward_key_rotation_generation_ready=true"
 must_contain "$DOC" "project_owned_argon2_scrypt_kdf_ready=false"
 must_contain "$DOC" "forward_only_schema_version_ready=true"
@@ -79,6 +83,11 @@ must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_KEY_
 must_contain "reference/INDEPENDENT_REVIEW_PACKET.md" "reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_3_key_storage_lifecycle_gate_reviewed=true"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "production_key_management_source_ready=true"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "storage_negative_corpus_source_gate_ready=true"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "production_ready_claim_allowed=false"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "security_ready_claimed=false"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "high_risk_public_claim_allowed=false"
+must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "high_risk_ready_claim_allowed=false"
 must_contain "reference/PRODUCTION_READINESS_CLAIM_GATE.md" "ops_4_default_transport_product_path_reviewed=true"
 
 must_contain "crates/storage/src/lib.rs" "unlock_policy_requires_passphrase_for_all_modes"
@@ -88,10 +97,12 @@ must_contain "crates/storage/src/lib.rs" "sqlcipher_store_key_rotation_generatio
 must_contain "crates/storage/src/lib.rs" "key_rotation_marker_monotonic_write_enforced: true"
 must_contain "crates/storage/src/lib.rs" "sqlcipher_store_rejects_key_rotation_marker_scope_mismatch"
 must_contain "crates/storage/src/lib.rs" "sqlcipher_store_rejects_replay_window_scope_mismatch"
+must_contain "crates/storage/src/lib.rs" "rollback_detection_negative_corpus_keeps_high_risk_and_delivery_claims_closed"
+must_contain "crates/storage/src/lib.rs" "sqlcipher_store_replay_negative_corpus_rejects_wrong_kind_scope_and_missing_records"
 must_contain "crates/storage/src/lib.rs" "key_rotation_marker_scope_bound: true"
 must_contain "crates/storage/src/lib.rs" "replay_window_scope_bound_loader_ready: true"
 must_contain "crates/storage/src/lib.rs" "pub fn load_replay_window_for_scope"
-must_contain "crates/storage/src/lib.rs" "storage_backend_integration_summary_keeps_non_ready_boundaries_explicit"
+must_contain "crates/storage/src/lib.rs" "sqlcipher_kdf_rekey_memory_hygiene_boundary_is_ready"
 must_contain "crates/storage/src/lib.rs" "production_message_storage_summary_allows_encrypted_session_transport"
 must_contain "crates/core/src/lib.rs" "production_local_data_lifecycle_policy_summary"
 must_contain "crates/core/src/lib.rs" "production_local_storage_lifecycle_product_summary"
@@ -146,11 +157,16 @@ sqlcipher_passphrase_rotation_generation_source_ready=true
 key_rotation_marker_monotonic_write_enforced=true
 key_rotation_marker_scope_bound=true
 replay_window_scope_bound_loader_ready=true
+storage_negative_corpus_source_gate_ready=true
+rollback_marker_negative_corpus_ready=true
+replay_window_negative_corpus_ready=true
 minimum_forward_key_rotation_generation_ready=true
 rollback_detection_marker_only=true
 rollback_prevention_claimed=false
 secure_media_deletion_claimed=false
 production_key_management_ready=false
 security_ready_claimed=false
+high_risk_public_claim_allowed=false
+high_risk_ready_claim_allowed=false
 next_required_phase=Phase-O100-1-Operations-Incident-And-Vulnerability-Readiness
 STATUS
