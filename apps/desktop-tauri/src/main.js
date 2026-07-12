@@ -3332,6 +3332,11 @@ function renderFirstRunDesktopSummary(input = {}) {
   const view = productionFirstRunDesktopSummaryView(input);
   setText(fields.firstRunPrimaryNextAction, `Next: ${view.primaryNextAction}`);
   fields.firstRunPrimaryNextAction?.setAttribute("data-current-step", view.currentStep);
+  fields.firstRunPrimaryNextAction?.setAttribute("data-current-action", view.currentAction);
+  fields.firstRunPrimaryNextAction?.setAttribute("data-current-blocked-reason", view.currentBlockedReason);
+  fields.firstRunPrimaryNextAction?.setAttribute("data-recovery-next-action", view.currentAction);
+  fields.firstRunPrimaryNextAction?.setAttribute("data-local-delete-warning", view.localDeleteWarning);
+  fields.firstRunPrimaryNextAction?.setAttribute("data-diagnostics-copy-status", view.diagnosticsCopyStatus);
   fields.firstRunPrimaryNextAction?.setAttribute("aria-label", `${view.progressLabel}. Next: ${view.primaryNextAction}`);
   fields.firstRunChecklistItems?.forEach((item) => {
     const step = item.dataset.firstRunStep;
@@ -3355,18 +3360,37 @@ function renderFirstRunDesktopSummary(input = {}) {
             : t("firstRunStatusPending");
     const nextAction = detail.nextAction ?? "review-next-action";
     const blockedReason = detail.blockedReason ?? "unknown";
-    const detailText =
+    const keyboardLabel = detail.keyboardLabel ?? "keyboard-review-step";
+    const detailParts =
       status === "blocked"
-        ? `${statusLabel}: ${t("firstRunStepReasonPrefix")} ${blockedReason}; ${t("firstRunStepNextPrefix")} ${nextAction}.`
-        : `${statusLabel}: ${t("firstRunStepNextPrefix")} ${nextAction}.`;
+        ? [
+            `${statusLabel}: ${t("firstRunStepReasonPrefix")} ${blockedReason}`,
+            `${t("firstRunStepNextPrefix")} ${nextAction}`,
+          ]
+        : [`${statusLabel}: ${t("firstRunStepNextPrefix")} ${nextAction}`];
+    detailParts.push(`keyboard ${keyboardLabel}`);
+    if (step === "message") {
+      detailParts.push(`warning ${view.localDeleteWarning}`);
+    }
+    if (step === "diagnostics") {
+      detailParts.push(`copy ${view.diagnosticsCopyStatus}`);
+    }
+    const detailText = `${detailParts.join("; ")}.`;
     item.dataset.stepStatus = status;
     item.setAttribute("data-next-action", nextAction);
     item.setAttribute("data-blocked-reason", blockedReason);
+    item.setAttribute("data-keyboard-label", keyboardLabel);
+    if (step === "message") {
+      item.setAttribute("data-local-delete-warning", view.localDeleteWarning);
+    }
+    if (step === "diagnostics") {
+      item.setAttribute("data-diagnostics-copy-status", view.diagnosticsCopyStatus);
+    }
     detailNode.textContent = detailText;
     detailNode.setAttribute("data-step-detail-status", status);
     item.setAttribute(
       "aria-label",
-      `${baseLabel} Status: ${status}. Next: ${nextAction}. Blocked reason: ${blockedReason}.`,
+      `${baseLabel} Status: ${status}. Next: ${nextAction}. Blocked reason: ${blockedReason}. Keyboard: ${keyboardLabel}.`,
     );
     if (status === "current") {
       item.setAttribute("aria-current", "step");

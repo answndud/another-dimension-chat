@@ -206,6 +206,7 @@ export function productionHighRiskTransportMetadataBoundaryView() {
       "high_risk_transport_runtime_event_identifiers_redacted=true",
       "high_risk_transport_runtime_evidence_required_for_ready=true",
       "high_risk_transport_runtime_evidence_present=false",
+      "high_risk_transport_evidence_blocker=transport-runtime-evidence-missing",
       "high_risk_transport_ready=false",
       "high_risk_transport_not_ready_reason=runtime-network-disabled-until-explicit-user-action",
     ].join(" "),
@@ -1108,6 +1109,15 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
   const diagnosticsCopied = Boolean(input.diagnosticsCopied);
   const purpose = "No-central-trusted-server 1:1 private messenger";
   const releaseStatus = "Unsigned public beta; no production security claim";
+  const keyboardLabels = {
+    profile: "keyboard-profile-form",
+    room: "keyboard-invite-room-controls",
+    safety: "keyboard-safety-phrase-compare",
+    message: "keyboard-manual-envelope-actions",
+    diagnostics: "keyboard-redacted-diagnostics-copy",
+  };
+  const localDeleteWarning = "delete-local-data-removes-this-device-copy-no-cloud-recovery";
+  const diagnosticsCopyStatus = diagnosticsCopied ? "copied" : "not-copied";
   const stepStatuses = {
     profile: profileUnlocked ? "complete" : "current",
     room: !profileUnlocked ? "blocked" : roomPresent ? "complete" : "current",
@@ -1142,28 +1152,37 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
       status: stepStatuses.profile,
       nextAction: profileInputPresent ? "unlock-or-create-profile" : "enter-local-profile-and-passphrase",
       blockedReason: profileUnlocked ? "none" : profileInputPresent ? "profile-locked" : "profile-input-missing",
+      keyboardLabel: keyboardLabels.profile,
     },
     room: {
       status: stepStatuses.room,
       nextAction: roomPresent ? "compare-safety" : "create-or-join-pairwise-invite-room",
       blockedReason: profileUnlocked ? (roomPresent ? "none" : "room-missing") : "profile-locked",
+      keyboardLabel: keyboardLabels.room,
     },
     safety: {
       status: stepStatuses.safety,
       nextAction: safetyVerified ? "write-message" : "compare-mandatory-safety-material",
       blockedReason: roomPresent ? (safetyVerified ? "none" : "safety-not-verified") : "room-missing",
+      keyboardLabel: keyboardLabels.safety,
     },
     message: {
       status: stepStatuses.message,
       nextAction: messageFlowReady ? "import-reply-retry-cancel-or-delete" : "export-manual-encrypted-envelope",
       blockedReason: safetyVerified ? (messageFlowReady ? "none" : "manual-envelope-not-exported") : "safety-not-verified",
+      keyboardLabel: keyboardLabels.message,
+      localDeleteWarning,
     },
     diagnostics: {
       status: stepStatuses.diagnostics,
       nextAction: diagnosticsCopied ? "done" : "copy-redacted-support-report-if-needed",
       blockedReason: messageFlowReady ? (diagnosticsCopied ? "none" : "diagnostics-not-copied") : "message-flow-not-ready",
+      keyboardLabel: keyboardLabels.diagnostics,
+      copyStatus: diagnosticsCopyStatus,
     },
   };
+  const currentAction = stepDetails[currentStep].nextAction;
+  const currentBlockedReason = stepDetails[currentStep].blockedReason;
   return {
     purpose,
     releaseStatus,
@@ -1174,6 +1193,10 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
     stepDetails,
     progressLabel,
     primaryNextAction,
+    currentAction,
+    currentBlockedReason,
+    localDeleteWarning,
+    diagnosticsCopyStatus,
     boundary: [
       "first_run_summary=true",
       `first_run_current_step=${currentStep}`,
@@ -1192,6 +1215,13 @@ export function productionFirstRunDesktopSummaryView(input = {}) {
       `diagnostics_copied=${diagnosticsCopied}`,
       `first_run_step_next_actions=${stepOrder.map((step) => `${step}:${stepDetails[step].nextAction}`).join("#")}`,
       `first_run_blocked_reasons=${stepOrder.map((step) => `${step}:${stepDetails[step].blockedReason}`).join("#")}`,
+      `first_run_keyboard_labels=${stepOrder.map((step) => `${step}:${stepDetails[step].keyboardLabel}`).join("#")}`,
+      `first_run_current_action=${currentStep}:${currentAction}`,
+      `first_run_current_blocked_reason=${currentBlockedReason}`,
+      "first_run_recovery_next_action_visible=true",
+      `first_run_local_delete_warning=${localDeleteWarning}`,
+      `first_run_diagnostics_copy_status=${diagnosticsCopyStatus}`,
+      "first_run_mobile_desktop_wrap_safe=true",
       "sensitive_communication_claim=false",
       "security_ready_claim=false",
       "network_on_launch=false",
