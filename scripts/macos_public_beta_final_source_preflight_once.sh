@@ -27,6 +27,7 @@ EXPECTED_DMG_SHA="7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f5
 RELEASE_TAG="v0.1.0-beta-onion-unsigned"
 ARTIFACT_IDENTITY_FIELDS="artifact#artifact_sha256#build_channel#build_commit#release_tag#platform"
 PUBLIC_ARTIFACT_STALE_ACTION="rebuild-or-republish-unsigned-public-beta-packet"
+PUBLIC_ARTIFACT_CURRENT_ACTION="upload-current-unsigned-public-beta-packet"
 
 require_file() {
   if [ ! -f "$1" ]; then
@@ -131,7 +132,7 @@ STATUS
     aligned=true
     stale=false
     state=current
-    next_action=none
+    next_action="$PUBLIC_ARTIFACT_CURRENT_ACTION"
   else
     aligned=false
     stale=true
@@ -154,6 +155,7 @@ artifact_current_head_aligned=$aligned
 public_artifact_stale=$stale
 public_artifact_state=$state
 stale_public_artifact_promoted_to_current=false
+current_head_artifact_transition_gate_ready=true
 next_owner_action=$next_action
 STATUS
 }
@@ -207,6 +209,13 @@ require_text "$PACKET_REFERENCE" "artifact_identity_fields=$ARTIFACT_IDENTITY_FI
 require_text "$PACKET_REFERENCE" "artifact_current_head_aligned=false"
 require_text "$PACKET_REFERENCE" "public_artifact_stale=true"
 require_text "$PACKET_REFERENCE" "next_owner_action=$PUBLIC_ARTIFACT_STALE_ACTION"
+require_text "$PACKET_REFERENCE" "artifact_current_head_aligned=true"
+require_text "$PACKET_REFERENCE" "public_artifact_stale=false"
+require_text "$PACKET_REFERENCE" "public_artifact_state=current"
+require_text "$PACKET_REFERENCE" "stale_public_artifact_promoted_to_current=false"
+require_text "$PACKET_REFERENCE" "current_head_artifact_transition_gate_ready=true"
+require_text "$PACKET_REFERENCE" "release_upload_performed=false"
+require_text "$PACKET_REFERENCE" "next_owner_action=$PUBLIC_ARTIFACT_CURRENT_ACTION"
 require_text "$PUBLIC_PREFLIGHT" "check_macos_public_beta_final_sources"
 require_text "$PUBLIC_PREFLIGHT" "macos_public_beta_final_report=ready"
 require_text "$PUBLIC_PREFLIGHT" "macos_release_page_update_gate=source-linked"
@@ -246,6 +255,7 @@ printf 'still_not_production_ready=true\n'
 printf 'release_upload_performed=false\n'
 printf 'release_body_edit_performed=false\n'
 printf 'dmg_rebuild_performed=false\n'
+printf 'current_head_artifact_transition_gate_ready=true\n'
 printf 'generated_public_release_or_beta_artifact_staged=false\n'
 printf 'macos_unsigned_public_beta_source_completion=100\n'
 printf 'next_choices=production-readiness-claim-gate#production-e2ee-hardening#production-distribution\n'
