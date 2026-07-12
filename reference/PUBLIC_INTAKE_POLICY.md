@@ -33,6 +33,31 @@ forbidden_public_intake_fields=raw-logs#crash-dumps#screenshots#onion-endpoints#
 public_intake_policy_alignment=app-diagnostics#github-issue-template#reference-policy
 ```
 
+## Public Issue Dry-Run Contract
+
+A public issue dry-run may include only the canonical allowed fields above. The
+support-safe fixture for a sidecar or High-Risk runtime issue must keep these
+fields redacted and non-evidentiary:
+
+```text
+recovery_next_action=stay-on-manual-envelope
+desktop_acceptance_status=not-claimed
+high_risk_runtime_evidence_source=absent
+high_risk_runtime_evidence_accepted=false
+high_risk_runtime_primary_blocker=high-risk-transport-runtime
+high_risk_runtime_failure_class=runtime-evidence-missing
+engine_sidecar_status_failure_class=sidecar-unavailable
+engine_sidecar_manual_self_test_failure_class=manual-self-test-not-run
+engine_sidecar_redacted_runtime_status=redacted
+public_issue_evidence_class=support-triage-only
+accepted_usability_evidence=false
+accepted_field_evidence=false
+accepted_high_risk_evidence=false
+```
+
+Public issues are support routing only. They are not representative usability
+evidence, not production field evidence, and not High-Risk readiness evidence.
+
 ## Desktop Real-User Test Preparation Boundary
 
 Tester-facing reports must use redacted public support diagnostics, failure

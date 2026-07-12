@@ -128,6 +128,17 @@ body:
         desktop_acceptance_status=not-claimed
         desktop_acceptance_blockers=none
         app_launch_network=false
+        high_risk_runtime_evidence_source=absent
+        high_risk_runtime_evidence_accepted=false
+        high_risk_runtime_primary_blocker=high-risk-transport-runtime
+        high_risk_runtime_failure_class=runtime-evidence-missing
+        engine_sidecar_status_failure_class=none
+        engine_sidecar_manual_self_test_failure_class=none
+        engine_sidecar_redacted_runtime_status=redacted
+        public_issue_evidence_class=support-triage-only
+        accepted_usability_evidence=false
+        accepted_field_evidence=false
+        accepted_high_risk_evidence=false
         payload_boundary=status-build-failure-class-recovery-action-desktop-acceptance-only
         crash_upload=false
         telemetry=false
