@@ -29,6 +29,7 @@ RELEASE_TAG="v0.1.0-beta-onion-unsigned"
 ARTIFACT_IDENTITY_FIELDS="artifact#artifact_sha256#build_channel#build_commit#release_tag#platform"
 PUBLIC_ARTIFACT_STALE_ACTION="rebuild-or-republish-unsigned-public-beta-packet"
 PUBLIC_ARTIFACT_CURRENT_ACTION="run-clean-macos-fresh-install-with-disposable-profile"
+CLEAN_INSTALL_RESULT="hold"
 
 require_file() {
   if [ ! -f "$1" ]; then
@@ -203,7 +204,34 @@ require_text "$FINAL_REPORT" "Remaining Non-Beta Product Blockers"
 require_text "$FINAL_REPORT" "Phase OPS-1 - Production Readiness Definition And Claim Gate"
 require_text "$RELEASE_POLICY" "current source packet upload is held without explicit upload approval"
 require_text "$FRESH_INSTALL" "Redacted Diagnostics Copy"
-require_text "$FRESH_RESULT" "Status: hold for manual GUI follow-through; source install authority passed."
+require_text "$FRESH_RESULT" "Status: hold for manual GUI follow-through; same-release download and checksum passed."
+require_text "$FRESH_RESULT" "clean_machine_execution=false"
+require_text "$FRESH_RESULT" "clean_machine_result_accepted=false"
+require_text "$FRESH_RESULT" "local_fixture_promoted_to_clean_install_pass=false"
+require_text "$FRESH_RESULT" "artifact_filename=$RELEASE_DMG"
+require_text "$FRESH_RESULT" "artifact_sha256=$EXPECTED_DMG_SHA"
+require_text "$FRESH_RESULT" "release_tag=$RELEASE_TAG"
+require_text "$FRESH_RESULT" "build_commit=$EXPECTED_BUILD_COMMIT"
+require_text "$FRESH_RESULT" "platform=macos-aarch64"
+require_text "$FRESH_RESULT" "release_download_source=github-release"
+require_text "$FRESH_RESULT" "same_release_download_result=pass"
+require_text "$FRESH_RESULT" "same_release_checksum_result=pass"
+require_text "$FRESH_RESULT" "manual_privacy_security_allow_result=hold"
+require_text "$FRESH_RESULT" "first_launch_result=hold"
+require_text "$FRESH_RESULT" "profile_create_result=hold"
+require_text "$FRESH_RESULT" "invite_join_safety_result=hold"
+require_text "$FRESH_RESULT" "manual_envelope_exchange_result=hold"
+require_text "$FRESH_RESULT" "diagnostics_redaction_result=hold"
+require_text "$FRESH_RESULT" "local_delete_result=hold"
+require_text "$FRESH_RESULT" "next_owner_action=$PUBLIC_ARTIFACT_CURRENT_ACTION"
+require_text "$FINAL_REPORT" "Expected DMG SHA-256:"
+require_text "$FINAL_REPORT" "$EXPECTED_DMG_SHA"
+require_text "$FINAL_REPORT" "clean_macos_fresh_install_result=$CLEAN_INSTALL_RESULT"
+require_text "$FINAL_REPORT" "clean_install_artifact_current=true"
+require_text "$FINAL_REPORT" "clean_machine_result_accepted=false"
+require_text "$FINAL_REPORT" "local_fixture_promoted_to_clean_install_pass=false"
+require_text "$FINAL_REPORT" "same_release_checksum_result=pass"
+require_text "$FINAL_REPORT" "next_owner_action=$PUBLIC_ARTIFACT_CURRENT_ACTION"
 require_text "$SCREENSHOT_GALLERY" "Reviewed files"
 require_text "$SUPPORT_TRIAGE" "Triage Routing Matrix"
 require_text "$PACKET_REFERENCE" "artifact_identity="
@@ -238,6 +266,12 @@ for file in "$INSTALL_GUIDE" "$RELEASE_NOTES" "$RELEASE_BODY" "$BETA_CHECKLIST";
   require_text "$file" "generated_artifact_boundary=do-not-commit-public-release-or-beta-artifacts#no-dmg-rebuild#no-release-upload-or-edit"
 done
 
+require_text "$BETA_CHECKLIST" "clean_macos_fresh_install_result=$CLEAN_INSTALL_RESULT"
+require_text "$BETA_CHECKLIST" "clean_install_artifact_current=true"
+require_text "$BETA_CHECKLIST" "clean_machine_result_accepted=false"
+require_text "$BETA_CHECKLIST" "local_fixture_promoted_to_clean_install_pass=false"
+require_text "$BETA_CHECKLIST" "same_release_checksum_result=pass"
+
 bash -n "$PUBLIC_PREFLIGHT"
 
 if git -C "$ROOT_DIR" ls-files | grep -Eq '^apps/desktop-tauri/(public-release|beta-artifacts)/'; then
@@ -259,5 +293,10 @@ printf 'release_body_edit_performed=false\n'
 printf 'dmg_rebuild_performed=false\n'
 printf 'current_head_artifact_transition_gate_ready=true\n'
 printf 'generated_public_release_or_beta_artifact_staged=false\n'
+printf 'clean_macos_fresh_install_result=%s\n' "$CLEAN_INSTALL_RESULT"
+printf 'clean_install_artifact_current=true\n'
+printf 'clean_machine_result_accepted=false\n'
+printf 'local_fixture_promoted_to_clean_install_pass=false\n'
+printf 'same_release_checksum_result=pass\n'
 printf 'macos_unsigned_public_beta_source_completion=100\n'
 printf 'next_choices=production-readiness-claim-gate#production-e2ee-hardening#production-distribution\n'
