@@ -718,7 +718,7 @@ pub mod production {
         let passphrase_key_debug_redacted =
             key_hierarchy.passphrase_debug_redacted() && key_hierarchy.key_debug_redacted();
         let key_buffers_zeroized_on_drop = key_hierarchy.key_buffers_zeroized_on_drop();
-        let production_key_management_ready = profile_kdf_params_stored
+        let source_key_lifecycle_ready = profile_kdf_params_stored
             && profile_root_key_derivation_ready
             && domain_separated_profile_keys_ready
             && passphrase_key_debug_redacted
@@ -742,17 +742,16 @@ pub mod production {
             domain_separated_profile_keys_ready,
             passphrase_key_debug_redacted,
             key_buffers_zeroized_on_drop,
-            production_key_management_ready,
+            production_key_management_ready: false,
             rollback_protection: replay_persistence_guarantees().rollback_protection,
             secure_deletion_from_media: false,
-            session_transport_persistence_allowed: true,
+            session_transport_persistence_allowed: source_key_lifecycle_ready,
         }
     }
 
     pub fn production_message_storage_boundary_summary() -> ProductionMessageStorageBoundarySummary
     {
         let replay = replay_persistence_guarantees();
-        let storage = storage_backend_integration_boundary_summary();
         ProductionMessageStorageBoundarySummary {
             replay_window_storage: protection_for(ProductionRecordKind::ReplayWindowState),
             message_envelope_storage: protection_for(ProductionRecordKind::MessageEnvelope),
@@ -761,7 +760,7 @@ pub mod production {
             session_transport_storage: protection_for(ProductionRecordKind::SessionTransportState),
             replay_commit_after_decrypt: replay.commit_after_decrypt,
             rollback_protection: replay.rollback_protection,
-            production_key_management_ready: storage.production_key_management_ready(),
+            production_key_management_ready: false,
             secure_deletion_from_media: false,
             durable_session_transport_persistence_allowed: true,
         }
@@ -2687,7 +2686,7 @@ pub mod production {
         }
 
         #[test]
-        fn sqlcipher_kdf_rekey_memory_hygiene_boundary_is_ready() {
+        fn storage_backend_integration_summary_keeps_non_ready_boundaries_explicit() {
             let summary = storage_backend_integration_boundary_summary();
 
             assert_eq!(summary.backend(), StorageBackendKind::SqlCipherAdrec1Spike);
@@ -2703,13 +2702,18 @@ pub mod production {
             assert!(summary.domain_separated_profile_keys_ready());
             assert!(summary.passphrase_key_debug_redacted());
             assert!(summary.key_buffers_zeroized_on_drop());
-            assert!(summary.production_key_management_ready());
+            assert!(!summary.production_key_management_ready());
             assert_eq!(
                 summary.rollback_protection(),
                 ReplayRollbackProtection::NotProvided
             );
             assert!(!summary.secure_deletion_from_media());
             assert!(summary.session_transport_persistence_allowed());
+        }
+
+        #[test]
+        fn sqlcipher_kdf_rekey_memory_hygiene_boundary_is_ready() {
+            storage_backend_integration_summary_keeps_non_ready_boundaries_explicit();
         }
 
         #[test]
@@ -2773,7 +2777,7 @@ pub mod production {
                 summary.rollback_protection(),
                 ReplayRollbackProtection::NotProvided
             );
-            assert!(summary.production_key_management_ready());
+            assert!(!summary.production_key_management_ready());
             assert!(!summary.secure_deletion_from_media());
             assert!(summary.durable_session_transport_persistence_allowed());
         }
