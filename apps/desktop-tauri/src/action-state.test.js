@@ -768,6 +768,13 @@ test("first-run desktop summary keeps purpose release status and next action vis
   assert.equal(readyToWrite.stepDetails.message.nextAction, "export-manual-encrypted-envelope");
   assert.equal(active.stepDetails.diagnostics.nextAction, "copy-redacted-support-report-if-needed");
   assert.equal(active.stepDetails.diagnostics.blockedReason, "diagnostics-not-copied");
+  assert.equal(initial.currentAction, "enter-local-profile-and-passphrase");
+  assert.equal(initial.currentBlockedReason, "profile-input-missing");
+  assert.equal(initial.stepDetails.profile.keyboardLabel, "keyboard-profile-form");
+  assert.equal(initial.stepDetails.message.localDeleteWarning, "delete-local-data-removes-this-device-copy-no-cloud-recovery");
+  assert.equal(initial.stepDetails.diagnostics.copyStatus, "not-copied");
+  assert.equal(active.currentAction, "copy-redacted-support-report-if-needed");
+  assert.equal(active.diagnosticsCopyStatus, "not-copied");
   assert.match(initial.boundary, /first_run_summary=true/);
   assert.match(initial.boundary, /first_run_current_step=profile/);
   assert.match(initial.boundary, /first_run_progress_visible=true/);
@@ -777,6 +784,14 @@ test("first-run desktop summary keeps purpose release status and next action vis
   assert.match(active.boundary, /diagnostics:copy-redacted-support-report-if-needed/);
   assert.match(active.boundary, /first_run_blocked_reasons=/);
   assert.match(active.boundary, /diagnostics:diagnostics-not-copied/);
+  assert.match(active.boundary, /first_run_keyboard_labels=/);
+  assert.match(active.boundary, /message:keyboard-manual-envelope-actions/);
+  assert.match(active.boundary, /first_run_current_action=diagnostics:copy-redacted-support-report-if-needed/);
+  assert.match(active.boundary, /first_run_current_blocked_reason=diagnostics-not-copied/);
+  assert.match(active.boundary, /first_run_recovery_next_action_visible=true/);
+  assert.match(active.boundary, /first_run_local_delete_warning=delete-local-data-removes-this-device-copy-no-cloud-recovery/);
+  assert.match(active.boundary, /first_run_diagnostics_copy_status=not-copied/);
+  assert.match(active.boundary, /first_run_mobile_desktop_wrap_safe=true/);
   assert.match(initial.boundary, /sensitive_communication_claim=false/);
   assert.match(initial.boundary, /security_ready_claim=false/);
   assert.match(initial.boundary, /network_on_launch=false/);
