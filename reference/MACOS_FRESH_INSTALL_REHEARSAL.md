@@ -18,17 +18,29 @@ Record only:
 
 - release tag
 - app artifact name
+- artifact filename
+- artifact SHA-256
+- provenance SHA-256
+- build commit
 - checksum_result: OK, mismatch, or not_run
+- dmg_mount_result: pass, hold, fail, or not_run
+- manual_privacy_security_allow_result: pass, hold, fail, or not_run
 - gatekeeper_manual_allow_result: pass, hold, fail, or not_run
 - first_launch_result: pass, hold, fail, or not_run
+- profile_create_result: pass, hold, fail, or not_run
 - profile_unlock_result: pass, hold, fail, or not_run
+- invite_join_safety_result: pass, hold, fail, or not_run
 - invite_join_result: pass, hold, fail, or not_run
 - safety_compare_result: pass, hold, fail, or not_run
+- manual_envelope_exchange_result: pass, hold, fail, or not_run
 - envelope_exchange_result: pass, hold, fail, or not_run
+- diagnostics_redaction_result: pass, hold, fail, or not_run
 - diagnostics_copy_result: pass, hold, fail, or not_run
 - local_delete_result: pass, hold, fail, or not_run
+- network_before_explicit_action: false, true, or not_observed
 - app_launch_network: false, true, or not_observed
-- platform: macOS Apple Silicon
+- platform: macos-aarch64
+- clean_install_evidence_source: owner-clean-mac
 - broad failure class, if any
 - recovery next action, if any
 - public beta non-claims confirmed: yes or no
@@ -39,16 +51,30 @@ Required machine-readable contract:
 clean_machine_execution=false
 clean_machine_result_accepted=false
 local_fixture_promoted_to_clean_install_pass=false
+artifact_filename=another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg
+artifact_sha256=ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13
+provenance_sha256=6a872d104b47144d3e15b60c79be71e82d2a5973898c9b7198aba270dd9cdec0
+release_tag=v0.1.0-beta-onion-unsigned
+build_commit=e724bd39
+platform=macos-aarch64
 checksum_result=OK
+dmg_mount_result=pass
+manual_privacy_security_allow_result=hold
 gatekeeper_manual_allow_result=hold
 first_launch_result=hold
+profile_create_result=hold
 profile_unlock_result=hold
+invite_join_safety_result=hold
 invite_join_result=hold
 safety_compare_result=hold
+manual_envelope_exchange_result=hold
 envelope_exchange_result=hold
+diagnostics_redaction_result=hold
 diagnostics_copy_result=hold
 local_delete_result=hold
+network_before_explicit_action=false
 app_launch_network=false
+clean_install_evidence_source=owner-clean-mac
 next_owner_action=run-clean-macos-fresh-install-with-disposable-profile
 ```
 
