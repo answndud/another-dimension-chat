@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RELEASE_DIR="$ROOT_DIR/apps/desktop-tauri/public-release/unsigned-public-beta"
 RELEASE_DMG="another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg"
 RELEASE_PROVENANCE="$RELEASE_DMG.provenance.json"
-EXPECTED_DMG_SHA="7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a"
+EXPECTED_DMG_SHA="ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13"
 RELEASE_TAG="v0.1.0-beta-onion-unsigned"
 ARTIFACT_IDENTITY_FIELDS="artifact#artifact_sha256#build_channel#build_commit#release_tag#platform"
 PUBLIC_ARTIFACT_STALE_ACTION="rebuild-or-republish-unsigned-public-beta-packet"
@@ -86,7 +86,7 @@ STATUS
     aligned=true
     stale=false
     state=current
-    next_action=none
+    next_action=upload-current-unsigned-public-beta-packet
   else
     aligned=false
     stale=true
@@ -158,9 +158,9 @@ require_release_policy_sources() {
   require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "Forbidden public claims"
   require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "artifact_identity="
   require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "artifact_identity_fields=$ARTIFACT_IDENTITY_FIELDS"
-  require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "artifact_current_head_aligned=false"
-  require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "public_artifact_stale=true"
-  require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "next_owner_action=$PUBLIC_ARTIFACT_STALE_ACTION"
+  require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "artifact_current_head_aligned=true"
+  require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "public_artifact_stale=false"
+  require_text "$ROOT_DIR/reference/MACOS_UNSIGNED_OSS_PUBLIC_RELEASE_PACKET.md" "next_owner_action=upload-current-unsigned-public-beta-packet"
 
   for file in \
     "$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_INSTALL.md" \
