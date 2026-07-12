@@ -1,5 +1,5 @@
-#[cfg(all(feature = "public-shell", feature = "full-runtime"))]
-compile_error!("public-shell must not be built with full-runtime");
+#[cfg(all(feature = "public-shell", feature = "legacy-embedded-runtime"))]
+compile_error!("public-shell must not be built with legacy-embedded-runtime");
 
 #[cfg(feature = "public-shell")]
 use tauri::Manager;
@@ -9,7 +9,7 @@ fn main() {
     run_windows_public_shell();
 }
 
-#[cfg(all(not(feature = "public-shell"), feature = "full-runtime"))]
+#[cfg(all(not(feature = "public-shell"), feature = "legacy-embedded-runtime"))]
 fn main() {
     another_dimension_desktop_tauri::run();
 }
@@ -561,5 +561,5 @@ fn run_windows_public_shell() {
         .expect("failed to run desktop public shell");
 }
 
-#[cfg(all(not(feature = "public-shell"), not(feature = "full-runtime")))]
-compile_error!("desktop-tauri requires either full-runtime or public-shell");
+#[cfg(all(not(feature = "public-shell"), not(feature = "legacy-embedded-runtime")))]
+compile_error!("desktop-tauri requires either legacy-embedded-runtime or public-shell");

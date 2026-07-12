@@ -298,7 +298,7 @@ Run the lightweight local Tauri public shell:
 npm run tauri:dev
 ```
 
-Run the full-runtime local Tauri beta shell with the manual onion attempt feature compiled in:
+Run the local Tauri beta shell with the manual E2EE engine sidecar bundled:
 
 ```bash
 npm run tauri:dev:beta-onion
@@ -311,7 +311,8 @@ npm run tauri:build
 ```
 
 That generic local build output is a public-shell artifact, not a public release
-upload artifact. Full-runtime desktop builds are explicit opt-in commands.
+upload artifact. Legacy embedded-runtime desktop builds are explicit opt-in
+compatibility commands.
 
 ## CLI Boundary Checks
 
