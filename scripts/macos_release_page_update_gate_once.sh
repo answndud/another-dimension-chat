@@ -7,7 +7,7 @@ RELEASE_BODY="$ROOT_DIR/reference/UNSIGNED_PUBLIC_BETA_GITHUB_RELEASE_BODY.md"
 TAG="v0.1.0-beta-onion-unsigned"
 REPO="answndud/another-dimension-chat"
 DMG="another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg"
-DMG_SHA="7445c281e461571aad47a8d636f4e98914d9d51746329876bdfe3c6b9c49f50a"
+DMG_SHA="ddd48c1316e5eb86ca992d479270d30a151e59839e899949a1055980c4c6bf13"
 
 require_file() {
   if [ ! -f "$1" ]; then
@@ -42,7 +42,7 @@ require_text "$POLICY" '"asset_upload_allowed": false'
 require_text "$POLICY" '"asset_delete_allowed": false'
 require_text "$POLICY" '"checksum_change_allowed": false'
 require_text "$POLICY" '"dmg_rebuild_allowed": false'
-require_text "$POLICY" "no live release update needed while source upload-set extras remain held"
+require_text "$POLICY" "current source packet upload is held without explicit upload approval"
 require_text "$POLICY" "$DMG_SHA"
 
 for file in "$POLICY" "$RELEASE_BODY"; do
@@ -130,7 +130,17 @@ else
   body_drift=true
 fi
 
-if [ -s "$live_body_missing_assets" ] || [ -s "$live_body_extra_assets" ]; then
+if grep -Fq "$DMG_SHA" "$live_body"; then
+  live_current_sha_present=true
+else
+  live_current_sha_present=false
+fi
+
+if [ "$live_current_sha_present" = false ]; then
+  live_asset_body_drift=false
+  asset_drift=true
+  decision="upload-current-unsigned-public-beta-packet-after-explicit-user-approval"
+elif [ -s "$live_body_missing_assets" ] || [ -s "$live_body_extra_assets" ]; then
   live_asset_body_drift=true
   asset_drift=true
   decision="hold-live-release-edit-until-live-body-and-assets-match"
@@ -151,6 +161,7 @@ fi
 printf 'release_page_update_gate=ok\n'
 printf 'published_release_body_drift=%s\n' "$body_drift"
 printf 'published_release_asset_drift=%s\n' "$live_asset_body_drift"
+printf 'published_release_current_sha_present=%s\n' "$live_current_sha_present"
 printf 'source_expected_asset_drift=%s\n' "$asset_drift"
 printf 'decision=%s\n' "$decision"
 
