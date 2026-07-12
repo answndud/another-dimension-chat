@@ -256,6 +256,11 @@ updated, and a later explicit release/claim task authorizes the wording.
 - windows_real_runtime_result_validator_available=true
 - windows_result_requires_current_source_commit=true
 - windows_result_current_head_strict_mode_ready=true
+- windows_result_requires_valid_artifact_manifest=true
+- windows_result_artifact_manifest_sha_verified=true
+- windows_result_artifact_provenance_sha_verified=true
+- windows_result_artifact_bytes_sha_verified=true
+- windows_artifact_package_structure_verified_by_validator=true
 - real_windows_runtime_smoke_requirements_defined=true
 - windows_installer_signing_decision_recorded=true
 - windows_checksum_provenance_requirements_defined=true

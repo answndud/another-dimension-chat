@@ -156,6 +156,8 @@ Read the full public security boundary in [SECURITY.md](SECURITY.md).
 - Desktop public beta source freeze candidate: source-only candidate for the desktop beta freeze, no DMG rebuild, no release upload, no upload, and no release packaging/upload without an explicit user request.
 - Public support evidence is limited to redacted diagnostics.
 - Source-only desktop flow blocker checks do not create release artifacts.
+- Deployment gap tracking is public-reference only and uses [reference/DEPLOYMENT_READINESS_GAP_REGISTER.md](reference/DEPLOYMENT_READINESS_GAP_REGISTER.md) plus [reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md](reference/DEPLOYMENT_100_BLOCKER_RESOLUTION_PLAN.md); these do not authorize production, security-ready, or sensitive-communication claims.
+- Production-source boundary references are [reference/PRODUCTION_E2EE_SOURCE_GATE.md](reference/PRODUCTION_E2EE_SOURCE_GATE.md), [reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md](reference/PRODUCTION_KEY_MANAGEMENT_SOURCE_GATE.md), [reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md](reference/MACOS_SIGNED_NOTARIZED_EXECUTION_PATH.md), [reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md](reference/EXTERNAL_EVIDENCE_INTAKE_EXECUTION.md), and [reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md](reference/WINDOWS_PUBLIC_ARTIFACT_EXECUTION_PATH.md); these are source/reference gates, not production or sensitive-use claims.
 - Next source-only axes: Windows, real-user test preparation, default-transport-boundary; non-claims remain in force.
 - Windows desktop cross-platform parity intake uses `apps/desktop-tauri/windows_desktop_parity_intake.json`; Windows local build candidate only, no public Windows artifact, no Windows installer, no public artifact upload; Windows local runtime smoke boundary remains source-only and still requires WebView2 runtime smoke, Tauri app-data storage, path separator, local deletion behavior, redacted diagnostics, explicit user action, and local-manual envelope default path checks.
 - Windows local runtime smoke handoff uses `apps/desktop-tauri/windows_local_runtime_smoke_handoff.json` and `npm --prefix apps/desktop-tauri run test:windows-boundary`; this is not a Windows local runtime smoke passed claim and still requires WebView2 runtime smoke, Tauri app-data path review, path separator review, local deletion behavior review, redacted diagnostics behavior review, explicit user action, local-manual envelope default path review, no auto-update, and public non-claim checks on a real Windows machine.
@@ -382,8 +384,27 @@ Public roadmap and boundary documents:
 - [reference/PRIVACY_MODEL_COMPARISON.md](reference/PRIVACY_MODEL_COMPARISON.md)
 - [reference/COMPONENT_BOUNDARIES.md](reference/COMPONENT_BOUNDARIES.md)
 - [reference/PRODUCTION_READINESS_CLAIM_GATE.md](reference/PRODUCTION_READINESS_CLAIM_GATE.md)
+- [reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md](reference/PRODUCTION_LOCAL_MANUAL_E2EE_CLAIM.md)
+- [reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md](reference/PRODUCTION_KEY_ROLLBACK_DELETION_CLAIM.md)
+- [reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md](reference/PAIRWISE_IDENTITY_SAFETY_PRODUCT_CLOSURE.md)
 - [reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md](reference/PRODUCTION_DEFAULT_TRANSPORT_PATH.md)
 - [reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md](reference/PRODUCTION_DEFAULT_PRACTICAL_TRANSPORT_CLAIM.md)
+- [reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md](reference/MACOS_UPDATE_ROLLBACK_SAFE_RELEASE_CHANNEL.md)
+- [reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md](reference/MACOS_SIGNED_UPDATE_MANIFEST_SCHEMA.md)
+- [reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md](reference/MACOS_UNIVERSAL_SCOPED_ARTIFACT_POLICY.md)
+- [reference/EXTERNAL_REVIEW_AUDIT_READINESS.md](reference/EXTERNAL_REVIEW_AUDIT_READINESS.md)
+- [reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md](reference/EXTERNAL_REVIEW_INTAKE_RUNBOOK.md)
+- [reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md](reference/EXTERNAL_REVIEW_RELEASE_CLASS_SCOPE_DOWN.md)
+- [reference/EXTERNAL_REVIEW_SIGNOFF_SCHEMA.md](reference/EXTERNAL_REVIEW_SIGNOFF_SCHEMA.md)
+- [reference/AUDIT_FINDING_TRACKER.md](reference/AUDIT_FINDING_TRACKER.md)
+- [reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md](reference/FIELD_EVIDENCE_RELIABILITY_PROGRAM.md)
+- [reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md](reference/FIELD_EVIDENCE_RELEASE_CLASS_SCOPE_DOWN.md)
+- [reference/REDACTED_FIELD_REPORT_PACKET.md](reference/REDACTED_FIELD_REPORT_PACKET.md)
+- [reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md](reference/REPRESENTATIVE_USABILITY_REPORT_PACKET.md)
+- [reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md](reference/OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md)
+- [reference/INCIDENT_TABLETOP_RECORD.md](reference/INCIDENT_TABLETOP_RECORD.md)
+- [reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md](reference/TARGET_STANDARD_100_ACTIVE_QUEUE_SOURCE_CLOSURE.md)
+- [reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md](reference/TARGET_STANDARD_100_FINAL_ACTIVE_QUEUE_CLOSURE.md)
 - [reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md](reference/WINDOWS_PUBLIC_ARTIFACT_SCOPE_DOWN.md)
 
 Beta, non-production, non-audited, and sensitive-use-prohibited wording must

@@ -30,7 +30,7 @@ for (const key of ["minimumSystemVersion", "hardenedRuntime", "entitlements", "s
   if (!Object.hasOwn(macSchema, key)) throw new Error(`tauri schema missing macOS.${key}`);
 }
 if (config.productName !== "Another Dimension Chat") throw new Error("unexpected productName");
-if (config.identifier !== "chat.anotherdimension.prototype") throw new Error("unexpected bundle identifier");
+if (config.identifier !== "chat.anotherdimension.app") throw new Error("unexpected bundle identifier");
 if (config.app?.macOSPrivateApi === true) throw new Error("macOS private API must stay disabled");
 if (config.bundle?.active !== true) throw new Error("bundle.active must be true");
 const mac = config.bundle?.macOS;

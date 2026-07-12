@@ -516,7 +516,7 @@ mod tests {
             .contains("secure_deletion_claim_allowed=false"));
         assert!(status
             .key_rollback_boundary
-            .contains("production_key_management_ready=true"));
+            .contains("production_key_management_ready=false"));
         assert!(status
             .backup_migration_boundary
             .contains("boundary_closed=true"));

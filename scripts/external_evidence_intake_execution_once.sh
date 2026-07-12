@@ -175,6 +175,8 @@ cat >"$tmp_dir/local-only.md" <<'REPORT'
 app_version=0.1.0
 build_channel=beta-onion
 build_commit=test-redacted
+high_risk_readiness_condition_set=safety-verification#high-risk-transport-runtime#emergency-controls#clipboard-expiry#local-storage-evidence#release-integrity
+high_risk_readiness_condition_coverage=safety-verification#high-risk-transport-runtime
 platform_pair=macos-to-macos
 checksum_result=pass
 install_path_reached=first-launch
