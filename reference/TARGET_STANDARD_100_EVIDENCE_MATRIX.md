@@ -41,6 +41,16 @@ updated, and a later explicit release/claim task authorizes the wording.
 | Incident, vulnerability, and support operation | Public support, private vulnerability reporting, incident severity, dependency advisory handling, emergency release, and user notification copy are rehearsed. | source gate closed; production operations claim false | [OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md](OPERATIONAL_SUPPORT_INCIDENT_PROCESS.md), [INCIDENT_TABLETOP_RECORD.md](INCIDENT_TABLETOP_RECORD.md) |
 | Stable macOS release decision | Production/security/distribution/evidence/support blockers are all pass and owner release approval exists. | hold | [STABLE_MACOS_V1_RELEASE_GATE.md](STABLE_MACOS_V1_RELEASE_GATE.md), [STABLE_RELEASE_HOLD_REPORT.md](STABLE_RELEASE_HOLD_REPORT.md) |
 
+## macOS Unsigned Public Beta Final Alignment
+
+| Axis | Current state | Claim boundary |
+| --- | --- | --- |
+| Artifact identity | Current GitHub Release DMG, same-release checksum, provenance, release tag, and build commit are aligned. | unsigned experimental public beta only |
+| Clean install evidence | `clean_macos_fresh_install_result=hold`, `clean_install_artifact_current=true`, `same_release_checksum_result=pass`. | no clean-machine pass claim |
+| First-run flow | Profile, invite/join, safety compare, manual envelope exchange, diagnostics, and local deletion are documented. | tester-facing beta flow only |
+| Public support redaction | Support intake is redacted diagnostics only. | no raw logs, payloads, paths, keys, screenshots, or private room data |
+| Non-claims | not audited, not production-ready, sensitive communication prohibited. | production, High-Risk-ready, secure-messenger, and sensitive-use claims false |
+
 ## TARGET_STANDARD 100%
 
 | Target standard criterion | Required evidence | Current state | Gate |
@@ -162,6 +172,13 @@ updated, and a later explicit release/claim task authorizes the wording.
 - target_standard_100_deployment_gap_reconciled=true
 - target_standard_criteria_complete=true
 - macos_public_app_100_criteria_complete=true
+- macos_unsigned_public_beta_final_alignment_available=true
+- macos_unsigned_public_beta_artifact_identity_current=true
+- clean_macos_fresh_install_result=hold
+- clean_install_artifact_current=true
+- same_release_checksum_result=pass
+- public_support_redaction_aligned=true
+- first_run_flow_documented=true
 - pairwise_identity_safety_product_closure_reviewed=true
 - macos_update_rollback_safe_release_channel_reviewed=true
 - macos_current_scope_supported=true

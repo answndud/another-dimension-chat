@@ -105,6 +105,7 @@ must_contain "SECURITY.md" "reference/MACOS_RELEASE_CREDENTIAL_EVIDENCE_SCHEMA.m
 must_contain "$MATRIX" "Status: P100-0 definition locked"
 must_contain "$MATRIX" "## Evidence Order"
 must_contain "$MATRIX" "## macOS Public App Experience 100%"
+must_contain "$MATRIX" "## macOS Unsigned Public Beta Final Alignment"
 must_contain "$MATRIX" "## TARGET_STANDARD 100%"
 must_contain "$MATRIX" "## Gate Connection Matrix"
 must_contain "$MATRIX" "## Forbidden Claim Matrix"
@@ -265,6 +266,13 @@ for flag in \
   "macos_update_rollback_safe_release_channel_reviewed=true" \
   "macos_current_scope_supported=true" \
   "macos_universal_intel_scope_still_hold=true" \
+  "macos_unsigned_public_beta_final_alignment_available=true" \
+  "macos_unsigned_public_beta_artifact_identity_current=true" \
+  "clean_macos_fresh_install_result=hold" \
+  "clean_install_artifact_current=true" \
+  "same_release_checksum_result=pass" \
+  "public_support_redaction_aligned=true" \
+  "first_run_flow_documented=true" \
   "onboarding_recovery_source_ready=true" \
   "supported_default_transport_ready=true" \
   "supported_local_key_lifecycle_ready=true" \

@@ -43,6 +43,16 @@ The source tree now has public-facing material for:
 - release artifact integrity recheck notes
 - fresh install rehearsal checklist and public-safe result record
 
+## Final Public Beta Alignment
+
+| Axis | Current state | Public claim |
+| --- | --- | --- |
+| Artifact identity | current DMG, same-release checksum, provenance, release tag, and build commit are aligned | unsigned experimental public beta only |
+| Clean macOS fresh-install | same-release download/checksum passed; disposable GUI flow remains `hold` | no clean-machine pass claim |
+| First-run flow | profile, invite/join, safety compare, manual envelope exchange, diagnostics, and local deletion are documented | tester-facing beta flow only |
+| Support redaction | public support path accepts redacted diagnostics only | no raw logs, payloads, paths, keys, screenshots, or private room data |
+| Non-claims | not audited, not production-ready, sensitive communication prohibited | production/high-risk/security claims remain false |
+
 This source acceptance does not rebuild the DMG, upload release assets, edit the
 GitHub Release, notarize, sign, audit, create an auto-update channel, or claim
 external onion delivery success.
