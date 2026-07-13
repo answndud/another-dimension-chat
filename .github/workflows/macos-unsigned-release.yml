@@ -225,7 +225,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          release_tag="$RELEASE_TAG"
+          input_release_tag="${{ inputs.release_tag }}"
+          version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
+          if [ -n "$input_release_tag" ]; then
+            release_tag="$input_release_tag"
+          elif [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            release_tag="$GITHUB_REF_NAME"
+          else
+            release_tag="v${version}-main-${GITHUB_SHA:0:12}"
+          fi
           if gh release view "$release_tag" >/dev/null 2>&1; then
             echo "release already exists for tag" >&2
             exit 1
@@ -256,7 +264,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          release_tag="$RELEASE_TAG"
+          input_release_tag="${{ inputs.release_tag }}"
+          version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
+          if [ -n "$input_release_tag" ]; then
+            release_tag="$input_release_tag"
+          elif [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            release_tag="$GITHUB_REF_NAME"
+          else
+            release_tag="v${version}-main-${GITHUB_SHA:0:12}"
+          fi
           body_file="$(mktemp)"
           app_version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
           printf '%s\n' \
