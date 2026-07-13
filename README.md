@@ -32,7 +32,7 @@ exchange.
 
 For Macs with an Apple chip (M1 or newer). Intel Macs are not supported.
 
-### [Download for macOS](https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-unsigned-fix2/another-dimension-chat-0.1.0-beta-onion-arm64.dmg)
+### [Download for macOS](https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-ui-fix/another-dimension-chat-0.1.0-beta-onion-arm64.dmg)
 
 1. Click **Download for macOS** above.
 2. Open the downloaded file.
