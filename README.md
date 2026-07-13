@@ -32,12 +32,11 @@ exchange.
 
 For Macs with an Apple chip (M1 or newer). Intel Macs are not supported.
 
-### [Download the latest macOS release](https://github.com/answndud/another-dimension-chat/releases)
+### [Download the latest macOS DMG](https://github.com/answndud/another-dimension-chat/releases/download/latest/another-dimension-chat-0.1.0-beta-onion-arm64.dmg)
 
-1. Open the newest **Pre-release** and download its `.dmg` file.
-2. Open the downloaded file.
-3. Drag **Another Dimension Chat** into the **Applications** folder.
-4. Open the app from Applications.
+1. Open the downloaded file.
+2. Drag **Another Dimension Chat** into the **Applications** folder.
+3. Open the app from Applications.
 
 macOS may block the first launch because this beta does not have an Apple
 Developer ID signature. If that happens, open **System Settings > Privacy &

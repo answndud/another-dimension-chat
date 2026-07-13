@@ -300,3 +300,23 @@ jobs:
             --title "$release_tag" \
             --notes-file "$body_file" \
             public-release/macos-unsigned-public-beta/*
+
+          latest_tag="latest"
+          if gh release view "$latest_tag" >/dev/null 2>&1; then
+            gh release delete "$latest_tag" --yes --cleanup-tag
+          fi
+          latest_body_file="$(mktemp)"
+          printf '%s\n' \
+            "Latest unsigned macOS Apple Silicon prerelease." \
+            "This moving alias points to the newest successful main build." \
+            "Commit: ${GITHUB_SHA}" \
+            "Immutable release: ${release_tag}" \
+            "" \
+            "Not Developer ID signed. Not notarized. Not audited." \
+            "Use the checksum file to verify the download." > "$latest_body_file"
+
+          gh release create "$latest_tag" \
+            --prerelease \
+            --title "Latest unsigned macOS release" \
+            --notes-file "$latest_body_file" \
+            public-release/macos-unsigned-public-beta/*
