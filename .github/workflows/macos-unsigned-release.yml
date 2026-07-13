@@ -258,20 +258,20 @@ jobs:
           set -euo pipefail
           release_tag="$RELEASE_TAG"
           body_file="$(mktemp)"
-          cat >"$body_file" <<EOF
-Unsigned macOS Apple Silicon prerelease.
-
-Release tag: ${release_tag}
-Commit: ${GITHUB_SHA}
-Runner: macos-14
-Architecture: arm64
-App version: $(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')
-
-Not Developer ID signed.
-Not notarized.
-Not audited.
-Use the checksum file to verify the download.
-EOF
+          app_version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
+          printf '%s\n' \
+            "Unsigned macOS Apple Silicon prerelease." \
+            "" \
+            "Release tag: ${release_tag}" \
+            "Commit: ${GITHUB_SHA}" \
+            "Runner: macos-14" \
+            "Architecture: arm64" \
+            "App version: ${app_version}" \
+            "" \
+            "Not Developer ID signed." \
+            "Not notarized." \
+            "Not audited." \
+            "Use the checksum file to verify the download." > "$body_file"
 
           gh release create "$release_tag" \
             --prerelease \
