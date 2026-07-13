@@ -8,6 +8,8 @@ on:
         required: true
         type: string
   push:
+    branches:
+      - main
     tags:
       - "v*-unsigned-fix*"
 
@@ -39,14 +41,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          release_tag="${{ inputs.release_tag || github.ref_name }}"
-          expected_commit="${GITHUB_SHA}"
-          actual_commit="$(git rev-list -n 1 "$release_tag")"
-          if [ "$actual_commit" != "$expected_commit" ]; then
-            echo "release tag does not match current commit" >&2
-            exit 1
-          fi
+          input_release_tag="${{ inputs.release_tag }}"
           version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
+          if [ -n "$input_release_tag" ]; then
+            release_tag="$input_release_tag"
+          elif [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            release_tag="$GITHUB_REF_NAME"
+          else
+            release_tag="v${version}-main-${GITHUB_SHA:0:12}"
+          fi
+          echo "RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
+          expected_commit="${GITHUB_SHA}"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] || [ -n "$input_release_tag" ]; then
+            actual_commit="$(git rev-list -n 1 "$release_tag")"
+            if [ "$actual_commit" != "$expected_commit" ]; then
+              echo "release tag does not match current commit" >&2
+              exit 1
+            fi
+          fi
           if [[ "$release_tag" != "v${version}" && "$release_tag" != "v${version}-"* ]]; then
             echo "release tag does not match app version" >&2
             exit 1
@@ -121,6 +133,15 @@ jobs:
             -format UDZO \
             "$dmg_dir/Another Dimension Chat.dmg"
 
+      - name: Verify bundle belongs to this commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -f apps/desktop-tauri/dist/index.html
+          grep -Fq 'another-dimension-language-v2' apps/desktop-tauri/dist/index.html
+          grep -Fq 'is-booting' apps/desktop-tauri/dist/index.html
+
       - name: Prepare ignored macOS release packet
         shell: bash
         run: |
@@ -149,7 +170,7 @@ jobs:
           AD_MACOS_RELEASE_OUT_DIR="$packet_dir" \
           AD_MACOS_RELEASE_VERSION="$version" \
           AD_MACOS_RELEASE_COMMIT="$GITHUB_SHA" \
-          AD_MACOS_RELEASE_TAG="${{ inputs.release_tag || github.ref_name }}" \
+          AD_MACOS_RELEASE_TAG="$RELEASE_TAG" \
           AD_MACOS_RELEASE_BUILD_CHANNEL=beta-onion \
           AD_MACOS_RELEASE_ARCH=arm64 \
             node apps/desktop-tauri/scripts/prepare-macos-release.mjs
@@ -204,7 +225,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          release_tag="${{ inputs.release_tag || github.ref_name }}"
+          release_tag="$RELEASE_TAG"
           if gh release view "$release_tag" >/dev/null 2>&1; then
             echo "release already exists for tag" >&2
             exit 1
@@ -235,7 +256,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          release_tag="${{ inputs.release_tag || github.ref_name }}"
+          release_tag="$RELEASE_TAG"
           body_file="$(mktemp)"
           cat >"$body_file" <<EOF
 Unsigned macOS Apple Silicon prerelease.
