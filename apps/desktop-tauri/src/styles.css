@@ -76,6 +76,10 @@ body {
   background-size: 28px 28px;
 }
 
+html.is-booting body {
+  visibility: hidden;
+}
+
 .shell {
   display: block;
   min-height: 100vh;

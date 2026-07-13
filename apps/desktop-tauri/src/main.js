@@ -145,6 +145,7 @@ import {
   roomListStoragePayload,
   savedRoomManualRebuildExpired,
   savedInviteRoomStorageLimit,
+  savedRoomMetadataStartupSyncLimit,
   serializeStoredLifecycleMap,
   serializeStoredStringMap,
   savedInviteRoomActionRechecksAfterOpen,
@@ -707,6 +708,314 @@ const productionPayloadSlots = {
   messageEnvelope: new Map(),
 };
 
+function resetSimulationFields() {
+  setText(fields.aliceProfile, t("setupProfilesWaiting"));
+  setText(fields.aliceContact, t("waitingPairing"));
+  setText(fields.aliceInbox, t("messagesNotRun"));
+  setText(fields.bobProfile, t("setupProfilesWaiting"));
+  setText(fields.bobContact, t("waitingPairing"));
+  setText(fields.bobInbox, t("messagesNotRun"));
+  setText(fields.simulationSafetyNumber, t("notShownYet"));
+  setText(fields.simulationSafetyPhrase, t("notShownYet"));
+  setText(fields.simulationMessage, t("notReceivedYet"));
+  setText(fields.simulationReplay, t("notCheckedYet"));
+}
+
+function resetSimulationView() {
+  resetSimulationFields();
+  fields.flowControls?.replaceChildren();
+}
+
+function resetLoopView() {
+  setLoopState(t("loopIdle"));
+  setText(fields.loopWarning, t("loopNotRun"));
+  setText(fields.loopReplay, t("notCheckedYet"));
+  setText(fields.loopExpiry, t("notCheckedYet"));
+  setText(fields.loopStorage, t("notCheckedYet"));
+  if (fields.loopResults) {
+    fields.loopResults.replaceChildren();
+    const item = document.createElement("li");
+    item.textContent = t("messagesNotRun");
+    fields.loopResults.append(item);
+  }
+}
+
+function resetProductionRoundtripView() {
+  setProductionRoundtripState(t("roundtripIdle"));
+  setText(fields.productionRoundtripWarning, t("roundtripNotRun"));
+  setText(fields.productionRoundtripSession, t("notCheckedYet"));
+  setText(fields.productionRoundtripEnvelope, t("notCheckedYet"));
+  setText(fields.productionRoundtripReceive, t("notCheckedYet"));
+  setText(fields.productionRoundtripBoundary, t("notCheckedYet"));
+}
+
+function resetProductionTwoProfileView() {
+  latestProductionTwoProfileSessionStatus = null;
+  latestProductionTwoProfileSafety = null;
+  setProductionTwoProfileState(t("twoProfileIdle"));
+  setText(fields.productionTwoProfileWarning, t("twoProfileNotRun"));
+  setText(fields.productionTwoProfileProfiles, t("notCheckedYet"));
+  setText(fields.productionTwoProfileSession, t("notCheckedYet"));
+  setText(fields.productionTwoProfileMessageState, t("notCheckedYet"));
+  setText(fields.productionTwoProfileBoundary, t("notCheckedYet"));
+  resetProductionTwoProfileTranscript();
+  renderProductionTwoProfileMemory();
+  updateMinimalChatMode(productionTwoProfileInput(), false);
+  setProductionFollowupActions(false, t("followupLocked"));
+  applyProductionActionState();
+}
+
+function resetProductionProfileView() {
+  latestProductionProfileUnlocked = false;
+  latestProductionProductUnlockStatus = null;
+  setProductionProfileState(t("profileLocked"));
+  setText(fields.productionProfileWarning, t("profileLocked"));
+  setText(fields.productionProductUnlockState, t("notCheckedYet"));
+  setText(fields.productionProfileStorage, t("notCheckedYet"));
+  setText(fields.productionProfileIdentity, t("notCheckedYet"));
+  setText(fields.productionProfileBoundary, t("notCheckedYet"));
+  setText(fields.productionDataLifecycle, t("notCheckedYet"));
+  renderFirstRunDesktopSummary({
+    profileInputPresent: Boolean(productionProfileInput().profile && productionProfileInput().passphrase),
+  });
+  if (fields.lockProductionProfile) {
+    fields.lockProductionProfile.disabled = true;
+  }
+  applyProductionActionState();
+}
+
+function renderProductionProfileSelector(profiles) {
+  if (!fields.productionProfileSelector) {
+    return;
+  }
+  fields.productionProfileSelector.replaceChildren();
+  if (!profiles || profiles.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = t("noSavedProfiles");
+    fields.productionProfileSelector.append(option);
+    return;
+  }
+  for (const profile of profiles) {
+    const option = document.createElement("option");
+    option.value = profile;
+    option.textContent = profile;
+    fields.productionProfileSelector.append(option);
+  }
+  const currentProfile = productionProfileInput().profile;
+  if (profiles.includes(currentProfile)) {
+    fields.productionProfileSelector.value = currentProfile;
+  } else if (!currentProfile && profiles[0] && fields.productionProfileName) {
+    fields.productionProfileSelector.value = profiles[0];
+    fields.productionProfileName.value = profiles[0];
+  }
+  if (twoProfileInviteCodeModeActive()) {
+    applyProductionActionState();
+    return;
+  }
+  const pair = productionTwoProfilePairFromProfiles(
+    profiles,
+    fields.productionTwoProfileA?.value,
+    fields.productionTwoProfileB?.value,
+  );
+  if (pair.changed) {
+    fields.productionTwoProfileA && (fields.productionTwoProfileA.value = pair.profileA);
+    fields.productionTwoProfileB && (fields.productionTwoProfileB.value = pair.profileB);
+    renderProductionTwoProfileDirection(productionTwoProfileInput());
+    renderProductionTwoProfileMemory(productionTwoProfileInput());
+    resetTwoProfileAutoResumeAttempt();
+  }
+  applyProductionActionState();
+}
+
+async function loadProductionProfileList() {
+  if (!fields.productionProfileSelector) {
+    return;
+  }
+  try {
+    const result = await invoke("production_profile_list");
+    renderProductionProfileSelector(result.profiles);
+    if (result.profile_count > 0) {
+      const input = productionTwoProfileInput();
+      setText(
+        fields.productionProfileStorage,
+        `saved_profiles=${result.profile_count} selected_pair=${input.profileA || "none"}->${input.profileB || "none"}`,
+      );
+    }
+    scheduleTwoProfileAutoResume();
+  } catch {
+    renderProductionProfileSelector([]);
+  }
+}
+
+function clearProductionTwoProfileOnionReceiveTimer() {
+  if (productionTwoProfileOnionReceiveMode.timer) {
+    clearTimeout(productionTwoProfileOnionReceiveMode.timer);
+  }
+  productionTwoProfileOnionReceiveMode.timer = null;
+}
+
+function rememberProductionTwoProfileOnionReceiveRuntimeState(runtimeState, result = null) {
+  productionTwoProfileOnionReceiveMode.runtimeState = runtimeState;
+  productionTwoProfileOnionReceiveMode.runtimeLabel = result?.runtime_label || "";
+  return productionOnionReceiveRuntimeView(productionTwoProfileOnionReceiveMode, result);
+}
+
+function setProductionTwoProfileOnionReceiveRuntimeState(runtimeState, result = null) {
+  const view = rememberProductionTwoProfileOnionReceiveRuntimeState(runtimeState, result);
+  setProductionTwoProfileState(view.label);
+  return view;
+}
+
+function stopProductionTwoProfileOnionReceiveForInput(input, options = {}) {
+  const targetInput = input ?? productionTwoProfileInput();
+  const silent = options.silent === true;
+  if (!productionTwoProfileReceiveMatchesInput(targetInput)) {
+    if (!silent) {
+      setText(fields.productionTwoProfileWarning, t("receiveOtherRoomActive"));
+      applyProductionActionState();
+    }
+    return;
+  }
+  clearProductionTwoProfileOnionReceiveTimer();
+  rememberReceiveIntentForRoom(targetInput, false);
+  productionTwoProfileOnionReceiveMode = {
+    ...productionTwoProfileOnionReceiveMode,
+    enabled: false,
+    stopRequested: true,
+    runtimeState: "stopped",
+    runtimeLabel: "",
+    passphrase: "",
+    timer: null,
+  };
+  setProductionTwoProfileOnionReceiveRuntimeState("stopped");
+  if (!silent) {
+    setText(fields.productionTwoProfileWarning, t("receiveStopped"));
+  }
+  applyProductionActionState();
+}
+
+function stopProductionTwoProfileOnionReceive() {
+  stopProductionTwoProfileOnionReceiveForInput(productionTwoProfileInput());
+}
+
+function handleTwoProfileMessageKeydown(event) {
+  if (event.key !== "Enter") {
+    return;
+  }
+  event.preventDefault();
+  if ((event.metaKey || event.ctrlKey) && !event.shiftKey) {
+    const node = event.currentTarget;
+    const start = node.selectionStart ?? node.value.length;
+    const end = node.selectionEnd ?? node.value.length;
+    node.value = `${node.value.slice(0, start)}\n${node.value.slice(end)}`;
+    node.selectionStart = start + 1;
+    node.selectionEnd = start + 1;
+    node.dispatchEvent(new Event("input", { bubbles: true }));
+    return;
+  }
+  runTwoProfilePrimaryActionFromCompose();
+}
+
+function runProductionRoundtrip() {
+  setProductionRoundtripState(t("roundtripNotRun"));
+  setText(fields.productionRoundtripWarning, t("tauriUnavailable"));
+}
+
+function runTwoProfilePrimaryActionFromCompose() {
+  setProductionTwoProfileState(t("messageNotSent"));
+  setText(fields.productionTwoProfileWarning, t("inputRequiredSetup"));
+  applyProductionActionState();
+}
+
+function runProductionTwoProfileRoundtrip() {
+  setProductionTwoProfileState(t("twoProfileNotRun"));
+  setText(fields.productionTwoProfileWarning, t("inputRequiredSetup"));
+  applyProductionActionState();
+}
+
+function runProductionTwoProfileComposerPrimaryAction() {
+  runTwoProfilePrimaryActionFromCompose();
+}
+
+function runLocalLoop() {
+  resetLoopView();
+  setLoopState(t("loopNotRun"));
+}
+
+function runLocalDemo() {
+  resetSimulationView();
+}
+
+function applySimulationStage() {
+  resetSimulationView();
+}
+
+function ensurePrivateDeliveryRuntimeReady() {
+  return true;
+}
+
+let desktopPanelRoutePreparer = null;
+let desktopPanelPermissionEnabler = null;
+
+function preparePrivateDeliveryRoute(...args) {
+  return desktopPanelRoutePreparer?.(...args);
+}
+
+function enablePrivateDeliveryPermission(...args) {
+  return desktopPanelPermissionEnabler?.(...args);
+}
+
+function resetProductionPairingSafety(status = t("notCheckedYet")) {
+  latestProductionPairingSafety = null;
+  if (fields.productionPairingSafetyVerified) {
+    fields.productionPairingSafetyVerified.checked = false;
+  }
+  setText(fields.productionPairingSafetyNumber, status);
+  setText(fields.productionPairingSafetyPhrase, status);
+  setText(fields.productionPairingSafetyBoundary, "verified=false network_io=false");
+}
+
+function resetProductionPairingView(options = {}) {
+  rememberProductionSessionState(productionProfileInput(), null);
+  if (!options.preserveTwoProfileStatus) {
+    latestProductionTwoProfileSessionStatus = null;
+  }
+  setProductionPairingState(t("pairingNotExported"));
+  setText(fields.productionPairingWarning, t("pairingNotExported"));
+  if (fields.productionPairingPayload) {
+    fields.productionPairingPayload.value = "";
+  }
+  resetProductionPairingSafety();
+  clearAllManualRemotePayloadInputs();
+  setHandshakePayload(fields.productionHandshakeInitPayload, "");
+  setHandshakePayload(fields.productionHandshakeReplyPayload, "");
+  setHandshakePayload(fields.productionHandshakeFinishPayload, "");
+  setText(fields.productionPairingStorage, t("notCheckedYet"));
+  setText(fields.productionPairingSession, t("notCheckedYet"));
+  setText(fields.productionHandshakeState, t("notCheckedYet"));
+  setText(fields.productionSessionLifecycle, t("notCheckedYet"));
+  setText(fields.productionPairingBoundary, t("notCheckedYet"));
+  applyProductionActionState();
+}
+
+function resetProductionMessageView() {
+  resetProductionMessageImportState();
+  resetProductionMessageTranscript();
+  setProductionMessageState(t("messageFlowIdle"));
+  setText(fields.productionMessageWarning, t("messageEnvelopeNotExported"));
+  if (fields.productionMessageEnvelope) {
+    fields.productionMessageEnvelope.value = "";
+  }
+  setText(fields.productionMessageActiveStatus, t("notCheckedYet"));
+  setText(fields.productionMessageManualCheck, t("manualCheck"));
+  setText(fields.productionMessageOutbound, t("notCheckedYet"));
+  setText(fields.productionMessageInbound, t("notCheckedYet"));
+  setText(fields.productionMessageBoundary, t("notCheckedYet"));
+  setProductionMessageManualCurrent(null);
+  applyProductionActionState();
+}
+
 const productionBusyActionState = createProductionBusyActionState({
   getAction: () => productionBusyAction,
   setAction: (action) => {
@@ -902,7 +1211,8 @@ const localPreviewRetentionPolicy = {
 };
 
 const themeStorageKey = "another-dimension-theme";
-const languageStorageKey = "another-dimension-language";
+// Use a new preference key so installs that were stuck on the old English fallback start in Korean.
+const languageStorageKey = "another-dimension-language-v2";
 const localMemoryStore = new Map();
 const browserPreviewPeer =
   new URLSearchParams(window.location.search).get("peer") === "peer-a" ||
@@ -3894,6 +4204,14 @@ function pairingSafetyFingerprint(input = productionPairingInput()) {
   return `${String(input.profile ?? "")}:${String(input.passphrase ?? "")}`;
 }
 
+function currentPairingSafetyVerified(input = productionPairingInput()) {
+  return Boolean(
+    input.safetyConfirmed &&
+      latestProductionPairingSafety &&
+      latestProductionPairingSafety.fingerprint === pairingSafetyFingerprint(input),
+  );
+}
+
 function productionMessageInput() {
   return {
     profile: (fields.productionProfileName?.value ?? "").trim().toLowerCase(),
@@ -4232,9 +4550,13 @@ const onionRuntimeController = createOnionRuntimeController({
 });
 const {
   checkOnionLaunchPreflight,
+  attemptOnionServiceLaunch,
   launchProductionTwoProfileOnionEndpoint,
   refreshProductionTwoProfilePeerEndpoints,
   prepareProductionTwoProfileOnionKey,
+  prepareProductionTwoProfileOnionPairing,
+  saveProductionTwoProfileOnionSessions,
+  completeProductionTwoProfileOnionHandshake,
 } = onionRuntimeController;
 
 const savedRoomController = createSavedRoomController({
@@ -4258,6 +4580,7 @@ const savedRoomController = createSavedRoomController({
   showRoomDetail,
   clearCurrentInviteRoomInput,
   rememberConnectionCodeRole,
+  connectionCodeRoleFor,
   syncTwoProfileDerivedConnectionFields,
   renderCurrentInviteCodeDisplay,
   applyProductionActionState,
@@ -6358,6 +6681,7 @@ const productionActionStateController = createProductionActionStateController({
   productionTwoProfileReplySelectionView,
   twoProfilePrimaryReadiness,
   productionProfileInput,
+  renderProductionTwoProfileMemory,
 });
 
 function renderProductionActionStateControls(input) {
@@ -6398,6 +6722,8 @@ const desktopPanelController = createDesktopPanelController({
   closeAppSettingsPanel,
   openManualProductionTools,
 });
+desktopPanelRoutePreparer = desktopPanelController.preparePrivateDeliveryRoute;
+desktopPanelPermissionEnabler = desktopPanelController.enablePrivateDeliveryPermission;
 
 function applyPairwiseInviteGuidance(step, options = {}) {
   const input = options.input ?? productionTwoProfileInput();
@@ -12788,6 +13114,7 @@ function applyProductionActionState() {
     autoMessageNumber: message.autoMessageNumber,
   };
   const availability = productionActionAvailability(state);
+  state.availability = availability;
   const manualAvailability = productionManualRelayAvailability(state);
   const manualDisabledReasons = productionManualRelayDisabledReasons(state);
   // routeRecoveryReady
@@ -12963,6 +13290,7 @@ function applyProductionActionState() {
     selectedTwoProfilePendingConversationEntry,
     automaticVisibleTwoProfileRetryableOutboundEntry,
     pendingMessageEnvelopeSlotForActiveProfile,
+    activeProductionProfileName,
     productionManualCurrentStepView,
     renderManualEnvelopePanel,
     twoProfileConversationActionView,
@@ -14704,80 +15032,12 @@ if (fields.copyRoomInviteToken) {
   });
 }
 
-if (fields.checkOnionPreflight) {
-  fields.checkOnionPreflight.addEventListener("click", checkOnionPreflight);
-}
-
-if (fields.prepareOnionBackupExclusion) {
-  fields.prepareOnionBackupExclusion.addEventListener("click", prepareOnionBackupExclusion);
-}
-
-if (fields.checkOnionClientPreflight) {
-  fields.checkOnionClientPreflight.addEventListener("click", checkOnionClientPreflight);
-}
-
-if (fields.checkOnionClientAttemptGate) {
-  fields.checkOnionClientAttemptGate.addEventListener("click", checkOnionClientAttemptGate);
-}
-
-if (fields.runOnionClientOnce) {
-  fields.runOnionClientOnce.addEventListener("click", runOnionClientOnce);
-}
-
-if (fields.checkOnionPersistentClient) {
-  fields.checkOnionPersistentClient.addEventListener("click", checkOnionPersistentClient);
-}
-
-if (fields.startOnionPersistentClient) {
-  fields.startOnionPersistentClient.addEventListener("click", startOnionPersistentClient);
-}
-
-if (fields.prepareOnionKeyRecord) {
-  fields.prepareOnionKeyRecord.addEventListener("click", prepareOnionKeyRecord);
-}
-
 if (fields.checkOnionLaunchPreflight) {
   fields.checkOnionLaunchPreflight.addEventListener("click", checkOnionLaunchPreflight);
 }
 
 if (fields.attemptOnionServiceLaunch) {
   fields.attemptOnionServiceLaunch.addEventListener("click", attemptOnionServiceLaunch);
-}
-
-if (fields.prepareOnionDescriptorPublication) {
-  fields.prepareOnionDescriptorPublication.addEventListener("click", prepareOnionDescriptorPublication);
-}
-
-if (fields.attemptOnionDescriptorPublication) {
-  fields.attemptOnionDescriptorPublication.addEventListener("click", attemptOnionDescriptorPublication);
-}
-
-if (fields.prepareOnionInboundStream) {
-  fields.prepareOnionInboundStream.addEventListener("click", prepareOnionInboundStream);
-}
-
-if (fields.attemptOnionInboundEnvelopeReceive) {
-  fields.attemptOnionInboundEnvelopeReceive.addEventListener("click", attemptOnionInboundEnvelopeReceive);
-}
-
-if (fields.prepareOnionOutboundStream) {
-  fields.prepareOnionOutboundStream.addEventListener("click", prepareOnionOutboundStream);
-}
-
-if (fields.prepareOnionStreamCloseout) {
-  fields.prepareOnionStreamCloseout.addEventListener("click", prepareOnionStreamCloseout);
-}
-
-if (fields.prepareOnionRemoteAuth) {
-  fields.prepareOnionRemoteAuth.addEventListener("click", prepareOnionRemoteAuth);
-}
-
-if (fields.prepareOnionOutboundEnvelopeSend) {
-  fields.prepareOnionOutboundEnvelopeSend.addEventListener("click", prepareOnionOutboundEnvelopeSend);
-}
-
-if (fields.attemptOnionOutboundEnvelopeSend) {
-  fields.attemptOnionOutboundEnvelopeSend.addEventListener("click", attemptOnionOutboundEnvelopeSend);
 }
 
 if (fields.productionProfileSelector) {
@@ -15277,13 +15537,6 @@ if (fields.rejectTwoProfileSafety) {
   fields.rejectTwoProfileSafety.addEventListener("click", rejectCurrentTwoProfileSafety);
 }
 
-if (fields.startProductionTwoProfileOnionBootstrap) {
-  fields.startProductionTwoProfileOnionBootstrap.addEventListener(
-    "click",
-    startProductionTwoProfileOnionBootstrap,
-  );
-}
-
 if (fields.prepareProductionTwoProfileOnionKey) {
   fields.prepareProductionTwoProfileOnionKey.addEventListener(
     "click",
@@ -15486,3 +15739,5 @@ syncSavedInviteRoomMetadataFromLocalStores();
 loadProductionOnionBridgeConfigStatus();
 applyScreenshotSafePreviewMode();
 window.setTimeout(applyScreenshotSafePreviewMode, 50);
+document.documentElement.classList.remove("is-booting");
+document.body?.classList.remove("is-booting");

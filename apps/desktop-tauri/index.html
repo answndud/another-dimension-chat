@@ -4,9 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Another Dimension Chat</title>
+    <script>
+      (() => {
+        const language = window.localStorage?.getItem("another-dimension-language-v2");
+        document.documentElement.lang = language === "en" || language === "ko" ? language : "ko";
+        const theme = window.localStorage?.getItem("another-dimension-theme");
+        document.documentElement.dataset.theme = theme === "light" ? "light" : "dark";
+        document.documentElement.classList.add("is-booting");
+        const revealOnBootstrapFailure = () => {
+          document.documentElement.classList.remove("is-booting");
+          document.body?.classList.remove("is-booting");
+        };
+        window.addEventListener("error", revealOnBootstrapFailure, { once: true });
+        window.addEventListener("unhandledrejection", revealOnBootstrapFailure, { once: true });
+      })();
+    </script>
     <script type="module" src="/src/main.js"></script>
   </head>
-  <body>
+  <body class="is-booting">
     <main class="shell">
       <section class="status-panel" aria-labelledby="app-title">
         <p class="eyebrow" data-i18n="appTagline">Private 1:1 chat</p>

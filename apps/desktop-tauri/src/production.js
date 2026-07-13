@@ -35,6 +35,7 @@ export function createProductionActionStateController(input) {
     productionTwoProfileReplySelectionView,
     twoProfilePrimaryReadiness,
     productionProfileInput,
+    renderProductionTwoProfileMemory,
   } = input;
 
   function renderProductionActionStateControls(state) {

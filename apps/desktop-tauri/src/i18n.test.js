@@ -6,7 +6,7 @@ import { hasTranslation, normalizeLanguage, supportedLanguages, translate } from
 test("language selection supports English and Korean", () => {
   assert.deepEqual(supportedLanguages, ["en", "ko"]);
   assert.equal(normalizeLanguage("ko"), "ko");
-  assert.equal(normalizeLanguage("unknown"), "en");
+  assert.equal(normalizeLanguage("unknown"), "ko");
   assert.equal(translate("en", "send"), "Send");
   assert.equal(translate("ko", "send"), "보내기");
   assert.equal(translate("ko", "retrySend"), "다시 보내기");
