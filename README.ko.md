@@ -32,13 +32,12 @@ safety material 비교, 로컬 암호화 저장, 수동 sealed-message 교환을
 Apple 칩이 탑재된 Mac(M1 이상)에서 사용할 수 있습니다. Intel Mac은 아직
 지원하지 않습니다.
 
-### [최신 macOS 릴리스 다운로드](https://github.com/answndud/another-dimension-chat/releases)
+### [최신 macOS DMG 바로 다운로드](https://github.com/answndud/another-dimension-chat/releases/download/latest/another-dimension-chat-0.1.0-beta-onion-arm64.dmg)
 
-1. 최신 **Pre-release**를 열고 `.dmg` 파일을 다운로드합니다.
-2. 다운로드된 파일을 엽니다.
-3. **Another Dimension Chat**을 **Applications(응용 프로그램)** 폴더로
+1. 다운로드된 파일을 엽니다.
+2. **Another Dimension Chat**을 **Applications(응용 프로그램)** 폴더로
    드래그합니다.
-4. Applications 폴더에서 앱을 실행합니다.
+3. Applications 폴더에서 앱을 실행합니다.
 
 이 베타는 Apple Developer ID로 서명되지 않아 첫 실행이 차단될 수 있습니다.
 그럴 때는 **시스템 설정 > 개인정보 보호 및 보안**을 열고 아래로 스크롤한
