@@ -99,6 +99,7 @@ test("settings controls are present and Korean is the default language", () => {
     readFileSync(join(here, "main.js"), "utf8"),
     [
       'localStoreGet(languageStorageKey) ?? "ko"',
+      'const languageStorageKey = "another-dimension-language-v2"',
       'fields.themeToggle.addEventListener("click", toggleTheme)',
       'fields.languageSelector.addEventListener("change"',
       'fields.closeAppSettings.addEventListener("click"',
@@ -110,6 +111,25 @@ test("settings controls are present and Korean is the default language", () => {
     ["pointer-events: none;", "pointer-events: auto;"],
     "settings overlay interaction",
   );
+});
+
+test("optional desktop controls cannot abort the remaining bootstrap", () => {
+  const mainJs = readFileSync(join(here, "main.js"), "utf8");
+  assert.match(
+    mainJs,
+    /if \(fields\.runProductionTwoProfileRoundtrip\) \{\s*fields\.runProductionTwoProfileRoundtrip\.addEventListener/s,
+  );
+  for (const resetFunction of [
+    "resetProductionProfileView",
+    "resetProductionPairingView",
+    "resetProductionMessageView",
+    "resetProductionTwoProfileView",
+    "resetProductionRoundtripView",
+    "loadProductionProfileList",
+    "renderProductionProfileSelector",
+  ]) {
+    assert.match(mainJs, new RegExp(`function ${resetFunction}\\(`));
+  }
 });
 
 test("invite flow is invite-code only without QR controls", () => {

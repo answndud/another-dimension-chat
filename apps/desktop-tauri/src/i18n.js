@@ -1070,6 +1070,7 @@ const dictionaries = {
     manualRebuildExplicitDeliveryScopeNext:
       "Next: run the explicit private delivery action only after this room's route is ready.",
     profileLocked: "Profile locked",
+    noSavedProfiles: "No saved profiles",
     nextEnterProfilePassphrase: "Next: keep the random nickname or reset it, then enter passphrase.",
     productionProfileLockedWarning: "Production profile has not been unlocked yet.",
     profileRecoveryUnlocked: "Profile unlocked. Next: check saved room state; passphrase is not retained.",
@@ -2254,6 +2255,7 @@ const dictionaries = {
     manualRebuildExplicitDeliveryScopeNext:
       "다음: 이 방의 경로가 준비된 뒤 명시적 비공개 전송 액션을 실행하세요.",
     profileLocked: "프로필 잠김",
+    noSavedProfiles: "저장된 프로필 없음",
     nextEnterProfilePassphrase: "다음: 무작위 닉네임을 유지하거나 다시 만들고 패스프레이즈를 입력하세요.",
     productionProfileLockedWarning: "아직 프로필을 열지 않았습니다.",
     profileRecoveryUnlocked: "프로필을 열었습니다. 다음: 저장된 채팅방 상태를 확인하세요. 패스프레이즈는 보관하지 않습니다.",
@@ -2376,7 +2378,7 @@ const dictionaries = {
 export const supportedLanguages = Object.freeze(Object.keys(dictionaries));
 
 export function normalizeLanguage(language) {
-  return supportedLanguages.includes(language) ? language : "en";
+  return supportedLanguages.includes(language) ? language : "ko";
 }
 
 export function translate(language, key) {
