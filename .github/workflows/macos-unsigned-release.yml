@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Release tag to validate, for example v0.1.0"
+        description: "Release tag to validate, for example v0.1.0-unsigned-fix"
         required: true
         type: string
 
@@ -44,7 +44,7 @@ jobs:
             exit 1
           fi
           version="$(node -e 'const c=require("./apps/desktop-tauri/src-tauri/tauri.conf.json"); process.stdout.write(c.version)')"
-          if [ "$release_tag" != "v${version}" ]; then
+          if [[ "$release_tag" != "v${version}" && "$release_tag" != "v${version}-"* ]]; then
             echo "release tag does not match app version" >&2
             exit 1
           fi
@@ -81,9 +81,42 @@ jobs:
           npm --prefix apps/desktop-tauri run verify:light
           scripts/verify_source_build_path.sh
 
-      - name: Build unsigned DMG candidate
+      - name: Build unsigned macOS app bundle
         working-directory: apps/desktop-tauri
-        run: npm run tauri:build:macos-dmg:beta-onion
+        run: |
+          VITE_AD_BUILD_CHANNEL=beta-onion \
+            node scripts/prepare-engine-sidecar.mjs --release --manual-e2ee-runtime \
+            --tauri-build -- tauri build --config src-tauri/tauri.sidecar.conf.json --bundles app
+
+      - name: Seal app bundle with an ad-hoc signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_path="$PWD/.build-cache/cargo-target/release/bundle/macos/Another Dimension Chat.app"
+          if [ ! -d "$app_path" ]; then
+            app_path="$PWD/apps/desktop-tauri/src-tauri/target/release/bundle/macos/Another Dimension Chat.app"
+          fi
+          if [ ! -d "$app_path" ]; then
+            echo "missing macOS app bundle" >&2
+            exit 1
+          fi
+          codesign --force --deep --options runtime --sign - "$app_path"
+          codesign --verify --deep --strict --verbose=2 "$app_path"
+
+          staging_dir="$PWD/.build-cache/macos-dmg-staging"
+          dmg_dir="$PWD/.build-cache/cargo-target/release/bundle/dmg"
+          if [ -e "$staging_dir" ]; then
+            rm -rf "$staging_dir"
+          fi
+          mkdir -p "$staging_dir" "$dmg_dir"
+          cp -R "$app_path" "$staging_dir/Another Dimension Chat.app"
+          ln -s /Applications "$staging_dir/Applications"
+          hdiutil create \
+            -volname "Another Dimension Chat" \
+            -srcfolder "$staging_dir" \
+            -ov \
+            -format UDZO \
+            "$dmg_dir/Another Dimension Chat.dmg"
 
       - name: Prepare ignored macOS release packet
         shell: bash

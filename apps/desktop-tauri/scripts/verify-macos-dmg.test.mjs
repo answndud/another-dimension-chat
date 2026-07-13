@@ -51,8 +51,8 @@ function makeFixtureRepo(root) {
   mkdirSync(join(appBundle, "Contents", "MacOS"), { recursive: true });
   mkdirSync(join(appBundle, "Contents", "Resources", "binaries"), { recursive: true });
   writeFileSync(join(appBundle, "Contents", "Info.plist"), '<key>CFBundleIdentifier</key><string>chat.anotherdimension.app</string><key>CFBundleShortVersionString</key><string>0.1.0</string>', "utf8");
-  writeFileSync(join(appBundle, "Contents", "MacOS", "Another Dimension Chat"), "arm64 executable", "utf8");
-  writeFileSync(join(appBundle, "Contents", "Resources", "binaries", "another-dimension-engine-aarch64-apple-darwin"), "arm64 sidecar", "utf8");
+  writeFileSync(join(appBundle, "Contents", "MacOS", "another-dimension-desktop-tauri"), "arm64 executable", "utf8");
+  writeFileSync(join(appBundle, "Contents", "MacOS", "another-dimension-engine"), "arm64 sidecar", "utf8");
   symlinkSync("/Applications", join(appRoot, "Applications"));
   return { appRoot, appBundle };
 }

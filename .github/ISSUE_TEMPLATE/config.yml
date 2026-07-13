@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/answndud/another-dimension-chat/security/advisories/new
     about: Use private vulnerability reporting when the report contains exploit details, payloads, logs, endpoints, paths, keys, or other sensitive material.
   - name: Fallback download path
-    url: https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-beta-onion-unsigned
+    url: https://github.com/answndud/another-dimension-chat/releases/tag/v0.1.0-unsigned-fix
     about: Use the fallback release download only if you explicitly need the unsigned path and matching checksum.
