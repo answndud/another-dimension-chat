@@ -83,6 +83,35 @@ test("first launch explains manual delivery and explicit network permission", ()
   );
 });
 
+test("settings controls are present and Korean is the default language", () => {
+  assertIncludesAll(
+    indexHtml,
+    [
+      '<html lang="ko"',
+      'id="theme-toggle"',
+      'id="language-selector"',
+      'id="close-app-settings"',
+      '<option value="ko" selected>한국어</option>',
+    ],
+    "settings controls",
+  );
+  assertIncludesAll(
+    readFileSync(join(here, "main.js"), "utf8"),
+    [
+      'localStoreGet(languageStorageKey) ?? "ko"',
+      'fields.themeToggle.addEventListener("click", toggleTheme)',
+      'fields.languageSelector.addEventListener("change"',
+      'fields.closeAppSettings.addEventListener("click"',
+    ],
+    "settings bootstrap",
+  );
+  assertIncludesAll(
+    stylesCss,
+    ["pointer-events: none;", "pointer-events: auto;"],
+    "settings overlay interaction",
+  );
+});
+
 test("invite flow is invite-code only without QR controls", () => {
   assertIncludesAll(
     indexHtml,
@@ -155,12 +184,12 @@ test("public diagnostics exclude private support data", () => {
   );
 });
 
-test("source build remains the primary macOS installation path", () => {
+test("unsigned DMG remains the primary macOS installation path", () => {
   for (const [label, source] of [
     ["README", readme],
     ["Korean README", readmeKo],
   ]) {
-    assertIncludesAll(source, ["source-build-primary", "not production-ready"], label);
+    assertIncludesAll(source, ["unsigned DMG primary", "not production-ready"], label);
   }
   assertIncludesAll(
     installFromSource,
