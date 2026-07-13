@@ -122,3 +122,26 @@ test("prepare-macos-release fails when tag and version mismatch", async () => {
   assert.match(result.stderr, /tag-version-mismatch/);
   rmSync(sandbox, { recursive: true, force: true });
 });
+
+test("prepare-macos-release accepts a versioned fix release tag", async () => {
+  const sandbox = makeTempDir("ad-prepare-macos-release-fix-tag-");
+  const sourceDir = join(sandbox, "source");
+  const outDir = join(sandbox, "out");
+  mkdirSync(sourceDir, { recursive: true });
+  writeFixtureDmg(sourceDir, "Another Dimension Chat.dmg");
+
+  const result = await runNode([
+    join("scripts", "prepare-macos-release.mjs"),
+    "--source-dir", sourceDir,
+    "--out-dir", outDir,
+    "--version", "0.1.0",
+    "--commit", "abc123",
+    "--tag", "v0.1.0-unsigned-fix",
+    "--channel", "beta-onion",
+    "--arch", "arm64",
+  ]);
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(existsSync(join(outDir, "SHA256SUMS.txt")), true);
+  rmSync(sandbox, { recursive: true, force: true });
+});

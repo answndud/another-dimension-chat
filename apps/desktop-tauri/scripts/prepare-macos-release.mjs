@@ -83,7 +83,7 @@ if (!options.channel) fail("missing-channel");
 if (!options.arch) fail("missing-arch");
 
 const appVersion = options.version ?? readAppVersion();
-if (options.tag !== `v${appVersion}`) {
+if (!new RegExp(`^v${appVersion}(-|$)`).test(options.tag)) {
   fail("tag-version-mismatch");
 }
 
