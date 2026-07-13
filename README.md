@@ -32,9 +32,9 @@ exchange.
 
 For Macs with an Apple chip (M1 or newer). Intel Macs are not supported.
 
-### [Download for macOS](https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-bootstrap-fix/another-dimension-chat-0.1.0-bootstrap-fix-arm64.dmg)
+### [Download the latest macOS release](https://github.com/answndud/another-dimension-chat/releases)
 
-1. Click **Download for macOS** above.
+1. Open the newest **Pre-release** and download its `.dmg` file.
 2. Open the downloaded file.
 3. Drag **Another Dimension Chat** into the **Applications** folder.
 4. Open the app from Applications.
