@@ -129,6 +129,7 @@ function createHarness(options = {}) {
       calls.setText.push(value);
     },
     t: (key) => key,
+    window: { confirm: () => true },
     fields: {
       productionTwoProfileB: {},
       productionTwoProfileWarning: {},
@@ -158,6 +159,11 @@ function createHarness(options = {}) {
     refreshProductionTwoProfilePeerEndpoints: async () => ({ ready: false }),
     showLatestRetryableOutboundNotice: () => false,
     setChatDeliveryNoticeByKey: () => {},
+    stopProductionTwoProfileOnionReceiveForInput: () => {},
+    currentInviteRoomCode: () => "",
+    clearCurrentInviteRoomInput: () => {},
+    showRoomList: () => {},
+    applyPairwiseInviteGuidance: () => {},
   });
   return { controller, store, calls };
 }
@@ -236,6 +242,18 @@ test("forgetInviteRoom clears both inviter and joiner runtime side effects", () 
   assert.equal(calls.clearPrivateRouteFollowupForRoom.length, 2);
   assert.equal(calls.clearChatDeliveryNoticeForInput.length, 2);
   assert.equal(calls.clearPrivateRouteRuntimeStateForInput.length, 2);
+});
+
+test("removeSavedInviteRoom removes the last-room fallback pointer", () => {
+  const { controller, store } = createHarness();
+  store.set("invite-rooms", JSON.stringify([{ code: "room-e", role: "inviter" }]));
+  store.set("last-room", JSON.stringify({ code: "room-e", role: "inviter" }));
+
+  const removed = controller.removeSavedInviteRoom({ code: "room-e", role: "inviter" });
+
+  assert.equal(removed, true);
+  assert.equal(store.has("last-room"), false);
+  assert.deepEqual(JSON.parse(store.get("invite-rooms")), []);
 });
 
 test("openSavedInviteRoom restores code and role into the active room input", async () => {
