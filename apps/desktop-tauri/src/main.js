@@ -8094,6 +8094,9 @@ function clearCurrentInviteRoomInput() {
 }
 
 async function createNewInviteRoomFromList() {
+  if (!window.confirm(t("newRoomConfirm"))) {
+    return false;
+  }
   clearCurrentInviteRoomInput();
   showRoomDetail();
   return createInviteCode();

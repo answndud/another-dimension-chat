@@ -1468,6 +1468,14 @@ export function createSavedRoomController(input) {
       return false;
     }
     stopProductionTwoProfileOnionReceiveForInput(savedInviteRoomInput(room), { silent: true });
+    try {
+      const lastRoom = JSON.parse(localStoreGet(lastInviteRoomStorageKey) ?? "null");
+      if (String(lastRoom?.code ?? "").trim() === code) {
+        localStoreRemove(lastInviteRoomStorageKey);
+      }
+    } catch {
+      localStoreRemove(lastInviteRoomStorageKey);
+    }
     forgetInviteRoom(code);
     if (code === currentInviteRoomCode()) {
       clearCurrentInviteRoomInput();
