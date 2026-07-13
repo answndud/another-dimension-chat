@@ -84,7 +84,7 @@ if (!input) fail("missing-input");
 const dmgPath = findSingleDmgInput(input);
 const mountPath = process.env.AD_VERIFY_MACOS_DMG_MOUNT_POINT
   ? process.env.AD_VERIFY_MACOS_DMG_MOUNT_POINT
-  : parseHdiutilAttach(runTool("hdiutil", ["attach", "-nobrowse", "-readonly", "-plist", dmgPath]));
+  : parseHdiutilAttach(runTool("hdiutil", ["attach", "-nobrowse", "-readonly", dmgPath]));
 let mountedApp = null;
 
 try {
@@ -101,11 +101,11 @@ try {
   assertContains(info, version, "version-mismatch");
   assertContains(info, "chat.anotherdimension.app", "bundle-identifier-mismatch");
 
-  const executablePath = join(mountedApp, "Contents", "MacOS", "Another Dimension Chat");
+  const executablePath = join(mountedApp, "Contents", "MacOS", "another-dimension-desktop-tauri");
   const fileOutput = runTool("file", [executablePath]);
   assertContains(fileOutput, "arm64", "main-executable-not-arm64");
 
-  const sidecarPath = join(mountedApp, "Contents", "Resources", "binaries", "another-dimension-engine-aarch64-apple-darwin");
+  const sidecarPath = join(mountedApp, "Contents", "MacOS", "another-dimension-engine");
   if (!existsSync(sidecarPath)) fail("missing-sidecar");
   const sidecarOutput = runTool("file", [sidecarPath]);
   assertContains(sidecarOutput, "arm64", "sidecar-not-arm64");

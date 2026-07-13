@@ -37,9 +37,9 @@ function targetTriple() {
   fail(`unsupported-sidecar-host-${process.platform}-${process.arch}`);
 }
 
-function runCommand(command, args, env) {
+function runCommand(command, args, env, cwd = repoRoot) {
   const child = spawnSync(command, args, {
-    cwd: repoRoot,
+    cwd,
     stdio: "inherit",
     env,
     shell: process.platform === "win32",
@@ -82,7 +82,7 @@ try {
     if (!buildCommand) {
       fail("missing-tauri-build-command");
     }
-    runCommand(buildCommand, buildCommandArgs, cargoTargetContext.env);
+    runCommand(buildCommand, buildCommandArgs, cargoTargetContext.env, appRoot);
   }
 
   console.log("engine_sidecar_prepared=true");

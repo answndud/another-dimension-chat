@@ -32,7 +32,7 @@ exchange.
 
 For Macs with an Apple chip (M1 or newer). Intel Macs are not supported.
 
-### [Download for macOS](https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-beta-onion-unsigned/another-dimension-chat-0.1.0-beta-onion-macos-aarch64-unsigned.dmg)
+### [Download for macOS](https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-unsigned-fix/another-dimension-chat-0.1.0-beta-onion-arm64.dmg)
 
 1. Click **Download for macOS** above.
 2. Open the downloaded file.
@@ -41,7 +41,10 @@ For Macs with an Apple chip (M1 or newer). Intel Macs are not supported.
 
 macOS may block the first launch because this beta does not have an Apple
 Developer ID signature. If that happens, open **System Settings > Privacy &
-Security**, scroll down, and click **Open Anyway**.
+Security**, scroll down, and click **Open Anyway**. This button appears only
+after macOS has blocked an attempted launch. If it is not shown, open
+**Applications**, Control-click **Another Dimension Chat**, choose **Open**, and
+choose **Open** again in the confirmation dialog.
 
 For optional download verification, troubleshooting, and uninstall steps, see
 [Install the unsigned DMG on macOS](INSTALL_UNSIGNED_DMG_MACOS.md).
