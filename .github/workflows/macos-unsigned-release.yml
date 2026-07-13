@@ -7,6 +7,9 @@ on:
         description: "Release tag to validate, for example v0.1.0-unsigned-fix"
         required: true
         type: string
+  push:
+    tags:
+      - "v*-unsigned-fix*"
 
 permissions:
   contents: read
@@ -36,7 +39,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          release_tag="${{ inputs.release_tag }}"
+          release_tag="${{ inputs.release_tag || github.ref_name }}"
           expected_commit="${GITHUB_SHA}"
           actual_commit="$(git rev-list -n 1 "$release_tag")"
           if [ "$actual_commit" != "$expected_commit" ]; then
@@ -146,7 +149,7 @@ jobs:
           AD_MACOS_RELEASE_OUT_DIR="$packet_dir" \
           AD_MACOS_RELEASE_VERSION="$version" \
           AD_MACOS_RELEASE_COMMIT="$GITHUB_SHA" \
-          AD_MACOS_RELEASE_TAG="${{ inputs.release_tag }}" \
+          AD_MACOS_RELEASE_TAG="${{ inputs.release_tag || github.ref_name }}" \
           AD_MACOS_RELEASE_BUILD_CHANNEL=beta-onion \
           AD_MACOS_RELEASE_ARCH=arm64 \
             node apps/desktop-tauri/scripts/prepare-macos-release.mjs
@@ -201,7 +204,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          release_tag="${{ inputs.release_tag }}"
+          release_tag="${{ inputs.release_tag || github.ref_name }}"
           if gh release view "$release_tag" >/dev/null 2>&1; then
             echo "release already exists for tag" >&2
             exit 1
@@ -232,7 +235,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          release_tag="${{ inputs.release_tag }}"
+          release_tag="${{ inputs.release_tag || github.ref_name }}"
           body_file="$(mktemp)"
           cat >"$body_file" <<EOF
 Unsigned macOS Apple Silicon prerelease.

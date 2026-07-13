@@ -32,7 +32,7 @@ safety material 비교, 로컬 암호화 저장, 수동 sealed-message 교환을
 Apple 칩이 탑재된 Mac(M1 이상)에서 사용할 수 있습니다. Intel Mac은 아직
 지원하지 않습니다.
 
-### [macOS용 앱 다운로드](https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-unsigned-fix/another-dimension-chat-0.1.0-beta-onion-arm64.dmg)
+### [macOS용 앱 다운로드](https://github.com/answndud/another-dimension-chat/releases/download/v0.1.0-unsigned-fix2/another-dimension-chat-0.1.0-beta-onion-arm64.dmg)
 
 1. 위의 **macOS용 앱 다운로드**를 클릭합니다.
 2. 다운로드된 파일을 엽니다.
