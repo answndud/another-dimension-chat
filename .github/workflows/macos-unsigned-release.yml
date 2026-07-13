@@ -94,7 +94,7 @@ jobs:
       - name: Remove restored generated build output before source checks
         shell: bash
         run: |
-          rm -rf .build-cache/cargo-target
+          rm -rf .build-cache
           rm -rf apps/desktop-tauri/dist apps/desktop-tauri/src-tauri/binaries
 
       - name: Check source and public release boundaries
