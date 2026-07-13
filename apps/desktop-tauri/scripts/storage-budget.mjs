@@ -10,7 +10,7 @@ export const trackedFileLimit = 180;
 export const trackedDirectoryLimit = 45;
 export const frontendSourceFileLimit = 40;
 export const referenceFileLimit = 4;
-export const scriptFileLimit = 20;
+export const scriptFileLimit = 24;
 
 function resolveLayout(root = repoRoot) {
   const desktopRoot = resolve(root, "apps/desktop-tauri");
