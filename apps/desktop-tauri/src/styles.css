@@ -1301,6 +1301,26 @@ body.is-room-list-mode .room-list-panel {
   min-width: 96px;
 }
 
+.room-action-confirm {
+  width: min(420px, calc(100vw - 32px));
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 18px;
+  background: var(--panel);
+  color: var(--text-primary);
+  box-shadow: 0 24px 70px rgb(0 0 0 / 42%);
+}
+
+.room-action-confirm::backdrop {
+  background: rgb(5 9 16 / 66%);
+}
+
+.room-action-confirm-message {
+  margin: 8px 0 16px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
 .saved-room-list {
   display: grid;
   gap: 6px;
