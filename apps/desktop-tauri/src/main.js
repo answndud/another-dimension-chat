@@ -1171,6 +1171,9 @@ async function clearClipboardBestEffort() {
 }
 
 async function writeClipboardWithTtl(value, ttlMs = 15_000) {
+  if (!navigator.clipboard?.writeText) {
+    throw new Error("clipboard-unavailable");
+  }
   await navigator.clipboard.writeText(value);
   window.setTimeout(() => {
     void clearClipboardBestEffort();
@@ -6425,7 +6428,9 @@ function renderSavedInviteRooms() {
       view.nextAction ? "saved-room-next-action" : "is-secondary",
     ].join(" ");
     primaryAction.textContent = view.nextAction ? t(view.nextAction.labelKey) : t("openRoom");
-    primaryAction.addEventListener("click", () => {
+    primaryAction.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       runRowPrimaryAction();
     });
     item.addEventListener("keydown", (event) => {
@@ -6439,7 +6444,11 @@ function renderSavedInviteRooms() {
     remove.type = "button";
     remove.className = "flow-control is-secondary saved-room-remove";
     remove.textContent = t("removeRoom");
-    remove.addEventListener("click", () => {
+    remove.setAttribute("aria-label", t("removeRoom"));
+    remove.title = t("removeRoom");
+    remove.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       removeSavedInviteRoom(displayRoom);
     });
     item.append(summary, state, primaryAction, remove, readiness);
@@ -6795,12 +6804,7 @@ async function copyCurrentInviteCode(options = {}) {
     setText(fields.productionTwoProfileWarning, t("inviteCodeCopied"));
     return true;
   } catch {
-    if (fields.createdInviteCodeDisplay && !fields.createdInviteCodeDisplay.hidden) {
-      fields.createdInviteCodeDisplay.focus?.();
-      fields.createdInviteCodeDisplay.select?.();
-    } else {
-      fields.productionTwoProfileB?.select?.();
-    }
+    focusCurrentInviteCodeDisplay();
     setProductionTwoProfileState("Invite code selected");
     setText(
       fields.productionTwoProfileWarning,
@@ -8041,7 +8045,7 @@ async function createInviteCode() {
     fields.receivedInviteCode.value = "";
   }
   currentInviteCodeShareVisible = true;
-  return startInviteRoomFromCode({ code, role: "inviter" });
+  return startInviteRoomFromCode({ code, role: "inviter", copyBeforePrepare: true });
 }
 
 async function createRoomFromReceivedInviteCode() {
@@ -8119,7 +8123,10 @@ async function startInviteRoomFromCode({ code, role, copyBeforePrepare = false }
   setText(
     fields.productionTwoProfileWarning,
     role === "inviter"
-      ? `${t("inviteCodeCreatedHint")} Local profile: ${inviteCreateView.localProfile}. Intended peer: ${inviteCreateView.intendedPeerLabel}. ${inviteCreateView.manualSendInstruction}`
+      ? formatTemplate("inviteCodeCreatedRoomHint", {
+          localProfile: inviteCreateView.localProfile,
+          peerLabel: inviteCreateView.intendedPeerLabel,
+        })
       : t("receivedCodeReadyHint"),
   );
   renderManualInviteRoomRebuildFlow("invite-room-started");
@@ -8132,6 +8139,9 @@ async function startInviteRoomFromCode({ code, role, copyBeforePrepare = false }
   renderCurrentInviteCodeDisplay();
   applyProductionActionState();
 
+  if (role === "inviter") {
+    focusCurrentInviteCodeDisplay();
+  }
   if (copyBeforePrepare) {
     await copyCurrentInviteCode({ quiet: true });
   }
