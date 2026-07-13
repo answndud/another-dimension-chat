@@ -46,6 +46,25 @@ test("public chat surface keeps the essential room and message entry points", ()
   );
 });
 
+test("room actions use the in-app confirmation dialog", () => {
+  assertIncludesAll(
+    indexHtml,
+    [
+      'id="room-action-confirm"',
+      'id="room-action-confirm-message"',
+      'id="room-action-confirm-cancel"',
+      'id="room-action-confirm-accept"',
+    ],
+    "room action confirmation",
+  );
+  const mainJs = readFileSync(join(here, "main.js"), "utf8");
+  assert.match(mainJs, /async function createNewInviteRoomFromList\(\)/);
+  assert.match(mainJs, /await confirmRoomAction\(t\("newRoomConfirm"\)\)/);
+  assert.match(mainJs, /confirmRoomAction,\s*\n\}\);/s);
+  assert.doesNotMatch(mainJs, /window\.confirm\(/);
+  assert.doesNotMatch(stylesCss.trim(), /,\s*$/);
+});
+
 test("first launch states the public beta security non-claims", () => {
   assertIncludesAll(
     indexHtml,
