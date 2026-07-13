@@ -831,6 +831,16 @@
                 </button>
               </div>
             </section>
+            <dialog id="room-action-confirm" class="room-action-confirm">
+              <form method="dialog">
+                <p class="eyebrow" data-i18n="roomActionConfirmTitle">Confirm room action</p>
+                <p id="room-action-confirm-message" class="room-action-confirm-message"></p>
+                <div class="loop-actions">
+                  <button id="room-action-confirm-cancel" type="button" class="flow-control is-secondary" data-i18n="cancel">Cancel</button>
+                  <button id="room-action-confirm-accept" type="button" class="flow-control" data-i18n="confirm">Confirm</button>
+                </div>
+              </form>
+            </dialog>
             <section class="chat-empty-state" aria-labelledby="chat-empty-title">
               <p class="eyebrow" data-i18n="connectionNeeded">Connection needed</p>
               <h4 id="chat-empty-title" data-i18n="peerNotConnected">No peer connected yet</h4>

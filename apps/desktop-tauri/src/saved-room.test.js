@@ -130,6 +130,7 @@ function createHarness(options = {}) {
     },
     t: (key) => key,
     window: { confirm: () => true },
+    confirmRoomAction: async () => true,
     fields: {
       productionTwoProfileB: {},
       productionTwoProfileWarning: {},
@@ -244,12 +245,12 @@ test("forgetInviteRoom clears both inviter and joiner runtime side effects", () 
   assert.equal(calls.clearPrivateRouteRuntimeStateForInput.length, 2);
 });
 
-test("removeSavedInviteRoom removes the last-room fallback pointer", () => {
+test("removeSavedInviteRoom removes the last-room fallback pointer", async () => {
   const { controller, store } = createHarness();
   store.set("invite-rooms", JSON.stringify([{ code: "room-e", role: "inviter" }]));
   store.set("last-room", JSON.stringify({ code: "room-e", role: "inviter" }));
 
-  const removed = controller.removeSavedInviteRoom({ code: "room-e", role: "inviter" });
+  const removed = await controller.removeSavedInviteRoom({ code: "room-e", role: "inviter" });
 
   assert.equal(removed, true);
   assert.equal(store.has("last-room"), false);

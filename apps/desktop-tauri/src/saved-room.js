@@ -1459,12 +1459,12 @@ export function createSavedRoomController(input) {
     return openInviteRoomFromToken(openInput);
   }
 
-  function removeSavedInviteRoom(room) {
+  async function removeSavedInviteRoom(room) {
     const code = String(room?.code ?? "").trim();
     if (!code) {
       return false;
     }
-    if (!window.confirm(t("removeRoomConfirm"))) {
+    if (!(await input.confirmRoomAction?.(t("removeRoomConfirm")))) {
       return false;
     }
     stopProductionTwoProfileOnionReceiveForInput(savedInviteRoomInput(room), { silent: true });

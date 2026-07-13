@@ -478,6 +478,10 @@ const fields = {
   roomListJoinRoom: document.querySelector("#room-list-join-room"),
   roomListSyncStatus: document.querySelector("#room-list-sync-status"),
   savedRoomList: document.querySelector("#saved-room-list"),
+  roomActionConfirm: document.querySelector("#room-action-confirm"),
+  roomActionConfirmMessage: document.querySelector("#room-action-confirm-message"),
+  roomActionConfirmCancel: document.querySelector("#room-action-confirm-cancel"),
+  roomActionConfirmAccept: document.querySelector("#room-action-confirm-accept"),
   productionTwoProfileDirection: document.querySelector("#production-two-profile-direction"),
   connectionDeviceRole: document.querySelector("#connection-device-role"),
   productionTwoProfileStepSession: document.querySelector("#production-two-profile-step-session"),
@@ -622,6 +626,36 @@ const fields = {
   loopExpiry: document.querySelector("#loop-expiry"),
   loopStorage: document.querySelector("#loop-storage"),
 };
+
+let pendingRoomConfirmationResolve = null;
+
+function finishRoomConfirmation(confirmed) {
+  const resolve = pendingRoomConfirmationResolve;
+  pendingRoomConfirmationResolve = null;
+  fields.roomActionConfirm?.close?.();
+  resolve?.(confirmed === true);
+}
+
+function confirmRoomAction(message) {
+  const dialog = fields.roomActionConfirm;
+  if (!dialog?.showModal) {
+    return Promise.resolve(false);
+  }
+  pendingRoomConfirmationResolve?.(false);
+  fields.roomActionConfirmMessage.textContent = String(message ?? "");
+  dialog.showModal();
+  fields.roomActionConfirmAccept?.focus?.();
+  return new Promise((resolve) => {
+    pendingRoomConfirmationResolve = resolve;
+  });
+}
+
+fields.roomActionConfirmCancel?.addEventListener("click", () => finishRoomConfirmation(false));
+fields.roomActionConfirmAccept?.addEventListener("click", () => finishRoomConfirmation(true));
+fields.roomActionConfirm?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  finishRoomConfirmation(false);
+});
 
 // Bind settings before the larger state bootstrap so basic controls survive a later optional failure.
 if (fields.themeToggle) {
@@ -4494,6 +4528,7 @@ const transcriptController = createTranscriptController({
   },
   twoProfileRecoveryMessage,
   window,
+  confirmRoomAction,
 });
 const {
   loadProductionTwoProfileTranscript,
@@ -4642,6 +4677,7 @@ const savedRoomController = createSavedRoomController({
     latestCreatedInviteCode = value;
   },
   window,
+  confirmRoomAction,
 });
 
 const chatDeliveryNoticeController = createChatDeliveryNoticeController({
@@ -8094,7 +8130,7 @@ function clearCurrentInviteRoomInput() {
 }
 
 async function createNewInviteRoomFromList() {
-  if (!window.confirm(t("newRoomConfirm"))) {
+  if (!(await confirmRoomAction(t("newRoomConfirm")))) {
     return false;
   }
   clearCurrentInviteRoomInput();
@@ -14997,7 +15033,9 @@ if (fields.receivedInviteCode) {
 }
 
 if (fields.roomListCreateRoom) {
-  fields.roomListCreateRoom.addEventListener("click", createNewInviteRoomFromList);
+  fields.roomListCreateRoom.addEventListener("click", () => {
+    void createNewInviteRoomFromList();
+  });
 }
 
 if (fields.backToRoomList) {
