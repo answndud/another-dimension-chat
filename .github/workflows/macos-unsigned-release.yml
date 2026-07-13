@@ -89,7 +89,7 @@ jobs:
         run: |
           VITE_AD_BUILD_CHANNEL=beta-onion \
             node scripts/prepare-engine-sidecar.mjs --release --manual-e2ee-runtime \
-            --tauri-build -- tauri build --config src-tauri/tauri.sidecar.conf.json --bundles app
+            --tauri-build -- npm exec -- tauri build --config src-tauri/tauri.sidecar.conf.json --bundles app
 
       - name: Seal app bundle with an ad-hoc signature
         shell: bash
