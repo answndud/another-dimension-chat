@@ -1046,6 +1046,7 @@ body.is-app-settings-open::before {
   inset: 0;
   background: color-mix(in srgb, var(--bg) 92%, transparent);
   content: "";
+  pointer-events: none;
 }
 
 [data-theme="light"] body.is-app-settings-open::before {
@@ -2649,6 +2650,7 @@ body.is-chat-settings-open .chat-settings-panel[open],
   box-shadow:
     0 24px 58px rgb(0 0 0 / 42%),
     0 0 0 1px color-mix(in srgb, var(--accent-cyan) 8%, transparent);
+  pointer-events: auto;
 }
 
 body.is-app-settings-open .system-settings-panel[open],

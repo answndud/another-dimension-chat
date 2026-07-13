@@ -622,6 +622,24 @@ const fields = {
   loopStorage: document.querySelector("#loop-storage"),
 };
 
+// Bind settings before the larger state bootstrap so basic controls survive a later optional failure.
+if (fields.themeToggle) {
+  fields.themeToggle.addEventListener("click", toggleTheme);
+}
+
+if (fields.languageSelector) {
+  fields.languageSelector.addEventListener("change", () => {
+    applyLanguage(fields.languageSelector.value);
+  });
+}
+
+if (fields.closeAppSettings) {
+  fields.closeAppSettings.addEventListener("click", (event) => {
+    event.preventDefault();
+    closeAppSettingsPanel();
+  });
+}
+
 let latestSimulation = null;
 let latestProductionSessionState = null;
 let latestProductionSessionStateFingerprint = "";
@@ -961,7 +979,7 @@ function localStoreRemove(key) {
   return true;
 }
 
-let currentLanguage = normalizeLanguage(localStoreGet(languageStorageKey) ?? "en");
+let currentLanguage = normalizeLanguage(localStoreGet(languageStorageKey) ?? "ko");
 
 function t(key) {
   return translate(currentLanguage, key);
@@ -14618,16 +14636,6 @@ async function loadProductionMessageTranscript() {
     }
     applyProductionActionState();
   }
-}
-
-if (fields.themeToggle) {
-  fields.themeToggle.addEventListener("click", toggleTheme);
-}
-
-if (fields.languageSelector) {
-  fields.languageSelector.addEventListener("change", () => {
-    applyLanguage(fields.languageSelector.value);
-  });
 }
 
 desktopPanelController.bindPanelControls();
