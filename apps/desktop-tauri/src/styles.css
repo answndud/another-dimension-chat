@@ -2919,7 +2919,6 @@ body.is-developer-mode .status-panel > .production-workflow[aria-labelledby="oni
 
 body.is-app-settings-open .system-settings-panel[open],
 body.is-chat-settings-open .chat-settings-panel[open],
-.system-settings-panel[open],
 .chat-settings-panel[open] {
   position: fixed;
   display: grid;
@@ -5835,5 +5834,3 @@ body.is-chat-active .system-settings-panel > summary::before {
   content: "App";
   font-size: 11px;
 }
-
-.system-settings-panel[open],
