@@ -652,7 +652,7 @@ test("version integrity view keeps manual update and rollback claims bounded", (
     buildChannel: "beta-onion",
     buildCommit: "abc1234",
     latestVersion: "0.1.1",
-    currentReleaseTag: "v0.1.0-unsigned-fix2",
+    currentReleaseTag: "v0.1.0-ui-fix",
   });
 
   assert.equal(view.currentVersion, "0.1.0");

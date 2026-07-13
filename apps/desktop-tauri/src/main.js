@@ -3598,7 +3598,7 @@ function renderVersionIntegrityStatus(input = {}) {
     currentVersion: FIELD_TEST_APP_VERSION,
     buildChannel: FIELD_TEST_BUILD_CHANNEL,
     buildCommit: FIELD_TEST_BUILD_COMMIT,
-    currentReleaseTag: "v0.1.0-unsigned-fix2",
+    currentReleaseTag: "v0.1.0-ui-fix",
     ...input,
   });
   setText(fields.versionIntegrityStatus, view.summary);
