@@ -1,12 +1,21 @@
 # Another Dimension local server
 
-This is the user-owned development server. It serves the static browser bundle and
-holds only opaque sealed envelopes in a capability-scoped inbox. It never receives
-plaintext, profile keys, or passphrases.
+This is the user-owned relay server. In its default mode it exposes only the
+health/info/inbox API and holds opaque sealed envelopes in a capability-scoped
+inbox. It never receives plaintext, profile keys, or passphrases. It does not
+serve the browser bundle unless the explicit development-only `serveStatic`
+option or `AD_SERVE_UI=1` is enabled.
 
 ```sh
-npm --prefix apps/web run build --workspaces=false
 ./scripts/start_local_server.sh
+```
+
+Serve the browser UI from a separately verified static release. The combined
+server/UI mode is for local development only:
+
+```sh
+AD_SERVE_UI=1 npm --prefix apps/web run build --workspaces=false
+AD_SERVE_UI=1 ./scripts/start_local_server.sh
 ```
 
 Run `./scripts/start_local_server.sh --setup` for a guided local,
@@ -18,10 +27,9 @@ The web bundle includes the committed Rust `vodozemac` Olm WebAssembly module.
 Only crypto-source changes require `npm --prefix apps/web run build:crypto
 --workspaces=false`; ordinary server starts and release builds do not compile Rust.
 
-Open the private local UI URL printed at startup, including its `#local=...`
-fragment. That fragment authorizes the browser to read the inbox setting; a
-plain root URL remains in manual mode. Never share or log the private local UI
-URL.
+The private URL file contains a `#relay=...&local=...` fragment. The `local`
+value authorizes the browser to read the inbox setting and is a bearer secret.
+Use it only with a separately verified browser UI. Never share or log it.
 
 For a source-independent archive, run `./scripts/build_release.sh` from the
 repository root and start the extracted `scripts/start_local_server.sh`.

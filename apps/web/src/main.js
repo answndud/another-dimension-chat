@@ -28,7 +28,7 @@ import {
 import "./styles.css";
 
 const app = document.querySelector("#app");
-let state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "" };
+let state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "", riskAcknowledged: false };
 let syncInFlight = false;
 
 if (window.isSecureContext && "serviceWorker" in navigator) {
@@ -52,7 +52,13 @@ function endpointOrigin(info) {
 function endpointWarning(info) {
   const origin = endpointOrigin(info);
   if (!origin || !origin.startsWith("http://") || /localhost|127\.0\.0\.1/.test(origin)) return "";
-  return "Development HTTP endpoint: capability and network metadata are exposed on the LAN. Use HTTPS for production.";
+  // TM-03/TM-07: do not let an unsafe transport look like an anonymous secure route.
+  return "보안 경고: 이 HTTP endpoint에서는 capability와 통신 metadata가 네트워크에 노출될 수 있습니다. 익명성이 제공되지 않으며 자동 전달을 사용할 수 없습니다.";
+}
+
+function canAutoDeliver(info) {
+  const origin = endpointOrigin(info);
+  return Boolean(origin && (origin.startsWith("https://") || /localhost|127\.0\.0\.1/.test(origin)));
 }
 
 function localServerStatus(info) {
@@ -79,12 +85,14 @@ function render() {
             <h2>Create local profile</h2>
             <label>Profile name<input name="name" required pattern="[A-Za-z0-9_-]+" autocomplete="off" /></label>
             <label>Passphrase<input name="passphrase" required minlength="10" type="password" autocomplete="new-password" /></label>
+            <label class="consent"><input name="risk-ack" type="checkbox" required /> 현재 실험용 버전이며 민감한 정보·실명·취재원 정보를 입력하지 않겠습니다.</label>
             <button>Create profile</button>
           </form>
           <form id="unlock-form" class="stack">
             <h2>Unlock existing profile</h2>
             <label>Profile<select name="profile">${listProfiles().map((name) => `<option>${escapeHtml(name)}</option>`).join("") || "<option disabled>No local profiles</option>"}</select></label>
             <label>Passphrase<input name="passphrase" required type="password" autocomplete="current-password" /></label>
+            <label class="consent"><input name="risk-ack" type="checkbox" required /> 현재 실험용 버전이며 민감한 정보·실명·취재원 정보를 입력하지 않겠습니다.</label>
             <button class="secondary">Unlock</button>
           </form>
           <div class="card stack">
@@ -94,7 +102,7 @@ function render() {
             <button id="import-backup" class="secondary">Import encrypted backup</button>
           </div>
         </div>
-        <p class="disclaimer">Experimental beta. Not audited, not production-ready, and not for sensitive communication.</p>
+        <p class="disclaimer">실험용 beta입니다. 독립 감사 전에는 production-ready가 아니며 민감한 통신에 사용할 수 없습니다.</p>
         ${state.error ? `<p class="error">${escapeHtml(state.error)}</p>` : ""}
       </section>`;
     bindAuth();
@@ -105,7 +113,7 @@ function render() {
   app.innerHTML = `
     <section class="shell">
       <header class="topbar"><div><div class="eyebrow">ANOTHER DIMENSION</div><h1>Local encrypted room</h1></div><div class="row-between"><button id="export-backup" class="ghost">Copy encrypted backup</button><button id="panic-wipe" class="ghost">Panic wipe</button><button id="lock" class="ghost">Lock ${escapeHtml(state.profile.name)}</button></div></header>
-      <div class="notice">${escapeHtml(state.notice || (state.serverInfo ? "Your local server is connected. Sealed envelopes can be delivered directly to a peer server." : "Manual mode: run this app from your local server for direct sealed-envelope delivery."))}</div>
+      <div class="notice">${escapeHtml(state.notice || (state.serverInfo ? "로컬 relay가 연결되었습니다. 서버는 암호화된 봉투만 처리합니다." : "수동 봉투 모드입니다. 민감한 정보는 입력하지 마세요."))}</div>
       <div class="layout">
         <aside class="card stack">
           <div><span class="label">LOCAL PROFILE</span><strong>${escapeHtml(state.profile.name)}</strong><p class="small">${escapeHtml(localServerStatus(state.serverInfo))}</p></div>
@@ -129,7 +137,7 @@ function render() {
             ${state.peer && state.sessionStatus !== "ready" ? '<p class="warning">Olm ratchet session is establishing. Keep both rooms open, or move the pending handshake envelope manually.</p>' : ""}
             ${state.pendingHandshake && state.sessionStatus === "ready" ? '<p class="warning">Deliver the final ready envelope to the peer, then confirm delivery before messaging.</p><button id="confirm-handshake" class="secondary">I delivered the handshake envelope</button>' : ""}
             <label>Message<textarea id="message" rows="4" placeholder="Write locally, then send or export a sealed envelope"></textarea></label>
-            <div class="row-between"><button id="send-envelope" ${state.peer?.server?.inboxUrl && state.sessionStatus === "ready" && isSafetyVerified() && !state.pendingHandshake ? "" : "disabled"}>Encrypt and send to peer server</button><button id="sync-inbox" ${state.serverInfo?.inboxUrl ? "" : "disabled"} class="secondary">Sync my inbox</button></div>
+            <div class="row-between"><button id="send-envelope" ${state.peer?.server?.inboxUrl && canAutoDeliver(state.peer.server) && state.sessionStatus === "ready" && isSafetyVerified() && !state.pendingHandshake ? "" : "disabled"}>Encrypt and send to peer server</button><button id="sync-inbox" ${state.serverInfo?.inboxUrl ? "" : "disabled"} class="secondary">Sync my inbox</button></div>
             <button id="export-envelope" ${state.peer && state.sessionStatus === "ready" && isSafetyVerified() && !state.pendingHandshake ? "" : "disabled"}>Encrypt and export envelope</button>
             <label>Outgoing envelope<textarea id="envelope" rows="5" placeholder="Your sealed envelope appears here">${escapeHtml(state.envelope)}</textarea></label>
             <label>Incoming envelope<textarea id="incoming" rows="5" placeholder="Paste the peer's sealed envelope here"></textarea></label>
@@ -139,7 +147,7 @@ function render() {
           <div class="card stack"><div class="row-between"><h2>Conversation</h2><span class="small">Encrypted local transcript</span></div>${renderMessages()}</div>
         </section>
       </div>
-      <p class="disclaimer">Browser-local experimental beta. This app does not provide reliable network delivery, anonymity, backup recovery, or protection from compromised devices.</p>
+      <p class="disclaimer">실험용 beta: anonymity, secure deletion, reliable delivery, compromised device 보호를 제공하지 않습니다. 민감한 통신을 금지합니다.</p>
     </section>`;
     bindRoom();
 }
@@ -153,12 +161,12 @@ function bindAuth() {
   document.querySelector("#create-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    try { state = { ...state, profile: await createProfile(data.get("name"), data.get("passphrase")), error: "" }; await refresh(); } catch (error) { state.error = error.message; render(); }
+    try { state = { ...state, profile: await createProfile(data.get("name"), data.get("passphrase")), riskAcknowledged: true, error: "" }; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#unlock-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    try { state = { ...state, profile: await unlockProfile(data.get("profile"), data.get("passphrase")), error: "" }; await refresh(); } catch (error) { state.error = error.message; render(); }
+    try { state = { ...state, profile: await unlockProfile(data.get("profile"), data.get("passphrase")), riskAcknowledged: true, error: "" }; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#import-backup")?.addEventListener("click", async () => {
     try { const name = await importProfileBackup(document.querySelector("#backup-import").value); state.notice = `Encrypted backup for ${name} imported. Unlock it with its original passphrase.`; render(); } catch (error) { state.error = error.message; render(); }
@@ -166,7 +174,7 @@ function bindAuth() {
 }
 
 function bindRoom() {
-  document.querySelector("#lock")?.addEventListener("click", () => { lockProfile(); state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "" }; render(); });
+  document.querySelector("#lock")?.addEventListener("click", () => { lockProfile(); state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "", riskAcknowledged: false }; render(); });
   document.querySelector("#panic-wipe")?.addEventListener("click", async () => {
     const passphrase = window.prompt("Type this profile passphrase to permanently wipe its local data:");
     if (passphrase === null) return;

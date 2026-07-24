@@ -7,7 +7,7 @@ CONFIG_FILE=${AD_CONFIG_FILE:-"$PROJECT_DIR/.another-dimension-server/server-con
 
 node -e 'const major = Number(process.versions.node.split(".")[0]); if (major < 20) { console.error(`Node.js 20 or newer is required (found ${process.version}).`); process.exit(1); }'
 
-if [ ! -f "$PROJECT_DIR/apps/web/dist/index.html" ]; then
+if [ "${AD_SERVE_UI:-0}" = "1" ] && [ ! -f "$PROJECT_DIR/apps/web/dist/index.html" ]; then
   echo "Web bundle missing. Run: npm --prefix apps/web run build --workspaces=false" >&2
   exit 1
 fi

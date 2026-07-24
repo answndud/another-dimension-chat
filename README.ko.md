@@ -9,7 +9,9 @@
 프로필과 메시지 키는 브라우저에 두고, 암호화된 로컬 프로필 자료는 IndexedDB에
 저장하며, 각 사용자의 서버는 opaque sealed envelope만 처리합니다.
 
-현재 제품 경계는 `apps/web` browser UI와 `apps/server` 사용자 소유 relay입니다.
+현재 제품 경계는 별도로 검증한 `apps/web` browser UI와 API 전용
+`apps/server` 사용자 소유 relay입니다. relay가 UI를 함께 제공하는 모드는
+개발용 opt-in입니다.
 `apps/desktop-tauri`, `apps/cli`, `apps/engine` 및 기존 Rust native crates는
 legacy/native prototype으로 보존되어 있지만 현재 web 제품의 release나 보안
 준비도 증거가 아닙니다.
@@ -19,10 +21,10 @@ legacy/native prototype으로 보존되어 있지만 현재 web 제품의 releas
 > 자신의 local server를 실행하면 명시적으로 교환한 endpoint를 통해 sealed
 > envelope를 직접 전달할 수 있습니다.
 
-> **앱 코드 공급망 경고:** 현재 local server는 편의를 위해 browser
-> JavaScript/WASM도 제공합니다. server나 reverse proxy가 변조되면 암호화가
-> 시작되기 전에 passphrase·평문·key가 탈취될 수 있습니다. 독립적으로 검증할
-> signed app release가 아직 없으므로 고위험 통신에 사용하면 안 됩니다.
+> **앱 코드 공급망 경고:** local relay는 기본적으로 API만 제공하며 browser
+> JavaScript/WASM을 제공하지 않습니다. `AD_SERVE_UI=1` combined mode는 개발용
+> opt-in입니다. static UI가 변조되면 암호화 전에 passphrase·평문·key가 탈취될
+> 수 있으므로 별도로 검증한 signed release만 사용해야 합니다.
 
 ## 현재 웹 prototype에서 동작하는 것
 
@@ -73,10 +75,16 @@ npm --prefix apps/web run build --workspaces=false
 ./scripts/start_local_server.sh
 ```
 
-서버가 출력하는 `#local=...` fragment까지 포함된 private local UI URL을
-여세요. 일반 root URL은 inbox capability를 읽거나 광고할 수 없어 의도적으로
-manual mode로 동작합니다. 출력된 local UI URL을 비밀로 취급하고 log,
-screenshot, support report에 포함하지 마세요.
+서버 data directory의 private URL 파일에 있는 `#relay=...&local=...`
+fragment를 별도로 검증한 browser UI에 입력합니다. `local` 값은 inbox를
+읽는 bearer secret이므로 log, screenshot, support report에 포함하지 마세요.
+
+개발 rehearsal에서만 static UI를 relay와 함께 제공할 수 있습니다.
+
+```sh
+AD_SERVE_UI=1 npm --prefix apps/web run build --workspaces=false
+AD_SERVE_UI=1 ./scripts/start_local_server.sh
+```
 
 첫 실행은 loopback 전용입니다. 환경변수를 직접 조합하지 않고 상대가 접근할
 HTTPS 경로를 선택하려면 guided setup을 실행하세요. private 설정을 저장한 뒤
@@ -242,7 +250,8 @@ credential, query, fragment를 허용하지 않습니다. 이는 초대에 들�
 명확히 할 뿐 DNS, 방화벽, reverse proxy의 실제 도달성을 대신 만들지 않습니다.
 저장 설정이 없을 때의 기존 `AD_*` 환경변수는 고급 호환 경로로 유지합니다.
 
-서버는 bounded opaque envelope만 저장하고 정적 browser UI를 제공합니다.
+서버는 bounded opaque envelope만 저장합니다. 정적 browser UI는 별도의 검증된
+release에서 제공하며, `AD_SERVE_UI=1`은 개발용 combined mode입니다.
 
 ChatGPT Sites나 중앙 메시지 hosting은 필요하지 않습니다.
 

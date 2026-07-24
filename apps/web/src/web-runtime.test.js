@@ -48,7 +48,7 @@ test("web UI exposes the complete manual pairing and sealed-envelope flow", () =
   ]) assert.match(ui, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), text === "Safety material" ? "i" : ""));
   assert.doesNotMatch(ui, /browser-preview-tauri/);
   assert.doesNotMatch(ui, /production_onion/);
-  assert.match(ui, /Development HTTP endpoint/);
+  assert.match(ui, /자동 전달을 사용할 수 없습니다/);
   assert.match(ui, /setInterval[\s\S]*5_000/);
   assert.match(ui, /visibilitychange/);
   assert.match(serviceWorker, /pathname\.startsWith\("\/api\/"\)/);

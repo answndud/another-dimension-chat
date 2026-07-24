@@ -109,9 +109,17 @@ function validInboxUrl(value) {
 async function localServerInfo() {
   if (localInfoCache) return localInfoCache;
   try {
-    const localAccess = new URLSearchParams(globalThis.location?.hash?.slice(1) || "").get("local");
+    const hash = new URLSearchParams(globalThis.location?.hash?.slice(1) || "");
+    const localAccess = hash.get("local");
+    const relayOrigin = hash.get("relay");
     if (!localAccess) return null;
-    const response = await fetch("/api/v1/info", { headers: { accept: "application/json", "x-ad-local-access": localAccess } });
+    let infoUrl = "/api/v1/info";
+    if (relayOrigin) {
+      let origin;
+      try { origin = new URL(relayOrigin).origin; } catch { return null; }
+      infoUrl = `${origin}/api/v1/info`;
+    }
+    const response = await fetch(infoUrl, { headers: { accept: "application/json", "x-ad-local-access": localAccess } });
     if (!response.ok) return null;
     const info = await response.json();
     localInfoCache = { ...info, inboxUrl: validInboxUrl(info.inboxUrl), localAccess };

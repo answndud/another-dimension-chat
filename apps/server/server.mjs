@@ -129,7 +129,7 @@ export async function loadServerConfig(configFile) {
     throw new Error(`Could not read server config ${absoluteConfigFile}: ${error.message}`);
   }
   if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error("Server config must be a JSON object.");
-  const allowed = new Set(["bindHost", "port", "dataDir", "distDir", "publicUrl", "corsOrigins", "trustProxy", "ttlMs", "tlsKeyFile", "tlsCertFile"]);
+  const allowed = new Set(["bindHost", "port", "dataDir", "distDir", "serveStatic", "publicUrl", "corsOrigins", "trustProxy", "ttlMs", "tlsKeyFile", "tlsCertFile"]);
   const unknown = Object.keys(parsed).filter((key) => !allowed.has(key));
   if (unknown.length) throw new Error(`Unknown server config field: ${unknown.join(", ")}`);
   const relativePathKeys = ["dataDir", "distDir", "tlsKeyFile", "tlsCertFile"];
@@ -144,6 +144,7 @@ export async function createLocalServer({
   port = Number(process.env.AD_PORT || 1422),
   dataDir = process.env.AD_SERVER_DATA_DIR || resolve(process.cwd(), ".another-dimension-server"),
   distDir = process.env.AD_WEB_DIST_DIR || defaultDist,
+  serveStatic = process.env.AD_SERVE_UI === "1",
   publicUrl = process.env.AD_PUBLIC_URL || "",
   corsOrigins = parseOrigins(process.env.AD_CORS_ORIGINS || ""),
   trustProxy = process.env.AD_TRUST_PROXY === "1",
@@ -156,6 +157,7 @@ export async function createLocalServer({
   if (!Number.isFinite(ttlMs) || ttlMs <= 0) throw new Error("AD_INBOX_TTL_MS must be a positive number.");
   const normalizedPublicUrl = normalizePublicUrl(publicUrl);
   if (typeof trustProxy !== "boolean") throw new Error("AD_TRUST_PROXY must be boolean.");
+  if (typeof serveStatic !== "boolean") throw new Error("serveStatic must be boolean.");
   const allowedCorsOrigins = new Set([normalizedPublicUrl, ...corsOrigins].filter(Boolean));
   if (["0.0.0.0", "::"].includes(bindHost) && !normalizedPublicUrl) throw new Error("AD_PUBLIC_URL is required with a wildcard AD_BIND_HOST.");
   if (tlsKeyFile && normalizedPublicUrl.startsWith("http://")) throw new Error("AD_PUBLIC_URL must use HTTPS when direct TLS is enabled.");
@@ -243,6 +245,7 @@ export async function createLocalServer({
         publicOrigin,
         externalSecure: publicOrigin.startsWith("https://"),
         listenerTls: Boolean(tlsKeyFile && tlsCertFile),
+        serveStatic,
         networkScope: isLoopbackHost(bindHost) ? "loopback" : "non-loopback",
         maxEnvelopeBytes: MAX_ENVELOPE_BYTES,
       }, headers);
@@ -309,6 +312,8 @@ export async function createLocalServer({
       return;
     }
 
+    // TM-02: the relay must not become an implicit browser-code distribution boundary.
+    if (!serveStatic) { json(res, 404, { error: "relay_only" }, headers); return; }
     if (req.method !== "GET") { json(res, 405, { error: "method_not_allowed" }, headers); return; }
     const file = safeFile(distDir, requestUrl.pathname);
     try {
@@ -328,7 +333,7 @@ export async function createLocalServer({
   const localUiOrigin = tlsKeyFile && normalizedPublicUrl
     ? normalizedPublicUrl
     : `${scheme}://${urlHost(localHost)}:${port}`;
-  const localUiUrl = `${localUiOrigin}/#local=${localAccessCapability}`;
+  const localUiUrl = `${localUiOrigin}/#relay=${encodeURIComponent(originFor(bindHost))}&local=${localAccessCapability}`;
   await writeFile(localUiUrlFile, `${localUiUrl}\n`, { mode: 0o600 });
   return {
     server,
@@ -339,6 +344,7 @@ export async function createLocalServer({
     publicOrigin: originFor(bindHost),
     externalSecure: originFor(bindHost).startsWith("https://"),
     listenerTls: Boolean(tlsKeyFile && tlsCertFile),
+    serveStatic,
     localAccessCapability,
     localUiUrl,
     localUiUrlFile,

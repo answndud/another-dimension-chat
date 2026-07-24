@@ -7,6 +7,18 @@ public beta. It describes the intended direction and the current beta
 boundary. It does not claim that the current build is safe for sensitive
 communication.
 
+## Requirement IDs
+
+| ID | Threat / asset | Required boundary | Current claim |
+| --- | --- | --- | --- |
+| TM-01 | Relay operator sees plaintext or private keys | Relay receives opaque envelopes only | Implemented guardrail; not independently audited |
+| TM-02 | Relay or proxy replaces browser JS/WASM | Static UI is separately verified; relay-only is the default | Release blocker |
+| TM-03 | Network observer correlates IP, timing, size, or endpoint | Explicit transport limitation or a verified anonymity route | No anonymity claim |
+| TM-04 | Browser/device/extension is compromised | Fail closed where possible and disclose endpoint limit | Not protected |
+| TM-05 | Capability, invite, or local profile leaks | Redaction, rotation, encrypted storage, and user warning | Partial implementation |
+| TM-06 | Queue abuse or relay failure loses messages | Bounded queue, explicit errors, and no silent discard | Availability not guaranteed |
+| TM-07 | User mistakes unsafe pairing or release | Safety confirmation and signed release verification | Prototype gate |
+
 ## Product Direction
 
 The long-term product direction is a high-risk 1:1 messenger with no central
@@ -15,7 +27,7 @@ or cloud backup.
 
 The current web prototype is narrower:
 
-- user-owned Node server plus browser UI
+- user-owned Node relay plus separately served browser UI
 - signed invite-code room flow
 - safety material confirmation
 - browser-local profile, Olm account/session, and message transcript storage
@@ -58,7 +70,9 @@ Current implementation evidence includes:
 - public support diagnostics redaction boundary
 - explicit documentation of endpoint, browser, device, and metadata limits
 
-These are implementation guardrails, not a secure messenger claim.
+These are implementation guardrails, not a secure messenger claim. Requirement
+IDs describe the boundary to verify in code and documentation; they are not
+evidence of an independent security review.
 
 ## Out Of Scope For This Beta
 

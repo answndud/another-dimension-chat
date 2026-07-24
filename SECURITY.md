@@ -11,11 +11,13 @@ ChatGPT Sites project or central message host is required by the product. The
 Tauri desktop target is a secondary development wrapper, not the current
 product distribution boundary.
 
-The current server also serves a convenience copy of the browser UI. That copy
-is not a trusted high-risk code-distribution boundary: an operator, reverse
-proxy, compromised host, or altered release can replace JavaScript or WASM
-before encryption starts and can therefore observe passphrases, plaintext, and
-keys. Signed, independently verifiable app distribution is a release blocker.
+The current relay defaults to API-only mode and does not serve the browser UI.
+An explicit `serveStatic`/`AD_SERVE_UI=1` development mode still exists for local
+rehearsal, but it is not a trusted high-risk code-distribution boundary. An
+operator, reverse proxy, compromised host, or altered release can replace
+JavaScript or WASM before encryption starts and can therefore observe
+passphrases, plaintext, and keys. Signed, independently verifiable app
+distribution remains a release blocker.
 
 ## Current web behavior
 
@@ -45,6 +47,9 @@ keys. Signed, independently verifiable app distribution is a release blocker.
 - No central message server, push service, cloud backup, or account recovery exists.
 - A user-owned local server may store bounded opaque sealed envelopes for that
   user's inbox; it is not trusted with plaintext or private keys.
+- The user-owned relay is API-only by default. Static browser assets must come
+  from a separately verified release; combined relay/UI serving is development
+  convenience only.
 - The inbox capability is returned only when the browser presents the separate
   local-access capability from the private `#local=...` startup URL. Opening the
   public root URL does not disclose or advertise the inbox.

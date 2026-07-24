@@ -58,6 +58,37 @@ test("local server exposes health and a capability-scoped opaque inbox", async (
   await rm(dataDir, { recursive: true, force: true });
 });
 
+test("relay-only mode never serves the browser bundle", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const distDir = await mkdtemp(join(tmpdir(), "another-dimension-dist-"));
+  await writeFile(join(distDir, "index.html"), JSON.stringify({ malicious: true }));
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const root = await call(port, "GET", "/");
+  assert.equal(root.status, 404);
+  assert.equal(root.body.error, "relay_only");
+  const info = await call(port, "GET", "/api/v1/info", undefined, localHeaders(runtime));
+  assert.equal(info.body.serveStatic, false);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+  await rm(distDir, { recursive: true, force: true });
+});
+
+test("static serving requires an explicit development opt-in", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const distDir = await mkdtemp(join(tmpdir(), "another-dimension-dist-"));
+  await writeFile(join(distDir, "index.html"), JSON.stringify({ development: true }));
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir, serveStatic: true });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const root = await call(port, "GET", "/");
+  assert.equal(root.status, 200);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+  await rm(distDir, { recursive: true, force: true });
+});
+
 test("server applies security headers and rejects unlisted cross-origin API calls", async () => {
   const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist"), publicUrl: "https://chat.example.test", corsOrigins: ["https://peer.example.test"] });
@@ -85,7 +116,7 @@ test("local access can rotate the inbox capability and invalidate the old URL", 
   assert.equal(rotated.status, 200);
   const newPath = new URL(rotated.body.inboxUrl.replace(":0", `:${port}`)).pathname;
   assert.notEqual(newPath, oldPath);
-  assert.equal((await call(port, "POST", oldPath, { envelope: "ADENVWEB1.old-capability" })).status, 405);
+  assert.equal((await call(port, "POST", oldPath, { envelope: "ADENVWEB1.old-capability" })).status, 404);
   assert.equal((await call(port, "POST", newPath, { envelope: "ADENVWEB1.new-capability" })).status, 202);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
@@ -153,7 +184,7 @@ test("local server rejects malformed inbox requests without storing them", async
   const port = runtime.server.address().port;
   const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
   assert.equal((await rawCall(port, "POST", inboxPath, "not-json")).status, 400);
-  assert.equal((await call(port, "POST", `${inboxPath}/../inbox`, { envelope: "ADENVWEB1.invalid-path" })).status, 405);
+  assert.equal((await call(port, "POST", `${inboxPath}/../inbox`, { envelope: "ADENVWEB1.invalid-path" })).status, 404);
   assert.equal((await call(port, "GET", inboxPath, undefined, localHeaders(runtime))).body.items.length, 0);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
