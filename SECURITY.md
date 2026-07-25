@@ -23,8 +23,8 @@ distribution remains a release blocker.
 
 - Profile private material is generated in the browser.
 - Profile private material is encrypted with a passphrase before IndexedDB storage.
-- New profile wrapping uses Argon2id in the committed WASM boundary; legacy
-  PBKDF2 records are migrated after a successful unlock. The browser session
+- New profile wrapping uses Argon2id in a dedicated browser Worker backed by the
+  committed WASM boundary; legacy PBKDF2 records are migrated after a successful unlock. The browser session
   auto-locks after five minutes of inactivity, and explicit passphrase-confirmed
   profile wipe removes the local profile, messages, and replay records.
 - Peer invites are signed and verified locally.
@@ -74,7 +74,7 @@ distribution remains a release blocker.
 - The startup process does not print the private local UI capability URL. It
   writes it to a mode-600 file in the server data directory; the file remains
   a bearer secret and must not be copied into logs or reports.
-- The browser can export/import a passphrase-wrapped `ADBACKUP1` profile record;
+- The browser can export/import a versioned passphrase-wrapped `ADBACKUP1` profile record;
   import refuses to overwrite an existing profile. This is user-managed local
   recovery, not cloud backup, and the backup still requires offline passphrase
   protection.

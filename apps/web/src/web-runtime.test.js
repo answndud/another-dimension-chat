@@ -16,6 +16,8 @@ test("web runtime uses browser crypto and IndexedDB rather than preview storage"
   assert.match(runtime, /crypto\.subtle\.generateKey/);
   assert.match(runtime, /PBKDF2/);
   assert.match(runtime, /argon2id_profile_key/);
+  assert.match(runtime, /argon2-worker\.js/);
+  assert.match(runtime, /new Worker/);
   assert.match(runtime, /argon2id-v1/);
   assert.match(runtime, /AES-GCM/);
   assert.match(runtime, /olm_outbound_start/);
@@ -33,6 +35,9 @@ test("web runtime uses browser crypto and IndexedDB rather than preview storage"
   assert.doesNotMatch(runtime, /noise_handshake|noise_(?:initiator|responder)/);
   assert.doesNotMatch(runtime, /ADWEB2|ADENVWEB2/);
   assert.doesNotMatch(runtime, /localStorage/);
+  assert.match(runtime, /ADBACKUP1/);
+  assert.match(runtime, /backup\.version/);
+  assert.match(runtime, /MIN_PASSPHRASE_LENGTH = 12/);
 });
 
 test("web UI exposes the complete manual pairing and sealed-envelope flow", () => {
@@ -200,6 +205,9 @@ test("two local profiles establish an Olm ratchet, persist it, and reject tamper
     }
   }
   assert.ok(deliveryProfile, "one peer must have no pending handshake control envelope");
+  globalThis.__AD_TEST_FAIL_NEXT_WRITE__ = true;
+  await assert.rejects(() => runtime.exportEnvelope("storage failure rollback"), /Injected browser storage write failure/);
+  assert.match(await runtime.exportEnvelope("after storage failure"), /^ADENVWEB3\./);
   let failedDelivery;
   try { await runtime.sendEnvelope("failed delivery"); } catch (error) { failedDelivery = error; }
   assert.match(failedDelivery.message, /could not accept/);

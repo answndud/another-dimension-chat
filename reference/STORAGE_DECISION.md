@@ -10,6 +10,11 @@ plaintext files, and the current spike must not be described as complete
 production key management, rollback protection, secure deletion, backup,
 recovery, or production E2EE readiness.
 
+The current web product uses passphrase-wrapped IndexedDB records. New profile
+key derivation uses Argon2id in a dedicated browser Worker; legacy PBKDF2
+records are migrated after unlock. The worker prevents the KDF from blocking
+the UI, but it does not protect an already compromised browser or device.
+
 ## Current State
 
 The repository currently has:
@@ -56,6 +61,11 @@ The repository does not currently have:
   export/import recovery, or prototype data migration behavior.
 - Production account recovery or key rotation.
 - Full production message persistence and rich local message index schema.
+
+The web backup format is `ADBACKUP1` with an explicit versioned wrapper and an
+AES-GCM protected stored profile. Import validates the wrapper, refuses
+overwrite, and does not claim secure deletion from browser storage, clipboard
+history, swap, crash dumps, or SSD media.
 
 ## Non-Negotiable Rules
 

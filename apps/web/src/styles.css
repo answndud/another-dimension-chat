@@ -23,6 +23,8 @@ h2 { margin: 0; font-size: 1rem; }
 label { display: grid; gap: 7px; color: #b2c7d2; font-size: .84rem; }
 .divider { height: 1px; background: #24465a; margin: 4px 0; }
 .small, .muted, .disclaimer { color: #91aab7; font-size: .82rem; line-height: 1.5; }
+.consent { display: flex; gap: .55rem; align-items: flex-start; font-size: .86rem; color: #91aab7; }
+.consent input { width: auto; margin-top: .2rem; }
 .notice { margin-top: 20px; padding: 12px 14px; border-radius: 10px; color: #c6e6d5; background: #102f2c; border: 1px solid #23524b; }
 .safety { border-color: #527f6d; background: linear-gradient(135deg, #12332e, #0c1f2e); }
 .safety strong { font-size: 1.35rem; color: #dff7e9; letter-spacing: .02em; }

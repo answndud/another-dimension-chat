@@ -19,12 +19,16 @@ const BACKUP_PREFIX = "ADBACKUP1.";
 const ENVELOPE_PREFIX = "ADENVWEB3.";
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
 const AUTO_LOCK_MS = 5 * 60 * 1000;
+const MIN_PASSPHRASE_LENGTH = 12;
 const MAX_ENVELOPE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const profileNames = [];
 let activeProfile = null;
 let localInfoCache = null;
 let lastActivityAt = 0;
+let argon2WorkerInstance = null;
+let argon2WorkerSequence = 0;
+const argon2WorkerRequests = new Map();
 
 const cryptoReady = (() => {
   if (globalThis.__AD_CRYPTO_WASM_BYTES__) {
@@ -62,6 +66,10 @@ async function read(storeName, key) {
 }
 
 async function write(storeName, value) {
+  if (globalThis.__AD_TEST_FAIL_NEXT_WRITE__ === true) {
+    delete globalThis.__AD_TEST_FAIL_NEXT_WRITE__;
+    throw new Error("Injected browser storage write failure.");
+  }
   const db = await openDb();
   try { return await request(db.transaction(storeName, "readwrite").objectStore(storeName), "put", value); } finally { db.close(); }
 }
@@ -131,11 +139,46 @@ export async function getLocalServerInfo() { return localServerInfo(); }
 
 async function wrappingKey(passphrase, salt, algorithm = "argon2id-v1") {
   if (algorithm === "argon2id-v1") {
-    const derived = argon2id_profile_key(String(passphrase), salt);
+    const derived = await deriveArgon2id(String(passphrase), salt);
     return crypto.subtle.importKey("raw", derived, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
   }
   const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 210_000, hash: "SHA-256" }, material, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+
+function deriveArgon2id(passphrase, salt) {
+  if (typeof Worker !== "function" || typeof URL !== "function" || String(globalThis.location?.protocol || "").startsWith("node")) {
+    return Promise.resolve(argon2id_profile_key(passphrase, salt));
+  }
+  if (!argon2WorkerInstance) {
+    argon2WorkerInstance = new Worker(new URL("./argon2-worker.js", import.meta.url), { type: "module" });
+    argon2WorkerInstance.onmessage = ({ data }) => {
+      const request = argon2WorkerRequests.get(data?.id);
+      if (!request) return;
+      argon2WorkerRequests.delete(data.id);
+      if (data.error) request.reject(new Error(data.error));
+      else request.resolve(new Uint8Array(data.key));
+    };
+    argon2WorkerInstance.onerror = () => {
+      for (const request of argon2WorkerRequests.values()) request.reject(new Error("Argon2id worker stopped."));
+      argon2WorkerRequests.clear();
+      argon2WorkerInstance?.terminate();
+      argon2WorkerInstance = null;
+    };
+  }
+  const id = ++argon2WorkerSequence;
+  return new Promise((resolve, reject) => {
+    argon2WorkerRequests.set(id, { resolve, reject });
+    const transferableSalt = new Uint8Array(salt);
+    argon2WorkerInstance.postMessage({ id, passphrase, salt: transferableSalt }, [transferableSalt.buffer]);
+  });
+}
+
+function stopArgon2Worker() {
+  argon2WorkerInstance?.terminate();
+  argon2WorkerInstance = null;
+  for (const request of argon2WorkerRequests.values()) request.reject(new Error("Profile session locked during key derivation."));
+  argon2WorkerRequests.clear();
 }
 
 async function sealWithKey(material, key, salt) {
@@ -176,6 +219,41 @@ function storedProfile(profile) {
   };
 }
 
+function capturePrivateState() {
+  if (!activeProfile) return null;
+  return {
+    privateMaterial: structuredClone(activeProfile.privateMaterial),
+    salt: activeProfile.salt,
+    iv: activeProfile.iv,
+    sealed: activeProfile.sealed,
+    kdf: activeProfile.kdf,
+    peer: structuredClone(activeProfile.peer),
+    selfInviteBody: structuredClone(activeProfile.selfInviteBody),
+    olmOneTimePublic: activeProfile.olmOneTimePublic,
+  };
+}
+
+function restorePrivateState(snapshot) {
+  if (!activeProfile || !snapshot) return;
+  activeProfile.privateMaterial = snapshot.privateMaterial;
+  activeProfile.salt = snapshot.salt;
+  activeProfile.iv = snapshot.iv;
+  activeProfile.sealed = snapshot.sealed;
+  activeProfile.kdf = snapshot.kdf;
+  activeProfile.peer = snapshot.peer;
+  activeProfile.selfInviteBody = snapshot.selfInviteBody;
+  activeProfile.olmOneTimePublic = snapshot.olmOneTimePublic;
+}
+
+async function rollbackPrivateState(snapshot) {
+  restorePrivateState(snapshot);
+  try {
+    await persistPrivateProfile();
+  } catch {
+    throw new Error("Local session persistence failed. Stop using this pairing and create a fresh profile.");
+  }
+}
+
 async function replenishPrekeys(minimum = 3) {
   const prekeys = activeProfile.privateMaterial.prekeys || [];
   activeProfile.privateMaterial.prekeys = prekeys;
@@ -199,9 +277,16 @@ async function consumeLocalPrekey(publicKey) {
 }
 
 async function persistPrivateProfile() {
-  const sealed = await sealWithKey(activeProfile.privateMaterial, activeProfile.wrappingKey, base64ToBytes(activeProfile.salt));
-  Object.assign(activeProfile, sealed);
-  await write("profiles", storedProfile(activeProfile));
+  const snapshot = capturePrivateState();
+  try {
+    const sealed = await sealWithKey(activeProfile.privateMaterial, activeProfile.wrappingKey, base64ToBytes(activeProfile.salt));
+    const record = storedProfile({ ...activeProfile, ...sealed });
+    await write("profiles", record);
+    Object.assign(activeProfile, sealed);
+  } catch (error) {
+    restorePrivateState(snapshot);
+    throw error;
+  }
 }
 
 async function persistPublicProfile() {
@@ -224,7 +309,7 @@ export async function createProfile(name, passphrase) {
   ensureCrypto();
   await cryptoReady;
   if (!/^[A-Za-z0-9_-]+$/.test(String(name)) || String(name).length > 48) throw new Error("Use letters, numbers, hyphen, or underscore for the profile name.");
-  if (String(passphrase).length < 10) throw new Error("Use a passphrase of at least 10 characters.");
+  if (String(passphrase).length < MIN_PASSPHRASE_LENGTH) throw new Error(`Use a passphrase of at least ${MIN_PASSPHRASE_LENGTH} characters.`);
   if (await read("profiles", name)) throw new Error("That local profile already exists.");
   const ecdsa = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
   const olm = JSON.parse(olm_account_new());
@@ -272,6 +357,7 @@ export async function unlockProfile(name, passphrase) {
     wrappingKey: profileWrappingKey,
     privateMaterial: material,
   };
+  localInfoCache = null;
   let migratedSession = false;
   if (activeProfile.privateMaterial.session && activeProfile.peer && !activeProfile.privateMaterial.session.peerIdentity) {
     activeProfile.privateMaterial.session.localIdentity = identityFingerprint(activeProfile.selfInviteBody || activeProfile);
@@ -289,7 +375,7 @@ export async function unlockProfile(name, passphrase) {
   return activeProfile;
 }
 
-export function lockProfile() { activeProfile = null; lastActivityAt = 0; }
+export function lockProfile() { stopArgon2Worker(); activeProfile = null; localInfoCache = null; lastActivityAt = 0; }
 
 export function touchActivity() {
   if (activeProfile) lastActivityAt = Date.now();
@@ -315,18 +401,36 @@ export async function deleteProfile(name, passphrase) {
   const index = profileNames.indexOf(name);
   if (index >= 0) profileNames.splice(index, 1);
   if (activeProfile?.name === name) lockProfile();
+  else localInfoCache = null;
 }
 
 export async function exportProfileBackup() {
   if (!activeProfile) throw new Error("Unlock a local profile first.");
-  return `${BACKUP_PREFIX}${encode(storedProfile(activeProfile))}`;
+  return `${BACKUP_PREFIX}${encode({ format: BACKUP_PREFIX.slice(0, -1), version: 1, createdAt: Date.now(), profile: storedProfile(activeProfile) })}`;
 }
 
 export async function importProfileBackup(value) {
   const text = String(value || "").trim();
   if (!text.startsWith(BACKUP_PREFIX)) throw new Error("This is not a valid encrypted profile backup.");
-  const record = decode(text.slice(BACKUP_PREFIX.length));
-  if (!record || typeof record.name !== "string" || !/^[A-Za-z0-9_-]+$/.test(record.name) || !record.salt || !record.iv || !record.sealed || !record.kdf) {
+  const decoded = decode(text.slice(BACKUP_PREFIX.length));
+  const backup = decoded?.profile ? decoded : { format: BACKUP_PREFIX.slice(0, -1), version: 0, createdAt: 0, profile: decoded };
+  const record = backup?.profile;
+  if (
+    !backup
+    || backup.format !== BACKUP_PREFIX.slice(0, -1)
+    || ![0, 1].includes(backup.version)
+    || !Number.isSafeInteger(backup.createdAt)
+    || backup.createdAt > Date.now() + MAX_CLOCK_SKEW_MS
+    || !record
+    || typeof record.name !== "string"
+    || !/^[A-Za-z0-9_-]+$/.test(record.name)
+    || record.name.length > 48
+    || !record.salt
+    || !record.iv
+    || !record.sealed
+    || !record.kdf
+    || !["argon2id-v1", "pbkdf2-v1"].includes(record.kdf)
+  ) {
     throw new Error("Profile backup metadata is invalid.");
   }
   if (await read("profiles", record.name)) throw new Error("That local profile already exists; refusing to overwrite it.");
@@ -575,6 +679,7 @@ export async function exportEnvelope(text, { record = true } = {}) {
   if (session?.status !== "ready") throw new Error("The Olm session is still establishing. Keep both rooms open or move the pending handshake envelope manually.");
   if (!session.safetyVerified) throw new Error("Compare the safety material with the peer and confirm it before sending messages.");
   if (session.pendingEnvelope) throw new Error("Deliver and confirm the final Olm handshake envelope before sending a message.");
+  const snapshot = capturePrivateState();
   let encrypted;
   try {
     encrypted = JSON.parse(olm_session_encrypt(session.sessionPickle, new TextEncoder().encode(message)));
@@ -582,13 +687,14 @@ export async function exportEnvelope(text, { record = true } = {}) {
     throw new Error("Olm message encryption failed. Pair again before sending.");
   }
   const result = await signedEnvelope("message", encrypted.message);
-  const previousPickle = session.sessionPickle;
   session.sessionPickle = encrypted.sessionPickle;
-  try { await persistPrivateProfile(); } catch (error) {
-    session.sessionPickle = previousPickle;
+  try {
+    await persistPrivateProfile();
+    if (record) await recordSentEnvelope(result, message);
+  } catch (error) {
+    await rollbackPrivateState(snapshot);
     throw error;
   }
-  if (record) await recordSentEnvelope(result, message);
   return result;
 }
 
@@ -672,6 +778,7 @@ async function verifiedEnvelope(value) {
 
 async function processHandshakeEnvelope(envelope) {
   const session = activeProfile.privateMaterial.session;
+  const snapshot = capturePrivateState();
   if (!session?.peerIdentity || session.peerIdentity !== identityFingerprint(activeProfile.peer)) throw new Error("Peer identity changed. Stop and establish a fresh verified session.");
   if (envelope.type === "olm-init") {
     if (session.role !== "responder" || session.status !== "waiting-init") throw new Error("Unexpected Olm init message.");
@@ -709,20 +816,32 @@ async function processHandshakeEnvelope(envelope) {
   } else {
     throw new Error("Unsupported Olm control envelope.");
   }
-  await persistPrivateProfile();
-  await flushPendingEnvelope().catch(() => false);
+  try {
+    await persistPrivateProfile();
+    await flushPendingEnvelope().catch(() => false);
+  } catch (error) {
+    await rollbackPrivateState(snapshot);
+    throw error;
+  }
 }
 
 export async function importEnvelope(value) {
   if (!activeProfile?.peer) throw new Error("Pair with a peer before importing.");
   const envelope = await verifiedEnvelope(value);
   if (envelope.type !== "message") {
-    await processHandshakeEnvelope(envelope);
-    await write("seen", { id: `${activeProfile.name}:${envelope.id}`, profile: activeProfile.name, createdAt: Date.now() });
+    const snapshot = capturePrivateState();
+    try {
+      await processHandshakeEnvelope(envelope);
+      await write("seen", { id: `${activeProfile.name}:${envelope.id}`, profile: activeProfile.name, createdAt: Date.now() });
+    } catch (error) {
+      await rollbackPrivateState(snapshot);
+      throw new Error(`Handshake transaction failed and was rolled back: ${error.message}`);
+    }
     return null;
   }
   const session = activeProfile.privateMaterial.session;
   if (session?.status !== "ready") throw new Error("Olm session is not ready.");
+  const snapshot = capturePrivateState();
   let decrypted;
   try {
     decrypted = JSON.parse(olm_session_decrypt(
@@ -735,9 +854,14 @@ export async function importEnvelope(value) {
   }
   const message = new TextDecoder().decode(base64ToBytes(decrypted.plaintext));
   session.sessionPickle = decrypted.sessionPickle;
-  await persistPrivateProfile();
-  await write("seen", { id: `${activeProfile.name}:${envelope.id}`, profile: activeProfile.name, createdAt: Date.now() });
-  await write("messages", { id: `${activeProfile.name}:${envelope.id}`, envelopeId: envelope.id, profile: activeProfile.name, direction: "received", text: message, createdAt: envelope.createdAt });
+  try {
+    await persistPrivateProfile();
+    await write("seen", { id: `${activeProfile.name}:${envelope.id}`, profile: activeProfile.name, createdAt: Date.now() });
+    await write("messages", { id: `${activeProfile.name}:${envelope.id}`, envelopeId: envelope.id, profile: activeProfile.name, direction: "received", text: message, createdAt: envelope.createdAt });
+  } catch (error) {
+    await rollbackPrivateState(snapshot);
+    throw error;
+  }
   return message;
 }
 

@@ -193,14 +193,16 @@ local/LAN HTTP mode는 capability와 metadata가 네트워크에 노출될 수 �
 출력하지 않고 `.another-dimension-server/local-ui-url` 파일(mode 600)에만
 기록합니다.
 
-profile private material은 Argon2id 기반 wrapping key로 IndexedDB에 저장됩니다.
+profile private material은 Argon2id 기반 wrapping key로 IndexedDB에 저장되며,
+Argon2id 계산은 별도 browser Worker에서 실행되어 화면을 멈추지 않습니다.
 기존 PBKDF2 profile은 올바른 passphrase로 처음 unlock할 때 Argon2id 형식으로
 자동 재포장됩니다. 5분 동안 입력이 없으면 브라우저 세션이 자동 잠기며, 화면의
 `Panic wipe`는 passphrase를 다시 확인한 뒤 해당 profile의 private material과
 로컬 transcript를 삭제합니다. 삭제 데이터는 복구되지 않으므로 실제 백업으로
 간주하지 마세요.
 
-`Encrypted profile backup`은 현재 passphrase로 감싼 profile record만 내보내며,
+`Encrypted profile backup`은 versioned `ADBACKUP1` wrapper 안에 현재 passphrase로
+감싼 profile record만 내보내며,
 복구 시 기존 profile을 덮어쓰지 않습니다. backup 문자열과 passphrase는 서로
 다른 장소에 보관하세요. 공개 채널·클라우드 메모·스크린샷에 올리지 마세요.
 이 기능은 메시지 transcript의 안전한 자동 cloud backup이 아닙니다.

@@ -107,6 +107,9 @@ release, add tests and evidence that prove:
 - Identity, prekey, endpoint, and capability rotation/revocation are explicit.
 - No high-risk mode is exposed while the app-code, metadata, and storage
   boundaries remain incomplete.
+- The browser protocol state contract is recorded in
+  `reference/PROTOCOL_STATE_MACHINE.md`; persistence failure must roll back the
+  in-memory ratchet and ambiguous state must require a fresh pairing.
 
 ## Open Questions
 

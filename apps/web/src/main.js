@@ -84,7 +84,7 @@ function render() {
           <form id="create-form" class="stack">
             <h2>Create local profile</h2>
             <label>Profile name<input name="name" required pattern="[A-Za-z0-9_-]+" autocomplete="off" /></label>
-            <label>Passphrase<input name="passphrase" required minlength="10" type="password" autocomplete="new-password" /></label>
+            <label>Passphrase<input name="passphrase" required minlength="12" type="password" autocomplete="new-password" /></label>
             <label class="consent"><input name="risk-ack" type="checkbox" required /> 현재 실험용 버전이며 민감한 정보·실명·취재원 정보를 입력하지 않겠습니다.</label>
             <button>Create profile</button>
           </form>
@@ -97,7 +97,7 @@ function render() {
           </form>
           <div class="card stack">
             <h2>Encrypted profile backup</h2>
-            <p class="small">Backups contain passphrase-wrapped local data. Keep the passphrase separate and never paste a backup into a public service.</p>
+            <p class="small">Backups contain passphrase-wrapped local data. Keep the passphrase separate, avoid clipboard history, and never paste a backup into a public service.</p>
             <textarea id="backup-import" rows="4" placeholder="Paste an ADBACKUP1 profile backup"></textarea>
             <button id="import-backup" class="secondary">Import encrypted backup</button>
           </div>
@@ -181,7 +181,7 @@ function bindRoom() {
     try { await deleteProfile(state.profile.name, passphrase); state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "Local profile data was wiped." }; render(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#export-backup")?.addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText(await exportProfileBackup()); state.notice = "Encrypted backup copied. Store it offline and keep the passphrase separate."; render(); } catch (error) { state.error = error.message; render(); }
+    try { await navigator.clipboard.writeText(await exportProfileBackup()); state.notice = "Encrypted backup copied. Clipboard history may retain it; move it to offline storage and keep the passphrase separate."; render(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#peer-invite")?.addEventListener("input", (event) => { state.peerInvite = event.currentTarget.value; });
   document.querySelector("#copy-invite")?.addEventListener("click", async () => { await navigator.clipboard.writeText(state.invite); state.notice = "Invite copied. Share it with the other person."; render(); });
