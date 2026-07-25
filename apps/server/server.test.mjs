@@ -147,7 +147,42 @@ test("local server validates its advertised public origin", async () => {
   assert.equal(info.body.externalSecure, true);
   assert.equal(info.body.listenerTls, false);
   assert.equal(info.body.networkScope, "non-loopback");
+  assert.equal(info.body.highRiskAllowed, false);
+  assert.equal(info.body.transportMode, "direct-https-low-risk");
   assert.match(info.body.inboxUrl, /^https:\/\/chat\.example\.test\/api\/v1\/inbox\//);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("trusted proxy mode requires a public origin and local control endpoints are rate limited", async () => {
+  await assert.rejects(() => createLocalServer({ trustProxy: true }), /requires an explicitly configured publicUrl/);
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({ port: 0, dataDir, publicUrl: "https://relay.example.test" });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  for (let index = 0; index < 30; index += 1) assert.equal((await call(port, "GET", "/api/v1/info", undefined, localHeaders(runtime))).status, 200);
+  assert.equal((await call(port, "GET", "/api/v1/info", undefined, localHeaders(runtime))).status, 429);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("relay rejects non-JSON envelope writes", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({ port: 0, dataDir });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
+  const response = await new Promise((resolve, reject) => {
+    const req = request({ host: "127.0.0.1", port, method: "POST", path: inboxPath, headers: { "content-type": "text/plain" } }, (res) => {
+      let text = "";
+      res.on("data", (chunk) => { text += chunk; });
+      res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(text) }));
+    });
+    req.on("error", reject);
+    req.end(JSON.stringify({ envelope: "ADENVWEB3.invalid-content-type" }));
+  });
+  assert.equal(response.status, 400);
+  assert.equal(response.body.error, "content_type_not_allowed");
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });

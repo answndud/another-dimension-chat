@@ -22,6 +22,12 @@ high-risk code. Trust must be established before the browser opens a profile:
 6. The user checks the release hash and public-key fingerprint through a
    separate trusted channel before entering a passphrase.
 
+Key rotation is explicit: a new trusted public key is distributed out of band,
+the old key ID is passed to the verifier with `--revoked-key-id`, and a release
+signed by that revoked ID is rejected even when its signature is mathematically
+valid. The release also carries `RELEASE-PROVENANCE.json`, `Cargo.lock`, and a
+CycloneDX SBOM covering NPM, Cargo, and the Node runtime.
+
 The user-owned relay is API-only by default. `serveStatic` and
 `AD_SERVE_UI=1` are development convenience modes and must never be presented
 as a high-risk release path.

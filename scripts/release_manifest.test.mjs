@@ -25,3 +25,11 @@ test('unsigned development manifests are rejected by the verified path', async (
   await assert.rejects(() => verifyManifest(root, { manifest, requireSignature: true }), /signed release required/);
   await assert.rejects(() => verifyManifest(root, { manifest, minVersion: '0.2.0' }), /older than the minimum/);
 });
+
+test('revoked signing key ids are rejected even when the signature is valid', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'another-dimension-manifest-'));
+  await writeFile(path.join(root, 'index.html'), 'signed\n');
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  const manifest = await createManifest(root, { version: '1.0.0', privateKey });
+  await assert.rejects(() => verifyManifest(root, { manifest, publicKey, requireSignature: true, revokedKeyIds: [manifest.signature.keyId] }), /signing key is revoked/);
+});

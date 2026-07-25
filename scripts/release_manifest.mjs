@@ -64,7 +64,7 @@ export async function writeManifest(root, options = {}) {
   return manifest;
 }
 
-export async function verifyManifest(root, { manifest = null, publicKey = null, requireSignature = false, minVersion = null } = {}) {
+export async function verifyManifest(root, { manifest = null, publicKey = null, requireSignature = false, minVersion = null, revokedKeyIds = [] } = {}) {
   const loaded = manifest ?? JSON.parse(await readFile(path.join(root, MANIFEST_NAME), 'utf8'));
   if (loaded.format !== 'another-dimension-release-manifest' || loaded.manifestVersion !== MANIFEST_VERSION) throw new Error('unsupported release manifest');
   if (minVersion && compareVersions(loaded.releaseVersion, minVersion) < 0) throw new Error(`release ${loaded.releaseVersion} is older than the minimum allowed ${minVersion}`);
@@ -88,6 +88,7 @@ export async function verifyManifest(root, { manifest = null, publicKey = null, 
     return { signed: false, releaseVersion: loaded.releaseVersion, fileCount: loaded.files.length };
   }
   if (signature.algorithm !== 'Ed25519' || typeof signature.value !== 'string' || typeof signature.keyId !== 'string') throw new Error('invalid release signature');
+  if (revokedKeyIds.includes(signature.keyId)) throw new Error(`release signing key is revoked: ${signature.keyId}`);
   const trustedKey = publicKey?.type === 'public' ? publicKey : createPublicKey(publicKey ?? signature.publicKey);
   const trustedKeyId = createHash('sha256').update(trustedKey.export({ type: 'spki', format: 'der' })).digest('hex').slice(0, 32);
   if (trustedKeyId !== signature.keyId) throw new Error('release signing key fingerprint mismatch');

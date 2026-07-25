@@ -158,6 +158,7 @@ export async function createLocalServer({
   const normalizedPublicUrl = normalizePublicUrl(publicUrl);
   if (typeof trustProxy !== "boolean") throw new Error("AD_TRUST_PROXY must be boolean.");
   if (typeof serveStatic !== "boolean") throw new Error("serveStatic must be boolean.");
+  if (trustProxy && !normalizedPublicUrl) throw new Error("trustProxy requires an explicitly configured publicUrl.");
   const allowedCorsOrigins = new Set([normalizedPublicUrl, ...corsOrigins].filter(Boolean));
   if (["0.0.0.0", "::"].includes(bindHost) && !normalizedPublicUrl) throw new Error("AD_PUBLIC_URL is required with a wildcard AD_BIND_HOST.");
   if (tlsKeyFile && normalizedPublicUrl.startsWith("http://")) throw new Error("AD_PUBLIC_URL must use HTTPS when direct TLS is enabled.");
@@ -234,6 +235,7 @@ export async function createLocalServer({
       return;
     }
     if (requestUrl.pathname === "/api/v1/info" && req.method === "GET") {
+      if (!consumeRateLimit(req, "local-info", 30)) { json(res, 429, { error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
       if (!hasLocalAccess(req, localAccessCapability)) {
         json(res, 403, { error: "local_access_required" }, headers);
         return;
@@ -246,6 +248,8 @@ export async function createLocalServer({
         externalSecure: publicOrigin.startsWith("https://"),
         listenerTls: Boolean(tlsKeyFile && tlsCertFile),
         serveStatic,
+        highRiskAllowed: false,
+        transportMode: publicOrigin.startsWith("https://") ? "direct-https-low-risk" : "local-or-http-low-risk",
         networkScope: isLoopbackHost(bindHost) ? "loopback" : "non-loopback",
         maxEnvelopeBytes: MAX_ENVELOPE_BYTES,
       }, headers);
@@ -254,6 +258,7 @@ export async function createLocalServer({
 
     const inboxPrefix = capabilityPath(inboxCapability);
     if (requestUrl.pathname === "/api/v1/inbox/rotate" && req.method === "POST") {
+      if (!consumeRateLimit(req, "local-rotate", 10)) { json(res, 429, { rotated: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
       if (!hasLocalAccess(req, localAccessCapability)) {
         json(res, 403, { rotated: false, error: "local_access_required" }, headers);
         return;
@@ -275,6 +280,7 @@ export async function createLocalServer({
     if (requestUrl.pathname === inboxPrefix && req.method === "POST") {
       if (!consumeRateLimit(req, "inbox-post", MAX_POSTS_PER_WINDOW)) { json(res, 429, { accepted: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
       try {
+        if (req.headers["content-type"] && !String(req.headers["content-type"]).toLowerCase().startsWith("application/json")) throw new Error("content_type_not_allowed");
         const body = JSON.parse(await readBody(req));
         const envelope = String(body?.envelope || "").trim();
         if (!/^ADENVWEB(?:1|2|3)\./.test(envelope) || Buffer.byteLength(envelope) > MAX_ENVELOPE_BYTES) throw new Error("invalid_envelope");
@@ -301,6 +307,7 @@ export async function createLocalServer({
         return;
       }
       try {
+        if (req.headers["content-type"] && !String(req.headers["content-type"]).toLowerCase().startsWith("application/json")) throw new Error("content_type_not_allowed");
         const body = JSON.parse(await readBody(req, 32 * 1024));
         if (!Array.isArray(body?.ids) || body.ids.length > MAX_INBOX_ITEMS) throw new Error("too_many_ids");
         const ids = new Set(body.ids.map(String));

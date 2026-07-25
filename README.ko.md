@@ -188,6 +188,9 @@ profile을 복제하면 이 보장이 깨질 수 있으므로 profile 백업·�
 | 악성 browser/server/proxy | JS/WASM 교체, 입력·화면·passphrase·복호화 전후 데이터 | 앱 암호화가 이미 장악된 실행 환경을 구해 주지 않음 |
 
 일반 HTTPS·VPN은 전송 경로 보호와 도달성 도구일 뿐 익명성 경로가 아닙니다.
+현재 web relay는 low-risk transport만 제공합니다. 원격 HTTP inbox는 capability와
+metadata 노출 위험 때문에 자동 연결에서 거부되며, Tor/onion 익명성이나 검열
+저항은 제공하지 않습니다.
 local/LAN HTTP mode는 capability와 metadata가 네트워크에 노출될 수 있으므로
 민감한 통신에 사용하지 마세요. 서버 시작 시 private UI URL 자체는 터미널에
 출력하지 않고 `.another-dimension-server/local-ui-url` 파일(mode 600)에만

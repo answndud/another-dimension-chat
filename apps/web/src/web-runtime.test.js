@@ -37,6 +37,7 @@ test("web runtime uses browser crypto and IndexedDB rather than preview storage"
   assert.doesNotMatch(runtime, /localStorage/);
   assert.match(runtime, /ADBACKUP1/);
   assert.match(runtime, /backup\.version/);
+  assert.match(runtime, /Remote relay endpoints require HTTPS/);
   assert.match(runtime, /MIN_PASSPHRASE_LENGTH = 12/);
 });
 
@@ -61,6 +62,7 @@ test("web UI exposes the complete manual pairing and sealed-envelope flow", () =
   assert.match(serviceWorker, /caches\.delete/);
   assert.match(serviceWorker, /another-dimension-web-v5-argon2/);
   assert.match(serviceWorker, /fetch\(event\.request\)/);
+  assert.doesNotMatch(serviceWorker, /skipWaiting/);
 });
 
 class MemoryIndexedDb {

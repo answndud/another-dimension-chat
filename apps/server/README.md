@@ -49,6 +49,8 @@ put an HTTPS reverse proxy in front of the HTTP server for LAN/VPN/public use:
 - `AD_TLS_KEY_FILE` and `AD_TLS_CERT_FILE` — optional paired PEM files for
   direct HTTPS termination. Prefer a maintained reverse proxy for public
   exposure; never commit or share these files.
+- `AD_TRUST_PROXY=1` — only enable behind a proxy that overwrites
+  `X-Forwarded-For`; it also requires an explicit `AD_PUBLIC_URL`.
 
 For development, `./scripts/generate_tls_cert.sh <host-or-ip>` creates a
 self-signed certificate. Install it in the browser device trust stores before
@@ -57,6 +59,9 @@ testing; do not use this certificate workflow as a production PKI.
 The inbox is bounded to 256 items and 96 KiB per envelope. Restart recovery is
 file-backed. The invite capability permits submission only; queue reads and
 acknowledgements additionally require the private local-access capability.
+Control and inbox operations have bounded in-memory rate limits and return
+explicit `429`/`queue_full` failures; this is abuse resistance, not a
+high-availability guarantee.
 Share invites only with the intended peer and rotate the data directory if
 either capability is exposed. Authentication, relay, port
 forwarding, and anonymity are not provided automatically. Plain HTTP remote

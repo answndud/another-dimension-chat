@@ -2,8 +2,9 @@ const CACHE = "another-dimension-web-v5-argon2";
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
+  // Do not take control of existing tabs until the browser completes a normal
+  // lifecycle. This prevents a failed update from replacing a working room.
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -22,7 +23,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          if (response.ok) caches.open(CACHE).then((cache) => cache.put("/", response.clone()));
+          if (response.ok && response.type !== "opaque") caches.open(CACHE).then((cache) => cache.put("/", response.clone()));
           return response;
         })
         .catch(() => caches.match("/")),
@@ -32,7 +33,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (response.ok) caches.open(CACHE).then((cache) => cache.put(event.request, response.clone()));
+        if (response.ok && response.type !== "opaque") caches.open(CACHE).then((cache) => cache.put(event.request, response.clone()));
         return response;
       })
       .catch(() => caches.match(event.request)),

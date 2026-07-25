@@ -7,11 +7,13 @@ if (!root) { console.error('Usage: verify_release_manifest.mjs RELEASE_ROOT [--r
 let requireSignature = false;
 let publicKey;
 let minVersion;
+const revokedKeyIds = [];
 for (let index = 0; index < args.length; index += 1) {
   if (args[index] === '--require-signature') requireSignature = true;
   else if (args[index] === '--public-key') publicKey = await readFile(args[++index], 'utf8');
   else if (args[index] === '--min-version') minVersion = args[++index];
+  else if (args[index] === '--revoked-key-id') revokedKeyIds.push(args[++index]);
   else throw new Error(`unknown argument: ${args[index]}`);
 }
-const result = await verifyManifest(root, { requireSignature, publicKey, minVersion });
+const result = await verifyManifest(root, { requireSignature, publicKey, minVersion, revokedKeyIds });
 console.log(`verified ${result.signed ? 'signed' : 'unsigned-development'} release ${result.releaseVersion}: ${result.fileCount} files${result.keyId ? ` (key ${result.keyId})` : ''}`);

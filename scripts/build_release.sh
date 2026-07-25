@@ -21,11 +21,15 @@ cp -R "$PROJECT_DIR/apps/web/dist" "$STAGE/another-dimension-$VERSION/apps/web/"
 cp "$PROJECT_DIR/apps/web/package.json" "$PROJECT_DIR/apps/web/package-lock.json" "$STAGE/another-dimension-$VERSION/apps/web/"
 cp "$PROJECT_DIR/scripts/start_local_server.sh" "$PROJECT_DIR/scripts/configure_local_server.mjs" "$PROJECT_DIR/scripts/preflight_local_server.mjs" "$PROJECT_DIR/scripts/generate_tls_cert.sh" "$PROJECT_DIR/scripts/check_https_endpoint.mjs" "$PROJECT_DIR/scripts/release_manifest.mjs" "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$PROJECT_DIR/scripts/verify_public_release_gate.mjs" "$STAGE/another-dimension-$VERSION/scripts/"
 cp "$PROJECT_DIR/README.md" "$PROJECT_DIR/README.ko.md" "$PROJECT_DIR/SECURITY.md" "$PROJECT_DIR/SUPPORT.md" "$STAGE/another-dimension-$VERSION/"
-node "$PROJECT_DIR/scripts/generate_sbom.mjs" "$STAGE/another-dimension-$VERSION/apps/web/package-lock.json" "$STAGE/another-dimension-$VERSION/SBOM.cyclonedx.json"
+cp "$PROJECT_DIR/Cargo.lock" "$STAGE/another-dimension-$VERSION/Cargo.lock"
+SOURCE_COMMIT=${AD_RELEASE_SOURCE_COMMIT:-$(git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || printf '%s' unknown)}
+node -e 'const fs=require("fs"); const [file, version, commit, epoch] = process.argv.slice(1); fs.writeFileSync(file, JSON.stringify({format:"another-dimension-release-provenance", version, sourceCommit:commit, node:process.version, sourceDateEpoch:Number(epoch)}, null, 2)+"\n")' "$STAGE/another-dimension-$VERSION/RELEASE-PROVENANCE.json" "$VERSION" "$SOURCE_COMMIT" "${AD_RELEASE_SOURCE_DATE_EPOCH:-0}"
+node "$PROJECT_DIR/scripts/generate_sbom.mjs" "$STAGE/another-dimension-$VERSION/apps/web/package-lock.json" "$STAGE/another-dimension-$VERSION/SBOM.cyclonedx.json" --cargo-lock "$PROJECT_DIR/Cargo.lock" --node-version "$(node --version)"
 chmod +x "$STAGE/another-dimension-$VERSION/scripts/start_local_server.sh" "$STAGE/another-dimension-$VERSION/scripts/configure_local_server.mjs" "$STAGE/another-dimension-$VERSION/scripts/generate_tls_cert.sh"
 
 MANIFEST_ARGS="--version $VERSION"
 VERIFY_ARGS=""
+if [ "${AD_RELEASE_PROFILE:-development}" = "public" ]; then AD_RELEASE_REQUIRE_SIGNATURE=1; fi
 if [ -n "${AD_RELEASE_SIGNING_KEY:-}" ]; then
   MANIFEST_ARGS="$MANIFEST_ARGS --private-key $AD_RELEASE_SIGNING_KEY"
 elif [ "${AD_RELEASE_REQUIRE_SIGNATURE:-0}" = "1" ]; then
@@ -34,6 +38,12 @@ elif [ "${AD_RELEASE_REQUIRE_SIGNATURE:-0}" = "1" ]; then
 fi
 if [ "${AD_RELEASE_REQUIRE_SIGNATURE:-0}" = "1" ]; then VERIFY_ARGS="--require-signature"; fi
 if [ -n "${AD_RELEASE_MIN_VERSION:-}" ]; then VERIFY_ARGS="$VERIFY_ARGS --min-version $AD_RELEASE_MIN_VERSION"; fi
+if [ -n "${AD_RELEASE_REVOKED_KEY_IDS:-}" ]; then
+  OLD_IFS=$IFS
+  IFS=,
+  for REVOKED_KEY_ID in $AD_RELEASE_REVOKED_KEY_IDS; do VERIFY_ARGS="$VERIFY_ARGS --revoked-key-id $REVOKED_KEY_ID"; done
+  IFS=$OLD_IFS
+fi
 # shellcheck disable=SC2086
 SOURCE_DATE_EPOCH="${AD_RELEASE_SOURCE_DATE_EPOCH:-0}" node "$PROJECT_DIR/scripts/create_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $MANIFEST_ARGS
 # Unsigned output is allowed only for local development; verified distribution requires a signature.
@@ -41,5 +51,7 @@ SOURCE_DATE_EPOCH="${AD_RELEASE_SOURCE_DATE_EPOCH:-0}" node "$PROJECT_DIR/script
 node "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $VERIFY_ARGS
 
 mkdir -p "$RELEASE_ROOT"
-tar -czf "$RELEASE_ROOT/another-dimension-$VERSION.tar.gz" -C "$STAGE" "another-dimension-$VERSION"
+RELEASE_MTIME=$(date -r "${AD_RELEASE_SOURCE_DATE_EPOCH:-0}" '+%Y%m%d%H%M.%S')
+find "$STAGE/another-dimension-$VERSION" -exec touch -t "$RELEASE_MTIME" {} +
+tar --options gzip:!timestamp -czf "$RELEASE_ROOT/another-dimension-$VERSION.tar.gz" -C "$STAGE" "another-dimension-$VERSION"
 printf '%s\n' "Created $RELEASE_ROOT/another-dimension-$VERSION.tar.gz"

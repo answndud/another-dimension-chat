@@ -64,7 +64,7 @@ function canAutoDeliver(info) {
 function localServerStatus(info) {
   if (!info) return "Manual envelope mode";
   const transport = info.externalSecure ? "HTTPS endpoint advertised" : info.networkScope === "loopback" ? "loopback only" : "development HTTP";
-  return `Local server connected · ${endpointOrigin(info)} · ${transport}`;
+  return `Local relay connected · ${endpointOrigin(info)} · ${transport} · high-risk mode unavailable`;
 }
 
 function browserStatus() {
@@ -118,6 +118,7 @@ function render() {
         <aside class="card stack">
           <div><span class="label">LOCAL PROFILE</span><strong>${escapeHtml(state.profile.name)}</strong><p class="small">${escapeHtml(localServerStatus(state.serverInfo))}</p></div>
           ${state.serverInfo && endpointWarning(state.serverInfo) ? `<p class="warning">${escapeHtml(endpointWarning(state.serverInfo))}</p>` : ""}
+          ${state.serverInfo && state.serverInfo.highRiskAllowed === false && state.serverInfo.externalSecure ? '<p class="warning">HTTPS protects the connection but does not hide IP, timing, endpoint, or traffic size. This is low-risk transport only; do not use it for journalist or life-safety communications.</p>' : ""}
           <div class="divider"></div>
           <h2>1. Share your invite</h2>
           <p class="small">This code contains public setup material only. Send it through any channel.</p>

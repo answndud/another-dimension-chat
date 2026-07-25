@@ -61,6 +61,9 @@ distribution remains a release blocker.
 - The browser can POST a sealed envelope to the peer endpoint in a signed invite
   and can GET/ack its own local inbox; endpoint reachability is a network
   configuration concern, not an identity or confidentiality guarantee.
+- The web direct-inbox path is explicitly low-risk transport. Remote HTTP
+  inboxes are rejected; HTTPS does not provide anonymity, traffic-shape hiding,
+  censorship resistance, or protection from endpoint observation.
 - Remote browser origins must use HTTPS (localhost is the development exception)
   because Web Crypto is unavailable in ordinary insecure HTTP contexts.
 - `AD_PUBLIC_URL` is only an advertised origin. HTTPS in that setting means the

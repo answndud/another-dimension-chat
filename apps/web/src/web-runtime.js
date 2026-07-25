@@ -111,6 +111,9 @@ function validInboxUrl(value) {
   if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.hash || !url.pathname.includes("/api/v1/inbox/")) {
     throw new Error("Server endpoint must be an HTTP(S) capability inbox URL.");
   }
+  if (url.protocol === "http:" && !["localhost", "127.0.0.1", "::1"].includes(url.hostname)) {
+    throw new Error("Remote relay endpoints require HTTPS; HTTP does not provide anonymity or safe capability transport.");
+  }
   return url.href;
 }
 

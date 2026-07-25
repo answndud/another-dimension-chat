@@ -20,6 +20,14 @@ lifecycle readiness.
 
 ## What Exists Today
 
+The browser web product currently uses user-owned direct inbox endpoints only.
+Those endpoints are a low-risk transport path, even when HTTPS is enabled:
+HTTPS protects the connection contents in transit but does not hide IP address,
+timing, endpoint, frequency, or ciphertext size. The web UI exposes no
+high-risk transport toggle and rejects remote HTTP inbox URLs. The high-risk
+onion-only policy below remains a fail-closed design boundary until a real,
+separately verified Tor/Arti adapter exists.
+
 - `TransportPolicy::high_risk_default()` allows only `TransportRoute::OnionService`.
 - `TransportPolicy::local_only()` allows only local/manual routes.
 - `TransportPolicy::low_risk_direct_allowed()` is the only policy that allows
