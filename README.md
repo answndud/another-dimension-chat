@@ -18,6 +18,33 @@
 > opt-in일 뿐입니다. static UI가 변조되면 암호화가 시작되기 전에 passphrase·평문·키가
 > 탈취될 수 있으므로, 별도로 검증한 signed release만 사용해야 합니다.
 
+## 사용자 설치 경로
+
+개발자가 아닌 사용자는 소스 저장소, npm, Vite를 설치하지 않습니다. 공개 release는
+`runtime/node`를 포함한 signed archive여야 하며, 별도로 전달받은 공개키로
+`release-manifest.json`, SBOM, provenance와 파일 hash를 먼저 검증합니다. 검증된
+release 디렉터리에서 다음 설치기를 실행하면 private data directory와 owner-only
+권한의 `start`, `stop`, `restart`, `status`, `uninstall` 명령이 만들어집니다.
+
+```sh
+./scripts/install_local_server.sh --archive ./another-dimension-0.1.0
+~/.local/share/another-dimension/server/another-dimension-server start
+```
+
+현재 저장소에서 만드는 development archive에는 bundled runtime이 없을 수 있으므로
+설치기가 이를 감지해 중단합니다. `AD_RELEASE_PROFILE=public` release는
+`AD_NODE_RUNTIME=/secure/node`를 요구하며, 이 값이 없으면 생성되지 않습니다.
+따라서 Node/npm 설치를 요구하는 source flow를 일반 사용자 설치 방법으로 안내하지
+않습니다. data directory는 uninstall 때도 자동 삭제하지 않습니다.
+
+릴리스 공개 전 필수 조건은 signed manifest, 공개키 fingerprint의 독립 전달, SBOM,
+provenance, archive hash, 그리고 다음 자동 gate입니다.
+
+```sh
+./scripts/verify_all.sh
+node scripts/acceptance_p3.mjs
+```
+
 ## 1. 가장 먼저 이해할 구조
 
 이 앱은 다음 세 부분으로 구성됩니다.

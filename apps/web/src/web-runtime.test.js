@@ -43,14 +43,14 @@ test("web runtime uses browser crypto and IndexedDB rather than preview storage"
 
 test("web UI exposes the complete manual pairing and sealed-envelope flow", () => {
   for (const text of [
-    "Create local profile",
-    "Unlock existing profile",
-    "Share your invite",
-    "Pair and verify",
-    "Safety material",
-    "Encrypt and export envelope",
-    "Import and decrypt",
-    "Conversation",
+    "로컬 프로필 만들기",
+    "기존 프로필 잠금 해제",
+    "초대 공유",
+    "초대 확인 후 페어링",
+    "안전 문구",
+    "암호화 봉투 내보내기",
+    "가져와 복호화",
+    "대화",
   ]) assert.match(ui, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), text === "Safety material" ? "i" : ""));
   assert.doesNotMatch(ui, /browser-preview-tauri/);
   assert.doesNotMatch(ui, /production_onion/);

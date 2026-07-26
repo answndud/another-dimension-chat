@@ -26,6 +26,35 @@ legacy/native prototype으로 보존되어 있지만 현재 web 제품의 releas
 > opt-in입니다. static UI가 변조되면 암호화 전에 passphrase·평문·key가 탈취될
 > 수 있으므로 별도로 검증한 signed release만 사용해야 합니다.
 
+## 개발 도구 없는 사용자 설치
+
+일반 사용자는 Node.js, npm, Vite, 터미널 개발 환경을 설치하지 않는 것이 기본입니다.
+운영 배포물은 반드시 `runtime/node`를 포함한 signed archive여야 합니다. 공개키를
+별도 신뢰 경로로 확인한 뒤 manifest·SBOM·provenance·파일 hash를 검증하고, archive
+안의 설치기를 실행합니다.
+
+```sh
+./scripts/install_local_server.sh --archive ./another-dimension-0.1.0
+~/.local/share/another-dimension/server/another-dimension-server start
+```
+
+설치기는 private data directory(권한 700), 설정 파일(권한 600), 그리고
+`start|stop|restart|status|uninstall` 명령을 만듭니다. `uninstall`은 사용자 데이터까지
+자동 삭제하지 않습니다. 데이터가 필요한지 확인한 뒤 별도로 폐기하세요.
+
+현재 저장소의 development archive는 bundled runtime이 없을 수 있습니다. 그런
+archive는 설치기가 명확히 거부하며 일반 사용자용 배포물로 취급하면 안 됩니다.
+`AD_RELEASE_PROFILE=public`은 `AD_NODE_RUNTIME=/secure/node`가 없으면 실패합니다.
+즉 Node/npm이 없는 깨끗한 기기에서도 설치·실행할 수 있는 공개 release가 준비되기
+전에는 이 프로젝트를 민감한 통신에 사용하지 마세요.
+
+릴리스 전 자동 검증은 저장소 루트에서 다음처럼 실행합니다.
+
+```sh
+./scripts/verify_all.sh
+node scripts/acceptance_p3.mjs
+```
+
 ## 현재 웹 prototype에서 동작하는 것
 
 - passphrase를 사용하는 로컬 브라우저 프로필 생성·unlock
