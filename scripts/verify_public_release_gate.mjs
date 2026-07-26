@@ -16,7 +16,15 @@ for (let index = 0; index < args.length; index += 1) {
   else throw new Error(`unknown argument: ${args[index]}`);
 }
 if (!publicKey) throw new Error("A trusted public key is required for the public release gate.");
-const required = ["README.md", "README.ko.md", "SECURITY.md", "SBOM.cyclonedx.json", "RELEASE-PROVENANCE.json", "release-manifest.json"];
+const required = ["README.md", "README.ko.md", "SECURITY.md", "SBOM.cyclonedx.json", "RELEASE-PROVENANCE.json", "release-manifest.json", "reference/PRODUCT_BOUNDARY.md"];
 for (const file of required) await access(path.join(root, file), constants.R_OK);
+for (const legacy of ["apps/desktop-tauri", "apps/cli", "apps/engine", "crates/transport"]) {
+  try {
+    await access(path.join(root, legacy), constants.R_OK);
+    throw new Error(`legacy product surface is present in public release: ${legacy}`);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+}
 const result = await verifyManifest(root, { publicKey, requireSignature: true, minVersion, revokedKeyIds });
 console.log(`public release gate passed: signed ${result.releaseVersion}, ${result.fileCount} files, key ${result.keyId}`);

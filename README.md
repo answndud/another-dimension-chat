@@ -85,8 +85,9 @@ Olm 초기화 봉투 자동 교환
 
 현재 제품 경계는 `apps/web` 브라우저 UI와 `apps/server` 사용자 소유 relay입니다.
 `apps/desktop-tauri`, `apps/cli`, `apps/engine` 및 기존 Rust native crates는
-legacy/native prototype으로 보존되어 있지만 현재 웹 제품의 release나 보안
-준비도 증거가 아닙니다.
+legacy/research source로만 보존됩니다. 현재 웹 제품의 release·설치·보안 준비도
+증거가 아니며 공식 사용자는 이 경로를 선택하면 안 됩니다. 정확한 경계는
+[`reference/PRODUCT_BOUNDARY.md`](reference/PRODUCT_BOUNDARY.md)에 있습니다.
 
 ## 2. 준비물
 

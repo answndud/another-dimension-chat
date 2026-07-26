@@ -7,6 +7,9 @@ const checks = [
   ["SECURITY.md", "not audited"],
   ["SECURITY.md", "Remote browser origins must use HTTPS"],
   ["SUPPORT.md", "절대 공개하지 마세요"],
+  ["reference/PRODUCT_BOUNDARY.md", "verified browser UI bundle"],
+  ["reference/SECURITY_REQUIREMENTS.md", "RELEASE-01"],
+  ["reference/CRYPTO_REVIEW_PACKET.md", "INV-01"],
 ];
 const failures = [];
 for (const [file, text] of checks) {

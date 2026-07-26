@@ -13,8 +13,9 @@
 `apps/server` 사용자 소유 relay입니다. relay가 UI를 함께 제공하는 모드는
 개발용 opt-in입니다.
 `apps/desktop-tauri`, `apps/cli`, `apps/engine` 및 기존 Rust native crates는
-legacy/native prototype으로 보존되어 있지만 현재 web 제품의 release나 보안
-준비도 증거가 아닙니다.
+legacy/research source로만 보존됩니다. 현재 web 제품의 release·설치·보안 준비도
+증거가 아니며 공식 사용자는 이 경로를 선택하면 안 됩니다. 정확한 경계는
+[`reference/PRODUCT_BOUNDARY.md`](reference/PRODUCT_BOUNDARY.md)에 있습니다.
 
 > **현재 상태:** web-first 실험용 prototype. 감사되지 않았고,
 > production-ready가 아니며, 민감한 통신에 사용하면 안 됩니다. 각 사용자가
@@ -87,8 +88,8 @@ npm --prefix apps/web run dev --workspaces=false
 ```
 
 Vite가 출력하는 로컬 URL을 엽니다. 브라우저 제품은 `apps/web`에 있고,
-local server 제품은 `apps/server`에 있으며, Tauri 패키지는 선택적인 desktop
-wrapper입니다.
+local server 제품은 `apps/server`에 있습니다. Tauri/CLI/engine은 공식 web 제품의
+대체 실행 경로가 아닙니다.
 
 생성된 cryptography WebAssembly module은 commit되므로 일반 release build는 Rust를
 다시 compile하지 않습니다. `crates/crypto` 또는 `crates/web-crypto-wasm`을

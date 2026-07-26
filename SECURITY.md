@@ -8,8 +8,9 @@ not for sensitive communication.
 
 The current direction is a user-owned local server plus a browser UI. No
 ChatGPT Sites project or central message host is required by the product. The
-Tauri desktop target is a secondary development wrapper, not the current
-product distribution boundary.
+Tauri, CLI, engine, and native transport targets are legacy/research source,
+not alternative clients or evidence for the supported web product. The current
+product boundary is recorded in `reference/PRODUCT_BOUNDARY.md`.
 
 The current relay defaults to API-only mode and does not serve the browser UI.
 An explicit `serveStatic`/`AD_SERVE_UI=1` development mode still exists for local
@@ -85,6 +86,10 @@ distribution remains a release blocker.
   activation, and prefers fresh successful network responses for static UI
   assets. This reduces stale-cache rollback risk but is not a cryptographic
   substitute for independently verified signed releases.
+
+The executable security requirement register is in
+`reference/SECURITY_REQUIREMENTS.md`. The application crypto review input is in
+`reference/CRYPTO_REVIEW_PACKET.md`; neither document is an audit report.
 
 These are implementation behaviors, not proof of secure messenger readiness.
 
