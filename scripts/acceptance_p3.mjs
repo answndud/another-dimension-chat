@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 
 const root = join(tmpdir(), `another-dimension-acceptance-${process.pid}`);
 await mkdir(root, { recursive: true });
+const releaseMode = process.argv.includes("--release");
 const commands = [
   ["server", process.execPath, ["--test", "apps/server/server.test.mjs"]],
   ["web-runtime", process.execPath, ["--test", "apps/web/src/web-runtime.test.js"]],
@@ -20,9 +21,13 @@ const run = (name, command, args) => new Promise((resolve, reject) => {
   child.on("exit", (code, signal) => { clearTimeout(timer); code === 0 ? resolve() : reject(new Error(`${name} failed (${code ?? signal})`)); });
 });
 try {
+  if (releaseMode) {
+    await access("apps/web/node_modules/.bin/vite", constants.X_OK);
+    await run("production-build", process.env.npm_execpath || "npm", ["--prefix", "apps/web", "run", "build", "--workspaces=false"]);
+  }
   for (const [name, command, args] of commands) await run(name, command, args);
   await access("apps/web/src/generated/ad_crypto_bg.wasm", constants.R_OK);
-  await writeFile(join(root, "acceptance.json"), JSON.stringify({ format: "another-dimension-p3-acceptance", status: "passed", checks: commands.map(([name]) => name), wasmFreshness: "committed-module-present" }, null, 2));
+  await writeFile(join(root, "acceptance.json"), JSON.stringify({ format: "another-dimension-p3-acceptance", status: "passed", mode: releaseMode ? "release" : "focused", checks: [ ...(releaseMode ? ["production-build"] : []), ...commands.map(([name]) => name) ], wasmFreshness: "committed-module-present" }, null, 2));
   console.log(`P3 automated acceptance passed; artifact: ${join(root, "acceptance.json")}`);
 } finally {
   // Keep the artifact for inspection; it is in the OS temp directory, never in the repository.

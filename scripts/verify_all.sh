@@ -4,6 +4,8 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT"
 export CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2}
+MODE=focused
+if [ "${1:-}" = "--release" ]; then MODE=release; elif [ "${1:-}" = "--focused" ] || [ -z "${1:-}" ]; then :; else echo "사용법: $0 [--focused|--release]" >&2; exit 2; fi
 echo "[1/8] shell and JavaScript syntax"
 bash -n scripts/*.sh
 node --check scripts/generate_sbom.mjs
@@ -23,10 +25,16 @@ node --test scripts/release_manifest.test.mjs
 echo "[7/8] public claim boundary"
 node scripts/verify_docs_claims.mjs
 echo "[8/8] production build (only when dependencies are present)"
-if [ -x apps/web/node_modules/.bin/vite ]; then
+if [ "$MODE" = release ]; then
+  if [ ! -x apps/web/node_modules/.bin/vite ]; then
+    echo "release gate requires installed web dependencies; production build cannot be skipped" >&2
+    exit 1
+  fi
+  npm --prefix apps/web run build --workspaces=false
+elif [ -x apps/web/node_modules/.bin/vite ]; then
   npm --prefix apps/web run build --workspaces=false
 else
   echo "production build skipped: apps/web/node_modules is absent; run npm ci before release verification" >&2
 fi
 git diff --check
-echo "verify_all passed (focused local gate)"
+echo "verify_all passed ($MODE local gate)"
