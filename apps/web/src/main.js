@@ -83,12 +83,22 @@ function explainError(value) {
   return `원인: ${message} 조치: ${action} 보안 영향: 이 작업은 완료되지 않았습니다. 확인 전에는 메시지를 보내지 마세요.`;
 }
 
+function onboardingStep() {
+  if (!state.profile) return "1/6 · 프로필을 만들거나 잠금 해제하세요.";
+  if (!state.peer) return "2/6 · 상대방의 초대를 안전하게 추가하세요.";
+  if (!isSafetyVerified()) return "3/6 · 별도 신뢰 채널에서 안전 문구 전체를 비교하세요.";
+  if (state.sessionStatus !== "ready" || state.pendingHandshake) return "4/6 · Olm handshake 봉투를 전달하고 완료를 확인하세요.";
+  if (!state.messages.length) return "5/6 · 첫 메시지를 암호화해 보내세요.";
+  return "6/6 · 대화 중입니다. 잠금·백업·긴급 삭제 한계를 확인하세요.";
+}
+
 function render() {
   if (!state.profile) {
     app.innerHTML = `
       <section class="shell narrow">
         <div class="eyebrow">ANOTHER DIMENSION</div>
         <h1>브라우저 안의 개인 암호화 방</h1>
+        <p class="step">${escapeHtml(onboardingStep())}</p>
         <p class="lede">계정과 중앙 메시지 서버가 없습니다. 로컬 프로필을 만들고 공개 초대를 교환한 뒤, 암호화 봉투를 원하는 경로로 전달합니다.</p>
         <div class="notice">${escapeHtml(browserStatus())}</div>
         <div class="card grid-two">
@@ -124,6 +134,7 @@ function render() {
   app.innerHTML = `
     <section class="shell">
       <header class="topbar"><div><div class="eyebrow">ANOTHER DIMENSION</div><h1>로컬 암호화 방</h1></div><div class="row-between"><button id="export-backup" class="ghost">암호화 백업 복사</button><button id="panic-wipe" class="ghost">긴급 삭제</button><button id="lock" class="ghost">${escapeHtml(state.profile.name)} 잠그기</button></div></header>
+      <p class="step">${escapeHtml(onboardingStep())}</p>
       <div class="notice">${escapeHtml(state.notice || (state.serverInfo ? "로컬 relay가 연결되었습니다. 서버는 암호화된 봉투만 처리합니다." : "수동 봉투 모드입니다. 민감한 정보는 입력하지 마세요."))}</div>
       <div class="layout">
         <aside class="card stack">

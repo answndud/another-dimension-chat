@@ -41,10 +41,11 @@ if [ ! -x "$archive/runtime/node" ]; then
   echo "이 release는 runtime/node를 포함하지 않습니다. 소스 개발 아카이브는 일반 사용자 설치물로 사용할 수 없습니다." >&2
   exit 1
 fi
-verify_args="--require-signature --public-key $public_key"
-[ -n "$min_version" ] && verify_args="$verify_args --min-version $min_version"
-# shellcheck disable=SC2086
-"$archive/runtime/node" "$archive/scripts/verify_release_manifest.mjs" "$archive" $verify_args >/dev/null
+if [ -n "$min_version" ]; then
+  "$archive/runtime/node" "$archive/scripts/verify_public_release_gate.mjs" "$archive" --public-key "$public_key" --min-version "$min_version" >/dev/null
+else
+  "$archive/runtime/node" "$archive/scripts/verify_public_release_gate.mjs" "$archive" --public-key "$public_key" >/dev/null
+fi
 
 umask 077
 mkdir -p "$destination" "$data_dir"
@@ -56,9 +57,7 @@ for item in apps scripts README.md README.ko.md SECURITY.md SUPPORT.md RELEASE-P
 done
 cp "$archive/runtime/node" "$destination/runtime-node"
 chmod 700 "$destination/runtime-node"
-cat > "$destination/server-config.json" <<EOF
-{"dataDir":"$data_dir","bindHost":"127.0.0.1","port":1422}
-EOF
+"$archive/runtime/node" -e 'const fs=require("node:fs"); const [file,dataDir,distDir]=process.argv.slice(1); fs.writeFileSync(file, JSON.stringify({dataDir,distDir,serveStatic:true,bindHost:"127.0.0.1",port:1422})+"\n")' "$destination/server-config.json" "$data_dir" "$destination/apps/web/dist"
 chmod 600 "$destination/server-config.json"
 
 cat > "$destination/another-dimension-server" <<EOF
@@ -75,10 +74,17 @@ case "\${1:-start}" in
   stop)
     if [ -f "\$PIDFILE" ]; then kill "\$(cat "\$PIDFILE")" 2>/dev/null || true; rm -f "\$PIDFILE"; fi; echo "stopped" ;;
   restart) "\$0" stop; "\$0" start ;;
+  open-ui)
+    URL_FILE="${data_dir}/local-ui-url"
+    if [ ! -r "\$URL_FILE" ]; then echo "private UI URL is not available; start the server first" >&2; exit 1; fi
+    URL=\$(cat "\$URL_FILE")
+    if command -v open >/dev/null 2>&1; then open "\$URL"
+    elif command -v xdg-open >/dev/null 2>&1; then xdg-open "\$URL"
+    else echo "브라우저에서 다음 private UI URL을 여세요: \$URL"; fi ;;
   status)
     if [ -f "\$PIDFILE" ] && kill -0 "\$(cat "\$PIDFILE")" 2>/dev/null; then echo "running pid=\$(cat "\$PIDFILE")"; else echo "stopped"; exit 1; fi ;;
   uninstall) "\$0" stop; rm -rf "\$ROOT"; echo "server installation removed; data directory retained: $data_dir" ;;
-  *) echo "사용법: \$0 {start|stop|restart|status|uninstall}" >&2; exit 2 ;;
+  *) echo "사용법: \$0 {start|open-ui|stop|restart|status|uninstall}" >&2; exit 2 ;;
 esac
 EOF
 chmod 700 "$destination/another-dimension-server"

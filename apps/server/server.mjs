@@ -35,6 +35,9 @@ function securityHeaders({ api = false, hsts = false } = {}) {
   return {
     "cache-control": api ? "no-store" : "no-cache",
     "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    "cross-origin-opener-policy": "same-origin",
+    "cross-origin-resource-policy": "same-origin",
+    "form-action": "'self'",
     "permissions-policy": "camera=(), microphone=(), geolocation=()",
     "referrer-policy": "no-referrer",
     "x-content-type-options": "nosniff",
@@ -53,6 +56,11 @@ function corsHeaders(req, allowedOrigins, options = {}) {
     headers.vary = "Origin";
   }
   return headers;
+}
+
+function hasJsonContentType(req) {
+  return typeof req.headers["content-type"] === "string"
+    && req.headers["content-type"].toLowerCase().startsWith("application/json");
 }
 
 function parseOrigins(value) {
@@ -280,7 +288,7 @@ export async function createLocalServer({
     if (requestUrl.pathname === inboxPrefix && req.method === "POST") {
       if (!consumeRateLimit(req, "inbox-post", MAX_POSTS_PER_WINDOW)) { json(res, 429, { accepted: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
       try {
-        if (req.headers["content-type"] && !String(req.headers["content-type"]).toLowerCase().startsWith("application/json")) throw new Error("content_type_not_allowed");
+        if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
         const body = JSON.parse(await readBody(req));
         const envelope = String(body?.envelope || "").trim();
         if (!/^ADENVWEB(?:1|2|3)\./.test(envelope) || Buffer.byteLength(envelope) > MAX_ENVELOPE_BYTES) throw new Error("invalid_envelope");
@@ -307,7 +315,7 @@ export async function createLocalServer({
         return;
       }
       try {
-        if (req.headers["content-type"] && !String(req.headers["content-type"]).toLowerCase().startsWith("application/json")) throw new Error("content_type_not_allowed");
+        if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
         const body = JSON.parse(await readBody(req, 32 * 1024));
         if (!Array.isArray(body?.ids) || body.ids.length > MAX_INBOX_ITEMS) throw new Error("too_many_ids");
         const ids = new Set(body.ids.map(String));
@@ -332,9 +340,15 @@ export async function createLocalServer({
     } catch { json(res, 500, { error: "web_dist_unavailable" }); }
   };
 
+  const serverOptions = {
+    requestTimeout: 15_000,
+    headersTimeout: 10_000,
+    keepAliveTimeout: 5_000,
+    maxHeaderSize: 16 * 1024,
+  };
   const server = tlsKeyFile && tlsCertFile
-    ? createHttpsServer({ key: await readFile(tlsKeyFile), cert: await readFile(tlsCertFile) }, handleRequest)
-    : createServer(handleRequest);
+    ? createHttpsServer({ ...serverOptions, key: await readFile(tlsKeyFile), cert: await readFile(tlsCertFile) }, handleRequest)
+    : createServer({ ...serverOptions }, handleRequest);
 
   const localHost = ["0.0.0.0", "::"].includes(bindHost) ? "127.0.0.1" : bindHost;
   const localUiOrigin = tlsKeyFile && normalizedPublicUrl

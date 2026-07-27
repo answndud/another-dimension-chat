@@ -98,6 +98,9 @@ test("server applies security headers and rejects unlisted cross-origin API call
   assert.equal(health.status, 200);
   assert.equal(health.headers["access-control-allow-origin"], "https://peer.example.test");
   assert.equal(health.headers["x-content-type-options"], "nosniff");
+  assert.equal(health.headers["cross-origin-opener-policy"], "same-origin");
+  assert.equal(health.headers["cross-origin-resource-policy"], "same-origin");
+  assert.equal(health.headers["form-action"], "'self'");
   assert.equal(health.headers["strict-transport-security"], "max-age=31536000");
   const denied = await call(port, "GET", "/api/v1/health", undefined, { origin: "https://unexpected.example.test" });
   assert.equal(denied.status, 403);
@@ -183,6 +186,38 @@ test("relay rejects non-JSON envelope writes", async () => {
   });
   assert.equal(response.status, 400);
   assert.equal(response.body.error, "content_type_not_allowed");
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("relay requires JSON content type for envelope and acknowledgement writes", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({ port: 0, dataDir });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
+  const response = await new Promise((resolve, reject) => {
+    const req = request({ host: "127.0.0.1", port, method: "POST", path: inboxPath }, (res) => {
+      let text = "";
+      res.on("data", (chunk) => { text += chunk; });
+      res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(text) }));
+    });
+    req.on("error", reject);
+    req.end(JSON.stringify({ envelope: "ADENVWEB3.missing-content-type" }));
+  });
+  assert.equal(response.status, 400);
+  assert.equal(response.body.error, "content_type_not_allowed");
+  const ack = await new Promise((resolve, reject) => {
+    const req = request({ host: "127.0.0.1", port, method: "POST", path: `${inboxPath}/ack`, headers: localHeaders(runtime) }, (res) => {
+      let text = "";
+      res.on("data", (chunk) => { text += chunk; });
+      res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(text) }));
+    });
+    req.on("error", reject);
+    req.end(JSON.stringify({ ids: [] }));
+  });
+  assert.equal(ack.status, 400);
+  assert.equal(ack.body.error, "content_type_not_allowed");
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });

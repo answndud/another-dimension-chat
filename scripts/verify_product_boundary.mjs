@@ -26,7 +26,7 @@ if (release) {
   await walk(release);
   const leaked = entries.filter((file) => forbidden.some((prefix) => file === prefix || file.startsWith(`${prefix}${path.sep}`)));
   if (leaked.length) throw new Error(`legacy product files leaked into release: ${leaked.join(", ")}`);
-  for (const file of ["apps/web/index.html", "apps/server/server.mjs", "reference/PRODUCT_BOUNDARY.md", "SECURITY.md"]) {
+  for (const file of ["apps/web/dist/index.html", "apps/server/server.mjs", "reference/PRODUCT_BOUNDARY.md", "SECURITY.md"]) {
     await access(path.join(release, file), constants.R_OK);
   }
   console.log(`product boundary passed: ${entries.length} release files, no legacy surface`);

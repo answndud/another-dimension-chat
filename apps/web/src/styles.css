@@ -16,6 +16,7 @@ textarea { resize: vertical; line-height: 1.4; }
 h1 { margin: .35rem 0 0; font-size: clamp(2rem, 5vw, 4.5rem); line-height: .98; letter-spacing: -.055em; }
 h2 { margin: 0; font-size: 1rem; }
 .lede { max-width: 620px; color: #b2c7d2; font-size: 1.1rem; line-height: 1.6; margin: 22px 0 30px; }
+.step { margin: .35rem 0 1rem; color: #a6e3c6; font-weight: 750; line-height: 1.5; }
 .card { background: rgba(12, 31, 46, .87); border: 1px solid #24465a; border-radius: 16px; padding: 20px; box-shadow: 0 16px 60px rgba(0,0,0,.18); }
 .grid-two, .layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .layout { grid-template-columns: minmax(260px, .75fr) minmax(0, 1.25fr); align-items: start; margin-top: 24px; }

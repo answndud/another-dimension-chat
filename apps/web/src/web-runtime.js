@@ -216,8 +216,6 @@ function storedProfile(profile) {
     iv: profile.iv,
     sealed: profile.sealed,
     kdf: profile.kdf || "pbkdf2-v1",
-    peer: profile.peer || null,
-    selfInviteBody: profile.selfInviteBody || null,
     createdAt: profile.createdAt,
   };
 }
@@ -282,18 +280,21 @@ async function consumeLocalPrekey(publicKey) {
 async function persistPrivateProfile() {
   const snapshot = capturePrivateState();
   try {
-    const sealed = await sealWithKey(activeProfile.privateMaterial, activeProfile.wrappingKey, base64ToBytes(activeProfile.salt));
+    const privateMaterial = {
+      ...activeProfile.privateMaterial,
+      peer: structuredClone(activeProfile.peer),
+      selfInviteBody: structuredClone(activeProfile.selfInviteBody),
+      olmOneTimePublic: activeProfile.olmOneTimePublic,
+    };
+    const sealed = await sealWithKey(privateMaterial, activeProfile.wrappingKey, base64ToBytes(activeProfile.salt));
     const record = storedProfile({ ...activeProfile, ...sealed });
     await write("profiles", record);
+    activeProfile.privateMaterial = privateMaterial;
     Object.assign(activeProfile, sealed);
   } catch (error) {
     restorePrivateState(snapshot);
     throw error;
   }
-}
-
-async function persistPublicProfile() {
-  await write("profiles", storedProfile(activeProfile));
 }
 
 function ensureCrypto() {
@@ -322,6 +323,9 @@ export async function createProfile(name, passphrase) {
     olmAccountPickle: olm.accountPickle,
     prekeys: (olm.oneTimePublicKeys || []).map((publicKey) => ({ public: publicKey, state: "available", issuedAt: null })),
     session: null,
+    peer: null,
+    selfInviteBody: null,
+    olmOneTimePublic: "",
   };
   const { wrappingKey: profileWrappingKey, ...sealed } = await sealPrivateMaterial(privateMaterial, passphrase);
   const record = {
@@ -354,8 +358,17 @@ export async function unlockProfile(name, passphrase) {
   if (!record) throw new Error("Local profile not found.");
   const { material, wrappingKey: profileWrappingKey } = await openPrivateMaterial(record, passphrase);
   const ecdsaPrivate = await crypto.subtle.importKey("jwk", material.ecdsaPrivate, { name: "ECDSA", namedCurve: "P-256" }, true, ["sign"]);
+  const migratedPublicState = Boolean(record.peer || record.selfInviteBody);
+  const peer = material.peer || record.peer || null;
+  const selfInvite = material.selfInviteBody || record.selfInviteBody || null;
+  material.peer = peer;
+  material.selfInviteBody = selfInvite;
+  material.olmOneTimePublic = material.olmOneTimePublic || record.olmOneTimePublic || "";
   activeProfile = {
     ...record,
+    peer,
+    selfInviteBody: selfInvite,
+    olmOneTimePublic: material.olmOneTimePublic,
     ecdsaPrivate,
     wrappingKey: profileWrappingKey,
     privateMaterial: material,
@@ -372,7 +385,7 @@ export async function unlockProfile(name, passphrase) {
     activeProfile.wrappingKey = await wrappingKey(passphrase, base64ToBytes(record.salt));
     activeProfile.kdf = "argon2id-v1";
     await persistPrivateProfile();
-  } else if (migratedSession) {
+  } else if (migratedSession || migratedPublicState || !Object.hasOwn(material, "peer")) {
     await persistPrivateProfile();
   }
   return activeProfile;
@@ -459,6 +472,7 @@ async function selfInviteBody() {
   prekey.state = "reserved";
   prekey.issuedAt = now;
   activeProfile.olmOneTimePublic = prekey.public;
+  activeProfile.privateMaterial.olmOneTimePublic = prekey.public;
   const info = await localServerInfo();
   const body = {
     v: 3,
@@ -474,7 +488,8 @@ async function selfInviteBody() {
     ...(info ? { server: { inboxUrl: info.inboxUrl, protocol: info.protocol } } : {}),
   };
   activeProfile.selfInviteBody = body;
-  await persistPublicProfile();
+  activeProfile.privateMaterial.selfInviteBody = body;
+  await persistPrivateProfile();
   return body;
 }
 
@@ -494,9 +509,10 @@ export async function revokeInvite() {
   if (prekey) prekey.state = "revoked";
   activeProfile.privateMaterial.olmAccountPickle = olm_account_revoke(activeProfile.privateMaterial.olmAccountPickle, existing.olmOneTimePublic);
   activeProfile.selfInviteBody = null;
+  activeProfile.privateMaterial.selfInviteBody = null;
   activeProfile.olmOneTimePublic = "";
+  activeProfile.privateMaterial.olmOneTimePublic = "";
   await persistPrivateProfile();
-  await persistPublicProfile();
   return true;
 }
 
@@ -625,6 +641,7 @@ export async function importInvite(value) {
   const valid = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, publicKey, base64ToBytes(signature), new TextEncoder().encode(canonical(body)));
   if (!valid || body.v !== 3 || body.name === activeProfile.name) throw new Error("Invite signature or peer identity is invalid.");
   activeProfile.peer = body;
+  activeProfile.privateMaterial.peer = body;
   await initializeOlmSession();
   return body;
 }

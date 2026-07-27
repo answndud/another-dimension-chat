@@ -55,6 +55,7 @@ test("web UI exposes the complete manual pairing and sealed-envelope flow", () =
   assert.doesNotMatch(ui, /browser-preview-tauri/);
   assert.doesNotMatch(ui, /production_onion/);
   assert.match(ui, /자동 전달을 사용할 수 없습니다/);
+  assert.match(ui, /onboardingStep/);
   assert.match(ui, /setInterval[\s\S]*5_000/);
   assert.match(ui, /visibilitychange/);
   assert.match(serviceWorker, /pathname\.startsWith\("\/api\/"\)/);
@@ -178,6 +179,10 @@ test("two local profiles establish an Olm ratchet, persist it, and reject tamper
   await runtime.unlockProfile("bob", "bob-passphrase");
   const bobPeer = await runtime.importInvite(aliceInvite);
   assert.match(runtime.safetyPhrase(bob, bobPeer), /sha256-.+compare/);
+  const aliceStoredRecord = globalThis.indexedDB.stores.get("profiles").values.get("alice");
+  assert.equal(Object.hasOwn(aliceStoredRecord, "peer"), false);
+  assert.equal(Object.hasOwn(aliceStoredRecord, "selfInviteBody"), false);
+  assert.doesNotMatch(JSON.stringify(aliceStoredRecord), /peer\.invalid/);
   await completeManualHandshake(runtime, { alice: "alice-passphrase", bob: "bob-passphrase" });
 
   await runtime.unlockProfile("alice", "alice-passphrase");
