@@ -13,6 +13,7 @@ node --check scripts/release_manifest.mjs
 node --check scripts/verify_docs_claims.mjs
 node --check scripts/verify_product_boundary.mjs
 node --check scripts/acceptance_p3.mjs
+node --check scripts/verify_security_requirements.mjs
 echo "[2/8] product boundary"
 node scripts/verify_product_boundary.mjs
 echo "[3/8] focused server tests"
@@ -25,6 +26,7 @@ echo "[6/8] release manifest tests"
 node --test scripts/release_manifest.test.mjs
 echo "[7/8] public claim boundary"
 node scripts/verify_docs_claims.mjs
+node scripts/verify_security_requirements.mjs
 echo "[8/8] production build (only when dependencies are present)"
 if [ "$MODE" = release ]; then
   if [ ! -x apps/web/node_modules/.bin/vite ]; then

@@ -10,6 +10,7 @@ const checks = [
   ["reference/PRODUCT_BOUNDARY.md", "verified browser UI bundle"],
   ["reference/SECURITY_REQUIREMENTS.md", "RELEASE-01"],
   ["reference/CRYPTO_REVIEW_PACKET.md", "INV-01"],
+  ["scripts/verify_security_requirements.mjs", "security requirement evidence passed"],
 ];
 const failures = [];
 for (const [file, text] of checks) {
