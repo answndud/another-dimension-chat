@@ -12,6 +12,7 @@ node --check scripts/generate_sbom.mjs
 node --check scripts/release_manifest.mjs
 node --check scripts/verify_docs_claims.mjs
 node --check scripts/verify_product_boundary.mjs
+node --check scripts/acceptance_p3.mjs
 echo "[2/8] product boundary"
 node scripts/verify_product_boundary.mjs
 echo "[3/8] focused server tests"

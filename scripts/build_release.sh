@@ -45,6 +45,10 @@ chmod +x "$STAGE/another-dimension-$VERSION/scripts/start_local_server.sh" "$STA
 MANIFEST_ARGS="--version $VERSION"
 VERIFY_ARGS=""
 if [ "${AD_RELEASE_PROFILE:-development}" = "public" ]; then AD_RELEASE_REQUIRE_SIGNATURE=1; fi
+if [ "${AD_RELEASE_PROFILE:-development}" = "public" ] && [ -z "${AD_RELEASE_PUBLIC_KEY:-}" ]; then
+  printf '%s\n' "AD_RELEASE_PROFILE=public requires AD_RELEASE_PUBLIC_KEY for the post-signature public gate." >&2
+  exit 1
+fi
 if [ -n "${AD_RELEASE_SIGNING_KEY:-}" ]; then
   MANIFEST_ARGS="$MANIFEST_ARGS --private-key $AD_RELEASE_SIGNING_KEY"
 elif [ "${AD_RELEASE_REQUIRE_SIGNATURE:-0}" = "1" ]; then
@@ -64,6 +68,12 @@ SOURCE_DATE_EPOCH="${AD_RELEASE_SOURCE_DATE_EPOCH:-0}" node "$PROJECT_DIR/script
 # Unsigned output is allowed only for local development; verified distribution requires a signature.
 # shellcheck disable=SC2086
 node "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $VERIFY_ARGS
+if [ "${AD_RELEASE_PROFILE:-development}" = "public" ]; then
+  PUBLIC_GATE_ARGS="--public-key $AD_RELEASE_PUBLIC_KEY"
+  [ -n "${AD_RELEASE_MIN_VERSION:-}" ] && PUBLIC_GATE_ARGS="$PUBLIC_GATE_ARGS --min-version $AD_RELEASE_MIN_VERSION"
+  # shellcheck disable=SC2086
+  node "$PROJECT_DIR/scripts/verify_public_release_gate.mjs" "$STAGE/another-dimension-$VERSION" $PUBLIC_GATE_ARGS
+fi
 
 mkdir -p "$RELEASE_ROOT"
 RELEASE_MTIME=$(date -r "${AD_RELEASE_SOURCE_DATE_EPOCH:-0}" '+%Y%m%d%H%M.%S')
