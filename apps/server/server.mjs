@@ -34,7 +34,7 @@ function json(res, status, body, headers = {}) {
 function securityHeaders({ api = false, hsts = false } = {}) {
   return {
     "cache-control": api ? "no-store" : "no-cache",
-    "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    "content-security-policy": "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; worker-src 'self';",
     "cross-origin-opener-policy": "same-origin",
     "cross-origin-resource-policy": "same-origin",
     "form-action": "'self'",
