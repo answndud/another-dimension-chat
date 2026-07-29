@@ -12,6 +12,7 @@ const commands = [
   ["server", process.execPath, ["--test", "apps/server/server.test.mjs"]],
   ["web-runtime", process.execPath, ["--test", "apps/web/src/web-runtime.test.js"]],
   ["relay-smoke", process.execPath, ["scripts/smoke_user_owned_servers.mjs"]],
+  ["local-only-acceptance", process.execPath, ["scripts/acceptance_local_only.mjs"]],
   ["release-tests", process.execPath, ["--test", "scripts/release_manifest.test.mjs"]],
   ["claim-scan", process.execPath, ["scripts/verify_docs_claims.mjs"]],
 ];

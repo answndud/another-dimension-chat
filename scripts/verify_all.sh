@@ -22,6 +22,7 @@ echo "[4/8] focused browser runtime tests"
 npm --prefix apps/web test --workspaces=false
 echo "[5/8] relay restart and capability smoke"
 node scripts/smoke_user_owned_servers.mjs
+node scripts/acceptance_local_only.mjs
 echo "[6/8] release manifest tests"
 node --test scripts/release_manifest.test.mjs
 echo "[7/8] public claim boundary"
