@@ -13,6 +13,8 @@ node --check scripts/release_manifest.mjs
 node --check scripts/verify_docs_claims.mjs
 node --check scripts/verify_product_boundary.mjs
 node --check scripts/acceptance_p3.mjs
+node --check scripts/acceptance_local_only.mjs
+node --check scripts/acceptance_release_local_only.mjs
 node --check scripts/verify_security_requirements.mjs
 echo "[2/8] product boundary"
 node scripts/verify_product_boundary.mjs
@@ -23,6 +25,7 @@ npm --prefix apps/web test --workspaces=false
 echo "[5/8] relay restart and capability smoke"
 node scripts/smoke_user_owned_servers.mjs
 node scripts/acceptance_local_only.mjs
+node scripts/acceptance_release_local_only.mjs
 echo "[6/8] release manifest tests"
 node --test scripts/release_manifest.test.mjs
 echo "[7/8] public claim boundary"
