@@ -61,7 +61,10 @@ test("web UI exposes the complete manual pairing and sealed-envelope flow", () =
   assert.match(serviceWorker, /pathname\.startsWith\("\/api\/"\)/);
   assert.match(serviceWorker, /request\.mode === "navigate"/);
   assert.match(serviceWorker, /caches\.delete/);
-  assert.match(serviceWorker, /another-dimension-web-v5-argon2/);
+  assert.match(serviceWorker, /another-dimension-web-v6-integrity/);
+  assert.match(serviceWorker, /asset-integrity\.json/);
+  assert.match(serviceWorker, /verifiedShellResponse/);
+  assert.match(serviceWorker, /cache: "no-store"/);
   assert.match(serviceWorker, /fetch\(event\.request\)/);
   assert.doesNotMatch(serviceWorker, /skipWaiting/);
 });

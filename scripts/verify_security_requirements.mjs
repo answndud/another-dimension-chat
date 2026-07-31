@@ -15,6 +15,7 @@ const evidence = new Map([
   ["RELAY-03", ["apps/web/src/web-runtime.js", "Remote relay endpoints require HTTPS"]],
   ["RELAY-02", ["scripts/verify_relay_logs.mjs", "relay log scan passed"]],
   ["TRANSPORT-02", ["apps/server/server.mjs", "highRiskAllowed: false"]],
+  ["WEB-01", ["scripts/verify_web_artifact.mjs", "asset integrity manifest"]],
   ["RELEASE-01", ["scripts/verify_public_release_gate.mjs", "requiredReleaseFiles"]],
   ["RELEASE-03", ["scripts/verify_all.sh", "production build cannot be skipped"]],
 ]);

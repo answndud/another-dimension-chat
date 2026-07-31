@@ -4,6 +4,7 @@ import { constants } from "node:fs";
 import path from "node:path";
 import { verifyManifest } from "./release_manifest.mjs";
 import { isForbiddenReleasePath, loadProductBoundary } from "./product_boundary.mjs";
+import { verifyWebArtifact } from "./verify_web_artifact.mjs";
 
 const [root, ...args] = process.argv.slice(2);
 if (!root) throw new Error("Usage: verify_public_release_gate.mjs RELEASE_ROOT --public-key PEM_FILE [--min-version VERSION]");
@@ -20,6 +21,7 @@ if (!publicKey) throw new Error("A trusted public key is required for the public
 const boundary = await loadProductBoundary(root);
 const required = boundary.requiredReleaseFiles;
 for (const file of required) await access(path.join(root, file), constants.R_OK);
+await verifyWebArtifact(path.join(root, "apps/web/dist"));
 const releaseEntries = [];
 const walk = async (dir, prefix = "") => {
   for (const entry of await readdir(dir, { withFileTypes: true })) {

@@ -14,12 +14,13 @@ if [ ! -f "$PROJECT_DIR/apps/web/src/generated/ad_crypto_bg.wasm" ]; then
   exit 1
 fi
 npm --prefix "$PROJECT_DIR/apps/web" run build --workspaces=false
+node "$PROJECT_DIR/scripts/verify_web_artifact.mjs" "$PROJECT_DIR/apps/web/dist"
 
 mkdir -p "$STAGE/another-dimension-$VERSION/apps/server" "$STAGE/another-dimension-$VERSION/apps/web" "$STAGE/another-dimension-$VERSION/scripts"
 cp "$PROJECT_DIR/apps/server/server.mjs" "$PROJECT_DIR/apps/server/package.json" "$PROJECT_DIR/apps/server/README.md" "$STAGE/another-dimension-$VERSION/apps/server/"
 cp -R "$PROJECT_DIR/apps/web/dist" "$STAGE/another-dimension-$VERSION/apps/web/"
 cp "$PROJECT_DIR/apps/web/package.json" "$PROJECT_DIR/apps/web/package-lock.json" "$STAGE/another-dimension-$VERSION/apps/web/"
-cp "$PROJECT_DIR/scripts/start_local_server.sh" "$PROJECT_DIR/scripts/install_local_server.sh" "$PROJECT_DIR/scripts/configure_local_server.mjs" "$PROJECT_DIR/scripts/preflight_local_server.mjs" "$PROJECT_DIR/scripts/generate_tls_cert.sh" "$PROJECT_DIR/scripts/check_https_endpoint.mjs" "$PROJECT_DIR/scripts/release_manifest.mjs" "$PROJECT_DIR/scripts/product_boundary.mjs" "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$PROJECT_DIR/scripts/verify_public_release_gate.mjs" "$STAGE/another-dimension-$VERSION/scripts/"
+cp "$PROJECT_DIR/scripts/start_local_server.sh" "$PROJECT_DIR/scripts/install_local_server.sh" "$PROJECT_DIR/scripts/configure_local_server.mjs" "$PROJECT_DIR/scripts/preflight_local_server.mjs" "$PROJECT_DIR/scripts/generate_tls_cert.sh" "$PROJECT_DIR/scripts/check_https_endpoint.mjs" "$PROJECT_DIR/scripts/release_manifest.mjs" "$PROJECT_DIR/scripts/product_boundary.mjs" "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$PROJECT_DIR/scripts/verify_public_release_gate.mjs" "$PROJECT_DIR/scripts/verify_web_artifact.mjs" "$STAGE/another-dimension-$VERSION/scripts/"
 cp "$PROJECT_DIR/README.md" "$PROJECT_DIR/README.ko.md" "$PROJECT_DIR/SECURITY.md" "$PROJECT_DIR/SUPPORT.md" "$STAGE/another-dimension-$VERSION/"
 mkdir -p "$STAGE/another-dimension-$VERSION/reference"
 cp "$PROJECT_DIR/reference/PRODUCT_BOUNDARY.md" "$PROJECT_DIR/reference/product_boundary.json" "$STAGE/another-dimension-$VERSION/reference/"

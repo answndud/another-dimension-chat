@@ -47,11 +47,13 @@ await Promise.all([
   copy("apps/server/server.mjs"),
   copy("scripts/verify_public_release_gate.mjs"),
   copy("scripts/product_boundary.mjs"),
+  copy("scripts/verify_web_artifact.mjs"),
   copy("scripts/release_manifest.mjs"),
   copy("scripts/install_local_server.sh"),
 ]);
 await mkdir(join(archive, "apps/web/dist"), { recursive: true });
 await writeFile(join(archive, "apps/web/dist/index.html"), "<!doctype html><title>fixture</title>\n");
+await writeFile(join(archive, "apps/web/dist/asset-integrity.json"), JSON.stringify({ format: "another-dimension-asset-integrity", version: 1, assets: {} }) + "\n");
 await mkdir(join(archive, "runtime"), { recursive: true });
 await cp(process.execPath, join(archive, "runtime/node"));
 await chmod(join(archive, "runtime/node"), 0o700);

@@ -23,6 +23,7 @@
     "reference/PRODUCT_BOUNDARY.md",
     "reference/product_boundary.json",
     "apps/web/dist/index.html",
+    "apps/web/dist/asset-integrity.json",
     "apps/server/server.mjs",
     "runtime/node"
   ],
