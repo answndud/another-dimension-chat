@@ -70,15 +70,26 @@ function parseOrigins(value) {
   return String(value).split(",").map((origin) => normalizePublicUrl(origin.trim())).filter(Boolean);
 }
 
-async function readBody(req, limit = MAX_ENVELOPE_BYTES + 4096) {
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of req) {
-    size += chunk.length;
-    if (size > limit) throw new Error("request_too_large");
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks).toString("utf8");
+async function readBody(req, limit = MAX_ENVELOPE_BYTES + 4096, timeoutMs = 15_000) {
+  let timer;
+  const read = (async () => {
+    const chunks = [];
+    let size = 0;
+    for await (const chunk of req) {
+      size += chunk.length;
+      if (size > limit) throw new Error("request_too_large");
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks).toString("utf8");
+  })();
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      req.destroy();
+      req.socket.destroy();
+      reject(new Error("request_timeout"));
+    }, timeoutMs);
+  });
+  try { return await Promise.race([read, timeout]); } finally { clearTimeout(timer); }
 }
 
 function safeFile(distDir, pathname) {
@@ -123,11 +134,11 @@ function newCapability(scope, now = Date.now()) {
   return { format: "another-dimension-capability", version: 1, token: capability(), scope, issuedAt: now, expiresAt: now + CAPABILITY_TTL_MS };
 }
 
-async function loadCapability(file, scope) {
+async function loadCapability(file, scope, writeFileFn = writePrivateFile) {
   const raw = await readRegularPrivateFile(file);
   if (!raw) {
     const created = newCapability(scope);
-    await writePrivateFile(file, `${JSON.stringify(created)}\n`);
+    await writeFileFn(file, `${JSON.stringify(created)}\n`);
     return created;
   }
   let parsed;
@@ -141,11 +152,11 @@ async function loadCapability(file, scope) {
     || parsed.expiresAt <= Date.now()
   ) {
     const rotated = newCapability(scope);
-    await writePrivateFile(file, `${JSON.stringify(rotated)}\n`);
+    await writeFileFn(file, `${JSON.stringify(rotated)}\n`);
     return rotated;
   }
   const normalized = { format: "another-dimension-capability", version: 1, token: parsed.token, scope, issuedAt: Number.isSafeInteger(parsed.issuedAt) ? parsed.issuedAt : Date.now(), expiresAt: parsed.expiresAt };
-  await writePrivateFile(file, `${JSON.stringify(normalized)}\n`);
+  await writeFileFn(file, `${JSON.stringify(normalized)}\n`);
   return normalized;
 }
 
@@ -215,10 +226,15 @@ export async function createLocalServer({
   ttlMs = Number(process.env.AD_INBOX_TTL_MS || DEFAULT_TTL_MS),
   tlsKeyFile = process.env.AD_TLS_KEY_FILE || "",
   tlsCertFile = process.env.AD_TLS_CERT_FILE || "",
+  requestTimeoutMs = 15_000,
+  headersTimeoutMs = 10_000,
+  keepAliveTimeoutMs = 5_000,
+  privateFileWriter = writePrivateFile,
 } = {}) {
   if (Boolean(tlsKeyFile) !== Boolean(tlsCertFile)) throw new Error("AD_TLS_KEY_FILE and AD_TLS_CERT_FILE must be configured together.");
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("AD_PORT must be an integer between 0 and 65535.");
   if (!Number.isFinite(ttlMs) || ttlMs <= 0) throw new Error("AD_INBOX_TTL_MS must be a positive number.");
+  if (![requestTimeoutMs, headersTimeoutMs, keepAliveTimeoutMs].every((value) => Number.isInteger(value) && value > 0)) throw new Error("Server timeout values must be positive integers.");
   const normalizedPublicUrl = normalizePublicUrl(publicUrl);
   if (typeof trustProxy !== "boolean") throw new Error("AD_TRUST_PROXY must be boolean.");
   if (typeof serveStatic !== "boolean") throw new Error("serveStatic must be boolean.");
@@ -231,15 +247,15 @@ export async function createLocalServer({
   const localAccessFile = join(dataDir, "local-access-capability");
   const localUiUrlFile = join(dataDir, "local-ui-url");
   const queueFile = join(dataDir, "inbox.json");
-  let inboxCapability = await loadCapability(capabilityFile, "inbox-write");
-  let localAccessCapability = await loadCapability(localAccessFile, "local-control");
+  let inboxCapability = await loadCapability(capabilityFile, "inbox-write", privateFileWriter);
+  let localAccessCapability = await loadCapability(localAccessFile, "local-control", privateFileWriter);
   let inbox;
   const queueContents = await readRegularPrivateFile(queueFile);
   if (queueContents === null) {
     const temporaryQueue = await readRegularPrivateFile(`${queueFile}.tmp`);
     if (temporaryQueue !== null) {
       try { JSON.parse(temporaryQueue); } catch { throw new Error("Server inbox recovery file is corrupt."); }
-      await writePrivateFile(queueFile, temporaryQueue);
+      await privateFileWriter(queueFile, temporaryQueue);
       inbox = JSON.parse(temporaryQueue);
     } else inbox = [];
   } else {
@@ -257,7 +273,7 @@ export async function createLocalServer({
     purge();
     const snapshot = JSON.stringify(inbox);
     const operation = persistChain.then(async () => {
-      await writePrivateFile(queueFile, snapshot);
+      await privateFileWriter(queueFile, snapshot);
     });
     persistChain = operation.catch(() => {});
     return operation;
@@ -267,7 +283,7 @@ export async function createLocalServer({
   const inboxUrlFor = (address) => `${originFor(address)}${capabilityPath(inboxCapability.token)}`;
   const rotateInboxCapability = async () => {
     inboxCapability = newCapability("inbox-write");
-    await writePrivateFile(capabilityFile, `${JSON.stringify(inboxCapability)}\n`);
+    await privateFileWriter(capabilityFile, `${JSON.stringify(inboxCapability)}\n`);
     return inboxCapability;
   };
   const requestWindows = new Map();
@@ -354,22 +370,23 @@ export async function createLocalServer({
       if (!consumeRateLimit(req, "inbox-post", MAX_POSTS_PER_WINDOW)) { json(res, 429, { accepted: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
       try {
         if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
-        const body = JSON.parse(await readBody(req));
+        const body = JSON.parse(await readBody(req, MAX_ENVELOPE_BYTES + 4096, requestTimeoutMs));
         const envelope = String(body?.envelope || "").trim();
         if (!/^ADENVWEB(?:1|2|3)\./.test(envelope) || Buffer.byteLength(envelope) > MAX_ENVELOPE_BYTES) throw new Error("invalid_envelope");
         const id = storeId(envelope);
         if (!inbox.some((item) => item.id === id)) {
-          if (inbox.length >= MAX_INBOX_ITEMS) {
+        if (inbox.length >= MAX_INBOX_ITEMS) {
             json(res, 429, { accepted: false, error: "queue_full" }, { ...headers, "retry-after": "60" });
             return;
-          }
-          inbox.push({ id, envelope, receivedAt: Date.now() });
-          inbox = inbox.slice(-MAX_INBOX_ITEMS);
-          await persist();
+        }
+        const previousInbox = inbox.slice();
+        inbox.push({ id, envelope, receivedAt: Date.now() });
+        inbox = inbox.slice(-MAX_INBOX_ITEMS);
+        try { await persist(); } catch (error) { inbox = previousInbox; throw error; }
         }
         json(res, 202, { accepted: true, id }, headers);
       } catch (error) {
-        json(res, error.message === "request_too_large" ? 413 : 400, { accepted: false, error: error.message }, headers);
+        json(res, error.message === "request_too_large" ? 413 : error.message === "request_timeout" ? 408 : 400, { accepted: false, error: error.message }, headers);
       }
       return;
     }
@@ -382,14 +399,15 @@ export async function createLocalServer({
       }
       try {
         if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
-        const body = JSON.parse(await readBody(req, 32 * 1024));
+        const body = JSON.parse(await readBody(req, 32 * 1024, requestTimeoutMs));
         if (!Array.isArray(body?.ids) || body.ids.length > MAX_INBOX_ITEMS) throw new Error("too_many_ids");
         const ids = new Set(body.ids.map(String));
+        const previousInbox = inbox;
         const previousLength = inbox.length;
         inbox = inbox.filter((item) => !ids.has(item.id));
-        await persist();
+        try { await persist(); } catch (error) { inbox = previousInbox; throw error; }
         json(res, 200, { acknowledged: previousLength - inbox.length }, headers);
-      } catch (error) { json(res, 400, { acknowledged: 0, error: error.message }, headers); }
+      } catch (error) { json(res, error.message === "request_timeout" ? 408 : 400, { acknowledged: 0, error: error.message }, headers); }
       return;
     }
 
@@ -407,21 +425,22 @@ export async function createLocalServer({
   };
 
   const serverOptions = {
-    requestTimeout: 15_000,
-    headersTimeout: 10_000,
-    keepAliveTimeout: 5_000,
+    requestTimeout: requestTimeoutMs,
+    headersTimeout: headersTimeoutMs,
+    keepAliveTimeout: keepAliveTimeoutMs,
     maxHeaderSize: 16 * 1024,
   };
   const server = tlsKeyFile && tlsCertFile
     ? createHttpsServer({ ...serverOptions, key: await readFile(tlsKeyFile), cert: await readFile(tlsCertFile) }, handleRequest)
     : createServer({ ...serverOptions }, handleRequest);
+  server.setTimeout(requestTimeoutMs, (socket) => socket.destroy());
 
   const localHost = ["0.0.0.0", "::"].includes(bindHost) ? "127.0.0.1" : bindHost;
   const localUiOrigin = tlsKeyFile && normalizedPublicUrl
     ? normalizedPublicUrl
     : `${scheme}://${urlHost(localHost)}:${port}`;
   const localUiUrl = `${localUiOrigin}/#relay=${encodeURIComponent(originFor(bindHost))}&local=${localAccessCapability.token}`;
-  await writePrivateFile(localUiUrlFile, `${localUiUrl}\n`);
+  await privateFileWriter(localUiUrlFile, `${localUiUrl}\n`);
   return {
     server,
     bindHost,

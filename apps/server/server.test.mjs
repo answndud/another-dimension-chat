@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { request } from "node:http";
+import { connect } from "node:net";
 import { test } from "node:test";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -371,4 +372,43 @@ test("relay refuses corrupt queue state and recovers a valid interrupted queue w
   assert.deepEqual(items.body.items.map((item) => item.id), ["recovered"]);
   await runtime.server.close();
   await rm(recoveryDir, { recursive: true, force: true });
+});
+
+test("relay bounds slow client settings and closes an incomplete body", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({ port: 0, dataDir, headersTimeoutMs: 80, requestTimeoutMs: 120, keepAliveTimeoutMs: 80 });
+  assert.equal(runtime.server.headersTimeout, 80);
+  assert.equal(runtime.server.requestTimeout, 120);
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const result = await new Promise((resolve, reject) => {
+    const socket = connect(port, "127.0.0.1");
+    let output = "";
+    const timer = setTimeout(() => { socket.destroy(); reject(new Error("slow client was not closed within the bounded timeout")); }, 1_000);
+    socket.on("connect", () => socket.write("POST /api/v1/inbox/slow HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 100\r\nContent-Type: application/json\r\n\r\n{"));
+    socket.on("data", (chunk) => { output += chunk.toString(); });
+    socket.on("close", () => { clearTimeout(timer); resolve(output); });
+    socket.on("error", (error) => { if (error.code !== "ECONNRESET") reject(error); });
+  });
+  assert.ok(result === "" || /408|Request Timeout|HTTP\/1\.1/.test(result));
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("relay fails queue writes safely when the data directory becomes read-only", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const failingWriter = async (file, contents) => {
+    if (file.endsWith("inbox.json")) throw new Error("disk_full");
+    await writeFile(file, contents, { mode: 0o600 });
+  };
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist"), privateFileWriter: failingWriter });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
+  const response = await call(port, "POST", inboxPath, { envelope: "ADENVWEB1.read-only" });
+  assert.equal(response.status, 400);
+  assert.equal(response.body.accepted, false);
+  assert.equal((await call(port, "GET", inboxPath, undefined, localHeaders(runtime))).body.items.length, 0);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
 });

@@ -13,6 +13,7 @@ const evidence = new Map([
   ["DATA-03", ["SECURITY.md", "secure deletion"]],
   ["RELAY-01", ["apps/server/server.mjs", "MAX_ENVELOPE_BYTES"]],
   ["RELAY-03", ["apps/web/src/web-runtime.js", "Remote relay endpoints require HTTPS"]],
+  ["RELAY-02", ["scripts/verify_relay_logs.mjs", "relay log scan passed"]],
   ["TRANSPORT-02", ["apps/server/server.mjs", "highRiskAllowed: false"]],
   ["RELEASE-01", ["scripts/verify_public_release_gate.mjs", "requiredReleaseFiles"]],
   ["RELEASE-03", ["scripts/verify_all.sh", "production build cannot be skipped"]],
