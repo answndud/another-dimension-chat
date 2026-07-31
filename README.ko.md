@@ -71,6 +71,8 @@ node scripts/acceptance_p3.mjs
 - unlock된 room이 보이는 동안 새 envelope 자동 수신·ack 및 복구용 수동 Sync
 - 상대에게 공유한 invite capability는 write-only로 제한하고 queue 조회·ack는
   소유자의 별도 local-access capability로 보호
+- relay capability 파일은 owner-only 권한의 목적별 record이며 30일 후 만료됩니다.
+  만료·손상·심볼릭 링크 상태는 서버가 폐기하고 새 capability를 발급합니다.
 
 기본 자동 전달은 사용자 소유 server 간에만 동작합니다. 서버가 꺼져 있거나
 도달할 수 없으면 invite와 sealed envelope를 복사하는 수동 모드로 돌아갑니다.

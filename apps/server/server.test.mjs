@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { request } from "node:http";
 import { test } from "node:test";
 import { tmpdir } from "node:os";
@@ -304,4 +304,58 @@ test("relay refuses new envelopes when the bounded queue is full", async () => {
   assert.equal(response.body.error, "queue_full");
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
+});
+
+test("capability records rotate after expiry and preserve private file permissions", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const oldToken = "expired-capability-token";
+  await writeFile(join(dataDir, "inbox-capability"), JSON.stringify({
+    format: "another-dimension-capability", version: 1, token: oldToken, scope: "inbox-write", issuedAt: 1, expiresAt: 1,
+  }));
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
+  assert.notEqual(runtime.inboxCapability, oldToken);
+  const capabilityRecord = JSON.parse(await readFile(join(dataDir, "inbox-capability"), "utf8"));
+  assert.equal(capabilityRecord.scope, "inbox-write");
+  assert.ok(capabilityRecord.expiresAt > Date.now());
+  assert.equal((await stat(dataDir)).mode & 0o777, 0o700);
+  assert.equal((await stat(join(dataDir, "inbox-capability"))).mode & 0o777, 0o600);
+  assert.equal((await stat(join(dataDir, "local-access-capability"))).mode & 0o777, 0o600);
+  assert.equal((await stat(join(dataDir, "local-ui-url"))).mode & 0o777, 0o600);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("relay refuses symlinked data directories and sensitive files", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const target = join(parent, "target");
+  const linked = join(parent, "linked");
+  await mkdir(target, { recursive: true });
+  await symlink(target, linked);
+  await assert.rejects(() => createLocalServer({ port: 0, dataDir: linked }), /real directory, not a symlink/);
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const capabilityTarget = join(dataDir, "capability-target");
+  await writeFile(capabilityTarget, "secret");
+  await rm(join(dataDir, "inbox-capability"), { force: true });
+  await symlink(capabilityTarget, join(dataDir, "inbox-capability"));
+  await assert.rejects(() => createLocalServer({ port: 0, dataDir }), /not a regular file/);
+  await rm(parent, { recursive: true, force: true });
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("relay refuses corrupt queue state and recovers a valid interrupted queue write", async () => {
+  const corruptDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  await writeFile(join(corruptDir, "inbox.json"), "not-json");
+  await assert.rejects(() => createLocalServer({ port: 0, dataDir: corruptDir }), /inbox file is corrupt/);
+  await rm(corruptDir, { recursive: true, force: true });
+
+  const recoveryDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  await writeFile(join(recoveryDir, "inbox.json.tmp"), JSON.stringify([{ id: "recovered", envelope: "ADENVWEB1.recovered", receivedAt: Date.now() }]));
+  const runtime = await createLocalServer({ port: 0, dataDir: recoveryDir, distDir: join(recoveryDir, "missing-dist") });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
+  const items = await call(port, "GET", inboxPath, undefined, localHeaders(runtime));
+  assert.deepEqual(items.body.items.map((item) => item.id), ["recovered"]);
+  await runtime.server.close();
+  await rm(recoveryDir, { recursive: true, force: true });
 });

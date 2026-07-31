@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createReadStream, realpathSync } from "node:fs";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
 import { dirname, extname, join, normalize, resolve } from "node:path";
@@ -12,6 +12,8 @@ const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const MAX_POSTS_PER_WINDOW = 30;
 const MAX_LOCAL_READS_PER_WINDOW = 120;
+const CAPABILITY_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const CAPABILITY_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaultDist = resolve(__dirname, "../web/dist");
 
@@ -93,8 +95,62 @@ function hasLocalAccess(req, expected) {
   const supplied = req.headers["x-ad-local-access"];
   if (typeof supplied !== "string") return false;
   const suppliedBytes = Buffer.from(supplied);
-  const expectedBytes = Buffer.from(expected);
+  const expectedBytes = Buffer.from(expected.token, "utf8");
   return suppliedBytes.length === expectedBytes.length && timingSafeEqual(suppliedBytes, expectedBytes);
+}
+
+async function ensurePrivateDirectory(dataDir) {
+  await mkdir(dataDir, { recursive: true, mode: 0o700 });
+  const info = await lstat(dataDir);
+  if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("Server data directory must be a real directory, not a symlink.");
+  await chmod(dataDir, 0o700);
+}
+
+async function readRegularPrivateFile(file) {
+  const info = await lstat(file).catch((error) => error.code === "ENOENT" ? null : Promise.reject(error));
+  if (!info) return null;
+  if (!info.isFile() || info.isSymbolicLink()) throw new Error(`Private server file is not a regular file: ${file}`);
+  return readFile(file, "utf8");
+}
+
+async function writePrivateFile(file, contents) {
+  const temporary = `${file}.${randomBytes(8).toString("hex")}.tmp`;
+  await writeFile(temporary, contents, { mode: 0o600 });
+  await rename(temporary, file);
+}
+
+function newCapability(scope, now = Date.now()) {
+  return { format: "another-dimension-capability", version: 1, token: capability(), scope, issuedAt: now, expiresAt: now + CAPABILITY_TTL_MS };
+}
+
+async function loadCapability(file, scope) {
+  const raw = await readRegularPrivateFile(file);
+  if (!raw) {
+    const created = newCapability(scope);
+    await writePrivateFile(file, `${JSON.stringify(created)}\n`);
+    return created;
+  }
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch { parsed = { token: raw.trim(), expiresAt: Date.now() + CAPABILITY_TTL_MS }; }
+  if (
+    !parsed || typeof parsed.token !== "string" || !CAPABILITY_PATTERN.test(parsed.token)
+    || (parsed.format && parsed.format !== "another-dimension-capability")
+    || (parsed.version && parsed.version !== 1)
+    || (parsed.scope && parsed.scope !== scope)
+    || !Number.isSafeInteger(parsed.expiresAt)
+    || parsed.expiresAt <= Date.now()
+  ) {
+    const rotated = newCapability(scope);
+    await writePrivateFile(file, `${JSON.stringify(rotated)}\n`);
+    return rotated;
+  }
+  const normalized = { format: "another-dimension-capability", version: 1, token: parsed.token, scope, issuedAt: Number.isSafeInteger(parsed.issuedAt) ? parsed.issuedAt : Date.now(), expiresAt: parsed.expiresAt };
+  await writePrivateFile(file, `${JSON.stringify(normalized)}\n`);
+  return normalized;
+}
+
+function capabilityValid(record) {
+  return record && Number.isSafeInteger(record.expiresAt) && record.expiresAt > Date.now();
 }
 
 function capabilityPath(value) {
@@ -170,17 +226,26 @@ export async function createLocalServer({
   const allowedCorsOrigins = new Set([normalizedPublicUrl, ...corsOrigins].filter(Boolean));
   if (["0.0.0.0", "::"].includes(bindHost) && !normalizedPublicUrl) throw new Error("AD_PUBLIC_URL is required with a wildcard AD_BIND_HOST.");
   if (tlsKeyFile && normalizedPublicUrl.startsWith("http://")) throw new Error("AD_PUBLIC_URL must use HTTPS when direct TLS is enabled.");
-  await mkdir(dataDir, { recursive: true });
+  await ensurePrivateDirectory(dataDir);
   const capabilityFile = join(dataDir, "inbox-capability");
   const localAccessFile = join(dataDir, "local-access-capability");
   const localUiUrlFile = join(dataDir, "local-ui-url");
   const queueFile = join(dataDir, "inbox.json");
-  let inboxCapability;
-  try { inboxCapability = (await readFile(capabilityFile, "utf8")).trim(); } catch { inboxCapability = capability(); await writeFile(capabilityFile, `${inboxCapability}\n`, { mode: 0o600 }); }
-  let localAccessCapability;
-  try { localAccessCapability = (await readFile(localAccessFile, "utf8")).trim(); } catch { localAccessCapability = capability(); await writeFile(localAccessFile, `${localAccessCapability}\n`, { mode: 0o600 }); }
+  let inboxCapability = await loadCapability(capabilityFile, "inbox-write");
+  let localAccessCapability = await loadCapability(localAccessFile, "local-control");
   let inbox;
-  try { inbox = JSON.parse(await readFile(queueFile, "utf8")); } catch { inbox = []; }
+  const queueContents = await readRegularPrivateFile(queueFile);
+  if (queueContents === null) {
+    const temporaryQueue = await readRegularPrivateFile(`${queueFile}.tmp`);
+    if (temporaryQueue !== null) {
+      try { JSON.parse(temporaryQueue); } catch { throw new Error("Server inbox recovery file is corrupt."); }
+      await writePrivateFile(queueFile, temporaryQueue);
+      inbox = JSON.parse(temporaryQueue);
+    } else inbox = [];
+  } else {
+    try { inbox = JSON.parse(queueContents); } catch { throw new Error("Server inbox file is corrupt; refusing to discard it."); }
+  }
+  if (!Array.isArray(inbox)) throw new Error("Server inbox file must contain an array.");
   const purge = () => {
     const cutoff = Date.now() - ttlMs;
     inbox = Array.isArray(inbox) ? inbox.filter((item) => Number.isSafeInteger(item.receivedAt) && item.receivedAt >= cutoff).slice(-MAX_INBOX_ITEMS) : [];
@@ -191,20 +256,18 @@ export async function createLocalServer({
   const persist = () => {
     purge();
     const snapshot = JSON.stringify(inbox);
-    const temporaryQueueFile = `${queueFile}.tmp`;
     const operation = persistChain.then(async () => {
-      await writeFile(temporaryQueueFile, snapshot, { mode: 0o600 });
-      await rename(temporaryQueueFile, queueFile);
+      await writePrivateFile(queueFile, snapshot);
     });
     persistChain = operation.catch(() => {});
     return operation;
   };
   const scheme = tlsKeyFile && tlsCertFile ? "https" : "http";
   const originFor = (address) => normalizedPublicUrl || `${scheme}://${urlHost(address)}:${port}`;
-  const inboxUrlFor = (address) => `${originFor(address)}${capabilityPath(inboxCapability)}`;
+  const inboxUrlFor = (address) => `${originFor(address)}${capabilityPath(inboxCapability.token)}`;
   const rotateInboxCapability = async () => {
-    inboxCapability = capability();
-    await writeFile(capabilityFile, `${inboxCapability}\n`, { mode: 0o600 });
+    inboxCapability = newCapability("inbox-write");
+    await writePrivateFile(capabilityFile, `${JSON.stringify(inboxCapability)}\n`);
     return inboxCapability;
   };
   const requestWindows = new Map();
@@ -244,7 +307,7 @@ export async function createLocalServer({
     }
     if (requestUrl.pathname === "/api/v1/info" && req.method === "GET") {
       if (!consumeRateLimit(req, "local-info", 30)) { json(res, 429, { error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      if (!hasLocalAccess(req, localAccessCapability)) {
+      if (!capabilityValid(localAccessCapability) || !hasLocalAccess(req, localAccessCapability)) {
         json(res, 403, { error: "local_access_required" }, headers);
         return;
       }
@@ -264,10 +327,10 @@ export async function createLocalServer({
       return;
     }
 
-    const inboxPrefix = capabilityPath(inboxCapability);
+    const inboxPrefix = capabilityPath(inboxCapability.token);
     if (requestUrl.pathname === "/api/v1/inbox/rotate" && req.method === "POST") {
       if (!consumeRateLimit(req, "local-rotate", 10)) { json(res, 429, { rotated: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      if (!hasLocalAccess(req, localAccessCapability)) {
+      if (!capabilityValid(localAccessCapability) || !hasLocalAccess(req, localAccessCapability)) {
         json(res, 403, { rotated: false, error: "local_access_required" }, headers);
         return;
       }
@@ -276,8 +339,9 @@ export async function createLocalServer({
       return;
     }
     if (requestUrl.pathname === inboxPrefix && req.method === "GET") {
+      if (!capabilityValid(inboxCapability)) { json(res, 410, { error: "capability_expired" }, headers); return; }
       if (!consumeRateLimit(req, "inbox-read", MAX_LOCAL_READS_PER_WINDOW)) { json(res, 429, { error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      if (!hasLocalAccess(req, localAccessCapability)) {
+      if (!capabilityValid(localAccessCapability) || !hasLocalAccess(req, localAccessCapability)) {
         json(res, 403, { error: "local_access_required" }, headers);
         return;
       }
@@ -286,6 +350,7 @@ export async function createLocalServer({
       return;
     }
     if (requestUrl.pathname === inboxPrefix && req.method === "POST") {
+      if (!capabilityValid(inboxCapability)) { json(res, 410, { accepted: false, error: "capability_expired" }, headers); return; }
       if (!consumeRateLimit(req, "inbox-post", MAX_POSTS_PER_WINDOW)) { json(res, 429, { accepted: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
       try {
         if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
@@ -309,8 +374,9 @@ export async function createLocalServer({
       return;
     }
     if (requestUrl.pathname === `${inboxPrefix}/ack` && req.method === "POST") {
+      if (!capabilityValid(inboxCapability)) { json(res, 410, { acknowledged: 0, error: "capability_expired" }, headers); return; }
       if (!consumeRateLimit(req, "inbox-ack", MAX_LOCAL_READS_PER_WINDOW)) { json(res, 429, { acknowledged: 0, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      if (!hasLocalAccess(req, localAccessCapability)) {
+      if (!capabilityValid(localAccessCapability) || !hasLocalAccess(req, localAccessCapability)) {
         json(res, 403, { acknowledged: 0, error: "local_access_required" }, headers);
         return;
       }
@@ -354,19 +420,19 @@ export async function createLocalServer({
   const localUiOrigin = tlsKeyFile && normalizedPublicUrl
     ? normalizedPublicUrl
     : `${scheme}://${urlHost(localHost)}:${port}`;
-  const localUiUrl = `${localUiOrigin}/#relay=${encodeURIComponent(originFor(bindHost))}&local=${localAccessCapability}`;
-  await writeFile(localUiUrlFile, `${localUiUrl}\n`, { mode: 0o600 });
+  const localUiUrl = `${localUiOrigin}/#relay=${encodeURIComponent(originFor(bindHost))}&local=${localAccessCapability.token}`;
+  await writePrivateFile(localUiUrlFile, `${localUiUrl}\n`);
   return {
     server,
     bindHost,
     port,
-    inboxCapability,
+    inboxCapability: inboxCapability.token,
     inboxUrl: inboxUrlFor(bindHost),
     publicOrigin: originFor(bindHost),
     externalSecure: originFor(bindHost).startsWith("https://"),
     listenerTls: Boolean(tlsKeyFile && tlsCertFile),
     serveStatic,
-    localAccessCapability,
+    localAccessCapability: localAccessCapability.token,
     localUiUrl,
     localUiUrlFile,
   };

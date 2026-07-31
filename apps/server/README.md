@@ -57,7 +57,9 @@ self-signed certificate. Install it in the browser device trust stores before
 testing; do not use this certificate workflow as a production PKI.
 
 The inbox is bounded to 256 items and 96 KiB per envelope. Restart recovery is
-file-backed. The invite capability permits submission only; queue reads and
+file-backed with an atomic replacement. Capability records are owner-only,
+purpose-scoped, and expire after 30 days; restart replaces expired or malformed
+records. The invite capability permits submission only; queue reads and
 acknowledgements additionally require the private local-access capability.
 Control and inbox operations have bounded in-memory rate limits and return
 explicit `429`/`queue_full` failures; this is abuse resistance, not a
