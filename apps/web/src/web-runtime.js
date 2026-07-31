@@ -22,13 +22,56 @@ const AUTO_LOCK_MS = 5 * 60 * 1000;
 const MIN_PASSPHRASE_LENGTH = 12;
 const MAX_ENVELOPE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
+const COORDINATION_CHANNEL = "another-dimension-session-v1";
 const profileNames = [];
 let activeProfile = null;
 let localInfoCache = null;
 let lastActivityAt = 0;
+let activeSessionEpoch = 0;
+let storageState = { available: true, error: "" };
 let argon2WorkerInstance = null;
 let argon2WorkerSequence = 0;
 const argon2WorkerRequests = new Map();
+const tabId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+const coordinationChannel = typeof BroadcastChannel === "function" ? new BroadcastChannel(COORDINATION_CHANNEL) : null;
+coordinationChannel?.unref?.();
+
+function notifySessionEvent(type, detail = {}) {
+  globalThis.__AD_SESSION_EVENT__?.({ type, ...detail });
+}
+
+function broadcastSession(type, profile = activeProfile?.name) {
+  coordinationChannel?.postMessage({ type, profile, source: tabId, at: Date.now() });
+}
+
+function markStorageUnavailable(error) {
+  storageState = { available: false, error: error?.message || "Browser storage is unavailable." };
+  const wasActive = Boolean(activeProfile);
+  lockProfile({ broadcast: false, reason: "storage-failure" });
+  if (wasActive) notifySessionEvent("storage-failure", { message: "Browser storage is unavailable. The session was locked; preserve any offline backup before retrying." });
+}
+
+function requireStorage() {
+  if (!storageState.available) throw new Error("Browser storage is unavailable. The session is locked; do not send messages until storage is restored.");
+}
+
+function assertSessionEpoch(epoch = activeSessionEpoch) {
+  if (!activeProfile || epoch !== activeSessionEpoch) throw new Error("This tab was locked by another tab or a storage failure. Unlock the profile again before continuing.");
+}
+
+if (coordinationChannel) {
+  coordinationChannel.onmessage = ({ data }) => {
+    if (!data || data.source === tabId || !["lock", "wipe", "profile-updated"].includes(data.type)) return;
+    if (data.profile && activeProfile?.name !== data.profile) return;
+    if (!activeProfile) return;
+    lockProfile({ broadcast: false, reason: data.type === "wipe" ? "remote-wipe" : "remote-lock" });
+    notifySessionEvent(data.type === "wipe" ? "profile-wiped" : "remote-lock", {
+      message: data.type === "wipe"
+        ? "Another tab deleted this profile. This tab was locked and its in-memory session was discarded."
+        : "Another tab changed or locked this profile. This tab was locked and its in-memory session was discarded.",
+    });
+  };
+}
 
 const cryptoReady = (() => {
   if (globalThis.__AD_CRYPTO_WASM_BYTES__) {
@@ -39,16 +82,22 @@ const cryptoReady = (() => {
 })();
 
 function openDb() {
+  requireStorage();
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    let request;
+    try { request = indexedDB.open(DB_NAME, DB_VERSION); } catch (error) { markStorageUnavailable(error); reject(new Error("Browser storage could not be opened.")); return; }
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains("profiles")) db.createObjectStore("profiles", { keyPath: "name" });
       if (!db.objectStoreNames.contains("messages")) db.createObjectStore("messages", { keyPath: "id" });
       if (!db.objectStoreNames.contains("seen")) db.createObjectStore("seen", { keyPath: "id" });
     };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(new Error("Browser storage could not be opened."));
+    request.onsuccess = () => {
+      request.result.onversionchange = () => request.result.close();
+      resolve(request.result);
+    };
+    request.onblocked = () => reject(new Error("Browser storage is busy in another tab. Close stale tabs and retry."));
+    request.onerror = () => { markStorageUnavailable(request.error); reject(new Error("Browser storage could not be opened.")); };
   });
 }
 
@@ -62,7 +111,7 @@ function request(store, method, value) {
 
 async function read(storeName, key) {
   const db = await openDb();
-  try { return await request(db.transaction(storeName, "readonly").objectStore(storeName), "get", key); } finally { db.close(); }
+  try { return await request(db.transaction(storeName, "readonly").objectStore(storeName), "get", key); } catch (error) { markStorageUnavailable(error); throw error; } finally { db.close(); }
 }
 
 async function write(storeName, value) {
@@ -71,17 +120,17 @@ async function write(storeName, value) {
     throw new Error("Injected browser storage write failure.");
   }
   const db = await openDb();
-  try { return await request(db.transaction(storeName, "readwrite").objectStore(storeName), "put", value); } finally { db.close(); }
+  try { return await request(db.transaction(storeName, "readwrite").objectStore(storeName), "put", value); } catch (error) { if (error?.name !== "Error") markStorageUnavailable(error); throw error; } finally { db.close(); }
 }
 
 async function remove(storeName, key) {
   const db = await openDb();
-  try { return await request(db.transaction(storeName, "readwrite").objectStore(storeName), "delete", key); } finally { db.close(); }
+  try { return await request(db.transaction(storeName, "readwrite").objectStore(storeName), "delete", key); } catch (error) { markStorageUnavailable(error); throw error; } finally { db.close(); }
 }
 
 async function all(storeName) {
   const db = await openDb();
-  try { return await request(db.transaction(storeName, "readonly").objectStore(storeName), "getAll"); } finally { db.close(); }
+  try { return await request(db.transaction(storeName, "readonly").objectStore(storeName), "getAll"); } catch (error) { markStorageUnavailable(error); throw error; } finally { db.close(); }
 }
 
 function bytesToBase64(bytes) {
@@ -124,6 +173,10 @@ async function localServerInfo() {
     const localAccess = hash.get("local");
     const relayOrigin = hash.get("relay");
     if (!localAccess) return null;
+    try {
+      const cleanUrl = `${globalThis.location?.pathname || "/"}${globalThis.location?.search || ""}`;
+      globalThis.history?.replaceState?.(null, globalThis.document?.title || "Another Dimension", cleanUrl);
+    } catch { /* A non-browser fixture may not expose history; keep the capability memory-only. */ }
     let infoUrl = "/api/v1/info";
     if (relayOrigin) {
       let origin;
@@ -291,6 +344,7 @@ async function persistPrivateProfile() {
     await write("profiles", record);
     activeProfile.privateMaterial = privateMaterial;
     Object.assign(activeProfile, sealed);
+    broadcastSession("profile-updated");
   } catch (error) {
     restorePrivateState(snapshot);
     throw error;
@@ -303,14 +357,22 @@ function ensureCrypto() {
 
 export const ready = (async () => {
   await cryptoReady;
-  const records = await all("profiles").catch(() => []);
+  const records = await all("profiles");
   profileNames.splice(0, profileNames.length, ...records.map((record) => record.name).sort());
 })();
 
 export function listProfiles() { return [...profileNames]; }
 
+export function getStorageStatus() { return { ...storageState }; }
+
+export function onSessionEvent(listener) {
+  globalThis.__AD_SESSION_EVENT__ = typeof listener === "function" ? listener : null;
+  return () => { if (globalThis.__AD_SESSION_EVENT__ === listener) globalThis.__AD_SESSION_EVENT__ = null; };
+}
+
 export async function createProfile(name, passphrase) {
   ensureCrypto();
+  requireStorage();
   await cryptoReady;
   if (!/^[A-Za-z0-9_-]+$/.test(String(name)) || String(name).length > 48) throw new Error("Use letters, numbers, hyphen, or underscore for the profile name.");
   if (String(passphrase).length < MIN_PASSPHRASE_LENGTH) throw new Error(`Use a passphrase of at least ${MIN_PASSPHRASE_LENGTH} characters.`);
@@ -353,6 +415,7 @@ export async function createProfile(name, passphrase) {
 
 export async function unlockProfile(name, passphrase) {
   ensureCrypto();
+  requireStorage();
   await cryptoReady;
   const record = await read("profiles", name);
   if (!record) throw new Error("Local profile not found.");
@@ -373,6 +436,7 @@ export async function unlockProfile(name, passphrase) {
     wrappingKey: profileWrappingKey,
     privateMaterial: material,
   };
+  activeSessionEpoch += 1;
   localInfoCache = null;
   let migratedSession = false;
   if (activeProfile.privateMaterial.session && activeProfile.peer && !activeProfile.privateMaterial.session.peerIdentity) {
@@ -395,7 +459,16 @@ export async function unlockProfile(name, passphrase) {
   return activeProfile;
 }
 
-export function lockProfile() { stopArgon2Worker(); activeProfile = null; localInfoCache = null; lastActivityAt = 0; }
+export function lockProfile({ broadcast = true, reason = "manual" } = {}) {
+  const profile = activeProfile?.name;
+  stopArgon2Worker();
+  activeProfile = null;
+  localInfoCache = null;
+  lastActivityAt = 0;
+  activeSessionEpoch += 1;
+  if (broadcast && profile) broadcastSession(reason === "profile-deleted" ? "wipe" : "lock", profile);
+  notifySessionEvent("locked", { reason, profile });
+}
 
 export function touchActivity() {
   if (activeProfile) lastActivityAt = Date.now();
@@ -403,7 +476,7 @@ export function touchActivity() {
 
 export function checkAutoLock() {
   if (activeProfile && lastActivityAt > 0 && Date.now() - lastActivityAt >= AUTO_LOCK_MS) {
-    lockProfile();
+    lockProfile({ reason: "idle" });
     return true;
   }
   return false;
@@ -420,7 +493,7 @@ export async function deleteProfile(name, passphrase) {
   await remove("profiles", name);
   const index = profileNames.indexOf(name);
   if (index >= 0) profileNames.splice(index, 1);
-  if (activeProfile?.name === name) lockProfile();
+  if (activeProfile?.name === name) lockProfile({ reason: "profile-deleted" });
   else localInfoCache = null;
 }
 
@@ -430,6 +503,7 @@ export async function exportProfileBackup() {
 }
 
 export async function importProfileBackup(value) {
+  requireStorage();
   const text = String(value || "").trim();
   if (!text.startsWith(BACKUP_PREFIX)) throw new Error("This is not a valid encrypted profile backup.");
   const decoded = decode(text.slice(BACKUP_PREFIX.length));
@@ -714,6 +788,7 @@ async function recordSentEnvelope(envelope, text) {
 
 export async function exportEnvelope(text, { record = true } = {}) {
   if (!activeProfile?.peer) throw new Error("Pair with a peer before sending.");
+  const epoch = activeSessionEpoch;
   const message = String(text || "").trim();
   if (!message) throw new Error("Write a message first.");
   const session = activeProfile.privateMaterial.session;
@@ -729,6 +804,7 @@ export async function exportEnvelope(text, { record = true } = {}) {
     throw new Error("Olm message encryption failed. Pair again before sending.");
   }
   const result = await signedEnvelope("message", encrypted.message);
+  assertSessionEpoch(epoch);
   session.sessionPickle = encrypted.sessionPickle;
   try {
     await persistPrivateProfile();
@@ -742,6 +818,7 @@ export async function exportEnvelope(text, { record = true } = {}) {
 
 export async function sendEnvelope(text) {
   if (!activeProfile?.peer?.server?.inboxUrl) throw new Error("Peer has no reachable server endpoint; export a sealed envelope instead.");
+  const epoch = activeSessionEpoch;
   const message = String(text || "").trim();
   if (!message) throw new Error("Write a message first.");
   const session = activeProfile.privateMaterial.session;
@@ -750,6 +827,7 @@ export async function sendEnvelope(text) {
   }
   const envelope = await exportEnvelope(message, { record: false });
   const response = await fetch(activeProfile.peer.server.inboxUrl, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ envelope }) });
+  assertSessionEpoch(epoch);
   if (!response.ok) {
     const error = new Error("Peer server could not accept the sealed envelope. Export the prepared envelope manually instead.");
     error.envelope = envelope;
@@ -766,6 +844,8 @@ function ackUrl(inboxUrl) {
 }
 
 export async function syncInbox() {
+  const epoch = activeSessionEpoch;
+  assertSessionEpoch(epoch);
   await flushPendingEnvelope().catch(() => false);
   const localInfo = await localServerInfo();
   if (!localInfo?.inboxUrl) throw new Error("This browser is not connected to a local server.");
@@ -777,6 +857,7 @@ export async function syncInbox() {
   const accepted = [];
   let messageCount = 0;
   for (const item of Array.isArray(payload.items) ? payload.items : []) {
+    assertSessionEpoch(epoch);
     try {
       const message = await importEnvelope(item.envelope);
       if (message !== null) messageCount += 1;
@@ -787,6 +868,7 @@ export async function syncInbox() {
     }
   }
   if (accepted.length) {
+    assertSessionEpoch(epoch);
     const ack = await fetch(ackUrl(inboxUrl), { method: "POST", headers: { "content-type": "application/json", "x-ad-local-access": localInfo.localAccess }, body: JSON.stringify({ ids: accepted }) });
     if (!ack.ok) throw new Error("Message was received but the local server could not acknowledge it.");
   }
@@ -870,7 +952,9 @@ async function processHandshakeEnvelope(envelope) {
 
 export async function importEnvelope(value) {
   if (!activeProfile?.peer) throw new Error("Pair with a peer before importing.");
+  const epoch = activeSessionEpoch;
   const envelope = await verifiedEnvelope(value);
+  assertSessionEpoch(epoch);
   if (envelope.type !== "message") {
     const snapshot = capturePrivateState();
     try {

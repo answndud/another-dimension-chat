@@ -39,6 +39,11 @@ test("web runtime uses browser crypto and IndexedDB rather than preview storage"
   assert.match(runtime, /backup\.version/);
   assert.match(runtime, /Remote relay endpoints require HTTPS/);
   assert.match(runtime, /MIN_PASSPHRASE_LENGTH = 12/);
+  assert.match(runtime, /BroadcastChannel/);
+  assert.match(runtime, /Browser storage is unavailable/);
+  assert.match(runtime, /replaceState/);
+  assert.match(runtime, /activeSessionEpoch/);
+  assert.match(runtime, /stopArgon2Worker/);
 });
 
 test("web UI exposes the complete manual pairing and sealed-envelope flow", () => {
@@ -74,6 +79,7 @@ class MemoryIndexedDb {
   open() {
     const request = {};
     queueMicrotask(() => {
+      if (this.failOpen) { request.error = new Error("Injected IndexedDB open failure."); request.onerror?.(); return; }
       request.result = {
         objectStoreNames: { contains: (name) => this.stores.has(name) },
         createObjectStore: (name, options = {}) => { this.stores.set(name, { keyPath: options.keyPath, values: new Map() }); },
@@ -101,6 +107,13 @@ class MemoryIndexedDb {
     queueMicrotask(() => { request.result = value; request.onsuccess?.(); });
     return request;
   }
+}
+
+class MemoryBroadcastChannel {
+  static channels = new Set();
+  constructor() { this.onmessage = null; MemoryBroadcastChannel.channels.add(this); }
+  postMessage(data) { for (const channel of MemoryBroadcastChannel.channels) queueMicrotask(() => channel.onmessage?.({ data })); }
+  close() { MemoryBroadcastChannel.channels.delete(this); }
 }
 
 function envelopeBody(value) {
@@ -346,4 +359,30 @@ test("inbox sync drives Olm controls and protects read and ack headers", async (
     globalThis.fetch = originalFetch;
     delete globalThis.location;
   }
+});
+
+test("another tab lock discards the active session and storage failure fails closed", async () => {
+  if (!globalThis.crypto?.subtle) Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
+  const database = new MemoryIndexedDb();
+  globalThis.indexedDB = database;
+  globalThis.BroadcastChannel = MemoryBroadcastChannel;
+  Object.defineProperty(globalThis, "location", { value: { hash: "", pathname: "/", search: "" }, configurable: true });
+  const first = await import(`./web-runtime.js?coordination-first=${Date.now()}`);
+  const second = await import(`./web-runtime.js?coordination-second=${Date.now()}`);
+  await Promise.all([first.ready, second.ready]);
+  await first.createProfile("coordination", "coordination-passphrase");
+  await second.unlockProfile("coordination", "coordination-passphrase");
+  assert.equal(second.getSessionStatus(), "not-paired");
+  first.lockProfile();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await assert.rejects(() => second.exportProfileBackup(), /Unlock a local profile first/);
+
+  await first.unlockProfile("coordination", "coordination-passphrase");
+  database.failOpen = true;
+  await assert.rejects(() => first.listMessages(), /Browser storage could not be opened/);
+  assert.equal(first.getStorageStatus().available, false);
+  await assert.rejects(() => first.exportProfileBackup(), /Unlock a local profile first/);
+  database.failOpen = false;
+  for (const channel of MemoryBroadcastChannel.channels) channel.close();
+  delete globalThis.BroadcastChannel;
 });

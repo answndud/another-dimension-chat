@@ -23,6 +23,7 @@ import {
   importProfileBackup,
   touchActivity,
   checkAutoLock,
+  onSessionEvent,
   ready,
 } from "./web-runtime.js";
 import "./styles.css";
@@ -30,6 +31,15 @@ import "./styles.css";
 const app = document.querySelector("#app");
 let state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "", riskAcknowledged: false };
 let syncInFlight = false;
+
+function lockedState(message) {
+  state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: message, riskAcknowledged: false };
+  render();
+}
+
+onSessionEvent(({ message }) => {
+  if (message) lockedState(message);
+});
 
 if (window.isSecureContext && "serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
@@ -119,7 +129,7 @@ function render() {
           <div class="card stack">
             <h2>암호화된 프로필 백업</h2>
             <p class="small">백업은 암호 문구로 감싼 로컬 자료입니다. 암호 문구와 백업을 따로 보관하고, 클립보드 기록과 공개 서비스 사용을 피하세요.</p>
-            <textarea id="backup-import" rows="4" placeholder="ADBACKUP1 백업을 붙여 넣으세요"></textarea>
+          <textarea id="backup-import" autocomplete="off" rows="4" placeholder="ADBACKUP1 백업을 붙여 넣으세요"></textarea>
             <button id="import-backup" class="secondary">암호화 백업 가져오기</button>
           </div>
         </div>
@@ -144,12 +154,12 @@ function render() {
           <div class="divider"></div>
           <h2>1. 초대 공유</h2>
           <p class="small">공개 설정 자료만 포함됩니다. 그래도 의도한 상대에게만 보내세요. 클립보드와 QR은 신뢰 채널이 아닙니다.</p>
-          <textarea id="invite" readonly rows="5">${escapeHtml(state.invite)}</textarea>
+          <textarea id="invite" readonly autocomplete="off" rows="5">${escapeHtml(state.invite)}</textarea>
           <button id="copy-invite" class="secondary">초대 복사</button>
           ${!state.peer ? '<button id="revoke-invite" class="ghost">초대 폐기 후 새로 발급</button>' : ""}
           <p class="small">이 페이지가 서버에서 제공되면 초대에 서버 capability가 포함될 수 있습니다. 의도한 상대에게만 공유하세요.</p>
           <h2>2. 상대 초대 추가</h2>
-          <textarea id="peer-invite" rows="5" placeholder="상대방의 초대를 붙여 넣으세요">${escapeHtml(state.peerInvite)}</textarea>
+          <textarea id="peer-invite" autocomplete="off" rows="5" placeholder="상대방의 초대를 붙여 넣으세요">${escapeHtml(state.peerInvite)}</textarea>
           <button id="pair" ${state.peer ? "disabled" : ""}>${state.peer ? "이미 페어링됨" : "초대 확인 후 페어링"}</button>
         </aside>
         <section class="stack">
@@ -162,8 +172,8 @@ function render() {
             <label>메시지<textarea id="message" rows="4" placeholder="로컬에서 작성한 뒤 암호화 봉투로 전송하세요"></textarea></label>
             <div class="row-between"><button id="send-envelope" ${state.peer?.server?.inboxUrl && canAutoDeliver(state.peer.server) && state.sessionStatus === "ready" && isSafetyVerified() && !state.pendingHandshake ? "" : "disabled"}>암호화 후 상대 서버로 전송</button><button id="sync-inbox" ${state.serverInfo?.inboxUrl ? "" : "disabled"} class="secondary">내 inbox 동기화</button></div>
             <button id="export-envelope" ${state.peer && state.sessionStatus === "ready" && isSafetyVerified() && !state.pendingHandshake ? "" : "disabled"}>암호화 봉투 내보내기</button>
-            <label>보낼 봉투<textarea id="envelope" rows="5" placeholder="암호화된 봉투가 여기에 표시됩니다">${escapeHtml(state.envelope)}</textarea></label>
-            <label>받은 봉투<textarea id="incoming" rows="5" placeholder="상대방의 암호화 봉투를 붙여 넣으세요"></textarea></label>
+            <label>보낼 봉투<textarea id="envelope" autocomplete="off" rows="5" placeholder="암호화된 봉투가 여기에 표시됩니다">${escapeHtml(state.envelope)}</textarea></label>
+            <label>받은 봉투<textarea id="incoming" autocomplete="off" rows="5" placeholder="상대방의 암호화 봉투를 붙여 넣으세요"></textarea></label>
             <button id="import-envelope" ${state.peer ? "" : "disabled"} class="secondary">가져와 복호화</button>
             ${state.envelope ? '<p class="small">An outgoing envelope is ready for manual delivery if the peer server is unavailable.</p>' : ""}
           </div>
@@ -204,10 +214,14 @@ function bindRoom() {
     try { await deleteProfile(state.profile.name, passphrase); state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "로컬 프로필 데이터가 삭제되었습니다." }; render(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#export-backup")?.addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText(await exportProfileBackup()); state.notice = "암호화 백업을 복사했습니다. 클립보드 기록에 남을 수 있으니 오프라인 저장소로 옮기고 암호 문구는 따로 보관하세요."; render(); } catch (error) { state.error = error.message; render(); }
+    if (!window.confirm("암호화 백업을 클립보드에 복사합니다. 클립보드 기록·동기화에 남을 수 있습니다. 계속할까요?")) return;
+    try { await navigator.clipboard.writeText(await exportProfileBackup()); state.notice = "암호화 백업을 복사했습니다. 클립보드에서 즉시 지우고 오프라인 저장소로 옮기세요."; render(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#peer-invite")?.addEventListener("input", (event) => { state.peerInvite = event.currentTarget.value; });
-  document.querySelector("#copy-invite")?.addEventListener("click", async () => { await navigator.clipboard.writeText(state.invite); state.notice = "초대를 복사했습니다. 상대방에게만 공유하세요."; render(); });
+  document.querySelector("#copy-invite")?.addEventListener("click", async () => {
+    if (!window.confirm("초대에는 상대방 서버 접속 정보가 포함될 수 있습니다. 클립보드에 복사할까요?")) return;
+    try { await navigator.clipboard.writeText(state.invite); state.notice = "초대를 복사했습니다. 전송 후 클립보드와 기록에서 삭제하세요."; render(); } catch (error) { state.error = error.message; render(); }
+  });
   document.querySelector("#revoke-invite")?.addEventListener("click", async () => {
     try { await revokeInvite(); state.notice = "이전 초대를 폐기했습니다. 새로 발급된 초대를 공유하세요."; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
@@ -284,6 +298,7 @@ window.setInterval(() => {
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) receiveMessages(false);
 });
+window.addEventListener("pagehide", () => lockProfile({ reason: "pagehide" }), { once: true });
 
 ready.then(render).catch((error) => {
   state.error = error.message;
