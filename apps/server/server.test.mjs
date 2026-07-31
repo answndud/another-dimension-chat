@@ -169,6 +169,19 @@ test("trusted proxy mode requires a public origin and local control endpoints ar
   await rm(dataDir, { recursive: true, force: true });
 });
 
+test("untrusted forwarded headers cannot bypass local rate limits", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({ port: 0, dataDir });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  for (let index = 0; index < 30; index += 1) {
+    assert.equal((await call(port, "GET", "/api/v1/info", undefined, { "x-ad-local-access": runtime.localAccessCapability, "x-forwarded-for": `198.51.100.${index}` })).status, 200);
+  }
+  assert.equal((await call(port, "GET", "/api/v1/info", undefined, { "x-ad-local-access": runtime.localAccessCapability, "x-forwarded-for": "198.51.100.250" })).status, 429);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
 test("relay rejects non-JSON envelope writes", async () => {
   const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
   const runtime = await createLocalServer({ port: 0, dataDir });

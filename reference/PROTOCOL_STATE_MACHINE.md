@@ -26,6 +26,9 @@ it does not introduce a new cryptographic primitive.
 The following must hold for every state:
 
 - `peerIdentity` and the canonical transcript remain unchanged for the session.
+- `endpointBinding` records the canonical peer relay origin, capability path, and
+  protocol version used when the session was paired; a later endpoint or
+  capability change requires a fresh pairing and safety comparison.
 - A changed identity, endpoint, capability set, prekey, signature, or replay ID
   fails closed before Olm state advances.
 - An Olm session pickle is persisted before the operation is considered

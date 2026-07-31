@@ -378,6 +378,10 @@ export async function unlockProfile(name, passphrase) {
   if (activeProfile.privateMaterial.session && activeProfile.peer && !activeProfile.privateMaterial.session.peerIdentity) {
     activeProfile.privateMaterial.session.localIdentity = identityFingerprint(activeProfile.selfInviteBody || activeProfile);
     activeProfile.privateMaterial.session.peerIdentity = identityFingerprint(activeProfile.peer);
+    activeProfile.privateMaterial.session.endpointBinding = endpointBinding(activeProfile.peer);
+    migratedSession = true;
+  } else if (activeProfile.privateMaterial.session && activeProfile.peer && !activeProfile.privateMaterial.session.endpointBinding) {
+    activeProfile.privateMaterial.session.endpointBinding = endpointBinding(activeProfile.peer);
     migratedSession = true;
   }
   lastActivityAt = Date.now();
@@ -532,6 +536,22 @@ function identityFingerprint(participant) {
   });
 }
 
+function endpointBinding(participant) {
+  return canonical({
+    inboxUrl: participant?.server?.inboxUrl || null,
+    protocol: participant?.server?.protocol || null,
+  });
+}
+
+function assertSessionBinding(session, peer) {
+  if (!session?.peerIdentity || session.peerIdentity !== identityFingerprint(peer)) {
+    throw new Error("Peer identity changed. Stop and establish a fresh verified session.");
+  }
+  if (!session.endpointBinding || session.endpointBinding !== endpointBinding(peer)) {
+    throw new Error("Peer endpoint or capability changed. Stop and establish a fresh verified session.");
+  }
+}
+
 export function getIdentityFingerprint() {
   if (!activeProfile) return "";
   return identityFingerprint({
@@ -597,6 +617,7 @@ async function initializeOlmSession() {
     transcript: sessionTranscript(local, peer),
     localIdentity: identityFingerprint(local),
     peerIdentity: identityFingerprint(peer),
+    endpointBinding: endpointBinding(peer),
     safetyVerified: false,
     pendingEnvelope: null,
   };
@@ -696,6 +717,7 @@ export async function exportEnvelope(text, { record = true } = {}) {
   const message = String(text || "").trim();
   if (!message) throw new Error("Write a message first.");
   const session = activeProfile.privateMaterial.session;
+  assertSessionBinding(session, activeProfile.peer);
   if (session?.status !== "ready") throw new Error("The Olm session is still establishing. Keep both rooms open or move the pending handshake envelope manually.");
   if (!session.safetyVerified) throw new Error("Compare the safety material with the peer and confirm it before sending messages.");
   if (session.pendingEnvelope) throw new Error("Deliver and confirm the final Olm handshake envelope before sending a message.");
@@ -787,6 +809,7 @@ async function verifiedEnvelope(value) {
     || envelope.createdAt < now - MAX_ENVELOPE_AGE_MS
     || envelope.createdAt > now + MAX_CLOCK_SKEW_MS
   ) throw new Error("Envelope identity or replay window does not match this room.");
+  assertSessionBinding(activeProfile.privateMaterial.session, activeProfile.peer);
   const signingKey = await crypto.subtle.importKey("jwk", activeProfile.peer.ecdsaPublic, { name: "ECDSA", namedCurve: "P-256" }, true, ["verify"]);
   const { signature, ...body } = envelope;
   if (!await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, signingKey, base64ToBytes(signature), new TextEncoder().encode(canonical(body)))) {
@@ -799,7 +822,7 @@ async function verifiedEnvelope(value) {
 async function processHandshakeEnvelope(envelope) {
   const session = activeProfile.privateMaterial.session;
   const snapshot = capturePrivateState();
-  if (!session?.peerIdentity || session.peerIdentity !== identityFingerprint(activeProfile.peer)) throw new Error("Peer identity changed. Stop and establish a fresh verified session.");
+  assertSessionBinding(session, activeProfile.peer);
   if (envelope.type === "olm-init") {
     if (session.role !== "responder" || session.status !== "waiting-init") throw new Error("Unexpected Olm init message.");
     let accepted;

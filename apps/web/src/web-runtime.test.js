@@ -226,6 +226,32 @@ test("two local profiles establish an Olm ratchet, persist it, and reject tamper
   assert.equal((await runtime.listMessages()).length, 1);
 });
 
+test("paired sessions fail closed when the peer endpoint or capability changes", async () => {
+  if (!globalThis.crypto?.subtle) Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
+  globalThis.indexedDB = new MemoryIndexedDb();
+  const runtime = await import(`./web-runtime.js?endpoint-binding=${Date.now()}`);
+  await runtime.ready;
+  await runtime.createProfile("endpoint_owner", "owner-passphrase");
+  const ownerInvite = await runtime.exportInvite();
+  await runtime.createProfile("endpoint_peer", "peer-passphrase");
+  const peerInvite = await runtime.exportInvite();
+  await runtime.unlockProfile("endpoint_owner", "owner-passphrase");
+  await runtime.importInvite(peerInvite);
+  await runtime.unlockProfile("endpoint_peer", "peer-passphrase");
+  await runtime.importInvite(ownerInvite);
+  for (let step = 0; step < 4; step += 1) {
+    const current = runtime.getPendingEnvelope();
+    if (!current) break;
+    const target = envelopeBody(current).to;
+    await runtime.unlockProfile(target, target === "endpoint_owner" ? "owner-passphrase" : "peer-passphrase");
+    await runtime.importEnvelope(current);
+  }
+  await runtime.unlockProfile("endpoint_owner", "owner-passphrase");
+  const profile = await runtime.unlockProfile("endpoint_owner", "owner-passphrase");
+  profile.peer.server = { inboxUrl: "https://changed.invalid/api/v1/inbox/new-capability", protocol: 1 };
+  await assert.rejects(() => runtime.exportEnvelope("must not send after endpoint change"), /endpoint or capability changed/);
+});
+
 test("deep canonical signatures bind nested Olm and server material", async () => {
   if (!globalThis.crypto?.subtle) Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
   globalThis.indexedDB = new MemoryIndexedDb();
