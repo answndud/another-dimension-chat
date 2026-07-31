@@ -36,7 +36,11 @@ test("web runtime uses browser crypto and IndexedDB rather than preview storage"
   assert.doesNotMatch(runtime, /ADWEB2|ADENVWEB2/);
   assert.doesNotMatch(runtime, /localStorage/);
   assert.match(runtime, /ADBACKUP1/);
+  assert.match(runtime, /ADSESSION1/);
+  assert.match(runtime, /ADTRANSCRIPT1/);
   assert.match(runtime, /backup\.version/);
+  assert.match(runtime, /MAX_BACKUP_BYTES/);
+  assert.match(runtime, /rollback/);
   assert.match(runtime, /Remote relay endpoints require HTTPS/);
   assert.match(runtime, /MIN_PASSPHRASE_LENGTH = 12/);
   assert.match(runtime, /BroadcastChannel/);
@@ -202,6 +206,11 @@ test("two local profiles establish an Olm ratchet, persist it, and reject tamper
   await completeManualHandshake(runtime, { alice: "alice-passphrase", bob: "bob-passphrase" });
 
   await runtime.unlockProfile("alice", "alice-passphrase");
+  const sessionBackup = await runtime.exportSessionBackup();
+  assert.match(sessionBackup, /^ADSESSION1\./);
+  await assert.rejects(() => runtime.importSessionBackup(`${sessionBackup}tampered`));
+
+  await runtime.unlockProfile("alice", "alice-passphrase");
   assert.ok(runtime.getIdentityFingerprint().includes('"ecdsaPublic"'));
   await assert.rejects(() => runtime.importInvite(bobInvite), /already paired/);
   const envelope = await runtime.exportEnvelope("hello from alice");
@@ -292,12 +301,33 @@ test("profile wipe requires the passphrase and removes the local profile", async
   await runtime.ready;
   await runtime.createProfile("wipe_me", "wipe-me-passphrase");
   const backup = await runtime.exportProfileBackup();
+  assert.match(backup, /^ADBACKUP1\./);
+  await assert.rejects(() => runtime.importProfileBackup(`${backup.slice(0, -1)}x`));
+  const decoded = JSON.parse(Buffer.from(backup.slice("ADBACKUP1.".length), "base64url").toString());
+  const reIntegrity = async (value) => {
+    const { integrity, ...payload } = value;
+    value.integrity = { algorithm: "SHA-256", digest: bytesToBase64(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical(payload))))) };
+    return `ADBACKUP1.${Buffer.from(JSON.stringify(value)).toString("base64url")}`;
+  };
+  decoded.version = 99;
+  const future = await reIntegrity(decoded);
+  await assert.rejects(() => runtime.importProfileBackup(future), /integrity|invalid/);
+  decoded.version = 1;
+  decoded.kdf = { algorithm: "PBKDF2", hash: "SHA-1", iterations: 1, outputBytes: 32 };
+  const weak = await reIntegrity(decoded);
+  await assert.rejects(() => runtime.importProfileBackup(weak), /integrity|invalid/);
+  globalThis.indexedDB.stores.get("messages").values.set("wipe_me:transcript", { id: "wipe_me:transcript", profile: "wipe_me", direction: "received", text: "local transcript", createdAt: Date.now() });
+  const transcript = await runtime.exportTranscript();
+  assert.match(transcript, /^ADTRANSCRIPT1\./);
   await assert.rejects(() => runtime.deleteProfile("wipe_me", "wrong-passphrase"), /Wrong passphrase/);
   await runtime.deleteProfile("wipe_me", "wipe-me-passphrase");
   assert.equal(runtime.listProfiles().includes("wipe_me"), false);
   assert.equal(await runtime.importProfileBackup(backup), "wipe_me");
   const restored = await runtime.unlockProfile("wipe_me", "wipe-me-passphrase");
   assert.equal(restored.name, "wipe_me");
+  assert.equal(restored.privateMaterial.session, null);
+  assert.equal((await runtime.importTranscript(transcript)).count, 1);
+  assert.equal((await runtime.listMessages())[0].text, "local transcript");
 });
 
 test("inbox sync drives Olm controls and protects read and ack headers", async () => {

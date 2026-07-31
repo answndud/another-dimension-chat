@@ -16,12 +16,19 @@ const DB_NAME = "another-dimension-web-v3";
 const DB_VERSION = 1;
 const INVITE_PREFIX = "ADWEB3.";
 const BACKUP_PREFIX = "ADBACKUP1.";
+const SESSION_BACKUP_PREFIX = "ADSESSION1.";
+const TRANSCRIPT_BACKUP_PREFIX = "ADTRANSCRIPT1.";
 const ENVELOPE_PREFIX = "ADENVWEB3.";
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
 const AUTO_LOCK_MS = 5 * 60 * 1000;
 const MIN_PASSPHRASE_LENGTH = 12;
 const MAX_ENVELOPE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
+const MAX_BACKUP_BYTES = 512 * 1024;
+const KDF_METADATA = Object.freeze({
+  "argon2id-v1": { algorithm: "Argon2id", version: "0x13", memoryKiB: 19_456, timeCost: 2, parallelism: 1, outputBytes: 32 },
+  "pbkdf2-v1": { algorithm: "PBKDF2", hash: "SHA-256", iterations: 210_000, outputBytes: 32 },
+});
 const COORDINATION_CHANNEL = "another-dimension-session-v1";
 const profileNames = [];
 let activeProfile = null;
@@ -137,6 +144,30 @@ function bytesToBase64(bytes) {
   let binary = "";
   new Uint8Array(bytes).forEach((byte) => { binary += String.fromCharCode(byte); });
   return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+function assertBackupSize(value) {
+  if (new TextEncoder().encode(String(value)).byteLength > MAX_BACKUP_BYTES) throw new Error("Backup is too large; refusing to load it into browser memory.");
+}
+
+function kdfMetadata(algorithm) {
+  const metadata = KDF_METADATA[algorithm];
+  if (!metadata) throw new Error("Unsupported key derivation policy.");
+  return { algorithm, ...metadata };
+}
+
+async function integrityDigest(value) {
+  return bytesToBase64(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical(value))));
+}
+
+function backupPayload(backup) {
+  const { integrity, ...payload } = backup;
+  return payload;
+}
+
+async function assertBackupIntegrity(backup) {
+  if (!backup?.integrity || backup.integrity.algorithm !== "SHA-256" || typeof backup.integrity.digest !== "string") throw new Error("Backup integrity metadata is missing.");
+  if (backup.integrity.digest !== await integrityDigest(backupPayload(backup))) throw new Error("Backup integrity check failed; the backup was altered or truncated.");
 }
 
 function base64ToBytes(value) {
@@ -269,6 +300,7 @@ function storedProfile(profile) {
     iv: profile.iv,
     sealed: profile.sealed,
     kdf: profile.kdf || "pbkdf2-v1",
+    revision: Number.isSafeInteger(profile.revision) ? profile.revision : 0,
     createdAt: profile.createdAt,
   };
 }
@@ -284,6 +316,7 @@ function capturePrivateState() {
     peer: structuredClone(activeProfile.peer),
     selfInviteBody: structuredClone(activeProfile.selfInviteBody),
     olmOneTimePublic: activeProfile.olmOneTimePublic,
+    revision: activeProfile.revision,
   };
 }
 
@@ -297,6 +330,7 @@ function restorePrivateState(snapshot) {
   activeProfile.peer = snapshot.peer;
   activeProfile.selfInviteBody = snapshot.selfInviteBody;
   activeProfile.olmOneTimePublic = snapshot.olmOneTimePublic;
+  activeProfile.revision = snapshot.revision;
 }
 
 async function rollbackPrivateState(snapshot) {
@@ -333,6 +367,7 @@ async function consumeLocalPrekey(publicKey) {
 async function persistPrivateProfile() {
   const snapshot = capturePrivateState();
   try {
+    if (!activeProfile) throw new Error("Profile session is locked.");
     const privateMaterial = {
       ...activeProfile.privateMaterial,
       peer: structuredClone(activeProfile.peer),
@@ -340,10 +375,11 @@ async function persistPrivateProfile() {
       olmOneTimePublic: activeProfile.olmOneTimePublic,
     };
     const sealed = await sealWithKey(privateMaterial, activeProfile.wrappingKey, base64ToBytes(activeProfile.salt));
-    const record = storedProfile({ ...activeProfile, ...sealed });
+    const record = storedProfile({ ...activeProfile, ...sealed, revision: (activeProfile.revision || 0) + 1 });
     await write("profiles", record);
     activeProfile.privateMaterial = privateMaterial;
     Object.assign(activeProfile, sealed);
+    activeProfile.revision = record.revision;
     broadcastSession("profile-updated");
   } catch (error) {
     restorePrivateState(snapshot);
@@ -399,6 +435,7 @@ export async function createProfile(name, passphrase) {
     ...sealed,
     peer: null,
     selfInviteBody: null,
+    revision: 1,
     createdAt: Date.now(),
   };
   await write("profiles", record);
@@ -408,6 +445,7 @@ export async function createProfile(name, passphrase) {
     ecdsaPrivate: ecdsa.privateKey,
     wrappingKey: profileWrappingKey,
     privateMaterial,
+    revision: record.revision,
   };
   lastActivityAt = Date.now();
   return activeProfile;
@@ -499,22 +537,45 @@ export async function deleteProfile(name, passphrase) {
 
 export async function exportProfileBackup() {
   if (!activeProfile) throw new Error("Unlock a local profile first.");
-  return `${BACKUP_PREFIX}${encode({ format: BACKUP_PREFIX.slice(0, -1), version: 1, createdAt: Date.now(), profile: storedProfile(activeProfile) })}`;
+  const profileOnlyMaterial = {
+    ...structuredClone(activeProfile.privateMaterial),
+    session: null,
+    peer: null,
+    selfInviteBody: null,
+    olmOneTimePublic: "",
+  };
+  const profileOnlySealed = await sealWithKey(profileOnlyMaterial, activeProfile.wrappingKey, base64ToBytes(activeProfile.salt));
+  const backup = {
+    format: "ADPROFILE1",
+    version: 1,
+    createdAt: Date.now(),
+    revision: activeProfile.revision || 0,
+    kdf: kdfMetadata(activeProfile.kdf),
+    profile: { ...storedProfile(activeProfile), ...profileOnlySealed, revision: activeProfile.revision || 0 },
+  };
+  backup.integrity = { algorithm: "SHA-256", digest: await integrityDigest(backup) };
+  const encoded = `${BACKUP_PREFIX}${encode(backup)}`;
+  assertBackupSize(encoded);
+  return encoded;
 }
 
 export async function importProfileBackup(value) {
   requireStorage();
   const text = String(value || "").trim();
+  assertBackupSize(text);
   if (!text.startsWith(BACKUP_PREFIX)) throw new Error("This is not a valid encrypted profile backup.");
   const decoded = decode(text.slice(BACKUP_PREFIX.length));
-  const backup = decoded?.profile ? decoded : { format: BACKUP_PREFIX.slice(0, -1), version: 0, createdAt: 0, profile: decoded };
+  const backup = decoded;
+  await assertBackupIntegrity(backup);
   const record = backup?.profile;
   if (
     !backup
-    || backup.format !== BACKUP_PREFIX.slice(0, -1)
-    || ![0, 1].includes(backup.version)
+    || backup.format !== "ADPROFILE1"
+    || backup.version !== 1
     || !Number.isSafeInteger(backup.createdAt)
     || backup.createdAt > Date.now() + MAX_CLOCK_SKEW_MS
+    || !Number.isSafeInteger(backup.revision)
+    || !backup.kdf
     || !record
     || typeof record.name !== "string"
     || !/^[A-Za-z0-9_-]+$/.test(record.name)
@@ -523,15 +584,124 @@ export async function importProfileBackup(value) {
     || !record.iv
     || !record.sealed
     || !record.kdf
-    || !["argon2id-v1", "pbkdf2-v1"].includes(record.kdf)
+    || record.kdf !== "argon2id-v1"
+    || canonical(backup.kdf) !== canonical(kdfMetadata(record.kdf))
+    || record.revision !== backup.revision
   ) {
-    throw new Error("Profile backup metadata is invalid.");
+    throw new Error("Profile backup metadata is invalid or uses a weak/future key derivation policy.");
   }
   if (await read("profiles", record.name)) throw new Error("That local profile already exists; refusing to overwrite it.");
   await write("profiles", record);
   profileNames.push(record.name);
   profileNames.sort();
   return record.name;
+}
+
+async function exportEncryptedState(prefix, format, state) {
+  if (!activeProfile) throw new Error("Unlock a local profile first.");
+  const epoch = activeSessionEpoch;
+  const sealed = await sealWithKey(state, activeProfile.wrappingKey, base64ToBytes(activeProfile.salt));
+  assertSessionEpoch(epoch);
+  const backup = {
+    format,
+    version: 1,
+    createdAt: Date.now(),
+    revision: activeProfile.revision || 0,
+    profileName: activeProfile.name,
+    kdf: kdfMetadata(activeProfile.kdf),
+    sealed,
+  };
+  backup.integrity = { algorithm: "SHA-256", digest: await integrityDigest(backup) };
+  const encoded = `${prefix}${encode(backup)}`;
+  assertBackupSize(encoded);
+  return encoded;
+}
+
+async function importEncryptedState(value, prefix, format) {
+  if (!activeProfile) throw new Error("Unlock a local profile first.");
+  const text = String(value || "").trim();
+  assertBackupSize(text);
+  if (!text.startsWith(prefix)) throw new Error(`This is not a valid ${format} backup.`);
+  const backup = decode(text.slice(prefix.length));
+  await assertBackupIntegrity(backup);
+  if (
+    backup?.format !== format
+    || backup.version !== 1
+    || !Number.isSafeInteger(backup.createdAt)
+    || backup.createdAt > Date.now() + MAX_CLOCK_SKEW_MS
+    || backup.profileName !== activeProfile.name
+    || !Number.isSafeInteger(backup.revision)
+    || backup.revision < (activeProfile.revision || 0)
+    || canonical(backup.kdf) !== canonical(kdfMetadata(activeProfile.kdf))
+    || !backup.sealed?.iv
+    || !backup.sealed?.sealed
+  ) throw new Error(`${format} metadata is invalid, stale, or uses a different key derivation policy.`);
+  let plain;
+  try {
+    plain = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: base64ToBytes(backup.sealed.iv) },
+      activeProfile.wrappingKey,
+      base64ToBytes(backup.sealed.sealed),
+    )));
+  } catch { throw new Error(`${format} authentication failed or the backup belongs to another profile.`); }
+  return { backup, plain };
+}
+
+export async function exportSessionBackup() {
+  if (!activeProfile?.privateMaterial?.session) throw new Error("An established session is required before exporting session state.");
+  const seen = (await all("seen")).filter((entry) => entry.profile === activeProfile.name);
+  return exportEncryptedState(SESSION_BACKUP_PREFIX, "ADSESSION1", {
+    session: structuredClone(activeProfile.privateMaterial.session),
+    seen: structuredClone(seen),
+  });
+}
+
+export async function importSessionBackup(value) {
+  const { backup, plain } = await importEncryptedState(value, SESSION_BACKUP_PREFIX, "ADSESSION1");
+  if (!plain?.session || !Array.isArray(plain.seen) || plain.seen.some((entry) => entry.profile !== activeProfile.name || typeof entry.id !== "string")) {
+    throw new Error("Session backup contents are invalid.");
+  }
+  const previous = capturePrivateState();
+  const existingSeen = await all("seen");
+  const existingIds = new Set(existingSeen.filter((entry) => entry.profile === activeProfile.name).map((entry) => entry.id));
+  const added = [];
+  try {
+    activeProfile.privateMaterial.session = structuredClone(plain.session);
+    assertSessionBinding(activeProfile.privateMaterial.session, activeProfile.peer);
+    await persistPrivateProfile();
+    for (const entry of plain.seen) {
+      if (!existingIds.has(entry.id)) { await write("seen", structuredClone(entry)); added.push(entry.id); }
+    }
+  } catch (error) {
+    for (const id of added) await remove("seen", id).catch(() => {});
+    restorePrivateState(previous);
+    try { await persistPrivateProfile(); } catch { throw new Error("Session backup import failed and rollback could not be completed. Stop using this profile and restore it from a fresh profile backup."); }
+    throw new Error(`Session backup import failed and was rolled back: ${error.message}`);
+  }
+  return { profile: activeProfile.name, revision: backup.revision };
+}
+
+export async function exportTranscript() {
+  const messages = (await all("messages")).filter((message) => message.profile === activeProfile?.name);
+  if (!activeProfile) throw new Error("Unlock a local profile first.");
+  return exportEncryptedState(TRANSCRIPT_BACKUP_PREFIX, "ADTRANSCRIPT1", { messages: structuredClone(messages) });
+}
+
+export async function importTranscript(value) {
+  const { backup, plain } = await importEncryptedState(value, TRANSCRIPT_BACKUP_PREFIX, "ADTRANSCRIPT1");
+  if (!plain || !Array.isArray(plain.messages) || plain.messages.some((message) => message.profile !== activeProfile.name || typeof message.id !== "string" || typeof message.text !== "string")) {
+    throw new Error("Transcript export contents are invalid.");
+  }
+  const existing = new Set((await all("messages")).filter((message) => message.profile === activeProfile.name).map((message) => message.id));
+  if (plain.messages.some((message) => existing.has(message.id))) throw new Error("Transcript import would overwrite an existing message; refusing the import.");
+  const added = [];
+  try {
+    for (const message of plain.messages) { await write("messages", structuredClone(message)); added.push(message.id); }
+  } catch (error) {
+    for (const id of added) await remove("messages", id).catch(() => {});
+    throw new Error(`Transcript import failed and was rolled back: ${error.message}`);
+  }
+  return { profile: activeProfile.name, revision: backup.revision, count: plain.messages.length };
 }
 
 async function selfInviteBody() {

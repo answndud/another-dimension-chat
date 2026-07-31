@@ -236,11 +236,20 @@ Argon2id 계산은 별도 browser Worker에서 실행되어 화면을 멈추지 
 로컬 transcript를 삭제합니다. 삭제 데이터는 복구되지 않으므로 실제 백업으로
 간주하지 마세요.
 
-`Encrypted profile backup`은 versioned `ADBACKUP1` wrapper 안에 현재 passphrase로
-감싼 profile record만 내보내며,
-복구 시 기존 profile을 덮어쓰지 않습니다. backup 문자열과 passphrase는 서로
-다른 장소에 보관하세요. 공개 채널·클라우드 메모·스크린샷에 올리지 마세요.
-이 기능은 메시지 transcript의 안전한 자동 cloud backup이 아닙니다.
+`프로필 전용 백업`은 versioned `ADBACKUP1` wrapper 안에 session·peer·초대 상태를
+제거한 profile material만 현재 passphrase로 감싸 내보냅니다. KDF 정책·revision·생성
+시각·SHA-256 무결성 정보가 포함되며, 약한 KDF·미래 version·변조·기존 profile 덮어쓰기를
+거부합니다. 이 백업은 대화 기록이나 Olm session/replay 상태를 복구하지 않습니다.
+
+잠금 해제한 방에서는 별도로 `ADSESSION1`(Olm ratchet/session과 replay seen 상태)과
+`ADTRANSCRIPT1`(로컬 대화 기록) 암호화 export/import를 사용할 수 있습니다. 세 자료는
+서로 다른 목적과 포맷이며 현재 profile의 암호 문구로 인증됩니다. 오래된 revision은
+rollback으로 보고 거부하고, import 중 오류가 나면 새로 쓴 항목을 되돌립니다.
+
+모든 backup/export 문자열과 passphrase는 서로 다른 장소에 보관하세요. 공개 채널·클라우드
+메모·스크린샷·클립보드 기록에 올리지 마세요. 긴급 삭제는 브라우저 저장소의 삭제를
+시도하지만 브라우저/OS 백업, clipboard history, swap, crash dump, SSD wear-leveling까지
+지운다는 보장이 없습니다. 이 기능은 메시지의 자동 cloud backup이 아닙니다.
 
 두 사용자 서버의 health → opaque 전달 → ack 흐름은 다음 짧은 smoke 명령으로
 확인할 수 있습니다.

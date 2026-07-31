@@ -23,6 +23,11 @@ Never post invite codes, sealed envelopes, message text, safety phrases,
 profile names, passphrases, private keys, browser storage exports, raw logs,
 local paths, crash dumps, private local UI URLs, or screenshots of private rooms.
 
+백업도 목적별로 분리됩니다. `ADBACKUP1`은 프로필 전용이고 대화·Olm session을
+포함하지 않습니다. `ADSESSION1`은 Olm/replay 상태, `ADTRANSCRIPT1`은 대화 기록입니다.
+지원 문의에는 이 문자열이나 일부를 절대 붙이지 말고, import 실패 단계와 일반 오류만
+기록하세요. 긴급 삭제는 브라우저/OS 백업과 SSD 영역까지 지운다고 보장하지 않습니다.
+
 한국어 요약: 초대·봉투·안전 문구·프로필 이름·암호 문구·개인키·브라우저 백업·원본
 로그·private UI 주소는 절대 공개하지 마세요. 지원 문의에는 버전, 운영체제·브라우저,
 일반적인 오류 종류와 마지막으로 성공한 복구 단계만 적습니다.

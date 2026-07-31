@@ -62,10 +62,15 @@ The repository does not currently have:
 - Production account recovery or key rotation.
 - Full production message persistence and rich local message index schema.
 
-The web backup format is `ADBACKUP1` with an explicit versioned wrapper and an
-AES-GCM protected stored profile. Import validates the wrapper, refuses
-overwrite, and does not claim secure deletion from browser storage, clipboard
-history, swap, crash dumps, or SSD media.
+The web backup formats are intentionally separate. `ADBACKUP1` is profile-only:
+its AES-GCM payload removes peer/session/invite state before sealing. `ADSESSION1`
+contains the encrypted Olm session and replay-seen state, while `ADTRANSCRIPT1`
+contains encrypted local transcript records. All three include KDF metadata,
+creation time, revision, size limits, and a SHA-256 integrity envelope; weak or
+future KDF/version metadata, stale revisions, altered input, and overwrite are
+rejected. Import writes are rolled back on partial failure. None of these formats
+claim secure deletion from browser storage, clipboard history, swap, crash dumps,
+or SSD media.
 
 ## Non-Negotiable Rules
 

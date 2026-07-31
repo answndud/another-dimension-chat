@@ -21,6 +21,10 @@ import {
   deleteProfile,
   exportProfileBackup,
   importProfileBackup,
+  exportSessionBackup,
+  importSessionBackup,
+  exportTranscript,
+  importTranscript,
   touchActivity,
   checkAutoLock,
   onSessionEvent,
@@ -29,11 +33,11 @@ import {
 import "./styles.css";
 
 const app = document.querySelector("#app");
-let state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "", riskAcknowledged: false };
+let state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false };
 let syncInFlight = false;
 
 function lockedState(message) {
-  state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: message, riskAcknowledged: false };
+  state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: message, riskAcknowledged: false };
   render();
 }
 
@@ -127,8 +131,8 @@ function render() {
             <button class="secondary">잠금 해제</button>
           </form>
           <div class="card stack">
-            <h2>암호화된 프로필 백업</h2>
-            <p class="small">백업은 암호 문구로 감싼 로컬 자료입니다. 암호 문구와 백업을 따로 보관하고, 클립보드 기록과 공개 서비스 사용을 피하세요.</p>
+            <h2>프로필 전용 백업</h2>
+            <p class="small">프로필 공개키·암호화 private material만 복구합니다. 대화 기록·Olm session·replay 상태는 포함하지 않습니다.</p>
           <textarea id="backup-import" autocomplete="off" rows="4" placeholder="ADBACKUP1 백업을 붙여 넣으세요"></textarea>
             <button id="import-backup" class="secondary">암호화 백업 가져오기</button>
           </div>
@@ -143,7 +147,7 @@ function render() {
   const phrase = state.safety || "상대방과 페어링하면 안전 문구가 표시됩니다.";
   app.innerHTML = `
     <section class="shell">
-      <header class="topbar"><div><div class="eyebrow">ANOTHER DIMENSION</div><h1>로컬 암호화 방</h1></div><div class="row-between"><button id="export-backup" class="ghost">암호화 백업 복사</button><button id="panic-wipe" class="ghost">긴급 삭제</button><button id="lock" class="ghost">${escapeHtml(state.profile.name)} 잠그기</button></div></header>
+      <header class="topbar"><div><div class="eyebrow">ANOTHER DIMENSION</div><h1>로컬 암호화 방</h1></div><div class="row-between"><button id="export-backup" class="ghost">프로필 백업 복사</button><button id="panic-wipe" class="ghost">긴급 삭제</button><button id="lock" class="ghost">${escapeHtml(state.profile.name)} 잠그기</button></div></header>
       <p class="step">${escapeHtml(onboardingStep())}</p>
       <div class="notice">${escapeHtml(state.notice || (state.serverInfo ? "로컬 relay가 연결되었습니다. 서버는 암호화된 봉투만 처리합니다." : "수동 봉투 모드입니다. 민감한 정보는 입력하지 마세요."))}</div>
       <div class="layout">
@@ -178,6 +182,7 @@ function render() {
             ${state.envelope ? '<p class="small">An outgoing envelope is ready for manual delivery if the peer server is unavailable.</p>' : ""}
           </div>
           <div class="card stack"><div class="row-between"><h2>대화</h2><span class="small">로컬 암호화 기록</span></div>${renderMessages()}</div>
+          <div class="card stack"><h2>복구 자료 구분</h2><p class="small">프로필 백업은 대화와 session을 복구하지 않습니다. 아래 자료는 모두 현재 프로필의 암호 문구로 인증된 별도 파일이며, 클립보드·공개 채널·스크린샷에 남기지 마세요.</p><button id="make-session-backup" class="secondary">Olm session/replay 백업 생성</button><textarea id="session-backup" autocomplete="off" rows="4" placeholder="ADSESSION1 백업을 여기에 붙여 넣으세요">${escapeHtml(state.sessionBackup)}</textarea><button id="load-session-backup" class="secondary">Olm session/replay 백업 가져오기</button><button id="make-transcript-export" class="secondary">대화 기록 export 생성</button><textarea id="transcript-export" autocomplete="off" rows="4" placeholder="ADTRANSCRIPT1 export를 여기에 붙여 넣으세요">${escapeHtml(state.transcriptExport)}</textarea><button id="load-transcript-export" class="secondary">대화 기록 export 가져오기</button><p class="warning">긴급 삭제는 브라우저 저장소의 삭제를 시도할 뿐이며 브라우저/OS 백업, swap, crash dump, SSD wear-leveling까지 지운다는 보장이 없습니다.</p></div>
         </section>
       </div>
       <p class="disclaimer">실험용 beta: 익명성·안전한 삭제·확실한 전달·장악된 기기 보호를 제공하지 않습니다. 민감한 통신을 금지합니다.</p>
@@ -207,11 +212,11 @@ function bindAuth() {
 }
 
 function bindRoom() {
-  document.querySelector("#lock")?.addEventListener("click", () => { lockProfile(); state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "", riskAcknowledged: false }; render(); });
+  document.querySelector("#lock")?.addEventListener("click", () => { lockProfile(); lockedState("프로필을 잠갔습니다. 메모리의 세션 자료를 폐기했습니다."); });
   document.querySelector("#panic-wipe")?.addEventListener("click", async () => {
     const passphrase = window.prompt("로컬 데이터를 영구 삭제하려면 이 프로필의 암호 문구를 입력하세요:");
     if (passphrase === null) return;
-    try { await deleteProfile(state.profile.name, passphrase); state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "로컬 프로필 데이터가 삭제되었습니다." }; render(); } catch (error) { state.error = error.message; render(); }
+    try { await deleteProfile(state.profile.name, passphrase); lockedState("로컬 프로필과 해당 transcript/replay 기록의 삭제를 시도했습니다. 브라우저·OS 백업이나 SSD 영역의 삭제까지 보장하지 않습니다."); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#export-backup")?.addEventListener("click", async () => {
     if (!window.confirm("암호화 백업을 클립보드에 복사합니다. 클립보드 기록·동기화에 남을 수 있습니다. 계속할까요?")) return;
@@ -243,6 +248,18 @@ function bindRoom() {
   });
   document.querySelector("#import-envelope")?.addEventListener("click", async () => {
     try { const message = await importEnvelope(document.querySelector("#incoming").value); state.notice = message === null ? "Olm handshake advanced. Move any pending response envelope back to the peer." : "Envelope decrypted locally and added to the transcript."; await refresh(); } catch (error) { state.error = error.message; render(); }
+  });
+  document.querySelector("#make-session-backup")?.addEventListener("click", async () => {
+    try { state.sessionBackup = await exportSessionBackup(); state.notice = "Olm session/replay 백업을 생성했습니다. profile backup과 별도로 보관하세요."; render(); } catch (error) { state.error = error.message; render(); }
+  });
+  document.querySelector("#load-session-backup")?.addEventListener("click", async () => {
+    try { await importSessionBackup(document.querySelector("#session-backup").value); state.notice = "Olm session/replay 백업을 인증하고 복구했습니다."; await refresh(); } catch (error) { state.error = error.message; render(); }
+  });
+  document.querySelector("#make-transcript-export")?.addEventListener("click", async () => {
+    try { state.transcriptExport = await exportTranscript(); state.notice = "암호화된 대화 기록 export를 생성했습니다. profile/session backup과 별도로 보관하세요."; render(); } catch (error) { state.error = error.message; render(); }
+  });
+  document.querySelector("#load-transcript-export")?.addEventListener("click", async () => {
+    try { const result = await importTranscript(document.querySelector("#transcript-export").value); state.notice = `${result.count}개의 대화 기록을 기존 기록을 덮어쓰지 않고 복구했습니다.`; await refresh(); } catch (error) { state.error = error.message; render(); }
   });
 }
 
