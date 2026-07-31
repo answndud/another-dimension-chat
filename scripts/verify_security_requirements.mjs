@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
+import { loadProductBoundary } from "./product_boundary.mjs";
 
 const evidence = new Map([
-  ["ARCH-01", ["scripts/verify_product_boundary.mjs", "product boundary"]],
+  ["ARCH-01", ["reference/product_boundary.json", "supportedProduct"]],
   ["ARCH-02", ["apps/server/server.test.mjs", "relay-only mode"]],
+  ["ARCH-03", ["reference/product_boundary.json", "forbiddenReleasePaths"]],
   ["AUTH-01", ["apps/web/src/web-runtime.js", "unlockProfile"]],
   ["AUTH-02", ["apps/web/src/web-runtime.js", "peerIdentity"]],
   ["CRYPTO-01", ["reference/CRYPTO_REVIEW_PACKET.md", "INV-01"]],
@@ -12,10 +14,13 @@ const evidence = new Map([
   ["RELAY-01", ["apps/server/server.mjs", "MAX_ENVELOPE_BYTES"]],
   ["RELAY-03", ["apps/web/src/web-runtime.js", "Remote relay endpoints require HTTPS"]],
   ["TRANSPORT-02", ["apps/server/server.mjs", "highRiskAllowed: false"]],
-  ["RELEASE-01", ["scripts/verify_public_release_gate.mjs", "runtime/node"]],
+  ["RELEASE-01", ["scripts/verify_public_release_gate.mjs", "requiredReleaseFiles"]],
   ["RELEASE-03", ["scripts/verify_all.sh", "production build cannot be skipped"]],
 ]);
 const failures = [];
+const boundary = await loadProductBoundary(".");
+if (boundary.highRiskAllowed !== false) failures.push("product boundary must keep high-risk mode disabled");
+if (!boundary.forbiddenReleasePaths.includes("apps/desktop-tauri")) failures.push("legacy product boundary is incomplete");
 for (const [id, [file, marker]] of evidence) {
   const contents = await readFile(file, "utf8");
   if (!contents.includes(marker)) failures.push(`${id}: evidence marker missing from ${file}: ${marker}`);

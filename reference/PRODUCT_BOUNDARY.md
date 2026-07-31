@@ -40,3 +40,5 @@ or be used as evidence that the supported web package passed its release gate.
   anonymity transport and the full release trust boundary exist.
 - A changed JavaScript/WASM bundle, missing signature, revoked key, missing
   provenance/SBOM, or legacy artifact in a public package is a release failure.
+- This boundary does not claim anonymity, secure deletion, coercion resistance,
+  compromised-device protection, or independent audit status.

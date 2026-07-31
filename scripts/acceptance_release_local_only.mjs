@@ -43,8 +43,10 @@ await Promise.all([
   copy("SECURITY.md"),
   copy("SUPPORT.md"),
   copy("reference/PRODUCT_BOUNDARY.md"),
+  copy("reference/product_boundary.json"),
   copy("apps/server/server.mjs"),
   copy("scripts/verify_public_release_gate.mjs"),
+  copy("scripts/product_boundary.mjs"),
   copy("scripts/release_manifest.mjs"),
   copy("scripts/install_local_server.sh"),
 ]);

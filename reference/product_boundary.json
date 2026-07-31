@@ -1,0 +1,36 @@
+{
+  "format": "another-dimension-product-boundary",
+  "version": 1,
+  "supportedProduct": "verified browser UI bundle + user-owned API-only relay",
+  "forbiddenReleasePaths": [
+    "apps/desktop-tauri",
+    "apps/cli",
+    "apps/engine",
+    "crates/transport"
+  ],
+  "developmentOnlyModes": [
+    "serveStatic",
+    "AD_SERVE_UI=1"
+  ],
+  "highRiskAllowed": false,
+  "requiredReleaseFiles": [
+    "README.md",
+    "README.ko.md",
+    "SECURITY.md",
+    "SBOM.cyclonedx.json",
+    "RELEASE-PROVENANCE.json",
+    "release-manifest.json",
+    "reference/PRODUCT_BOUNDARY.md",
+    "reference/product_boundary.json",
+    "apps/web/dist/index.html",
+    "apps/server/server.mjs",
+    "runtime/node"
+  ],
+  "nonClaims": [
+    "anonymity",
+    "secure deletion",
+    "coercion resistance",
+    "compromised-device protection",
+    "independent audit"
+  ]
+}

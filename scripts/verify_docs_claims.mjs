@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
+import { loadProductBoundary } from "./product_boundary.mjs";
 
 const checks = [
   ["README.ko.md", "production-ready가 아니며"],
@@ -12,6 +13,9 @@ const checks = [
   ["reference/CRYPTO_REVIEW_PACKET.md", "INV-01"],
   ["scripts/verify_security_requirements.mjs", "security requirement evidence passed"],
 ];
+const boundary = await loadProductBoundary(".");
+checks.push(["reference/product_boundary.json", boundary.supportedProduct]);
+for (const nonClaim of boundary.nonClaims) checks.push(["reference/PRODUCT_BOUNDARY.md", nonClaim]);
 const failures = [];
 for (const [file, text] of checks) {
   const contents = await readFile(file, "utf8");

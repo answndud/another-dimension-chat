@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import { verifyManifest } from "./release_manifest.mjs";
+import { isForbiddenReleasePath, loadProductBoundary } from "./product_boundary.mjs";
 
 const [root, ...args] = process.argv.slice(2);
 if (!root) throw new Error("Usage: verify_public_release_gate.mjs RELEASE_ROOT --public-key PEM_FILE [--min-version VERSION]");
@@ -16,26 +17,19 @@ for (let index = 0; index < args.length; index += 1) {
   else throw new Error(`unknown argument: ${args[index]}`);
 }
 if (!publicKey) throw new Error("A trusted public key is required for the public release gate.");
-const required = [
-  "README.md",
-  "README.ko.md",
-  "SECURITY.md",
-  "SBOM.cyclonedx.json",
-  "RELEASE-PROVENANCE.json",
-  "release-manifest.json",
-  "reference/PRODUCT_BOUNDARY.md",
-  "apps/web/dist/index.html",
-  "apps/server/server.mjs",
-  "runtime/node",
-];
+const boundary = await loadProductBoundary(root);
+const required = boundary.requiredReleaseFiles;
 for (const file of required) await access(path.join(root, file), constants.R_OK);
-for (const legacy of ["apps/desktop-tauri", "apps/cli", "apps/engine", "crates/transport"]) {
-  try {
-    await access(path.join(root, legacy), constants.R_OK);
-    throw new Error(`legacy product surface is present in public release: ${legacy}`);
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
+const releaseEntries = [];
+const walk = async (dir, prefix = "") => {
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const relative = path.join(prefix, entry.name);
+    if (entry.isDirectory()) await walk(path.join(dir, entry.name), relative);
+    else releaseEntries.push(relative);
   }
-}
+};
+await walk(root);
+const leaked = releaseEntries.filter((file) => isForbiddenReleasePath(file, boundary.forbiddenReleasePaths));
+if (leaked.length) throw new Error(`legacy product surface is present in public release: ${leaked.join(", ")}`);
 const result = await verifyManifest(root, { publicKey, requireSignature: true, minVersion, revokedKeyIds });
 console.log(`public release gate passed: signed ${result.releaseVersion}, ${result.fileCount} files, key ${result.keyId}`);

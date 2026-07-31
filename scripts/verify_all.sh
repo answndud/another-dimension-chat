@@ -12,12 +12,16 @@ node --check scripts/generate_sbom.mjs
 node --check scripts/release_manifest.mjs
 node --check scripts/verify_docs_claims.mjs
 node --check scripts/verify_product_boundary.mjs
+node --check scripts/product_boundary.mjs
+node --check scripts/verify_public_release_gate.mjs
+node --check scripts/product_boundary_negative.test.mjs
 node --check scripts/acceptance_p3.mjs
 node --check scripts/acceptance_local_only.mjs
 node --check scripts/acceptance_release_local_only.mjs
 node --check scripts/verify_security_requirements.mjs
 echo "[2/8] product boundary"
 node scripts/verify_product_boundary.mjs
+node scripts/product_boundary_negative.test.mjs
 echo "[3/8] focused server tests"
 node --test apps/server/server.test.mjs
 echo "[4/8] focused browser runtime tests"
