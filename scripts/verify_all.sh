@@ -13,6 +13,8 @@ node --check scripts/release_manifest.mjs
 node --check scripts/verify_docs_claims.mjs
 node --check scripts/verify_product_boundary.mjs
 node --check scripts/product_boundary.mjs
+node --check scripts/preflight_local_server.mjs
+node --check scripts/configure_local_server.mjs
 node --check scripts/verify_public_release_gate.mjs
 node --check scripts/product_boundary_negative.test.mjs
 node --check scripts/verify_relay_logs.mjs

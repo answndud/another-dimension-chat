@@ -102,6 +102,35 @@ local server 제품은 `apps/server`에 있습니다. Tauri/CLI/engine은 공식
 
 브라우저 bundle을 만든 뒤 사용자의 기기에서 서버를 실행합니다.
 
+### 처음 사용하는 순서
+
+아래 순서를 건너뛰지 마세요. `#local=...`이 포함된 private UI 주소, 초대, sealed
+envelope, backup, passphrase는 터미널 출력·스크린샷·공개 채널에 붙여 넣지 않습니다.
+
+1. **배포물 확인** — signed release의 공개키 fingerprint와 manifest를 별도 신뢰 채널에서 확인합니다. unsigned 개발 archive는 민감한 통신에 사용하지 않습니다.
+2. **사전 점검** — 서버를 시작하기 전에 다음 명령을 실행합니다.
+
+   ```sh
+   node scripts/preflight_local_server.mjs
+   ```
+
+   static UI를 함께 제공하는 설정이면 production `index.html`과 asset integrity manifest도 자동 검사합니다. 실패하면 브라우저를 열지 말고 오류 원인을 먼저 해결합니다.
+
+3. **서버 시작** — 기본은 loopback 전용입니다.
+
+   ```sh
+   ./scripts/start_local_server.sh
+   ```
+
+   첫 설정이 필요하면 `./scripts/start_local_server.sh --setup`을 실행합니다. public URL을 사용할 때는 반드시 HTTPS reverse proxy 또는 검증된 direct TLS를 선택합니다. HTTP LAN 공개·UPnP·자동 port forwarding은 사용하지 않습니다.
+4. **브라우저 보안 확인** — private UI를 localhost 또는 HTTPS origin에서 열고, 화면에 Web Crypto가 활성화되었다고 표시되는지 확인합니다. 평문 HTTP 원격 페이지나 변조된 bundle에서 passphrase를 입력하지 않습니다.
+5. **프로필 생성** — 12자 이상의 고유 passphrase를 password manager에 보관합니다. passphrase를 서버·지원 채널·초대에 넣지 않습니다.
+6. **초대 교환** — 초대는 의도한 상대에게만 별도 채널로 전달합니다. capability가 포함될 수 있으므로 공개 게시하지 않습니다.
+7. **안전 문구 확인** — 첫 메시지 전에 별도 채널로 전체 safety material을 비교합니다. 화면·QR·클립보드만으로 상대 identity를 확인하지 않습니다.
+8. **handshake 완료 후 사용** — `init`·`ready` 봉투 전달이 끝나고 UI가 전송을 활성화한 뒤에만 메시지를 보냅니다. 자동 전달 실패 시 준비된 sealed envelope를 수동 전달합니다.
+9. **종료·복구** — 자리를 비울 때 Lock을 누릅니다. profile(`ADBACKUP1`), session/replay(`ADSESSION1`), transcript(`ADTRANSCRIPT1`) 백업은 서로 다르므로 필요한 자료를 별도로 보관합니다.
+10. **긴급 삭제의 한계** — Panic wipe는 브라우저 저장소 삭제를 시도하지만 브라우저/OS 백업, clipboard history, swap, crash dump, SSD 영역까지 지운다고 보장하지 않습니다.
+
 ```sh
 npm --prefix apps/web run build --workspaces=false
 ./scripts/start_local_server.sh
@@ -145,7 +174,7 @@ archive에는 빌드된 browser bundle과 server runtime이 포함되므로 압�
 실행 전 환경만 확인하려면 다음 preflight를 사용합니다.
 
 ```sh
-./scripts/preflight_local_server.mjs --config .another-dimension-server/server-config.json
+node scripts/preflight_local_server.mjs --config .another-dimension-server/server-config.json
 ```
 
 공개 배포 archive는 운영자가 보관하는 trusted public key로 별도 검증해야

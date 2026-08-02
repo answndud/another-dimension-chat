@@ -34,6 +34,16 @@ local paths, crash dumps, private local UI URLs, or screenshots of private rooms
 
 ## Recovery boundary
 
+## 오류가 났을 때의 순서
+
+| 화면의 분류 | 먼저 할 일 | 보안상 금지할 일 |
+| --- | --- | --- |
+| 암호 문구·프로필 | 암호 문구를 한 번 확인하고, 필요하면 profile 전용 백업을 준비합니다. | site data를 지우거나 기존 profile을 덮어쓰지 않습니다. |
+| 저장소·IndexedDB·quota | 현재 화면을 잠그고 백업을 보존한 뒤 일반 브라우저 창과 저장 공간을 확인합니다. | 저장소 오류를 성공으로 간주하거나 백업 없이 재설정하지 않습니다. |
+| 초대·identity·안전 문구 | 전송을 멈추고 별도 신뢰 채널에서 전체 문구와 새 초대를 비교합니다. | 화면·QR·클립보드만으로 확인하지 않습니다. |
+| endpoint·relay·timeout | 서버·HTTPS·capability 상태를 확인하고, 실패하면 준비된 봉투를 수동 전달합니다. | capability·private UI URL을 지원 채널에 붙이지 않습니다. |
+| backup·integrity·rollback | profile/session/transcript 포맷을 구분하고 원본을 보존합니다. | 변조·오래된 백업을 반복 import하거나 기존 자료를 덮어쓰지 않습니다. |
+
 - If the peer server is unreachable, use the prepared outgoing envelope in the
   manual copy/paste flow; a failed automatic send is not recorded as delivered.
 - After a server restart or endpoint change, create and exchange a fresh signed

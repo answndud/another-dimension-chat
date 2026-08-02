@@ -65,6 +65,10 @@ test("web UI exposes the complete manual pairing and sealed-envelope flow", () =
   assert.doesNotMatch(ui, /production_onion/);
   assert.match(ui, /자동 전달을 사용할 수 없습니다/);
   assert.match(ui, /onboardingStep/);
+  assert.match(ui, /안전한 시작 순서/);
+  assert.match(ui, /원인:/);
+  assert.match(ui, /보안 영향:/);
+  assert.match(ui, /재시도:/);
   assert.match(ui, /setInterval[\s\S]*5_000/);
   assert.match(ui, /visibilitychange/);
   assert.match(serviceWorker, /pathname\.startsWith\("\/api\/"\)/);

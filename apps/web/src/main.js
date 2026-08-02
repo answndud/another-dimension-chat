@@ -89,12 +89,20 @@ function browserStatus() {
 function explainError(value) {
   const message = String(value || "알 수 없는 오류");
   const lower = message.toLowerCase();
-  let action = "입력을 확인하고 같은 작업을 한 번만 다시 시도하세요.";
-  if (lower.includes("passphrase") || lower.includes("profile")) action = "프로필 이름과 암호 문구를 확인하세요. 계속 실패하면 새 프로필 또는 오프라인 백업 복구를 사용하세요.";
-  else if (lower.includes("server") || lower.includes("endpoint") || lower.includes("inbox")) action = "서버가 실행 중인지 확인하고, 실패하면 준비된 봉투를 수동으로 전달하세요.";
-  else if (lower.includes("safety") || lower.includes("identity") || lower.includes("invite")) action = "전송을 멈추고 초대와 안전 문구를 신뢰할 수 있는 별도 채널에서 다시 비교하세요.";
-  else if (lower.includes("storage") || lower.includes("database")) action = "브라우저 저장소를 지우거나 새 프로필을 만들지 말고, 먼저 필요한 백업을 보존하세요.";
-  return `원인: ${message} 조치: ${action} 보안 영향: 이 작업은 완료되지 않았습니다. 확인 전에는 메시지를 보내지 마세요.`;
+  const matched = [
+    [/(wrong passphrase|damaged local profile|passphrase)/, "암호 문구가 틀렸거나 프로필 자료를 열 수 없습니다.", "암호 문구를 다시 확인하세요. 계속 실패하면 기존 자료를 덮어쓰지 말고 프로필 전용 백업을 사용하세요.", "현재 프로필은 잠금 해제되지 않았습니다.", "한 번만 다시 시도할 수 있습니다."],
+    [/(storage|database|indexeddb|quota|private browsing)/, "브라우저 저장소를 열거나 기록할 수 없습니다.", "site data를 지우지 말고 필요한 백업을 먼저 보존한 뒤 일반 브라우저 창과 충분한 저장 공간에서 다시 여세요.", "현재 세션과 전송은 잠금 상태로 유지됩니다.", "저장소 상태를 확인한 뒤 다시 시도하세요."],
+    [/(safety material|safety|identity changed|peer identity)/, "상대 identity 또는 안전 문구를 신뢰할 수 없습니다.", "전송을 중단하고 별도 신뢰 채널에서 초대와 전체 안전 문구를 다시 비교하세요. identity 변경이면 새 프로필로 다시 pairing해야 합니다.", "메시지 전송은 허용되지 않습니다.", "확인 전 재시도하지 마세요."],
+    [/(endpoint or capability|server endpoint|inbox|peer server|could not be reached|timeout)/, "상대 relay endpoint에 도달하지 못했거나 capability가 바뀌었습니다.", "서버 상태와 HTTPS 설정을 확인하세요. 실패하면 화면에 준비된 sealed envelope를 수동 전달하세요. capability 변경이면 새 초대를 교환하세요.", "자동 전달 완료로 기록되지 않습니다.", "서버 확인 후 재시도할 수 있습니다."],
+    [/(already imported|already paired|revoked|expired|invite)/, "초대·봉투가 만료되었거나 이미 사용되었거나 현재 방과 맞지 않습니다.", "오래된 값을 다시 붙여 넣지 말고 새 초대 또는 새 봉투를 안전한 채널로 교환하세요.", "검증되지 않은 값은 처리되지 않습니다.", "새 값을 받은 뒤에만 재시도하세요."],
+    [/(backup|transcript|session.*revision|rollback|integrity)/, "백업의 목적·무결성·revision이 현재 프로필과 맞지 않습니다.", "profile/session/transcript 백업을 구분하고, 변조되었거나 오래된 백업은 사용하지 마세요. 기존 데이터를 덮어쓰지 않습니다.", "복구는 완료되지 않았고 기존 자료는 보존됩니다.", "원본 백업을 별도 보관한 뒤에만 다시 시도하세요."],
+  ].find(([pattern]) => pattern.test(lower));
+  const [, cause, action, impact, retry] = matched || [null, "입력 또는 브라우저 환경을 확인할 수 없습니다.", "입력을 확인하고 서버·브라우저 상태를 점검하세요.", "작업은 완료되지 않았으며 메시지 전송은 열리지 않습니다.", "원인을 확인한 뒤 한 번만 다시 시도하세요."];
+  return `원인: ${cause} 조치: ${action} 보안 영향: ${impact} 재시도: ${retry}`;
+}
+
+function onboardingGuide() {
+  return `<ol class="onboarding-list"><li>서버를 실행하고 preflight 결과와 공개 release fingerprint를 확인합니다.</li><li>localhost 또는 HTTPS에서 브라우저 보안 상태를 확인합니다.</li><li>로컬 프로필을 만들고 암호 문구를 password manager에만 보관합니다.</li><li>초대를 별도 신뢰 채널로 교환하고 상대 identity·안전 문구 전체를 비교합니다.</li><li>Olm handshake 봉투 전달을 완료한 뒤에만 첫 메시지를 보냅니다.</li><li>잠금·profile/session/transcript 백업·긴급 삭제의 한계를 확인합니다.</li></ol>`;
 }
 
 function onboardingStep() {
@@ -115,6 +123,7 @@ function render() {
         <p class="step">${escapeHtml(onboardingStep())}</p>
         <p class="lede">계정과 중앙 메시지 서버가 없습니다. 로컬 프로필을 만들고 공개 초대를 교환한 뒤, 암호화 봉투를 원하는 경로로 전달합니다.</p>
         <div class="notice">${escapeHtml(browserStatus())}</div>
+        <div class="card stack"><h2>안전한 시작 순서</h2>${onboardingGuide()}</div>
         <div class="card grid-two">
           <form id="create-form" class="stack">
             <h2>1. 로컬 프로필 만들기</h2>

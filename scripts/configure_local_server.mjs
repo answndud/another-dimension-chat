@@ -64,19 +64,19 @@ function argumentValue(args, name) {
 async function interactiveAnswers() {
   const terminal = createInterface({ input: process.stdin, output: process.stdout });
   try {
-    console.log("Choose how peers reach this server:");
-    console.log("  1. This Mac only (safe default)");
-    console.log("  2. Existing HTTPS reverse proxy or Tailscale Serve");
-    console.log("  3. Direct HTTPS with your PEM certificate and key");
-    const choice = (await terminal.question("Mode [1]: ")).trim() || "1";
+    console.log("상대방이 이 서버에 접근하는 방식을 선택하세요:");
+    console.log("  1. 이 기기에서만 사용 (안전한 기본값, 자동 전달은 같은 기기 fixture용)");
+    console.log("  2. 이미 운영 중인 HTTPS reverse proxy 또는 Tailscale Serve 뒤에 연결");
+    console.log("  3. 보유한 PEM 인증서와 key로 직접 HTTPS 제공");
+    const choice = (await terminal.question("방식 [1]: ")).trim() || "1";
     const mode = { 1: "local", 2: "reverse-proxy", 3: "direct-tls" }[choice];
-    if (!mode) throw new Error("Choose 1, 2, or 3.");
-    const port = (await terminal.question("Local server port [1422]: ")).trim() || "1422";
+    if (!mode) throw new Error("1, 2, 3 중 하나를 선택하세요.");
+    const port = (await terminal.question("로컬 서버 포트 [1422]: ")).trim() || "1422";
     if (mode === "local") return { mode, port };
-    const publicUrl = (await terminal.question("Peer-reachable HTTPS origin (for example https://chat.example.com): ")).trim();
+    const publicUrl = (await terminal.question("상대가 접근할 HTTPS origin (예: https://chat.example.com): ")).trim();
     if (mode === "reverse-proxy") return { mode, port, publicUrl };
-    const tlsKeyFile = (await terminal.question("TLS private key PEM path: ")).trim();
-    const tlsCertFile = (await terminal.question("TLS certificate PEM path: ")).trim();
+    const tlsKeyFile = (await terminal.question("TLS private key PEM 경로: ")).trim();
+    const tlsCertFile = (await terminal.question("TLS certificate PEM 경로: ")).trim();
     return { mode, port, publicUrl, tlsKeyFile, tlsCertFile };
   } finally {
     terminal.close();
@@ -113,11 +113,11 @@ async function main() {
     : { ...(await interactiveAnswers()), dataDir: dirname(configFile) };
   const config = buildServerConfig(answers);
   await saveServerConfig(configFile, config);
-  console.log(`Saved server configuration: ${configFile}`);
-  console.log(`Mode: ${answers.mode} · bind ${config.bindHost}:${config.port}${config.publicUrl ? ` · advertise ${config.publicUrl}` : ""}`);
-  console.log("The startup script will reuse this configuration automatically.");
+  console.log(`서버 설정 저장 완료: ${configFile}`);
+  console.log(`모드: ${answers.mode} · bind ${config.bindHost}:${config.port}${config.publicUrl ? ` · advertise ${config.publicUrl}` : ""}`);
+  console.log("다음부터는 ./scripts/start_local_server.sh만 실행하면 이 설정을 다시 사용합니다.");
   if (config.publicUrl) {
-    console.log(`After the server and HTTPS route are running, verify with: node scripts/check_https_endpoint.mjs ${config.publicUrl}`);
+    console.log(`서버와 HTTPS route를 시작한 뒤 다음 명령으로 endpoint를 확인하세요: node scripts/check_https_endpoint.mjs ${config.publicUrl}`);
   }
 }
 
