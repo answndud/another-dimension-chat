@@ -274,8 +274,10 @@ profile을 복제하면 이 보장이 깨질 수 있으므로 profile 백업·�
 현재 web relay는 low-risk transport만 제공합니다. 원격 HTTP inbox는 capability와
 metadata 노출 위험 때문에 자동 연결에서 거부되며, Tor/onion 익명성이나 검열
 저항은 제공하지 않습니다.
-local/LAN HTTP mode는 capability와 metadata가 네트워크에 노출될 수 있으므로
-민감한 통신에 사용하지 마세요. 서버 시작 시 private UI URL 자체는 터미널에
+원격 HTTP relay mode는 이제 서버가 시작 단계에서 거부합니다. capability와
+metadata가 네트워크에 노출되고 원격 브라우저의 Web Crypto 보장을 만들 수 없기
+때문입니다. loopback의 개발용 HTTP만 허용되며 민감한 통신에는 사용하지 마세요.
+서버 시작 시 private UI URL 자체는 터미널에
 출력하지 않고 `.another-dimension-server/local-ui-url` 파일(mode 600)에만
 기록합니다.
 
@@ -334,9 +336,10 @@ Header: x-ad-local-access: <private local UI capability>
 새 초대를 안전한 채널로 다시 교환해야 합니다. 이 API는 `x-ad-local-access`가
 없으면 동작하지 않습니다.
 
-reverse proxy가 앞에 있고 실제 client IP를 `X-Forwarded-For`로 전달하는 경우에만
-설정 파일에 다음을 추가할 수 있습니다. proxy가 외부에서 직접 접근 가능하거나
-헤더를 덮어쓰지 않는다면 활성화하지 마세요.
+reverse proxy가 앞에 있는 경우에만 설정 파일에 다음을 추가할 수 있습니다.
+이 옵션은 public HTTPS origin을 확인하는 운영 모드 표시이며, 클라이언트가 보낸
+`X-Forwarded-For`를 신원·rate limit 판단에 신뢰하지 않습니다. proxy가 외부에서
+직접 접근 가능하거나 public origin을 덮어쓰는 구성이라면 활성화하지 마세요.
 
 ```json
 { "trustProxy": true }
@@ -356,15 +359,13 @@ ChatGPT Sites나 중앙 메시지 hosting은 필요하지 않습니다.
 
 - Loopback(`127.0.0.1`, 기본값): 같은 기기 테스트용이며 다른 기기에서는
   접근할 수 없습니다.
-- LAN: LAN 주소 또는 `0.0.0.0`으로 명시적으로 bind한 뒤 HTTPS reverse
-  proxy를 앞에 두고, guided setup에 HTTPS origin을 설정하며 방화벽 정책을
-  직접 적용합니다. 일반 브라우저는 평문 HTTP LAN 페이지에서 Web Crypto를
-  사용할 수 없습니다.
-- Local UI + LAN API(개발 전용): 각자 자신의 `localhost` 서버에서 UI를 열고,
-  invite는 상대의 LAN inbox를 가리키게 할 수 있습니다. sealed envelope는
-  암호화된 상태로 유지되지만 HTTP capability URL은 노출되거나 opaque traffic
-  주입·삭제에 악용될 수 있습니다. 통제된 네트워크에서만 사용하고 운영에는
-  HTTPS를 사용하세요.
+- LAN: LAN 주소 또는 `0.0.0.0`으로 명시적으로 bind하려면 HTTPS reverse
+  proxy 또는 검증된 direct TLS와 HTTPS public origin이 필수입니다. guided
+  setup에 HTTPS origin을 설정하고 방화벽 정책을 직접 적용합니다. 평문 HTTP
+  LAN relay는 서버가 시작을 거부합니다.
+- Local UI + LAN API(legacy/manual 개발 전용): 현재 안전한 relay 운영 경로가
+  아니므로 운영·민감한 통신에 사용하지 않습니다. LAN으로 공개하려면 위의
+  HTTPS reverse proxy 또는 direct TLS 경계를 사용하세요.
 - VPN: Tailscale/WireGuard 인터페이스에 연결된 HTTPS 주소를
   guided setup의 public URL로 사용합니다. VPN이 도달성을 제공하며 앱이
   제공하는 기능은 아닙니다.
@@ -375,8 +376,10 @@ ChatGPT Sites나 중앙 메시지 hosting은 필요하지 않습니다.
 자동으로 제공하지 않습니다.
 
 소규모 자체 운영에서는 guided `direct-tls` mode에서 PEM key와 certificate
-경로를 지정해 서버가 HTTPS를 직접 종료할 수 있습니다. 공개 노출에는
-유지보수되는 reverse proxy를 사용하는 편이 안전합니다.
+경로를 지정해 서버가 HTTPS를 직접 종료할 수 있습니다. 서버는 인증서가 유효한
+X.509 형식이고 현재 시각에 아직 유효한지 확인하며, 만료·미래 시작 인증서는
+시작을 거부합니다. 공개 노출에는 유지보수되는 reverse proxy를 사용하는 편이
+안전합니다.
 
 개발용으로는 `./scripts/generate_tls_cert.sh <host-or-ip>`로 인증서를 만들 수
 있습니다. self-signed 인증서이므로 브라우저가 수용하려면 각 기기의 trust

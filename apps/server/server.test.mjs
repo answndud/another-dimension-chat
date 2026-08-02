@@ -130,6 +130,46 @@ test("local server requires TLS key and certificate as a pair", async () => {
   await assert.rejects(() => createLocalServer({ tlsKeyFile: "key.pem" }), /must be configured together/);
 });
 
+test("remote bind refuses HTTP and missing or unsafe advertised origins", async () => {
+  await assert.rejects(() => createLocalServer({ bindHost: "0.0.0.0", publicUrl: "http://chat.example.test" }), /requires an HTTPS publicUrl/);
+  await assert.rejects(() => createLocalServer({ bindHost: "192.0.2.10" }), /required with a non-loopback/);
+  await assert.rejects(() => createLocalServer({ bindHost: "192.0.2.10", publicUrl: "http://chat.example.test" }), /requires an HTTPS publicUrl/);
+});
+
+test("trusted proxy mode never uses spoofed forwarded addresses for rate limits", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({ port: 0, dataDir, publicUrl: "https://relay.example.test", trustProxy: true });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  for (let index = 0; index < 30; index += 1) {
+    assert.equal((await call(port, "GET", "/api/v1/info", undefined, {
+      "x-ad-local-access": runtime.localAccessCapability,
+      "x-forwarded-for": `198.51.100.${index}`,
+    })).status, 200);
+  }
+  assert.equal((await call(port, "GET", "/api/v1/info", undefined, {
+    "x-ad-local-access": runtime.localAccessCapability,
+    "x-forwarded-for": "203.0.113.250",
+  })).status, 429);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("TLS certificate input must be a currently valid X.509 certificate", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const keyFile = join(dataDir, "server.key");
+  const certFile = join(dataDir, "server.crt");
+  await writeFile(keyFile, "not-a-private-key");
+  await writeFile(certFile, "not-a-certificate");
+  await assert.rejects(() => createLocalServer({
+    dataDir,
+    publicUrl: "https://relay.example.test",
+    tlsKeyFile: keyFile,
+    tlsCertFile: certFile,
+  }), /valid X\.509 certificate/);
+  await rm(dataDir, { recursive: true, force: true });
+});
+
 test("local server validates its advertised public origin", async () => {
   await assert.rejects(() => createLocalServer({ publicUrl: "https://example.test/chat" }), /must be an HTTP\(S\) origin/);
   await assert.rejects(() => createLocalServer({ publicUrl: "https://user@example.test" }), /must be an HTTP\(S\) origin/);

@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual, X509Certificate } from "node:crypto";
 import { createReadStream, realpathSync } from "node:fs";
 import { chmod, lstat, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -193,6 +193,24 @@ function isLoopbackHost(host) {
   return host === "localhost" || host === "::1" || /^127(?:\.\d{1,3}){3}$/.test(host);
 }
 
+function isLoopbackHttpOrigin(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" && isLoopbackHost(url.hostname);
+  } catch { return false; }
+}
+
+function validateTlsCertificate(certificatePem, now = Date.now()) {
+  let certificate;
+  try { certificate = new X509Certificate(certificatePem); } catch { throw new Error("TLS certificate is not a valid X.509 certificate."); }
+  const validFrom = Date.parse(certificate.validFrom);
+  const validTo = Date.parse(certificate.validTo);
+  if (!Number.isFinite(validFrom) || !Number.isFinite(validTo) || now < validFrom || now >= validTo) {
+    throw new Error("TLS certificate is expired or not yet valid.");
+  }
+  return certificate;
+}
+
 function urlHost(host) {
   return host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
 }
@@ -239,9 +257,17 @@ export async function createLocalServer({
   if (typeof trustProxy !== "boolean") throw new Error("AD_TRUST_PROXY must be boolean.");
   if (typeof serveStatic !== "boolean") throw new Error("serveStatic must be boolean.");
   if (trustProxy && !normalizedPublicUrl) throw new Error("trustProxy requires an explicitly configured publicUrl.");
-  const allowedCorsOrigins = new Set([normalizedPublicUrl, ...corsOrigins].filter(Boolean));
-  if (["0.0.0.0", "::"].includes(bindHost) && !normalizedPublicUrl) throw new Error("AD_PUBLIC_URL is required with a wildcard AD_BIND_HOST.");
+  if (trustProxy && !normalizedPublicUrl.startsWith("https://")) throw new Error("trustProxy requires an HTTPS publicUrl.");
+  if (!Array.isArray(corsOrigins)) throw new Error("corsOrigins must be an array of HTTP(S) origins.");
+  const normalizedCorsOrigins = corsOrigins.map((origin) => normalizePublicUrl(origin));
+  if (normalizedCorsOrigins.some((origin) => !origin.startsWith("https://") && !isLoopbackHttpOrigin(origin))) {
+    throw new Error("corsOrigins must use HTTPS, except for loopback HTTP origins.");
+  }
+  const allowedCorsOrigins = new Set([normalizedPublicUrl, ...normalizedCorsOrigins].filter(Boolean));
+  if (!isLoopbackHost(bindHost) && !normalizedPublicUrl) throw new Error("AD_PUBLIC_URL is required with a non-loopback AD_BIND_HOST.");
+  if (!isLoopbackHost(bindHost) && !normalizedPublicUrl.startsWith("https://")) throw new Error("A non-loopback AD_BIND_HOST requires an HTTPS publicUrl.");
   if (tlsKeyFile && normalizedPublicUrl.startsWith("http://")) throw new Error("AD_PUBLIC_URL must use HTTPS when direct TLS is enabled.");
+  if (tlsCertFile) validateTlsCertificate(await readFile(tlsCertFile, "utf8"));
   await ensurePrivateDirectory(dataDir);
   const capabilityFile = join(dataDir, "inbox-capability");
   const localAccessFile = join(dataDir, "local-access-capability");
@@ -288,10 +314,9 @@ export async function createLocalServer({
   };
   const requestWindows = new Map();
   const consumeRateLimit = (req, bucket, limit) => {
-    const forwardedFor = trustProxy && typeof req.headers["x-forwarded-for"] === "string"
-      ? req.headers["x-forwarded-for"].split(",")[0].trim()
-      : "";
-    const key = `${bucket}:${forwardedFor || req.socket.remoteAddress || "unknown"}`;
+    // Forwarded headers are informational only. Trusting a client-supplied value
+    // here would let a direct caller rotate identities and bypass local limits.
+    const key = `${bucket}:${req.socket.remoteAddress || "unknown"}`;
     const now = Date.now();
     const timestamps = (requestWindows.get(key) || []).filter((timestamp) => now - timestamp < RATE_LIMIT_WINDOW_MS);
     if (timestamps.length >= limit) {
