@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
-import { chmod, cp, mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, mkdtemp, readFile, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,6 +11,7 @@ import { writeManifest } from "./release_manifest.mjs";
 const projectDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const root = await mkdtemp(join(tmpdir(), "another-dimension-release-acceptance-"));
 const archive = join(root, "archive");
+const archive2 = join(root, "archive-2");
 const install = join(root, "install");
 const data = join(root, "data");
 const keys = generateKeyPairSync("ed25519");
@@ -50,6 +51,8 @@ await Promise.all([
   copy("scripts/verify_web_artifact.mjs"),
   copy("scripts/release_manifest.mjs"),
   copy("scripts/install_local_server.sh"),
+  copy("scripts/update_local_server.sh"),
+  copy("scripts/verify_install_state.mjs"),
 ]);
 await mkdir(join(archive, "apps/web/dist"), { recursive: true });
 await writeFile(join(archive, "apps/web/dist/index.html"), "<!doctype html><title>fixture</title>\n");
@@ -74,6 +77,30 @@ assert.equal(config.distDir, join(install, "apps/web/dist"));
 assert.equal((await stat(join(install, "runtime-node"))).mode & 0o777, 0o700);
 assert.equal((await stat(join(install, "server-config.json"))).mode & 0o777, 0o600);
 assert.equal((await stat(data)).mode & 0o777, 0o700);
+assert.equal((await run(join(install, "another-dimension-server"), ["doctor"])).code, 0);
+assert.equal((await run(join(install, "another-dimension-server"), ["status"])).code, 1);
+await writeFile(join(data, "retained-sentinel"), "keep-me\n", { mode: 0o600 });
+await writeFile(join(install, "server.pid"), `${process.pid}\n`, { mode: 0o600 });
+const foreignPid = await run(join(install, "another-dimension-server"), ["start"]);
+assert.notEqual(foreignPid.code, 0);
+await writeFile(join(install, "server.pid"), "999999\n", { mode: 0o600 });
+const symlinkDestination = join(root, "install-symlink");
+await symlink(install, symlinkDestination);
+const symlinkInstall = await run("sh", [join(archive, "scripts/install_local_server.sh"), "--archive", archive, "--public-key", publicKeyFile, "--destination", symlinkDestination, "--data-dir", join(root, "data-symlink")]);
+assert.notEqual(symlinkInstall.code, 0);
+await cp(archive, archive2, { recursive: true });
+await writeFile(join(archive2, "README.md"), "updated release fixture\n");
+await writeManifest(archive2, { version: "0.2.0", privateKey });
+const update = await run(join(install, "another-dimension-server"), ["update", "--archive", archive2, "--public-key", publicKeyFile, "--stop"]);
+assert.equal(update.code, 0, update.output);
+const updatedMarker = JSON.parse(await readFile(join(install, ".another-dimension-install.json"), "utf8"));
+assert.equal(updatedMarker.releaseVersion, "0.2.0");
+assert.equal((await readFile(join(data, "retained-sentinel"), "utf8")), "keep-me\n");
+const rollback = await run(join(install, "another-dimension-server"), ["rollback"]);
+assert.equal(rollback.code, 0, rollback.output);
+const rolledBackMarker = JSON.parse(await readFile(join(install, ".another-dimension-install.json"), "utf8"));
+assert.equal(rolledBackMarker.releaseVersion, "0.1.0");
+assert.equal((await readFile(join(data, "retained-sentinel"), "utf8")), "keep-me\n");
 
 const wrongKey = generateKeyPairSync("ed25519").publicKey.export({ type: "spki", format: "pem" });
 const wrongKeyFile = join(root, "wrong-public.pem");

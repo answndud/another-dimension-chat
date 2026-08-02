@@ -43,6 +43,28 @@ legacy/research source로만 보존됩니다. 현재 web 제품의 release·설�
 `start|stop|restart|status|uninstall` 명령을 만듭니다. `uninstall`은 사용자 데이터까지
 자동 삭제하지 않습니다. 데이터가 필요한지 확인한 뒤 별도로 폐기하세요.
 
+설치된 launcher는 다음 명령도 제공합니다.
+
+```sh
+# 설치 상태·runtime hash·high-risk disabled 상태 확인
+~/.local/share/another-dimension/server/another-dimension-server doctor
+
+# 새 signed archive로 교체. 실행 중이면 --stop을 명시해야 함
+~/.local/share/another-dimension/server/another-dimension-server update \
+  --archive ./another-dimension-0.2.0 \
+  --public-key /secure/path/release-ed25519-public.pem \
+  --stop
+
+# 직전 verified installation으로 복구
+~/.local/share/another-dimension/server/another-dimension-server rollback
+```
+
+update는 먼저 새 archive를 임시 staging에 검증한 뒤 설치 디렉터리를 atomic하게
+교체합니다. 실패하면 기존 설치와 별도 data directory를 유지합니다. 실행 중인 서버는
+자동으로 끄지 않으며, `--stop` 없이 update를 거부합니다. rollback도 서버가 멈춘
+상태에서만 수행됩니다. PID 파일이 다른 프로세스를 가리키면 시작·중지를 임의로
+진행하지 않습니다.
+
 현재 저장소의 development archive는 bundled runtime이 없을 수 있습니다. 그런
 archive는 설치기가 명확히 거부하며 일반 사용자용 배포물로 취급하면 안 됩니다.
 `AD_RELEASE_PROFILE=public`은 `AD_NODE_RUNTIME=/secure/node`가 없으면 실패합니다.

@@ -25,7 +25,9 @@
     "apps/web/dist/index.html",
     "apps/web/dist/asset-integrity.json",
     "apps/server/server.mjs",
-    "runtime/node"
+    "runtime/node",
+    "scripts/update_local_server.sh",
+    "scripts/verify_install_state.mjs"
   ],
   "nonClaims": [
     "anonymity",
