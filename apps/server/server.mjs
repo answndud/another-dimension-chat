@@ -36,7 +36,9 @@ function json(res, status, body, headers = {}) {
 function securityHeaders({ api = false, hsts = false } = {}) {
   return {
     "cache-control": api ? "no-store" : "no-cache",
-    "content-security-policy": "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; worker-src 'self';",
+    // WebAssembly compilation is required by the audited Rust/WASM crypto boundary.
+    // `wasm-unsafe-eval` permits WASM compilation only; it does not enable JavaScript eval.
+    "content-security-policy": "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; worker-src 'self';",
     "cross-origin-opener-policy": "same-origin",
     "cross-origin-resource-policy": "same-origin",
     "form-action": "'self'",

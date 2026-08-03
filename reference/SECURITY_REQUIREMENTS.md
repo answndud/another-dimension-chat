@@ -46,7 +46,7 @@ Requirements marked `blocked` prevent any high-risk claim.
 | `RELAY-01` | Relay stores only bounded opaque envelopes and never private keys/plaintext. | `implemented` | Server route tests, body bounds, log scan. |
 | `RELAY-02` | Capability leakage, request abuse, proxy spoofing, disk failure, queue full, and restart are bounded. | `partial` | HTTP abuse fixtures and redacted logs. |
 | `RELAY-03` | Remote HTTP, unsafe bind, and misleading transport claims are rejected. | `implemented` | Server/web transport tests and config preflight. |
-| `WEB-01` | UI requires a secure context and has a strict CSP/no third-party runtime. | `blocked` | Built artifact header/CSP/SRI scan and browser execution test. |
+| `WEB-01` | UI requires a secure context and has a strict CSP/no third-party runtime. | `partial` | Built artifact header/CSP/SRI scan plus scoped in-app browser WASM/profile execution; full browser matrix remains absent. |
 | `WEB-02` | UI does not put capabilities, secrets, plaintext, or passphrases in telemetry/logs/URLs/titles. | `partial` | Network/log/DOM/clipboard scan. |
 | `WEB-03` | Korean onboarding blocks unsafe shortcuts and explains cause/action/security impact for failures. | `partial` | Automated two-profile UX flow and accessibility checks. |
 | `TRANSPORT-01` | Direct HTTPS/VPN/LAN is low-risk and does not claim anonymity. | `implemented` | UI/docs claim scan and packet metadata fixture. |

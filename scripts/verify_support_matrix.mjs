@@ -27,6 +27,13 @@ for (const entry of matrix.entries) {
 
 const browserEvidence = resolve(root, "reference/browser-evidence/codex-in-app-browser.json");
 const evidence = JSON.parse(await readFile(browserEvidence, "utf8"));
-if (evidence.status !== "blocked" || evidence.observations?.profileCreationCompleted !== false) fail("browser evidence is not an explicit blocked result");
+const browserEvidenceIsScopedVerified = evidence.status === "verified-local"
+  && evidence.observations?.productionUiRendered === true
+  && evidence.observations?.profileCreationCompleted === true
+  && evidence.observations?.initializationErrorShown === false
+  && /profile creation|프로필/i.test(evidence.scope ?? "");
+const browserEvidenceIsBlocked = evidence.status === "blocked"
+  && evidence.observations?.profileCreationCompleted === false;
+if (!browserEvidenceIsScopedVerified && !browserEvidenceIsBlocked) fail("browser evidence must be either an explicit blocked result or a scoped verified-local result");
 if (evidence.redaction?.includes("passphrase") !== true) fail("browser evidence redaction policy is missing");
 console.log(`support matrix valid: ${matrix.entries.length} entries; verified-local=${matrix.entries.filter((entry) => entry.status === "verified-local").length}; blocked=${matrix.entries.filter((entry) => entry.status === "blocked").length}; unverified=${matrix.entries.filter((entry) => entry.status === "unverified").length}`);

@@ -18,9 +18,9 @@
       "surface": "browser-ui",
       "platform": "Codex in-app browser",
       "runtime": "embedded browser (version not asserted)",
-      "status": "blocked",
+      "status": "verified-local",
       "evidence": "reference/browser-evidence/codex-in-app-browser.json",
-      "scope": "production UI rendered; profile initialization did not complete"
+      "scope": "production UI, security headers, WASM initialization, and IndexedDB-backed profile creation only; pairing, messaging, and browser support matrix remain unverified"
     },
     {
       "id": "chrome",

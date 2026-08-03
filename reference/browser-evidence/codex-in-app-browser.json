@@ -3,17 +3,19 @@
   "version": 1,
   "surface": "production static UI served from loopback",
   "browser": "Codex in-app browser",
-  "status": "blocked",
+  "status": "verified-local",
+  "scope": "production UI, security headers, WASM initialization, and IndexedDB-backed profile creation only",
   "observations": {
     "productionUiRendered": true,
     "visibleWebCryptoNotice": true,
-    "profileCreationCompleted": false,
-    "initializationErrorShown": true,
-    "errorClass": "browser-environment-or-input",
+    "profileCreationCompleted": true,
+    "initializationErrorShown": false,
+    "securityHeadersWasmUnsafeEval": true,
+    "roomOpened": true,
+    "errorClass": null,
     "consoleWarningsOrErrorsObserved": false
   },
   "notObserved": [
-    "profile creation success",
     "IndexedDB-backed unlock",
     "pairing",
     "message encryption or delivery",
@@ -21,5 +23,5 @@
     "multi-tab lock and wipe"
   ],
   "redaction": "No profile name, passphrase, invite, envelope, plaintext, capability, URL token, storage export, or private key was recorded.",
-  "nextAction": "Diagnose initialization failure in this embedded browser before changing any browser or OS support claim."
+  "nextAction": "Extend the scoped smoke to pairing, messaging, service-worker update/cache, multi-tab lock/wipe, then separately verify real browser and OS combinations."
 }

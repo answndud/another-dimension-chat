@@ -82,8 +82,14 @@ function localServerStatus(info) {
 }
 
 function browserStatus() {
-  if (!window.isSecureContext || !window.crypto?.subtle) return "브라우저 보안: 암호화를 사용하려면 localhost 또는 HTTPS로 접속하세요.";
-  return "브라우저 보안: Web Crypto가 활성화되었습니다.";
+  const capabilities = [
+    ["Web Crypto", Boolean(window.isSecureContext && window.crypto?.subtle)],
+    ["IndexedDB", typeof window.indexedDB === "object"],
+    ["WebAssembly", typeof window.WebAssembly === "object"],
+    ["Worker", typeof window.Worker === "function"],
+  ];
+  const summary = capabilities.map(([name, available]) => `${name} ${available ? "✓" : "✗"}`).join(" · ");
+  return `${!window.isSecureContext || !window.crypto?.subtle ? "브라우저 보안: localhost 또는 HTTPS가 필요합니다." : "브라우저 보안 상태"} · ${summary}`;
 }
 
 function explainError(value) {
@@ -96,6 +102,7 @@ function explainError(value) {
     [/(endpoint or capability|server endpoint|inbox|peer server|could not be reached|timeout)/, "상대 relay endpoint에 도달하지 못했거나 capability가 바뀌었습니다.", "서버 상태와 HTTPS 설정을 확인하세요. 실패하면 화면에 준비된 sealed envelope를 수동 전달하세요. capability 변경이면 새 초대를 교환하세요.", "자동 전달 완료로 기록되지 않습니다.", "서버 확인 후 재시도할 수 있습니다."],
     [/(already imported|already paired|revoked|expired|invite)/, "초대·봉투가 만료되었거나 이미 사용되었거나 현재 방과 맞지 않습니다.", "오래된 값을 다시 붙여 넣지 말고 새 초대 또는 새 봉투를 안전한 채널로 교환하세요.", "검증되지 않은 값은 처리되지 않습니다.", "새 값을 받은 뒤에만 재시도하세요."],
     [/(backup|transcript|session.*revision|rollback|integrity)/, "백업의 목적·무결성·revision이 현재 프로필과 맞지 않습니다.", "profile/session/transcript 백업을 구분하고, 변조되었거나 오래된 백업은 사용하지 마세요. 기존 데이터를 덮어쓰지 않습니다.", "복구는 완료되지 않았고 기존 자료는 보존됩니다.", "원본 백업을 별도 보관한 뒤에만 다시 시도하세요."],
+    [/(wasm|webassembly|instantiate|module|failed to fetch)/, "브라우저 암호화 모듈을 초기화하지 못했습니다.", "페이지를 새로고침하지 말고 다른 탭을 닫은 뒤, production bundle의 WASM 파일과 브라우저 WebAssembly 지원 상태를 확인하세요.", "프로필 생성·잠금 해제·메시지 전송은 잠금 상태입니다.", "원인을 확인하기 전 반복 입력하지 마세요."],
   ].find(([pattern]) => pattern.test(lower));
   const [, cause, action, impact, retry] = matched || [null, "입력 또는 브라우저 환경을 확인할 수 없습니다.", "입력을 확인하고 서버·브라우저 상태를 점검하세요.", "작업은 완료되지 않았으며 메시지 전송은 열리지 않습니다.", "원인을 확인한 뒤 한 번만 다시 시도하세요."];
   return `원인: ${cause} 조치: ${action} 보안 영향: ${impact} 재시도: ${retry}`;
