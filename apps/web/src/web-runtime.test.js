@@ -425,12 +425,12 @@ test("another tab lock discards the active session and storage failure fails clo
   await Promise.all([first.ready, second.ready]);
   await first.createProfile("coordination", "coordination-passphrase");
   await second.unlockProfile("coordination", "coordination-passphrase");
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await assert.rejects(() => first.exportProfileBackup(), /Unlock a local profile first/);
   assert.equal(second.getSessionStatus(), "not-paired");
-  first.lockProfile();
+  await first.unlockProfile("coordination", "coordination-passphrase");
   await new Promise((resolve) => setTimeout(resolve, 0));
   await assert.rejects(() => second.exportProfileBackup(), /Unlock a local profile first/);
-
-  await first.unlockProfile("coordination", "coordination-passphrase");
   database.failOpen = true;
   await assert.rejects(() => first.listMessages(), /Browser storage could not be opened/);
   assert.equal(first.getStorageStatus().available, false);

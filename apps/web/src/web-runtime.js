@@ -496,6 +496,9 @@ export async function unlockProfile(name, passphrase) {
   } else if (migratedSession || migratedPublicState || !Object.hasOwn(material, "peer")) {
     await persistPrivateProfile();
   }
+  // A profile may only have one live unlocked session. Opening it in another
+  // tab must invalidate any previously unlocked tab before the caller uses it.
+  broadcastSession("profile-updated", activeProfile.name);
   return activeProfile;
 }
 

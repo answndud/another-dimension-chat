@@ -130,7 +130,7 @@ function render() {
         <h1>브라우저 안의 개인 암호화 방</h1>
         <p class="step">${escapeHtml(onboardingStep())}</p>
         <p class="lede">계정과 중앙 메시지 서버가 없습니다. 로컬 프로필을 만들고 공개 초대를 교환한 뒤, 암호화 봉투를 원하는 경로로 전달합니다.</p>
-        <div class="notice">${escapeHtml(browserStatus())}</div>
+        <div class="notice">${escapeHtml(state.notice || browserStatus())}</div>
         <div class="card stack"><h2>안전한 시작 순서</h2>${onboardingGuide()}</div>
         <div class="card grid-two">
           <form id="create-form" class="stack">

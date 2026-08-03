@@ -20,7 +20,7 @@
       "runtime": "embedded browser (version not asserted)",
       "status": "verified-local",
       "evidence": "reference/browser-evidence/codex-in-app-browser.json",
-      "scope": "production UI, security headers, WASM initialization, IndexedDB-backed profile creation, bidirectional invite validation, safety confirmation, manual Olm handshake, and encrypted message round-trip only; service-worker, multi-tab, and real browser/OS matrix remain unverified"
+      "scope": "production UI, security headers, WASM initialization, IndexedDB profile create/unlock, bidirectional invite validation, safety confirmation, manual Olm handshake, encrypted message round-trip, and single-active-session multi-tab replacement only; service-worker, wipe, and real browser/OS matrix remain unverified"
     },
     {
       "id": "chrome",

@@ -31,7 +31,7 @@ const browserEvidenceIsScopedVerified = evidence.status === "verified-local"
   && evidence.observations?.productionUiRendered === true
   && evidence.observations?.profileCreationCompleted === true
   && evidence.observations?.initializationErrorShown === false
-  && /profile creation|프로필/i.test(evidence.scope ?? "");
+  && /profile (creation|create)|프로필/i.test(evidence.scope ?? "");
 const browserEvidenceIsBlocked = evidence.status === "blocked"
   && evidence.observations?.profileCreationCompleted === false;
 if (!browserEvidenceIsScopedVerified && !browserEvidenceIsBlocked) fail("browser evidence must be either an explicit blocked result or a scoped verified-local result");
