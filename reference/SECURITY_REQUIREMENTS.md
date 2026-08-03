@@ -56,7 +56,7 @@ Requirements marked `blocked` prevent any high-risk claim.
 | `RELEASE-03` | Production gate fails on skipped build, missing browser acceptance, or missing artifact. | `blocked` | `verify_all.sh --release` negative tests. |
 | `OPS-01` | User can install, start, stop, restart, update, rollback, and recover without Node/npm. | `blocked` | No-Node clean OS fixture. |
 | `OPS-02` | Incident runbook covers leaked capability, lost device, changed release, key compromise, and fresh pairing. | `partial` | Redacted recovery fixture and support docs. |
-| `AUDIT-01` | Independent review covers protocol composition, browser, storage, relay, release, and transport. | `blocked` | Review packet and external report; automated tests cannot substitute. |
+| `AUDIT-01` | Independent review covers protocol composition, browser, storage, relay, release, and transport. | `blocked` | `verify_security_review_signoff.mjs --fixture` validates the handoff gate; actual external report, reviewer identity, and independent sign-off are absent. |
 
 ## Claim policy
 

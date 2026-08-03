@@ -64,6 +64,19 @@ Signature or report reference:
 서명란을 비워 둔 상태는 `independent review complete`가 아니다. 자동 테스트가
 모두 통과해도 이 서명이 없으면 `AUDIT-01`은 `blocked`다.
 
+Reviewer 결과 JSON은 [`SECURITY_REVIEW_RESULT_TEMPLATE.md`](SECURITY_REVIEW_RESULT_TEMPLATE.md)
+형식으로 제출하고, 별도 전달받은 reviewer public key로 다음을 검증한다.
+
+```sh
+node scripts/verify_security_review_signoff.mjs \
+  /secure/review/independent-review-signoff.json \
+  /secure/review/reviewer-public.pem
+```
+
+이 명령은 source revision, scope, reviewer 서명, 서명 key fingerprint를 검증하지만
+reviewer가 실제로 독립된 조직인지 또는 전달 채널이 신뢰되는지는 증명하지 않는다.
+그 신원·독립성 확인 기록이 없으면 `AUDIT-01`은 계속 `blocked`다.
+
 ## 공개 판정 규칙
 
 - `implemented`는 구현과 focused evidence가 있다는 뜻일 뿐 audit 통과가 아니다.

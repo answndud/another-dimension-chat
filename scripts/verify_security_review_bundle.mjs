@@ -21,6 +21,7 @@ if (manifest.format !== "another-dimension-security-review-bundle" || manifest.v
 if (manifest.claims?.independentReview !== "not-provided" || manifest.claims?.productionReady !== false || manifest.claims?.highRiskAllowed !== false) {
   throw new Error("review bundle claims an unearned security status");
 }
+await access(path.join(root, "review/reference/SECURITY_REVIEW_RESULT_TEMPLATE.md"), constants.R_OK);
 async function walk(dir) {
   const result = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
