@@ -31,6 +31,7 @@ node --check scripts/prepare_security_review.mjs
 node --check scripts/verify_security_review_bundle.mjs
 node --check scripts/verify_release_trust.mjs
 node --check scripts/verify_security_review_signoff.mjs
+node --check scripts/verify_security_review_handoff.mjs
 node --check scripts/acceptance_browser_matrix.mjs
 node --check scripts/verify_support_matrix.mjs
 node --check scripts/verify_release_support_gate.mjs
@@ -61,6 +62,7 @@ node scripts/verify_support_matrix.mjs
 node scripts/verify_release_support_gate.mjs
 node scripts/verify_release_trust.mjs --fixture
 node scripts/verify_security_review_signoff.mjs --fixture
+node scripts/verify_security_review_handoff.mjs --fixture
 echo "[8/8] production build (only when dependencies are present)"
 if [ "$MODE" = release ]; then
   if [ ! -x apps/web/node_modules/.bin/vite ]; then

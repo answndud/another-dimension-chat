@@ -73,6 +73,16 @@ node scripts/verify_security_review_signoff.mjs \
   /secure/review/reviewer-public.pem
 ```
 
+review packet의 source revision과 reviewer 결과를 함께 대조하려면 다음 handoff gate를
+사용한다. 세 입력물 중 하나라도 다른 revision이면 거부한다.
+
+```sh
+node scripts/verify_security_review_handoff.mjs \
+  /secure/review/bundle \
+  /secure/review/independent-review-signoff.json \
+  /secure/review/reviewer-public.pem
+```
+
 이 명령은 source revision, scope, reviewer 서명, 서명 key fingerprint를 검증하지만
 reviewer가 실제로 독립된 조직인지 또는 전달 채널이 신뢰되는지는 증명하지 않는다.
 그 신원·독립성 확인 기록이 없으면 `AUDIT-01`은 계속 `blocked`다.

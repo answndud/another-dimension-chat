@@ -30,6 +30,7 @@ const sourceFiles = [
   "scripts/verify_public_release_gate.mjs",
   "scripts/verify_release_trust.mjs",
   "scripts/verify_security_review_signoff.mjs",
+  "scripts/verify_security_review_handoff.mjs",
   "scripts/verify_install_state.mjs",
   "scripts/acceptance_p3.mjs",
   "reference/product_boundary.json",
