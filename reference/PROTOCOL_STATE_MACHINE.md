@@ -49,3 +49,20 @@ is at-least-once delivery. The relay may duplicate or retain an envelope, so
 the recipient deduplicates by profile-bound envelope ID. A failed ack does not
 erase the local decrypted result; the next sync may receive the same envelope
 and safely acknowledge it as already imported.
+
+## Executable state vectors
+
+The fixed-seed vector fixture runs the browser runtime against the committed WASM
+module and an in-memory IndexedDB boundary:
+
+```sh
+npm --prefix apps/web test --workspaces=false
+node scripts/verify_web_crypto_binding.mjs
+```
+
+The `fixed-seed protocol vectors preserve state-machine invariants` case covers
+fresh pairing and safety confirmation, prekey consumption/replenishment, signed
+payload mutation, deterministic message reordering, duplicate envelope replay,
+and peer endpoint mutation. A rejected mutation must leave the message count and
+session status unchanged. This is composition evidence only; it is not an
+independent cryptographic audit or a browser/OS matrix.

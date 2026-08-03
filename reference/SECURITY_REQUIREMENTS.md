@@ -37,8 +37,8 @@ Requirements marked `blocked` prevent any high-risk claim.
 | `AUTH-01` | Profile passphrase is required for local private-state unlock. | `implemented` | Web runtime tests and wrong-passphrase fixture. |
 | `AUTH-02` | Peer identity continuity fails closed on change. | `implemented` | Identity-change and fresh-pair fixture. |
 | `AUTH-03` | Invite signature, expiry, name collision, capability scope, and revocation are checked before pairing. | `partial` | Expired/revoked/capability fixture and protocol vectors. |
-| `CRYPTO-01` | All identity, invite, prekey, handshake, ratchet, replay, and persistence transitions are specified with invariants. | `partial` | `CRYPTO_REVIEW_PACKET.md`, state-machine vectors, external review input. |
-| `CRYPTO-02` | Tamper, duplicate, replay, corrupt storage, crash, concurrency, and rollback fail closed. | `partial` | Fixed-seed property/fuzz and kill-after-write fixtures. |
+| `CRYPTO-01` | All identity, invite, prekey, handshake, ratchet, replay, and persistence transitions are specified with invariants. | `partial` | `PROTOCOL_STATE_MACHINE.md`, fixed-seed browser vectors, and external review input. |
+| `CRYPTO-02` | Tamper, duplicate, replay, corrupt storage, crash, concurrency, and rollback fail closed. | `partial` | Fixed-seed property vectors, existing storage/concurrency fixtures, and kill-after-write fixtures. |
 | `CRYPTO-03` | JS/WASM key exposure and zeroization limits are explicit. | `partial` | Boundary review and browser memory/lock evidence; no stronger claim. |
 | `DATA-01` | Private profile state is encrypted before IndexedDB persistence. | `implemented` | Argon2id/PBKDF2 migration and storage tests. |
 | `DATA-02` | Browser quota, eviction, private mode, multiple tabs, cache, clipboard, and service-worker behavior are handled. | `blocked` | Browser matrix fixtures and safe-lock behavior. |

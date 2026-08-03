@@ -20,6 +20,7 @@ node --check scripts/verify_public_release_gate.mjs
 node --check scripts/product_boundary_negative.test.mjs
 node --check scripts/verify_relay_logs.mjs
 node --check scripts/verify_web_artifact.mjs
+node --check scripts/verify_web_crypto_binding.mjs
 node --check scripts/verify_web_artifact_fixture.mjs
 node --check scripts/acceptance_p3.mjs
 node --check scripts/acceptance_local_only.mjs
@@ -30,6 +31,7 @@ node scripts/verify_product_boundary.mjs
 node scripts/product_boundary_negative.test.mjs
 node scripts/verify_relay_logs.mjs
 node scripts/verify_web_artifact_fixture.mjs
+node scripts/verify_web_crypto_binding.mjs
 echo "[3/8] focused server tests"
 node --test apps/server/server.test.mjs
 echo "[4/8] focused browser runtime tests"

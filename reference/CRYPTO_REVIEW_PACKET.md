@@ -4,6 +4,11 @@ This packet is an input for an independent review of the application-level
 composition around the audited `vodozemac` implementation. It is not an audit
 report and must not be used as a security certificate.
 
+The executable composition evidence is run by
+`npm --prefix apps/web test --workspaces=false` and
+`node scripts/verify_web_crypto_binding.mjs`. These commands must pass together;
+neither command substitutes for independent review.
+
 ## Scope
 
 1. Profile identity generation, signing-key storage, passphrase wrapping,

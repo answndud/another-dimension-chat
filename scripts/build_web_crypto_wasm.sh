@@ -31,4 +31,7 @@ mkdir -p "$OUT_DIR"
   --out-name ad_crypto \
   "$TARGET_DIR/another_dimension_web_crypto_wasm.wasm"
 
+node "$PROJECT_DIR/scripts/verify_web_crypto_binding.mjs" --write "$PROJECT_DIR"
+node "$PROJECT_DIR/scripts/verify_web_crypto_binding.mjs" "$PROJECT_DIR"
+
 printf '%s\n' "Generated browser cryptography module in $OUT_DIR"

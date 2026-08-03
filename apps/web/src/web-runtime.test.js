@@ -142,6 +142,20 @@ function bytesToBase64(bytes) {
   return Buffer.from(bytes).toString("base64url");
 }
 
+function seededPermutation(values, seed) {
+  let state = seed >>> 0;
+  const output = [...values];
+  const next = () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state;
+  };
+  for (let index = output.length - 1; index > 0; index -= 1) {
+    const swap = next() % (index + 1);
+    [output[index], output[swap]] = [output[swap], output[index]];
+  }
+  return output;
+}
+
 async function completeManualHandshake(runtime, passphrases) {
   let pending = "";
   for (const name of Object.keys(passphrases)) {
@@ -419,4 +433,51 @@ test("another tab lock discards the active session and storage failure fails clo
   database.failOpen = false;
   for (const channel of MemoryBroadcastChannel.channels) channel.close();
   delete globalThis.BroadcastChannel;
+});
+
+test("fixed-seed protocol vectors preserve state-machine invariants", async () => {
+  if (!globalThis.crypto?.subtle) Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
+  globalThis.indexedDB = new MemoryIndexedDb();
+  Object.defineProperty(globalThis, "location", { value: { hash: "", pathname: "/", search: "" }, configurable: true });
+  const runtime = await import(`./web-runtime.js?property-vectors=${Date.now()}`);
+  await runtime.ready;
+  await runtime.createProfile("vector_alice", "alice-vector-passphrase");
+  const aliceInvite = await runtime.exportInvite();
+  await runtime.createProfile("vector_bob", "bob-vector-passphrase");
+  const bobInvite = await runtime.exportInvite();
+  await runtime.unlockProfile("vector_alice", "alice-vector-passphrase");
+  await runtime.importInvite(bobInvite);
+  await runtime.unlockProfile("vector_bob", "bob-vector-passphrase");
+  await runtime.importInvite(aliceInvite);
+  await completeManualHandshake(runtime, { vector_alice: "alice-vector-passphrase", vector_bob: "bob-vector-passphrase" });
+
+  const vectors = [0x01_02_03_04, 0x11_22_33_44, 0x55_66_77_88, 0xdead_beef];
+  for (const seed of vectors) {
+    await runtime.unlockProfile("vector_alice", "alice-vector-passphrase");
+    const envelopes = [];
+    for (let index = 0; index < 5; index += 1) envelopes.push(await runtime.exportEnvelope(`vector-${seed}-${index}`, { record: false }));
+    const tamperedBody = envelopeBody(envelopes[0]);
+    tamperedBody.payload.body = `A${tamperedBody.payload.body.slice(1)}`;
+    const tampered = `ADENVWEB3.${Buffer.from(JSON.stringify(tamperedBody)).toString("base64url")}`;
+    await runtime.unlockProfile("vector_bob", "bob-vector-passphrase");
+    const beforeTamper = await runtime.listMessages();
+    await assert.rejects(() => runtime.importEnvelope(tampered), /signature is invalid/);
+    assert.equal((await runtime.listMessages()).length, beforeTamper.length, `tamper mutated state for seed ${seed}`);
+    const imported = new Set();
+    for (const envelope of seededPermutation(envelopes, seed)) {
+      assert.equal(await runtime.importEnvelope(envelope), `vector-${seed}-${envelope === envelopes[0] ? 0 : envelope === envelopes[1] ? 1 : envelope === envelopes[2] ? 2 : envelope === envelopes[3] ? 3 : 4}`);
+      imported.add(envelope);
+    }
+    assert.equal(imported.size, envelopes.length);
+    const afterImport = await runtime.listMessages();
+    for (const envelope of envelopes) await assert.rejects(() => runtime.importEnvelope(envelope), /already imported/);
+    assert.equal((await runtime.listMessages()).length, afterImport.length, `duplicate mutated state for seed ${seed}`);
+  }
+
+  await runtime.unlockProfile("vector_alice", "alice-vector-passphrase");
+  const alice = await runtime.unlockProfile("vector_alice", "alice-vector-passphrase");
+  alice.peer.server = { inboxUrl: "https://changed.invalid/api/v1/inbox/new-capability", protocol: 1 };
+  await assert.rejects(() => runtime.exportEnvelope("endpoint mutation must stop"), /endpoint or capability changed/);
+  assert.equal(runtime.getSessionStatus(), "ready");
+  delete globalThis.location;
 });
