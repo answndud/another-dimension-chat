@@ -22,6 +22,8 @@
     "release-manifest.json",
     "reference/PRODUCT_BOUNDARY.md",
     "reference/product_boundary.json",
+    "reference/SUPPORT_MATRIX.json",
+    "reference/browser-evidence/codex-in-app-browser.json",
     "apps/web/dist/index.html",
     "apps/web/dist/asset-integrity.json",
     "apps/server/server.mjs",
