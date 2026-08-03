@@ -112,7 +112,15 @@ class MemoryIndexedDb {
     const store = this.stores.get(name);
     return {
       get: (key) => this.result(store.values.get(key)),
-      put: (value) => { store.values.set(value[store.keyPath], structuredClone(value)); return this.result(value[store.keyPath]); },
+      put: (value) => {
+        if (this.failWrite) {
+          const request = {};
+          queueMicrotask(() => { request.error = new DOMException("Injected quota exceeded.", "QuotaExceededError"); request.onerror?.(); });
+          return request;
+        }
+        store.values.set(value[store.keyPath], structuredClone(value));
+        return this.result(value[store.keyPath]);
+      },
       delete: (key) => { store.values.delete(key); return this.result(undefined); },
       getAll: () => this.result([...store.values.values()].map((value) => structuredClone(value))),
     };
@@ -444,6 +452,21 @@ test("another tab lock discards the active session and storage failure fails clo
   database.failOpen = false;
   for (const channel of MemoryBroadcastChannel.channels) channel.close();
   delete globalThis.BroadcastChannel;
+});
+
+test("quota-style IndexedDB write failures lock the active session", async () => {
+  if (!globalThis.crypto?.subtle) Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
+  const database = new MemoryIndexedDb();
+  globalThis.indexedDB = database;
+  const runtime = await import(`./web-runtime.js?quota-failure=${Date.now()}`);
+  await runtime.ready;
+  await runtime.createProfile("quota", "quota-passphrase");
+  await runtime.exportInvite();
+  database.failWrite = true;
+  await assert.rejects(() => runtime.revokeInvite(), /quota exceeded/i);
+  assert.equal(runtime.getStorageStatus().available, false);
+  await assert.rejects(() => runtime.exportProfileBackup(), /Unlock a local profile first/);
+  database.failWrite = false;
 });
 
 test("fixed-seed protocol vectors preserve state-machine invariants", async () => {

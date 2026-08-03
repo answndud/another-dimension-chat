@@ -41,7 +41,7 @@ Requirements marked `blocked` prevent any high-risk claim.
 | `CRYPTO-02` | Tamper, duplicate, replay, corrupt storage, crash, concurrency, and rollback fail closed. | `partial` | Fixed-seed property vectors, existing storage/concurrency fixtures, and kill-after-write fixtures. |
 | `CRYPTO-03` | JS/WASM key exposure and zeroization limits are explicit. | `partial` | Boundary review and browser memory/lock evidence; no stronger claim. |
 | `DATA-01` | Private profile state is encrypted before IndexedDB persistence. | `implemented` | Argon2id/PBKDF2 migration and storage tests. |
-| `DATA-02` | Browser quota, eviction, private mode, multiple tabs, cache, clipboard, and service-worker behavior are handled. | `blocked` | Browser matrix fixtures and safe-lock behavior. |
+| `DATA-02` | Browser quota, eviction, private mode, multiple tabs, cache, clipboard, and service-worker behavior are handled. | `partial` | Quota-style IndexedDB write failure locks the active session; multi-tab and Service Worker fixtures exist. Actual browser quota/eviction/private-mode matrix and cache lifecycle remain unverified. |
 | `DATA-03` | Wipe is not called secure deletion and backup is not cloud recovery. | `implemented` | UI/docs claim scan and recovery fixtures. |
 | `RELAY-01` | Relay stores only bounded opaque envelopes and never private keys/plaintext. | `implemented` | Server route tests, body bounds, log scan. |
 | `RELAY-02` | Capability leakage, request abuse, proxy spoofing, disk failure, queue full, and restart are bounded. | `partial` | HTTP abuse fixtures and redacted logs. |
