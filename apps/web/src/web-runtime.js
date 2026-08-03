@@ -933,7 +933,7 @@ export function isSafetyVerified() {
 export async function confirmSafetyVerification(material) {
   const session = activeProfile?.privateMaterial?.session;
   if (!session || !activeProfile.peer) throw new Error("Pair with a peer before verifying safety material.");
-  if (String(material || "").trim() !== safetyPhrase(activeProfile.selfInviteBody, activeProfile.peer)) {
+  if (String(material || "").trim() !== safetyPhrase(activeProfile, activeProfile.peer)) {
     throw new Error("Safety material does not match. Compare the complete phrase over a trusted channel.");
   }
   session.safetyVerified = true;

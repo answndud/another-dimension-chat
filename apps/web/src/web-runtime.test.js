@@ -173,7 +173,7 @@ async function completeManualHandshake(runtime, passphrases) {
     const profile = await runtime.unlockProfile(name, passphrases[name]);
     assert.equal(runtime.getSessionStatus(), "ready");
     await assert.rejects(() => runtime.exportEnvelope("blocked before safety verification"), /Compare the safety material/);
-    await runtime.confirmSafetyVerification(runtime.safetyPhrase(profile.selfInviteBody, profile.peer));
+    await runtime.confirmSafetyVerification(runtime.safetyPhrase(profile, profile.peer));
     if (runtime.getPendingEnvelope()) await runtime.confirmPendingEnvelopeDelivered();
   }
   let consumedPrekeyProfile = null;
@@ -398,7 +398,7 @@ test("inbox sync drives Olm controls and protects read and ack headers", async (
     }
     const syncAlice = await runtime.unlockProfile("sync_alice", "alice-passphrase");
     assert.equal(runtime.getSessionStatus(), "ready");
-    await runtime.confirmSafetyVerification(runtime.safetyPhrase(syncAlice.selfInviteBody, syncAlice.peer));
+    await runtime.confirmSafetyVerification(runtime.safetyPhrase(syncAlice, syncAlice.peer));
     const queuedEnvelope = await runtime.exportEnvelope("automatic receive");
     queue.push({ id: "message-id", envelope: queuedEnvelope });
     await runtime.unlockProfile("sync_bob", "bob-passphrase");

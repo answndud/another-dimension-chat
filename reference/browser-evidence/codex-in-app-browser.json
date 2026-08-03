@@ -4,7 +4,7 @@
   "surface": "production static UI served from loopback",
   "browser": "Codex in-app browser",
   "status": "verified-local",
-  "scope": "production UI, security headers, WASM initialization, and IndexedDB-backed profile creation only",
+  "scope": "production UI, security headers, WASM initialization, IndexedDB-backed profile creation, bidirectional invite validation, safety confirmation, manual Olm handshake, and encrypted message round-trip only",
   "observations": {
     "productionUiRendered": true,
     "visibleWebCryptoNotice": true,
@@ -12,16 +12,18 @@
     "initializationErrorShown": false,
     "securityHeadersWasmUnsafeEval": true,
     "roomOpened": true,
+    "bidirectionalInviteValidationCompleted": true,
+    "safetyConfirmationCompleted": true,
+    "manualHandshakeCompleted": true,
+    "encryptedMessageRoundTripCompleted": true,
     "errorClass": null,
     "consoleWarningsOrErrorsObserved": false
   },
   "notObserved": [
     "IndexedDB-backed unlock",
-    "pairing",
-    "message encryption or delivery",
     "service-worker update behavior",
     "multi-tab lock and wipe"
   ],
   "redaction": "No profile name, passphrase, invite, envelope, plaintext, capability, URL token, storage export, or private key was recorded.",
-  "nextAction": "Extend the scoped smoke to pairing, messaging, service-worker update/cache, multi-tab lock/wipe, then separately verify real browser and OS combinations."
+  "nextAction": "Extend the scoped smoke to IndexedDB unlock, service-worker update/cache, multi-tab lock/wipe, then separately verify real browser and OS combinations."
 }
