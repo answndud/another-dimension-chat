@@ -27,6 +27,8 @@ node --check scripts/acceptance_p3.mjs
 node --check scripts/acceptance_local_only.mjs
 node --check scripts/acceptance_release_local_only.mjs
 node --check scripts/verify_security_requirements.mjs
+node --check scripts/prepare_security_review.mjs
+node --check scripts/verify_security_review_bundle.mjs
 echo "[2/8] product boundary"
 node scripts/verify_product_boundary.mjs
 node scripts/product_boundary_negative.test.mjs
