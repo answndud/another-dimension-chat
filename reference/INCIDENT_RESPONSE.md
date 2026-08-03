@@ -1,5 +1,9 @@
 # 보안 사고·릴리스 사고 대응 runbook
 
+정상적인 signing key bootstrap·rotation·revocation 절차와 redacted 수령 기록은
+[`RELEASE_TRUST_OPERATIONS.md`](RELEASE_TRUST_OPERATIONS.md)에 있다. 이 문서는 사고
+발생 시 중지·격리·회전 순서를 우선한다.
+
 이 runbook은 사용자가 비밀값을 공개하지 않고 로컬 relay와 브라우저 세션을
 중지하는 절차다. 모든 사고에서 “조사 전에 더 실행해 보기”를 하지 않는다.
 운영자나 reviewer가 실제 조치를 수행했는지 자동 테스트가 증명할 수 없으므로,

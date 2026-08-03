@@ -260,6 +260,12 @@ node scripts/verify_release_manifest.mjs . \
 번들 변조와 잘못된 서명을 발견하지만, 운영체제·브라우저·호스트가 이미 장악된
 경우나 공개키를 처음 받는 과정의 신뢰 문제까지 해결하지는 않습니다.
 
+운영 key의 오프라인 생성, 두 독립 채널을 통한 최초 fingerprint 대조, rotation,
+revocation, rollback 금지, redacted 수령 기록 양식은
+[`reference/RELEASE_TRUST_OPERATIONS.md`](reference/RELEASE_TRUST_OPERATIONS.md)에
+있습니다. 이 저장소에는 실제 운영 fingerprint의 외부 수령 확인이 없으므로,
+자동 gate가 통과해도 verified distribution으로 간주하지 않습니다.
+
 pairing이 성공해도 바로 메시지를 보낼 수는 없습니다. 두 사람이 서로 다른
 신뢰된 채널(대면, 별도 음성 통화 등)로 화면의 전체 safety material을 비교하고,
 각자 확인 버튼을 눌러야 메시지 암호화·전송이 열립니다. 이 확인은 현재 paired

@@ -50,6 +50,9 @@ Node heap 256MB, worker 1개, redacted 임시 artifact 정책으로 실행됩니
 `--release`는 production UI build뿐 아니라 임시 Ed25519 키를 사용한 signed
 public release gate도 실행합니다. 이 임시 키는 배포용 신뢰 키가 아니며, 실제
 사용자는 별도 신뢰 채널의 운영 fingerprint를 확인해야 합니다.
+운영 bootstrap·rotation·revocation과 redacted 수령 기록 형식은
+[`reference/RELEASE_TRUST_OPERATIONS.md`](reference/RELEASE_TRUST_OPERATIONS.md)를
+따릅니다. archive 내부의 공개키만으로는 신뢰하지 않습니다.
 
 실제 브라우저·OS 조합을 검증하지 않은 상태에서 특정 Chrome, Safari, Firefox,
 Windows, Linux를 지원한다고 말하지 않습니다. 현장 사람·다른 기기 테스트가

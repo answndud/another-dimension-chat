@@ -97,6 +97,12 @@ The executable security requirement register is in
 are in `reference/INCIDENT_RESPONSE.md`. None of these documents is an audit
 report or reviewer sign-off.
 
+The operational release trust procedure, including offline bootstrap, two-channel
+fingerprint confirmation, rotation, revocation, and the redacted receipt template,
+is in `reference/RELEASE_TRUST_OPERATIONS.md`. The first external fingerprint
+confirmation has not been performed in this repository; until it is independently
+recorded, verified distribution remains blocked.
+
 These are implementation behaviors, not proof of secure messenger readiness.
 
 ## Non-claims

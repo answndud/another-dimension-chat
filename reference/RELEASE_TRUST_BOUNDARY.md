@@ -2,6 +2,10 @@
 
 This document fixes the browser distribution boundary for TM-02 and TM-07.
 
+The operator procedure and redacted receipt template are in
+[`RELEASE_TRUST_OPERATIONS.md`](RELEASE_TRUST_OPERATIONS.md). This document defines
+the security rule; the operations document defines the human execution steps.
+
 ## What the browser can and cannot prove
 
 A JavaScript application cannot cryptographically prove the integrity of the
