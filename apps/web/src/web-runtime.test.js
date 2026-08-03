@@ -75,6 +75,9 @@ test("web UI exposes the complete manual pairing and sealed-envelope flow", () =
   assert.doesNotMatch(ui, /window\.prompt/);
   assert.match(ui, /setInterval[\s\S]*5_000/);
   assert.match(ui, /visibilitychange/);
+  assert.match(ui, /Service Worker \$\{serviceWorkerStatus\}/);
+  assert.match(ui, /serviceWorkerStatus = "활성"/);
+  assert.match(ui, /serviceWorkerStatus = "등록 실패"/);
   assert.match(serviceWorker, /pathname\.startsWith\("\/api\/"\)/);
   assert.match(serviceWorker, /request\.mode === "navigate"/);
   assert.match(serviceWorker, /caches\.delete/);

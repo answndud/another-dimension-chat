@@ -4,10 +4,12 @@
   "surface": "production static UI served from loopback",
   "browser": "Codex in-app browser",
   "status": "verified-local",
-  "scope": "production UI, security headers, WASM initialization, IndexedDB profile create/unlock, bidirectional invite validation, safety confirmation, manual Olm handshake, encrypted message round-trip, single-active-session multi-tab replacement, and inline profile wipe only",
+  "scope": "production UI, security headers, WASM initialization, IndexedDB profile create/unlock, Service Worker active-registration status, bidirectional invite validation, safety confirmation, manual Olm handshake, encrypted message round-trip, single-active-session multi-tab replacement, and inline profile wipe only",
   "observations": {
     "productionUiRendered": true,
     "visibleWebCryptoNotice": true,
+    "serviceWorkerStatusVisible": true,
+    "serviceWorkerActiveStatusObserved": true,
     "profileCreationCompleted": true,
     "indexedDbUnlockCompleted": true,
     "initializationErrorShown": false,
@@ -24,7 +26,6 @@
     "consoleWarningsOrErrorsObserved": false
   },
   "notObserved": [
-    "service-worker update behavior",
     "service-worker runtime update/cache behavior"
   ],
   "redaction": "No profile name, passphrase, invite, envelope, plaintext, capability, URL token, storage export, or private key was recorded.",

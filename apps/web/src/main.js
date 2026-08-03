@@ -35,6 +35,7 @@ import "./styles.css";
 
 const app = document.querySelector("#app");
 let state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false };
+let serviceWorkerStatus = "확인 중";
 let syncInFlight = false;
 
 function lockedState(message) {
@@ -46,9 +47,36 @@ onSessionEvent(({ message }) => {
   if (message) lockedState(message);
 });
 
-if (window.isSecureContext && "serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+function registerServiceWorker() {
+  if (!window.isSecureContext) {
+    serviceWorkerStatus = "보안 context 필요";
+    return;
+  }
+  if (!("serviceWorker" in navigator)) {
+    serviceWorkerStatus = "미지원";
+    return;
+  }
+  navigator.serviceWorker.register("/sw.js", { scope: "/" })
+    .then((registration) => {
+      serviceWorkerStatus = registration.active ? "활성" : "설치 중";
+      render();
+      registration.addEventListener("updatefound", () => {
+        serviceWorkerStatus = "업데이트 중";
+        render();
+      });
+      return navigator.serviceWorker.ready;
+    })
+    .then(() => {
+      serviceWorkerStatus = "활성";
+      render();
+    })
+    .catch(() => {
+      serviceWorkerStatus = "등록 실패";
+      render();
+    });
 }
+
+registerServiceWorker();
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -90,7 +118,7 @@ function browserStatus() {
     ["Worker", typeof window.Worker === "function"],
   ];
   const summary = capabilities.map(([name, available]) => `${name} ${available ? "✓" : "✗"}`).join(" · ");
-  return `${!window.isSecureContext || !window.crypto?.subtle ? "브라우저 보안: localhost 또는 HTTPS가 필요합니다." : "브라우저 보안 상태"} · ${summary}`;
+  return `${!window.isSecureContext || !window.crypto?.subtle ? "브라우저 보안: localhost 또는 HTTPS가 필요합니다." : "브라우저 보안 상태"} · ${summary} · Service Worker ${serviceWorkerStatus}`;
 }
 
 function explainError(value) {
