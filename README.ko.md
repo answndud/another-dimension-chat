@@ -172,7 +172,7 @@ envelope, backup, passphrase는 터미널 출력·스크린샷·공개 채널에
 
    첫 설정이 필요하면 `./scripts/start_local_server.sh --setup`을 실행합니다. public URL을 사용할 때는 반드시 HTTPS reverse proxy 또는 검증된 direct TLS를 선택합니다. HTTP LAN 공개·UPnP·자동 port forwarding은 사용하지 않습니다.
 4. **브라우저 보안 확인** — private UI를 localhost 또는 HTTPS origin에서 열고, 화면에 Web Crypto가 활성화되었다고 표시되는지 확인합니다. 평문 HTTP 원격 페이지나 변조된 bundle에서 passphrase를 입력하지 않습니다.
-5. **프로필 생성** — 12자 이상의 고유 passphrase를 password manager에 보관합니다. passphrase를 서버·지원 채널·초대에 넣지 않습니다.
+5. **프로필 생성** — 기본으로 브라우저가 Web Crypto CSPRNG를 사용해 무작위 passphrase를 생성합니다. 생성된 문구를 password manager에 보관하세요. 복사와 평문 `.txt` 다운로드는 클립보드·Downloads·백업·동기화에 남을 수 있으므로 필요한 경우에만 사용하고, passphrase를 서버·지원 채널·초대에 넣지 않습니다.
 6. **초대 교환** — 초대는 의도한 상대에게만 별도 채널로 전달합니다. capability가 포함될 수 있으므로 공개 게시하지 않습니다.
 7. **안전 문구 확인** — 첫 메시지 전에 별도 채널로 전체 safety material을 비교합니다. 화면·QR·클립보드만으로 상대 identity를 확인하지 않습니다.
 8. **handshake 완료 후 사용** — `init`·`ready` 봉투 전달이 끝나고 UI가 전송을 활성화한 뒤에만 메시지를 보냅니다. 자동 전달 실패 시 준비된 sealed envelope를 수동 전달합니다.

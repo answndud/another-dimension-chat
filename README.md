@@ -289,7 +289,9 @@ public URL을 설정한 뒤 서버를 다시 시작해야 합니다. 초대문�
   아닙니다.
 - **passphrase** — 브라우저에 저장되는 프로필·세션 자료를 잠그는 암호입니다.
 
-passphrase는 서버로 전송되지 않습니다. 잊어버리면 이 프로필의 저장 자료를
+새 프로필에서는 브라우저가 CSPRNG로 무작위 passphrase를 기본 생성합니다. 생성된 passphrase를
+password manager에 보관해야 합니다. 생성된 passphrase는 서버로 전송되지 않습니다.
+잊어버리면 이 프로필의 저장 자료를
 복구할 수 없으므로 안전한 password manager에 보관하세요. 프로필을 만든 뒤에는
 페이지를 새로 열 때 **Unlock existing profile**에서 같은 passphrase로 잠금
 해제합니다.
