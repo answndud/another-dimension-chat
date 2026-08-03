@@ -28,6 +28,9 @@ if (server.includes("script-src 'self' 'unsafe-eval'")) throw new Error("server 
 const result = await run(process.execPath, ["scripts/verify_support_matrix.mjs"]);
 if (result.code !== 0) { process.stderr.write(result.stderr); process.exit(result.code || 1); }
 process.stdout.write(result.stdout);
+const serviceWorkerResult = await run(process.execPath, ["scripts/verify_service_worker.mjs"]);
+if (serviceWorkerResult.code !== 0) { process.stderr.write(serviceWorkerResult.stderr); process.exit(serviceWorkerResult.code || 1); }
+process.stdout.write(serviceWorkerResult.stdout);
 console.log("browser acceptance: production artifact boundary checked");
 console.log("browser acceptance: WASM CSP boundary checked without broad unsafe-eval");
 console.log("browser acceptance: in-app browser profile-creation result is scoped verified-local; full browser matrix remains unverified");
