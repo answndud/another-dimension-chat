@@ -35,7 +35,10 @@ legacy/research source로만 보존됩니다. 현재 web 제품의 release·설�
 안의 설치기를 실행합니다.
 
 ```sh
-./scripts/install_local_server.sh --archive ./another-dimension-0.1.0
+./scripts/install_local_server.sh --archive ./another-dimension-0.1.0 \
+  --public-key /secure/path/release-ed25519-public.pem \
+  --trust-manifest /secure/path/release-trust.json \
+  --trust-manifest-key /secure/path/bootstrap-public.pem
 ~/.local/share/another-dimension/server/another-dimension-server start
 ```
 

@@ -27,7 +27,10 @@ release 디렉터리에서 다음 설치기를 실행하면 private data directo
 권한의 `start`, `stop`, `restart`, `status`, `uninstall` 명령이 만들어집니다.
 
 ```sh
-./scripts/install_local_server.sh --archive ./another-dimension-0.1.0
+./scripts/install_local_server.sh --archive ./another-dimension-0.1.0 \
+  --public-key /secure/path/release-ed25519-public.pem \
+  --trust-manifest /secure/path/release-trust.json \
+  --trust-manifest-key /secure/path/bootstrap-public.pem
 ~/.local/share/another-dimension/server/another-dimension-server start
 ```
 

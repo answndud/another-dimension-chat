@@ -4,7 +4,7 @@ set -eu
 usage() {
   cat <<'EOF'
 사용법:
-  update_local_server.sh --install-root DIR --archive DIR --public-key PEM [--min-version VERSION] [--stop]
+  update_local_server.sh --install-root DIR --archive DIR --public-key PEM --trust-manifest JSON --trust-manifest-key PEM [--min-version VERSION] [--stop]
   update_local_server.sh --install-root DIR --rollback
 
 실행 중인 서버를 자동으로 끄지 않습니다. update에서 --stop을 명시해야 합니다.
@@ -15,6 +15,8 @@ EOF
 install_root=
 archive=
 public_key=
+trust_manifest=
+trust_manifest_key=
 min_version=
 rollback=0
 allow_stop=0
@@ -23,6 +25,8 @@ while [ "$#" -gt 0 ]; do
     --install-root) install_root=${2:?--install-root requires a directory}; shift 2 ;;
     --archive) archive=${2:?--archive requires a directory}; shift 2 ;;
     --public-key) public_key=${2:?--public-key requires a file}; shift 2 ;;
+    --trust-manifest) trust_manifest=${2:?--trust-manifest requires a file}; shift 2 ;;
+    --trust-manifest-key) trust_manifest_key=${2:?--trust-manifest-key requires a file}; shift 2 ;;
     --min-version) min_version=${2:?--min-version requires a version}; shift 2 ;;
     --rollback) rollback=1; shift ;;
     --stop) allow_stop=1; shift ;;
@@ -62,6 +66,7 @@ fi
 
 [ -n "$archive" ] || { echo "update에는 --archive가 필요합니다." >&2; usage >&2; exit 2; }
 [ -n "$public_key" ] || { echo "update에는 --public-key가 필요합니다." >&2; usage >&2; exit 2; }
+[ -n "$trust_manifest" ] && [ -n "$trust_manifest_key" ] || { echo "update에는 --trust-manifest와 --trust-manifest-key가 모두 필요합니다." >&2; usage >&2; exit 2; }
 verify
 if is_running; then
   [ "$allow_stop" -eq 1 ] || { echo "서버가 실행 중입니다. --stop을 명시해야 atomic update를 진행합니다." >&2; exit 1; }
@@ -79,9 +84,9 @@ if [ -e "$previous" ] || [ -L "$previous" ]; then
 fi
 
 if [ -n "$min_version" ]; then
-  sh "$install_root/scripts/install_local_server.sh" --archive "$archive" --public-key "$public_key" --destination "$stage" --data-dir "$data_dir" --min-version "$min_version"
+  sh "$install_root/scripts/install_local_server.sh" --archive "$archive" --public-key "$public_key" --trust-manifest "$trust_manifest" --trust-manifest-key "$trust_manifest_key" --destination "$stage" --data-dir "$data_dir" --min-version "$min_version"
 else
-  sh "$install_root/scripts/install_local_server.sh" --archive "$archive" --public-key "$public_key" --destination "$stage" --data-dir "$data_dir"
+  sh "$install_root/scripts/install_local_server.sh" --archive "$archive" --public-key "$public_key" --trust-manifest "$trust_manifest" --trust-manifest-key "$trust_manifest_key" --destination "$stage" --data-dir "$data_dir"
 fi
 if ! "$stage/runtime-node" "$stage/scripts/verify_install_state.mjs" "$stage" >/dev/null; then
   echo "새 release staging 검증에 실패했습니다. 기존 설치는 변경되지 않았습니다." >&2
