@@ -23,3 +23,9 @@ release manifest, SBOM, threat model, focused test output, and known non-claims.
 The audit must report assumptions, attack preconditions, severity, reproduction
 steps, and residual risk. A library audit is not evidence that this application
 is safe for journalists or activists.
+
+The handoff index is [`SECURITY_REVIEW_EVIDENCE.md`](SECURITY_REVIEW_EVIDENCE.md).
+The reviewer must record covered and excluded scope, affected versions, findings,
+remediation, and a separate sign-off. Automated output must be attached as evidence,
+not copied into the sign-off field. Incident, CVE, signing-key, and rollback
+procedures are in [`INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md).

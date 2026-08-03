@@ -92,7 +92,10 @@ distribution remains a release blocker.
 
 The executable security requirement register is in
 `reference/SECURITY_REQUIREMENTS.md`. The application crypto review input is in
-`reference/CRYPTO_REVIEW_PACKET.md`; neither document is an audit report.
+`reference/CRYPTO_REVIEW_PACKET.md`. The requirement-to-evidence index is in
+`reference/SECURITY_REVIEW_EVIDENCE.md`, and incident/key compromise procedures
+are in `reference/INCIDENT_RESPONSE.md`. None of these documents is an audit
+report or reviewer sign-off.
 
 These are implementation behaviors, not proof of secure messenger readiness.
 
@@ -150,6 +153,9 @@ local paths, browser storage exports, or screenshots of private rooms.
 Security reports should use GitHub private vulnerability reporting when
 available. If it is unavailable, publish only a minimal redacted issue asking
 for a private contact path; do not include exploit details or private data.
+Use [`reference/INCIDENT_RESPONSE.md`](reference/INCIDENT_RESPONSE.md) for
+capability leakage, altered releases, CVE handling, signing-key compromise, and
+rollback decisions.
 
 ## Related review notes
 

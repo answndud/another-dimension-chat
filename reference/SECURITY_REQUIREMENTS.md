@@ -65,6 +65,20 @@ The UI and public docs may claim only `implemented` or explicitly scoped
 No requirement in this file grants anonymity, secure deletion, coercion
 resistance, compromised-device protection, or independent audit status.
 
+## Evidence and incident boundary
+
+The source/test/artifact mapping for this register is maintained in
+[`SECURITY_REVIEW_EVIDENCE.md`](SECURITY_REVIEW_EVIDENCE.md). Each mapped item
+must identify the exact source boundary, focused command, observable artifact,
+and remaining limitation. A command that exits zero is evidence of that command's
+fixture only; it is not reviewer approval.
+
+`SECURITY_REVIEW_EVIDENCE.md` also defines the separate reviewer sign-off format.
+An empty sign-off leaves `AUDIT-01` blocked. Key compromise, CVE disclosure,
+capability leakage, altered release, and rollback response must follow
+[`INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md); an incident cannot be closed by
+merely rerunning the normal test suite.
+
 ## External references
 
 - OWASP ASVS: https://owasp.org/www-project-application-security-verification-standard/

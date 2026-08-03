@@ -70,6 +70,10 @@ local paths, crash dumps, private local UI URLs, or screenshots of private rooms
 Use GitHub private vulnerability reporting when available. If it is
 unavailable, publish only a minimal redacted request for a private contact
 path. Do not include exploit details or sensitive material in a public issue.
+For leaked capabilities, altered releases, CVEs, signing-key compromise, or
+rollback decisions, follow
+[`reference/INCIDENT_RESPONSE.md`](reference/INCIDENT_RESPONSE.md). A passing
+automated test is not a security sign-off.
 
 ## Legacy macOS artifacts
 
