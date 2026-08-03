@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { writeManifest } from "./release_manifest.mjs";
 import { verifyInstallState } from "./verify_install_state.mjs";
+import { createTrustManifest } from "./verify_release_trust.mjs";
 
 const projectDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const root = await mkdtemp(join(tmpdir(), "another-dimension-release-acceptance-"));
@@ -19,6 +20,9 @@ const keys = generateKeyPairSync("ed25519");
 const privateKey = keys.privateKey.export({ type: "pkcs8", format: "pem" });
 const publicKey = keys.publicKey.export({ type: "spki", format: "pem" });
 const publicKeyFile = join(root, "release-public.pem");
+const bootstrap = generateKeyPairSync("ed25519");
+const bootstrapPublicKeyFile = join(root, "trust-bootstrap-public.pem");
+const trustManifestFile = join(root, "release-trust.json");
 
 async function copy(relativePath) {
   const source = join(projectDir, relativePath);
@@ -39,6 +43,7 @@ async function run(command, args, options = {}) {
 }
 
 await writeFile(publicKeyFile, publicKey, { mode: 0o600 });
+await writeFile(bootstrapPublicKeyFile, bootstrap.publicKey.export({ type: "spki", format: "pem" }), { mode: 0o600 });
 await Promise.all([
   copy("README.md"),
   copy("README.ko.md"),
@@ -48,6 +53,7 @@ await Promise.all([
   copy("reference/product_boundary.json"),
   copy("apps/server/server.mjs"),
   copy("scripts/verify_public_release_gate.mjs"),
+  copy("scripts/verify_release_trust.mjs"),
   copy("scripts/product_boundary.mjs"),
   copy("scripts/verify_web_artifact.mjs"),
   copy("scripts/release_manifest.mjs"),
@@ -64,10 +70,19 @@ await chmod(join(archive, "runtime/node"), 0o700);
 await writeFile(join(archive, "SBOM.cyclonedx.json"), JSON.stringify({ bomFormat: "CycloneDX", specVersion: "1.5", components: [] }) + "\n");
 await writeFile(join(archive, "RELEASE-PROVENANCE.json"), JSON.stringify({ format: "acceptance-fixture", sourceCommit: "fixture" }) + "\n");
 await writeManifest(archive, { version: "0.1.0", privateKey });
+const trustManifest = createTrustManifest({ rootPrivateKey: bootstrap.privateKey, releaseKeys: [{ publicKey: keys.publicKey, validFromVersion: "0.1.0" }], minimumReleaseVersion: "0.1.0" });
+await writeFile(trustManifestFile, `${JSON.stringify(trustManifest, null, 2)}\n`, { mode: 0o600 });
 
-const gate = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile]);
+const gate = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile]);
 assert.equal(gate.code, 0, gate.output);
 assert.match(gate.output, /public release gate passed/);
+const tamperedTrust = structuredClone(trustManifest);
+tamperedTrust.policy.minimumReleaseVersion = "9.0.0";
+await writeFile(trustManifestFile, JSON.stringify(tamperedTrust));
+const tamperedTrustResult = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile]);
+assert.notEqual(tamperedTrustResult.code, 0);
+assert.match(tamperedTrustResult.output, /invalid trust manifest signature/);
+await writeFile(trustManifestFile, JSON.stringify(trustManifest));
 
 const installResult = await run("sh", [join(archive, "scripts/install_local_server.sh"), "--archive", archive, "--public-key", publicKeyFile, "--destination", install, "--data-dir", data]);
 assert.equal(installResult.code, 0, installResult.output);

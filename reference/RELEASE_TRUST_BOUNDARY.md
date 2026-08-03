@@ -22,9 +22,10 @@ high-risk code. Trust must be established before the browser opens a profile:
 6. The user checks the release hash and public-key fingerprint through a
    separate trusted channel before entering a passphrase.
 
-Key rotation is explicit: a new trusted public key is distributed out of band,
-the old key ID is passed to the verifier with `--revoked-key-id`, and a release
-signed by that revoked ID is rejected even when its signature is mathematically
+Key rotation is explicit: a signed trust manifest, verified with an external
+bootstrap public key, lists release key fingerprints, minimum release version,
+validity windows, and revoked key IDs. A release signed by a revoked, unknown,
+not-yet-valid, or expired key is rejected even when its signature is mathematically
 valid. The release also carries `RELEASE-PROVENANCE.json`, `Cargo.lock`, and a
 CycloneDX SBOM covering NPM, Cargo, and the Node runtime.
 
@@ -47,6 +48,9 @@ as a high-risk release path.
 ## Fail-closed rules
 
 - Missing or invalid manifest signature blocks a public release gate.
+- Missing, tampered, or externally untrusted release trust manifest blocks the
+  public release gate; the public key embedded in the manifest is not its own
+  trust root.
 - A rollbacked or partially downloaded archive is not accepted.
 - A relay root URL never serves a fallback `index.html` in relay-only mode.
 - A browser warning must not describe HTTPS, VPN, or a verified archive as

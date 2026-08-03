@@ -50,6 +50,10 @@ if [ "${AD_RELEASE_PROFILE:-development}" = "public" ] && [ -z "${AD_RELEASE_PUB
   printf '%s\n' "AD_RELEASE_PROFILE=public requires AD_RELEASE_PUBLIC_KEY for the post-signature public gate." >&2
   exit 1
 fi
+if [ "${AD_RELEASE_PROFILE:-development}" = "public" ] && { [ -z "${AD_RELEASE_TRUST_MANIFEST:-}" ] || [ -z "${AD_RELEASE_TRUST_MANIFEST_KEY:-}" ]; }; then
+  printf '%s\n' "AD_RELEASE_PROFILE=public requires AD_RELEASE_TRUST_MANIFEST and AD_RELEASE_TRUST_MANIFEST_KEY for the external trust gate." >&2
+  exit 1
+fi
 if [ -n "${AD_RELEASE_SIGNING_KEY:-}" ]; then
   MANIFEST_ARGS="$MANIFEST_ARGS --private-key $AD_RELEASE_SIGNING_KEY"
 elif [ "${AD_RELEASE_REQUIRE_SIGNATURE:-0}" = "1" ]; then
@@ -71,7 +75,7 @@ node "$PROJECT_DIR/scripts/verify_product_boundary.mjs" "$STAGE/another-dimensio
 # shellcheck disable=SC2086
 node "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $VERIFY_ARGS
 if [ "${AD_RELEASE_PROFILE:-development}" = "public" ]; then
-  PUBLIC_GATE_ARGS="--public-key $AD_RELEASE_PUBLIC_KEY"
+  PUBLIC_GATE_ARGS="--public-key $AD_RELEASE_PUBLIC_KEY --trust-manifest $AD_RELEASE_TRUST_MANIFEST --trust-manifest-key $AD_RELEASE_TRUST_MANIFEST_KEY"
   [ -n "${AD_RELEASE_MIN_VERSION:-}" ] && PUBLIC_GATE_ARGS="$PUBLIC_GATE_ARGS --min-version $AD_RELEASE_MIN_VERSION"
   # shellcheck disable=SC2086
   node "$PROJECT_DIR/scripts/verify_public_release_gate.mjs" "$STAGE/another-dimension-$VERSION" $PUBLIC_GATE_ARGS

@@ -5,15 +5,20 @@ import path from "node:path";
 import { verifyManifest } from "./release_manifest.mjs";
 import { isForbiddenReleasePath, loadProductBoundary } from "./product_boundary.mjs";
 import { verifyWebArtifact } from "./verify_web_artifact.mjs";
+import { authorizeReleaseKey, verifyTrustManifest } from "./verify_release_trust.mjs";
 
 const [root, ...args] = process.argv.slice(2);
 if (!root) throw new Error("Usage: verify_public_release_gate.mjs RELEASE_ROOT --public-key PEM_FILE [--min-version VERSION]");
 let publicKey;
 let minVersion;
+let trustManifest;
+let trustManifestKey;
 const revokedKeyIds = [];
 for (let index = 0; index < args.length; index += 1) {
   if (args[index] === "--public-key") publicKey = await readFile(args[++index], "utf8");
   else if (args[index] === "--min-version") minVersion = args[++index];
+  else if (args[index] === "--trust-manifest") trustManifest = JSON.parse(await readFile(args[++index], "utf8"));
+  else if (args[index] === "--trust-manifest-key") trustManifestKey = await readFile(args[++index], "utf8");
   else if (args[index] === "--revoked-key-id") revokedKeyIds.push(args[++index]);
   else throw new Error(`unknown argument: ${args[index]}`);
 }
@@ -35,4 +40,9 @@ await walk(root);
 const leaked = releaseEntries.filter((file) => isForbiddenReleasePath(file, boundary.forbiddenReleasePaths));
 if (leaked.length) throw new Error(`legacy product surface is present in public release: ${leaked.join(", ")}`);
 const result = await verifyManifest(root, { publicKey, requireSignature: true, minVersion, revokedKeyIds });
+if (trustManifest || trustManifestKey) {
+  if (!trustManifest || !trustManifestKey) throw new Error("trust manifest and bootstrap key must be supplied together");
+  verifyTrustManifest(trustManifest, trustManifestKey);
+  authorizeReleaseKey(trustManifest, result.releaseVersion, publicKey);
+}
 console.log(`public release gate passed: signed ${result.releaseVersion}, ${result.fileCount} files, key ${result.keyId}`);

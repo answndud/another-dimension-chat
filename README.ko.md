@@ -149,7 +149,7 @@ local server 제품은 `apps/server`에 있습니다. Tauri/CLI/engine은 공식
 아래 순서를 건너뛰지 마세요. `#local=...`이 포함된 private UI 주소, 초대, sealed
 envelope, backup, passphrase는 터미널 출력·스크린샷·공개 채널에 붙여 넣지 않습니다.
 
-1. **배포물 확인** — signed release의 공개키 fingerprint와 manifest를 별도 신뢰 채널에서 확인합니다. unsigned 개발 archive는 민감한 통신에 사용하지 않습니다.
+1. **배포물 확인** — signed release의 공개키 fingerprint와, 외부 bootstrap 키로 서명된 release trust manifest를 별도 신뢰 채널에서 확인합니다. unsigned 개발 archive는 민감한 통신에 사용하지 않습니다.
 2. **사전 점검** — 서버를 시작하기 전에 다음 명령을 실행합니다.
 
    ```sh
