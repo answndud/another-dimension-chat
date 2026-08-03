@@ -55,6 +55,7 @@ if [ ! -x "$archive/runtime/node" ]; then
   echo "이 release는 runtime/node를 포함하지 않습니다. 소스 개발 아카이브는 일반 사용자 설치물로 사용할 수 없습니다." >&2
   exit 1
 fi
+"$archive/runtime/node" -e 'const major=Number(process.versions.node.split(".")[0]); if (major < 20) { console.error(`bundled runtime must be Node.js 20 or newer (found ${process.version})`); process.exit(1); }'
 if [ -n "$min_version" ]; then
   "$archive/runtime/node" "$archive/scripts/verify_public_release_gate.mjs" "$archive" --public-key "$public_key" --min-version "$min_version" >/dev/null
 else

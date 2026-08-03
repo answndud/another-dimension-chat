@@ -7,6 +7,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { writeManifest } from "./release_manifest.mjs";
+import { verifyInstallState } from "./verify_install_state.mjs";
 
 const projectDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const root = await mkdtemp(join(tmpdir(), "another-dimension-release-acceptance-"));
@@ -79,6 +80,13 @@ assert.equal((await stat(join(install, "server-config.json"))).mode & 0o777, 0o6
 assert.equal((await stat(data)).mode & 0o777, 0o700);
 assert.equal((await run(join(install, "another-dimension-server"), ["doctor"])).code, 0);
 assert.equal((await run(join(install, "another-dimension-server"), ["status"])).code, 1);
+const installedServerFile = join(install, "apps/server/server.mjs");
+const originalServerFile = await readFile(installedServerFile, "utf8");
+await writeFile(installedServerFile, `${originalServerFile}\n// tampered fixture\n`);
+await assert.rejects(() => verifyInstallState(install), /Installed file hash mismatch/);
+await writeFile(installedServerFile, originalServerFile);
+await verifyInstallState(install);
+assert.equal((await run(join(install, "another-dimension-server"), ["doctor"])).code, 0);
 await writeFile(join(data, "retained-sentinel"), "keep-me\n", { mode: 0o600 });
 await writeFile(join(install, "server.pid"), `${process.pid}\n`, { mode: 0o600 });
 const foreignPid = await run(join(install, "another-dimension-server"), ["start"]);

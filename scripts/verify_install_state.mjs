@@ -36,16 +36,39 @@ function modeIs(info, expected) {
   return (info.mode & 0o777) === expected;
 }
 
+async function verifyInstalledFile(localPath, releasePath, manifestFiles) {
+  const info = await lstat(localPath);
+  if (info.isSymbolicLink()) throw new Error(`Installed tree contains a symlink: ${localPath}`);
+  if (info.isDirectory()) {
+    for (const entry of await readdir(localPath, { withFileTypes: true })) {
+      await verifyInstalledFile(path.join(localPath, entry.name), path.posix.join(releasePath, entry.name), manifestFiles);
+    }
+    return;
+  }
+  if (!info.isFile()) throw new Error(`Installed path is not a regular file: ${localPath}`);
+  const expected = manifestFiles.get(releasePath);
+  if (!expected) throw new Error(`Installed file is not listed in the release manifest: ${releasePath}`);
+  const contents = await readFile(localPath);
+  const actualHash = createHash("sha256").update(contents).digest("hex");
+  if (actualHash !== expected.sha256 || contents.byteLength !== expected.bytes) throw new Error(`Installed file hash mismatch: ${releasePath}`);
+}
+
 export async function verifyInstallState(rootValue) {
   const root = path.resolve(rootValue);
   await assertNoSymlinks(root);
   for (const relative of REQUIRED) await access(path.join(root, relative), constants.R_OK);
   const marker = JSON.parse(await readFile(path.join(root, ".another-dimension-install.json"), "utf8"));
   const manifest = JSON.parse(await readFile(path.join(root, "release-manifest.json"), "utf8"));
-  if (marker.format !== "another-dimension-install" || marker.version !== 1 || marker.root !== root) throw new Error("Installation marker is invalid or belongs to another path.");
+  if (marker.format !== "another-dimension-install" || marker.version !== 1) throw new Error("Installation marker is invalid.");
   if (!marker.releaseVersion || marker.releaseVersion !== manifest.releaseVersion) throw new Error("Installed release version does not match its manifest.");
   const manifestHash = createHash("sha256").update(await readFile(path.join(root, "release-manifest.json"))).digest("hex");
   if (manifestHash !== marker.manifestSha256) throw new Error("Installed release manifest changed after installation.");
+  const manifestFiles = new Map((manifest.files || []).map((file) => [file.path, file]));
+  for (const [local, release] of [["apps", "apps"], ["scripts", "scripts"]]) await verifyInstalledFile(path.join(root, local), release, manifestFiles);
+  for (const file of ["README.md", "README.ko.md", "SECURITY.md", "SUPPORT.md", "RELEASE-PROVENANCE.json", "SBOM.cyclonedx.json"]) {
+    await verifyInstalledFile(path.join(root, file), file, manifestFiles);
+  }
+  await verifyInstalledFile(path.join(root, "runtime-node"), "runtime/node", manifestFiles);
   const config = JSON.parse(await readFile(path.join(root, "server-config.json"), "utf8"));
   if (!config || typeof config.dataDir !== "string" || path.resolve(config.dataDir).startsWith(`${root}${path.sep}`)) throw new Error("Installed data directory must remain outside the code installation.");
   const runtime = await assertRegular(root, "runtime-node");

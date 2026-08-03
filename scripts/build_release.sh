@@ -33,6 +33,7 @@ if [ -n "${AD_NODE_RUNTIME:-}" ]; then
   mkdir -p "$STAGE/another-dimension-$VERSION/runtime"
   cp "$AD_NODE_RUNTIME" "$STAGE/another-dimension-$VERSION/runtime/node"
   chmod 700 "$STAGE/another-dimension-$VERSION/runtime/node"
+  "$STAGE/another-dimension-$VERSION/runtime/node" -e 'const major=Number(process.versions.node.split(".")[0]); if (major < 20) { console.error(`bundled runtime must be Node.js 20 or newer (found ${process.version})`); process.exit(1); }'
 elif [ "${AD_RELEASE_PROFILE:-development}" = "public" ]; then
   printf '%s\n' "Public release requires AD_NODE_RUNTIME so users do not need Node/npm." >&2
   exit 1

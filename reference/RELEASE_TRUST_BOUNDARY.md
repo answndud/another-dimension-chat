@@ -28,6 +28,18 @@ signed by that revoked ID is rejected even when its signature is mathematically
 valid. The release also carries `RELEASE-PROVENANCE.json`, `Cargo.lock`, and a
 CycloneDX SBOM covering NPM, Cargo, and the Node runtime.
 
+After installation, `verify_install_state.mjs` re-hashes the installed runtime,
+relay, scripts, UI, provenance, and SBOM against the signed release manifest.
+`doctor`, `start`, `status`, `update`, and `rollback` stop when any copied file
+has changed. The generated config, PID, log, and install marker are local
+operational files and are not treated as release code.
+
+If a signing key may be compromised: stop distribution and local updates, treat
+every release signed by that key as untrusted, publish a replacement fingerprint
+through the separate trusted channel, add the old key ID to the revocation list,
+raise the minimum accepted version, and install only a newly signed archive.
+Do not use rollback to return to an artifact signed by the compromised key.
+
 The user-owned relay is API-only by default. `serveStatic` and
 `AD_SERVE_UI=1` are development convenience modes and must never be presented
 as a high-risk release path.

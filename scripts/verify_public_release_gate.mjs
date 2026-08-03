@@ -21,6 +21,7 @@ if (!publicKey) throw new Error("A trusted public key is required for the public
 const boundary = await loadProductBoundary(root);
 const required = boundary.requiredReleaseFiles;
 for (const file of required) await access(path.join(root, file), constants.R_OK);
+await access(path.join(root, "runtime/node"), constants.X_OK);
 await verifyWebArtifact(path.join(root, "apps/web/dist"));
 const releaseEntries = [];
 const walk = async (dir, prefix = "") => {
