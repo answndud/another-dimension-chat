@@ -54,7 +54,7 @@ Requirements marked `blocked` prevent any high-risk claim.
 | `RELEASE-01` | Public archive has verified UI, relay, runtime, manifest, SBOM, provenance, and no legacy artifacts. | `blocked` | Clean public release gate with signed archive. |
 | `RELEASE-02` | Trusted key bootstrap, rotation, revocation, rollback, and compromised-release response are executable. | `partial` | `verify_release_trust.mjs --fixture`, `verify_release_trust_receipt.mjs --fixture`, trust-manifest public gate, and clean-install update/rollback matrix; external bootstrap delivery remains blocked. |
 | `RELEASE-03` | Production gate fails on skipped build, missing browser acceptance, or missing artifact. | `blocked` | `verify_all.sh --release` negative tests. |
-| `OPS-01` | User can install, start, stop, restart, update, rollback, and recover without Node/npm. | `blocked` | No-Node clean OS fixture. |
+| `OPS-01` | User can install, start, stop, restart, update, rollback, and recover without Node/npm. | `partial` | `acceptance_release_local_only.mjs` runs install, doctor, status, update, and rollback with Node absent from PATH; clean OS and all supported host combinations remain unverified. |
 | `OPS-02` | Incident runbook covers leaked capability, lost device, changed release, key compromise, and fresh pairing. | `partial` | Redacted recovery fixture and support docs. |
 | `AUDIT-01` | Independent review covers protocol composition, browser, storage, relay, release, and transport. | `blocked` | `verify_security_review_signoff.mjs --fixture` validates the handoff gate; actual external report, reviewer identity, and independent sign-off are absent. |
 

@@ -30,7 +30,7 @@ capability, passphrase, plaintext, IP를 넣지 않는다.
 | browser integration | `apps/web/src/main.js`, `apps/web/src/web-runtime.js`, `apps/web/public/sw.js` | `npm --prefix apps/web test --workspaces=false`, `node scripts/verify_web_artifact.mjs apps/web/dist` | lock, wipe, storage, SRI, service-worker checks | 실제 OS/browser matrix 없음 |
 | storage/backup/wipe | `apps/web/src/web-runtime.js` | focused browser tests, local acceptance | passphrase-wrapped backup and fail-closed import evidence | secure deletion·quota/eviction은 non-claim 또는 blocked |
 | relay/capability | `apps/server/server.mjs`, `scripts/verify_relay_logs.mjs` | `node --test apps/server/server.test.mjs`, `node scripts/smoke_user_owned_servers.mjs` | bounds, rotation, restart, redacted log scan | relay 운영자·traffic metadata를 제거하지 않음 |
-| release supply chain | `scripts/build_release.sh`, `scripts/verify_public_release_gate.mjs` | `./scripts/verify_all.sh --release` | signed archive, manifest, SBOM, provenance, runtime, no legacy surface | 최초 trusted-key 전달은 운영 절차에 의존 |
+| release supply chain | `scripts/build_release.sh`, `scripts/verify_public_release_gate.mjs`, `scripts/verify_release_trust_receipt.mjs` | `./scripts/verify_all.sh --release`, `node scripts/acceptance_release_local_only.mjs` | signed archive, manifest, SBOM, provenance, runtime, no legacy surface, no-Node install/update fixture | 최초 trusted-key 전달·clean OS matrix는 운영 절차와 현재 host 범위를 벗어남 |
 | transport/anonymity | `apps/server/server.mjs`, `apps/web/src/web-runtime.js`, `scripts/verify_transport_boundary.mjs` | `node scripts/verify_transport_boundary.mjs` | `highRiskAllowed:false`, onion/Tor rejection | anonymity·metadata 보호를 제공하지 않음 |
 
 ## Reviewer가 각 finding에 반드시 기록할 것
