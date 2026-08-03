@@ -31,6 +31,9 @@ process.stdout.write(result.stdout);
 const serviceWorkerResult = await run(process.execPath, ["scripts/verify_service_worker.mjs"]);
 if (serviceWorkerResult.code !== 0) { process.stderr.write(serviceWorkerResult.stderr); process.exit(serviceWorkerResult.code || 1); }
 process.stdout.write(serviceWorkerResult.stdout);
+const serviceWorkerRuntimeResult = await run(process.execPath, ["scripts/verify_service_worker_runtime.mjs"]);
+if (serviceWorkerRuntimeResult.code !== 0) { process.stderr.write(serviceWorkerRuntimeResult.stderr); process.exit(serviceWorkerRuntimeResult.code || 1); }
+process.stdout.write(serviceWorkerRuntimeResult.stdout);
 console.log("browser acceptance: production artifact boundary checked");
 console.log("browser acceptance: WASM CSP boundary checked without broad unsafe-eval");
 console.log("browser acceptance: in-app browser profile-creation result is scoped verified-local; full browser matrix remains unverified");
