@@ -30,7 +30,6 @@ function integrityManifest() {
           bytes: bytes.byteLength,
         };
       }
-      await writeFile(join(root, "asset-integrity.json"), `${JSON.stringify({ format: "another-dimension-asset-integrity", version: 1, assets }, null, 2)}\n`);
       const indexFile = join(root, "index.html");
       let index = await readFile(indexFile, "utf8");
       index = index.replace(/(<(?:script|link)\b[^>]+(?:src|href)="(\/assets\/[^"]+)"[^>]*)(>)/g, (full, prefix, asset, end) => {
@@ -39,6 +38,12 @@ function integrityManifest() {
         return `${prefix} integrity="sha256-${entry.sha256}" crossorigin="anonymous"${end}`;
       });
       await writeFile(indexFile, index);
+      const indexedBytes = await readFile(indexFile);
+      assets["/index.html"] = {
+        sha256: createHash("sha256").update(indexedBytes).digest("base64"),
+        bytes: indexedBytes.byteLength,
+      };
+      await writeFile(join(root, "asset-integrity.json"), `${JSON.stringify({ format: "another-dimension-asset-integrity", version: 1, assets }, null, 2)}\n`);
     },
   };
 }
