@@ -29,6 +29,9 @@ node --check scripts/acceptance_release_local_only.mjs
 node --check scripts/verify_security_requirements.mjs
 node --check scripts/prepare_security_review.mjs
 node --check scripts/verify_security_review_bundle.mjs
+node --check scripts/acceptance_browser_matrix.mjs
+node --check scripts/verify_support_matrix.mjs
+node --check scripts/acceptance_os_matrix.mjs
 echo "[2/8] product boundary"
 node scripts/verify_product_boundary.mjs
 node scripts/product_boundary_negative.test.mjs
@@ -49,6 +52,7 @@ node --test scripts/release_manifest.test.mjs
 echo "[7/8] public claim boundary"
 node scripts/verify_docs_claims.mjs
 node scripts/verify_security_requirements.mjs
+node scripts/verify_support_matrix.mjs
 echo "[8/8] production build (only when dependencies are present)"
 if [ "$MODE" = release ]; then
   if [ ! -x apps/web/node_modules/.bin/vite ]; then

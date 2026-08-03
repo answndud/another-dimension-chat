@@ -1,0 +1,25 @@
+{
+  "format": "another-dimension-browser-observation",
+  "version": 1,
+  "surface": "production static UI served from loopback",
+  "browser": "Codex in-app browser",
+  "status": "blocked",
+  "observations": {
+    "productionUiRendered": true,
+    "visibleWebCryptoNotice": true,
+    "profileCreationCompleted": false,
+    "initializationErrorShown": true,
+    "errorClass": "browser-environment-or-input",
+    "consoleWarningsOrErrorsObserved": false
+  },
+  "notObserved": [
+    "profile creation success",
+    "IndexedDB-backed unlock",
+    "pairing",
+    "message encryption or delivery",
+    "service-worker update behavior",
+    "multi-tab lock and wipe"
+  ],
+  "redaction": "No profile name, passphrase, invite, envelope, plaintext, capability, URL token, storage export, or private key was recorded.",
+  "nextAction": "Diagnose initialization failure in this embedded browser before changing any browser or OS support claim."
+}

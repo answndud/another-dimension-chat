@@ -91,6 +91,13 @@ Web Crypto, IndexedDB, WebAssembly, Service Worker를 모두 지원해야 하며
 Windows·Linux를 공식 지원한다고 주장하지 않습니다. 자세한 범위는
 [`SUPPORT.md`](SUPPORT.md)의 지원 표를 확인하세요.
 
+현재 Codex 내장 브라우저에서는 production 화면 렌더링까지 확인했지만 프로필
+초기화가 완료되지 않아 브라우저 지원 판정은 `blocked`입니다. 이 결과를 성공으로
+간주하거나 다른 브라우저로 일반화하지 않습니다. 매트릭스 원본과 redacted 관찰은
+[`reference/SUPPORT_MATRIX.json`](reference/SUPPORT_MATRIX.json)과
+[`reference/browser-evidence/codex-in-app-browser.json`](reference/browser-evidence/codex-in-app-browser.json)에
+있습니다.
+
 ## 현재 웹 prototype에서 동작하는 것
 
 - passphrase를 사용하는 로컬 브라우저 프로필 생성·unlock

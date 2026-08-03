@@ -1,0 +1,71 @@
+{
+  "format": "another-dimension-support-matrix",
+  "version": 1,
+  "generatedFor": "web-first prototype",
+  "claimsPolicy": "Only entries with an attached, reproducible evidence file may be verified.",
+  "entries": [
+    {
+      "id": "macos-arm64-node20-local-gate",
+      "surface": "server-runtime",
+      "platform": "macOS arm64",
+      "runtime": "bundled Node.js 20+",
+      "status": "verified-local",
+      "evidence": "scripts/acceptance_os_matrix.mjs",
+      "scope": "current-host bundled-runtime install, permission, tamper, update, rollback and relay acceptance only"
+    },
+    {
+      "id": "codex-in-app-browser-production-ui",
+      "surface": "browser-ui",
+      "platform": "Codex in-app browser",
+      "runtime": "embedded browser (version not asserted)",
+      "status": "blocked",
+      "evidence": "reference/browser-evidence/codex-in-app-browser.json",
+      "scope": "production UI rendered; profile initialization did not complete"
+    },
+    {
+      "id": "chrome",
+      "surface": "browser-ui",
+      "platform": "Chrome",
+      "runtime": "version not tested",
+      "status": "unverified",
+      "evidence": null,
+      "scope": "no support claim"
+    },
+    {
+      "id": "safari",
+      "surface": "browser-ui",
+      "platform": "Safari",
+      "runtime": "version not tested",
+      "status": "unverified",
+      "evidence": null,
+      "scope": "no support claim"
+    },
+    {
+      "id": "firefox",
+      "surface": "browser-ui",
+      "platform": "Firefox",
+      "runtime": "version not tested",
+      "status": "unverified",
+      "evidence": null,
+      "scope": "no support claim"
+    },
+    {
+      "id": "windows",
+      "surface": "server-runtime",
+      "platform": "Windows",
+      "runtime": "not tested",
+      "status": "unverified",
+      "evidence": null,
+      "scope": "no support claim"
+    },
+    {
+      "id": "linux",
+      "surface": "server-runtime",
+      "platform": "Linux",
+      "runtime": "not tested",
+      "status": "unverified",
+      "evidence": null,
+      "scope": "no support claim"
+    }
+  ]
+}

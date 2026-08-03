@@ -41,7 +41,7 @@ local paths, crash dumps, private local UI URLs, or screenshots of private rooms
 | 제품 | `apps/web` browser UI + 사용자 소유 API-only relay | `reference/PRODUCT_BOUNDARY.md` |
 | release runtime | signed archive의 bundled Node.js 20 이상 | public release gate와 local-only acceptance |
 | 개발 검증 runtime | Node.js 20.13.1, npm 10.5.2 | 현재 자동 acceptance 환경 |
-| 브라우저 기능 | secure context, Web Crypto, IndexedDB, WebAssembly, Service Worker가 모두 필요 | 브라우저별 실제 matrix는 아직 `blocked` |
+| 브라우저 기능 | secure context, Web Crypto, IndexedDB, WebAssembly, Service Worker가 모두 필요 | Codex in-app browser에서 UI는 렌더링됐지만 초기화가 `blocked`; 실제 브라우저 matrix는 `unverified` |
 | 운영체제 | macOS ARM64에서 local-only 자동 검증 | Linux/Windows 및 실제 브라우저 matrix는 지원 선언하지 않음 |
 | 네트워크 | loopback 기본, 검증된 HTTPS/VPN은 저위험 경로 | 익명성·traffic hiding·Tor는 제공하지 않음 |
 
@@ -55,6 +55,28 @@ public release gate도 실행합니다. 이 임시 키는 배포용 신뢰 키�
 Windows, Linux를 지원한다고 말하지 않습니다. 현장 사람·다른 기기 테스트가
 없어도 되는 자동 fixture와, 자동화할 수 없어 `blocked`인 독립성·운영 신뢰를
 구분합니다.
+
+현재 Mac의 설치·runtime 경계는 다음 명령으로만 판정합니다. 이 명령은 현재 host가
+macOS arm64인지와 Node.js 20+인지 확인한 뒤, 격리된 임시 archive에서 설치·doctor·권한·
+변조·update·rollback·키/버전/revocation 거부를 실행합니다. 이 결과를 다른 OS의
+호환성 증거로 확대 해석하지 않습니다.
+
+```sh
+node scripts/acceptance_os_matrix.mjs --current-host
+```
+
+현재 판정의 원본은 [`reference/SUPPORT_MATRIX.json`](reference/SUPPORT_MATRIX.json)입니다.
+Codex 내장 브라우저에서 production UI는 표시됐지만 프로필 초기화가 완료되지 않아
+브라우저 지원을 `verified`로 올리지 않았습니다. 관찰 상세는
+[`reference/browser-evidence/codex-in-app-browser.json`](reference/browser-evidence/codex-in-app-browser.json)에
+있으며, 이 파일에는 비밀값이나 원본 URL을 기록하지 않습니다.
+
+매트릭스와 production 산출물 경계는 다음처럼 짧게 검사합니다.
+
+```sh
+node scripts/acceptance_browser_matrix.mjs --in-app-browser
+node scripts/verify_support_matrix.mjs
+```
 
 ## Recovery boundary
 
