@@ -34,11 +34,11 @@ import {
 import "./styles.css";
 
 const app = document.querySelector("#app");
-let state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false };
+let state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false };
 let syncInFlight = false;
 
 function lockedState(message) {
-  state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: message, riskAcknowledged: false };
+  state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: message, riskAcknowledged: false, wipeConfirmOpen: false };
   render();
 }
 
@@ -168,6 +168,7 @@ function render() {
       <p class="step">${escapeHtml(onboardingStep())}</p>
       <div class="notice">${escapeHtml(state.notice || (state.serverInfo ? "로컬 relay가 연결되었습니다. 서버는 암호화된 봉투만 처리합니다." : "수동 봉투 모드입니다. 민감한 정보는 입력하지 마세요."))}</div>
       ${state.error ? `<p class="error" role="alert">${escapeHtml(explainError(state.error))}</p>` : ""}
+      ${state.wipeConfirmOpen ? `<div class="card wipe-confirm" role="alertdialog" aria-labelledby="wipe-title"><h2 id="wipe-title">로컬 프로필과 기록 삭제</h2><p class="warning">현재 프로필·대화 기록·replay 표시를 삭제합니다. 브라우저/OS 백업, swap, crash dump, SSD 영역까지 지운다고 보장하지 않습니다. 되돌릴 수 없습니다.</p><form id="wipe-confirm-form" class="stack"><label>계속하려면 현재 프로필의 암호 문구를 입력하세요<input id="wipe-passphrase" name="passphrase" type="password" autocomplete="current-password" required /></label><div class="row-between"><button type="submit">프로필 삭제 실행</button><button id="cancel-wipe" type="button" class="secondary">취소</button></div></form></div>` : ""}
       <div class="layout">
         <aside class="card stack">
           <div><span class="label">로컬 프로필</span><strong>${escapeHtml(state.profile.name)}</strong><p class="small">${escapeHtml(localServerStatus(state.serverInfo))}</p></div>
@@ -231,10 +232,12 @@ function bindAuth() {
 
 function bindRoom() {
   document.querySelector("#lock")?.addEventListener("click", () => { lockProfile(); lockedState("프로필을 잠갔습니다. 메모리의 세션 자료를 폐기했습니다."); });
-  document.querySelector("#panic-wipe")?.addEventListener("click", async () => {
-    const passphrase = window.prompt("로컬 데이터를 영구 삭제하려면 이 프로필의 암호 문구를 입력하세요:");
-    if (passphrase === null) return;
-    try { await deleteProfile(state.profile.name, passphrase); lockedState("로컬 프로필과 해당 transcript/replay 기록의 삭제를 시도했습니다. 브라우저·OS 백업이나 SSD 영역의 삭제까지 보장하지 않습니다."); } catch (error) { state.error = error.message; render(); }
+  document.querySelector("#panic-wipe")?.addEventListener("click", () => { state.wipeConfirmOpen = true; state.error = ""; render(); });
+  document.querySelector("#cancel-wipe")?.addEventListener("click", () => { state.wipeConfirmOpen = false; state.error = ""; render(); });
+  document.querySelector("#wipe-confirm-form")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const passphrase = new FormData(event.currentTarget).get("passphrase");
+    try { await deleteProfile(state.profile.name, passphrase); lockedState("로컬 프로필과 해당 transcript/replay 기록의 삭제를 시도했습니다. 브라우저·OS 백업이나 SSD 영역의 삭제까지 보장하지 않습니다."); } catch (error) { state.error = error.message; state.wipeConfirmOpen = true; render(); }
   });
   document.querySelector("#export-backup")?.addEventListener("click", async () => {
     if (!window.confirm("암호화 백업을 클립보드에 복사합니다. 클립보드 기록·동기화에 남을 수 있습니다. 계속할까요?")) return;

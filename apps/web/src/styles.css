@@ -38,5 +38,6 @@ label { display: grid; gap: 7px; color: #b2c7d2; font-size: .84rem; }
 .message span, .message time { color: #83b7c9; font-size: .72rem; }
 .message p { margin: 5px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .error { color: #ffb4a7; background: #3b1d24; border: 1px solid #77414a; padding: 10px 12px; border-radius: 9px; }
+.wipe-confirm { border-color: #a66b45; background: #2b211b; margin-top: 18px; }
 .warning { color: #ffe0a3; background: #3a2d16; border: 1px solid #806329; padding: 10px 12px; border-radius: 9px; font-size: .82rem; line-height: 1.5; }
 @media (max-width: 760px) { .grid-two, .layout { grid-template-columns: 1fr; } .shell { padding-top: 28px; } .topbar { align-items: flex-start; } h1 { font-size: 2.6rem; } }

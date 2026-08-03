@@ -70,6 +70,9 @@ test("web UI exposes the complete manual pairing and sealed-envelope flow", () =
   assert.match(ui, /원인:/);
   assert.match(ui, /보안 영향:/);
   assert.match(ui, /재시도:/);
+  assert.match(ui, /wipe-confirm-form/);
+  assert.match(ui, /프로필 삭제 실행/);
+  assert.doesNotMatch(ui, /window\.prompt/);
   assert.match(ui, /setInterval[\s\S]*5_000/);
   assert.match(ui, /visibilitychange/);
   assert.match(serviceWorker, /pathname\.startsWith\("\/api\/"\)/);
