@@ -4,6 +4,10 @@ import { loadProductBoundary } from "./product_boundary.mjs";
 
 const checks = [
   ["README.ko.md", "production-ready가 아니며"],
+  ["README.md", "scoped `verified-local`"],
+  ["README.md", "다른 브라우저로 일반화하지 않습니다"],
+  ["README.ko.md", "scoped `verified-local`"],
+  ["README.ko.md", "다른 브라우저로 일반화하지 않습니다"],
   ["README.ko.md", "Tor/onion 익명성이나 검열"],
   ["SECURITY.md", "not audited"],
   ["SECURITY.md", "Remote browser origins must use HTTPS"],

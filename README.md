@@ -420,6 +420,14 @@ node scripts/check_https_endpoint.mjs https://chat.example.com
 실패 처리합니다. DNS, 방화벽, reverse proxy가 실제로 올바르게 구성되었는지와
 두 실제 브라우저에서 초대·메시지 왕복이 되는지는 별도로 확인해야 합니다.
 
+현재 Codex 내장 브라우저에서는 production UI·WASM 초기화·프로필 생성/잠금 해제·
+초대 검증·안전 문구·수동 핸드셰이크·암호화 메시지 왕복·다중 탭 단일 세션 교체·
+inline wipe까지 scoped `verified-local`로 확인했습니다. Service Worker의 실제
+브라우저 update/cache lifecycle과 Chrome·Safari·Firefox·Windows·Linux는 아직
+검증하지 않았으며, 이 결과를 다른 브라우저로 일반화하지 않습니다. 상세한 지원
+판정은 [SUPPORT.md](SUPPORT.md)와 [SUPPORT_MATRIX.json](reference/SUPPORT_MATRIX.json)을
+확인하세요.
+
 ## 9. 독립 실행 release 만들기
 
 소스 저장소 없이 실행할 수 있는 압축 파일을 만들려면 다음을 실행합니다.

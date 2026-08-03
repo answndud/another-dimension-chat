@@ -91,9 +91,12 @@ Web Crypto, IndexedDB, WebAssembly, Service Worker를 모두 지원해야 하며
 Windows·Linux를 공식 지원한다고 주장하지 않습니다. 자세한 범위는
 [`SUPPORT.md`](SUPPORT.md)의 지원 표를 확인하세요.
 
-현재 Codex 내장 브라우저에서는 production 화면 렌더링까지 확인했지만 프로필
-초기화가 완료되지 않아 브라우저 지원 판정은 `blocked`입니다. 이 결과를 성공으로
-간주하거나 다른 브라우저로 일반화하지 않습니다. 매트릭스 원본과 redacted 관찰은
+현재 Codex 내장 브라우저에서는 production UI·WASM 초기화·프로필 생성/잠금 해제·
+초대 검증·안전 문구·수동 핸드셰이크·암호화 메시지 왕복·다중 탭 단일 세션 교체·
+inline wipe까지 scoped `verified-local`로 확인했습니다. Service Worker의 실제
+브라우저 update/cache lifecycle과 Chrome·Safari·Firefox·Windows·Linux는 아직
+검증하지 않았으며, 이 결과를 다른 브라우저로 일반화하지 않습니다. 매트릭스 원본과
+redacted 관찰은
 [`reference/SUPPORT_MATRIX.json`](reference/SUPPORT_MATRIX.json)과
 [`reference/browser-evidence/codex-in-app-browser.json`](reference/browser-evidence/codex-in-app-browser.json)에
 있습니다.
