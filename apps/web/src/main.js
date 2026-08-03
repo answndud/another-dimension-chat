@@ -6,6 +6,7 @@ import {
   revokeInvite,
   importInvite,
   safetyPhrase,
+  getSafetyPhrase,
   exportEnvelope,
   sendEnvelope,
   importEnvelope,
@@ -166,6 +167,7 @@ function render() {
       <header class="topbar"><div><div class="eyebrow">ANOTHER DIMENSION</div><h1>로컬 암호화 방</h1></div><div class="row-between"><button id="export-backup" class="ghost">프로필 백업 복사</button><button id="panic-wipe" class="ghost">긴급 삭제</button><button id="lock" class="ghost">${escapeHtml(state.profile.name)} 잠그기</button></div></header>
       <p class="step">${escapeHtml(onboardingStep())}</p>
       <div class="notice">${escapeHtml(state.notice || (state.serverInfo ? "로컬 relay가 연결되었습니다. 서버는 암호화된 봉투만 처리합니다." : "수동 봉투 모드입니다. 민감한 정보는 입력하지 마세요."))}</div>
+      ${state.error ? `<p class="error" role="alert">${escapeHtml(explainError(state.error))}</p>` : ""}
       <div class="layout">
         <aside class="card stack">
           <div><span class="label">로컬 프로필</span><strong>${escapeHtml(state.profile.name)}</strong><p class="small">${escapeHtml(localServerStatus(state.serverInfo))}</p></div>
@@ -311,7 +313,7 @@ async function refresh() {
   state.serverInfo = await getLocalServerInfo();
   state.peer = state.profile?.peer || state.peer;
   state.sessionStatus = getSessionStatus();
-  state.safety = state.peer ? safetyPhrase(state.profile, state.peer) : "";
+  state.safety = getSafetyPhrase();
   const pendingHandshake = getPendingEnvelope();
   if (pendingHandshake) state.envelope = pendingHandshake;
   else if (state.pendingHandshake && state.envelope === state.pendingHandshake) state.envelope = "";

@@ -918,6 +918,10 @@ export function safetyPhrase(local, peer) {
   return `${safety_material(sessionTranscript(local.selfInviteBody, peer))} · compare over a trusted channel`;
 }
 
+export function getSafetyPhrase() {
+  return activeProfile?.peer ? safetyPhrase(activeProfile, activeProfile.peer) : "";
+}
+
 export function getSessionStatus() {
   return activeProfile?.privateMaterial?.session?.status || "not-paired";
 }
