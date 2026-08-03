@@ -33,6 +33,9 @@ node --check scripts/verify_release_trust.mjs
 node --check scripts/verify_security_review_signoff.mjs
 node --check scripts/acceptance_browser_matrix.mjs
 node --check scripts/verify_support_matrix.mjs
+node --check scripts/verify_release_support_gate.mjs
+node --check scripts/verify_service_worker.mjs
+node --check scripts/verify_service_worker_runtime.mjs
 node --check scripts/acceptance_os_matrix.mjs
 echo "[2/8] product boundary"
 node scripts/verify_product_boundary.mjs
@@ -55,6 +58,7 @@ echo "[7/8] public claim boundary"
 node scripts/verify_docs_claims.mjs
 node scripts/verify_security_requirements.mjs
 node scripts/verify_support_matrix.mjs
+node scripts/verify_release_support_gate.mjs
 node scripts/verify_release_trust.mjs --fixture
 node scripts/verify_security_review_signoff.mjs --fixture
 echo "[8/8] production build (only when dependencies are present)"

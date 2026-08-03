@@ -3,6 +3,11 @@
   "version": 1,
   "generatedFor": "web-first prototype",
   "claimsPolicy": "Only entries with an attached, reproducible evidence file may be verified.",
+  "releasePolicy": {
+    "blockedStatusesFail": true,
+    "unverifiedStatusesAreNonClaim": true,
+    "verifiedLocalIsNotPublicSupport": true
+  },
   "entries": [
     {
       "id": "macos-arm64-node20-local-gate",
