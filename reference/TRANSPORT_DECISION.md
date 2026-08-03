@@ -5,7 +5,14 @@ messaging adapter exists.
 
 ## Current Decision
 
-High-risk mode is onion-only by default.
+High-risk mode is permanently disabled in the v0.1 web product.
+
+The web product does not implement Tor/onion routing, does not accept `.onion`
+endpoints, and does not expose an anonymity toggle or fallback. Direct HTTPS,
+VPN, and loopback/manual delivery remain low-risk routes only. A future onion
+implementation would require a new product-boundary decision, a separately
+verified adapter, and independent review; the legacy/native research crate is
+not that implementation.
 
 The default production transport policy rejects direct peer routes. Direct P2P,
 WebRTC, libp2p direct dialing, STUN, TURN, and ICE-style NAT traversal are not
@@ -24,9 +31,11 @@ The browser web product currently uses user-owned direct inbox endpoints only.
 Those endpoints are a low-risk transport path, even when HTTPS is enabled:
 HTTPS protects the connection contents in transit but does not hide IP address,
 timing, endpoint, frequency, or ciphertext size. The web UI exposes no
-high-risk transport toggle and rejects remote HTTP inbox URLs. The high-risk
-onion-only policy below remains a fail-closed design boundary until a real,
-separately verified Tor/Arti adapter exists.
+high-risk transport toggle, rejects remote HTTP inbox URLs, and rejects onion
+endpoints. The policy below is retained only as legacy research context and is
+not a supported web route.
+
+## Legacy research context (not the web product)
 
 - `TransportPolicy::high_risk_default()` allows only `TransportRoute::OnionService`.
 - `TransportPolicy::local_only()` allows only local/manual routes.
@@ -138,10 +147,10 @@ separately verified Tor/Arti adapter exists.
 - Onion endpoint rotation remains a protocol/session concern and must be
   handled inside an authenticated encrypted session when implemented.
 
-## Next Implementation Step
+## Future boundary condition
 
-Arti lifecycle cleanup is closed out for the previous phase. Phase 4 starts
-with an Arti bootstrap-to-hosting readiness audit using the existing
-fail-closed boundaries. Do not add more stream readiness or intent tokens, and
-do not implement real descriptor publication, network stream I/O, envelope
-send/receive, or usable messaging without a separate boundary decision.
+Do not add more onion stream readiness, intent tokens, descriptor publication,
+network stream I/O, envelope send/receive, or usable messaging to the v0.1 web
+product. Any future transport work must begin with a new boundary decision and
+must not reuse this legacy skeleton as evidence of anonymity or censorship
+resistance.

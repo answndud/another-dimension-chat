@@ -173,6 +173,7 @@ test("TLS certificate input must be a currently valid X.509 certificate", async 
 test("local server validates its advertised public origin", async () => {
   await assert.rejects(() => createLocalServer({ publicUrl: "https://example.test/chat" }), /must be an HTTP\(S\) origin/);
   await assert.rejects(() => createLocalServer({ publicUrl: "https://user@example.test" }), /must be an HTTP\(S\) origin/);
+  await assert.rejects(() => createLocalServer({ publicUrl: "https://relayexample.onion" }), /Onion\/Tor public URLs are not supported/);
   await assert.rejects(() => createLocalServer({ bindHost: "0.0.0.0" }), /AD_PUBLIC_URL is required/);
 
   const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
@@ -192,6 +193,8 @@ test("local server validates its advertised public origin", async () => {
   assert.equal(info.body.listenerTls, false);
   assert.equal(info.body.networkScope, "non-loopback");
   assert.equal(info.body.highRiskAllowed, false);
+  assert.equal(info.body.highRiskTransport, "disabled");
+  assert.deepEqual(info.body.supportedTransports, ["loopback", "direct-https-low-risk", "manual-envelope"]);
   assert.equal(info.body.transportMode, "direct-https-low-risk");
   assert.match(info.body.inboxUrl, /^https:\/\/chat\.example\.test\/api\/v1\/inbox\//);
   await runtime.server.close();
@@ -287,6 +290,7 @@ test("guided server config validates modes and resolves stored paths", async () 
   );
   assert.throws(() => buildServerConfig({ mode: "direct-tls", publicUrl: "https://chat.example.test" }), /requires both/);
   assert.throws(() => buildServerConfig({ mode: "reverse-proxy", publicUrl: "http://chat.example.test" }), /HTTPS origin/);
+  assert.throws(() => buildServerConfig({ mode: "reverse-proxy", publicUrl: "https://relayexample.onion" }), /Onion\/Tor public URLs are not supported/);
 
   const directory = await mkdtemp(join(tmpdir(), "another-dimension-config-"));
   const configFile = join(directory, "server-config.json");

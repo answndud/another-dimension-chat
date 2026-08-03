@@ -36,7 +36,7 @@ if (release) {
 }
 
 const boundaryDocument = await readFile(path.join(root, "reference/PRODUCT_BOUNDARY.md"), "utf8");
-for (const marker of [boundary.supportedProduct, "high-risk route remains disabled", ...boundary.nonClaims]) {
+for (const marker of [boundary.supportedProduct, "high-risk route is permanently disabled", ...boundary.nonClaims]) {
   if (!boundaryDocument.toLowerCase().includes(marker.toLowerCase())) throw new Error(`product boundary missing marker: ${marker}`);
 }
 console.log("product boundary source checks passed");

@@ -13,6 +13,7 @@ const defaultConfigFile = resolve(projectDir, ".another-dimension-server/server-
 function normalizedOrigin(value) {
   let url;
   try { url = new URL(String(value)); } catch { throw new Error("Public URL must be a valid HTTPS origin."); }
+  if (url.hostname.replace(/\.$/, "").endsWith(".onion")) throw new Error("Onion/Tor public URLs are not supported; high-risk transport is disabled.");
   if (url.protocol !== "https:" || url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
     throw new Error("Public URL must be an HTTPS origin without credentials, path, query, or fragment.");
   }

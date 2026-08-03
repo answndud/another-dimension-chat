@@ -188,6 +188,8 @@ function validInboxUrl(value) {
   if (!value) return null;
   let url;
   try { url = new URL(String(value)); } catch { throw new Error("Server endpoint is not a valid URL."); }
+  const hostname = url.hostname.replace(/\.$/, "");
+  if (hostname.endsWith(".onion")) throw new Error("Onion/Tor endpoints are not supported in this web product; high-risk transport is disabled.");
   if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.hash || !url.pathname.includes("/api/v1/inbox/")) {
     throw new Error("Server endpoint must be an HTTP(S) capability inbox URL.");
   }

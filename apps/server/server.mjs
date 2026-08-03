@@ -176,6 +176,7 @@ function normalizePublicUrl(value) {
   if (!value) return "";
   let url;
   try { url = new URL(String(value)); } catch { throw new Error("AD_PUBLIC_URL must be a valid HTTP(S) origin."); }
+  if (url.hostname.replace(/\.$/, "").endsWith(".onion")) throw new Error("Onion/Tor public URLs are not supported; high-risk transport is disabled.");
   if (
     !["http:", "https:"].includes(url.protocol)
     || url.username
@@ -361,6 +362,8 @@ export async function createLocalServer({
         listenerTls: Boolean(tlsKeyFile && tlsCertFile),
         serveStatic,
         highRiskAllowed: false,
+        highRiskTransport: "disabled",
+        supportedTransports: ["loopback", "direct-https-low-risk", "manual-envelope"],
         transportMode: publicOrigin.startsWith("https://") ? "direct-https-low-risk" : "local-or-http-low-risk",
         networkScope: isLoopbackHost(bindHost) ? "loopback" : "non-loopback",
         maxEnvelopeBytes: MAX_ENVELOPE_BYTES,

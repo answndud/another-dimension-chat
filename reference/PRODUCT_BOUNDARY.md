@@ -36,8 +36,10 @@ or be used as evidence that the supported web package passed its release gate.
   public release package.
 - Direct HTTPS, VPN, and LAN transport are low-risk delivery routes; they do
   not provide anonymity or censorship resistance.
-- The high-risk route remains disabled until an independently reviewed
-  anonymity transport and the full release trust boundary exist.
+- The high-risk route is permanently disabled in the v0.1 web product. Onion/Tor
+  endpoints are rejected by the browser and server configuration; a future
+  anonymity transport would require a new product-boundary decision and
+  independent review before any implementation could ship.
 - A changed JavaScript/WASM bundle, missing signature, revoked key, missing
   provenance/SBOM, or legacy artifact in a public package is a release failure.
 - This boundary does not claim anonymity, secure deletion, coercion resistance,

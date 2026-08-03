@@ -42,6 +42,7 @@ test("web runtime uses browser crypto and IndexedDB rather than preview storage"
   assert.match(runtime, /MAX_BACKUP_BYTES/);
   assert.match(runtime, /rollback/);
   assert.match(runtime, /Remote relay endpoints require HTTPS/);
+  assert.match(runtime, /Onion\/Tor endpoints are not supported/);
   assert.match(runtime, /MIN_PASSPHRASE_LENGTH = 12/);
   assert.match(runtime, /BroadcastChannel/);
   assert.match(runtime, /Browser storage is unavailable/);
@@ -209,9 +210,13 @@ test("two local profiles establish an Olm ratchet, persist it, and reject tamper
   const expiredInviteBody = { ...bobInviteBody, issuedAt: Date.now() - (25 * 60 * 60 * 1000), expiresAt: Date.now() - 1 };
   const expiredSignature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, bob.ecdsaPrivate, new TextEncoder().encode(canonical(expiredInviteBody)));
   const expiredInvite = `ADWEB3.${Buffer.from(JSON.stringify({ ...expiredInviteBody, signature: bytesToBase64(expiredSignature) })).toString("base64url")}`;
+  const onionInviteBody = { ...bobInviteBody, server: { ...bobInviteBody.server, inboxUrl: "https://peerexample.onion/api/v1/inbox/capability" } };
+  const onionSignature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, bob.ecdsaPrivate, new TextEncoder().encode(canonical(onionInviteBody)));
+  const onionInvite = `ADWEB3.${Buffer.from(JSON.stringify({ ...onionInviteBody, signature: bytesToBase64(onionSignature) })).toString("base64url")}`;
 
   await runtime.unlockProfile("alice", "alice-passphrase");
   await assert.rejects(() => runtime.importInvite(expiredInvite), /Invite Olm setup material is invalid/);
+  await assert.rejects(() => runtime.importInvite(onionInvite), /Onion\/Tor endpoints are not supported/);
   const alicePeer = await runtime.importInvite(bobInvite);
   assert.match(runtime.safetyPhrase(alice, alicePeer), /sha256-.+compare/);
   await runtime.unlockProfile("bob", "bob-passphrase");

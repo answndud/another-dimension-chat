@@ -277,6 +277,9 @@ metadata 노출 위험 때문에 자동 연결에서 거부되며, Tor/onion 익
 원격 HTTP relay mode는 이제 서버가 시작 단계에서 거부합니다. capability와
 metadata가 네트워크에 노출되고 원격 브라우저의 Web Crypto 보장을 만들 수 없기
 때문입니다. loopback의 개발용 HTTP만 허용되며 민감한 통신에는 사용하지 마세요.
+`.onion` 주소와 Tor/onion route도 현재 웹 제품에서 지원하지 않으며, 초대·서버
+설정 단계에서 거부됩니다. 고위험 통신 경로는 v0.1에서 영구적으로 비활성화되어
+있습니다.
 서버 시작 시 private UI URL 자체는 터미널에
 출력하지 않고 `.another-dimension-server/local-ui-url` 파일(mode 600)에만
 기록합니다.
