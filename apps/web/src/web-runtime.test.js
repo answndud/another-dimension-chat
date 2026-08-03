@@ -73,6 +73,9 @@ test("web UI exposes the complete manual pairing and sealed-envelope flow", () =
   assert.match(ui, /wipe-confirm-form/);
   assert.match(ui, /프로필 삭제 실행/);
   assert.doesNotMatch(ui, /window\.prompt/);
+  assert.match(ui, /copyToClipboard/);
+  assert.match(ui, /Clipboard is unavailable/);
+  assert.match(ui, /profileBackup/);
   assert.match(ui, /setInterval[\s\S]*5_000/);
   assert.match(ui, /visibilitychange/);
   assert.match(ui, /Service Worker \$\{serviceWorkerStatus\}/);

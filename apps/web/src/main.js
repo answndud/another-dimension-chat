@@ -34,12 +34,12 @@ import {
 import "./styles.css";
 
 const app = document.querySelector("#app");
-let state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false };
+let state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false };
 let serviceWorkerStatus = "확인 중";
 let syncInFlight = false;
 
 function lockedState(message) {
-  state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: message, riskAcknowledged: false, wipeConfirmOpen: false };
+  state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: message, riskAcknowledged: false, wipeConfirmOpen: false };
   render();
 }
 
@@ -121,12 +121,20 @@ function browserStatus() {
   return `${!window.isSecureContext || !window.crypto?.subtle ? "브라우저 보안: localhost 또는 HTTPS가 필요합니다." : "브라우저 보안 상태"} · ${summary} · Service Worker ${serviceWorkerStatus}`;
 }
 
+async function copyToClipboard(value) {
+  if (!window.isSecureContext || typeof navigator === "undefined" || typeof navigator.clipboard?.writeText !== "function") {
+    throw new Error("Clipboard is unavailable. Copy the displayed encrypted material manually and clear clipboard history after delivery.");
+  }
+  await navigator.clipboard.writeText(value);
+}
+
 function explainError(value) {
   const message = String(value || "알 수 없는 오류");
   const lower = message.toLowerCase();
   const matched = [
     [/(wrong passphrase|damaged local profile|passphrase)/, "암호 문구가 틀렸거나 프로필 자료를 열 수 없습니다.", "암호 문구를 다시 확인하세요. 계속 실패하면 기존 자료를 덮어쓰지 말고 프로필 전용 백업을 사용하세요.", "현재 프로필은 잠금 해제되지 않았습니다.", "한 번만 다시 시도할 수 있습니다."],
     [/(storage|database|indexeddb|quota|private browsing)/, "브라우저 저장소를 열거나 기록할 수 없습니다.", "site data를 지우지 말고 필요한 백업을 먼저 보존한 뒤 일반 브라우저 창과 충분한 저장 공간에서 다시 여세요.", "현재 세션과 전송은 잠금 상태로 유지됩니다.", "저장소 상태를 확인한 뒤 다시 시도하세요."],
+    [/(clipboard|copy)/, "클립보드를 사용할 수 없습니다.", "화면에 표시된 암호화 자료를 수동으로 복사하고 전송 후 clipboard history와 동기화 기록을 삭제하세요.", "암호화 자료는 화면의 수동 저장 영역에 남아 있습니다.", "브라우저 권한을 바꾸기 전까지 자동 복사를 반복하지 마세요."],
     [/(safety material|safety|identity changed|peer identity)/, "상대 identity 또는 안전 문구를 신뢰할 수 없습니다.", "전송을 중단하고 별도 신뢰 채널에서 초대와 전체 안전 문구를 다시 비교하세요. identity 변경이면 새 프로필로 다시 pairing해야 합니다.", "메시지 전송은 허용되지 않습니다.", "확인 전 재시도하지 마세요."],
     [/(endpoint or capability|server endpoint|inbox|peer server|could not be reached|timeout)/, "상대 relay endpoint에 도달하지 못했거나 capability가 바뀌었습니다.", "서버 상태와 HTTPS 설정을 확인하세요. 실패하면 화면에 준비된 sealed envelope를 수동 전달하세요. capability 변경이면 새 초대를 교환하세요.", "자동 전달 완료로 기록되지 않습니다.", "서버 확인 후 재시도할 수 있습니다."],
     [/(already imported|already paired|revoked|expired|invite)/, "초대·봉투가 만료되었거나 이미 사용되었거나 현재 방과 맞지 않습니다.", "오래된 값을 다시 붙여 넣지 말고 새 초대 또는 새 봉투를 안전한 채널로 교환하세요.", "검증되지 않은 값은 처리되지 않습니다.", "새 값을 받은 뒤에만 재시도하세요."],
@@ -229,7 +237,7 @@ function render() {
             ${state.envelope ? '<p class="small">An outgoing envelope is ready for manual delivery if the peer server is unavailable.</p>' : ""}
           </div>
           <div class="card stack"><div class="row-between"><h2>대화</h2><span class="small">로컬 암호화 기록</span></div>${renderMessages()}</div>
-          <div class="card stack"><h2>복구 자료 구분</h2><p class="small">프로필 백업은 대화와 session을 복구하지 않습니다. 아래 자료는 모두 현재 프로필의 암호 문구로 인증된 별도 파일이며, 클립보드·공개 채널·스크린샷에 남기지 마세요.</p><button id="make-session-backup" class="secondary">Olm session/replay 백업 생성</button><textarea id="session-backup" autocomplete="off" rows="4" placeholder="ADSESSION1 백업을 여기에 붙여 넣으세요">${escapeHtml(state.sessionBackup)}</textarea><button id="load-session-backup" class="secondary">Olm session/replay 백업 가져오기</button><button id="make-transcript-export" class="secondary">대화 기록 export 생성</button><textarea id="transcript-export" autocomplete="off" rows="4" placeholder="ADTRANSCRIPT1 export를 여기에 붙여 넣으세요">${escapeHtml(state.transcriptExport)}</textarea><button id="load-transcript-export" class="secondary">대화 기록 export 가져오기</button><p class="warning">긴급 삭제는 브라우저 저장소의 삭제를 시도할 뿐이며 브라우저/OS 백업, swap, crash dump, SSD wear-leveling까지 지운다는 보장이 없습니다.</p></div>
+          <div class="card stack"><h2>복구 자료 구분</h2><p class="small">프로필 백업은 대화와 session을 복구하지 않습니다. 아래 자료는 모두 현재 프로필의 암호 문구로 인증된 별도 파일이며, 클립보드·공개 채널·스크린샷에 남기지 마세요.</p>${state.profileBackup ? '<label>클립보드 실패 시 수동 저장용 암호화 프로필 백업<textarea id="profile-backup-output" readonly autocomplete="off" rows="4">' + escapeHtml(state.profileBackup) + '</textarea></label><p class="warning">이 자료를 신뢰할 수 있는 오프라인 저장소에 옮긴 뒤 화면·clipboard history·동기화 기록에서 삭제하세요.</p>' : ""}<button id="make-session-backup" class="secondary">Olm session/replay 백업 생성</button><textarea id="session-backup" autocomplete="off" rows="4" placeholder="ADSESSION1 백업을 여기에 붙여 넣으세요">${escapeHtml(state.sessionBackup)}</textarea><button id="load-session-backup" class="secondary">Olm session/replay 백업 가져오기</button><button id="make-transcript-export" class="secondary">대화 기록 export 생성</button><textarea id="transcript-export" autocomplete="off" rows="4" placeholder="ADTRANSCRIPT1 export를 여기에 붙여 넣으세요">${escapeHtml(state.transcriptExport)}</textarea><button id="load-transcript-export" class="secondary">대화 기록 export 가져오기</button><p class="warning">긴급 삭제는 브라우저 저장소의 삭제를 시도할 뿐이며 브라우저/OS 백업, swap, crash dump, SSD wear-leveling까지 지운다는 보장이 없습니다.</p></div>
         </section>
       </div>
       <p class="disclaimer">실험용 beta: 익명성·안전한 삭제·확실한 전달·장악된 기기 보호를 제공하지 않습니다. 민감한 통신을 금지합니다.</p>
@@ -269,12 +277,13 @@ function bindRoom() {
   });
   document.querySelector("#export-backup")?.addEventListener("click", async () => {
     if (!window.confirm("암호화 백업을 클립보드에 복사합니다. 클립보드 기록·동기화에 남을 수 있습니다. 계속할까요?")) return;
-    try { await navigator.clipboard.writeText(await exportProfileBackup()); state.notice = "암호화 백업을 복사했습니다. 클립보드에서 즉시 지우고 오프라인 저장소로 옮기세요."; render(); } catch (error) { state.error = error.message; render(); }
+    let backup = "";
+    try { backup = await exportProfileBackup(); await copyToClipboard(backup); state.profileBackup = ""; state.notice = "암호화 백업을 복사했습니다. 클립보드에서 즉시 지우고 오프라인 저장소로 옮기세요."; render(); } catch (error) { if (backup) state.profileBackup = backup; state.error = error.message; render(); }
   });
   document.querySelector("#peer-invite")?.addEventListener("input", (event) => { state.peerInvite = event.currentTarget.value; });
   document.querySelector("#copy-invite")?.addEventListener("click", async () => {
     if (!window.confirm("초대에는 상대방 서버 접속 정보가 포함될 수 있습니다. 클립보드에 복사할까요?")) return;
-    try { await navigator.clipboard.writeText(state.invite); state.notice = "초대를 복사했습니다. 전송 후 클립보드와 기록에서 삭제하세요."; render(); } catch (error) { state.error = error.message; render(); }
+    try { await copyToClipboard(state.invite); state.notice = "초대를 복사했습니다. 전송 후 클립보드와 기록에서 삭제하세요."; render(); } catch (error) { state.error = error.message; render(); }
   });
   document.querySelector("#revoke-invite")?.addEventListener("click", async () => {
     try { await revokeInvite(); state.notice = "이전 초대를 폐기했습니다. 새로 발급된 초대를 공유하세요."; await refresh(); } catch (error) { state.error = error.message; render(); }
@@ -357,7 +366,7 @@ async function refresh() {
 for (const eventName of ["pointerdown", "keydown", "touchstart"]) document.addEventListener(eventName, touchActivity, { passive: true });
 window.setInterval(() => {
   if (checkAutoLock()) {
-    state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", messages: [], error: "", notice: "Session auto-locked after inactivity." };
+    state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", messages: [], error: "", notice: "Session auto-locked after inactivity." };
     render();
   } else if (!document.hidden) receiveMessages(false);
 }, 5_000);
