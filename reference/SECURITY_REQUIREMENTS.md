@@ -52,7 +52,7 @@ Requirements marked `blocked` prevent any high-risk claim.
 | `TRANSPORT-01` | Direct HTTPS/VPN/LAN is low-risk and does not claim anonymity. | `implemented` | UI/docs claim scan and packet metadata fixture. |
 | `TRANSPORT-02` | High-risk mode is disabled until an independently reviewed anonymity transport exists. | `implemented` | `highRiskAllowed:false`, server/web tests. |
 | `RELEASE-01` | Public archive has verified UI, relay, runtime, manifest, SBOM, provenance, and no legacy artifacts. | `blocked` | Clean public release gate with signed archive. |
-| `RELEASE-02` | Trusted key bootstrap, rotation, revocation, rollback, and compromised-release response are executable. | `partial` | `verify_release_trust.mjs --fixture`, trust-manifest public gate, and clean-install update/rollback matrix; external bootstrap delivery remains blocked. |
+| `RELEASE-02` | Trusted key bootstrap, rotation, revocation, rollback, and compromised-release response are executable. | `partial` | `verify_release_trust.mjs --fixture`, `verify_release_trust_receipt.mjs --fixture`, trust-manifest public gate, and clean-install update/rollback matrix; external bootstrap delivery remains blocked. |
 | `RELEASE-03` | Production gate fails on skipped build, missing browser acceptance, or missing artifact. | `blocked` | `verify_all.sh --release` negative tests. |
 | `OPS-01` | User can install, start, stop, restart, update, rollback, and recover without Node/npm. | `blocked` | No-Node clean OS fixture. |
 | `OPS-02` | Incident runbook covers leaked capability, lost device, changed release, key compromise, and fresh pairing. | `partial` | Redacted recovery fixture and support docs. |

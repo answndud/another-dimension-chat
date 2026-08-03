@@ -122,9 +122,18 @@ verifier_command: <비밀 경로를 제거한 명령 이름과 옵션>
 verification_result: passed|blocked|revoked|mismatch
 operator_initials: <운영 내부 식별자>
 reviewer_required: true|false
+external_evidence_reference: <외부 전달·대조 증거의 redacted 내부 식별자>
 notes: <비밀값 없는 제한사항>
 ```
 
 `matched_byte_for_byte`가 `false`이거나 결과가 `passed`가 아니면 archive를 실행하지
 않는다. 이 기록은 외부 채널이 실제로 독립적이었다는 증거 자체는 아니며, 운영자가
 확보한 외부 전달 증거와 함께 보관해야 한다.
+
+형식과 명시된 외부 증거 참조가 있는지 확인하려면 다음 명령을 사용한다. 이 명령은
+채널의 실제 독립성이나 외부 기록의 진위를 증명하지 않으므로, 통과해도 운영 trust
+상태를 자동으로 `verified`로 승격하지 않는다.
+
+```sh
+node scripts/verify_release_trust_receipt.mjs /secure/trust/bootstrap-ack.txt
+```
