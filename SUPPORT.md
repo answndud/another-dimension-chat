@@ -32,6 +32,30 @@ local paths, crash dumps, private local UI URLs, or screenshots of private rooms
 로그·private UI 주소는 절대 공개하지 마세요. 지원 문의에는 버전, 운영체제·브라우저,
 일반적인 오류 종류와 마지막으로 성공한 복구 단계만 적습니다.
 
+## 지원 범위와 자동 검증 범위
+
+현재 공개 지원 범위는 다음처럼 보수적으로 선언합니다.
+
+| 구분 | 선언 | 근거/제한 |
+| --- | --- | --- |
+| 제품 | `apps/web` browser UI + 사용자 소유 API-only relay | `reference/PRODUCT_BOUNDARY.md` |
+| release runtime | signed archive의 bundled Node.js 20 이상 | public release gate와 local-only acceptance |
+| 개발 검증 runtime | Node.js 20.13.1, npm 10.5.2 | 현재 자동 acceptance 환경 |
+| 브라우저 기능 | secure context, Web Crypto, IndexedDB, WebAssembly, Service Worker가 모두 필요 | 브라우저별 실제 matrix는 아직 `blocked` |
+| 운영체제 | macOS ARM64에서 local-only 자동 검증 | Linux/Windows 및 실제 브라우저 matrix는 지원 선언하지 않음 |
+| 네트워크 | loopback 기본, 검증된 HTTPS/VPN은 저위험 경로 | 익명성·traffic hiding·Tor는 제공하지 않음 |
+
+`node scripts/acceptance_p3.mjs`는 deterministic seed, 30초 단계 timeout,
+Node heap 256MB, worker 1개, redacted 임시 artifact 정책으로 실행됩니다.
+`--release`는 production UI build뿐 아니라 임시 Ed25519 키를 사용한 signed
+public release gate도 실행합니다. 이 임시 키는 배포용 신뢰 키가 아니며, 실제
+사용자는 별도 신뢰 채널의 운영 fingerprint를 확인해야 합니다.
+
+실제 브라우저·OS 조합을 검증하지 않은 상태에서 특정 Chrome, Safari, Firefox,
+Windows, Linux를 지원한다고 말하지 않습니다. 현장 사람·다른 기기 테스트가
+없어도 되는 자동 fixture와, 자동화할 수 없어 `blocked`인 독립성·운영 신뢰를
+구분합니다.
+
 ## Recovery boundary
 
 ## 오류가 났을 때의 순서

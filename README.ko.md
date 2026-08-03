@@ -78,6 +78,19 @@ archive는 설치기가 명확히 거부하며 일반 사용자용 배포물로 
 node scripts/acceptance_p3.mjs
 ```
 
+공개 release acceptance는 production build와 signed public gate를 함께 실행합니다.
+임시 테스트 키는 실제 배포 신뢰 키가 아니므로 사용자에게 전달하지 않습니다.
+
+```sh
+node scripts/acceptance_p3.mjs --release
+```
+
+지원 브라우저·운영체제 범위는 아직 보수적으로 제한되어 있습니다. secure context,
+Web Crypto, IndexedDB, WebAssembly, Service Worker를 모두 지원해야 하며, 실제
+브라우저 matrix를 독립적으로 검증하기 전에는 특정 Chrome·Safari·Firefox 버전이나
+Windows·Linux를 공식 지원한다고 주장하지 않습니다. 자세한 범위는
+[`SUPPORT.md`](SUPPORT.md)의 지원 표를 확인하세요.
+
 ## 현재 웹 prototype에서 동작하는 것
 
 - passphrase를 사용하는 로컬 브라우저 프로필 생성·unlock
