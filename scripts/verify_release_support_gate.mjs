@@ -2,7 +2,13 @@
 import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const root = resolve(import.meta.dirname, "..");
+const projectRoot = resolve(import.meta.dirname, "..");
+const args = process.argv.slice(2);
+const rootIndex = args.indexOf("--root");
+if (rootIndex !== -1 && (!args[rootIndex + 1] || args[rootIndex + 1].startsWith("--"))) {
+  throw new Error("release support gate: --root requires a directory path");
+}
+const root = rootIndex === -1 ? projectRoot : resolve(args[rootIndex + 1]);
 const matrix = JSON.parse(await readFile(resolve(root, "reference/SUPPORT_MATRIX.json"), "utf8"));
 const fail = (message) => { throw new Error(`release support gate: ${message}`); };
 const policy = matrix.releasePolicy;
@@ -17,7 +23,9 @@ for (const entry of matrix.entries) {
   }
   if (entry.status === "verified-local") {
     if (!entry.evidence) fail(`verified-local entry has no evidence: ${entry.id}`);
-    await access(resolve(root, entry.evidence));
+    const evidence = resolve(root, entry.evidence);
+    if (entry.evidence.split("/").includes("..")) fail(`evidence path escapes release root: ${entry.id}`);
+    await access(evidence);
     if (policy.verifiedLocalIsNotPublicSupport && !/only|scoped/i.test(entry.scope || "")) {
       fail(`verified-local entry does not declare a scope: ${entry.id}`);
     }

@@ -73,6 +73,7 @@ fi
 # shellcheck disable=SC2086
 SOURCE_DATE_EPOCH="${AD_RELEASE_SOURCE_DATE_EPOCH:-0}" node "$PROJECT_DIR/scripts/create_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $MANIFEST_ARGS
 node "$PROJECT_DIR/scripts/verify_product_boundary.mjs" "$STAGE/another-dimension-$VERSION" --release
+node "$PROJECT_DIR/scripts/verify_release_support_gate.mjs" --root "$STAGE/another-dimension-$VERSION"
 # Unsigned output is allowed only for local development; verified distribution requires a signature.
 # shellcheck disable=SC2086
 node "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $VERIFY_ARGS
