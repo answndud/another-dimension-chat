@@ -1,10 +1,11 @@
-import { createHash, randomBytes, timingSafeEqual, X509Certificate } from "node:crypto";
+import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, randomBytes, sign, timingSafeEqual, X509Certificate } from "node:crypto";
 import { createReadStream, realpathSync } from "node:fs";
 import { chmod, lstat, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { consumeInviteCode, createInviteCode, inviteCodeHash, invitePayloadDigest, purgeInviteCodes } from "./invite-code.mjs";
 
 const MAX_ENVELOPE_BYTES = 96 * 1024;
 const MAX_INBOX_ITEMS = 256;
@@ -14,8 +15,28 @@ const MAX_POSTS_PER_WINDOW = 30;
 const MAX_LOCAL_READS_PER_WINDOW = 120;
 const CAPABILITY_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const CAPABILITY_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const MAX_INVITE_CODE_RECORDS = 256;
+const MAX_INVITE_CODE_BODY_BYTES = 96 * 1024 + 4096;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaultDist = resolve(__dirname, "../web/dist");
+
+async function loadRelayReceiptKey(dataDir, privateFileWriter, configuredFile = "") {
+  const privateFile = configuredFile || join(dataDir, "relay-receipt-signing-key.pem");
+  const existing = await readRegularPrivateFile(privateFile);
+  if (configuredFile && !existing) {
+    throw new Error(`Configured relay receipt signing key does not exist: ${configuredFile}`);
+  }
+  if (existing) {
+    const privateKey = createPrivateKey(existing);
+    const publicKey = createPublicKey(privateKey);
+    const publicKeyHex = publicKey.export({ type: "spki", format: "der" }).subarray(-32).toString("hex");
+    return { privateKey, publicKeyHex, publicKeyFingerprint: createHash("sha256").update(Buffer.from(publicKeyHex, "hex")).digest("hex") };
+  }
+  const generated = generateKeyPairSync("ed25519");
+  await privateFileWriter(privateFile, generated.privateKey.export({ type: "pkcs8", format: "pem" }));
+  const publicKeyHex = generated.publicKey.export({ type: "spki", format: "der" }).subarray(-32).toString("hex");
+  return { privateKey: generated.privateKey, publicKeyHex, publicKeyFingerprint: createHash("sha256").update(Buffer.from(publicKeyHex, "hex")).digest("hex") };
+}
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -251,6 +272,7 @@ export async function createLocalServer({
   headersTimeoutMs = 10_000,
   keepAliveTimeoutMs = 5_000,
   privateFileWriter = writePrivateFile,
+  relayReceiptSigningKeyFile = process.env.AD_RELAY_RECEIPT_SIGNING_KEY || "",
 } = {}) {
   if (Boolean(tlsKeyFile) !== Boolean(tlsCertFile)) throw new Error("AD_TLS_KEY_FILE and AD_TLS_CERT_FILE must be configured together.");
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("AD_PORT must be an integer between 0 and 65535.");
@@ -276,7 +298,9 @@ export async function createLocalServer({
   const localAccessFile = join(dataDir, "local-access-capability");
   const localUiUrlFile = join(dataDir, "local-ui-url");
   const queueFile = join(dataDir, "inbox.json");
+  const inviteCodeFile = join(dataDir, "invite-codes.json");
   let inboxCapability = await loadCapability(capabilityFile, "inbox-write", privateFileWriter);
+  const relayReceiptKey = await loadRelayReceiptKey(dataDir, privateFileWriter, relayReceiptSigningKeyFile);
   let localAccessCapability = await loadCapability(localAccessFile, "local-control", privateFileWriter);
   let inbox;
   const queueContents = await readRegularPrivateFile(queueFile);
@@ -291,6 +315,19 @@ export async function createLocalServer({
     try { inbox = JSON.parse(queueContents); } catch { throw new Error("Server inbox file is corrupt; refusing to discard it."); }
   }
   if (!Array.isArray(inbox)) throw new Error("Server inbox file must contain an array.");
+  const inviteCodeContents = await readRegularPrivateFile(inviteCodeFile);
+  let inviteCodes;
+  if (inviteCodeContents === null) {
+    const temporaryInviteCodes = await readRegularPrivateFile(`${inviteCodeFile}.tmp`);
+    if (temporaryInviteCodes !== null) {
+      try { inviteCodes = JSON.parse(temporaryInviteCodes); } catch { throw new Error("Server invite-code recovery file is corrupt."); }
+      await privateFileWriter(inviteCodeFile, temporaryInviteCodes);
+    } else inviteCodes = [];
+  } else {
+    try { inviteCodes = JSON.parse(inviteCodeContents); } catch { throw new Error("Server invite-code file is corrupt; refusing to discard it."); }
+  }
+  if (!Array.isArray(inviteCodes)) throw new Error("Server invite-code file must contain an array.");
+  inviteCodes = purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS);
   const purge = () => {
     const cutoff = Date.now() - ttlMs;
     inbox = Array.isArray(inbox) ? inbox.filter((item) => Number.isSafeInteger(item.receivedAt) && item.receivedAt >= cutoff).slice(-MAX_INBOX_ITEMS) : [];
@@ -305,6 +342,15 @@ export async function createLocalServer({
       await privateFileWriter(queueFile, snapshot);
     });
     persistChain = operation.catch(() => {});
+    return operation;
+  };
+  let invitePersistChain = Promise.resolve();
+  const persistInviteCodes = () => {
+    const snapshot = JSON.stringify(purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS));
+    const operation = invitePersistChain.then(async () => {
+      await privateFileWriter(inviteCodeFile, snapshot);
+    });
+    invitePersistChain = operation.catch(() => {});
     return operation;
   };
   const scheme = tlsKeyFile && tlsCertFile ? "https" : "http";
@@ -369,7 +415,52 @@ export async function createLocalServer({
         transportMode: publicOrigin.startsWith("https://") ? "direct-https-low-risk" : "local-or-http-low-risk",
         networkScope: isLoopbackHost(bindHost) ? "loopback" : "non-loopback",
         maxEnvelopeBytes: MAX_ENVELOPE_BYTES,
+        relayReceiptPublicKey: relayReceiptKey.publicKeyHex,
+        relayReceiptPublicKeyFingerprint: relayReceiptKey.publicKeyFingerprint,
+        relayReceiptKeyId: relayReceiptKey.publicKeyFingerprint,
+        relayReceiptKeySource: relayReceiptSigningKeyFile ? "external-configured" : "generated-development",
       }, headers);
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/v1/invite-codes" && req.method === "POST") {
+      if (!consumeRateLimit(req, "invite-code-create", 5)) { json(res, 429, { created: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
+      if (!capabilityValid(localAccessCapability) || !hasLocalAccess(req, localAccessCapability)) {
+        json(res, 403, { created: false, error: "local_access_required" }, headers);
+        return;
+      }
+      try {
+        if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
+        const body = JSON.parse(await readBody(req, MAX_INVITE_CODE_BODY_BYTES, requestTimeoutMs));
+        const created = createInviteCode({ invite: body?.invite, expectedRelayOrigin: originFor(bindHost), ttlMs: body?.ttlMs });
+        if (inviteCodes.length >= MAX_INVITE_CODE_RECORDS) inviteCodes = purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS + 1);
+        inviteCodes.push(created.record);
+        try { await persistInviteCodes(); } catch (error) { inviteCodes = inviteCodes.filter((record) => record !== created.record); throw error; }
+        // The clear-text code is returned exactly once. It is never persisted or logged.
+        json(res, 201, { created: true, code: created.code, expiresAt: created.record.expiresAt, inviteDigest: created.record.inviteDigest }, headers);
+      } catch (error) {
+        const status = error.message === "request_too_large" ? 413 : error.message === "request_timeout" ? 408 : error.message === "content_type_not_allowed" ? 400 : 400;
+        json(res, status, { created: false, error: error.message }, headers);
+      }
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/v1/invite-codes/consume" && req.method === "POST") {
+      if (!consumeRateLimit(req, "invite-code-consume", 20)) { json(res, 429, { consumed: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
+      try {
+        if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
+        const body = JSON.parse(await readBody(req, 8 * 1024, requestTimeoutMs));
+        const before = inviteCodes.slice();
+        const result = consumeInviteCode(inviteCodes, body?.code);
+        if (!result.ok) { json(res, 404, { consumed: false, error: result.reason }, headers); return; }
+        try { await persistInviteCodes(); } catch (error) { inviteCodes = before; throw error; }
+        const receiptBody = `ADRECEIPT1.${relayReceiptKey.publicKeyFingerprint}.${Buffer.from(originFor(bindHost), "utf8").toString("hex")}.${inviteCodeHash(body?.code)}.${invitePayloadDigest(result.record.invite)}.${Date.now()}`;
+        const receipt = `${receiptBody}.${sign(null, Buffer.from(receiptBody), relayReceiptKey.privateKey).toString("hex")}`;
+        json(res, 200, { consumed: true, invite: result.record.invite, inviteDigest: result.record.inviteDigest, receipt }, headers);
+      } catch (error) {
+        const status = error.message === "request_too_large" ? 413 : error.message === "request_timeout" ? 408 : 400;
+        json(res, status, { consumed: false, error: error.message }, headers);
+      }
       return;
     }
 
@@ -484,6 +575,10 @@ export async function createLocalServer({
     localAccessCapability: localAccessCapability.token,
     localUiUrl,
     localUiUrlFile,
+    relayReceiptPublicKey: relayReceiptKey.publicKeyHex,
+    relayReceiptPublicKeyFingerprint: relayReceiptKey.publicKeyFingerprint,
+    relayReceiptKeyId: relayReceiptKey.publicKeyFingerprint,
+    relayReceiptKeySource: relayReceiptSigningKeyFile ? "external-configured" : "generated-development",
   };
 }
 

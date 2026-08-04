@@ -2,6 +2,8 @@
   "format": "another-dimension-product-boundary",
   "version": 1,
   "supportedProduct": "verified browser UI bundle + user-owned API-only relay",
+  "candidateProduct": "apps/daemon local security daemon boundary (not implemented; high-risk disabled)",
+  "candidateProductPath": "apps/daemon",
   "forbiddenReleasePaths": [
     "apps/desktop-tauri",
     "apps/cli",

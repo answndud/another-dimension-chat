@@ -368,3 +368,102 @@ inbox API를 함께 제공한다. 이 구조는 설치와 same-origin fetch에�
   절차를 결정한다.
 - reverse proxy가 API-only surface를 보장하도록 어떤 route/header contract를
   강제할지 결정한다.
+
+## ADR-0007 - 고위험 후보는 daemon-owned identity·storage와 user-owned relay로 고정
+
+- 상태: accepted for the future production candidate; not implemented
+- 날짜: 2026-08-04
+- 근거 유형: explicit product boundary + security requirement register
+
+### Context
+
+현재 web prototype은 브라우저가 profile key, Olm account/session, IndexedDB
+records를 소유한다. 이 구조는 개발·시연에는 유효하지만 hostile origin,
+extension, stale bundle, local browser compromise를 daemon 경계로 격리하지
+못한다. 기존 ADR들도 browser Olm, legacy native Noise, SQLCipher spike,
+Node relay를 설명하지만 Account Root Key, Device Key, recovery와 rollback의
+production ownership을 한 문서에서 고정하지 않았다.
+
+### Decision
+
+고위험 후보의 소유권과 흐름을 다음처럼 고정한다.
+
+```text
+Account Root Key (offline/explicit approval only)
+  └─ signs Device Certificate and device revoke records
+       └─ Device Key + protocol KeyPackage + session state
+            └─ local encrypted daemon store
+                 └─ opaque envelope → user-owned relay
+```
+
+1. **Identity:** Account Root Key는 계정의 장기 Ed25519 signing identity다.
+   각 기기는 독립 Device Key를 만들고 root가 서명한 certificate를 가진다.
+   표시 이름, invite code, relay origin, mailbox capability는 identity가 아니다.
+   root는 routine message path나 browser API에 노출하지 않으며, 서명되지 않은
+   device·revoked device·duplicate device는 session member가 될 수 없다.
+2. **1:1 protocol:** daemon candidate는 Rust 기반 vetted MLS implementation을
+   우선 후보로 채택한다. 1:1은 두 사용자의 승인된 device leaf로 구성된 MLS
+   group으로 모델링하고, group 확장은 별도 slice로 잠근다. 현재 browser
+   `vodozemac` Olm v2 path는 compatibility/legacy prototype evidence일 뿐
+   daemon protocol의 보안 승인이나 migration source가 아니다. OpenMLS API,
+   cipher suite, persistence, license, maintenance, independent composition
+   review가 통과하기 전에는 daemon message implementation을 시작하지 않는다.
+3. **Rendezvous/relay:** 각 사용자가 운영하는 relay는 code-to-signed-invite
+   rendezvous와 bounded opaque envelope delivery만 담당한다. 중앙 directory,
+   username search, global account lookup, server-side decryption은 만들지
+   않는다. invite code는 hash-only·짧은 TTL·1회 소비 secret이며 identity,
+   private key, message key가 아니다.
+4. **Local bridge:** browser는 untrusted renderer다. daemon만 root/device key,
+   protocol state, encrypted database와 recovery policy를 소유한다. UI는
+   one-time bootstrap 이후 least-privilege API만 사용하고 raw key, DB file,
+   ratchet/MLS state를 읽지 않는다.
+5. **Recovery/rollback:** root backup은 사용자가 별도 passphrase로 암호화해
+   수동 보관하는 profile-only artifact다. relay·중앙 서버 복구는 없다.
+   session/transcript는 자동 복구하지 않으며, import는 version, monotonic
+   revision, identity binding과 current-state conflict를 확인하고 실패 시
+   현재 상태를 변경하지 않는다. release trust manifest의 minimum version과
+   local monotonic marker가 불일치하면 update/rollback을 거부하지만, 이
+   marker가 장악된 OS에서 rollback을 막는다고 주장하지 않는다.
+6. **Transport:** direct HTTPS/VPN/LAN은 low-risk delivery only다. P2P,
+   WebRTC, automatic port forwarding, Tor/onion, push와 metadata anonymity는
+   이 ADR의 구현 범위가 아니며 별도 review 없이는 high-risk mode를 열지 않는다.
+
+### Alternatives
+
+- **Browser-local key ownership** — 현재 prototype에는 간단하지만 hostile
+  origin/extension과 local DB 노출을 daemon 경계 밖에서 막지 못해 production
+  candidate에서 거부한다.
+- **vodozemac Olm as daemon protocol** — 현재 browser path와 연속성이 있지만
+  multi-device/group lifecycle과 daemon ownership을 새로 조합해야 하므로
+  legacy compatibility path로만 남긴다.
+- **Signal/libsignal direct integration** — 1:1 성숙도는 매력적이지만 현재
+  제품의 Rust/browser 배포·license·외부 API 유지 책임을 충족한다는 증거가
+  없어 기본 결정으로 채택하지 않는다.
+- **Central relay or account recovery service** — 가용성은 높이지만 중앙
+  trusted server와 contact/metadata authority가 생기므로 제품 경계와 충돌한다.
+- **Automatic cloud backup or panic recovery** — 사용자 안전을 보장하지 못하고
+  복구 비밀·강요 저항에 대한 오해를 만들므로 제공하지 않는다.
+
+### Consequences
+
+- daemon workspace, bridge contract, identity lifecycle, storage and recovery
+  must be implemented before the current browser flow can be called a candidate.
+- existing web/Olm/IndexedDB/Node artifacts remain runnable prototype paths but
+  cannot satisfy daemon requirements or release evidence.
+- users must explicitly approve device changes and keep their own recovery
+  material; loss of root material has no server-side reset path.
+- independent protocol composition, storage, bridge, relay and release review
+  remains a mandatory gate. This ADR does not grant production or high-risk
+  approval.
+
+### Evidence and implementation gate
+
+- Threat and requirement mapping: `reference/PUBLIC_THREAT_MODEL.md`,
+  `reference/SECURITY_REQUIREMENTS.md`, `reference/SECURITY_REVIEW_EVIDENCE.md`.
+- Pairing/code boundary: `reference/PROTOCOL_STATE_MACHINE.md`,
+  `apps/server/invite-code.mjs`, `scripts/verify_invite_code.mjs`.
+- Current implementation exclusion: `reference/product_boundary.json` and the
+  release boundary verifier.
+- The ADR is complete as a design decision only when the daemon slices add
+  fixed identity/protocol/storage/bridge/recovery evidence; until then the
+  corresponding requirements remain `blocked`.

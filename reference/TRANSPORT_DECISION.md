@@ -25,6 +25,23 @@ must retain explicit control over app-private state/cache directories, redacted
 event boundaries, bootstrap permission, censorship/bridge policy, and onion
 lifecycle readiness.
 
+## Daemon candidate transport decision
+
+The first daemon release candidate uses user-owned relay API endpoints as an
+untrusted store-and-forward path. The daemon sends already encrypted protocol
+envelopes; the relay exposes only bounded POST, owner-scoped read/ack, and the
+short-lived invite-code rendezvous endpoints. The daemon validates the signed
+invite's relay binding before using the endpoint. There is no central directory,
+shared mailbox, automatic port forwarding, P2P/WebRTC path, push service, or
+server-side decryption.
+
+Direct HTTPS, a user-managed VPN, or a controlled LAN may make the relay
+reachable, but each remains `low-risk` transport because IP, timing, endpoint,
+frequency, and ciphertext-size metadata are visible. The daemon must refuse an
+attempt to select these routes as high-risk or anonymous transport. Tor/onion
+and censorship circumvention remain a separate future decision and cannot be
+enabled by reusing the legacy research skeleton.
+
 ## What Exists Today
 
 The browser web product currently uses user-owned direct inbox endpoints only.

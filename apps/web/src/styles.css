@@ -195,3 +195,15 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .start-shell, .workspace-main { background: var(--canvas); }
 .start-card, .view-stack { background: transparent; }
 .security-panel { border-color: #b7cedf; background: var(--accent-surface); }
+.daemon-gate { min-height: 100vh; width: min(680px, 100%); margin: 0 auto; padding: clamp(48px, 12vh, 120px) 24px; }
+.daemon-gate-mark { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--line); font-size: 1.4rem; margin-bottom: 32px; }
+.daemon-gate h1 { max-width: 620px; margin: 8px 0 14px; font-size: clamp(1.8rem, 4vw, 3rem); letter-spacing: -.04em; }
+.daemon-gate .lede { max-width: 600px; color: var(--muted); line-height: 1.7; }
+.daemon-facts { margin: 28px 0; border-top: 1px solid var(--line); }
+.daemon-facts div { display: grid; grid-template-columns: 150px 1fr; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.daemon-facts dt { color: var(--muted); font-size: .78rem; }
+.daemon-facts dd { margin: 0; font-size: .84rem; }
+.daemon-invite { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 20px; }
+.daemon-invite h2 { font-size: 1rem; }
+.daemon-invite p { color: var(--muted); font-size: .82rem; line-height: 1.6; }
+.daemon-invite textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem; }

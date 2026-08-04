@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { generateKeyPairSync } from "node:crypto";
 import { chmod, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { request } from "node:http";
 import { connect } from "node:net";
@@ -76,6 +77,31 @@ test("relay-only mode never serves the browser bundle", async () => {
   await rm(distDir, { recursive: true, force: true });
 });
 
+test("operational receipt signing keys are externally provisioned and identified", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const keyDir = await mkdtemp(join(tmpdir(), "another-dimension-relay-key-"));
+  const keyFile = join(keyDir, "receipt-key.pem");
+  const pair = generateKeyPairSync("ed25519");
+  await writeFile(keyFile, pair.privateKey.export({ type: "pkcs8", format: "pem" }), { mode: 0o600 });
+  const runtime = await createLocalServer({
+    port: 0,
+    dataDir,
+    distDir: join(dataDir, "missing-dist"),
+    relayReceiptSigningKeyFile: keyFile,
+  });
+  assert.equal(runtime.relayReceiptKeySource, "external-configured");
+  assert.equal(runtime.relayReceiptKeyId, runtime.relayReceiptPublicKeyFingerprint);
+  await runtime.server.close();
+  const missingDataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  await assert.rejects(
+    () => createLocalServer({ port: 0, dataDir: missingDataDir, relayReceiptSigningKeyFile: join(keyDir, "missing.pem") }),
+    /Configured relay receipt signing key does not exist/,
+  );
+  await rm(dataDir, { recursive: true, force: true });
+  await rm(missingDataDir, { recursive: true, force: true });
+  await rm(keyDir, { recursive: true, force: true });
+});
+
 test("static serving requires an explicit development opt-in", async () => {
   const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
   const distDir = await mkdtemp(join(tmpdir(), "another-dimension-dist-"));
@@ -122,6 +148,37 @@ test("local access can rotate the inbox capability and invalidate the old URL", 
   assert.notEqual(newPath, oldPath);
   assert.equal((await call(port, "POST", oldPath, { envelope: "ADENVWEB1.old-capability" })).status, 404);
   assert.equal((await call(port, "POST", newPath, { envelope: "ADENVWEB1.new-capability" })).status, 202);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("invite codes are relay-bound, hash-only, single-use rendezvous records", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  // The runtime was intentionally created with port 0; its advertised origin
+  // uses the configured port, while the test listener uses the allocated port.
+  const relayOrigin = "http://127.0.0.1:0";
+  const invite = `ADWEB3.${Buffer.from(JSON.stringify({ v: 3, server: { inboxUrl: `${relayOrigin}/api/v1/inbox/redacted` }, signature: "redacted" })).toString("base64url")}`;
+  const created = await call(port, "POST", "/api/v1/invite-codes", { invite }, localHeaders(runtime));
+  assert.equal(created.status, 201);
+  assert.match(created.body.code, /^(?:[0-9A-HJKMNP-TV-Z]{4}-){6}[0-9A-HJKMNP-TV-Z]{2}$/);
+  const persisted = await readFile(join(dataDir, "invite-codes.json"), "utf8");
+  assert.doesNotMatch(persisted, new RegExp(created.body.code.replaceAll("-", ""), "i"));
+  assert.match(persisted, /codeHash/);
+
+  const consumed = await call(port, "POST", "/api/v1/invite-codes/consume", { code: created.body.code });
+  assert.equal(consumed.status, 200);
+  assert.equal(consumed.body.invite, invite);
+  assert.equal((await call(port, "POST", "/api/v1/invite-codes/consume", { code: created.body.code })).status, 404);
+  const addaPayload = ["another-dimension/invite/v1", "ad1pk" + "00".repeat(32), "device-1", "00".repeat(32), "1", relayOrigin].join("\n");
+  const addaInvite = `ADDAINV1.${Buffer.from(addaPayload).toString("hex")}.00`;
+  const addaCreated = await call(port, "POST", "/api/v1/invite-codes", { invite: addaInvite }, localHeaders(runtime));
+  assert.equal(addaCreated.status, 201);
+  assert.equal((await call(port, "POST", "/api/v1/invite-codes/consume", { code: addaCreated.body.code })).body.invite, addaInvite);
+  const wrongRelayInvite = `ADWEB3.${Buffer.from(JSON.stringify({ v: 3, server: { inboxUrl: "https://other.example/api/v1/inbox/redacted" }, signature: "redacted" })).toString("base64url")}`;
+  assert.equal((await call(port, "POST", "/api/v1/invite-codes", { invite: wrongRelayInvite }, localHeaders(runtime))).status, 400);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });

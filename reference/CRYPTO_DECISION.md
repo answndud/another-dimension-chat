@@ -71,7 +71,7 @@ The repository does not currently have:
   storage encryption, and transport anonymity as one interchangeable security
   layer.
 
-## Current Direction
+## Prototype direction (not the daemon release decision)
 
 The browser product uses the reviewed-library Olm Double Ratchet boundary:
 
@@ -87,6 +87,33 @@ The browser product uses the reviewed-library Olm Double Ratchet boundary:
 7. This boundary is not a high-risk release until app-code distribution,
    prekey lifecycle, local storage, metadata, UX, and independent review gates
    are complete.
+
+## Daemon candidate decision
+
+The future production candidate uses a daemon-owned Account Root Key and
+independent Device Keys. The root signs device certificates and revocations but
+does not participate in routine message encryption. The daemon protocol
+candidate is OpenMLS in Rust, with a two-device 1:1 group as the first profile.
+This is a decision to evaluate and gate, not evidence that OpenMLS is already
+implemented or audited here.
+
+The daemon may proceed only after the selected OpenMLS version, cipher suite,
+license, persistence API, KeyPackage/prekey lifecycle, device removal semantics,
+and application composition have a written review packet and fixed vectors. The
+current browser Olm v2 implementation remains isolated as prototype/legacy
+evidence and must not be silently migrated into the daemon.
+
+The daemon currently has an admission gate for this decision: it recognizes only
+the named `openmls-1` protocol identifier and still refuses session admission
+until a pinned vetted implementation, persistence contract, and fixed vectors
+are present. Browser `Olm.v2` and `ADENVWEB3` are rejected at the daemon boundary;
+the gate is not a cryptographic implementation or a claim that daemon messaging
+is available.
+
+The daemon's stable `account_id` is derived from the Account Root public key
+(`ad1pk...`). It is not derived from display name, username, relay origin,
+invite code, or device id. The public key is an identifier, not a private key;
+its exposure still does not provide message authorization or profile unlock.
 
 ## Implementation Gate
 
@@ -111,13 +138,15 @@ release, add tests and evidence that prove:
   `reference/PROTOCOL_STATE_MACHINE.md`; persistence failure must roll back the
   in-memory ratchet and ambiguous state must require a fresh pairing.
 
-## Open Questions
+## Rejected or deferred alternatives
 
-- What trusted bootstrap lets a browser user independently verify the signed
-  app bundle when the user's own server also serves a convenience UI?
-- Which prekey pool, replenishment, rotation, and revocation model fits the
-  user-owned relay without creating central contact discovery?
-- Which anonymity/metadata route can be supported without making an unverified
-  Tor or censorship-resistance claim?
-- Which local backup, recovery, and panic-wipe behavior is safe to promise on
-  browser storage that cannot guarantee secure deletion?
+- Browser-local keys: rejected for the daemon candidate because the renderer is
+  not a suitable long-term private-key owner.
+- Olm/vodozemac in the daemon: deferred to compatibility research; current
+  browser code does not define a multi-device daemon protocol.
+- Signal/libsignal: not selected until license, API stability, Rust integration,
+  and maintenance ownership are independently resolved.
+- Custom ratchet, KDF, AEAD, MLS, or PQ protocol: rejected.
+
+Anonymity transport, trusted app bootstrap, recovery UX, and secure deletion are
+separate release gates, not cryptographic implementation details.

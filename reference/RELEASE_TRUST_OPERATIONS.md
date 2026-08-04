@@ -88,6 +88,76 @@ node scripts/verify_public_release_gate.mjs ./another-dimension-0.1.0 \
    manifest에 다시 서명한다.
 6. 폐기된 key로 서명된 archive를 rollback 대상으로 사용하지 않는다.
 
+## relay receipt signing key 운영
+
+릴레이 영수증 키는 release signing key와 별개다. 로컬 개발에서는 relay data directory의
+`relay-receipt-signing-key.pem`을 자동 생성할 수 있지만, 운영 relay는 반드시 daemon 시작
+전에 별도 보관한 키를 `AD_RELAY_RECEIPT_SIGNING_KEY`로 주입한다. 이 환경변수가 가리키는
+파일이 없으면 relay는 시작하지 않는다. 자동 생성된 키의 `/api/v1/info` 값은
+`generated-development`로 표시되며 외부 신뢰 자료로 사용하지 않는다.
+
+운영 bootstrap 순서:
+
+1. offline 장치에서 Ed25519 relay receipt key를 만들고 private PEM을 relay 호스트의
+   권한 0600 파일에 설치한다. private PEM을 data archive, repository, 로그에 복사하지 않는다.
+2. raw public key의 SHA-256을 `relayReceiptKeyId`/fingerprint로 계산해 daemon 운영자에게
+   public key와 fingerprint를 서로 독립된 채널로 전달한다.
+3. relay를 `AD_RELAY_RECEIPT_SIGNING_KEY=/secure/relay/receipt-key.pem`으로 시작하고,
+   `/api/v1/info`의 `relayReceiptKeySource=external-configured`와 key ID를 확인한다.
+4. daemon은 relay public key와 동일한 fingerprint를 `--relay-public-key` 및
+   `--relay-public-key-fingerprint`로 명시하지 않으면 시작하지 않는다. `/api/v1/info`만
+   보고 값을 복사해 넣는 자동화는 신뢰 bootstrap으로 인정하지 않는다.
+
+회전·폐기 순서:
+
+1. 새 키를 offline에서 만들고 새 public key/fingerprint를 두 독립 채널로 전달한다.
+2. 모든 daemon을 새 fingerprint로 재구성한 뒤 새 receipt가 수락되는지 확인한다. receipt
+   형식의 첫 key ID가 daemon이 bootstrap한 public key fingerprint와 다르면 거부된다.
+3. 이전 키 파일과 fingerprint를 폐기 목록에 기록하고, 이전 키로 서명된 영수증·invite
+   staging을 복구하지 않는다. 새 키가 확인되기 전에는 이전 키 파일을 삭제하지 말고
+   사고 조사용으로 별도 격리한다.
+4. 이전 키가 노출됐거나 신뢰할 수 없으면 즉시 relay를 중지하고 새 키로 재기동한다.
+   daemon이 새 외부 fingerprint를 받기 전까지는 메시징을 재개하지 않는다.
+
+daemon은 relay trust manifest도 직접 검증한다. 형식은
+[`relay-trust.example`](relay-trust.example)의 고정 line format이며, bootstrap public key가
+서명한 `bootstrap=`, `key=`, `revoked=`, `payload-end` 구간을 검증한다. daemon 시작 시
+다음 두 옵션을 함께 지정한다.
+
+```sh
+another-dimension-daemon serve \
+  --relay-public-key <raw-public-key-hex> \
+  --relay-public-key-fingerprint <sha256-raw-key-hex> \
+  --relay-trust-manifest /secure/trust/relay.trust \
+  --relay-trust-bootstrap-key <raw-bootstrap-public-key-hex>
+```
+
+manifest 서명·bootstrap key·relay public key 중 하나라도 다르거나, receipt key가 allowlist에
+없거나 revoked 목록에 있으면 daemon은 시작 또는 초대 staging을 거부한다. `/api/v1/info`는
+이 값을 자동으로 신뢰하지 않는다.
+
+manifest는 다음 도구로 생성한다. bootstrap private key와 relay public key는 외부 보안
+경로에서 준비하고, 명령행에 private key 내용을 직접 넣지 않는다.
+
+```sh
+node scripts/relay_trust.mjs \
+  --bootstrap-private-key /secure/trust/bootstrap-private.pem \
+  --relay-public-key /secure/relay/receipt-public.pem \
+  --output /secure/trust/relay.trust
+```
+
+daemon 시작 전 preflight만 실행하려면 `serve` 대신 다음을 사용한다.
+
+```sh
+another-dimension-daemon doctor \
+  --relay-public-key <raw-public-key-hex> \
+  --relay-public-key-fingerprint <sha256-raw-key-hex> \
+  --relay-trust-manifest /secure/trust/relay.trust \
+  --relay-trust-bootstrap-key <raw-bootstrap-public-key-hex>
+```
+
+`doctor status`가 `relay trust: verified`를 출력하지 않으면 daemon을 시작하지 않는다.
+
 ## compromise·revocation
 
 1. private key 유출 가능성, bootstrap 장치 침해, 예기치 않은 fingerprint 변경이 있으면

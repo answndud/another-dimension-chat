@@ -1,6 +1,113 @@
-# Browser protocol state machine
+# Pairing and browser protocol state machine
 
-This is the executable state contract for the current `ADWEB3`/`ADENVWEB3`
+The invite-code rendezvous below is a transport helper for the current
+prototype. It does not replace the signed invite, safety comparison, or future
+daemon-owned identity. A code bearer can retrieve one short-lived signed invite
+payload, but cannot create an identity, obtain a private key, or decrypt a
+session from the code alone.
+
+## Daemon identity ownership state
+
+The future daemon protocol has a separate identity layer above the message
+protocol:
+
+| State | Entered by | Allowed next transition | Invariant |
+| --- | --- | --- | --- |
+| `account-root-created` | local CSPRNG root generation | create device, export recovery | root private key is daemon-owned and is not sent to the relay or browser API |
+| `device-certified` | root-signed device certificate | publish KeyPackage, pair, revoke | device key is independent; certificate binds device id, protocol package, expiry, and root signature |
+| `device-revoked` | root-signed revoke record | create a fresh device | revoked device cannot publish, pair, or continue a session |
+| `recovery-exported` | explicit user export | import after conflict checks | artifact is profile/root recovery only; it is not automatic cloud recovery |
+
+Display names, relay origins, invite codes, mailbox capabilities, and safety
+phrases are never accepted as account identity. A changed device certificate,
+root fingerprint, or protocol package is a security event requiring explicit
+user confirmation and, when continuity cannot be proven, fresh pairing.
+
+## Local bridge session contract
+
+The browser obtains a daemon session through this one-time sequence:
+
+```text
+daemon start → URL fragment bootstrap → Origin/Host/version check
+  → one-time exchange → HttpOnly + SameSite=Strict cookie
+  → fragment removal → authenticated least-privilege API
+```
+
+- The bootstrap secret exists only in memory and the URL fragment. It is
+  consumed only after exact Origin, Host, and UI-version checks succeed; a
+  failed attempt does not burn the token, while a successful exchange burns it
+  immediately.
+- The daemon stores only hashes of bootstrap, cookie, and CSRF values. The UI
+  must call `history.replaceState` to remove the fragment before normal use.
+- All API requests require the exact configured loopback Origin and Host. State
+  changes additionally require the session CSRF token. Missing Origin,
+  alternate Host, stale cookie, expired session, wrong UI version, and daemon
+  restart fail closed.
+- The bridge is not a trust upgrade for a compromised browser, extension, or
+  operating system. It prevents arbitrary web origins from using the daemon API;
+  it does not protect an endpoint that can read the browser's live memory.
+- The current Rust HTTP handler exposes only `POST /local-session/exchange`,
+  `GET /local-api/status`, `GET /local-api/identity`, and
+  `POST /local-api/invites`, `POST /local-api/invites/verify`,
+  `POST /local-api/invites/stage`, and
+  `POST /local-api/session/lock`. Requests are
+  loopback-bound, capped at a small body size, marked `no-store`, and unknown
+  routes are rejected. `serve --ui-dir` serves only the built web bundle after
+  rejecting traversal, encoded paths, and symlink escapes. The identity endpoint
+  returns only the public account/device/display summary
+  after the daemon has unlocked its encrypted store; it never returns seeds or
+  store records. Invite creation signs a short-lived code binding with the
+  account root key and keeps only its hash in daemon memory; verification checks
+  the same binding and signature but does not consume a relay code, add a peer,
+  unlock a profile, or authorize a message. Staging is memory-only and is
+  discarded on daemon restart or lock; it is not peer trust or a session.
+  Pairing and message APIs are intentionally absent until the vetted protocol
+  adapter exists.
+- The canonical invite envelope is `ADDAINV1`. The relay stores and consumes it
+  opaquely after checking the signed payload's advertised relay origin; the
+  daemon remains responsible for signature, code binding, and expiry checks.
+  A successful relay consume returns an `ADRECEIPT1` receipt signed by the
+  relay's Ed25519 key. The receipt contains the signing key fingerprint as
+  its first authenticated field, so a rotated or revoked key is rejected
+  until the daemon is explicitly reconfigured with a separately delivered
+  public key and fingerprint. The receipt contains
+  relay origin, code hash, invite digest, and timestamp; daemon
+  staging requires the fields and the explicitly bootstrapped relay public key
+  to match. The daemon also requires a separately delivered SHA-256 fingerprint
+  of that raw public key; the relay response and `/api/v1/info` value are
+  display/reference material, not a trust bootstrap. A key/fingerprint mismatch
+  fails before staging.
+
+## Invite-code lifecycle
+
+| State | Entered by | Allowed next transition | Invariant |
+| --- | --- | --- | --- |
+| `code-created` | owner submits a signed `ADDAINV1` invite to its user-owned relay | consume, expire, revoke | relay stores only `SHA-256(normalized_code)`, the signed invite payload, digest, and expiry |
+| `code-consumed` | one successful code submission | none | record is removed atomically before the response is accepted; a second consume fails |
+| `code-expired` | TTL or purge | none | expired record is not returned and is removed on the next persistence boundary |
+| `code-invalid` | malformed, unknown, wrong-relay, or reused code | create a new code | response does not reveal whether a record ever existed |
+
+Protocol rules:
+
+- Code material is generated with the platform CSPRNG and has at least 128 bits
+  of entropy after normalization.
+- Display formatting is cosmetic; spaces and hyphens are ignored only for
+  input normalization, and the canonical value is what is hashed.
+- The default TTL is 10 minutes and the maximum is 24 hours. A code is
+  single-use and is removed only after durable persistence succeeds.
+- The relay never logs the code, code hash, invite, invite digest, or requester
+  payload. Failed attempts are deliberately returned as one generic error.
+- The stored signed invite is bound to the code by `inviteDigest`. The receiver
+  must still verify the invite signature, expiry, identity, relay binding, and
+  safety material before pairing.
+- The creating relay accepts an invite code only when the signed invite's
+  advertised relay origin matches that relay. A code submitted to a different
+  relay is an unknown code, not a cross-relay redirect.
+- Code entry is a rendezvous operation, not authentication. Code possession
+  alone must never authorize private-key export, profile unlock, device
+  addition, or message sending.
+
+This is the executable state contract for the current `ADDAINV1`/`ADENVWEB3`
 1:1 browser protocol. It is a composition boundary around vodozemac Olm v2;
 it does not introduce a new cryptographic primitive.
 

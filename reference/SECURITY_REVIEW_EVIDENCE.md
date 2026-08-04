@@ -33,6 +33,30 @@ capability, passphrase, plaintext, IP를 넣지 않는다.
 | release supply chain | `scripts/build_release.sh`, `scripts/verify_public_release_gate.mjs`, `scripts/verify_release_trust_receipt.mjs` | `./scripts/verify_all.sh --release`, `node scripts/acceptance_release_local_only.mjs` | signed archive, manifest, SBOM, provenance, runtime, no legacy surface, no-Node install/update fixture | 최초 trusted-key 전달·clean OS matrix는 운영 절차와 현재 host 범위를 벗어남 |
 | transport/anonymity | `apps/server/server.mjs`, `apps/web/src/web-runtime.js`, `scripts/verify_transport_boundary.mjs` | `node scripts/verify_transport_boundary.mjs` | `highRiskAllowed:false`, onion/Tor rejection | anonymity·metadata 보호를 제공하지 않음 |
 
+## Daemon-first traceability register
+
+이 표는 P0 기준의 최소 추적 단위다. `blocked` 행은 아직 구현되지 않았거나
+독립 검토가 없으므로 고위험 제품의 증거로 사용할 수 없다.
+
+| 요구사항 | source boundary | focused test/command | redacted artifact | 남은 한계 |
+| --- | --- | --- | --- | --- |
+| `ARCH-04`, `BRIDGE-01` | `apps/daemon/src/bridge.rs` loopback/session contract | `node scripts/verify_local_bridge.mjs`, daemon bridge unit tests | origin/token/restart negative 결과; secret·port credential 제거 | 실제 UI route wiring과 browser matrix는 아직 없음 |
+| `AUTH-04` | account root, device certificate, revocation state | fixed identity/device vectors (daemon slice에서 추가) | key fingerprint와 event type만 포함한 device lifecycle report | 현재 web profile은 root/device 계층이 아님 |
+| `CRYPTO-04` | selected protocol adapter, state machine, persistence boundary | deterministic two-daemon vectors (protocol slice에서 추가) | message IDs, epochs, verdict만 포함한 vector report | protocol composition 및 독립 review 미완료 |
+| `DATA-04`, `RECOVERY-01` | `apps/daemon/src/storage.rs` encrypted store/keychain boundary | daemon storage tests, corruption/old-snapshot/keychain-unavailable fixtures | state transition·error code·hash만 포함한 recovery report | OS keychain integration·secure deletion·seizure/coercion 방어는 non-claim |
+| `RELEASE-01`, `RELEASE-02`, `RELEASE-03` | daemon/web/WASM/relay release manifest and trust bootstrap | `./scripts/verify_all.sh --release` and trust fixtures | artifact hashes, signer fingerprint, version, verdict only | 운영 신뢰 채널·clean OS matrix·실제 서명키는 외부 절차 |
+| `ACT-09`/`ACT-10` non-claims | browser/OS boundary and diagnostics | static/log/DOM scans | redacted category counts only | 장악된 브라우저·OS·keylogger·화면 캡처는 보호하지 않음 |
+| `ACT-11`/`ACT-12` non-claims | release trust and endpoint incident boundary | release negative fixtures; incident runbook fixture | version/fingerprint/event type only | coercion resistance와 완전한 공급망 신뢰는 주장하지 않음 |
+
+CLI workflow evidence is intentionally limited to `node scripts/verify_cli_workflow.mjs`
+and the daemon unit flow. It proves that passphrases are read from stdin, not
+argv, and that local encrypted recovery refuses overwrite; it does not prove
+terminal echo suppression, OS-wide keychain support, or a production update path.
+
+`source boundary`가 신규 daemon 경로를 가리키는데 실제 파일이 없으면 해당 행은
+자동으로 `blocked`로 취급한다. 현재 prototype의 동일한 이름을 가진 browser
+코드나 legacy/native 코드로 이 행을 충족했다고 판정하지 않는다.
+
 ## Reviewer가 각 finding에 반드시 기록할 것
 
 각 finding은 다음 형식을 사용한다.

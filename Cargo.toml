@@ -3,6 +3,7 @@
 # product path is apps/web + apps/server + crates/web-crypto-wasm; do not use a
 # full workspace build as current web product evidence.
 members = [
+    "apps/daemon",
     "crates/identity",
     "crates/pairing",
     "crates/crypto",

@@ -19,6 +19,16 @@ verification/install tooling, public documentation, SBOM, provenance, and the
 runtime explicitly required by that package. A package is not a supported
 release merely because its files compile.
 
+The future production candidate has a separate path:
+
+```text
+apps/daemon = local security-daemon boundary only
+```
+
+This crate currently exposes command names and an explicit not-ready status;
+it does not own keys, storage, protocol state, or network traffic yet. Its
+presence in the Rust workspace must not be interpreted as high-risk readiness.
+
 ## Explicitly unsupported legacy surfaces
 
 `apps/desktop-tauri`, `apps/cli`, `apps/engine`, and the native transport/onion

@@ -19,6 +19,57 @@ communication.
 | TM-06 | Queue abuse or relay failure loses messages | Bounded queue, explicit errors, and no silent discard | Availability not guaranteed |
 | TM-07 | User mistakes unsafe pairing or release | Safety confirmation and signed release verification | Prototype gate |
 
+## Daemon-first trust boundaries
+
+The production candidate is intentionally split into four independently
+reviewable boundaries. This is a security boundary, not merely a deployment
+diagram:
+
+```text
+human
+  │ explicit approval / visible warnings
+  ▼
+browser UI (untrusted renderer)
+  │ authenticated loopback bridge; no key ownership
+  ▼
+local security daemon (key/session/storage owner)
+  │ encrypted opaque envelopes only
+  ▼
+user-owned relay (untrusted delivery service)
+```
+
+The browser must be treated as an untrusted renderer even when it is served
+from the same machine. A browser extension, injected script, stale service
+worker, malicious reverse proxy, or cross-origin page can influence the UI;
+none of these may be allowed to mint identity, export private keys, or submit
+messages without an authenticated daemon session and explicit user policy.
+The daemon must be treated as a separate local security boundary: it owns the
+Account Root Key, Device Key, session state, encrypted records, and recovery
+policy. The relay must be treated as an untrusted transport and must not be
+required to know a profile name, plaintext, private key, or global contact
+graph.
+
+The current web prototype does not implement this daemon boundary. Its
+browser-local cryptographic state is therefore not evidence that the future
+daemon design is implemented.
+
+## Attack-surface separation
+
+| Surface | Attacker assumption | Protected asset | Required control | Evidence status |
+| --- | --- | --- | --- | --- |
+| Browser UI | hostile origin, extension, injected/stale bundle | daemon session, plaintext, user approval | loopback-only bridge, one-time bootstrap, Origin/Host/CSRF checks, strict CSP, version binding | blocked until daemon exists |
+| Local daemon | local process can probe ports/files or observe crashes | root/device keys, session state, recovery material | authenticated API, OS key store, encrypted DB, redacted logs, fail-closed errors | not implemented |
+| Relay | operator can read/alter/delete/replay everything it stores | plaintext, identity continuity, capabilities | opaque bounded envelopes, scoped rotating capabilities, replay/TTL checks in daemon | partial prototype evidence |
+| Reverse proxy | can replace web assets or alter headers | code integrity, passphrases, messages | signed artifact verification, pinned release manifest, no high-risk mode on mismatch | blocked |
+| Endpoint/OS | malware, keylogger, seizure, memory dump | live secrets, screen, clipboard | explicit non-claim; minimize exposure and disclose residual risk | non-claim |
+| Release channel | compromised build host or signing key | executable, WASM, update trust | reproducible build, offline signing, external bootstrap, revocation and rollback refusal | blocked |
+| Metadata path | observer sees IP, timing, size, frequency | relationship and activity metadata | no anonymity claim; optional transport is separately reviewed | non-claim |
+
+Each row must be represented by a requirement ID, a focused command, a
+redacted observable artifact, and a remaining limitation in
+`SECURITY_REVIEW_EVIDENCE.md`. A green prototype test cannot promote a blocked
+row or substitute for an independent review.
+
 ## Product Direction
 
 The long-term product direction is a high-risk 1:1 messenger with no central
@@ -48,6 +99,14 @@ The project is designed to protect:
 - local profile/session/message records
 - onion/transport configuration and runtime state
 - diagnostic and recovery data
+
+The highest-value ownership rule is explicit: the Account Root Key is not a
+browser secret and is not a relay secret. Device keys are independently
+generated and certified by the account root. Display names, invite codes,
+relay addresses, safety material, and mailbox capabilities are identifiers or
+delegation material, not replacements for the account root. A code leak may
+authorize rendezvous only within its short scope; it must never authorize
+identity creation, private-key export, or message decryption.
 
 The current public beta must still treat all of these as sensitive.
 Diagnostics, release artifacts, reports, and public docs must not include bridge

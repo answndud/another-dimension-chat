@@ -12,6 +12,9 @@
 - relay 자동 전달이 불가능하면 수동 암호화 봉투를 제공하되, 평문을 relay로 보내지 않는다.
 - 브라우저 UI는 현재 prototype에서 암호화 저장소를 사용한다. daemon 전환 전까지 고위험
   통신을 허용하는 표현을 하지 않는다.
+- daemon bootstrap 주소로 열린 경우에는 one-time fragment를 즉시 제거하고, 브라우저
+  저장소·암호화·메시지 화면을 열지 않은 채 daemon session gate만 표시한다. 실제 daemon
+  API가 준비되기 전에는 연결 성공이나 고위험 통신 가능으로 표시하지 않는다.
 - 잠금·삭제·백업은 각각 다른 작업이며, 하나의 버튼이나 화면으로 합치지 않는다.
 
 ## 화면 상태
@@ -31,6 +34,7 @@
 | `backup-recovery` | 백업 생성·가져오기 선택 | profile/session/transcript 구분 | 생성, 가져오기, 수동 저장 | 자료 종류 혼용 |
 | `wipe-confirm` | 긴급 삭제 선택 | 삭제 대상과 삭제 불가 한계 | 암호 문구 확인, 취소 | 즉시 삭제 |
 | `session-locked` | 다른 탭 잠금, pagehide, inactivity | 잠금 이유와 재잠금 안내 | 다시 잠금 해제 | 기존 세션 사용 |
+| `daemon-session-gate` | `ad_bootstrap` fragment로 daemon UI를 연 경우 | fragment 제거 결과, daemon session 상태, 브라우저 저장소 미사용 안내 | daemon 상태 확인, 세션 잠금, 연결 실패 시 데몬 재실행 | browser profile 생성·IndexedDB·메시지 전송 |
 
 ## 화면 구성
 

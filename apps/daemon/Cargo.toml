@@ -1,0 +1,29 @@
+[package]
+name = "another-dimension-daemon"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+description = "Local security daemon boundary for Another Dimension (implementation in progress)"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "another-dimension-daemon"
+path = "src/main.rs"
+
+[dependencies]
+aes-gcm = { version = "0.10.3", default-features = false, features = ["aes", "alloc"] }
+argon2 = { version = "0.5.3", default-features = false, features = ["alloc", "zeroize"] }
+ed25519-dalek = { version = "2.2.0", default-features = false, features = ["zeroize"] }
+getrandom = "0.4.2"
+openmls = { version = "=0.8.1", default-features = false, features = ["libcrux-provider"] }
+openmls_libcrux_crypto = "=0.3.1"
+openmls_traits = "=0.5.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+sha2 = "0.10.9"
+zeroize = "1.8.2"
+
+[lints]
+workspace = true

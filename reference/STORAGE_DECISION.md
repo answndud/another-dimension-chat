@@ -48,13 +48,17 @@ The repository currently has:
 - Local message index skeleton persistence through `ProductionEnvelopeSession`.
 - Local record lifecycle deletion helpers for encrypted records, replay state,
   message envelopes, local message indexes, and pairwise endpoint state.
+- A daemon-only `EncryptedStore` prototype using Argon2id, AES-256-GCM,
+  authenticated associated data, encrypted record classes, atomic file writes,
+  a monotonic revision marker, and zeroizing in-memory key buffers.
+- A fail-closed `OsKeyStore` trait boundary; no platform keychain implementation
+  is claimed yet, so the daemon cannot silently fall back to one.
 
 The repository does not currently have:
 
 - OS keychain, DPAPI, Android Keystore, or iOS Keychain integration.
-- Password-based key derivation.
-- Production key wrapping.
-- Durable production private key storage.
+- A daemon-integrated production key wrapping flow.
+- Durable production private-key lifecycle integration above the storage API.
 - Replay rollback protection.
 - Durable Noise transport or ratchet state storage.
 - Verified backup exclusion, cloud backup/sync, backup recovery,
@@ -88,13 +92,20 @@ or SSD media.
   derivation, unlock behavior, backup exclusion, platform support, and failure
   modes.
 
-## Current Direction
+## Daemon candidate direction
 
-Initial v0.1 direction: use a SQLCipher-compatible SQLite backend from the
-Rust core, with OS keychain integration treated as key wrapping/unlock support
-rather than the primary message store.
+The future daemon uses an encrypted local record store owned by the daemon. The
+database key is never accepted from the browser or relay. The preferred first
+implementation is an encrypted SQLite/SQLCipher-compatible backend behind a
+narrow storage trait, with OS keychain/keyring integration used to protect a
+wrapped database key rather than to replace the encrypted message store.
 
-The first backend spike should:
+The user passphrase remains an explicit recovery/unlock factor. A keychain-only
+silent unlock is not a high-risk default. If the platform key store or the
+passphrase policy cannot be established, the daemon fails closed instead of
+falling back to plaintext or browser storage.
+
+The daemon storage slice must:
 
 - Add the storage dependency only after an encrypted record envelope is
   defined.
@@ -104,8 +115,19 @@ The first backend spike should:
   scoped to the session contact.
 - Use a test-only ephemeral key in tests, clearly separated from production
   unlock/key wrapping.
-- Avoid OS keychain integration in the first spike.
-- Avoid migrations from `dev-insecure` data.
+- Keep OS keychain/keyring integration behind an auditable adapter and test
+  unavailable-keychain behavior as a hard failure.
+- Avoid migrations from browser, `dev-insecure`, Tauri, or legacy native data.
+- Keep Account Root Key, Device Key, protocol session, transcript, and recovery
+  records in separate encrypted classes with explicit associated data.
+- Write a monotonic revision/rollback marker before acknowledging a state
+  transition; an old or ambiguous snapshot is opened read-only for diagnosis or
+  rejected, never used to send messages.
+- Export only a profile/root recovery artifact by default. Session and transcript
+  restore require explicit, versioned, conflict-checked operations and never
+  overwrite an active profile.
+- Treat wipe as a deletion attempt, not secure deletion; do not expose a panic
+  or coercion-resistance claim.
 
 ## Required Follow-up Before Dependency Addition
 
@@ -114,7 +136,9 @@ The first backend spike should:
   inside the encrypted DB as well.
 - Decide test-only key handling so it cannot be confused with production
   unlock.
-- Add a dependency review note before adding `rusqlite`/SQLCipher features.
+- Add a dependency review note before adding `rusqlite`/SQLCipher features and
+  record platform support, FFI surface, key handling, and reproducibility. The
+  current daemon file store is a bounded prototype and is not a release store.
 
 ## Dependency Review
 
