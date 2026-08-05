@@ -100,6 +100,11 @@ export async function connectDaemonBridge({
     uiVersion,
     csrfToken,
     request,
+    relayTrust: () => request("/local-api/relay/trust"),
+    saveRelayTlsPin: (tlsPin, retrust = false) => request("/local-api/relay/trust", {
+      method: "POST",
+      body: JSON.stringify({ tls_pin: tlsPin, retrust }),
+    }),
     lock: () => request("/local-api/session/lock", { method: "POST" }),
     createConversation: (conversationId) => request("/local-api/session/create", {
       method: "POST",

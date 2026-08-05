@@ -5,7 +5,7 @@ use crate::{
     identity::{AccountRootKey, DeviceIdentity, ProfileIdentity},
     mls_session::MlsSessionCatalog,
     storage::{EncryptedStore, RecordClass, StorageError},
-    trust::{RelayTrust, TlsCertificatePin},
+    trust::{relay_tls_pin_record_key, RelayTrust, TlsCertificatePin},
 };
 use sha2::{Digest, Sha256};
 use std::{
@@ -591,14 +591,6 @@ fn now_seconds() -> u64 {
         .unwrap_or(0)
 }
 
-fn hex_bytes(bytes: &[u8]) -> String {
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
-}
-
-fn relay_tls_pin_key(origin: &str) -> String {
-    format!("relay-tls-pin/{origin}")
-}
-
 fn resolve_relay_tls_pin(
     store: &mut EncryptedStore,
     relay_origin: &str,
@@ -619,7 +611,10 @@ fn resolve_relay_tls_pin(
         return Ok(supplied);
     }
     let stored = store
-        .get(RecordClass::Account, &relay_tls_pin_key(relay_origin))
+        .get(
+            RecordClass::Account,
+            &relay_tls_pin_record_key(relay_origin),
+        )
         .and_then(|value| {
             std::str::from_utf8(&value)
                 .ok()
@@ -637,8 +632,8 @@ fn resolve_relay_tls_pin(
         if supplied.is_some() && (retrust || stored.is_none() || stored != Some(pin)) {
             store.put(
                 RecordClass::Account,
-                &relay_tls_pin_key(relay_origin),
-                format!("sha256:{}", hex_bytes(&pin.as_bytes())).as_bytes(),
+                &relay_tls_pin_record_key(relay_origin),
+                pin.as_text().as_bytes(),
             )?;
         }
         return Ok(Some(pin));

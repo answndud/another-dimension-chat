@@ -27,6 +27,20 @@ impl TlsCertificatePin {
     pub const fn as_bytes(self) -> [u8; 32] {
         self.0
     }
+
+    pub fn as_text(self) -> String {
+        format!(
+            "sha256:{}",
+            self.0
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect::<String>()
+        )
+    }
+}
+
+pub fn relay_tls_pin_record_key(origin: &str) -> String {
+    format!("relay-tls-pin/{origin}")
 }
 
 pub struct RelayTrust {

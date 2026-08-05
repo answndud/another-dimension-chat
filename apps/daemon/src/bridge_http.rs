@@ -7,8 +7,8 @@ use crate::{
     mls_session::{MlsSessionCatalog, SessionCatalogError},
     pairing::{PairingError, PairingSession},
     relay_http::{RelayClient, RelayEndpoint, RelayError},
-    storage::{EncryptedStore, StorageError},
-    trust::{RelayTrust, TlsCertificatePin},
+    storage::{EncryptedStore, RecordClass, StorageError},
+    trust::{relay_tls_pin_record_key, RelayTrust, TlsCertificatePin},
 };
 use axum::{
     body::{to_bytes, Body},
@@ -432,6 +432,94 @@ pub fn handle_request_with_context(
                 }
                 Err(error) => response(403, error_code(&error), None, Some("application/json")),
             }
+        }
+        ("GET", "/local-api/relay/trust") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority.as_deref() else {
+                return response(
+                    503,
+                    "relay_trust_unavailable",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let pin = authority.relay_tls_pin.map(TlsCertificatePin::as_text);
+            response(
+                200,
+                &format!(
+                    r##"{{"relay_origin":"{}","tls_pin":{},"retrust_required":false}}"##,
+                    json_escape(&authority.relay_origin),
+                    pin.as_deref()
+                        .map(|value| format!(r##""{}""##, json_escape(value)))
+                        .unwrap_or_else(|| "null".into())
+                ),
+                None,
+                Some("application/json"),
+            )
+        }
+        ("POST", "/local-api/relay/trust") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(
+                    503,
+                    "relay_trust_unavailable",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, Some("application/json"));
+            };
+            let Some(value) = json_string(request.body, "tls_pin") else {
+                return response(400, "tls_pin_required", None, Some("application/json"));
+            };
+            if !authority.relay_origin.starts_with("https://") {
+                return response(
+                    422,
+                    "tls_pin_requires_https",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            let Ok(pin) = TlsCertificatePin::parse(value) else {
+                return response(422, "invalid_tls_pin", None, Some("application/json"));
+            };
+            let retrust = json_bool(request.body, "retrust").unwrap_or(false);
+            if let Some(previous) = authority.relay_tls_pin {
+                if previous != pin && !retrust {
+                    return response(
+                        409,
+                        "relay_retrust_required",
+                        None,
+                        Some("application/json"),
+                    );
+                }
+            }
+            if store
+                .put(
+                    RecordClass::Account,
+                    &relay_tls_pin_record_key(&authority.relay_origin),
+                    pin.as_text().as_bytes(),
+                )
+                .is_err()
+            {
+                return response(503, "storage_unavailable", None, Some("application/json"));
+            }
+            authority.relay_tls_pin = Some(pin);
+            response(
+                200,
+                &format!(
+                    r##"{{"saved":true,"tls_pin":"{}","retrusted":{}}}"##,
+                    json_escape(&pin.as_text()),
+                    retrust
+                ),
+                None,
+                Some("application/json"),
+            )
         }
         ("GET", "/local-api/identity") => {
             let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session")
@@ -1663,6 +1751,19 @@ fn json_u64(body: &[u8], key: &str) -> Option<u64> {
         .ok()?
         .get(key)?
         .as_u64()
+}
+
+fn json_bool(body: &[u8], key: &str) -> Option<bool> {
+    let needle = format!(r##""{}":"##, key);
+    let text = std::str::from_utf8(body).ok()?;
+    let tail = text.split_once(&needle)?.1;
+    if tail.starts_with("true") {
+        Some(true)
+    } else if tail.starts_with("false") {
+        Some(false)
+    } else {
+        None
+    }
 }
 
 fn json_string_array(body: &[u8], key: &str) -> Option<Vec<String>> {

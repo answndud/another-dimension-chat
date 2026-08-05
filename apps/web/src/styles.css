@@ -213,6 +213,9 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .daemon-session-tools textarea[readonly] { background: var(--surface-muted); }
 .daemon-session-tools textarea, .daemon-session-tools input { font-family: inherit; }
 .daemon-action-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.daemon-relay-trust { border-top: 1px solid var(--line); }
+.daemon-relay-trust .checkbox-line { display: flex; align-items: center; gap: 8px; }
+.daemon-relay-trust .checkbox-line input { width: auto; }
 .daemon-divider { height: 1px; background: var(--line); margin: 4px 0; }
 .daemon-delivery { border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 10px; }
 .daemon-delivery h3 { margin: 0; font-size: .95rem; }
