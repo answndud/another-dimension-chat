@@ -13,6 +13,7 @@ const BLOCK_SIZE: usize = 256;
 const MAX_CIPHERTEXT_BYTES: usize = 96 * 1024;
 const MAX_MAILBOX_BYTES: usize = 128;
 const EXPIRY_BUCKET_SECONDS: u64 = 300;
+const MAX_ENVELOPE_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum EnvelopeError {
@@ -288,7 +289,7 @@ impl RelayEnvelope {
         if ciphertext.len() > MAX_CIPHERTEXT_BYTES {
             return Err(EnvelopeError::TooLarge);
         }
-        if expires_at <= now {
+        if expires_at <= now || expires_at > now.saturating_add(MAX_ENVELOPE_TTL_SECONDS) {
             return Err(EnvelopeError::InvalidExpiry);
         }
         let padded_len = ciphertext.len().div_ceil(BLOCK_SIZE) * BLOCK_SIZE;
@@ -326,7 +327,10 @@ impl RelayEnvelope {
     pub fn from_wire(wire: &str, now: u64) -> Result<Self, EnvelopeError> {
         let parsed: OwnedWireEnvelope =
             serde_json::from_str(wire).map_err(|_| EnvelopeError::InvalidWire)?;
-        if parsed.v != VERSION || parsed.e <= now {
+        if parsed.v != VERSION
+            || parsed.e <= now
+            || parsed.e > now.saturating_add(MAX_ENVELOPE_TTL_SECONDS)
+        {
             return Err(if parsed.e <= now {
                 EnvelopeError::Expired
             } else {
@@ -432,6 +436,10 @@ mod tests {
         assert_eq!(
             RelayEnvelope::from_wire("{\"v\":2}", 1),
             Err(EnvelopeError::InvalidWire)
+        );
+        assert_eq!(
+            RelayEnvelope::create("mailbox", b"x", 1 + 7 * 24 * 60 * 60 + 1, 1),
+            Err(EnvelopeError::InvalidExpiry)
         );
     }
 

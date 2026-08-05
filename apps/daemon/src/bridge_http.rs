@@ -30,6 +30,7 @@ use std::{
 
 const MAX_REQUEST_BYTES: usize = 16 * 1024;
 const EXCHANGE_PATH: &str = "/local-session/exchange";
+const MAX_INVITE_TTL_SECONDS: u64 = 10 * 60;
 
 /// Minimal HTTP boundary for the local bridge. It intentionally exposes only
 /// session bootstrap/status/lock; identity and message APIs remain absent.
@@ -111,7 +112,11 @@ fn verify_signed_invite_with_code(
         .next()
         .filter(|value| !value.is_empty())
         .map(str::to_owned);
-    if lines.next().is_some() || !account_id.starts_with("ad1pk") || now >= expires_at {
+    if lines.next().is_some()
+        || !account_id.starts_with("ad1pk")
+        || now >= expires_at
+        || expires_at > now.saturating_add(MAX_INVITE_TTL_SECONDS)
+    {
         return None;
     }
     if let Some(inbox_url) = &inbox_url {
