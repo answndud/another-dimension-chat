@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { consumeInviteCode, createInviteCode, inviteCodeHash, invitePayloadDigest, purgeInviteCodes } from "./invite-code.mjs";
+import { consumeInviteCode, createInviteCode, inviteCodeHash, invitePayloadDigest, purgeInviteCodes, validateDaemonInvite } from "./invite-code.mjs";
 
 const MAX_ENVELOPE_BYTES = 96 * 1024;
 const MAX_INBOX_ITEMS = 256;
@@ -440,6 +440,24 @@ export async function createLocalServer({
         json(res, 201, { created: true, code: created.code, expiresAt: created.record.expiresAt, inviteDigest: created.record.inviteDigest }, headers);
       } catch (error) {
         const status = error.message === "request_too_large" ? 413 : error.message === "request_timeout" ? 408 : error.message === "content_type_not_allowed" ? 400 : 400;
+        json(res, status, { created: false, error: error.message }, headers);
+      }
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/v1/invite-codes/public" && req.method === "POST") {
+      if (!consumeRateLimit(req, "public-invite-code-create", 10)) { json(res, 429, { created: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
+      try {
+        if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
+        const body = JSON.parse(await readBody(req, MAX_INVITE_CODE_BODY_BYTES, requestTimeoutMs));
+        validateDaemonInvite(body?.invite, originFor(bindHost));
+        const created = createInviteCode({ invite: body.invite, expectedRelayOrigin: originFor(bindHost) });
+        if (inviteCodes.length >= MAX_INVITE_CODE_RECORDS) inviteCodes = purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS + 1);
+        inviteCodes.push(created.record);
+        try { await persistInviteCodes(); } catch (error) { inviteCodes = inviteCodes.filter((record) => record !== created.record); throw error; }
+        json(res, 201, { created: true, code: created.code, expiresAt: created.record.expiresAt, inviteDigest: created.record.inviteDigest }, headers);
+      } catch (error) {
+        const status = error.message === "request_too_large" ? 413 : error.message === "request_timeout" ? 408 : 400;
         json(res, status, { created: false, error: error.message }, headers);
       }
       return;

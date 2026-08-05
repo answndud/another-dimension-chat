@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { createPublicKey, verify } from "node:crypto";
 
 // Crockford-style alphabet without visually confusing I, L, O, or U.
 const CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -40,6 +41,29 @@ export function inviteCodeHash(value) {
 
 export function invitePayloadDigest(invite) {
   return createHash("sha256").update(invite, "utf8").digest("hex");
+}
+
+export function validateDaemonInvite(invite, expectedRelayOrigin, now = Date.now()) {
+  if (typeof invite !== "string" || !invite.startsWith("ADDAINV1.")) throw new Error("invalid_signed_invite");
+  const parts = invite.split(".");
+  if (parts.length !== 3) throw new Error("invalid_signed_invite");
+  if (!/^(?:[0-9a-f]{2})+$/.test(parts[1]) || !/^[0-9a-f]{128}$/.test(parts[2])) throw new Error("invalid_signed_invite");
+  const payload = Buffer.from(parts[1], "hex");
+  const signature = Buffer.from(parts[2], "hex");
+  const lines = payload.toString("utf8").split("\n");
+  if (lines.length !== 6 || lines[0] !== "another-dimension/invite/v1") throw new Error("invalid_signed_invite");
+  const accountId = lines[1];
+  const publicKeyHex = accountId.startsWith("ad1pk") ? accountId.slice("ad1pk".length) : "";
+  if (!/^[0-9a-f]{64}$/.test(publicKeyHex) || signature.length !== 64 || !/^[0-9a-f]{64}$/.test(lines[3])) throw new Error("invalid_signed_invite");
+  const expiresAt = Number(lines[4]);
+  if (!Number.isSafeInteger(expiresAt) || expiresAt <= now) throw new Error("signed_invite_expired");
+  let relayOrigin;
+  try { relayOrigin = new URL(lines[5]).origin; } catch { throw new Error("signed_invite_relay_binding_missing"); }
+  if (relayOrigin !== expectedRelayOrigin) throw new Error("signed_invite_relay_binding_mismatch");
+  const publicKeyDer = Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), Buffer.from(publicKeyHex, "hex")]);
+  const publicKey = createPublicKey({ key: publicKeyDer, format: "der", type: "spki" });
+  if (!verify(null, payload, publicKey, signature)) throw new Error("invalid_signed_invite_signature");
+  return true;
 }
 
 function advertisedRelayOrigin(invite) {

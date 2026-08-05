@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { generateKeyPairSync } from "node:crypto";
+import { generateKeyPairSync, sign } from "node:crypto";
 import { chmod, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { request } from "node:http";
 import { connect } from "node:net";
@@ -179,6 +179,27 @@ test("invite codes are relay-bound, hash-only, single-use rendezvous records", a
   assert.equal((await call(port, "POST", "/api/v1/invite-codes/consume", { code: addaCreated.body.code })).body.invite, addaInvite);
   const wrongRelayInvite = `ADWEB3.${Buffer.from(JSON.stringify({ v: 3, server: { inboxUrl: "https://other.example/api/v1/inbox/redacted" }, signature: "redacted" })).toString("base64url")}`;
   assert.equal((await call(port, "POST", "/api/v1/invite-codes", { invite: wrongRelayInvite }, localHeaders(runtime))).status, 400);
+
+  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+  const publicKeyHex = publicKey.export({ type: "spki", format: "der" }).subarray(-32).toString("hex");
+  const daemonPayload = [
+    "another-dimension/invite/v1",
+    `ad1pk${publicKeyHex}`,
+    "device-public-1",
+    "00".repeat(32),
+    String(Date.now() + 600_000),
+    relayOrigin,
+  ].join("\n");
+  const publicInvite = `ADDAINV1.${Buffer.from(daemonPayload).toString("hex")}.${sign(null, Buffer.from(daemonPayload), privateKey).toString("hex")}`;
+  const publicCreated = await call(port, "POST", "/api/v1/invite-codes/public", { invite: publicInvite });
+  assert.equal(publicCreated.status, 201);
+  assert.match(publicCreated.body.code, /^(?:[0-9A-HJKMNP-TV-Z]{4}-){6}[0-9A-HJKMNP-TV-Z]{2}$/);
+  const publicConsumed = await call(port, "POST", "/api/v1/invite-codes/consume", { code: publicCreated.body.code });
+  assert.equal(publicConsumed.status, 200);
+  assert.equal(publicConsumed.body.invite, publicInvite);
+  assert.equal((await call(port, "POST", "/api/v1/invite-codes/consume", { code: publicCreated.body.code })).status, 404);
+  const malformed = await call(port, "POST", "/api/v1/invite-codes/public", { invite: publicInvite.replace(/\.[0-9a-f]{128}$/, ".0") });
+  assert.equal(malformed.status, 400);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });
