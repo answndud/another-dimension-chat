@@ -8,7 +8,11 @@
 use crate::delivery::RelayEnvelope;
 use axum::http::Uri;
 use serde::Deserialize;
-use std::time::Duration;
+use std::{
+    io::{Read, Write},
+    net::TcpStream as StdTcpStream,
+    time::Duration,
+};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -176,6 +180,56 @@ impl RelayClient {
         Ok(parsed.acknowledged)
     }
 
+    pub fn post_blocking(&self, envelope: &RelayEnvelope) -> Result<RelayAccepted, RelayError> {
+        let wire = envelope
+            .to_wire()
+            .map_err(|_| RelayError::InvalidResponse)?;
+        let body = serde_json::to_vec(&serde_json::json!({ "envelope": format!("ADENV1.{wire}") }))
+            .map_err(|_| RelayError::InvalidResponse)?;
+        let (status, response) = self.request_blocking("POST", &self.endpoint.path, &body)?;
+        if !(200..300).contains(&status) {
+            return Err(RelayError::Rejected(status));
+        }
+        let parsed: PostResponse =
+            serde_json::from_slice(&response).map_err(|_| RelayError::InvalidResponse)?;
+        if !parsed.accepted {
+            return Err(RelayError::Rejected(status));
+        }
+        Ok(RelayAccepted {
+            id: parsed.id.ok_or(RelayError::InvalidResponse)?,
+        })
+    }
+
+    pub fn sync_blocking(&self) -> Result<Vec<RelayItem>, RelayError> {
+        let (status, response) = self.request_blocking("GET", &self.endpoint.path, &[])?;
+        if !(200..300).contains(&status) {
+            return Err(RelayError::Rejected(status));
+        }
+        let parsed: SyncResponse =
+            serde_json::from_slice(&response).map_err(|_| RelayError::InvalidResponse)?;
+        Ok(parsed
+            .items
+            .into_iter()
+            .map(|item| RelayItem {
+                id: item.id,
+                envelope: item.envelope,
+            })
+            .collect())
+    }
+
+    pub fn ack_blocking(&self, ids: &[String]) -> Result<usize, RelayError> {
+        let body = serde_json::to_vec(&serde_json::json!({ "ids": ids }))
+            .map_err(|_| RelayError::InvalidResponse)?;
+        let (status, response) =
+            self.request_blocking("POST", &format!("{}/ack", self.endpoint.path), &body)?;
+        if !(200..300).contains(&status) {
+            return Err(RelayError::Rejected(status));
+        }
+        let parsed: AckResponse =
+            serde_json::from_slice(&response).map_err(|_| RelayError::InvalidResponse)?;
+        Ok(parsed.acknowledged)
+    }
+
     async fn request(
         &self,
         method: &str,
@@ -209,6 +263,43 @@ impl RelayClient {
         timeout(self.request_timeout, stream.read_to_end(&mut response))
             .await
             .map_err(|_| RelayError::Timeout)?
+            .map_err(|_| RelayError::Connect)?;
+        if response.len() > MAX_RESPONSE_BYTES {
+            return Err(RelayError::ResponseTooLarge);
+        }
+        parse_response(&response)
+    }
+
+    fn request_blocking(
+        &self,
+        method: &str,
+        path: &str,
+        body: &[u8],
+    ) -> Result<(u16, Vec<u8>), RelayError> {
+        let address = self.endpoint.address()?;
+        let mut stream = StdTcpStream::connect(address).map_err(|_| RelayError::Connect)?;
+        stream
+            .set_read_timeout(Some(self.request_timeout))
+            .map_err(|_| RelayError::Connect)?;
+        stream
+            .set_write_timeout(Some(self.request_timeout))
+            .map_err(|_| RelayError::Connect)?;
+        let authority = self
+            .endpoint
+            .origin
+            .strip_prefix("http://")
+            .ok_or(RelayError::InvalidEndpoint)?;
+        let request = format!(
+            "{method} {path} HTTP/1.1\r\nHost: {authority}\r\nConnection: close\r\nAccept: application/json\r\nContent-Type: application/json\r\nX-Ad-Relay-Capability: {}\r\nContent-Length: {}\r\n\r\n",
+            self.endpoint.capability, body.len()
+        );
+        stream
+            .write_all(request.as_bytes())
+            .map_err(|_| RelayError::Connect)?;
+        stream.write_all(body).map_err(|_| RelayError::Connect)?;
+        let mut response = Vec::new();
+        stream
+            .read_to_end(&mut response)
             .map_err(|_| RelayError::Connect)?;
         if response.len() > MAX_RESPONSE_BYTES {
             return Err(RelayError::ResponseTooLarge);
