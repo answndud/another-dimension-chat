@@ -3,6 +3,7 @@
 pub mod bridge;
 pub mod bridge_http;
 pub mod cli;
+pub mod delivery;
 pub mod device;
 pub mod identity;
 pub mod mls_provider;

@@ -511,7 +511,7 @@ export async function createLocalServer({
         if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
         const body = JSON.parse(await readBody(req, MAX_ENVELOPE_BYTES + 4096, requestTimeoutMs));
         const envelope = String(body?.envelope || "").trim();
-        if (!/^ADENVWEB(?:1|2|3)\./.test(envelope) || Buffer.byteLength(envelope) > MAX_ENVELOPE_BYTES) throw new Error("invalid_envelope");
+        if (!/^(?:ADENVWEB(?:1|2|3)|ADENV1)\./.test(envelope) || Buffer.byteLength(envelope) > MAX_ENVELOPE_BYTES) throw new Error("invalid_envelope");
         const id = storeId(envelope);
         if (!inbox.some((item) => item.id === id)) {
         if (inbox.length >= MAX_INBOX_ITEMS) {

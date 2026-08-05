@@ -55,6 +55,8 @@ test("local server exposes health and a capability-scoped opaque inbox", async (
   const duplicate = await call(port, "POST", inboxPath, { envelope });
   assert.equal(duplicate.status, 202);
   assert.equal((await call(port, "GET", inboxPath, undefined, localHeaders(runtime))).body.items.length, 1);
+  const daemonEnvelope = "ADENV1.{\"v\":1,\"m\":\"opaque\",\"i\":\"00\",\"e\":600,\"c\":\"aa\",\"p\":\"\"}";
+  assert.equal((await call(port, "POST", inboxPath, { envelope: daemonEnvelope })).status, 202);
   assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id] })).status, 403);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
