@@ -3,6 +3,9 @@
 use crate::{
     bridge::{BridgeRequest, LocalBridge},
     identity::AccountRootKey,
+    mls_session::{MlsSessionCatalog, SessionCatalogError},
+    pairing::{PairingError, PairingSession},
+    storage::{EncryptedStore, StorageError},
     trust::RelayTrust,
 };
 use axum::{
@@ -29,7 +32,7 @@ const EXCHANGE_PATH: &str = "/local-session/exchange";
 /// Minimal HTTP boundary for the local bridge. It intentionally exposes only
 /// session bootstrap/status/lock; identity and message APIs remain absent.
 pub fn handle_request(bridge: &mut LocalBridge, raw: &[u8], now: u64) -> Vec<u8> {
-    handle_request_with_context(bridge, raw, now, None, None, None)
+    handle_request_with_context(bridge, raw, now, None, None, None, None, None)
 }
 
 pub fn handle_request_with_ui(
@@ -38,7 +41,7 @@ pub fn handle_request_with_ui(
     now: u64,
     ui_root: Option<&Path>,
 ) -> Vec<u8> {
-    handle_request_with_context(bridge, raw, now, ui_root, None, None)
+    handle_request_with_context(bridge, raw, now, ui_root, None, None, None, None)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -56,9 +59,10 @@ pub struct InviteAuthority {
     relay_trust: Option<RelayTrust>,
     pending: Option<([u8; 32], u64)>,
     staged_peer: Option<VerifiedInvite>,
+    pairing: PairingSession,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct VerifiedInvite {
     pub account_id: String,
     pub device_id: String,
@@ -67,6 +71,18 @@ pub struct VerifiedInvite {
 }
 
 pub fn verify_signed_invite(code: &str, signed_invite: &str, now: u64) -> Option<VerifiedInvite> {
+    verify_signed_invite_with_code(Some(code), signed_invite, now)
+}
+
+fn verify_signed_invite_unbound(signed_invite: &str, now: u64) -> Option<VerifiedInvite> {
+    verify_signed_invite_with_code(None, signed_invite, now)
+}
+
+fn verify_signed_invite_with_code(
+    expected_code: Option<&str>,
+    signed_invite: &str,
+    now: u64,
+) -> Option<VerifiedInvite> {
     let mut parts = signed_invite.split('.');
     if parts.next()? != "ADDAINV1" {
         return None;
@@ -89,12 +105,22 @@ pub fn verify_signed_invite(code: &str, signed_invite: &str, now: u64) -> Option
         return None;
     }
     let public_key = hex_decode(account_id.strip_prefix("ad1pk")?)?;
-    if public_key.len() != 32 || code.is_empty() {
+    if public_key.len() != 32
+        || !code_hash
+            .chars()
+            .all(|character| character.is_ascii_hexdigit())
+        || code_hash.len() != 64
+    {
         return None;
     }
-    let expected_hash: [u8; 32] = Sha256::digest(code.as_bytes()).into();
-    if code_hash != hex_bytes(&expected_hash) {
-        return None;
+    if let Some(code) = expected_code {
+        if code.is_empty() {
+            return None;
+        }
+        let expected_hash: [u8; 32] = Sha256::digest(code.as_bytes()).into();
+        if code_hash != hex_bytes(&expected_hash) {
+            return None;
+        }
     }
     let key_bytes: [u8; 32] = public_key.try_into().ok()?;
     let key = VerifyingKey::from_bytes(&key_bytes).ok()?;
@@ -163,14 +189,17 @@ impl InviteAuthority {
         relay_public_key: Option<[u8; 32]>,
         relay_trust: Option<RelayTrust>,
     ) -> Self {
+        let device_id = device_id.into();
+        let local_account_id = root.account_id().as_str().to_owned();
         Self {
             root,
-            device_id: device_id.into(),
+            device_id: device_id.clone(),
             relay_origin: relay_origin.into(),
             relay_public_key,
             relay_trust,
             pending: None,
             staged_peer: None,
+            pairing: PairingSession::new(local_account_id, device_id),
         }
     }
 
@@ -199,6 +228,65 @@ impl InviteAuthority {
             ),
         ))
     }
+
+    pub fn restore_pairing(&mut self, store: &EncryptedStore) -> Result<(), StorageError> {
+        self.pairing = PairingSession::restore(
+            self.root.account_id().as_str(),
+            self.device_id.clone(),
+            store,
+        )?;
+        Ok(())
+    }
+
+    fn mark_invite_created(&mut self, store: &mut EncryptedStore) -> Result<(), PairingError> {
+        self.pairing.mark_invite_created()?;
+        self.pairing
+            .persist(store)
+            .map_err(|_| PairingError::InvalidTransition)
+    }
+
+    fn stage_peer(
+        &mut self,
+        invite: VerifiedInvite,
+        now: u64,
+        store: &mut EncryptedStore,
+    ) -> Result<(), PairingError> {
+        self.pairing.verify_peer(invite.clone(), now)?;
+        self.pairing
+            .persist(store)
+            .map_err(|_| PairingError::InvalidTransition)?;
+        self.staged_peer = Some(invite);
+        Ok(())
+    }
+
+    fn approve_pairing(
+        &mut self,
+        now: u64,
+        store: &mut EncryptedStore,
+    ) -> Result<(), PairingError> {
+        self.pairing.approve(now)?;
+        self.pairing
+            .persist(store)
+            .map_err(|_| PairingError::InvalidTransition)
+    }
+
+    fn confirm_safety(
+        &mut self,
+        value: &str,
+        store: &mut EncryptedStore,
+    ) -> Result<(), PairingError> {
+        self.pairing.confirm_safety(value)?;
+        self.pairing
+            .persist(store)
+            .map_err(|_| PairingError::InvalidTransition)
+    }
+
+    fn reject_pairing(&mut self, store: &mut EncryptedStore) -> Result<(), PairingError> {
+        self.pairing.reject()?;
+        self.pairing
+            .persist(store)
+            .map_err(|_| PairingError::InvalidTransition)
+    }
 }
 
 pub fn handle_request_with_context(
@@ -208,6 +296,8 @@ pub fn handle_request_with_context(
     ui_root: Option<&Path>,
     identity: Option<&IdentityView>,
     invite_authority: Option<&mut InviteAuthority>,
+    mut session_catalog: Option<&mut MlsSessionCatalog>,
+    mut session_store: Option<&mut EncryptedStore>,
 ) -> Vec<u8> {
     let Ok(request) = parse_request(raw) else {
         return response(400, "invalid_request", None, None);
@@ -263,12 +353,21 @@ pub fn handle_request_with_context(
                 ui_version: request.header("x-ad-ui-version").unwrap_or(""),
             };
             match bridge.authorize(&authorization, now) {
-                Ok(()) => response(
-                    200,
-                    r##"{"status":"daemon-session-active","high_risk":false,"private_state":"daemon-owned"}"##,
-                    None,
-                    Some("application/json"),
-                ),
+                Ok(()) => {
+                    let relay_origin = invite_authority
+                        .as_ref()
+                        .map(|authority| authority.relay_origin.as_str())
+                        .unwrap_or("");
+                    response(
+                        200,
+                        &format!(
+                            r##"{{"status":"daemon-session-active","high_risk":false,"private_state":"daemon-owned","relay_origin":"{}"}}"##,
+                            json_escape(relay_origin)
+                        ),
+                        None,
+                        Some("application/json"),
+                    )
+                }
                 Err(error) => response(403, error_code(&error), None, Some("application/json")),
             }
         }
@@ -319,6 +418,12 @@ pub fn handle_request_with_context(
             };
             match bridge.authorize(&authorization, now) {
                 Ok(()) => {
+                    let Some(store) = session_store.as_deref_mut() else {
+                        return response(503, "storage_unavailable", None, None);
+                    };
+                    if let Err(error) = authority.mark_invite_created(store) {
+                        return pairing_error(error);
+                    }
                     let Some((code, signed_invite)) = authority.create(now) else {
                         return response(503, "randomness_unavailable", None, None);
                     };
@@ -398,7 +503,7 @@ pub fn handle_request_with_context(
                     Some("application/json"),
                 );
             };
-            let Some(invite) = verify_signed_invite(code, signed_invite, now) else {
+            let Some(invite) = verify_signed_invite_unbound(signed_invite, now) else {
                 return response(422, "invalid_invite", None, Some("application/json"));
             };
             if !verify_relay_receipt(
@@ -412,14 +517,303 @@ pub fn handle_request_with_context(
             ) {
                 return response(422, "invalid_relay_receipt", None, Some("application/json"));
             }
-            authority.staged_peer = Some(invite.clone());
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            if let Err(error) = authority.stage_peer(invite.clone(), now, store) {
+                return pairing_error(error);
+            }
+            let safety_number = authority.pairing.safety_number().unwrap_or_default();
             let body = format!(
-                r##"{{"staged":true,"account_id":"{}","device_id":"{}","expires_at":{}}}"##,
+                r##"{{"staged":true,"state":"verified","safety_verified":false,"safety_number":"{}","account_id":"{}","device_id":"{}","expires_at":{}}}"##,
+                json_escape(&safety_number),
                 json_escape(&invite.account_id),
                 json_escape(&invite.device_id),
                 invite.expires_at
             );
             response(200, &body, None, Some("application/json"))
+        }
+        ("GET", "/local-api/pairing/status") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let snapshot = authority.pairing.snapshot();
+            let peer = snapshot.peer.map(|peer| format!(
+                r##",\"peer\":{{\"account_id\":\"{}\",\"device_id\":\"{}\",\"expires_at\":{},\"relay_origin\":\"{}\"}}"##,
+                json_escape(&peer.account_id),
+                json_escape(&peer.device_id),
+                peer.expires_at,
+                json_escape(&peer.relay_origin),
+            )).unwrap_or_default();
+            let safety_number = authority
+                .pairing
+                .safety_number()
+                .map(|value| format!(r##",\"safety_number\":\"{}\""##, json_escape(&value)))
+                .unwrap_or_default();
+            let safety_verified = if snapshot.safety_verified {
+                "true"
+            } else {
+                "false"
+            };
+            response(
+                200,
+                &format!(
+                    r##"{{"state":"{}","safety_verified":{}{}{} }}"##,
+                    snapshot.state.as_str(),
+                    safety_verified,
+                    peer,
+                    safety_number
+                )
+                .replace(" }", "}"),
+                None,
+                Some("application/json"),
+            )
+        }
+        ("POST", "/local-api/pairing/verify-safety") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let Some(value) = json_string(request.body, "safety_number") else {
+                return response(
+                    400,
+                    "safety_number_required",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match authority.confirm_safety(value, store) {
+                Ok(()) => response(
+                    200,
+                    r##"{"safety_verified":true}"##,
+                    None,
+                    Some("application/json"),
+                ),
+                Err(error) => pairing_error(error),
+            }
+        }
+        ("POST", "/local-api/pairing/approve") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match authority.approve_pairing(now, store) {
+                Ok(()) => response(
+                    200,
+                    r##"{"state":"established","approved":true}"##,
+                    None,
+                    Some("application/json"),
+                ),
+                Err(error) => pairing_error(error),
+            }
+        }
+        ("POST", "/local-api/pairing/reject") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match authority.reject_pairing(store) {
+                Ok(()) => response(
+                    200,
+                    r##"{"state":"rejected","rejected":true}"##,
+                    None,
+                    Some("application/json"),
+                ),
+                Err(error) => pairing_error(error),
+            }
+        }
+        ("POST", "/local-api/session/create") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(identity) = identity else {
+                return response(503, "identity_unavailable", None, None);
+            };
+            let Some(conversation_id) = json_string(request.body, "conversation_id") else {
+                return response(400, "invalid_conversation", None, Some("application/json"));
+            };
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match catalog.create(
+                conversation_id,
+                identity.account_id.as_bytes().to_vec(),
+                store,
+            ) {
+                Ok(()) => response(201, r##"{"created":true}"##, None, Some("application/json")),
+                Err(error) => catalog_error(error),
+            }
+        }
+        ("POST", "/local-api/session/prepare") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(conversation_id) = json_string(request.body, "conversation_id") else {
+                return response(400, "invalid_conversation", None, Some("application/json"));
+            };
+            let Some(identity) = identity else {
+                return response(503, "identity_unavailable", None, None);
+            };
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            match catalog.prepare(conversation_id, identity.account_id.as_bytes().to_vec()) {
+                Ok(key_package) => response(
+                    200,
+                    &format!(r##"{{"key_package":"{}"}}"##, hex_bytes(&key_package)),
+                    None,
+                    Some("application/json"),
+                ),
+                Err(error) => catalog_error(error),
+            }
+        }
+        ("POST", "/local-api/session/join") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(conversation_id) = json_string(request.body, "conversation_id") else {
+                return response(400, "invalid_conversation", None, Some("application/json"));
+            };
+            let Some(welcome) = json_string(request.body, "welcome").and_then(hex_decode) else {
+                return response(400, "invalid_welcome", None, Some("application/json"));
+            };
+            let Some(identity) = identity else {
+                return response(503, "identity_unavailable", None, None);
+            };
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match catalog.join(
+                conversation_id,
+                identity.account_id.as_bytes().to_vec(),
+                &welcome,
+                store,
+            ) {
+                Ok(()) => response(200, r##"{"joined":true}"##, None, Some("application/json")),
+                Err(error) => catalog_error(error),
+            }
+        }
+        ("POST", "/local-api/session/add-member") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(conversation_id) = json_string(request.body, "conversation_id") else {
+                return response(400, "invalid_conversation", None, Some("application/json"));
+            };
+            let Some(key_package) = json_string(request.body, "key_package").and_then(hex_decode)
+            else {
+                return response(400, "invalid_key_package", None, Some("application/json"));
+            };
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match catalog.add_member(conversation_id, &key_package, store) {
+                Ok(welcome) => response(
+                    200,
+                    &format!(r##"{{"welcome":"{}"}}"##, hex_bytes(&welcome)),
+                    None,
+                    Some("application/json"),
+                ),
+                Err(error) => catalog_error(error),
+            }
+        }
+        ("POST", "/local-api/session/send") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(conversation_id) = json_string(request.body, "conversation_id") else {
+                return response(400, "invalid_conversation", None, Some("application/json"));
+            };
+            let Some(plaintext) = json_string(request.body, "plaintext") else {
+                return response(400, "invalid_message", None, Some("application/json"));
+            };
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match catalog.send(conversation_id, plaintext.as_bytes(), store) {
+                Ok(ciphertext) => response(
+                    200,
+                    &format!(r##"{{"ciphertext":"{}"}}"##, hex_bytes(&ciphertext)),
+                    None,
+                    Some("application/json"),
+                ),
+                Err(error) => catalog_error(error),
+            }
+        }
+        ("POST", "/local-api/session/receive") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(conversation_id) = json_string(request.body, "conversation_id") else {
+                return response(400, "invalid_conversation", None, Some("application/json"));
+            };
+            let Some(ciphertext) = json_string(request.body, "ciphertext").and_then(hex_decode)
+            else {
+                return response(400, "invalid_ciphertext", None, Some("application/json"));
+            };
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match catalog.receive(conversation_id, &ciphertext, store) {
+                Ok(plaintext) => response(
+                    200,
+                    &format!(r##"{{"plaintext":"{}"}}"##, hex_bytes(&plaintext)),
+                    None,
+                    Some("application/json"),
+                ),
+                Err(error) => catalog_error(error),
+            }
         }
         ("POST", "/local-api/session/lock") => {
             let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session")
@@ -436,6 +830,9 @@ pub fn handle_request_with_context(
             };
             match bridge.authorize(&authorization, now) {
                 Ok(()) => {
+                    if let Some(catalog) = session_catalog.as_deref_mut() {
+                        catalog.lock();
+                    }
                     bridge.invalidate_session();
                     response(
                         200,
@@ -456,6 +853,8 @@ pub fn serve_forever(
     ui_root: Option<&Path>,
     identity: Option<IdentityView>,
     invite_authority: Option<InviteAuthority>,
+    session_catalog: MlsSessionCatalog,
+    session_store: EncryptedStore,
 ) -> std::io::Result<()> {
     let address = SocketAddr::new(bridge.bind_host(), bridge.port());
     let state = AppState {
@@ -463,6 +862,8 @@ pub fn serve_forever(
         ui_root: ui_root.map(Path::to_path_buf),
         identity,
         invite_authority: invite_authority.map(|authority| Arc::new(Mutex::new(authority))),
+        session_catalog: Arc::new(Mutex::new(session_catalog)),
+        session_store: Arc::new(Mutex::new(session_store)),
     };
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_io()
@@ -484,6 +885,8 @@ struct AppState {
     ui_root: Option<PathBuf>,
     identity: Option<IdentityView>,
     invite_authority: Option<Arc<Mutex<InviteAuthority>>>,
+    session_catalog: Arc<Mutex<MlsSessionCatalog>>,
+    session_store: Arc<Mutex<EncryptedStore>>,
 }
 
 async fn axum_handler(State(state): State<AppState>, request: HttpRequest<Body>) -> Response<Body> {
@@ -508,6 +911,12 @@ async fn axum_handler(State(state): State<AppState>, request: HttpRequest<Body>)
         .invite_authority
         .as_ref()
         .and_then(|authority| authority.lock().ok());
+    let Ok(mut catalog) = state.session_catalog.lock() else {
+        return axum_response(response(503, "session_unavailable", None, None));
+    };
+    let Ok(mut store) = state.session_store.lock() else {
+        return axum_response(response(503, "storage_unavailable", None, None));
+    };
     let output = handle_request_with_context(
         &mut bridge,
         &raw,
@@ -515,6 +924,8 @@ async fn axum_handler(State(state): State<AppState>, request: HttpRequest<Body>)
         state.ui_root.as_deref(),
         state.identity.as_ref(),
         invite_guard.as_deref_mut(),
+        Some(&mut catalog),
+        Some(&mut store),
     );
     axum_response(output)
 }
@@ -700,6 +1111,59 @@ fn response_bytes(status: u16, body: &[u8], content_type: &str) -> Option<Vec<u8
     Some(format!("HTTP/1.1 {status} {reason}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nConnection: close\r\n\r\n", body.len()).into_bytes().into_iter().chain(body.iter().copied()).collect())
 }
 
+fn authorize_api(bridge: &LocalBridge, request: &Request<'_>, now: u64) -> Result<(), Vec<u8>> {
+    let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session") else {
+        return Err(response(401, "session_invalid", None, None));
+    };
+    let authorization = BridgeRequest {
+        origin: request.header("origin").unwrap_or(""),
+        host: request.header("host").unwrap_or(""),
+        method: request.method,
+        cookie,
+        csrf_token: request.header("x-ad-csrf"),
+        ui_version: request.header("x-ad-ui-version").unwrap_or(""),
+    };
+    bridge
+        .authorize(&authorization, now)
+        .map_err(|error| response(403, error_code(&error), None, Some("application/json")))
+}
+
+fn catalog_error(error: SessionCatalogError) -> Vec<u8> {
+    match error {
+        SessionCatalogError::DuplicateConversation => {
+            response(409, "conversation_exists", None, Some("application/json"))
+        }
+        SessionCatalogError::UnknownConversation => response(
+            404,
+            "conversation_not_found",
+            None,
+            Some("application/json"),
+        ),
+        SessionCatalogError::Session(_) => response(
+            422,
+            "session_operation_failed",
+            None,
+            Some("application/json"),
+        ),
+    }
+}
+
+fn pairing_ready(authority: Option<&InviteAuthority>) -> bool {
+    authority.is_none_or(|value| value.pairing.can_message())
+}
+
+fn pairing_error(error: PairingError) -> Vec<u8> {
+    let (status, code) = match error {
+        PairingError::InvalidTransition => (409, "pairing_invalid_transition"),
+        PairingError::SelfInvite => (422, "self_invite"),
+        PairingError::Expired => (410, "pairing_expired"),
+        PairingError::Duplicate => (409, "pairing_duplicate"),
+        PairingError::SafetyMismatch => (422, "safety_number_mismatch"),
+        PairingError::BindingChanged => (409, "pairing_binding_changed"),
+    };
+    response(status, code, None, Some("application/json"))
+}
+
 fn error_code(error: &crate::bridge::BridgeError) -> &'static str {
     match error {
         crate::bridge::BridgeError::InvalidRequestOrigin => "invalid_origin",
@@ -749,10 +1213,18 @@ fn hex_nibble(value: u8) -> Option<u8> {
 
 #[cfg(test)]
 mod tests {
-    use super::{axum_request_bytes, handle_request};
+    use super::{
+        axum_request_bytes, handle_request, handle_request_with_context, hex_bytes, IdentityView,
+        InviteAuthority,
+    };
     use crate::bridge::{BridgeConfig, LocalBridge};
+    use crate::identity::AccountRootKey;
+    use crate::mls_session::MlsSessionCatalog;
+    use crate::storage::EncryptedStore;
     use axum::body::Body;
     use axum::http::{Request, Uri};
+    use ed25519_dalek::{Signer, SigningKey};
+    use sha2::{Digest, Sha256};
     use std::net::{IpAddr, Ipv4Addr};
 
     fn bridge() -> LocalBridge {
@@ -828,5 +1300,166 @@ mod tests {
             .unwrap();
         let (parts, _) = request.into_parts();
         assert!(axum_request_bytes(&parts, &[]).is_none());
+    }
+
+    #[test]
+    fn authenticated_session_routes_to_daemon_owned_mls_catalog() {
+        let mut daemon = bridge();
+        let bootstrap = token(&daemon);
+        let credentials = daemon
+            .exchange(
+                "http://127.0.0.1:1420",
+                "127.0.0.1:1420",
+                &bootstrap,
+                "web-v1",
+                10,
+            )
+            .unwrap();
+        let path = std::env::temp_dir().join(format!(
+            "another-dimension-bridge-session-{}",
+            std::process::id()
+        ));
+        let mut store = EncryptedStore::initialize(&path, "correct horse battery staple").unwrap();
+        let mut catalog = MlsSessionCatalog::new();
+        let identity = IdentityView {
+            account_id: "ad1pkbridge".into(),
+            device_id: "device-1".into(),
+            display_name: "Bridge test".into(),
+        };
+        let reply = handle_request_with_context(
+            &mut daemon,
+            &request(
+                "POST",
+                "/local-api/session/create",
+                r##"{"conversation_id":"conversation-1"}"##,
+                &format!(
+                    "X-Ad-Ui-Version: web-v1\r\nCookie: ad_session={}\r\nX-Ad-Csrf: {}",
+                    credentials.cookie, credentials.csrf_token
+                ),
+            ),
+            11,
+            None,
+            Some(&identity),
+            None,
+            Some(&mut catalog),
+            Some(&mut store),
+        );
+        let reply = String::from_utf8(reply).unwrap();
+        assert!(reply.starts_with("HTTP/1.1 201"));
+        assert!(reply.contains("\"created\":true"));
+
+        let unauthorized = handle_request_with_context(
+            &mut daemon,
+            &request(
+                "POST",
+                "/local-api/session/prepare",
+                r##"{"conversation_id":"conversation-1"}"##,
+                "X-Ad-Ui-Version: web-v1\r\nCookie: ad_session=missing\r\nX-Ad-Csrf: missing",
+            ),
+            12,
+            None,
+            Some(&identity),
+            None,
+            Some(&mut catalog),
+            Some(&mut store),
+        );
+        assert!(String::from_utf8(unauthorized)
+            .unwrap()
+            .starts_with("HTTP/1.1 403"));
+        drop(store);
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(path.with_extension("revision"));
+    }
+
+    #[test]
+    fn staged_invite_uses_relay_receipt_code_binding() {
+        let mut daemon = bridge();
+        let bootstrap = token(&daemon);
+        let credentials = daemon
+            .exchange(
+                "http://127.0.0.1:1420",
+                "127.0.0.1:1420",
+                &bootstrap,
+                "web-v1",
+                10,
+            )
+            .unwrap();
+        let path = std::env::temp_dir().join(format!(
+            "another-dimension-pairing-stage-{}",
+            std::process::id()
+        ));
+        let mut store = EncryptedStore::initialize(&path, "correct horse battery staple").unwrap();
+        let local_root = AccountRootKey::from_seed([7_u8; 32]);
+        let peer_root = AccountRootKey::from_seed([8_u8; 32]);
+        let relay_key = SigningKey::from_bytes(&[9_u8; 32]);
+        let relay_origin = "http://127.0.0.1:1420";
+        let code = "MANGO-RIVER-7H2P-Q9DX";
+        let payload = format!(
+            "another-dimension/invite/v1\n{}\npeer-device\n{}\n{}\n{}",
+            peer_root.account_id().as_str(),
+            "00".repeat(32),
+            610_u64,
+            relay_origin
+        );
+        let signed_invite = format!(
+            "ADDAINV1.{}.{}",
+            hex_bytes(payload.as_bytes()),
+            hex_bytes(&peer_root.sign(payload.as_bytes()))
+        );
+        let code_hash: [u8; 32] = Sha256::digest(code.as_bytes()).into();
+        let invite_digest: [u8; 32] = Sha256::digest(signed_invite.as_bytes()).into();
+        let key_id: [u8; 32] = Sha256::digest(relay_key.verifying_key().as_bytes()).into();
+        let receipt_body = format!(
+            "ADRECEIPT1.{}.{}.{}.{}.{}",
+            hex_bytes(&key_id),
+            hex_bytes(relay_origin.as_bytes()),
+            hex_bytes(&code_hash),
+            hex_bytes(&invite_digest),
+            20_u64
+        );
+        let receipt = format!(
+            "{}.{}",
+            receipt_body,
+            hex_bytes(&relay_key.sign(receipt_body.as_bytes()).to_bytes())
+        );
+        let mut authority = InviteAuthority::new(
+            local_root,
+            "local-device",
+            relay_origin,
+            Some(relay_key.verifying_key().to_bytes()),
+            None,
+        );
+        let identity = IdentityView {
+            account_id: authority.root.account_id().as_str().into(),
+            device_id: "local-device".into(),
+            display_name: "Pairing stage test".into(),
+        };
+        let reply = handle_request_with_context(
+            &mut daemon,
+            &request(
+                "POST",
+                "/local-api/invites/stage",
+                &format!(
+                    r##"{{"invite_code":"{}","signed_invite":"{}","relay_receipt":"{}"}}"##,
+                    code, signed_invite, receipt
+                ),
+                &format!(
+                    "X-Ad-Ui-Version: web-v1\r\nCookie: ad_session={}\r\nX-Ad-Csrf: {}",
+                    credentials.cookie, credentials.csrf_token
+                ),
+            ),
+            20,
+            None,
+            Some(&identity),
+            Some(&mut authority),
+            None,
+            Some(&mut store),
+        );
+        let reply = String::from_utf8(reply).unwrap();
+        assert!(reply.starts_with("HTTP/1.1 200"), "{reply}");
+        assert!(reply.contains(peer_root.account_id().as_str()));
+        drop(store);
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(path.with_extension("revision"));
     }
 }

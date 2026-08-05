@@ -3,6 +3,7 @@ use crate::{
     bridge_http::{serve_forever, IdentityView, InviteAuthority},
     device::{DeviceRegistry, DeviceRegistryError},
     identity::{AccountRootKey, DeviceIdentity, ProfileIdentity},
+    mls_session::MlsSessionCatalog,
     storage::{EncryptedStore, RecordClass, StorageError},
     trust::RelayTrust,
 };
@@ -156,6 +157,10 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         .authorize(&summary.device_id, now_seconds())
         .map_err(registry_error)?;
     let root_seed = summary.root_seed;
+    let mut session_catalog = MlsSessionCatalog::new();
+    session_catalog
+        .restore_all(&store)
+        .map_err(|_| StorageError::CorruptStore)?;
     let identity = IdentityView {
         account_id: summary.account_id,
         device_id: summary.device_id,
@@ -208,19 +213,29 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         ),
         _ => None,
     };
-    let authority = InviteAuthority::new(
+    let mut authority = InviteAuthority::new(
         AccountRootKey::from_seed(root_seed),
         identity.device_id.clone(),
         relay_origin,
         relay_public_key,
         relay_trust,
     );
+    authority
+        .restore_pairing(&store)
+        .map_err(|_| CliError::Storage(StorageError::CorruptStore))?;
     let bridge = LocalBridge::new(config.clone()).map_err(|_| CliError::Io)?;
     let url = bridge.bootstrap_url("/").map_err(|_| CliError::Io)?;
     eprintln!("daemon bridge listening on 127.0.0.1:{port}");
     eprintln!("open once: {url}");
-    serve_forever(bridge, Some(&ui_dir), Some(identity), Some(authority))
-        .map_err(CliError::from)?;
+    serve_forever(
+        bridge,
+        Some(&ui_dir),
+        Some(identity),
+        Some(authority),
+        session_catalog,
+        store,
+    )
+    .map_err(CliError::from)?;
     Ok("daemon stopped".into())
 }
 
