@@ -29,6 +29,7 @@ use tokio_rustls::TlsConnector;
 use webpki_roots::TLS_SERVER_ROOTS;
 
 const MAX_RESPONSE_BYTES: usize = 128 * 1024;
+const MAX_BLOB_BYTES: usize = 32 * 1024 * 1024;
 
 #[derive(Debug)]
 struct PinnedServerCertVerifier {
@@ -210,6 +211,14 @@ pub struct RelayItem {
     pub envelope: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BlobChunkAccepted {
+    pub complete: bool,
+    pub received: usize,
+    pub total: usize,
+    pub expires_at: u64,
+}
+
 #[derive(Deserialize)]
 struct PostResponse {
     accepted: bool,
@@ -230,6 +239,16 @@ struct SyncItem {
 #[derive(Deserialize)]
 struct AckResponse {
     acknowledged: usize,
+}
+
+#[derive(Deserialize)]
+struct BlobChunkResponse {
+    accepted: bool,
+    complete: bool,
+    received: usize,
+    total: usize,
+    #[serde(rename = "expiresAt")]
+    expires_at: u64,
 }
 
 impl RelayClient {
@@ -295,6 +314,69 @@ impl RelayClient {
         Ok(parsed.acknowledged)
     }
 
+    /// Upload one encrypted attachment chunk. The relay sees only opaque bytes
+    /// and a capability-scoped blob id; file keys and manifests stay in the
+    /// daemon's encrypted message payload.
+    pub async fn upload_blob_chunk(
+        &self,
+        blob_id: &str,
+        offset: usize,
+        total: usize,
+        chunk: &[u8],
+    ) -> Result<BlobChunkAccepted, RelayError> {
+        let path = self.blob_path(blob_id)?;
+        if total == 0 || total > MAX_BLOB_BYTES || offset > total || offset + chunk.len() > total {
+            return Err(RelayError::InvalidResponse);
+        }
+        let headers = [
+            ("X-Ad-Blob-Offset", offset.to_string()),
+            ("X-Ad-Blob-Total", total.to_string()),
+        ];
+        let (status, response) = self
+            .request_with_headers("POST", &path, chunk, &headers, MAX_RESPONSE_BYTES)
+            .await?;
+        if !(200..300).contains(&status) {
+            return Err(RelayError::Rejected(status));
+        }
+        let parsed: BlobChunkResponse =
+            serde_json::from_slice(&response).map_err(|_| RelayError::InvalidResponse)?;
+        if !parsed.accepted || parsed.total != total || parsed.received != offset + chunk.len() {
+            return Err(RelayError::InvalidResponse);
+        }
+        Ok(BlobChunkAccepted {
+            complete: parsed.complete,
+            received: parsed.received,
+            total: parsed.total,
+            expires_at: parsed.expires_at,
+        })
+    }
+
+    pub async fn download_blob(&self, blob_id: &str) -> Result<Vec<u8>, RelayError> {
+        let path = self.blob_path(blob_id)?;
+        let (status, response) = self
+            .request_with_headers("GET", &path, &[], &[], MAX_BLOB_BYTES)
+            .await?;
+        if !(200..300).contains(&status) {
+            return Err(RelayError::Rejected(status));
+        }
+        if response.len() > MAX_BLOB_BYTES {
+            return Err(RelayError::ResponseTooLarge);
+        }
+        Ok(response)
+    }
+
+    fn blob_path(&self, blob_id: &str) -> Result<String, RelayError> {
+        if blob_id.len() < 32
+            || blob_id.len() > 128
+            || !blob_id
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+        {
+            return Err(RelayError::InvalidEndpoint);
+        }
+        Ok(format!("/api/v1/blobs/{blob_id}"))
+    }
+
     pub fn post_blocking(&self, envelope: &RelayEnvelope) -> Result<RelayAccepted, RelayError> {
         let wire = envelope
             .to_wire()
@@ -351,6 +433,18 @@ impl RelayClient {
         path: &str,
         body: &[u8],
     ) -> Result<(u16, Vec<u8>), RelayError> {
+        self.request_with_headers(method, path, body, &[], MAX_RESPONSE_BYTES)
+            .await
+    }
+
+    async fn request_with_headers(
+        &self,
+        method: &str,
+        path: &str,
+        body: &[u8],
+        headers: &[(&str, String)],
+        max_response_bytes: usize,
+    ) -> Result<(u16, Vec<u8>), RelayError> {
         let address = self.endpoint.address()?;
         let tcp = timeout(self.request_timeout, TcpStream::connect(address))
             .await
@@ -364,9 +458,12 @@ impl RelayClient {
                 .connect(server_name, tcp)
                 .await
                 .map_err(|_| RelayError::TlsHandshake)?;
-            return self.request_async_stream(stream, method, path, body).await;
+            return self
+                .request_async_stream(stream, method, path, body, headers, max_response_bytes)
+                .await;
         }
-        self.request_async_stream(tcp, method, path, body).await
+        self.request_async_stream(tcp, method, path, body, headers, max_response_bytes)
+            .await
     }
 
     async fn request_async_stream<S>(
@@ -375,6 +472,8 @@ impl RelayClient {
         method: &str,
         path: &str,
         body: &[u8],
+        headers: &[(&str, String)],
+        max_response_bytes: usize,
     ) -> Result<(u16, Vec<u8>), RelayError>
     where
         S: AsyncRead + AsyncWrite + Unpin,
@@ -385,10 +484,16 @@ impl RelayClient {
             .split_once("://")
             .map(|(_, authority)| authority)
             .ok_or(RelayError::InvalidEndpoint)?;
-        let request = format!(
-            "{method} {path} HTTP/1.1\r\nHost: {authority}\r\nConnection: close\r\nAccept: application/json\r\nContent-Type: application/json\r\nX-Ad-Relay-Capability: {}\r\nContent-Length: {}\r\n\r\n",
-            self.endpoint.capability, body.len()
-        );
+        let extra = headers
+            .iter()
+            .map(|(name, value)| format!("{name}: {value}\r\n"))
+            .collect::<String>();
+        let content_type = if path.starts_with("/api/v1/blobs/") {
+            "application/octet-stream"
+        } else {
+            "application/json"
+        };
+        let request = format!("{method} {path} HTTP/1.1\r\nHost: {authority}\r\nConnection: close\r\nAccept: application/json\r\nContent-Type: {content_type}\r\nX-Ad-Relay-Capability: {}\r\n{extra}Content-Length: {}\r\n\r\n", self.endpoint.capability, body.len());
         timeout(self.request_timeout, stream.write_all(request.as_bytes()))
             .await
             .map_err(|_| RelayError::Timeout)?
@@ -402,7 +507,7 @@ impl RelayClient {
             .await
             .map_err(|_| RelayError::Timeout)?
             .map_err(|_| RelayError::Connect)?;
-        if response.len() > MAX_RESPONSE_BYTES {
+        if response.len() > max_response_bytes {
             return Err(RelayError::ResponseTooLarge);
         }
         parse_response(&response)
