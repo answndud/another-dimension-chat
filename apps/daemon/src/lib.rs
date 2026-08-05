@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub mod attachment;
 pub mod bridge;
 pub mod bridge_http;
 pub mod cli;
