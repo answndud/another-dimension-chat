@@ -20,12 +20,14 @@ use std::collections::BTreeMap;
 use tls_codec::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
+use crate::attachment::AttachmentDescriptor;
 use crate::mls_provider::{DaemonProvider, SELECTED_CIPHERSUITE};
 use crate::storage::{EncryptedStore, RecordClass};
 
 const MAX_IDENTITY_BYTES: usize = 1024;
 const MAX_MESSAGE_BYTES: usize = 1024 * 1024;
 const MAX_WIRE_BYTES: usize = 4 * 1024 * 1024;
+const ATTACHMENT_MESSAGE_PREFIX: &[u8] = b"ADATT1.";
 const DEFAULT_KEY_PACKAGE_LIFETIME_SECONDS: u64 = 7 * 24 * 60 * 60;
 const MAX_KEY_PACKAGE_LIFETIME_SECONDS: u64 = 7 * 24 * 60 * 60;
 
@@ -248,6 +250,32 @@ impl MlsSessionCatalog {
             .decrypt_and_persist(wire, store, conversation_id)
             .map_err(Into::into)
     }
+
+    pub fn send_attachment(
+        &mut self,
+        conversation_id: &str,
+        descriptor: &AttachmentDescriptor,
+        store: &mut EncryptedStore,
+    ) -> Result<Vec<u8>, SessionCatalogError> {
+        self.sessions
+            .get_mut(conversation_id)
+            .ok_or(SessionCatalogError::UnknownConversation)?
+            .encrypt_attachment_and_persist(descriptor, store, conversation_id)
+            .map_err(Into::into)
+    }
+
+    pub fn receive_attachment(
+        &mut self,
+        conversation_id: &str,
+        wire: &[u8],
+        store: &mut EncryptedStore,
+    ) -> Result<AttachmentDescriptor, SessionCatalogError> {
+        self.sessions
+            .get_mut(conversation_id)
+            .ok_or(SessionCatalogError::UnknownConversation)?
+            .decrypt_attachment_and_persist(wire, store, conversation_id)
+            .map_err(Into::into)
+    }
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -450,6 +478,28 @@ impl MlsSession {
         }
     }
 
+    pub fn encrypt_attachment(
+        &mut self,
+        descriptor: &AttachmentDescriptor,
+    ) -> Result<Vec<u8>, SessionError> {
+        let encoded = serde_json::to_vec(descriptor).map_err(|_| SessionError::InvalidWire)?;
+        let mut payload = Vec::with_capacity(ATTACHMENT_MESSAGE_PREFIX.len() + encoded.len());
+        payload.extend_from_slice(ATTACHMENT_MESSAGE_PREFIX);
+        payload.extend_from_slice(&encoded);
+        self.encrypt(&payload)
+    }
+
+    pub fn decrypt_attachment(
+        &mut self,
+        wire: &[u8],
+    ) -> Result<AttachmentDescriptor, SessionError> {
+        let payload = self.decrypt(wire)?;
+        let encoded = payload
+            .strip_prefix(ATTACHMENT_MESSAGE_PREFIX)
+            .ok_or(SessionError::UnsupportedMessage)?;
+        serde_json::from_slice(encoded).map_err(|_| SessionError::InvalidWire)
+    }
+
     /// Persist the complete OpenMLS memory provider checkpoint inside the
     /// authenticated encrypted daemon store. The browser never receives this
     /// payload and the signing key is covered by the store's AEAD.
@@ -546,6 +596,28 @@ impl MlsSession {
         Ok(plaintext)
     }
 
+    pub fn encrypt_attachment_and_persist(
+        &mut self,
+        descriptor: &AttachmentDescriptor,
+        store: &mut EncryptedStore,
+        conversation_id: &str,
+    ) -> Result<Vec<u8>, SessionError> {
+        let wire = self.encrypt_attachment(descriptor)?;
+        self.persist_or_poison(store, conversation_id)?;
+        Ok(wire)
+    }
+
+    pub fn decrypt_attachment_and_persist(
+        &mut self,
+        wire: &[u8],
+        store: &mut EncryptedStore,
+        conversation_id: &str,
+    ) -> Result<AttachmentDescriptor, SessionError> {
+        let descriptor = self.decrypt_attachment(wire)?;
+        self.persist_or_poison(store, conversation_id)?;
+        Ok(descriptor)
+    }
+
     fn persist_or_poison(
         &mut self,
         store: &mut EncryptedStore,
@@ -630,6 +702,28 @@ mod tests {
         let wire = alice.encrypt(b"secret message").unwrap();
         assert_eq!(bob.decrypt(&wire).unwrap(), b"secret message");
         assert_eq!(bob.decrypt(&wire), Err(SessionError::OpenMls));
+    }
+
+    #[test]
+    fn attachment_descriptor_is_carried_inside_authenticated_mls_message() {
+        let mut alice = MlsSession::new(b"alice-account".to_vec()).unwrap();
+        let mut bob = MlsSession::new(b"bob-account".to_vec()).unwrap();
+        alice.create_group().unwrap();
+        let welcome = alice.add_member(&bob.key_package().unwrap()).unwrap();
+        bob.join(&welcome).unwrap();
+        let package = crate::attachment::encrypt_for_blob(
+            b"private attachment",
+            crate::attachment::generate_key().unwrap(),
+            &"c".repeat(32),
+        )
+        .unwrap();
+        let wire = alice.encrypt_attachment(&package.descriptor).unwrap();
+        let descriptor = bob.decrypt_attachment(&wire).unwrap();
+        assert_eq!(descriptor, package.descriptor);
+        assert_eq!(
+            crate::attachment::decrypt_blob(&descriptor, &package.blob).unwrap(),
+            b"private attachment"
+        );
     }
 
     #[test]
