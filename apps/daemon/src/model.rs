@@ -27,7 +27,7 @@ macro_rules! typed_id {
                 let value = value.into();
                 if value.is_empty()
                     || value.len() > MAX_ID_BYTES
-                    || value.chars().any(|character| character.is_control())
+                    || crate::protocol_gate::validate_protocol_identifier(&value).is_err()
                 {
                     return Err(InvalidId);
                 }
