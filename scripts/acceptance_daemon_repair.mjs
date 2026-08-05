@@ -1,23 +1,31 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
-import { request } from "node:http";
-import { spawn } from "node:child_process";
+import { createHash, X509Certificate } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { execFileSync, spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createLocalServer } from "../apps/server/server.mjs";
 
 const daemonBinary = process.env.AD_DAEMON_BINARY || "target/debug/another-dimension-daemon";
 const passphrase = "acceptance-only-passphrase";
+const useTls = process.env.AD_ACCEPTANCE_TLS === "1";
 
 function httpCall(origin, method, path, body, headers = {}) {
   const url = new URL(path, origin);
   return new Promise((resolve, reject) => {
-    const req = request({
+    const requestImpl = url.protocol === "https:" ? httpsRequest : httpRequest;
+    const req = requestImpl({
       hostname: url.hostname,
       port: url.port,
       method,
       path: `${url.pathname}${url.search}`,
+      // The acceptance relay uses a generated self-signed certificate. The
+      // daemon remains the system under test: it authenticates the relay by
+      // the separately supplied certificate pin.
+      ...(url.protocol === "https:" ? { rejectUnauthorized: false } : {}),
       headers: { ...(body ? { "content-type": "application/json" } : {}), ...headers },
     }, (res) => {
       let text = "";
@@ -29,7 +37,7 @@ function httpCall(origin, method, path, body, headers = {}) {
         resolve({ status: res.statusCode, headers: res.headers, body: parsed });
       });
     });
-    req.on("error", reject);
+    req.on("error", (error) => reject(new Error(`${method} ${url.href}: ${error.message}`)));
     if (body) req.end(JSON.stringify(body)); else req.end();
   });
 }
@@ -73,16 +81,27 @@ async function startDaemon(dataDir, port, relay) {
     "serve", "--data-dir", dataDir, "--port", String(port),
     "--relay-origin", relay.origin,
     "--inbox-url", inboxUrl,
+    ...(relay.tlsPin ? ["--relay-tls-pin", relay.tlsPin] : []),
     "--relay-public-key", relay.relayReceiptPublicKey,
     "--relay-public-key-fingerprint", relay.relayReceiptPublicKeyFingerprint,
   ], { stdio: ["pipe", "ignore", "pipe"] });
+  let daemonError = "";
+  child.stderr.on("data", (chunk) => {
+    daemonError = `${daemonError}${chunk}`.slice(-100000);
+  });
   child.stdin.end(`${passphrase}\n`);
   const bootstrap = await waitForDaemon(child, port);
   const exchange = await httpCall(origin, "POST", "/local-session/exchange", { token: bootstrap, ui_version: "web-v1" }, { origin, host: `127.0.0.1:${port}`, "x-ad-ui-version": "web-v1" });
   assert.equal(exchange.status, 200);
   const cookie = String(exchange.headers["set-cookie"]?.[0] || "").split(";", 1)[0];
   const csrf = exchange.body.csrf_token;
-  const api = async (method, path, body) => httpCall(origin, method, path, body, { origin, host: `127.0.0.1:${port}`, cookie, "x-ad-ui-version": "web-v1", ...(method === "POST" ? { "x-ad-csrf": csrf } : {}) });
+  const api = async (method, path, body) => {
+    try {
+      return await httpCall(origin, method, path, body, { origin, host: `127.0.0.1:${port}`, cookie, "x-ad-ui-version": "web-v1", ...(method === "POST" ? { "x-ad-csrf": csrf } : {}) });
+    } catch (error) {
+      throw new Error(`${error.message}\ndaemon stderr:\n${daemonError}`);
+    }
+  };
   return { child, origin, api, inboxUrl };
 }
 
@@ -122,16 +141,38 @@ async function closeRelay(relay) {
 try {
   const relayAPort = 17430;
   const relayBPort = 17431;
-  relayA = await createLocalServer({ port: relayAPort, dataDir: join(root, "relay-a"), distDir: join(root, "missing-a") });
-  relayB = await createLocalServer({ port: relayBPort, dataDir: join(root, "relay-b"), distDir: join(root, "missing-b") });
+  let tlsFiles = null;
+  if (useTls) {
+    const tlsDir = join(root, "tls");
+    await mkdir(tlsDir, { recursive: true, mode: 0o700 });
+    execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", join(tlsDir, "server.key"), "-out", join(tlsDir, "server.crt"), "-days", "2", "-subj", "/CN=localhost", "-addext", "subjectAltName=DNS:localhost"], { stdio: "ignore" });
+    const certificate = new X509Certificate(await readFile(join(tlsDir, "server.crt")));
+    tlsFiles = {
+      key: join(tlsDir, "server.key"),
+      cert: join(tlsDir, "server.crt"),
+      pin: `sha256:${createHash("sha256").update(certificate.raw).digest("hex")}`,
+    };
+  }
+  const relayOptions = (port, name) => ({
+    port,
+    dataDir: join(root, name),
+    distDir: join(root, `missing-${name}`),
+    ...(tlsFiles ? { publicUrl: `https://localhost:${port}`, tlsKeyFile: tlsFiles.key, tlsCertFile: tlsFiles.cert } : {}),
+  });
+  relayA = await createLocalServer(relayOptions(relayAPort, "relay-a"));
+  relayB = await createLocalServer(relayOptions(relayBPort, "relay-b"));
   await Promise.all([
     new Promise((resolve) => relayA.server.listen(relayAPort, "127.0.0.1", resolve)),
     new Promise((resolve) => relayB.server.listen(relayBPort, "127.0.0.1", resolve)),
   ]);
   relayA.port = relayAPort;
   relayB.port = relayBPort;
-  relayA.origin = `http://127.0.0.1:${relayA.port}`;
-  relayB.origin = `http://127.0.0.1:${relayB.port}`;
+  relayA.origin = useTls ? `https://localhost:${relayA.port}` : `http://127.0.0.1:${relayA.port}`;
+  relayB.origin = useTls ? `https://localhost:${relayB.port}` : `http://127.0.0.1:${relayB.port}`;
+  relayA.inboxUrl = relayA.inboxUrl.replace(`http://127.0.0.1:${relayA.port}`, relayA.origin);
+  relayB.inboxUrl = relayB.inboxUrl.replace(`http://127.0.0.1:${relayB.port}`, relayB.origin);
+  relayA.tlsPin = tlsFiles?.pin;
+  relayB.tlsPin = tlsFiles?.pin;
   assert.equal((await relayApi(relayB, "GET", "/api/v1/info", undefined, { "x-ad-local-access": relayB.localAccessCapability })).status, 200);
 
   const aliceDir = join(root, "alice");

@@ -1,9 +1,8 @@
 //! Daemon-owned relay transport.
 //!
-//! This first transport deliberately supports only loopback HTTP, which is
-//! useful for local integration without pretending that an unpinned remote
-//! HTTPS connection is production-safe. P0.11 adds the remote TLS provider,
-//! pinning, redirect policy, and endpoint re-trust flow.
+//! The transport supports loopback HTTP for local development and explicitly
+//! pinned HTTPS endpoints for user-owned relays. It never follows redirects
+//! and does not accept an HTTPS endpoint without a configured trust pin.
 
 use crate::delivery::RelayEnvelope;
 use crate::trust::TlsCertificatePin;
@@ -46,20 +45,27 @@ impl rustls::client::danger::ServerCertVerifier for PinnedServerCertVerifier {
         ocsp_response: &[u8],
         now: UnixTime,
     ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
-        let verified = self.inner.verify_server_cert(
-            end_entity,
-            intermediates,
-            server_name,
-            ocsp_response,
-            now,
-        )?;
         let digest = Sha256::digest(end_entity.as_ref());
         if digest.as_slice() != self.pin.as_bytes() {
             return Err(rustls::Error::General(
                 "relay certificate pin mismatch".into(),
             ));
         }
-        Ok(verified)
+        // An exact certificate pin is an explicit trust anchor for privately
+        // operated relays. Publicly trusted certificates still pass the
+        // normal WebPKI verifier; pinned private certificates may be
+        // self-signed, but only the exact pre-provisioned DER certificate is
+        // accepted.
+        match self.inner.verify_server_cert(
+            end_entity,
+            intermediates,
+            server_name,
+            ocsp_response,
+            now,
+        ) {
+            Ok(verified) => Ok(verified),
+            Err(_) => Ok(rustls::client::danger::ServerCertVerified::assertion()),
+        }
     }
 
     fn verify_tls12_signature(
@@ -86,14 +92,20 @@ impl rustls::client::danger::ServerCertVerifier for PinnedServerCertVerifier {
 }
 
 fn tls_config(pin: TlsCertificatePin) -> Result<Arc<ClientConfig>, RelayError> {
+    // The workspace also contains OpenMLS dependencies that may enable a
+    // second rustls provider. Select the daemon transport provider explicitly
+    // instead of relying on rustls' process-global feature inference.
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
     let mut roots = RootCertStore::empty();
     roots.extend(TLS_SERVER_ROOTS.iter().cloned());
-    let inner = WebPkiServerVerifier::builder(Arc::new(roots))
+    let inner = WebPkiServerVerifier::builder_with_provider(Arc::new(roots), provider.clone())
         .build()
         .map_err(|_| RelayError::TlsConfiguration)?;
     let verifier = Arc::new(PinnedServerCertVerifier { inner, pin });
     Ok(Arc::new(
-        ClientConfig::builder()
+        ClientConfig::builder_with_provider(provider)
+            .with_safe_default_protocol_versions()
+            .map_err(|_| RelayError::TlsConfiguration)?
             .dangerous()
             .with_custom_certificate_verifier(verifier)
             .with_no_client_auth(),
@@ -175,8 +187,8 @@ impl RelayEndpoint {
 
     fn address(&self) -> Result<String, RelayError> {
         self.origin
-            .strip_prefix("http://")
-            .map(str::to_owned)
+            .split_once("://")
+            .map(|(_, authority)| authority.to_owned())
             .ok_or(RelayError::InvalidEndpoint)
     }
 }
