@@ -218,6 +218,7 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .daemon-delivery h3 { margin: 0; font-size: .95rem; }
 .daemon-message-list { display: grid; gap: 8px; }
 .daemon-message { border-left: 2px solid var(--accent); background: var(--surface-muted); padding: 10px 12px; }
+.daemon-message.outgoing { border-left-color: #767b7e; }
 .daemon-message p { margin: 0 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .daemon-message small { color: var(--muted); font-size: .72rem; }
 .delivery-state { margin: 0; color: var(--muted); font-size: .82rem; }
