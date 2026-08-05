@@ -5,7 +5,7 @@ use crate::{
     identity::{AccountRootKey, DeviceIdentity, ProfileIdentity},
     mls_session::MlsSessionCatalog,
     storage::{EncryptedStore, RecordClass, StorageError},
-    trust::RelayTrust,
+    trust::{RelayTrust, TlsCertificatePin},
 };
 use sha2::{Digest, Sha256};
 use std::{
@@ -181,6 +181,10 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         .map(|value| parse_hex_key(&value))
         .transpose()
         .map_err(|_| CliError::Usage("--relay-public-key must be 32-byte lowercase hex".into()))?;
+    let relay_tls_pin = option(args, "--relay-tls-pin")?
+        .map(|value| TlsCertificatePin::parse(&value))
+        .transpose()
+        .map_err(|_| CliError::Usage("--relay-tls-pin must use sha256:<64-hex>".into()))?;
     let relay_fingerprint = option(args, "--relay-public-key-fingerprint")?;
     let trust_manifest = option(args, "--relay-trust-manifest")?;
     let trust_bootstrap = option(args, "--relay-trust-bootstrap-key")?
@@ -229,6 +233,7 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         relay_origin,
         inbox_url,
         relay_public_key,
+        relay_tls_pin,
         relay_trust,
     );
     authority
@@ -301,6 +306,10 @@ fn identity_show(args: &[String], passphrase: &str) -> Result<String, CliError> 
 
 fn doctor(args: &[String]) -> Result<String, CliError> {
     let data_dir = data_dir(args)?;
+    let _relay_tls_pin = option(args, "--relay-tls-pin")?
+        .map(|value| TlsCertificatePin::parse(&value))
+        .transpose()
+        .map_err(|_| CliError::Usage("--relay-tls-pin must use sha256:<64-hex>".into()))?;
     let relay_public_key = option(args, "--relay-public-key")?
         .map(|value| parse_hex_key(&value))
         .transpose()
@@ -642,7 +651,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CliError> {
     Ok(())
 }
 fn help_text() -> String {
-    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery import --input PATH [--data-dir PATH]\n\nPassphrases are read from stdin and are never accepted as arguments.".into()
+    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery import --input PATH [--data-dir PATH]\n\nPassphrases are read from stdin and are never accepted as arguments.".into()
 }
 
 #[cfg(test)]

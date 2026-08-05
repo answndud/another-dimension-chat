@@ -8,7 +8,7 @@ use crate::{
     pairing::{PairingError, PairingSession},
     relay_http::{RelayClient, RelayEndpoint, RelayError},
     storage::{EncryptedStore, StorageError},
-    trust::RelayTrust,
+    trust::{RelayTrust, TlsCertificatePin},
 };
 use axum::{
     body::{to_bytes, Body},
@@ -59,6 +59,7 @@ pub struct InviteAuthority {
     relay_origin: String,
     inbox_url: Option<String>,
     relay_public_key: Option<[u8; 32]>,
+    relay_tls_pin: Option<TlsCertificatePin>,
     relay_trust: Option<RelayTrust>,
     pending: Option<([u8; 32], u64)>,
     staged_peer: Option<VerifiedInvite>,
@@ -231,6 +232,7 @@ impl InviteAuthority {
         relay_origin: impl Into<String>,
         inbox_url: Option<String>,
         relay_public_key: Option<[u8; 32]>,
+        relay_tls_pin: Option<TlsCertificatePin>,
         relay_trust: Option<RelayTrust>,
     ) -> Self {
         let device_id = device_id.into();
@@ -241,6 +243,7 @@ impl InviteAuthority {
             relay_origin: relay_origin.into(),
             inbox_url,
             relay_public_key,
+            relay_tls_pin,
             relay_trust,
             pending: None,
             staged_peer: None,
@@ -911,7 +914,12 @@ pub fn handle_request_with_context(
             let Some(expires_at) = json_u64(request.body, "expires_at") else {
                 return response(400, "invalid_expiry", None, Some("application/json"));
             };
-            let Ok(endpoint) = RelayEndpoint::from_inbox_url(inbox_url) else {
+            let Ok(endpoint) = RelayEndpoint::from_inbox_url_with_pin(
+                inbox_url,
+                invite_authority
+                    .as_deref()
+                    .and_then(|authority| authority.relay_tls_pin),
+            ) else {
                 return response(
                     422,
                     "unsupported_relay_endpoint",
@@ -1057,7 +1065,12 @@ pub fn handle_request_with_context(
                     Some("application/json"),
                 );
             };
-            let Ok(endpoint) = RelayEndpoint::from_inbox_url(inbox_url) else {
+            let Ok(endpoint) = RelayEndpoint::from_inbox_url_with_pin(
+                inbox_url,
+                invite_authority
+                    .as_deref()
+                    .and_then(|authority| authority.relay_tls_pin),
+            ) else {
                 return response(
                     422,
                     "unsupported_relay_endpoint",
@@ -1182,7 +1195,12 @@ pub fn handle_request_with_context(
             let Some(conversation_id) = json_string(request.body, "conversation_id") else {
                 return response(400, "invalid_conversation", None, Some("application/json"));
             };
-            let Ok(endpoint) = RelayEndpoint::from_inbox_url(inbox_url) else {
+            let Ok(endpoint) = RelayEndpoint::from_inbox_url_with_pin(
+                inbox_url,
+                invite_authority
+                    .as_deref()
+                    .and_then(|authority| authority.relay_tls_pin),
+            ) else {
                 return response(
                     422,
                     "unsupported_relay_endpoint",
@@ -1352,7 +1370,12 @@ pub fn handle_request_with_context(
             let Some(ids) = json_string_array(request.body, "ids") else {
                 return response(400, "invalid_delivery_ids", None, Some("application/json"));
             };
-            let Ok(endpoint) = RelayEndpoint::from_inbox_url(inbox_url) else {
+            let Ok(endpoint) = RelayEndpoint::from_inbox_url_with_pin(
+                inbox_url,
+                invite_authority
+                    .as_deref()
+                    .and_then(|authority| authority.relay_tls_pin),
+            ) else {
                 return response(
                     422,
                     "unsupported_relay_endpoint",
@@ -2032,7 +2055,12 @@ mod tests {
             hex_bytes(payload.as_bytes()),
             hex_bytes(&peer_root.sign(payload.as_bytes()))
         );
-        let code_hash: [u8; 32] = Sha256::digest(code.as_bytes()).into();
+        let normalized_code: String = code
+            .chars()
+            .filter(|character| *character != '-')
+            .flat_map(char::to_uppercase)
+            .collect();
+        let code_hash: [u8; 32] = Sha256::digest(normalized_code.as_bytes()).into();
         let invite_digest: [u8; 32] = Sha256::digest(signed_invite.as_bytes()).into();
         let key_id: [u8; 32] = Sha256::digest(relay_key.verifying_key().as_bytes()).into();
         let receipt_body = format!(
@@ -2054,6 +2082,7 @@ mod tests {
             relay_origin,
             None,
             Some(relay_key.verifying_key().to_bytes()),
+            None,
             None,
         );
         let identity = IdentityView {
