@@ -129,6 +129,10 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ inbox_url: inboxUrl, ciphertext, expires_at: expiresAt }),
     }),
+    deliveryStatus: (digest) => request("/local-api/delivery/status", {
+      method: "POST",
+      body: JSON.stringify({ digest }),
+    }),
     syncDelivery: (inboxUrl) => request("/local-api/delivery/sync", {
       method: "POST",
       body: JSON.stringify({ inbox_url: inboxUrl }),

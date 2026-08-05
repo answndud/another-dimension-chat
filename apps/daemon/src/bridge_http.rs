@@ -899,6 +899,45 @@ pub fn handle_request_with_context(
                 Some("application/json"),
             )
         }
+        ("POST", "/local-api/delivery/status") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(digest) = json_string(request.body, "digest") else {
+                return response(
+                    400,
+                    "invalid_delivery_digest",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(ledger) = delivery_ledger.as_deref() else {
+                return response(503, "delivery_unavailable", None, Some("application/json"));
+            };
+            let Some(record) = ledger.get(digest) else {
+                return response(404, "delivery_not_found", None, Some("application/json"));
+            };
+            let relay_id = record
+                .relay_id
+                .as_deref()
+                .map(|value| format!(r##""{}""##, json_escape(value)))
+                .unwrap_or_else(|| "null".to_owned());
+            response(
+                200,
+                &format!(
+                    r##"{{"digest":"{}","state":"{}","attempts":{},"next_retry_at":{},"relay_id":{}}}"##,
+                    json_escape(&record.digest),
+                    delivery_state_name(record.state),
+                    record.attempts,
+                    record
+                        .next_retry_at
+                        .map_or_else(|| "null".to_owned(), |value| value.to_string()),
+                    relay_id
+                ),
+                None,
+                Some("application/json"),
+            )
+        }
         ("POST", "/local-api/delivery/sync") => {
             if let Err(reply) = authorize_api(bridge, &request, now) {
                 return reply;
@@ -1256,6 +1295,19 @@ fn json_string_array(body: &[u8], key: &str) -> Option<Vec<String>> {
         .iter()
         .map(|value| value.as_str().map(str::to_owned))
         .collect()
+}
+
+fn delivery_state_name(state: crate::delivery::DeliveryState) -> &'static str {
+    match state {
+        crate::delivery::DeliveryState::Draft => "draft",
+        crate::delivery::DeliveryState::Encrypted => "encrypted",
+        crate::delivery::DeliveryState::Queued => "queued",
+        crate::delivery::DeliveryState::RelayAccepted => "relay-accepted",
+        crate::delivery::DeliveryState::RecipientReceived => "recipient-received",
+        crate::delivery::DeliveryState::Decrypted => "decrypted",
+        crate::delivery::DeliveryState::Retryable => "retryable",
+        crate::delivery::DeliveryState::Failed => "failed",
+    }
 }
 
 fn json_escape(value: &str) -> String {
