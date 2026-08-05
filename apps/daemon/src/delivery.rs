@@ -54,6 +54,8 @@ pub struct DeliveryRecord {
     pub next_retry_at: Option<u64>,
     #[serde(default)]
     pub relay_id: Option<String>,
+    #[serde(default)]
+    pub wire: Option<String>,
 }
 
 #[derive(Default)]
@@ -63,6 +65,14 @@ pub struct DeliveryLedger {
 
 impl DeliveryLedger {
     pub fn register_encrypted(&mut self, digest: impl Into<String>) -> Result<(), EnvelopeError> {
+        self.register_encrypted_with_wire(digest, None)
+    }
+
+    pub fn register_encrypted_with_wire(
+        &mut self,
+        digest: impl Into<String>,
+        wire: Option<String>,
+    ) -> Result<(), EnvelopeError> {
         let digest = digest.into();
         if digest.is_empty() || self.records.contains_key(&digest) {
             return Err(EnvelopeError::InvalidWire);
@@ -75,6 +85,7 @@ impl DeliveryLedger {
                 attempts: 0,
                 next_retry_at: None,
                 relay_id: None,
+                wire,
             },
         );
         Ok(())
@@ -164,6 +175,7 @@ impl DeliveryLedger {
                 attempts: 0,
                 next_retry_at: None,
                 relay_id: Some(relay_id.into()),
+                wire: None,
             },
         );
         Ok(true)

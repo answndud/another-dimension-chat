@@ -133,6 +133,10 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ digest }),
     }),
+    retryDelivery: (inboxUrl, digest) => request("/local-api/delivery/retry", {
+      method: "POST",
+      body: JSON.stringify({ inbox_url: inboxUrl, digest }),
+    }),
     syncDelivery: (conversationId, inboxUrl) => request("/local-api/delivery/sync", {
       method: "POST",
       body: JSON.stringify({ conversation_id: conversationId, inbox_url: inboxUrl }),

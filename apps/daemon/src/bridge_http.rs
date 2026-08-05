@@ -861,10 +861,21 @@ pub fn handle_request_with_context(
                     Some("application/json"),
                 );
             };
+            let Ok(wire) = envelope.to_wire() else {
+                return response(
+                    422,
+                    "invalid_delivery_envelope",
+                    None,
+                    Some("application/json"),
+                );
+            };
             let Some(ledger) = delivery_ledger.as_deref_mut() else {
                 return response(503, "delivery_unavailable", None, None);
             };
-            if ledger.register_encrypted(digest.clone()).is_err() {
+            if ledger
+                .register_encrypted_with_wire(digest.clone(), Some(wire))
+                .is_err()
+            {
                 return response(409, "duplicate_delivery", None, Some("application/json"));
             }
             let client = RelayClient::new(endpoint);
@@ -933,6 +944,122 @@ pub fn handle_request_with_context(
                         .next_retry_at
                         .map_or_else(|| "null".to_owned(), |value| value.to_string()),
                     relay_id
+                ),
+                None,
+                Some("application/json"),
+            )
+        }
+        ("POST", "/local-api/delivery/retry") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(inbox_url) = json_string(request.body, "inbox_url") else {
+                return response(400, "invalid_inbox_url", None, Some("application/json"));
+            };
+            let Some(digest) = json_string(request.body, "digest") else {
+                return response(
+                    400,
+                    "invalid_delivery_digest",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Ok(endpoint) = RelayEndpoint::from_inbox_url(inbox_url) else {
+                return response(
+                    422,
+                    "unsupported_relay_endpoint",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(ledger) = delivery_ledger.as_deref_mut() else {
+                return response(503, "delivery_unavailable", None, Some("application/json"));
+            };
+            let Some(record) = ledger.get(digest).cloned() else {
+                return response(404, "delivery_not_found", None, Some("application/json"));
+            };
+            if record.state == crate::delivery::DeliveryState::Failed {
+                return response(
+                    409,
+                    "delivery_retry_exhausted",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            if record.state != crate::delivery::DeliveryState::Retryable {
+                return response(
+                    409,
+                    "delivery_not_retryable",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            if record.next_retry_at.is_some_and(|retry_at| retry_at > now) {
+                return response(
+                    429,
+                    "delivery_retry_backoff",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            let Some(wire) = record.wire else {
+                return response(
+                    409,
+                    "delivery_not_retriable",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Ok(envelope) = RelayEnvelope::from_wire(&wire, now) else {
+                return response(
+                    409,
+                    "delivery_not_retriable",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            if envelope.mailbox != endpoint.capability {
+                return response(
+                    422,
+                    "delivery_endpoint_mismatch",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            let accepted = match RelayClient::new(endpoint).post_blocking(&envelope) {
+                Ok(value) => value,
+                Err(_) => {
+                    let _ = ledger.schedule_retry(digest, now);
+                    if let Some(store) = session_store.as_deref_mut() {
+                        let _ = ledger.persist(store);
+                    }
+                    return response(503, "relay_unavailable", None, Some("application/json"));
+                }
+            };
+            if ledger.bind_relay_id(digest, &accepted.id).is_err()
+                || ledger
+                    .transition(digest, crate::delivery::DeliveryState::Queued)
+                    .is_err()
+                || ledger
+                    .transition(digest, crate::delivery::DeliveryState::RelayAccepted)
+                    .is_err()
+            {
+                return response(503, "delivery_state_unavailable", None, None);
+            }
+            if let Some(store) = session_store.as_deref_mut() {
+                if ledger.persist(store).is_err() {
+                    return response(503, "storage_unavailable", None, None);
+                }
+            }
+            response(
+                202,
+                &format!(
+                    r##"{{"accepted":true,"id":"{}","digest":"{}","state":"relay-accepted"}}"##,
+                    json_escape(&accepted.id),
+                    json_escape(digest)
                 ),
                 None,
                 Some("application/json"),
