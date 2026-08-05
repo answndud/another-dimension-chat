@@ -1,8 +1,10 @@
+use crate::protocol_gate::TtlContract;
 use getrandom::fill as secure_random;
 use sha2::{Digest, Sha256};
 use std::{
     fmt,
     net::{IpAddr, SocketAddr, TcpListener},
+    time::Instant,
 };
 use zeroize::Zeroizing;
 
@@ -132,7 +134,8 @@ pub struct LocalBridge {
 struct SessionState {
     cookie_hash: [u8; TOKEN_HASH_BYTES],
     csrf_hash: [u8; TOKEN_HASH_BYTES],
-    expires_at: u64,
+    ttl: TtlContract,
+    started: Instant,
 }
 
 impl fmt::Debug for LocalBridge {
@@ -212,11 +215,15 @@ impl LocalBridge {
         self.bootstrap_token = None;
         let cookie = random_token()?;
         let csrf_token = random_token()?;
-        let expires_at = now.saturating_add(self.config.session_ttl_seconds);
+        let ttl = TtlContract {
+            issued_at: now,
+            ttl_seconds: self.config.session_ttl_seconds,
+        };
         self.session = Some(SessionState {
             cookie_hash: hash_token(&cookie),
             csrf_hash: hash_token(&csrf_token),
-            expires_at,
+            ttl,
+            started: Instant::now(),
         });
         Ok(SessionCredentials {
             set_cookie: format!(
@@ -225,7 +232,7 @@ impl LocalBridge {
             ),
             cookie,
             csrf_token,
-            expires_at,
+            expires_at: ttl.expires_at(),
             ui_version: self.config.ui_version.clone(),
         })
     }
@@ -236,7 +243,9 @@ impl LocalBridge {
             return Err(BridgeError::SessionInvalid);
         }
         let session = self.session.as_ref().ok_or(BridgeError::SessionInvalid)?;
-        if now >= session.expires_at
+        if session
+            .ttl
+            .is_expired(now, session.started.elapsed().as_secs())
             || !constant_time_equal(&session.cookie_hash, &hash_token(request.cookie))
         {
             return Err(BridgeError::SessionInvalid);
