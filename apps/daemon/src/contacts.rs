@@ -15,6 +15,8 @@ pub struct ContactRecord {
     pub state: String,
     #[serde(default)]
     pub conversation_id: Option<String>,
+    #[serde(default)]
+    pub last_message_preview: Option<String>,
     pub last_message_at: Option<u64>,
     pub unread_count: u32,
 }
@@ -88,6 +90,10 @@ impl ContactDirectory {
                     .contacts
                     .get(&account_id)
                     .and_then(|item| item.conversation_id.clone()),
+                last_message_preview: self
+                    .contacts
+                    .get(&account_id)
+                    .and_then(|item| item.last_message_preview.clone()),
                 last_message_at,
                 unread_count,
             },
@@ -151,6 +157,28 @@ impl ContactDirectory {
             .ok_or(ContactDirectoryError::ContactNotFound)?;
         contact.unread_count = contact.unread_count.saturating_add(1);
         contact.last_message_at = Some(now);
+        Ok(())
+    }
+
+    pub fn record_message(
+        &mut self,
+        conversation_id: &str,
+        preview: &str,
+        now: u64,
+        background: bool,
+    ) -> Result<(), ContactDirectoryError> {
+        let contact = self
+            .contacts
+            .values_mut()
+            .find(|item| item.conversation_id.as_deref() == Some(conversation_id))
+            .ok_or(ContactDirectoryError::ContactNotFound)?;
+        contact.last_message_at = Some(now);
+        contact.last_message_preview = Some(preview.to_owned());
+        if background {
+            contact.unread_count = contact.unread_count.saturating_add(1);
+        } else {
+            contact.unread_count = 0;
+        }
         Ok(())
     }
 

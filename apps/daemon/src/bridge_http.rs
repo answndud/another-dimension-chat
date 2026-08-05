@@ -321,6 +321,26 @@ impl InviteAuthority {
             .map_err(|_| ContactDirectoryError::Corrupt)
     }
 
+    fn record_contact_message(
+        &mut self,
+        conversation_id: &str,
+        plaintext: &[u8],
+        now: u64,
+        background: bool,
+        store: &mut EncryptedStore,
+    ) -> Result<(), ContactDirectoryError> {
+        let preview = String::from_utf8_lossy(plaintext)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        let preview = preview.chars().take(160).collect::<String>();
+        self.contacts
+            .record_message(conversation_id, &preview, now, background)?;
+        self.contacts
+            .persist(store)
+            .map_err(|_| ContactDirectoryError::Corrupt)
+    }
+
     fn create(&mut self, now: u64) -> Option<(String, String)> {
         let mut bytes = [0_u8; 32];
         getrandom::fill(&mut bytes).ok()?;
@@ -1455,6 +1475,7 @@ pub fn handle_request_with_context(
             let Some(conversation_id) = json_string(request.body, "conversation_id") else {
                 return response(400, "invalid_conversation", None, Some("application/json"));
             };
+            let background = json_bool(request.body, "background").unwrap_or(false);
             let Ok(endpoint) = RelayEndpoint::from_inbox_url_with_pin(
                 inbox_url,
                 invite_authority
@@ -1571,6 +1592,15 @@ pub fn handle_request_with_context(
                     if ledger.persist(store).is_err() {
                         return response(503, "storage_unavailable", None, None);
                     }
+                }
+                if let Some(authority) = invite_authority.as_deref_mut() {
+                    let _ = authority.record_contact_message(
+                        &conversation_id,
+                        &plaintext,
+                        now,
+                        background,
+                        store,
+                    );
                 }
                 acknowledged_ids.push(relay_id.clone());
                 messages.push(format!(

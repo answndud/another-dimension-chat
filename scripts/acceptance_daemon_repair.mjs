@@ -208,9 +208,12 @@ try {
   const boundContacts = await alice.api("GET", "/local-api/contacts");
   assert.equal(boundContacts.body.contacts[0].conversation_id, conversationId);
   assert.equal((await alice.api("POST", "/local-api/contacts/read", { account_id: contacts.body.contacts[0].account_id })).status, 200);
+  const bobContacts = await bob.api("GET", "/local-api/contacts");
+  assert.equal(bobContacts.body.contacts.length, 1);
   const bobPackage = await bob.api("POST", "/local-api/session/prepare", { conversation_id: conversationId });
   const welcome = await alice.api("POST", "/local-api/session/add-member", { conversation_id: conversationId, key_package: bobPackage.body.key_package });
   assert.equal((await bob.api("POST", "/local-api/session/join", { conversation_id: conversationId, welcome: welcome.body.welcome })).status, 200, JSON.stringify(welcome.body));
+  assert.equal((await bob.api("POST", "/local-api/contacts/bind-conversation", { account_id: bobContacts.body.contacts[0].account_id, conversation_id: conversationId })).status, 200);
   const ciphertext = await alice.api("POST", "/local-api/session/send", { conversation_id: conversationId, plaintext: "repair-flow" });
   assert.equal(ciphertext.status, 200);
   const posted = await alice.api("POST", "/local-api/delivery/post", { inbox_url: bob.inboxUrl, ciphertext: ciphertext.body.ciphertext, expires_at: Math.floor(Date.now() / 1000) + 3600 });
@@ -218,6 +221,8 @@ try {
   const received = await bob.api("POST", "/local-api/delivery/sync", { conversation_id: conversationId, inbox_url: bob.inboxUrl });
   assert.equal(received.status, 200);
   assert.equal(Buffer.from(received.body.messages[0].plaintext, "hex").toString(), "repair-flow");
+  const metadata = await bob.api("GET", "/local-api/contacts");
+  assert.equal(metadata.body.contacts[0].last_message_preview, "repair-flow");
 
   const oldAliceInbox = alice.inboxUrl;
   const rotation = await relayApi(relayA, "POST", "/api/v1/inbox/rotate", undefined, { "x-ad-local-access": relayA.localAccessCapability });

@@ -142,9 +142,9 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ inbox_url: inboxUrl, digest }),
     }),
-    syncDelivery: (conversationId, inboxUrl) => request("/local-api/delivery/sync", {
+    syncDelivery: (conversationId, inboxUrl, background = false) => request("/local-api/delivery/sync", {
       method: "POST",
-      body: JSON.stringify({ conversation_id: conversationId, inbox_url: inboxUrl }),
+      body: JSON.stringify({ conversation_id: conversationId, inbox_url: inboxUrl, ...(background ? { background: true } : {}) }),
     }),
     ackDelivery: (inboxUrl, ids) => request("/local-api/delivery/ack", {
       method: "POST",
