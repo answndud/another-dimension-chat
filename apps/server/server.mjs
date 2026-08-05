@@ -1,6 +1,6 @@
 import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, randomBytes, sign, timingSafeEqual, X509Certificate } from "node:crypto";
 import { createReadStream, realpathSync } from "node:fs";
-import { chmod, lstat, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, open, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
 import { dirname, extname, join, normalize, resolve } from "node:path";
@@ -17,6 +17,9 @@ const CAPABILITY_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const CAPABILITY_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const MAX_INVITE_CODE_RECORDS = 256;
 const MAX_INVITE_CODE_BODY_BYTES = 96 * 1024 + 4096;
+const MAX_BLOB_BYTES = 32 * 1024 * 1024;
+const MAX_BLOB_CHUNK_BYTES = 64 * 1024;
+const MAX_BLOB_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaultDist = resolve(__dirname, "../web/dist");
 
@@ -118,6 +121,26 @@ async function readBody(req, limit = MAX_ENVELOPE_BYTES + 4096, timeoutMs = 15_0
   });
   try { return await Promise.race([read, timeout]); } finally { clearTimeout(timer); }
 }
+
+async function readBodyBuffer(req, limit, timeoutMs = 15_000) {
+  let timer;
+  const read = (async () => {
+    const chunks = [];
+    let size = 0;
+    for await (const chunk of req) {
+      size += chunk.length;
+      if (size > limit) throw new Error("request_too_large");
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+  })();
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => { req.destroy(); req.socket.destroy(); reject(new Error("request_timeout")); }, timeoutMs);
+  });
+  try { return await Promise.race([read, timeout]); } finally { clearTimeout(timer); }
+}
+
+function validBlobId(value) { return /^[A-Za-z0-9_-]{32,128}$/.test(String(value || "")); }
 
 function safeFile(distDir, pathname) {
   const relative = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
@@ -306,6 +329,24 @@ export async function createLocalServer({
   if (tlsKeyFile && normalizedPublicUrl.startsWith("http://")) throw new Error("AD_PUBLIC_URL must use HTTPS when direct TLS is enabled.");
   if (tlsCertFile) validateTlsCertificate(await readFile(tlsCertFile, "utf8"));
   await ensurePrivateDirectory(dataDir);
+  const blobDir = join(dataDir, "blobs");
+  await ensurePrivateDirectory(blobDir);
+  const purgeBlobs = async () => {
+    for (const name of await readdir(blobDir)) {
+      if (!name.endsWith(".meta.json")) continue;
+      const metaFile = join(blobDir, name);
+      try {
+        const meta = JSON.parse(await readFile(metaFile, "utf8"));
+        if (!Number.isSafeInteger(meta.expiresAt) || meta.expiresAt <= Date.now()) {
+          await unlink(metaFile).catch(() => {});
+          await unlink(join(blobDir, name.replace(/\.meta\.json$/, ".blob"))).catch(() => {});
+        }
+      } catch {
+        await unlink(metaFile).catch(() => {});
+      }
+    }
+  };
+  await purgeBlobs();
   const capabilityFile = join(dataDir, "inbox-capability");
   const localAccessFile = join(dataDir, "local-access-capability");
   const localUiUrlFile = join(dataDir, "local-ui-url");
@@ -512,6 +553,62 @@ export async function createLocalServer({
     }
     if (retiredInboxPrefixes.has(requestUrl.pathname.replace(/\/ack$/, ""))) {
       json(res, 410, req.method === "GET" ? { error: "capability_expired" } : { accepted: false, error: "capability_expired" }, headers);
+      return;
+    }
+    const blobMatch = requestUrl.pathname.match(/^\/api\/v1\/blobs\/([A-Za-z0-9_-]{32,128})$/);
+    if (blobMatch && ["POST", "GET", "DELETE"].includes(req.method)) {
+      if (!capabilityValid(inboxCapability) || !hasRelayCapability(req, inboxCapability)) {
+        json(res, 403, { error: "relay_capability_required" }, headers);
+        return;
+      }
+      await purgeBlobs();
+      const blobId = blobMatch[1];
+      const blobFile = join(blobDir, `${blobId}.blob`);
+      const metaFile = join(blobDir, `${blobId}.meta.json`);
+      if (req.method === "GET") {
+        try {
+          const meta = JSON.parse(await readFile(metaFile, "utf8"));
+          if (meta.expiresAt <= Date.now()) throw new Error("expired");
+          const body = await readFile(blobFile);
+          res.writeHead(200, { ...headers, "cache-control": "no-store", "content-type": "application/octet-stream", "content-length": body.length, "x-ad-blob-complete": String(meta.complete) });
+          res.end(body);
+        } catch { json(res, 404, { error: "blob_not_found" }, headers); }
+        return;
+      }
+      if (req.method === "DELETE") {
+        await unlink(blobFile).catch(() => {});
+        await unlink(metaFile).catch(() => {});
+        json(res, 200, { deleted: true }, headers);
+        return;
+      }
+      try {
+        const offset = Number(req.headers["x-ad-blob-offset"] || 0);
+        const total = Number(req.headers["x-ad-blob-total"] || 0);
+        const requestedTtl = Number(req.headers["x-ad-blob-ttl-ms"] || MAX_BLOB_TTL_MS);
+        if (![offset, total, requestedTtl].every(Number.isSafeInteger) || offset < 0 || total <= 0 || total > MAX_BLOB_BYTES || offset > total || requestedTtl <= 0) throw new Error("invalid_blob_metadata");
+        const body = await readBodyBuffer(req, MAX_BLOB_CHUNK_BYTES, requestTimeoutMs);
+        if (offset + body.length > total) throw new Error("blob_chunk_out_of_bounds");
+        let meta = null;
+        try { meta = JSON.parse(await readFile(metaFile, "utf8")); } catch { /* first chunk */ }
+        if (meta && (meta.total !== total || meta.expiresAt <= Date.now())) throw new Error("blob_metadata_mismatch");
+        if (!meta) {
+          if (offset !== 0) throw new Error("blob_offset_mismatch");
+          meta = { version: 1, total, received: 0, complete: false, expiresAt: Date.now() + Math.min(requestedTtl, MAX_BLOB_TTL_MS) };
+        }
+        const handle = await open(blobFile, offset === 0 ? "w" : "r+");
+        try {
+          const current = (await handle.stat()).size;
+          if (current !== offset) throw new Error("blob_offset_mismatch");
+          await handle.write(body, 0, body.length, offset);
+        } finally { await handle.close(); }
+        meta.received = offset + body.length;
+        meta.complete = meta.received === meta.total;
+        await writeFile(metaFile, `${JSON.stringify(meta)}\n`, { mode: 0o600 });
+        json(res, meta.complete ? 201 : 202, { accepted: true, complete: meta.complete, received: meta.received, total: meta.total, expiresAt: meta.expiresAt, blobUrl: `/api/v1/blobs/${blobId}` }, headers);
+      } catch (error) {
+        const status = ["blob_offset_mismatch", "blob_metadata_mismatch"].includes(error.message) ? 409 : error.message === "request_too_large" ? 413 : 400;
+        json(res, status, { accepted: false, error: error.message }, headers);
+      }
       return;
     }
     if (requestUrl.pathname === inboxPrefix && req.method === "GET") {

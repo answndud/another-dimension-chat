@@ -33,6 +33,18 @@ function rawCall(port, method, path, body) {
   });
 }
 
+function binaryCall(port, method, path, body, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const req = request({ host: "127.0.0.1", port, method, path, headers }, (res) => {
+      const chunks = [];
+      res.on("data", (chunk) => chunks.push(chunk));
+      res.on("end", () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }));
+    });
+    req.on("error", reject);
+    if (body) req.end(body); else req.end();
+  });
+}
+
 function localHeaders(runtime) {
   return { "x-ad-local-access": runtime.localAccessCapability };
 }
@@ -61,6 +73,23 @@ test("local server exposes health and a capability-scoped opaque inbox", async (
   assert.equal((await call(port, "POST", inboxPath, { envelope: daemonEnvelope })).status, 202);
   assert.equal((await call(port, "GET", inboxPath, undefined, relayHeaders)).status, 200);
   assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id] }, relayHeaders)).status, 200);
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("relay stores only opaque resumable encrypted blobs with bounded TTL", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const blobId = "a".repeat(32);
+  const auth = { "x-ad-relay-capability": runtime.inboxCapability };
+  const first = await binaryCall(port, "POST", `/api/v1/blobs/${blobId}`, Buffer.from("enc"), { ...auth, "x-ad-blob-offset": "0", "x-ad-blob-total": "7" });
+  assert.equal(first.status, 202);
+  const second = await binaryCall(port, "POST", `/api/v1/blobs/${blobId}`, Buffer.from("rypt"), { ...auth, "x-ad-blob-offset": "3", "x-ad-blob-total": "7" });
+  assert.equal(second.status, 201);
+  assert.deepEqual((await binaryCall(port, "GET", `/api/v1/blobs/${blobId}`, undefined, auth)).body, Buffer.from("encrypt"));
+  assert.equal((await binaryCall(port, "POST", `/api/v1/blobs/${blobId}`, Buffer.from("x"), { ...auth, "x-ad-blob-offset": "0", "x-ad-blob-total": "7" })).status, 409);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });
