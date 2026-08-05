@@ -144,6 +144,46 @@ impl DeliveryLedger {
             .count()
     }
 
+    pub fn register_recipient_received(
+        &mut self,
+        digest: impl Into<String>,
+        relay_id: impl Into<String>,
+    ) -> Result<bool, EnvelopeError> {
+        let digest = digest.into();
+        if digest.is_empty() {
+            return Err(EnvelopeError::InvalidWire);
+        }
+        if self.records.contains_key(&digest) {
+            return Ok(false);
+        }
+        self.records.insert(
+            digest.clone(),
+            DeliveryRecord {
+                digest,
+                state: DeliveryState::RecipientReceived,
+                attempts: 0,
+                next_retry_at: None,
+                relay_id: Some(relay_id.into()),
+            },
+        );
+        Ok(true)
+    }
+
+    pub fn mark_decrypted(&mut self, digest: &str) -> Result<bool, EnvelopeError> {
+        let record = self
+            .records
+            .get_mut(digest)
+            .ok_or(EnvelopeError::InvalidWire)?;
+        if record.state == DeliveryState::Decrypted {
+            return Ok(false);
+        }
+        if record.state != DeliveryState::RecipientReceived {
+            return Err(EnvelopeError::InvalidWire);
+        }
+        record.state = DeliveryState::Decrypted;
+        Ok(true)
+    }
+
     pub fn schedule_retry(&mut self, digest: &str, now: u64) -> Result<bool, EnvelopeError> {
         let record = self
             .records
@@ -421,6 +461,25 @@ mod tests {
         assert_eq!(
             ledger.get("digest-2").unwrap().state,
             super::DeliveryState::Failed
+        );
+    }
+
+    #[test]
+    fn inbound_delivery_is_durable_and_idempotent() {
+        let mut ledger = super::DeliveryLedger::default();
+        assert_eq!(
+            ledger.register_recipient_received("digest-in", "relay-1"),
+            Ok(true)
+        );
+        assert_eq!(
+            ledger.register_recipient_received("digest-in", "relay-1"),
+            Ok(false)
+        );
+        assert_eq!(ledger.mark_decrypted("digest-in"), Ok(true));
+        assert_eq!(ledger.mark_decrypted("digest-in"), Ok(false));
+        assert_eq!(
+            ledger.get("digest-in").unwrap().state,
+            super::DeliveryState::Decrypted
         );
     }
 

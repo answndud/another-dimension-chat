@@ -942,8 +942,14 @@ pub fn handle_request_with_context(
             if let Err(reply) = authorize_api(bridge, &request, now) {
                 return reply;
             }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
             let Some(inbox_url) = json_string(request.body, "inbox_url") else {
                 return response(400, "invalid_inbox_url", None, Some("application/json"));
+            };
+            let Some(conversation_id) = json_string(request.body, "conversation_id") else {
+                return response(400, "invalid_conversation", None, Some("application/json"));
             };
             let Ok(endpoint) = RelayEndpoint::from_inbox_url(inbox_url) else {
                 return response(
@@ -954,7 +960,8 @@ pub fn handle_request_with_context(
                 );
             };
             let capability = endpoint.capability.clone();
-            let items = match RelayClient::new(endpoint).sync_blocking() {
+            let client = RelayClient::new(endpoint);
+            let items = match client.sync_blocking() {
                 Ok(items) => items,
                 Err(_) => {
                     return response(503, "relay_unavailable", None, Some("application/json"))
@@ -988,15 +995,90 @@ pub fn handle_request_with_context(
                         Some("application/json"),
                     );
                 }
-                validated_items.push(format!(
-                    r##"{{"id":"{}","envelope":"{}"}}"##,
-                    json_escape(&item.id),
-                    json_escape(&item.envelope)
+                validated_items.push((item.id, envelope));
+            }
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, Some("application/json"));
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, Some("application/json"));
+            };
+            let mut acknowledged_ids = Vec::new();
+            let mut messages = Vec::new();
+            for (relay_id, envelope) in validated_items {
+                let digest = match envelope.digest() {
+                    Ok(value) => value,
+                    Err(_) => {
+                        return response(
+                            502,
+                            "invalid_relay_envelope",
+                            None,
+                            Some("application/json"),
+                        );
+                    }
+                };
+                if delivery_ledger
+                    .as_deref()
+                    .and_then(|ledger| ledger.get(&digest))
+                    .is_some_and(|record| record.state == crate::delivery::DeliveryState::Decrypted)
+                {
+                    acknowledged_ids.push(relay_id);
+                    continue;
+                }
+                let plaintext = match catalog.receive(conversation_id, &envelope.ciphertext, store)
+                {
+                    Ok(value) => value,
+                    Err(_) => {
+                        return response(
+                            409,
+                            "message_decrypt_failed",
+                            None,
+                            Some("application/json"),
+                        );
+                    }
+                };
+                if let Some(ledger) = delivery_ledger.as_deref_mut() {
+                    if ledger
+                        .register_recipient_received(&digest, relay_id.clone())
+                        .is_err()
+                        || ledger.mark_decrypted(&digest).is_err()
+                    {
+                        return response(503, "delivery_state_unavailable", None, None);
+                    }
+                    if ledger.persist(store).is_err() {
+                        return response(503, "storage_unavailable", None, None);
+                    }
+                }
+                acknowledged_ids.push(relay_id.clone());
+                messages.push(format!(
+                    r##"{{"id":"{}","digest":"{}","plaintext":"{}"}}"##,
+                    json_escape(&relay_id),
+                    json_escape(&digest),
+                    hex_bytes(&plaintext)
                 ));
+            }
+            let acknowledged = if acknowledged_ids.is_empty() {
+                0
+            } else {
+                match client.ack_blocking(&acknowledged_ids) {
+                    Ok(value) => value,
+                    Err(_) => {
+                        return response(503, "relay_unavailable", None, Some("application/json"));
+                    }
+                }
+            };
+            if let Some(ledger) = delivery_ledger.as_deref_mut() {
+                if ledger.persist(store).is_err() {
+                    return response(503, "storage_unavailable", None, None);
+                }
             }
             response(
                 200,
-                &format!(r##"{{"items":[{}]}}"##, validated_items.join(",")),
+                &format!(
+                    r##"{{"acknowledged":{},"messages":[{}]}}"##,
+                    acknowledged,
+                    messages.join(",")
+                ),
                 None,
                 Some("application/json"),
             )

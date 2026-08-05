@@ -99,11 +99,11 @@ test("delivery helpers keep relay material in authenticated daemon request bodie
     },
   });
   await bridge.postDelivery("http://127.0.0.1:1421/api/v1/inbox/capability", "aa", 600);
-  await bridge.syncDelivery("http://127.0.0.1:1421/api/v1/inbox/capability");
+  await bridge.syncDelivery("conversation-1", "http://127.0.0.1:1421/api/v1/inbox/capability");
   await bridge.ackDelivery("http://127.0.0.1:1421/api/v1/inbox/capability", ["id-1"]);
   assert.deepEqual(calls.slice(1).map(({ url, options }) => [url, JSON.parse(options.body)]), [
     ["http://127.0.0.1:1420/local-api/delivery/post", { inbox_url: "http://127.0.0.1:1421/api/v1/inbox/capability", ciphertext: "aa", expires_at: 600 }],
-    ["http://127.0.0.1:1420/local-api/delivery/sync", { inbox_url: "http://127.0.0.1:1421/api/v1/inbox/capability" }],
+    ["http://127.0.0.1:1420/local-api/delivery/sync", { conversation_id: "conversation-1", inbox_url: "http://127.0.0.1:1421/api/v1/inbox/capability" }],
     ["http://127.0.0.1:1420/local-api/delivery/ack", { inbox_url: "http://127.0.0.1:1421/api/v1/inbox/capability", ids: ["id-1"] }],
   ]);
 });
