@@ -35,6 +35,34 @@ pub struct AttachmentManifest {
     pub chunks: Vec<AttachmentChunk>,
 }
 
+/// The small object carried inside an MLS application message. Ciphertext is
+/// deliberately omitted; it remains in the relay blob and only the nonce,
+/// length, and file key travel through the authenticated conversation.
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct AttachmentDescriptor {
+    pub version: u8,
+    pub blob_id: String,
+    pub key: AttachmentKey,
+    pub chunk_size: u32,
+    pub original_size: u64,
+    pub chunks: Vec<AttachmentChunkDescriptor>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct AttachmentChunkDescriptor {
+    pub index: u32,
+    pub nonce: String,
+    pub ciphertext_size: u32,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EncryptedAttachment {
+    pub descriptor: AttachmentDescriptor,
+    pub blob: Vec<u8>,
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum AttachmentError {
     Empty,
@@ -148,6 +176,86 @@ pub fn serialize(manifest: &AttachmentManifest) -> Result<String, AttachmentErro
     serde_json::to_string(manifest).map_err(|_| AttachmentError::Serialization)
 }
 
+pub fn encrypt_for_blob(
+    plaintext: &[u8],
+    key: AttachmentKey,
+    blob_id: &str,
+) -> Result<EncryptedAttachment, AttachmentError> {
+    if !valid_blob_id(blob_id) {
+        return Err(AttachmentError::InvalidManifest);
+    }
+    let manifest = encrypt(plaintext, &key)?;
+    let mut blob = Vec::new();
+    let mut chunks = Vec::with_capacity(manifest.chunks.len());
+    for chunk in &manifest.chunks {
+        let ciphertext = decode_hex(&chunk.ciphertext).ok_or(AttachmentError::InvalidChunk)?;
+        chunks.push(AttachmentChunkDescriptor {
+            index: chunk.index,
+            nonce: chunk.nonce.clone(),
+            ciphertext_size: ciphertext.len() as u32,
+        });
+        blob.extend_from_slice(&ciphertext);
+    }
+    Ok(EncryptedAttachment {
+        descriptor: AttachmentDescriptor {
+            version: manifest.version,
+            blob_id: blob_id.to_owned(),
+            key,
+            chunk_size: manifest.chunk_size,
+            original_size: manifest.original_size,
+            chunks,
+        },
+        blob,
+    })
+}
+
+pub fn decrypt_blob(
+    descriptor: &AttachmentDescriptor,
+    blob: &[u8],
+) -> Result<Vec<u8>, AttachmentError> {
+    if !valid_blob_id(&descriptor.blob_id)
+        || descriptor.version != ATTACHMENT_VERSION
+        || descriptor.chunk_size as usize != CHUNK_SIZE
+        || descriptor.original_size == 0
+        || descriptor.original_size as usize > MAX_ATTACHMENT_BYTES
+        || descriptor.chunks.is_empty()
+        || descriptor.chunks.len() > MAX_ATTACHMENT_BYTES.div_ceil(CHUNK_SIZE)
+    {
+        return Err(AttachmentError::InvalidManifest);
+    }
+    let mut offset = 0usize;
+    let mut chunks = Vec::with_capacity(descriptor.chunks.len());
+    for (expected, chunk) in descriptor.chunks.iter().enumerate() {
+        if chunk.index != expected as u32
+            || chunk.ciphertext_size < 16
+            || chunk.ciphertext_size as usize > CHUNK_SIZE + 16
+            || offset.checked_add(chunk.ciphertext_size as usize).is_none()
+        {
+            return Err(AttachmentError::InvalidChunk);
+        }
+        let end = offset + chunk.ciphertext_size as usize;
+        let ciphertext = blob.get(offset..end).ok_or(AttachmentError::InvalidChunk)?;
+        chunks.push(AttachmentChunk {
+            index: chunk.index,
+            nonce: chunk.nonce.clone(),
+            ciphertext: hex(ciphertext),
+        });
+        offset = end;
+    }
+    if offset != blob.len() {
+        return Err(AttachmentError::InvalidManifest);
+    }
+    decrypt(
+        &AttachmentManifest {
+            version: descriptor.version,
+            chunk_size: descriptor.chunk_size,
+            original_size: descriptor.original_size,
+            chunks,
+        },
+        &descriptor.key,
+    )
+}
+
 pub fn deserialize(value: &str) -> Result<AttachmentManifest, AttachmentError> {
     serde_json::from_str(value).map_err(|_| AttachmentError::InvalidManifest)
 }
@@ -174,6 +282,13 @@ fn decode_hex(value: &str) -> Option<Vec<u8>> {
         .step_by(2)
         .map(|index| u8::from_str_radix(&value[index..index + 2], 16).ok())
         .collect()
+}
+
+fn valid_blob_id(value: &str) -> bool {
+    (32..=128).contains(&value.len())
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'-')
 }
 
 #[cfg(test)]
@@ -211,6 +326,22 @@ mod tests {
         reordered.chunks.swap(0, 1);
         assert_eq!(
             decrypt(&reordered, &key),
+            Err(AttachmentError::InvalidChunk)
+        );
+    }
+
+    #[test]
+    fn mls_descriptor_contains_key_and_nonce_but_not_blob_ciphertext() {
+        let key = generate_key().unwrap();
+        let package = encrypt_for_blob(b"secret attachment", key, &"b".repeat(32)).unwrap();
+        let encoded = serde_json::to_string(&package.descriptor).unwrap();
+        assert!(!encoded.contains("\"ciphertext\":"));
+        assert_eq!(
+            decrypt_blob(&package.descriptor, &package.blob).unwrap(),
+            b"secret attachment"
+        );
+        assert_eq!(
+            decrypt_blob(&package.descriptor, &package.blob[..3]),
             Err(AttachmentError::InvalidChunk)
         );
     }
