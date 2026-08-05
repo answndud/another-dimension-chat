@@ -13,6 +13,7 @@ pub mod mls_storage_provider;
 pub mod model;
 pub mod pairing;
 pub mod protocol_gate;
+pub mod relay_http;
 pub mod storage;
 pub mod trust;
 
