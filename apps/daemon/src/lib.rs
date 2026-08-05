@@ -3,6 +3,7 @@
 pub mod bridge;
 pub mod bridge_http;
 pub mod cli;
+pub mod contacts;
 pub mod delivery;
 pub mod device;
 pub mod identity;

@@ -123,6 +123,10 @@ impl MlsSessionCatalog {
         }
     }
 
+    pub fn conversation_ids(&self) -> Vec<String> {
+        self.sessions.keys().cloned().collect()
+    }
+
     pub fn create(
         &mut self,
         conversation_id: &str,

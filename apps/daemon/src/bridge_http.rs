@@ -2,6 +2,7 @@
 
 use crate::{
     bridge::{BridgeRequest, LocalBridge},
+    contacts::{ContactDirectory, ContactDirectoryError},
     delivery::{DeliveryLedger, RelayEnvelope},
     identity::AccountRootKey,
     mls_session::{MlsSessionCatalog, SessionCatalogError},
@@ -65,6 +66,7 @@ pub struct InviteAuthority {
     pending: Option<([u8; 32], u64)>,
     staged_peer: Option<VerifiedInvite>,
     pairing: PairingSession,
+    contacts: ContactDirectory,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -253,7 +255,46 @@ impl InviteAuthority {
             pending: None,
             staged_peer: None,
             pairing: PairingSession::new(local_account_id, device_id),
+            contacts: ContactDirectory::new(),
         }
+    }
+
+    pub fn restore_contacts(&mut self, store: &EncryptedStore) -> Result<(), StorageError> {
+        self.contacts = ContactDirectory::restore(store)?;
+        Ok(())
+    }
+
+    fn register_approved_contact(
+        &mut self,
+        now: u64,
+        store: &mut EncryptedStore,
+    ) -> Result<(), ContactDirectoryError> {
+        let peer = self
+            .pairing
+            .snapshot()
+            .peer
+            .ok_or(ContactDirectoryError::ContactNotFound)?;
+        self.contacts
+            .upsert_verified(peer.account_id, peer.device_id, peer.relay_origin, now)?;
+        self.contacts
+            .persist(store)
+            .map_err(|_| ContactDirectoryError::Corrupt)
+    }
+
+    fn contacts(&self) -> Vec<crate::contacts::ContactRecord> {
+        self.contacts.list()
+    }
+
+    fn set_contact_alias(
+        &mut self,
+        account_id: &str,
+        alias: &str,
+        store: &mut EncryptedStore,
+    ) -> Result<(), ContactDirectoryError> {
+        self.contacts.set_alias(account_id, alias)?;
+        self.contacts
+            .persist(store)
+            .map_err(|_| ContactDirectoryError::Corrupt)
     }
 
     fn create(&mut self, now: u64) -> Option<(String, String)> {
@@ -786,14 +827,72 @@ pub fn handle_request_with_context(
                 return response(503, "storage_unavailable", None, None);
             };
             match authority.approve_pairing(now, store) {
-                Ok(()) => response(
-                    200,
-                    r##"{"state":"established","approved":true}"##,
-                    None,
-                    Some("application/json"),
-                ),
+                Ok(()) => match authority.register_approved_contact(now, store) {
+                    Ok(()) => response(
+                        200,
+                        r##"{"state":"established","approved":true}"##,
+                        None,
+                        Some("application/json"),
+                    ),
+                    Err(error) => contact_directory_error(error),
+                },
                 Err(error) => pairing_error(error),
             }
+        }
+        ("GET", "/local-api/contacts") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "contacts_unavailable", None, None);
+            };
+            let payload = match serde_json::to_string(&authority.contacts()) {
+                Ok(payload) => payload,
+                Err(_) => return response(503, "contacts_unavailable", None, None),
+            };
+            response(
+                200,
+                &format!(r##"{{"contacts":{payload}}}"##),
+                None,
+                Some("application/json"),
+            )
+        }
+        ("POST", "/local-api/contacts/alias") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "contacts_unavailable", None, None);
+            };
+            let Some(account_id) = json_string(request.body, "account_id") else {
+                return response(400, "account_id_required", None, Some("application/json"));
+            };
+            let Some(alias) = json_string(request.body, "alias") else {
+                return response(400, "alias_required", None, Some("application/json"));
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match authority.set_contact_alias(&account_id, &alias, store) {
+                Ok(()) => response(200, r##"{"updated":true}"##, None, Some("application/json")),
+                Err(error) => contact_directory_error(error),
+            }
+        }
+        ("GET", "/local-api/conversations") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            let payload =
+                serde_json::to_string(&catalog.conversation_ids()).unwrap_or_else(|_| "[]".into());
+            response(
+                200,
+                &format!(r##"{{"conversations":{payload}}}"##),
+                None,
+                Some("application/json"),
+            )
         }
         ("POST", "/local-api/pairing/reject") => {
             if let Err(reply) = authorize_api(bridge, &request, now) {
@@ -1913,6 +2012,16 @@ fn pairing_error(error: PairingError) -> Vec<u8> {
         PairingError::Duplicate => (409, "pairing_duplicate"),
         PairingError::SafetyMismatch => (422, "safety_number_mismatch"),
         PairingError::BindingChanged => (409, "pairing_binding_changed"),
+    };
+    response(status, code, None, Some("application/json"))
+}
+
+fn contact_directory_error(error: ContactDirectoryError) -> Vec<u8> {
+    let (status, code) = match error {
+        ContactDirectoryError::DuplicateDevice => (409, "contact_device_conflict"),
+        ContactDirectoryError::ContactNotFound => (404, "contact_not_found"),
+        ContactDirectoryError::InvalidAlias => (422, "invalid_alias"),
+        ContactDirectoryError::Corrupt => (503, "contacts_storage_corrupt"),
     };
     response(status, code, None, Some("application/json"))
 }

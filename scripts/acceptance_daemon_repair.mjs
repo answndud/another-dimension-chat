@@ -195,9 +195,15 @@ try {
   assert.equal((await alice.api("POST", "/local-api/pairing/verify-safety", { safety_number: aliceStaged.safety_number })).status, 200);
   assert.equal((await bob.api("POST", "/local-api/pairing/approve")).status, 200);
   assert.equal((await alice.api("POST", "/local-api/pairing/approve")).status, 200);
+  const contacts = await alice.api("GET", "/local-api/contacts");
+  assert.equal(contacts.status, 200);
+  assert.equal(contacts.body.contacts.length, 1);
+  assert.equal((await alice.api("POST", "/local-api/contacts/alias", { account_id: contacts.body.contacts[0].account_id, alias: "Bob" })).status, 200);
 
   const conversationId = "acceptance-repair-conversation";
   assert.equal((await alice.api("POST", "/local-api/session/create", { conversation_id: conversationId })).status, 201);
+  const conversations = await alice.api("GET", "/local-api/conversations");
+  assert.deepEqual(conversations.body.conversations, [conversationId]);
   const bobPackage = await bob.api("POST", "/local-api/session/prepare", { conversation_id: conversationId });
   const welcome = await alice.api("POST", "/local-api/session/add-member", { conversation_id: conversationId, key_package: bobPackage.body.key_package });
   assert.equal((await bob.api("POST", "/local-api/session/join", { conversation_id: conversationId, welcome: welcome.body.welcome })).status, 200, JSON.stringify(welcome.body));
