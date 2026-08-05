@@ -57,7 +57,10 @@ export function validateDaemonInvite(invite, expectedRelayOrigin, now = Date.now
   const publicKeyHex = accountId.startsWith("ad1pk") ? accountId.slice("ad1pk".length) : "";
   if (!/^[0-9a-f]{64}$/.test(publicKeyHex) || signature.length !== 64 || !/^[0-9a-f]{64}$/.test(lines[3])) throw new Error("invalid_signed_invite");
   const expiresAt = Number(lines[4]);
-  if (!Number.isSafeInteger(expiresAt) || expiresAt <= now) throw new Error("signed_invite_expired");
+  // Daemon invite payloads use Unix seconds; relay-local invite records use ms.
+  // Normalize only the comparison boundary so the signed wire format stays stable.
+  const expiryNow = expiresAt < 1_000_000_000_000 ? Math.floor(now / 1000) : now;
+  if (!Number.isSafeInteger(expiresAt) || expiresAt <= expiryNow) throw new Error("signed_invite_expired");
   let relayOrigin;
   try { relayOrigin = new URL(lines[5]).origin; } catch { throw new Error("signed_invite_relay_binding_missing"); }
   if (relayOrigin !== expectedRelayOrigin) throw new Error("signed_invite_relay_binding_mismatch");

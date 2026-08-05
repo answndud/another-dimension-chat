@@ -98,7 +98,9 @@ impl PairingSession {
     }
 
     pub fn verify_peer(&mut self, peer: VerifiedInvite, now: u64) -> Result<(), PairingError> {
-        if peer.account_id == self.local_account_id || peer.device_id == self.local_device_id {
+        // Device identifiers are scoped to their account (device-1 is valid
+        // for every account); only the account identity makes this a self invite.
+        if peer.account_id == self.local_account_id {
             return Err(PairingError::SelfInvite);
         }
         if now >= peer.expires_at {

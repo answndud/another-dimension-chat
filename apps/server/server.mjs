@@ -50,7 +50,11 @@ const mimeTypes = {
 
 function json(res, status, body, headers = {}) {
   const payload = JSON.stringify(body);
-  res.writeHead(status, { "content-type": "application/json; charset=utf-8", ...headers });
+  res.writeHead(status, {
+    "content-type": "application/json; charset=utf-8",
+    "content-length": Buffer.byteLength(payload),
+    ...headers,
+  });
   res.end(payload);
 }
 
@@ -308,6 +312,7 @@ export async function createLocalServer({
   const queueFile = join(dataDir, "inbox.json");
   const inviteCodeFile = join(dataDir, "invite-codes.json");
   let inboxCapability = await loadCapability(capabilityFile, "inbox-write", privateFileWriter);
+  const retiredInboxPrefixes = new Set();
   const relayReceiptKey = await loadRelayReceiptKey(dataDir, privateFileWriter, relayReceiptSigningKeyFile);
   let localAccessCapability = await loadCapability(localAccessFile, "local-control", privateFileWriter);
   let inbox;
@@ -365,6 +370,7 @@ export async function createLocalServer({
   const originFor = (address) => normalizedPublicUrl || `${scheme}://${urlHost(address)}:${port}`;
   const inboxUrlFor = (address) => `${originFor(address)}${capabilityPath(inboxCapability.token)}`;
   const rotateInboxCapability = async () => {
+    retiredInboxPrefixes.add(capabilityPath(inboxCapability.token));
     inboxCapability = newCapability("inbox-write");
     await privateFileWriter(capabilityFile, `${JSON.stringify(inboxCapability)}\n`);
     return inboxCapability;
@@ -480,7 +486,7 @@ export async function createLocalServer({
         const result = consumeInviteCode(inviteCodes, body?.code);
         if (!result.ok) { json(res, 404, { consumed: false, error: result.reason }, headers); return; }
         try { await persistInviteCodes(); } catch (error) { inviteCodes = before; throw error; }
-        const receiptBody = `ADRECEIPT1.${relayReceiptKey.publicKeyFingerprint}.${Buffer.from(originFor(bindHost), "utf8").toString("hex")}.${inviteCodeHash(body?.code)}.${invitePayloadDigest(result.record.invite)}.${Date.now()}`;
+        const receiptBody = `ADRECEIPT1.${relayReceiptKey.publicKeyFingerprint}.${Buffer.from(originFor(bindHost), "utf8").toString("hex")}.${inviteCodeHash(body?.code)}.${invitePayloadDigest(result.record.invite)}.${Math.floor(Date.now() / 1000)}`;
         const receipt = `${receiptBody}.${sign(null, Buffer.from(receiptBody), relayReceiptKey.privateKey).toString("hex")}`;
         json(res, 200, { consumed: true, invite: result.record.invite, inviteDigest: result.record.inviteDigest, receipt }, headers);
       } catch (error) {
@@ -499,6 +505,10 @@ export async function createLocalServer({
       }
       await rotateInboxCapability();
       json(res, 200, { rotated: true, inboxUrl: inboxUrlFor(bindHost) }, headers);
+      return;
+    }
+    if (retiredInboxPrefixes.has(requestUrl.pathname.replace(/\/ack$/, ""))) {
+      json(res, 410, req.method === "GET" ? { error: "capability_expired" } : { accepted: false, error: "capability_expired" }, headers);
       return;
     }
     if (requestUrl.pathname === inboxPrefix && req.method === "GET") {
