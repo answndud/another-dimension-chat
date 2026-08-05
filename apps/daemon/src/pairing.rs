@@ -175,6 +175,16 @@ impl PairingSession {
         Ok(())
     }
 
+    pub fn invalidate_binding(&mut self) -> Result<(), PairingError> {
+        if self.state != PairingState::Established {
+            return Err(PairingError::InvalidTransition);
+        }
+        self.state = PairingState::Rejected;
+        self.peer = None;
+        self.safety_verified = false;
+        Ok(())
+    }
+
     pub fn snapshot(&self) -> PairingSnapshot {
         PairingSnapshot {
             state: self.state,

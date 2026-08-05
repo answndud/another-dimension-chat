@@ -6,7 +6,7 @@ use crate::{
     identity::AccountRootKey,
     mls_session::{MlsSessionCatalog, SessionCatalogError},
     pairing::{PairingError, PairingSession},
-    relay_http::{RelayClient, RelayEndpoint},
+    relay_http::{RelayClient, RelayEndpoint, RelayError},
     storage::{EncryptedStore, StorageError},
     trust::RelayTrust,
 };
@@ -327,6 +327,13 @@ impl InviteAuthority {
             .persist(store)
             .map_err(|_| PairingError::InvalidTransition)
     }
+
+    fn invalidate_relay_binding(&mut self, store: &mut EncryptedStore) -> Result<(), PairingError> {
+        self.pairing.invalidate_binding()?;
+        self.pairing
+            .persist(store)
+            .map_err(|_| PairingError::InvalidTransition)
+    }
 }
 
 pub fn handle_request_with_context(
@@ -335,7 +342,7 @@ pub fn handle_request_with_context(
     now: u64,
     ui_root: Option<&Path>,
     identity: Option<&IdentityView>,
-    invite_authority: Option<&mut InviteAuthority>,
+    mut invite_authority: Option<&mut InviteAuthority>,
     mut session_catalog: Option<&mut MlsSessionCatalog>,
     mut session_store: Option<&mut EncryptedStore>,
     mut delivery_ledger: Option<&mut DeliveryLedger>,
@@ -936,6 +943,20 @@ pub fn handle_request_with_context(
             let client = RelayClient::new(endpoint);
             let accepted = match client.post_blocking(&envelope) {
                 Ok(value) => value,
+                Err(RelayError::Rejected(410)) => {
+                    if let (Some(authority), Some(store)) = (
+                        invite_authority.as_deref_mut(),
+                        session_store.as_deref_mut(),
+                    ) {
+                        let _ = authority.invalidate_relay_binding(store);
+                    }
+                    return response(
+                        409,
+                        "relay_capability_expired",
+                        None,
+                        Some("application/json"),
+                    );
+                }
                 Err(_) => {
                     let _ = ledger.schedule_retry(&digest, now);
                     if let Some(store) = session_store.as_deref_mut() {
@@ -1086,6 +1107,20 @@ pub fn handle_request_with_context(
             }
             let accepted = match RelayClient::new(endpoint).post_blocking(&envelope) {
                 Ok(value) => value,
+                Err(RelayError::Rejected(410)) => {
+                    if let (Some(authority), Some(store)) = (
+                        invite_authority.as_deref_mut(),
+                        session_store.as_deref_mut(),
+                    ) {
+                        let _ = authority.invalidate_relay_binding(store);
+                    }
+                    return response(
+                        409,
+                        "relay_capability_expired",
+                        None,
+                        Some("application/json"),
+                    );
+                }
                 Err(_) => {
                     let _ = ledger.schedule_retry(digest, now);
                     if let Some(store) = session_store.as_deref_mut() {
@@ -1145,6 +1180,20 @@ pub fn handle_request_with_context(
             let client = RelayClient::new(endpoint);
             let items = match client.sync_blocking() {
                 Ok(items) => items,
+                Err(RelayError::Rejected(410)) => {
+                    if let (Some(authority), Some(store)) = (
+                        invite_authority.as_deref_mut(),
+                        session_store.as_deref_mut(),
+                    ) {
+                        let _ = authority.invalidate_relay_binding(store);
+                    }
+                    return response(
+                        409,
+                        "relay_capability_expired",
+                        None,
+                        Some("application/json"),
+                    );
+                }
                 Err(_) => {
                     return response(503, "relay_unavailable", None, Some("application/json"))
                 }
@@ -1244,6 +1293,20 @@ pub fn handle_request_with_context(
             } else {
                 match client.ack_blocking(&acknowledged_ids) {
                     Ok(value) => value,
+                    Err(RelayError::Rejected(410)) => {
+                        if let (Some(authority), Some(store)) = (
+                            invite_authority.as_deref_mut(),
+                            session_store.as_deref_mut(),
+                        ) {
+                            let _ = authority.invalidate_relay_binding(store);
+                        }
+                        return response(
+                            409,
+                            "relay_capability_expired",
+                            None,
+                            Some("application/json"),
+                        );
+                    }
                     Err(_) => {
                         return response(503, "relay_unavailable", None, Some("application/json"));
                     }
@@ -1285,6 +1348,20 @@ pub fn handle_request_with_context(
             };
             let acknowledged = match RelayClient::new(endpoint).ack_blocking(&ids) {
                 Ok(value) => value,
+                Err(RelayError::Rejected(410)) => {
+                    if let (Some(authority), Some(store)) = (
+                        invite_authority.as_deref_mut(),
+                        session_store.as_deref_mut(),
+                    ) {
+                        let _ = authority.invalidate_relay_binding(store);
+                    }
+                    return response(
+                        409,
+                        "relay_capability_expired",
+                        None,
+                        Some("application/json"),
+                    );
+                }
                 Err(_) => {
                     return response(503, "relay_unavailable", None, Some("application/json"))
                 }
