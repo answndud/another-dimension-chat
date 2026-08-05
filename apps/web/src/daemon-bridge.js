@@ -101,6 +101,37 @@ export async function connectDaemonBridge({
     csrfToken,
     request,
     lock: () => request("/local-api/session/lock", { method: "POST" }),
+    createConversation: (conversationId) => request("/local-api/session/create", {
+      method: "POST",
+      body: JSON.stringify({ conversation_id: conversationId }),
+    }),
+    prepareConversation: (conversationId) => request("/local-api/session/prepare", {
+      method: "POST",
+      body: JSON.stringify({ conversation_id: conversationId }),
+    }),
+    joinConversation: (conversationId, welcome) => request("/local-api/session/join", {
+      method: "POST",
+      body: JSON.stringify({ conversation_id: conversationId, welcome }),
+    }),
+    addMember: (conversationId, keyPackage) => request("/local-api/session/add-member", {
+      method: "POST",
+      body: JSON.stringify({ conversation_id: conversationId, key_package: keyPackage }),
+    }),
+    sendMessage: (conversationId, plaintext) => request("/local-api/session/send", {
+      method: "POST",
+      body: JSON.stringify({ conversation_id: conversationId, plaintext }),
+    }),
+    receiveMessage: (conversationId, ciphertext) => request("/local-api/session/receive", {
+      method: "POST",
+      body: JSON.stringify({ conversation_id: conversationId, ciphertext }),
+    }),
+    pairingStatus: () => request("/local-api/pairing/status"),
+    verifySafety: (safetyNumber) => request("/local-api/pairing/verify-safety", {
+      method: "POST",
+      body: JSON.stringify({ safety_number: safetyNumber }),
+    }),
+    approvePairing: () => request("/local-api/pairing/approve", { method: "POST" }),
+    rejectPairing: () => request("/local-api/pairing/reject", { method: "POST" }),
   });
 }
 
@@ -121,5 +152,25 @@ export async function consumeRelayInvite(relayOrigin, code, { fetchImpl = global
   } catch { throw new DaemonBridgeError("relay-unavailable", "relay에 연결할 수 없습니다."); }
   const body = await jsonResponse(response);
   if (body.consumed !== true || typeof body.invite !== "string" || typeof body.receipt !== "string") throw new DaemonBridgeError("invite-consume-failed", "초대코드가 유효하지 않거나 이미 사용되었습니다.");
+  return body;
+}
+
+export async function createRelayInviteCode(relayOrigin, signedInvite, { fetchImpl = globalThis.fetch } = {}) {
+  let origin;
+  try { origin = new URL(String(relayOrigin)).origin; } catch { throw new DaemonBridgeError("invalid-relay", "relay 주소가 올바르지 않습니다."); }
+  const url = new URL(origin);
+  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  if (url.protocol !== "https:" && !loopback) throw new DaemonBridgeError("unsafe-relay", "원격 relay는 HTTPS에서만 사용할 수 있습니다.");
+  if (typeof fetchImpl !== "function") throw new DaemonBridgeError("unavailable", "relay에 연결할 수 없습니다.");
+  let response;
+  try {
+    response = await fetchImpl(`${origin}/api/v1/invite-codes/public`, {
+      method: "POST",
+      headers: { accept: "application/json", "content-type": "application/json" },
+      body: JSON.stringify({ invite: String(signedInvite || "") }),
+    });
+  } catch { throw new DaemonBridgeError("relay-unavailable", "relay에 연결할 수 없습니다."); }
+  const body = await jsonResponse(response);
+  if (body.created !== true || typeof body.code !== "string" || typeof body.inviteDigest !== "string") throw new DaemonBridgeError("invite-create-failed", "relay가 초대코드를 발급하지 않았습니다.");
   return body;
 }

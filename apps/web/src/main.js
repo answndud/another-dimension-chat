@@ -31,11 +31,11 @@ import {
   onSessionEvent,
   ready,
 } from "./web-runtime.js";
-import { connectDaemonBridge, consumeRelayInvite, DaemonBridgeError } from "./daemon-bridge.js";
+import { connectDaemonBridge, consumeRelayInvite, createRelayInviteCode, DaemonBridgeError } from "./daemon-bridge.js";
 import "./styles.css";
 
 const app = document.querySelector("#app");
-let state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", daemonReceivedInvite: null, daemonConsumedInvite: "", daemonInviteReceipt: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false, daemonBridge: null, daemonBridgeMode: false, daemonStatus: "확인 중", daemonIdentity: null, daemonInvite: null, daemonLocked: false };
+let state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", daemonReceivedInvite: null, daemonConsumedInvite: "", daemonInviteReceipt: "", daemonRelayOrigin: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false, daemonBridge: null, daemonBridgeMode: false, daemonStatus: "확인 중", daemonIdentity: null, daemonInvite: null, daemonPairing: null, daemonLocked: false, daemonConversationId: "", daemonKeyPackage: "", daemonWelcome: "", daemonCiphertext: "", daemonPlaintext: "" };
 let serviceWorkerStatus = "확인 중";
 let syncInFlight = false;
 const PASSPHRASE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
@@ -73,11 +73,18 @@ function lockedState(message) {
 
 function renderDaemonBridgeState() {
   const connected = Boolean(state.daemonBridge) && !state.daemonLocked;
+  if (connected && !state.daemonConversationId) state.daemonConversationId = newDaemonConversationId();
   const title = connected ? "보안 데몬 세션이 연결되었습니다" : "보안 데몬 연결이 필요합니다";
   const detail = connected
     ? "이 화면은 암호화 키·로컬 저장소·메시지 상태를 보관하지 않습니다. 실제 작업은 로컬 보안 데몬의 인증된 API를 통해서만 열립니다."
     : "브라우저 프로토타입 경로는 고위험 통신에 사용할 수 없습니다. CLI 데몬을 실행하고 데몬이 발급한 주소로 다시 여세요.";
-  return `<main class="daemon-gate" aria-labelledby="daemon-gate-title"><div class="daemon-gate-mark" aria-hidden="true">⊡</div><p class="eyebrow">LOCAL SECURITY DAEMON</p><h1 id="daemon-gate-title">${title}</h1><p class="lede">${detail}</p><div class="notice" role="status">${escapeHtml(state.notice || "키와 메시지는 브라우저가 아니라 로컬 데몬이 소유해야 합니다.")}</div><dl class="daemon-facts"><div><dt>세션 상태</dt><dd>${escapeHtml(state.daemonStatus)}</dd></div><div><dt>브라우저 저장소</dt><dd>daemon 모드에서 사용하지 않음</dd></div><div><dt>현재 identity</dt><dd>${escapeHtml(state.daemonIdentity ? `${state.daemonIdentity.display_name} · ${state.daemonIdentity.account_id}` : "daemon에서만 확인")}</dd></div><div><dt>보안 상태</dt><dd>고위험 출시 전까지 차단</dd></div></dl>${connected ? '<button id="daemon-create-invite" class="primary" type="button">일회성 초대 생성</button><button id="daemon-lock" class="quiet" type="button">데몬 세션 잠그기</button>' : '<p class="field-note">다시 연결하려면 daemon이 발급한 새 주소를 사용하세요.</p>'}${state.daemonInvite ? `<section class="daemon-invite"><h2>초대 공유 자료</h2><p>코드와 signed invite를 별도 신뢰 채널로 전달하세요. 10분 후 만료되며 새 초대 생성 시 이전 초대는 더 이상 UI에서 재사용하지 마세요.</p><label>초대 코드<textarea readonly rows="2">${escapeHtml(state.daemonInvite.invite_code)}</textarea></label><label>서명된 초대<textarea readonly rows="4">${escapeHtml(state.daemonInvite.signed_invite)}</textarea></label></section>` : ""}${connected ? `<section class="daemon-invite"><h2>받은 초대 검증</h2><label>상대 relay 주소<input id="received-relay-origin" placeholder="https://relay.example"></label><label>초대 코드<textarea id="received-invite-code" rows="2" placeholder="상대방의 초대 코드"></textarea></label><button id="daemon-consume-invite" class="secondary" type="button">relay에서 초대 가져오기</button><label>서명된 초대<textarea id="received-signed-invite" rows="4" placeholder="relay에서 가져온 signed invite">${escapeHtml(state.daemonConsumedInvite)}</textarea></label><button id="daemon-verify-invite" class="secondary" type="button">초대 검증</button>${state.daemonReceivedInvite ? `<p class="field-note">검증됨: ${escapeHtml(state.daemonReceivedInvite.account_id)} · device ${escapeHtml(state.daemonReceivedInvite.device_id)}</p>` : ""}</section>` : ""}${state.error ? `<p class="error" role="alert">${escapeHtml(state.error)}</p>` : ""}<p class="disclaimer">prototype / non-high-risk · 독립 보안 검토와 지원 matrix가 완료되기 전 민감한 통신을 입력하지 마세요.</p></main>`;
+  return `<main class="daemon-gate" aria-labelledby="daemon-gate-title"><div class="daemon-gate-mark" aria-hidden="true">⊡</div><p class="eyebrow">LOCAL SECURITY DAEMON</p><h1 id="daemon-gate-title">${title}</h1><p class="lede">${detail}</p><div class="notice" role="status">${escapeHtml(state.notice || "키와 메시지는 브라우저가 아니라 로컬 데몬이 소유해야 합니다.")}</div><dl class="daemon-facts"><div><dt>세션 상태</dt><dd>${escapeHtml(state.daemonStatus)}</dd></div><div><dt>브라우저 저장소</dt><dd>daemon 모드에서 사용하지 않음</dd></div><div><dt>현재 identity</dt><dd>${escapeHtml(state.daemonIdentity ? `${state.daemonIdentity.display_name} · ${state.daemonIdentity.account_id}` : "daemon에서만 확인")}</dd></div><div><dt>보안 상태</dt><dd>고위험 출시 전까지 차단</dd></div></dl>${connected ? '<button id="daemon-create-invite" class="primary" type="button">일회성 초대 생성</button><button id="daemon-lock" class="quiet" type="button">데몬 세션 잠그기</button>' : '<p class="field-note">다시 연결하려면 daemon이 발급한 새 주소를 사용하세요.</p>'}${state.daemonInvite ? `<section class="daemon-invite"><h2>초대 공유 자료</h2><p>코드와 signed invite를 별도 신뢰 채널로 전달하세요. 10분 후 만료되며 새 초대 생성 시 이전 초대는 더 이상 UI에서 재사용하지 마세요.</p><label>초대 코드<textarea readonly rows="2">${escapeHtml(state.daemonInvite.invite_code)}</textarea></label><p class="field-note">서명 자료는 daemon과 relay 사이에서만 처리됩니다. 상대에게는 코드만 전달하세요.</p></section>` : ""}${connected ? `<section class="daemon-invite"><h2>받은 초대 검증</h2><label>상대 relay 주소<input id="received-relay-origin" value="${escapeHtml(state.daemonRelayOrigin)}" placeholder="https://relay.example"></label><label>초대 코드<textarea id="received-invite-code" rows="2" placeholder="상대방의 초대 코드"></textarea></label><button id="daemon-consume-invite" class="secondary" type="button">relay에서 초대 가져오기</button><p class="field-note">signed invite와 relay receipt는 relay 소비 직후 daemon에 자동 전달되어 검증됩니다.</p>${state.daemonReceivedInvite ? `<p class="field-note">검증됨: ${escapeHtml(state.daemonReceivedInvite.account_id)} · device ${escapeHtml(state.daemonReceivedInvite.device_id)}</p>${state.daemonPairing?.state === "verified" ? '<button id="daemon-approve-pairing" class="primary" type="button">연락처 승인</button><button id="daemon-reject-pairing" class="quiet" type="button">거절</button>' : state.daemonPairing?.state === "established" ? '<p class="verified">연락처 승인이 완료되었습니다.</p>' : ""}` : ""}</section>` : ""}${renderDaemonSessionPanel()}${state.error ? `<p class="error" role="alert">${escapeHtml(state.error)}</p>` : ""}<p class="disclaimer">prototype / non-high-risk · 독립 보안 검토와 지원 matrix가 완료되기 전 민감한 통신을 입력하지 마세요.</p></main>`;
+}
+
+function renderDaemonSafetyControls(pairing) {
+  if (!pairing?.safety_number) return "";
+  if (pairing.safety_verified) return `<div class="daemon-safety"><strong>안전 번호</strong><code>${escapeHtml(pairing.safety_number)}</code><p class="verified">안전 번호 확인 완료</p></div>`;
+  return `<div class="daemon-safety"><strong>안전 번호</strong><code>${escapeHtml(pairing.safety_number)}</code><p class="field-note">상대방에게 별도 신뢰 채널로 전체 번호를 읽어 확인하세요.</p><label>확인한 안전 번호<input id="daemon-safety-confirmation" autocomplete="off" /></label><button id="daemon-verify-safety" class="secondary" type="button">안전 번호 확인</button></div>`;
 }
 
 onSessionEvent(({ message }) => {
@@ -122,6 +129,90 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function newDaemonConversationId() {
+  if (window.crypto?.randomUUID) return `conversation-${window.crypto.randomUUID()}`;
+  const bytes = new Uint8Array(16);
+  window.crypto?.getRandomValues?.(bytes);
+  return `conversation-${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("") || Date.now()}`;
+}
+
+function decodeHexText(value) {
+  const hex = String(value || "");
+  if (!hex || hex.length % 2 || !/^[0-9a-f]+$/i.test(hex)) throw new Error("데몬이 반환한 평문 형식이 올바르지 않습니다.");
+  const bytes = Uint8Array.from(hex.match(/.{2}/g), (pair) => Number.parseInt(pair, 16));
+  return new TextDecoder().decode(bytes);
+}
+
+function renderDaemonSessionPanel() {
+  const connected = Boolean(state.daemonBridge) && !state.daemonLocked;
+  if (!connected) return "";
+  if (state.daemonPairing?.state !== "established" || state.daemonPairing?.safety_verified !== true) {
+    return '<section class="daemon-session-tools" aria-live="polite"><h2>대화 세션</h2><p class="field-note">안전 번호를 확인하고 연락처를 승인한 뒤에만 대화 세션을 열 수 있습니다.</p></section>';
+  }
+  const conversationId = state.daemonConversationId || "";
+  return `<details class="daemon-session-tools"><summary>대화 세션 연결 및 메시지</summary><p class="field-note">현재 P0.5 개발 경계입니다. 브라우저는 평문 입력·출력만 담당하고 OpenMLS 키와 세션 상태는 데몬이 보관합니다. 최종 pairing에서는 아래 raw 연결 자료를 초대 코드 흐름으로 교체합니다.</p><label>대화 식별자<input id="daemon-conversation-id" value="${escapeHtml(conversationId)}" autocomplete="off" placeholder="새 대화 식별자"></label><div class="daemon-action-row"><button id="daemon-session-create" class="secondary" type="button">대화 만들기</button><button id="daemon-session-prepare" class="secondary" type="button">내 연결 자료 만들기</button></div><label>내 KeyPackage (상대 장치에 전달)<textarea id="daemon-key-package" readonly rows="3" placeholder="대화 만들기 후 생성됩니다">${escapeHtml(state.daemonKeyPackage)}</textarea></label><label>상대 장치의 Welcome<textarea id="daemon-welcome" rows="3" placeholder="상대 장치가 만든 Welcome을 붙여 넣으세요">${escapeHtml(state.daemonWelcome)}</textarea></label><button id="daemon-session-join" class="secondary" type="button">Welcome으로 참여</button><label>상대 장치의 KeyPackage<textarea id="daemon-peer-key-package" rows="3" placeholder="상대 장치의 KeyPackage를 붙여 넣으세요"></textarea></label><button id="daemon-session-add-member" class="secondary" type="button">상대 장치 추가</button><div class="daemon-divider"></div><label>메시지<textarea id="daemon-message" rows="3" placeholder="데몬이 암호화할 메시지"></textarea></label><button id="daemon-message-send" class="primary" type="button">암호화 후 보내기</button><label>생성된 암호문<textarea id="daemon-ciphertext" readonly rows="3" placeholder="relay가 연결되면 자동 전달됩니다">${escapeHtml(state.daemonCiphertext)}</textarea></label><label>받은 암호문<textarea id="daemon-incoming-ciphertext" rows="3" placeholder="상대 데몬의 암호문"></textarea></label><button id="daemon-message-receive" class="secondary" type="button">복호화하여 보기</button><label>복호화된 메시지<textarea id="daemon-plaintext" readonly rows="3" placeholder="복호화 결과">${escapeHtml(state.daemonPlaintext)}</textarea></label></details>`;
+}
+
+function bindDaemonSession() {
+  const bridge = state.daemonBridge;
+  const getConversationId = () => {
+    const value = document.querySelector("#daemon-conversation-id")?.value.trim() || "";
+    if (!value) throw new Error("대화 식별자를 입력하세요.");
+    state.daemonConversationId = value;
+    return value;
+  };
+  const run = async (action, success) => {
+    try {
+      await action();
+      state.notice = success;
+      state.error = "";
+    } catch (error) {
+      state.error = error.message;
+    }
+    render();
+  };
+  document.querySelector("#daemon-session-create")?.addEventListener("click", () => run(async () => {
+    const conversationId = getConversationId();
+    await bridge.createConversation(conversationId);
+  }, "대화 세션을 만들었습니다. 다음으로 연결 자료를 생성하세요."));
+  document.querySelector("#daemon-session-prepare")?.addEventListener("click", () => run(async () => {
+    const conversationId = getConversationId();
+    const result = await bridge.prepareConversation(conversationId);
+    state.daemonKeyPackage = result.key_package || "";
+    if (!state.daemonKeyPackage) throw new Error("데몬이 KeyPackage를 반환하지 않았습니다.");
+  }, "내 연결 자료를 만들었습니다. 안전한 별도 채널로 상대 장치에 전달하세요."));
+  document.querySelector("#daemon-session-join")?.addEventListener("click", () => run(async () => {
+    const conversationId = getConversationId();
+    const welcome = document.querySelector("#daemon-welcome")?.value.trim() || "";
+    if (!welcome) throw new Error("상대 장치의 Welcome을 입력하세요.");
+    state.daemonWelcome = welcome;
+    await bridge.joinConversation(conversationId, welcome);
+  }, "상대 장치의 Welcome을 검증하고 대화에 참여했습니다."));
+  document.querySelector("#daemon-session-add-member")?.addEventListener("click", () => run(async () => {
+    const conversationId = getConversationId();
+    const keyPackage = document.querySelector("#daemon-peer-key-package")?.value.trim() || "";
+    if (!keyPackage) throw new Error("상대 장치의 KeyPackage를 입력하세요.");
+    const result = await bridge.addMember(conversationId, keyPackage);
+    state.daemonWelcome = result.welcome || "";
+    if (!state.daemonWelcome) throw new Error("데몬이 Welcome을 반환하지 않았습니다.");
+  }, "상대 장치를 추가했습니다. 생성된 Welcome을 상대 장치에 전달하세요."));
+  document.querySelector("#daemon-message-send")?.addEventListener("click", () => run(async () => {
+    const conversationId = getConversationId();
+    const message = document.querySelector("#daemon-message")?.value || "";
+    if (!message.trim()) throw new Error("메시지를 입력하세요.");
+    const result = await bridge.sendMessage(conversationId, message);
+    state.daemonCiphertext = result.ciphertext || "";
+    if (!state.daemonCiphertext) throw new Error("데몬이 암호문을 반환하지 않았습니다.");
+  }, "메시지를 데몬에서 암호화했습니다. relay 계약이 연결되면 자동 전달됩니다."));
+  document.querySelector("#daemon-message-receive")?.addEventListener("click", () => run(async () => {
+    const conversationId = getConversationId();
+    const ciphertext = document.querySelector("#daemon-incoming-ciphertext")?.value.trim() || "";
+    if (!ciphertext) throw new Error("받은 암호문을 입력하세요.");
+    const result = await bridge.receiveMessage(conversationId, ciphertext);
+    state.daemonPlaintext = decodeHexText(result.plaintext);
+  }, "암호문을 데몬에서 복호화했습니다."));
 }
 
 function endpointOrigin(info) {
@@ -172,7 +263,7 @@ function explainError(value) {
     [/(wrong passphrase|damaged local profile|passphrase)/, "암호 문구가 틀렸거나 프로필 자료를 열 수 없습니다.", "암호 문구를 다시 확인하세요. 계속 실패하면 기존 자료를 덮어쓰지 말고 프로필 전용 백업을 사용하세요.", "현재 프로필은 잠금 해제되지 않았습니다.", "한 번만 다시 시도할 수 있습니다."],
     [/(storage|database|indexeddb|quota|private browsing)/, "브라우저 저장소를 열거나 기록할 수 없습니다.", "site data를 지우지 말고 필요한 백업을 먼저 보존한 뒤 일반 브라우저 창과 충분한 저장 공간에서 다시 여세요.", "현재 세션과 전송은 잠금 상태로 유지됩니다.", "저장소 상태를 확인한 뒤 다시 시도하세요."],
     [/(clipboard|copy)/, "클립보드를 사용할 수 없습니다.", "화면에 표시된 암호화 자료를 수동으로 복사하고 전송 후 clipboard history와 동기화 기록을 삭제하세요.", "암호화 자료는 화면의 수동 저장 영역에 남아 있습니다.", "브라우저 권한을 바꾸기 전까지 자동 복사를 반복하지 마세요."],
-    [/(safety material|safety|identity changed|peer identity)/, "상대 identity 또는 안전 문구를 신뢰할 수 없습니다.", "전송을 중단하고 별도 신뢰 채널에서 초대와 전체 안전 문구를 다시 비교하세요. identity 변경이면 새 프로필로 다시 pairing해야 합니다.", "메시지 전송은 허용되지 않습니다.", "확인 전 재시도하지 마세요."],
+    [/(safety material|safety|identity changed|peer identity|pairing_not_ready|pairing_binding_changed)/, "상대 identity 또는 안전 문구를 신뢰할 수 없습니다.", "전송을 중단하고 별도 신뢰 채널에서 초대와 전체 안전 문구를 다시 비교하세요. identity 변경이면 기존 연결을 폐기하고 새 pairing을 진행해야 합니다.", "메시지 전송은 허용되지 않습니다.", "확인 전 재시도하지 마세요."],
     [/(endpoint or capability|server endpoint|inbox|peer server|could not be reached|timeout)/, "상대 relay endpoint에 도달하지 못했거나 capability가 바뀌었습니다.", "서버 상태와 HTTPS 설정을 확인하세요. 실패하면 화면에 준비된 sealed envelope를 수동 전달하세요. capability 변경이면 새 초대를 교환하세요.", "자동 전달 완료로 기록되지 않습니다.", "서버 확인 후 재시도할 수 있습니다."],
     [/(already imported|already paired|revoked|expired|invite)/, "초대·봉투가 만료되었거나 이미 사용되었거나 현재 방과 맞지 않습니다.", "오래된 값을 다시 붙여 넣지 말고 새 초대 또는 새 봉투를 안전한 채널로 교환하세요.", "검증되지 않은 값은 처리되지 않습니다.", "새 값을 받은 뒤에만 재시도하세요."],
     [/(backup|transcript|session.*revision|rollback|integrity)/, "백업의 목적·무결성·revision이 현재 프로필과 맞지 않습니다.", "profile/session/transcript 백업을 구분하고, 변조되었거나 오래된 백업은 사용하지 마세요. 기존 데이터를 덮어쓰지 않습니다.", "복구는 완료되지 않았고 기존 자료는 보존됩니다.", "원본 백업을 별도 보관한 뒤에만 다시 시도하세요."],
@@ -275,6 +366,11 @@ function renderWorkspace() {
 function render() {
   if (state.daemonBridgeMode) {
     app.innerHTML = renderDaemonBridgeState();
+    if (state.daemonPairing?.safety_number) {
+      const inviteSection = document.querySelector("#daemon-consume-invite")?.closest("section");
+      inviteSection?.insertAdjacentHTML("beforeend", renderDaemonSafetyControls(state.daemonPairing));
+      if (!state.daemonPairing.safety_verified) document.querySelector("#daemon-approve-pairing")?.remove();
+    }
     document.querySelector("#daemon-lock")?.addEventListener("click", async () => {
       try {
         await state.daemonBridge.lock();
@@ -290,8 +386,11 @@ function render() {
     });
     document.querySelector("#daemon-create-invite")?.addEventListener("click", async () => {
       try {
-        state.daemonInvite = await state.daemonBridge.request("/local-api/invites", { method: "POST" });
-        state.notice = "초대를 생성했습니다. 코드와 signed invite를 별도 신뢰 채널로 전달하세요.";
+        const localInvite = await state.daemonBridge.request("/local-api/invites", { method: "POST" });
+        if (!state.daemonRelayOrigin) throw new Error("daemon에 relay 주소가 설정되지 않았습니다.");
+        const relayCode = await createRelayInviteCode(state.daemonRelayOrigin, localInvite.signed_invite);
+        state.daemonInvite = { ...localInvite, invite_code: relayCode.code, expires_at: relayCode.expiresAt, invite_digest: relayCode.inviteDigest };
+        state.notice = "relay가 일회성 초대코드를 발급했습니다. 코드만 별도 신뢰 채널로 전달하세요.";
         state.error = "";
         render();
       } catch (error) {
@@ -299,25 +398,48 @@ function render() {
         render();
       }
     });
-    document.querySelector("#daemon-verify-invite")?.addEventListener("click", async () => {
+    document.querySelector("#daemon-approve-pairing")?.addEventListener("click", async () => {
       try {
-        const result = await state.daemonBridge.request("/local-api/invites/stage", { method: "POST", body: JSON.stringify({ invite_code: document.querySelector("#received-invite-code").value, signed_invite: document.querySelector("#received-signed-invite").value, relay_receipt: state.daemonInviteReceipt || "" }) });
-        state.daemonReceivedInvite = result;
-        state.notice = "상대 identity를 검증하고 daemon 메모리에 staging했습니다. 아직 pairing이나 메시지 전송은 열리지 않았습니다.";
+        state.daemonPairing = { ...state.daemonPairing, ...(await state.daemonBridge.approvePairing()), safety_verified: true };
+        state.notice = "상대 연락처를 승인했습니다. 이제 후속 세션 연결을 진행할 수 있습니다.";
         state.error = "";
-        render();
-      } catch (error) { state.error = error.message; render(); }
+      } catch (error) { state.error = error.message; }
+      render();
+    });
+    document.querySelector("#daemon-verify-safety")?.addEventListener("click", async () => {
+      try {
+        const verified = await state.daemonBridge.verifySafety(document.querySelector("#daemon-safety-confirmation").value);
+        state.daemonPairing = { ...state.daemonPairing, ...verified, safety_verified: true };
+        state.daemonReceivedInvite = { ...state.daemonReceivedInvite, safety_verified: true };
+        state.notice = "안전 번호를 확인했습니다. 이제 연락처 승인을 진행할 수 있습니다.";
+        state.error = "";
+      } catch (error) { state.error = error.message; }
+      render();
+    });
+    document.querySelector("#daemon-reject-pairing")?.addEventListener("click", async () => {
+      try {
+        state.daemonPairing = await state.daemonBridge.rejectPairing();
+        state.daemonReceivedInvite = null;
+        state.notice = "상대 연락처 요청을 거절했습니다.";
+        state.error = "";
+      } catch (error) { state.error = error.message; }
+      render();
     });
     document.querySelector("#daemon-consume-invite")?.addEventListener("click", async () => {
       try {
         const result = await consumeRelayInvite(document.querySelector("#received-relay-origin").value, document.querySelector("#received-invite-code").value);
         state.daemonConsumedInvite = result.invite;
         state.daemonInviteReceipt = result.receipt;
-        state.notice = "relay에서 초대를 가져왔습니다. 서명 검증 전에는 상대 identity를 신뢰하지 마세요.";
+        const staged = await state.daemonBridge.request("/local-api/invites/stage", { method: "POST", body: JSON.stringify({ invite_code: document.querySelector("#received-invite-code").value, signed_invite: result.invite, relay_receipt: result.receipt }) });
+        state.daemonReceivedInvite = staged;
+        state.daemonPairing = staged;
+        state.daemonConsumedInvite = "";
+        state.notice = "relay 초대코드를 소비하고 daemon에서 상대 identity를 검증했습니다. 승인 전에는 연결되지 않습니다.";
         state.error = "";
       } catch (error) { state.error = error.message; }
       render();
     });
+    bindDaemonSession();
     return;
   }
   if (!state.profile) {
@@ -570,8 +692,11 @@ async function startApp() {
     if (daemonBridge) {
       state.daemonBridge = daemonBridge;
       state.daemonBridgeMode = true;
-      state.daemonStatus = (await daemonBridge.request("/local-api/status")).status || "인증됨";
+      const daemonStatus = await daemonBridge.request("/local-api/status");
+      state.daemonStatus = daemonStatus.status || "인증됨";
+      state.daemonRelayOrigin = daemonStatus.relay_origin || "";
       state.daemonIdentity = await daemonBridge.request("/local-api/identity");
+      state.daemonPairing = await daemonBridge.pairingStatus();
       state.notice = "브라우저 보안 경계를 확인했습니다. 암호화 키와 메시지 상태는 daemon이 소유합니다.";
       render();
       return;
