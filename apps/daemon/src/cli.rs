@@ -142,7 +142,7 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
             ui_dir.display()
         )));
     }
-    let store = open_store(&data_dir(args)?, passphrase)?;
+    let mut store = open_store(&data_dir(args)?, passphrase)?;
     let record = store
         .get(RecordClass::AccountRoot, "identity")
         .ok_or(CliError::NotInitialized)?;
@@ -167,6 +167,7 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         display_name: summary.display_name,
     };
     let relay_origin = option(args, "--relay-origin")?.unwrap_or_default();
+    let relay_tls_retrust = args.iter().any(|arg| arg == "--relay-tls-retrust");
     let inbox_url = option(args, "--inbox-url")?;
     if let Some(inbox_url) = &inbox_url {
         let expected_prefix = format!("{relay_origin}/api/v1/inbox/");
@@ -185,6 +186,13 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         .map(|value| TlsCertificatePin::parse(&value))
         .transpose()
         .map_err(|_| CliError::Usage("--relay-tls-pin must use sha256:<64-hex>".into()))?;
+    let relay_tls_pin =
+        resolve_relay_tls_pin(&mut store, &relay_origin, relay_tls_pin, relay_tls_retrust)?;
+    if relay_origin.starts_with("https://") && relay_tls_pin.is_none() {
+        return Err(CliError::Usage(
+            "HTTPS relay requires --relay-tls-pin or a previously trusted pin".into(),
+        ));
+    }
     let relay_fingerprint = option(args, "--relay-public-key-fingerprint")?;
     let trust_manifest = option(args, "--relay-trust-manifest")?;
     let trust_bootstrap = option(args, "--relay-trust-bootstrap-key")?
@@ -582,6 +590,62 @@ fn now_seconds() -> u64 {
         .map(|duration| duration.as_secs())
         .unwrap_or(0)
 }
+
+fn hex_bytes(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+fn relay_tls_pin_key(origin: &str) -> String {
+    format!("relay-tls-pin/{origin}")
+}
+
+fn resolve_relay_tls_pin(
+    store: &mut EncryptedStore,
+    relay_origin: &str,
+    supplied: Option<TlsCertificatePin>,
+    retrust: bool,
+) -> Result<Option<TlsCertificatePin>, CliError> {
+    if retrust && supplied.is_none() {
+        return Err(CliError::Usage(
+            "--relay-tls-retrust requires --relay-tls-pin".into(),
+        ));
+    }
+    if supplied.is_some() && !relay_origin.starts_with("https://") {
+        return Err(CliError::Usage(
+            "--relay-tls-pin requires an HTTPS relay origin".into(),
+        ));
+    }
+    if relay_origin.is_empty() {
+        return Ok(supplied);
+    }
+    let stored = store
+        .get(RecordClass::Account, &relay_tls_pin_key(relay_origin))
+        .and_then(|value| {
+            std::str::from_utf8(&value)
+                .ok()
+                .and_then(|value| TlsCertificatePin::parse(value).ok())
+        });
+    if let (Some(previous), Some(current)) = (stored.as_ref(), supplied.as_ref()) {
+        if previous != current && !retrust {
+            return Err(CliError::Usage(
+                "relay TLS pin changed; pass --relay-tls-retrust with the new pin".into(),
+            ));
+        }
+    }
+    let selected = supplied.or(stored);
+    if let Some(pin) = selected {
+        if supplied.is_some() && (retrust || stored.is_none() || stored != Some(pin)) {
+            store.put(
+                RecordClass::Account,
+                &relay_tls_pin_key(relay_origin),
+                format!("sha256:{}", hex_bytes(&pin.as_bytes())).as_bytes(),
+            )?;
+        }
+        return Ok(Some(pin));
+    }
+    Ok(None)
+}
+
 fn data_dir(args: &[String]) -> Result<PathBuf, CliError> {
     Ok(option(args, "--data-dir")?
         .map(PathBuf::from)
@@ -651,7 +715,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CliError> {
     Ok(())
 }
 fn help_text() -> String {
-    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery import --input PATH [--data-dir PATH]\n\nPassphrases are read from stdin and are never accepted as arguments.".into()
+    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery import --input PATH [--data-dir PATH]\n\nPassphrases are read from stdin and are never accepted as arguments.".into()
 }
 
 #[cfg(test)]
