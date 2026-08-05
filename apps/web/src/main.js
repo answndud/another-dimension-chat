@@ -38,6 +38,7 @@ const app = document.querySelector("#app");
 let state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", daemonReceivedInvite: null, daemonConsumedInvite: "", daemonInviteReceipt: "", daemonRelayOrigin: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false, daemonBridge: null, daemonBridgeMode: false, daemonStatus: "확인 중", daemonIdentity: null, daemonInvite: null, daemonPairing: null, daemonRelayTrust: null, daemonContacts: [], daemonContactSearch: "", daemonConversationIds: [], daemonSelectedContact: "", daemonLocked: false, daemonConversationId: "", daemonKeyPackage: "", daemonWelcome: "", daemonCiphertext: "", daemonPlaintext: "", daemonInboxUrl: "", daemonPeerInboxUrl: "", daemonMessages: [], daemonOutgoingMessages: [], daemonDeliveryDigest: "", daemonDeliveryState: "" };
 let serviceWorkerStatus = "확인 중";
 let syncInFlight = false;
+let daemonSyncInFlight = false;
 const PASSPHRASE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
 function generatePassphrase() {
@@ -774,6 +775,38 @@ async function receiveMessages(manual = false) {
   }
 }
 
+async function receiveDaemonMessages(background = false) {
+  const bridge = state.daemonBridge;
+  if (daemonSyncInFlight || !bridge || state.daemonLocked || !state.daemonConversationId || !state.daemonInboxUrl) return;
+  if (state.daemonPairing?.state !== "established" || state.daemonPairing?.safety_verified !== true) return;
+  daemonSyncInFlight = true;
+  try {
+    const result = await bridge.syncDelivery(state.daemonConversationId, state.daemonInboxUrl, background);
+    const received = (result.messages || []).map((message) => ({
+      id: message.id || "수신 메시지",
+      text: decodeHexText(message.plaintext),
+      state: "decrypted",
+      direction: "incoming",
+    }));
+    if (received.length) {
+      state.daemonMessages = [...state.daemonMessages, ...received];
+      state.daemonContacts = (await bridge.contacts()).contacts || state.daemonContacts;
+      state.notice = background ? `${received.length}개의 새 암호화 메시지를 받았습니다.` : "받은 암호화 메시지를 동기화했습니다.";
+      state.error = "";
+      render();
+    }
+  } catch (error) {
+    if (error.code === "relay_capability_expired") {
+      state.daemonPairing = { state: "rejected", safety_verified: false };
+      state.daemonInboxUrl = "";
+      state.notice = "relay capability가 폐기되어 새 연결이 필요합니다.";
+      render();
+    }
+  } finally {
+    daemonSyncInFlight = false;
+  }
+}
+
 async function refresh() {
   state.invite = await exportInvite();
   state.serverInfo = await getLocalServerInfo();
@@ -796,8 +829,15 @@ window.setInterval(() => {
     render();
   } else if (!document.hidden) receiveMessages(false);
 }, 5_000);
+window.setInterval(() => {
+  if (!document.hidden) return;
+  receiveDaemonMessages(true);
+}, 15_000);
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) receiveMessages(false);
+  if (!document.hidden) {
+    receiveMessages(false);
+    receiveDaemonMessages(false);
+  }
 });
 window.addEventListener("pagehide", () => lockProfile({ reason: "pagehide" }), { once: true });
 
