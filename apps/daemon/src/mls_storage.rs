@@ -34,12 +34,17 @@ pub enum KeyPackageState {
     Available,
     Reserved,
     Consumed,
+    Expired,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct KeyPackageRecord {
     state: KeyPackageState,
     reservation_digest: Option<String>,
+    #[serde(default)]
+    not_before: Option<u64>,
+    #[serde(default)]
+    not_after: Option<u64>,
 }
 
 #[derive(Debug)]
@@ -49,6 +54,7 @@ pub enum KeyPackageError {
     AlreadyRegistered,
     NotAvailable,
     ReservationMismatch,
+    InvalidLifetime,
 }
 
 impl std::fmt::Display for KeyPackageError {
@@ -59,6 +65,7 @@ impl std::fmt::Display for KeyPackageError {
             Self::AlreadyRegistered => "key package is already registered",
             Self::NotAvailable => "key package is not available for reservation",
             Self::ReservationMismatch => "key package reservation does not match",
+            Self::InvalidLifetime => "key package lifetime is invalid",
         })
     }
 }
@@ -254,6 +261,46 @@ impl<'a> MlsStateStore<'a> {
         let record = encode_entity(&KeyPackageRecord {
             state: KeyPackageState::Available,
             reservation_digest: None,
+            not_before: None,
+            not_after: None,
+        })?;
+        self.store.apply_batch(&[
+            RecordMutation::Put(
+                RecordClass::ProtocolSession,
+                crypto_key(CryptoStateItem::KeyPackage, package_id),
+                package.to_vec(),
+            ),
+            RecordMutation::Put(
+                RecordClass::ProtocolSession,
+                key_package_state_key(package_id),
+                record,
+            ),
+        ])?;
+        Ok(())
+    }
+
+    pub fn register_key_package_with_lifetime(
+        &mut self,
+        package_id: &[u8],
+        package: &[u8],
+        not_before: u64,
+        not_after: u64,
+    ) -> Result<(), KeyPackageError> {
+        if not_before >= not_after || package.is_empty() {
+            return Err(KeyPackageError::InvalidLifetime);
+        }
+        if self
+            .read_crypto_item(CryptoStateItem::KeyPackage, package_id)
+            .is_some()
+            || self.read_key_package_record(package_id).is_some()
+        {
+            return Err(KeyPackageError::AlreadyRegistered);
+        }
+        let record = encode_entity(&KeyPackageRecord {
+            state: KeyPackageState::Available,
+            reservation_digest: None,
+            not_before: Some(not_before),
+            not_after: Some(not_after),
         })?;
         self.store.apply_batch(&[
             RecordMutation::Put(
@@ -279,6 +326,87 @@ impl<'a> MlsStateStore<'a> {
             .map(|record| record.state))
     }
 
+    pub fn key_package_state_at(
+        &self,
+        package_id: &[u8],
+        now: u64,
+    ) -> Result<Option<KeyPackageState>, KeyPackageError> {
+        let Some(record) = self.read_key_package_record(package_id) else {
+            return Ok(None);
+        };
+        if record.state == KeyPackageState::Available && record.is_expired(now) {
+            return Ok(Some(KeyPackageState::Expired));
+        }
+        Ok(Some(record.state))
+    }
+
+    pub fn available_key_package_count(&self, now: u64) -> usize {
+        self.store
+            .records_with_prefix(
+                RecordClass::ProtocolSession,
+                &format!("{PREFIX}crypto/key-package-state/"),
+            )
+            .into_iter()
+            .filter_map(|(_, value)| decode_entity::<KeyPackageRecord>(&value).ok())
+            .filter(|record| record.state == KeyPackageState::Available && !record.is_expired(now))
+            .count()
+    }
+
+    /// Atomically adds only as many generated packages as needed to reach the
+    /// requested minimum. The caller must generate fresh package IDs and
+    /// private-key bundles; an expired or malformed bundle is never stored.
+    pub fn replenish_key_packages(
+        &mut self,
+        minimum: usize,
+        now: u64,
+        packages: &[(Vec<u8>, Vec<u8>, u64, u64)],
+    ) -> Result<usize, KeyPackageError> {
+        let current = self.available_key_package_count(now);
+        let needed = minimum.saturating_sub(current);
+        if needed == 0 {
+            return Ok(0);
+        }
+        let mut mutations = Vec::new();
+        let mut added = 0;
+        for (package_id, package, not_before, not_after) in packages {
+            if added == needed {
+                break;
+            }
+            if *not_before >= *not_after || *not_after <= now || package.is_empty() {
+                return Err(KeyPackageError::InvalidLifetime);
+            }
+            if self
+                .read_crypto_item(CryptoStateItem::KeyPackage, package_id)
+                .is_some()
+                || self.read_key_package_record(package_id).is_some()
+            {
+                return Err(KeyPackageError::AlreadyRegistered);
+            }
+            let record = encode_entity(&KeyPackageRecord {
+                state: KeyPackageState::Available,
+                reservation_digest: None,
+                not_before: Some(*not_before),
+                not_after: Some(*not_after),
+            })?;
+            mutations.push(RecordMutation::Put(
+                RecordClass::ProtocolSession,
+                crypto_key(CryptoStateItem::KeyPackage, package_id),
+                package.clone(),
+            ));
+            mutations.push(RecordMutation::Put(
+                RecordClass::ProtocolSession,
+                key_package_state_key(package_id),
+                record,
+            ));
+            added += 1;
+        }
+        if added < needed {
+            return Err(KeyPackageError::NotAvailable);
+        }
+        self.store.apply_batch(&mutations)?;
+        Ok(added)
+    }
+
     /// Reserves a package for one handshake. Only the reservation digest is
     /// persisted; the caller retains the reservation secret.
     pub fn reserve_key_package(
@@ -286,10 +414,19 @@ impl<'a> MlsStateStore<'a> {
         package_id: &[u8],
         reservation: &[u8],
     ) -> Result<Vec<u8>, KeyPackageError> {
+        self.reserve_key_package_at(package_id, reservation, current_time_seconds())
+    }
+
+    pub fn reserve_key_package_at(
+        &mut self,
+        package_id: &[u8],
+        reservation: &[u8],
+        now: u64,
+    ) -> Result<Vec<u8>, KeyPackageError> {
         let mut record = self
             .read_key_package_record(package_id)
             .ok_or(KeyPackageError::NotAvailable)?;
-        if record.state != KeyPackageState::Available {
+        if record.state != KeyPackageState::Available || record.is_expired(now) {
             return Err(KeyPackageError::NotAvailable);
         }
         let digest = Sha256::digest(reservation).to_vec();
@@ -459,6 +596,19 @@ fn key_package_state_key(package_id: &[u8]) -> String {
 
 fn hex_digest(value: &[u8]) -> String {
     value.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+impl KeyPackageRecord {
+    fn is_expired(&self, now: u64) -> bool {
+        self.not_after.is_some_and(|not_after| now >= not_after)
+    }
+}
+
+fn current_time_seconds() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0)
 }
 
 #[cfg(test)]
@@ -662,6 +812,45 @@ mod tests {
         assert!(matches!(
             adapter.reserve_key_package(b"package-1", b"reservation-c"),
             Err(KeyPackageError::NotAvailable)
+        ));
+        drop(adapter);
+        std::fs::remove_file(&path).unwrap();
+        std::fs::remove_file(format!("{}.revision", path.display())).unwrap();
+    }
+
+    #[test]
+    fn key_package_replenishment_is_bounded_and_expiry_is_fail_closed() {
+        let path = std::env::temp_dir().join(format!(
+            "another-dimension-key-package-replenish-{}",
+            std::process::id()
+        ));
+        let mut store = EncryptedStore::initialize(&path, "correct horse battery staple").unwrap();
+        let mut adapter = MlsStateStore::new(&mut store);
+        let packages = vec![
+            (b"package-a".to_vec(), b"opaque-a".to_vec(), 90, 200),
+            (b"package-b".to_vec(), b"opaque-b".to_vec(), 90, 200),
+        ];
+        assert_eq!(
+            adapter.replenish_key_packages(2, 100, &packages).unwrap(),
+            2
+        );
+        assert_eq!(adapter.available_key_package_count(100), 2);
+        assert_eq!(adapter.available_key_package_count(200), 0);
+        assert_eq!(
+            adapter.key_package_state_at(b"package-a", 200).unwrap(),
+            Some(KeyPackageState::Expired)
+        );
+        assert!(matches!(
+            adapter.reserve_key_package_at(b"package-a", b"reservation", 200),
+            Err(KeyPackageError::NotAvailable)
+        ));
+        assert!(matches!(
+            adapter.replenish_key_packages(
+                3,
+                100,
+                &[(b"package-c".to_vec(), b"opaque-c".to_vec(), 90, 100)]
+            ),
+            Err(KeyPackageError::InvalidLifetime)
         ));
         drop(adapter);
         std::fs::remove_file(&path).unwrap();

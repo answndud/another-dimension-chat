@@ -337,6 +337,14 @@ impl EncryptedStore {
         self.records.get(&(class, key.to_string())).cloned()
     }
 
+    pub fn records_with_prefix(&self, class: RecordClass, prefix: &str) -> Vec<(String, Vec<u8>)> {
+        self.records
+            .iter()
+            .filter(|((record_class, key), _)| *record_class == class && key.starts_with(prefix))
+            .map(|((_, key), value)| (key.clone(), value.clone()))
+            .collect()
+    }
+
     /// Applies a protocol-state batch as one encrypted store revision. This is
     /// the transaction boundary a future MLS StorageProvider adapter must use.
     pub fn apply_batch(&mut self, mutations: &[RecordMutation]) -> Result<(), StorageError> {
