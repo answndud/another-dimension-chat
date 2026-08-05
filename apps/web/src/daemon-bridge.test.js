@@ -88,6 +88,26 @@ test("pairing approval is an authenticated daemon mutation", async () => {
   assert.equal(calls[4].url, "http://127.0.0.1:1420/local-api/pairing/reject");
 });
 
+test("delivery helpers keep relay material in authenticated daemon request bodies", async () => {
+  const calls = [];
+  const bridge = await connectDaemonBridge({
+    location: location(),
+    history: { replaceState() {} },
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return { ok: true, json: async () => ({ csrf_token: "g".repeat(32), accepted: true, items: [], acknowledged: 1 }) };
+    },
+  });
+  await bridge.postDelivery("http://127.0.0.1:1421/api/v1/inbox/capability", "aa", 600);
+  await bridge.syncDelivery("http://127.0.0.1:1421/api/v1/inbox/capability");
+  await bridge.ackDelivery("http://127.0.0.1:1421/api/v1/inbox/capability", ["id-1"]);
+  assert.deepEqual(calls.slice(1).map(({ url, options }) => [url, JSON.parse(options.body)]), [
+    ["http://127.0.0.1:1420/local-api/delivery/post", { inbox_url: "http://127.0.0.1:1421/api/v1/inbox/capability", ciphertext: "aa", expires_at: 600 }],
+    ["http://127.0.0.1:1420/local-api/delivery/sync", { inbox_url: "http://127.0.0.1:1421/api/v1/inbox/capability" }],
+    ["http://127.0.0.1:1420/local-api/delivery/ack", { inbox_url: "http://127.0.0.1:1421/api/v1/inbox/capability", ids: ["id-1"] }],
+  ]);
+});
+
 test("ordinary prototype pages do not create a daemon session", async () => {
   let called = false;
   assert.equal(await connectDaemonBridge({ location: location(""), fetchImpl: () => { called = true; } }), null);

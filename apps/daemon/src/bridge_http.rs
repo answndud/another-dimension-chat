@@ -2,9 +2,11 @@
 
 use crate::{
     bridge::{BridgeRequest, LocalBridge},
+    delivery::{DeliveryLedger, RelayEnvelope},
     identity::AccountRootKey,
     mls_session::{MlsSessionCatalog, SessionCatalogError},
     pairing::{PairingError, PairingSession},
+    relay_http::{RelayClient, RelayEndpoint},
     storage::{EncryptedStore, StorageError},
     trust::RelayTrust,
 };
@@ -32,7 +34,7 @@ const EXCHANGE_PATH: &str = "/local-session/exchange";
 /// Minimal HTTP boundary for the local bridge. It intentionally exposes only
 /// session bootstrap/status/lock; identity and message APIs remain absent.
 pub fn handle_request(bridge: &mut LocalBridge, raw: &[u8], now: u64) -> Vec<u8> {
-    handle_request_with_context(bridge, raw, now, None, None, None, None, None)
+    handle_request_with_context(bridge, raw, now, None, None, None, None, None, None)
 }
 
 pub fn handle_request_with_ui(
@@ -41,7 +43,7 @@ pub fn handle_request_with_ui(
     now: u64,
     ui_root: Option<&Path>,
 ) -> Vec<u8> {
-    handle_request_with_context(bridge, raw, now, ui_root, None, None, None, None)
+    handle_request_with_context(bridge, raw, now, ui_root, None, None, None, None, None)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -298,6 +300,7 @@ pub fn handle_request_with_context(
     invite_authority: Option<&mut InviteAuthority>,
     mut session_catalog: Option<&mut MlsSessionCatalog>,
     mut session_store: Option<&mut EncryptedStore>,
+    mut delivery_ledger: Option<&mut DeliveryLedger>,
 ) -> Vec<u8> {
     let Ok(request) = parse_request(raw) else {
         return response(400, "invalid_request", None, None);
@@ -815,6 +818,151 @@ pub fn handle_request_with_context(
                 Err(error) => catalog_error(error),
             }
         }
+        ("POST", "/local-api/delivery/post") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(inbox_url) = json_string(request.body, "inbox_url") else {
+                return response(400, "invalid_inbox_url", None, Some("application/json"));
+            };
+            let Some(ciphertext) = json_string(request.body, "ciphertext").and_then(hex_decode)
+            else {
+                return response(400, "invalid_ciphertext", None, Some("application/json"));
+            };
+            let Some(expires_at) = json_u64(request.body, "expires_at") else {
+                return response(400, "invalid_expiry", None, Some("application/json"));
+            };
+            let Ok(endpoint) = RelayEndpoint::from_inbox_url(inbox_url) else {
+                return response(
+                    422,
+                    "unsupported_relay_endpoint",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Ok(envelope) =
+                RelayEnvelope::create(&endpoint.capability, &ciphertext, expires_at, now)
+            else {
+                return response(
+                    422,
+                    "invalid_delivery_envelope",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Ok(digest) = envelope.digest() else {
+                return response(
+                    422,
+                    "invalid_delivery_envelope",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(ledger) = delivery_ledger.as_deref_mut() else {
+                return response(503, "delivery_unavailable", None, None);
+            };
+            if ledger.register_encrypted(digest.clone()).is_err() {
+                return response(409, "duplicate_delivery", None, Some("application/json"));
+            }
+            let client = RelayClient::new(endpoint);
+            let accepted = match client.post_blocking(&envelope) {
+                Ok(value) => value,
+                Err(_) => {
+                    let _ = ledger.schedule_retry(&digest, now);
+                    return response(503, "relay_unavailable", None, Some("application/json"));
+                }
+            };
+            let _ = ledger.transition(&digest, crate::delivery::DeliveryState::Queued);
+            let _ = ledger.transition(&digest, crate::delivery::DeliveryState::RelayAccepted);
+            if let Some(store) = session_store.as_deref_mut() {
+                if ledger.persist(store).is_err() {
+                    return response(503, "storage_unavailable", None, None);
+                }
+            }
+            response(
+                202,
+                &format!(
+                    r##"{{"accepted":true,"id":"{}","digest":"{}","state":"relay-accepted"}}"##,
+                    json_escape(&accepted.id),
+                    json_escape(&digest)
+                ),
+                None,
+                Some("application/json"),
+            )
+        }
+        ("POST", "/local-api/delivery/sync") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(inbox_url) = json_string(request.body, "inbox_url") else {
+                return response(400, "invalid_inbox_url", None, Some("application/json"));
+            };
+            let Ok(endpoint) = RelayEndpoint::from_inbox_url(inbox_url) else {
+                return response(
+                    422,
+                    "unsupported_relay_endpoint",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let items = match RelayClient::new(endpoint).sync_blocking() {
+                Ok(items) => items,
+                Err(_) => {
+                    return response(503, "relay_unavailable", None, Some("application/json"))
+                }
+            };
+            let items = items
+                .into_iter()
+                .map(|item| {
+                    format!(
+                        r##"{{"id":"{}","envelope":"{}"}}"##,
+                        json_escape(&item.id),
+                        json_escape(&item.envelope)
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(",");
+            response(
+                200,
+                &format!(r##"{{"items":[{}]}}"##, items),
+                None,
+                Some("application/json"),
+            )
+        }
+        ("POST", "/local-api/delivery/ack") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(inbox_url) = json_string(request.body, "inbox_url") else {
+                return response(400, "invalid_inbox_url", None, Some("application/json"));
+            };
+            let Some(ids) = json_string_array(request.body, "ids") else {
+                return response(400, "invalid_delivery_ids", None, Some("application/json"));
+            };
+            let Ok(endpoint) = RelayEndpoint::from_inbox_url(inbox_url) else {
+                return response(
+                    422,
+                    "unsupported_relay_endpoint",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let acknowledged = match RelayClient::new(endpoint).ack_blocking(&ids) {
+                Ok(value) => value,
+                Err(_) => {
+                    return response(503, "relay_unavailable", None, Some("application/json"))
+                }
+            };
+            response(
+                200,
+                &format!(r##"{{"acknowledged":{}}}"##, acknowledged),
+                None,
+                Some("application/json"),
+            )
+        }
         ("POST", "/local-api/session/lock") => {
             let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session")
             else {
@@ -857,6 +1005,8 @@ pub fn serve_forever(
     session_store: EncryptedStore,
 ) -> std::io::Result<()> {
     let address = SocketAddr::new(bridge.bind_host(), bridge.port());
+    let delivery_ledger = DeliveryLedger::restore(&session_store)
+        .map_err(|error| io::Error::other(format!("delivery ledger restore failed: {error:?}")))?;
     let state = AppState {
         bridge: Arc::new(Mutex::new(bridge)),
         ui_root: ui_root.map(Path::to_path_buf),
@@ -864,6 +1014,7 @@ pub fn serve_forever(
         invite_authority: invite_authority.map(|authority| Arc::new(Mutex::new(authority))),
         session_catalog: Arc::new(Mutex::new(session_catalog)),
         session_store: Arc::new(Mutex::new(session_store)),
+        delivery_ledger: Arc::new(Mutex::new(delivery_ledger)),
     };
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_io()
@@ -887,6 +1038,7 @@ struct AppState {
     invite_authority: Option<Arc<Mutex<InviteAuthority>>>,
     session_catalog: Arc<Mutex<MlsSessionCatalog>>,
     session_store: Arc<Mutex<EncryptedStore>>,
+    delivery_ledger: Arc<Mutex<DeliveryLedger>>,
 }
 
 async fn axum_handler(State(state): State<AppState>, request: HttpRequest<Body>) -> Response<Body> {
@@ -917,6 +1069,9 @@ async fn axum_handler(State(state): State<AppState>, request: HttpRequest<Body>)
     let Ok(mut store) = state.session_store.lock() else {
         return axum_response(response(503, "storage_unavailable", None, None));
     };
+    let Ok(mut delivery_ledger) = state.delivery_ledger.lock() else {
+        return axum_response(response(503, "delivery_unavailable", None, None));
+    };
     let output = handle_request_with_context(
         &mut bridge,
         &raw,
@@ -926,6 +1081,7 @@ async fn axum_handler(State(state): State<AppState>, request: HttpRequest<Body>)
         invite_guard.as_deref_mut(),
         Some(&mut catalog),
         Some(&mut store),
+        Some(&mut delivery_ledger),
     );
     axum_response(output)
 }
@@ -1039,6 +1195,23 @@ fn json_string<'a>(body: &'a [u8], key: &str) -> Option<&'a str> {
     let value = &text[start..end];
     (!value.is_empty() && !value.contains('\\') && !value.chars().any(|ch| ch.is_control()))
         .then_some(value)
+}
+
+fn json_u64(body: &[u8], key: &str) -> Option<u64> {
+    serde_json::from_slice::<serde_json::Value>(body)
+        .ok()?
+        .get(key)?
+        .as_u64()
+}
+
+fn json_string_array(body: &[u8], key: &str) -> Option<Vec<String>> {
+    serde_json::from_slice::<serde_json::Value>(body)
+        .ok()?
+        .get(key)?
+        .as_array()?
+        .iter()
+        .map(|value| value.as_str().map(str::to_owned))
+        .collect()
 }
 
 fn json_escape(value: &str) -> String {
@@ -1343,6 +1516,7 @@ mod tests {
             None,
             Some(&mut catalog),
             Some(&mut store),
+            None,
         );
         let reply = String::from_utf8(reply).unwrap();
         assert!(reply.starts_with("HTTP/1.1 201"));
@@ -1362,6 +1536,7 @@ mod tests {
             None,
             Some(&mut catalog),
             Some(&mut store),
+            None,
         );
         assert!(String::from_utf8(unauthorized)
             .unwrap()
@@ -1454,6 +1629,7 @@ mod tests {
             Some(&mut authority),
             None,
             Some(&mut store),
+            None,
         );
         let reply = String::from_utf8(reply).unwrap();
         assert!(reply.starts_with("HTTP/1.1 200"), "{reply}");

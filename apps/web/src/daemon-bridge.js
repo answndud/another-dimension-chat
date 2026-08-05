@@ -125,6 +125,18 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ conversation_id: conversationId, ciphertext }),
     }),
+    postDelivery: (inboxUrl, ciphertext, expiresAt) => request("/local-api/delivery/post", {
+      method: "POST",
+      body: JSON.stringify({ inbox_url: inboxUrl, ciphertext, expires_at: expiresAt }),
+    }),
+    syncDelivery: (inboxUrl) => request("/local-api/delivery/sync", {
+      method: "POST",
+      body: JSON.stringify({ inbox_url: inboxUrl }),
+    }),
+    ackDelivery: (inboxUrl, ids) => request("/local-api/delivery/ack", {
+      method: "POST",
+      body: JSON.stringify({ inbox_url: inboxUrl, ids }),
+    }),
     pairingStatus: () => request("/local-api/pairing/status"),
     verifySafety: (safetyNumber) => request("/local-api/pairing/verify-safety", {
       method: "POST",
