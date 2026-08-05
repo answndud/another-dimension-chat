@@ -5,6 +5,7 @@
 //! and exact application timestamps remain inside the MLS ciphertext.
 
 use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 
 const VERSION: u8 = 1;
 const BLOCK_SIZE: usize = 256;
@@ -30,6 +31,124 @@ pub struct RelayEnvelope {
     pub expires_at: u64,
     pub ciphertext: Vec<u8>,
     pub padding: Vec<u8>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DeliveryState {
+    Draft,
+    Encrypted,
+    Queued,
+    RelayAccepted,
+    RecipientReceived,
+    Decrypted,
+    Retryable,
+    Failed,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DeliveryRecord {
+    pub digest: String,
+    pub state: DeliveryState,
+    pub attempts: u8,
+    pub next_retry_at: Option<u64>,
+}
+
+#[derive(Default)]
+pub struct DeliveryLedger {
+    records: BTreeMap<String, DeliveryRecord>,
+}
+
+impl DeliveryLedger {
+    pub fn register_encrypted(&mut self, digest: impl Into<String>) -> Result<(), EnvelopeError> {
+        let digest = digest.into();
+        if digest.is_empty() || self.records.contains_key(&digest) {
+            return Err(EnvelopeError::InvalidWire);
+        }
+        self.records.insert(
+            digest.clone(),
+            DeliveryRecord {
+                digest,
+                state: DeliveryState::Encrypted,
+                attempts: 0,
+                next_retry_at: None,
+            },
+        );
+        Ok(())
+    }
+
+    pub fn transition(&mut self, digest: &str, state: DeliveryState) -> Result<(), EnvelopeError> {
+        let record = self
+            .records
+            .get_mut(digest)
+            .ok_or(EnvelopeError::InvalidWire)?;
+        if !valid_transition(record.state, state) {
+            return Err(EnvelopeError::InvalidWire);
+        }
+        record.state = state;
+        record.next_retry_at = None;
+        Ok(())
+    }
+
+    pub fn acknowledge_recipient(&mut self, digest: &str) -> Result<bool, EnvelopeError> {
+        let record = self
+            .records
+            .get_mut(digest)
+            .ok_or(EnvelopeError::InvalidWire)?;
+        if matches!(
+            record.state,
+            DeliveryState::RecipientReceived | DeliveryState::Decrypted
+        ) {
+            return Ok(false);
+        }
+        if record.state != DeliveryState::RelayAccepted {
+            return Err(EnvelopeError::InvalidWire);
+        }
+        record.state = DeliveryState::RecipientReceived;
+        Ok(true)
+    }
+
+    pub fn schedule_retry(&mut self, digest: &str, now: u64) -> Result<bool, EnvelopeError> {
+        let record = self
+            .records
+            .get_mut(digest)
+            .ok_or(EnvelopeError::InvalidWire)?;
+        if matches!(
+            record.state,
+            DeliveryState::RecipientReceived | DeliveryState::Decrypted | DeliveryState::Failed
+        ) {
+            return Ok(false);
+        }
+        record.attempts = record.attempts.saturating_add(1);
+        if record.attempts > 5 {
+            record.state = DeliveryState::Failed;
+            record.next_retry_at = None;
+            return Ok(false);
+        }
+        record.state = DeliveryState::Retryable;
+        let backoff = 5_u64
+            .saturating_mul(2_u64.saturating_pow(u32::from(record.attempts - 1)))
+            .min(3600);
+        record.next_retry_at = Some(now.saturating_add(backoff));
+        Ok(true)
+    }
+
+    pub fn get(&self, digest: &str) -> Option<&DeliveryRecord> {
+        self.records.get(digest)
+    }
+}
+
+fn valid_transition(from: DeliveryState, to: DeliveryState) -> bool {
+    matches!(
+        (from, to),
+        (DeliveryState::Encrypted, DeliveryState::Queued)
+            | (DeliveryState::Queued, DeliveryState::RelayAccepted)
+            | (
+                DeliveryState::RelayAccepted,
+                DeliveryState::RecipientReceived
+            )
+            | (DeliveryState::RecipientReceived, DeliveryState::Decrypted)
+            | (DeliveryState::Retryable, DeliveryState::Queued)
+    )
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -210,6 +329,48 @@ mod tests {
         assert_eq!(
             RelayEnvelope::from_wire("{\"v\":2}", 1),
             Err(EnvelopeError::InvalidWire)
+        );
+    }
+
+    #[test]
+    fn delivery_ledger_distinguishes_relay_acceptance_and_recipient_ack() {
+        let mut ledger = super::DeliveryLedger::default();
+        ledger.register_encrypted("digest-1").unwrap();
+        ledger
+            .transition("digest-1", super::DeliveryState::Queued)
+            .unwrap();
+        ledger
+            .transition("digest-1", super::DeliveryState::RelayAccepted)
+            .unwrap();
+        assert_eq!(ledger.acknowledge_recipient("digest-1"), Ok(true));
+        assert_eq!(ledger.acknowledge_recipient("digest-1"), Ok(false));
+        ledger
+            .transition("digest-1", super::DeliveryState::Decrypted)
+            .unwrap();
+        assert_eq!(
+            ledger.get("digest-1").unwrap().state,
+            super::DeliveryState::Decrypted
+        );
+    }
+
+    #[test]
+    fn delivery_ledger_bounds_retries_with_exponential_backoff() {
+        let mut ledger = super::DeliveryLedger::default();
+        ledger.register_encrypted("digest-2").unwrap();
+        for attempt in 1..=5 {
+            assert_eq!(ledger.schedule_retry("digest-2", 100), Ok(true));
+            assert_eq!(
+                ledger.get("digest-2").unwrap().next_retry_at,
+                Some(100 + 5 * (1_u64 << (attempt - 1)))
+            );
+            ledger
+                .transition("digest-2", super::DeliveryState::Queued)
+                .unwrap();
+        }
+        assert_eq!(ledger.schedule_retry("digest-2", 100), Ok(false));
+        assert_eq!(
+            ledger.get("digest-2").unwrap().state,
+            super::DeliveryState::Failed
         );
     }
 }
