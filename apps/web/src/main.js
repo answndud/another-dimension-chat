@@ -35,7 +35,7 @@ import { connectDaemonBridge, consumeRelayInvite, createRelayInviteCode, DaemonB
 import "./styles.css";
 
 const app = document.querySelector("#app");
-let state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", daemonReceivedInvite: null, daemonConsumedInvite: "", daemonInviteReceipt: "", daemonRelayOrigin: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false, daemonBridge: null, daemonBridgeMode: false, daemonStatus: "확인 중", daemonIdentity: null, daemonInvite: null, daemonPairing: null, daemonLocked: false, daemonConversationId: "", daemonKeyPackage: "", daemonWelcome: "", daemonCiphertext: "", daemonPlaintext: "" };
+let state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", daemonReceivedInvite: null, daemonConsumedInvite: "", daemonInviteReceipt: "", daemonRelayOrigin: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false, daemonBridge: null, daemonBridgeMode: false, daemonStatus: "확인 중", daemonIdentity: null, daemonInvite: null, daemonPairing: null, daemonLocked: false, daemonConversationId: "", daemonKeyPackage: "", daemonWelcome: "", daemonCiphertext: "", daemonPlaintext: "", daemonInboxUrl: "", daemonMessages: [] };
 let serviceWorkerStatus = "확인 중";
 let syncInFlight = false;
 const PASSPHRASE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
@@ -67,7 +67,7 @@ function downloadPassphrase(value) {
 }
 
 function lockedState(message) {
-  state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: message, riskAcknowledged: false, wipeConfirmOpen: false };
+  state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: message, riskAcknowledged: false, wipeConfirmOpen: false, daemonMessages: [] };
   render();
 }
 
@@ -152,7 +152,10 @@ function renderDaemonSessionPanel() {
     return '<section class="daemon-session-tools" aria-live="polite"><h2>대화 세션</h2><p class="field-note">안전 번호를 확인하고 연락처를 승인한 뒤에만 대화 세션을 열 수 있습니다.</p></section>';
   }
   const conversationId = state.daemonConversationId || "";
-  return `<details class="daemon-session-tools"><summary>대화 세션 연결 및 메시지</summary><p class="field-note">현재 P0.5 개발 경계입니다. 브라우저는 평문 입력·출력만 담당하고 OpenMLS 키와 세션 상태는 데몬이 보관합니다. 최종 pairing에서는 아래 raw 연결 자료를 초대 코드 흐름으로 교체합니다.</p><label>대화 식별자<input id="daemon-conversation-id" value="${escapeHtml(conversationId)}" autocomplete="off" placeholder="새 대화 식별자"></label><div class="daemon-action-row"><button id="daemon-session-create" class="secondary" type="button">대화 만들기</button><button id="daemon-session-prepare" class="secondary" type="button">내 연결 자료 만들기</button></div><label>내 KeyPackage (상대 장치에 전달)<textarea id="daemon-key-package" readonly rows="3" placeholder="대화 만들기 후 생성됩니다">${escapeHtml(state.daemonKeyPackage)}</textarea></label><label>상대 장치의 Welcome<textarea id="daemon-welcome" rows="3" placeholder="상대 장치가 만든 Welcome을 붙여 넣으세요">${escapeHtml(state.daemonWelcome)}</textarea></label><button id="daemon-session-join" class="secondary" type="button">Welcome으로 참여</button><label>상대 장치의 KeyPackage<textarea id="daemon-peer-key-package" rows="3" placeholder="상대 장치의 KeyPackage를 붙여 넣으세요"></textarea></label><button id="daemon-session-add-member" class="secondary" type="button">상대 장치 추가</button><div class="daemon-divider"></div><label>메시지<textarea id="daemon-message" rows="3" placeholder="데몬이 암호화할 메시지"></textarea></label><button id="daemon-message-send" class="primary" type="button">암호화 후 보내기</button><label>생성된 암호문<textarea id="daemon-ciphertext" readonly rows="3" placeholder="relay가 연결되면 자동 전달됩니다">${escapeHtml(state.daemonCiphertext)}</textarea></label><label>받은 암호문<textarea id="daemon-incoming-ciphertext" rows="3" placeholder="상대 데몬의 암호문"></textarea></label><button id="daemon-message-receive" class="secondary" type="button">복호화하여 보기</button><label>복호화된 메시지<textarea id="daemon-plaintext" readonly rows="3" placeholder="복호화 결과">${escapeHtml(state.daemonPlaintext)}</textarea></label></details>`;
+  const receivedMessages = state.daemonMessages.length
+    ? state.daemonMessages.map((message) => `<article class="daemon-message"><p>${escapeHtml(message.text)}</p><small>daemon 복호화 완료 · ${escapeHtml(message.id.slice(0, 12))}</small></article>`).join("")
+    : '<p class="field-note">아직 받은 메시지가 없습니다.</p>';
+  return `<details class="daemon-session-tools"><summary>대화 세션 연결 및 메시지</summary><p class="field-note">브라우저는 평문 입력·출력만 담당하고 OpenMLS 키와 세션 상태는 데몬이 보관합니다.</p><label>대화 식별자<input id="daemon-conversation-id" value="${escapeHtml(conversationId)}" autocomplete="off" placeholder="새 대화 식별자"></label><div class="daemon-action-row"><button id="daemon-session-create" class="secondary" type="button">대화 만들기</button><button id="daemon-session-prepare" class="secondary" type="button">내 연결 자료 만들기</button></div><label>내 KeyPackage (상대 장치에 전달)<textarea id="daemon-key-package" readonly rows="3" placeholder="대화 만들기 후 생성됩니다">${escapeHtml(state.daemonKeyPackage)}</textarea></label><label>상대 장치의 Welcome<textarea id="daemon-welcome" rows="3" placeholder="상대 장치가 만든 Welcome을 붙여 넣으세요">${escapeHtml(state.daemonWelcome)}</textarea></label><button id="daemon-session-join" class="secondary" type="button">Welcome으로 참여</button><label>상대 장치의 KeyPackage<textarea id="daemon-peer-key-package" rows="3" placeholder="상대 장치의 KeyPackage를 붙여 넣으세요"></textarea></label><button id="daemon-session-add-member" class="secondary" type="button">상대 장치 추가</button><div class="daemon-divider"></div><label>메시지<textarea id="daemon-message" rows="3" placeholder="데몬이 암호화할 메시지"></textarea></label><button id="daemon-message-send" class="primary" type="button">암호화 후 보내기</button><label>생성된 암호문<textarea id="daemon-ciphertext" readonly rows="3" placeholder="relay가 연결되면 자동 전달됩니다">${escapeHtml(state.daemonCiphertext)}</textarea></label><section class="daemon-delivery"><h3>받은 메시지 동기화</h3><p class="field-note">릴레이에서 가져온 봉투는 daemon이 검증·복호화·저장한 뒤에만 이 목록에 표시됩니다.</p><label>내 inbox 주소<input id="daemon-inbox-url" value="${escapeHtml(state.daemonInboxUrl)}" autocomplete="off" placeholder="http://127.0.0.1:1421/api/v1/inbox/..."></label><button id="daemon-delivery-sync" class="secondary" type="button">받은 메시지 동기화</button><div class="daemon-message-list" aria-live="polite">${receivedMessages}</div></section><label>받은 암호문<textarea id="daemon-incoming-ciphertext" rows="3" placeholder="수동 복구용 암호문"></textarea></label><button id="daemon-message-receive" class="secondary" type="button">복호화하여 보기</button><label>복호화된 메시지<textarea id="daemon-plaintext" readonly rows="3" placeholder="복호화 결과">${escapeHtml(state.daemonPlaintext)}</textarea></label></details>`;
 }
 
 function bindDaemonSession() {
@@ -213,6 +216,19 @@ function bindDaemonSession() {
     const result = await bridge.receiveMessage(conversationId, ciphertext);
     state.daemonPlaintext = decodeHexText(result.plaintext);
   }, "암호문을 데몬에서 복호화했습니다."));
+  document.querySelector("#daemon-delivery-sync")?.addEventListener("click", () => run(async () => {
+    const conversationId = getConversationId();
+    const inboxUrl = document.querySelector("#daemon-inbox-url")?.value.trim() || "";
+    if (!inboxUrl) throw new Error("내 inbox 주소를 입력하세요.");
+    state.daemonInboxUrl = inboxUrl;
+    const result = await bridge.syncDelivery(conversationId, inboxUrl);
+    const received = (result.messages || []).map((message) => ({
+      id: message.id || "수신 메시지",
+      text: decodeHexText(message.plaintext),
+    }));
+    state.daemonMessages = [...state.daemonMessages, ...received];
+    state.daemonPlaintext = received.at(-1)?.text || state.daemonPlaintext;
+  }, "받은 봉투를 daemon에서 검증·복호화했습니다."));
 }
 
 function endpointOrigin(info) {

@@ -214,3 +214,9 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .daemon-session-tools textarea, .daemon-session-tools input { font-family: inherit; }
 .daemon-action-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .daemon-divider { height: 1px; background: var(--line); margin: 4px 0; }
+.daemon-delivery { border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 10px; }
+.daemon-delivery h3 { margin: 0; font-size: .95rem; }
+.daemon-message-list { display: grid; gap: 8px; }
+.daemon-message { border-left: 2px solid var(--accent); background: var(--surface-muted); padding: 10px 12px; }
+.daemon-message p { margin: 0 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.daemon-message small { color: var(--muted); font-size: .72rem; }
