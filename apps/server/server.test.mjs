@@ -45,6 +45,8 @@ test("local server exposes health and a capability-scoped opaque inbox", async (
   const health = await call(port, "GET", "/api/v1/health");
   assert.deepEqual(health.body, { ok: true, protocol: 1 });
   const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
+  const relayCapability = inboxPath.split("/").at(-1);
+  const relayHeaders = { "x-ad-relay-capability": relayCapability };
   const envelope = "ADENVWEB3.test-envelope";
   const accepted = await call(port, "POST", inboxPath, { envelope });
   assert.equal(accepted.status, 202);
@@ -57,7 +59,8 @@ test("local server exposes health and a capability-scoped opaque inbox", async (
   assert.equal((await call(port, "GET", inboxPath, undefined, localHeaders(runtime))).body.items.length, 1);
   const daemonEnvelope = "ADENV1.{\"v\":1,\"m\":\"opaque\",\"i\":\"00\",\"e\":600,\"c\":\"aa\",\"p\":\"\"}";
   assert.equal((await call(port, "POST", inboxPath, { envelope: daemonEnvelope })).status, 202);
-  assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id] })).status, 403);
+  assert.equal((await call(port, "GET", inboxPath, undefined, relayHeaders)).status, 200);
+  assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id] }, relayHeaders)).status, 200);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });

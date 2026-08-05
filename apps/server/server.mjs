@@ -133,6 +133,14 @@ function hasLocalAccess(req, expected) {
   return suppliedBytes.length === expectedBytes.length && timingSafeEqual(suppliedBytes, expectedBytes);
 }
 
+function hasRelayCapability(req, expected) {
+  const supplied = req.headers["x-ad-relay-capability"];
+  if (typeof supplied !== "string") return false;
+  const suppliedBytes = Buffer.from(supplied);
+  const expectedBytes = Buffer.from(expected.token, "utf8");
+  return suppliedBytes.length === expectedBytes.length && timingSafeEqual(suppliedBytes, expectedBytes);
+}
+
 async function ensurePrivateDirectory(dataDir) {
   await mkdir(dataDir, { recursive: true, mode: 0o700 });
   const info = await lstat(dataDir);
@@ -496,7 +504,8 @@ export async function createLocalServer({
     if (requestUrl.pathname === inboxPrefix && req.method === "GET") {
       if (!capabilityValid(inboxCapability)) { json(res, 410, { error: "capability_expired" }, headers); return; }
       if (!consumeRateLimit(req, "inbox-read", MAX_LOCAL_READS_PER_WINDOW)) { json(res, 429, { error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      if (!capabilityValid(localAccessCapability) || !hasLocalAccess(req, localAccessCapability)) {
+      const readAuthorized = (capabilityValid(localAccessCapability) && hasLocalAccess(req, localAccessCapability)) || hasRelayCapability(req, inboxCapability);
+      if (!readAuthorized) {
         json(res, 403, { error: "local_access_required" }, headers);
         return;
       }
@@ -532,7 +541,8 @@ export async function createLocalServer({
     if (requestUrl.pathname === `${inboxPrefix}/ack` && req.method === "POST") {
       if (!capabilityValid(inboxCapability)) { json(res, 410, { acknowledged: 0, error: "capability_expired" }, headers); return; }
       if (!consumeRateLimit(req, "inbox-ack", MAX_LOCAL_READS_PER_WINDOW)) { json(res, 429, { acknowledged: 0, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      if (!capabilityValid(localAccessCapability) || !hasLocalAccess(req, localAccessCapability)) {
+      const ackAuthorized = (capabilityValid(localAccessCapability) && hasLocalAccess(req, localAccessCapability)) || hasRelayCapability(req, inboxCapability);
+      if (!ackAuthorized) {
         json(res, 403, { acknowledged: 0, error: "local_access_required" }, headers);
         return;
       }
