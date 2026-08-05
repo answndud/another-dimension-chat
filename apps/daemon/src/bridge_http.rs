@@ -1,6 +1,7 @@
 #![allow(clippy::module_name_repetitions)]
 
 use crate::{
+    attachment::AttachmentDescriptor,
     bridge::{BridgeRequest, LocalBridge},
     contacts::{ContactDirectory, ContactDirectoryError},
     delivery::{DeliveryLedger, RelayEnvelope},
@@ -29,7 +30,7 @@ use std::{
     time::Duration,
 };
 
-const MAX_REQUEST_BYTES: usize = 16 * 1024;
+const MAX_REQUEST_BYTES: usize = 192 * 1024;
 const EXCHANGE_PATH: &str = "/local-session/exchange";
 const MAX_INVITE_TTL_SECONDS: u64 = 10 * 60;
 
@@ -1175,6 +1176,143 @@ pub fn handle_request_with_context(
                     Some("application/json"),
                 ),
                 Err(error) => catalog_error(error),
+            }
+        }
+        ("POST", "/local-api/session/send-attachment") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(conversation_id) = json_string(request.body, "conversation_id") else {
+                return response(400, "invalid_conversation", None, Some("application/json"));
+            };
+            let Some(descriptor_json) = json_string(request.body, "descriptor") else {
+                return response(
+                    400,
+                    "invalid_attachment_descriptor",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Ok(descriptor) = serde_json::from_str::<AttachmentDescriptor>(&descriptor_json)
+            else {
+                return response(
+                    400,
+                    "invalid_attachment_descriptor",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match catalog.send_attachment(conversation_id, &descriptor, store) {
+                Ok(ciphertext) => response(
+                    200,
+                    &format!(
+                        r##"{{"ciphertext":"{}","blob_id":"{}"}}"##,
+                        hex_bytes(&ciphertext),
+                        json_escape(&descriptor.blob_id)
+                    ),
+                    None,
+                    Some("application/json"),
+                ),
+                Err(error) => catalog_error(error),
+            }
+        }
+        ("POST", "/local-api/session/receive-attachment") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(conversation_id) = json_string(request.body, "conversation_id") else {
+                return response(400, "invalid_conversation", None, Some("application/json"));
+            };
+            let Some(ciphertext) = json_string(request.body, "ciphertext").and_then(hex_decode)
+            else {
+                return response(400, "invalid_ciphertext", None, Some("application/json"));
+            };
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match catalog.receive_attachment(conversation_id, &ciphertext, store) {
+                Ok(descriptor) => match serde_json::to_string(&descriptor) {
+                    Ok(payload) => response(
+                        200,
+                        &format!(r##"{{"descriptor":{payload}}}"##),
+                        None,
+                        Some("application/json"),
+                    ),
+                    Err(_) => response(503, "descriptor_unavailable", None, None),
+                },
+                Err(error) => catalog_error(error),
+            }
+        }
+        ("POST", "/local-api/attachment/upload-chunk") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(inbox_url) = json_string(request.body, "inbox_url") else {
+                return response(400, "invalid_inbox_url", None, Some("application/json"));
+            };
+            let Some(blob_id) = json_string(request.body, "blob_id") else {
+                return response(400, "invalid_blob_id", None, Some("application/json"));
+            };
+            let Some(chunk) = json_string(request.body, "chunk").and_then(hex_decode) else {
+                return response(400, "invalid_blob_chunk", None, Some("application/json"));
+            };
+            let Some(offset) =
+                json_u64(request.body, "offset").and_then(|value| usize::try_from(value).ok())
+            else {
+                return response(400, "invalid_blob_offset", None, Some("application/json"));
+            };
+            let Some(total) =
+                json_u64(request.body, "total").and_then(|value| usize::try_from(value).ok())
+            else {
+                return response(400, "invalid_blob_total", None, Some("application/json"));
+            };
+            let Ok(endpoint) = RelayEndpoint::from_inbox_url_with_pin(
+                &inbox_url,
+                invite_authority
+                    .as_deref()
+                    .and_then(|authority| authority.relay_tls_pin),
+            ) else {
+                return response(
+                    422,
+                    "unsupported_relay_endpoint",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            match RelayClient::new(endpoint)
+                .upload_blob_chunk_blocking(&blob_id, offset, total, &chunk)
+            {
+                Ok(result) => response(
+                    200,
+                    &format!(
+                        r##"{{"complete":{},"received":{},"total":{},"expires_at":{}}}"##,
+                        result.complete, result.received, result.total, result.expires_at
+                    ),
+                    None,
+                    Some("application/json"),
+                ),
+                Err(RelayError::Rejected(status)) => {
+                    response(status, "relay_rejected", None, Some("application/json"))
+                }
+                Err(_) => response(503, "relay_unavailable", None, Some("application/json")),
             }
         }
         ("POST", "/local-api/delivery/post") => {

@@ -427,6 +427,49 @@ impl RelayClient {
         Ok(parsed.acknowledged)
     }
 
+    pub fn upload_blob_chunk_blocking(
+        &self,
+        blob_id: &str,
+        offset: usize,
+        total: usize,
+        chunk: &[u8],
+    ) -> Result<BlobChunkAccepted, RelayError> {
+        let path = self.blob_path(blob_id)?;
+        if total == 0 || total > MAX_BLOB_BYTES || offset > total || offset + chunk.len() > total {
+            return Err(RelayError::InvalidResponse);
+        }
+        let headers = [
+            ("X-Ad-Blob-Offset", offset.to_string()),
+            ("X-Ad-Blob-Total", total.to_string()),
+        ];
+        let (status, response) =
+            self.request_blocking_with_headers("POST", &path, chunk, &headers, MAX_RESPONSE_BYTES)?;
+        if !(200..300).contains(&status) {
+            return Err(RelayError::Rejected(status));
+        }
+        let parsed: BlobChunkResponse =
+            serde_json::from_slice(&response).map_err(|_| RelayError::InvalidResponse)?;
+        if !parsed.accepted || parsed.total != total || parsed.received != offset + chunk.len() {
+            return Err(RelayError::InvalidResponse);
+        }
+        Ok(BlobChunkAccepted {
+            complete: parsed.complete,
+            received: parsed.received,
+            total: parsed.total,
+            expires_at: parsed.expires_at,
+        })
+    }
+
+    pub fn download_blob_blocking(&self, blob_id: &str) -> Result<Vec<u8>, RelayError> {
+        let path = self.blob_path(blob_id)?;
+        let (status, response) =
+            self.request_blocking_with_headers("GET", &path, &[], &[], MAX_BLOB_BYTES)?;
+        if !(200..300).contains(&status) {
+            return Err(RelayError::Rejected(status));
+        }
+        Ok(response)
+    }
+
     async fn request(
         &self,
         method: &str,
@@ -519,6 +562,17 @@ impl RelayClient {
         path: &str,
         body: &[u8],
     ) -> Result<(u16, Vec<u8>), RelayError> {
+        self.request_blocking_with_headers(method, path, body, &[], MAX_RESPONSE_BYTES)
+    }
+
+    fn request_blocking_with_headers(
+        &self,
+        method: &str,
+        path: &str,
+        body: &[u8],
+        headers: &[(&str, String)],
+        max_response_bytes: usize,
+    ) -> Result<(u16, Vec<u8>), RelayError> {
         let address = self.endpoint.address()?;
         let tcp = StdTcpStream::connect(address).map_err(|_| RelayError::Connect)?;
         tcp.set_read_timeout(Some(self.request_timeout))
@@ -532,9 +586,16 @@ impl RelayClient {
             let connection = rustls::ClientConnection::new(config, server_name)
                 .map_err(|_| RelayError::TlsHandshake)?;
             let mut stream = rustls::StreamOwned::new(connection, tcp);
-            return self.request_blocking_stream(&mut stream, method, path, body);
+            return self.request_blocking_stream(
+                &mut stream,
+                method,
+                path,
+                body,
+                headers,
+                max_response_bytes,
+            );
         }
-        self.request_blocking_stream(tcp, method, path, body)
+        self.request_blocking_stream(tcp, method, path, body, headers, max_response_bytes)
     }
 
     fn request_blocking_stream<S>(
@@ -543,6 +604,8 @@ impl RelayClient {
         method: &str,
         path: &str,
         body: &[u8],
+        headers: &[(&str, String)],
+        max_response_bytes: usize,
     ) -> Result<(u16, Vec<u8>), RelayError>
     where
         S: Read + Write,
@@ -553,10 +616,16 @@ impl RelayClient {
             .split_once("://")
             .map(|(_, authority)| authority)
             .ok_or(RelayError::InvalidEndpoint)?;
-        let request = format!(
-            "{method} {path} HTTP/1.1\r\nHost: {authority}\r\nConnection: close\r\nAccept: application/json\r\nContent-Type: application/json\r\nX-Ad-Relay-Capability: {}\r\nContent-Length: {}\r\n\r\n",
-            self.endpoint.capability, body.len()
-        );
+        let extra = headers
+            .iter()
+            .map(|(name, value)| format!("{name}: {value}\r\n"))
+            .collect::<String>();
+        let content_type = if path.starts_with("/api/v1/blobs/") {
+            "application/octet-stream"
+        } else {
+            "application/json"
+        };
+        let request = format!("{method} {path} HTTP/1.1\r\nHost: {authority}\r\nConnection: close\r\nAccept: application/json\r\nContent-Type: {content_type}\r\nX-Ad-Relay-Capability: {}\r\n{extra}Content-Length: {}\r\n\r\n", self.endpoint.capability, body.len());
         stream
             .write_all(request.as_bytes())
             .map_err(|_| RelayError::Connect)?;
@@ -565,7 +634,7 @@ impl RelayClient {
         stream
             .read_to_end(&mut response)
             .map_err(|_| RelayError::Connect)?;
-        if response.len() > MAX_RESPONSE_BYTES {
+        if response.len() > max_response_bytes {
             return Err(RelayError::ResponseTooLarge);
         }
         parse_response(&response)
