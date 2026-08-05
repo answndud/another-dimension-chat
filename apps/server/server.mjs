@@ -418,6 +418,7 @@ export async function createLocalServer({
       const publicOrigin = originFor(bindHost);
       json(res, 200, {
         protocol: 1,
+        protocolVersions: [1],
         inboxUrl: inboxUrlFor(bindHost),
         publicOrigin,
         externalSecure: publicOrigin.startsWith("https://"),
@@ -429,6 +430,8 @@ export async function createLocalServer({
         transportMode: publicOrigin.startsWith("https://") ? "direct-https-low-risk" : "local-or-http-low-risk",
         networkScope: isLoopbackHost(bindHost) ? "loopback" : "non-loopback",
         maxEnvelopeBytes: MAX_ENVELOPE_BYTES,
+        maxTextBytes: 64 * 1024,
+        maxAttachmentBytes: 32 * 1024 * 1024,
         relayReceiptPublicKey: relayReceiptKey.publicKeyHex,
         relayReceiptPublicKeyFingerprint: relayReceiptKey.publicKeyFingerprint,
         relayReceiptKeyId: relayReceiptKey.publicKeyFingerprint,

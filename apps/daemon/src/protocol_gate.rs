@@ -4,9 +4,29 @@
 pub const DAEMON_PROTOCOL: &str = "openmls-1";
 pub const DAEMON_PROTOCOL_VERSION: u16 = 1;
 pub const SUPPORTED_PROTOCOLS: [&str; 1] = [DAEMON_PROTOCOL];
+pub const MAX_TEXT_BYTES: usize = 64 * 1024;
+pub const MAX_ENVELOPE_BYTES: usize = 96 * 1024;
+pub const MAX_ATTACHMENT_BYTES: usize = 32 * 1024 * 1024;
+pub const MAX_CLOCK_SKEW_SECONDS: u64 = 300;
 
 pub fn supports(protocol: &str) -> bool {
     SUPPORTED_PROTOCOLS.contains(&protocol)
+}
+
+pub fn negotiate(peer_version: u16) -> Result<u16, AdmissionError> {
+    if peer_version == DAEMON_PROTOCOL_VERSION {
+        Ok(DAEMON_PROTOCOL_VERSION)
+    } else {
+        Err(AdmissionError::UnsupportedVersion)
+    }
+}
+
+pub fn validate_clock(now: u64, remote: u64) -> Result<(), AdmissionError> {
+    if now.abs_diff(remote) <= MAX_CLOCK_SKEW_SECONDS {
+        Ok(())
+    } else {
+        Err(AdmissionError::ClockSkew)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -20,6 +40,8 @@ pub struct SessionAdmission {
 pub enum AdmissionError {
     EmptyPeerIdentity,
     UnsupportedProtocol,
+    UnsupportedVersion,
+    ClockSkew,
     ImplementationNotAvailable,
 }
 
@@ -41,7 +63,10 @@ pub fn admit(
 
 #[cfg(test)]
 mod tests {
-    use super::{admit, supports, AdmissionError, DAEMON_PROTOCOL, DAEMON_PROTOCOL_VERSION};
+    use super::{
+        admit, negotiate, supports, validate_clock, AdmissionError, DAEMON_PROTOCOL,
+        DAEMON_PROTOCOL_VERSION,
+    };
 
     #[test]
     fn legacy_browser_protocols_never_enter_daemon_admission() {
@@ -68,5 +93,17 @@ mod tests {
             admit("", "device-1", DAEMON_PROTOCOL),
             Err(AdmissionError::EmptyPeerIdentity)
         );
+    }
+
+    #[test]
+    fn incompatible_versions_and_clock_skew_fail_closed() {
+        assert_eq!(
+            negotiate(DAEMON_PROTOCOL_VERSION),
+            Ok(DAEMON_PROTOCOL_VERSION)
+        );
+        assert_eq!(negotiate(2), Err(AdmissionError::UnsupportedVersion));
+        assert!(validate_clock(1_000, 1_300).is_ok());
+        assert_eq!(validate_clock(1_000, 1_301), Err(AdmissionError::ClockSkew));
+        assert_eq!(validate_clock(1_000, 699), Err(AdmissionError::ClockSkew));
     }
 }

@@ -151,7 +151,7 @@ test("local access can rotate the inbox capability and invalidate the old URL", 
   assert.equal(rotated.status, 200);
   const newPath = new URL(rotated.body.inboxUrl.replace(":0", `:${port}`)).pathname;
   assert.notEqual(newPath, oldPath);
-  assert.equal((await call(port, "POST", oldPath, { envelope: "ADENVWEB1.old-capability" })).status, 404);
+  assert.equal((await call(port, "POST", oldPath, { envelope: "ADENVWEB1.old-capability" })).status, 410);
   assert.equal((await call(port, "POST", newPath, { envelope: "ADENVWEB1.new-capability" })).status, 202);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });

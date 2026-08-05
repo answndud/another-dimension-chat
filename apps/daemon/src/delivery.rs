@@ -264,6 +264,7 @@ struct WireEnvelope<'a> {
 }
 
 #[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct OwnedWireEnvelope {
     v: u8,
     m: String,
@@ -430,6 +431,17 @@ mod tests {
         );
         assert_eq!(
             RelayEnvelope::from_wire("{\"v\":2}", 1),
+            Err(EnvelopeError::InvalidWire)
+        );
+    }
+
+    #[test]
+    fn unknown_wire_fields_are_rejected_instead_of_silently_downgrading() {
+        let envelope = RelayEnvelope::create("mailbox", b"ciphertext", 601, 1).unwrap();
+        let wire = envelope.to_wire().unwrap();
+        let with_unknown = wire.trim_end_matches('}').to_owned() + ",\"future\":true}";
+        assert_eq!(
+            RelayEnvelope::from_wire(&with_unknown, 1),
             Err(EnvelopeError::InvalidWire)
         );
     }
