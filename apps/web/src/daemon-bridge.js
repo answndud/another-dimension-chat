@@ -156,6 +156,14 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ account_id: accountId, alias }),
     }),
+    bindContactConversation: (accountId, conversationId) => request("/local-api/contacts/bind-conversation", {
+      method: "POST",
+      body: JSON.stringify({ account_id: accountId, conversation_id: conversationId }),
+    }),
+    markContactRead: (accountId) => request("/local-api/contacts/read", {
+      method: "POST",
+      body: JSON.stringify({ account_id: accountId }),
+    }),
     conversations: () => request("/local-api/conversations"),
     verifySafety: (safetyNumber) => request("/local-api/pairing/verify-safety", {
       method: "POST",

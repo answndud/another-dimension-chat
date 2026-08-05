@@ -202,8 +202,12 @@ try {
 
   const conversationId = "acceptance-repair-conversation";
   assert.equal((await alice.api("POST", "/local-api/session/create", { conversation_id: conversationId })).status, 201);
+  assert.equal((await alice.api("POST", "/local-api/contacts/bind-conversation", { account_id: contacts.body.contacts[0].account_id, conversation_id: conversationId })).status, 200);
   const conversations = await alice.api("GET", "/local-api/conversations");
   assert.deepEqual(conversations.body.conversations, [conversationId]);
+  const boundContacts = await alice.api("GET", "/local-api/contacts");
+  assert.equal(boundContacts.body.contacts[0].conversation_id, conversationId);
+  assert.equal((await alice.api("POST", "/local-api/contacts/read", { account_id: contacts.body.contacts[0].account_id })).status, 200);
   const bobPackage = await bob.api("POST", "/local-api/session/prepare", { conversation_id: conversationId });
   const welcome = await alice.api("POST", "/local-api/session/add-member", { conversation_id: conversationId, key_package: bobPackage.body.key_package });
   assert.equal((await bob.api("POST", "/local-api/session/join", { conversation_id: conversationId, welcome: welcome.body.welcome })).status, 200, JSON.stringify(welcome.body));

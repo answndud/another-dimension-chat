@@ -92,7 +92,7 @@ function renderDaemonContacts() {
   const query = state.daemonContactSearch.trim().toLowerCase();
   const contacts = state.daemonContacts.filter((contact) => [contact.alias, contact.account_id, contact.device_id].filter(Boolean).some((value) => String(value).toLowerCase().includes(query)));
   const rows = contacts.length
-    ? contacts.map((contact) => `<article class="daemon-contact ${state.daemonSelectedContact === contact.account_id ? "selected" : ""}"><button type="button" class="daemon-contact-select" data-contact-account="${escapeHtml(contact.account_id)}"><strong>${escapeHtml(contact.alias || contact.account_id.slice(0, 18))}</strong><small>${escapeHtml(contact.state)} · ${escapeHtml(contact.device_id)}</small></button><label class="daemon-contact-alias">별칭<input data-contact-alias="${escapeHtml(contact.account_id)}" value="${escapeHtml(contact.alias || "")}" maxlength="128"></label><button type="button" class="quiet daemon-contact-save" data-contact-save="${escapeHtml(contact.account_id)}">저장</button></article>`).join("")
+    ? contacts.map((contact) => `<article class="daemon-contact ${state.daemonSelectedContact === contact.account_id ? "selected" : ""}"><button type="button" class="daemon-contact-select" data-contact-account="${escapeHtml(contact.account_id)}"><strong>${escapeHtml(contact.alias || contact.account_id.slice(0, 18))}${contact.unread_count ? ` <span class="unread-badge">${contact.unread_count}</span>` : ""}</strong><small>${escapeHtml(contact.state)} · ${escapeHtml(contact.device_id)}${contact.conversation_id ? ` · ${escapeHtml(contact.conversation_id)}` : " · 대화 미연결"}</small></button><label class="daemon-contact-alias">별칭<input data-contact-alias="${escapeHtml(contact.account_id)}" value="${escapeHtml(contact.alias || "")}" maxlength="128"></label><button type="button" class="quiet daemon-contact-save" data-contact-save="${escapeHtml(contact.account_id)}">저장</button></article>`).join("")
     : '<p class="field-note">저장된 연락처가 없습니다. 안전 번호 확인 후 승인하면 여기에 표시됩니다.</p>';
   return `<section class="daemon-directory"><div class="row-between"><div><h2>연락처</h2><p class="field-note">연락처와 별칭은 daemon의 암호화 저장소에서만 관리됩니다.</p></div><span class="pill">${state.daemonContacts.length}명 · ${state.daemonConversationIds.length}개 대화</span></div><label>이 기기에서 검색<input id="daemon-contact-search" value="${escapeHtml(state.daemonContactSearch)}" placeholder="별칭·account ID·device ID"></label><div class="daemon-contact-list">${rows}</div></section>`;
 }
@@ -205,6 +205,9 @@ function bindDaemonSession() {
   document.querySelector("#daemon-session-create")?.addEventListener("click", () => run(async () => {
     const conversationId = getConversationId();
     await bridge.createConversation(conversationId);
+    if (state.daemonSelectedContact) await bridge.bindContactConversation(state.daemonSelectedContact, conversationId);
+    state.daemonConversationIds = [...new Set([...state.daemonConversationIds, conversationId])];
+    if (state.daemonSelectedContact) state.daemonContacts = (await bridge.contacts()).contacts || state.daemonContacts;
   }, "대화 세션을 만들었습니다. 다음으로 연결 자료를 생성하세요."));
   document.querySelector("#daemon-session-prepare")?.addEventListener("click", () => run(async () => {
     const conversationId = getConversationId();
@@ -459,6 +462,10 @@ function render() {
     document.querySelectorAll("[data-contact-account]").forEach((button) => button.addEventListener("click", () => {
       state.daemonSelectedContact = button.dataset.contactAccount || "";
       state.notice = "연락처를 선택했습니다. 해당 identity를 확인한 뒤 대화 세션을 연결하세요.";
+      state.daemonBridge.markContactRead(state.daemonSelectedContact).then(async () => {
+        state.daemonContacts = (await state.daemonBridge.contacts()).contacts || state.daemonContacts;
+        render();
+      }).catch(() => {});
       render();
     }));
     document.querySelectorAll("[data-contact-save]").forEach((button) => button.addEventListener("click", async () => {

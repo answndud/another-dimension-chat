@@ -232,6 +232,7 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .daemon-contact.selected { border-color: var(--accent); }
 .daemon-contact-select { display: grid; gap: 4px; text-align: left; border: 0; padding: 0; background: transparent; }
 .daemon-contact-select small { color: var(--muted); font-size: .72rem; overflow-wrap: anywhere; }
+.unread-badge { display: inline-block; min-width: 1.2em; padding: 1px 4px; background: var(--accent); color: #fff; font-size: .68rem; font-weight: 700; text-align: center; }
 .daemon-contact-alias { margin: 0; font-size: .7rem; }
 .daemon-contact-alias input { margin-top: 4px; padding: 7px; }
 .daemon-contact-save { white-space: nowrap; }

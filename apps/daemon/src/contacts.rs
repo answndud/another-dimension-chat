@@ -13,6 +13,8 @@ pub struct ContactRecord {
     pub relay_origin: String,
     pub alias: Option<String>,
     pub state: String,
+    #[serde(default)]
+    pub conversation_id: Option<String>,
     pub last_message_at: Option<u64>,
     pub unread_count: u32,
 }
@@ -82,6 +84,10 @@ impl ContactDirectory {
                 relay_origin: relay_origin.into(),
                 alias,
                 state: "verified".into(),
+                conversation_id: self
+                    .contacts
+                    .get(&account_id)
+                    .and_then(|item| item.conversation_id.clone()),
                 last_message_at,
                 unread_count,
             },
@@ -110,6 +116,42 @@ impl ContactDirectory {
 
     pub fn list(&self) -> Vec<ContactRecord> {
         self.contacts.values().cloned().collect()
+    }
+
+    pub fn bind_conversation(
+        &mut self,
+        account_id: &str,
+        conversation_id: &str,
+    ) -> Result<(), ContactDirectoryError> {
+        let contact = self
+            .contacts
+            .get_mut(account_id)
+            .ok_or(ContactDirectoryError::ContactNotFound)?;
+        if conversation_id.is_empty() || conversation_id.len() > 128 || !conversation_id.is_ascii()
+        {
+            return Err(ContactDirectoryError::InvalidAlias);
+        }
+        contact.conversation_id = Some(conversation_id.to_owned());
+        Ok(())
+    }
+
+    pub fn mark_read(&mut self, account_id: &str) -> Result<(), ContactDirectoryError> {
+        let contact = self
+            .contacts
+            .get_mut(account_id)
+            .ok_or(ContactDirectoryError::ContactNotFound)?;
+        contact.unread_count = 0;
+        Ok(())
+    }
+
+    pub fn mark_unread(&mut self, account_id: &str, now: u64) -> Result<(), ContactDirectoryError> {
+        let contact = self
+            .contacts
+            .get_mut(account_id)
+            .ok_or(ContactDirectoryError::ContactNotFound)?;
+        contact.unread_count = contact.unread_count.saturating_add(1);
+        contact.last_message_at = Some(now);
+        Ok(())
     }
 
     pub fn persist(&self, store: &mut EncryptedStore) -> Result<(), StorageError> {
@@ -156,5 +198,16 @@ mod tests {
             directory.upsert_verified("account-a", "device-b", "https://relay-b", 20),
             Err(ContactDirectoryError::DuplicateDevice)
         );
+        directory
+            .bind_conversation("account-a", "conversation-a")
+            .unwrap();
+        directory.mark_unread("account-a", 30).unwrap();
+        assert_eq!(
+            directory.list()[0].conversation_id.as_deref(),
+            Some("conversation-a")
+        );
+        assert_eq!(directory.list()[0].unread_count, 1);
+        directory.mark_read("account-a").unwrap();
+        assert_eq!(directory.list()[0].unread_count, 0);
     }
 }

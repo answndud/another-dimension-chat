@@ -297,6 +297,30 @@ impl InviteAuthority {
             .map_err(|_| ContactDirectoryError::Corrupt)
     }
 
+    fn bind_contact_conversation(
+        &mut self,
+        account_id: &str,
+        conversation_id: &str,
+        store: &mut EncryptedStore,
+    ) -> Result<(), ContactDirectoryError> {
+        self.contacts
+            .bind_conversation(account_id, conversation_id)?;
+        self.contacts
+            .persist(store)
+            .map_err(|_| ContactDirectoryError::Corrupt)
+    }
+
+    fn mark_contact_read(
+        &mut self,
+        account_id: &str,
+        store: &mut EncryptedStore,
+    ) -> Result<(), ContactDirectoryError> {
+        self.contacts.mark_read(account_id)?;
+        self.contacts
+            .persist(store)
+            .map_err(|_| ContactDirectoryError::Corrupt)
+    }
+
     fn create(&mut self, now: u64) -> Option<(String, String)> {
         let mut bytes = [0_u8; 32];
         getrandom::fill(&mut bytes).ok()?;
@@ -875,6 +899,50 @@ pub fn handle_request_with_context(
             };
             match authority.set_contact_alias(&account_id, &alias, store) {
                 Ok(()) => response(200, r##"{"updated":true}"##, None, Some("application/json")),
+                Err(error) => contact_directory_error(error),
+            }
+        }
+        ("POST", "/local-api/contacts/bind-conversation") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "contacts_unavailable", None, None);
+            };
+            let Some(account_id) = json_string(request.body, "account_id") else {
+                return response(400, "account_id_required", None, Some("application/json"));
+            };
+            let Some(conversation_id) = json_string(request.body, "conversation_id") else {
+                return response(
+                    400,
+                    "conversation_id_required",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match authority.bind_contact_conversation(&account_id, &conversation_id, store) {
+                Ok(()) => response(200, r##"{"bound":true}"##, None, Some("application/json")),
+                Err(error) => contact_directory_error(error),
+            }
+        }
+        ("POST", "/local-api/contacts/read") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "contacts_unavailable", None, None);
+            };
+            let Some(account_id) = json_string(request.body, "account_id") else {
+                return response(400, "account_id_required", None, Some("application/json"));
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match authority.mark_contact_read(&account_id, store) {
+                Ok(()) => response(200, r##"{"read":true}"##, None, Some("application/json")),
                 Err(error) => contact_directory_error(error),
             }
         }
