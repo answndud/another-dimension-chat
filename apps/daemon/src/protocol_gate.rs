@@ -152,13 +152,27 @@ mod tests {
 
     #[test]
     fn compatibility_fixture_accepts_only_current_wire_contract() {
-        let fixtures = [
-            ("v1", 1_u16, true),
-            ("future", 2_u16, false),
-            ("legacy", 0_u16, false),
-        ];
-        for (_name, version, accepted) in fixtures {
-            assert_eq!(negotiate(version).is_ok(), accepted);
+        #[derive(serde::Deserialize)]
+        struct Fixture {
+            wire: String,
+            cases: Vec<Case>,
+        }
+        #[derive(serde::Deserialize)]
+        struct Case {
+            name: String,
+            protocol_version: u16,
+            accepted: bool,
+        }
+        let fixture: Fixture =
+            serde_json::from_str(include_str!("../fixtures/peer-compatibility.json")).unwrap();
+        assert_eq!(fixture.wire, "another-dimension/peer-hello/v1");
+        for case in fixture.cases {
+            assert_eq!(
+                negotiate(case.protocol_version).is_ok(),
+                case.accepted,
+                "{}",
+                case.name
+            );
         }
     }
 }

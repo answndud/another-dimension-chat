@@ -11,6 +11,8 @@ use crate::{
 };
 use sha2::{Digest, Sha256};
 
+const PAIRING_SNAPSHOT_VERSION: u16 = 1;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum PairingState {
     Idle,
@@ -59,6 +61,9 @@ impl std::error::Error for PairingError {}
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct PairingSnapshot {
+    /// `0` is the legacy pre-versioned snapshot and is migrated to v1 on load.
+    #[serde(default)]
+    pub schema_version: u16,
     pub state: PairingState,
     pub peer: Option<VerifiedInvite>,
     #[serde(default)]
@@ -189,6 +194,7 @@ impl PairingSession {
 
     pub fn snapshot(&self) -> PairingSnapshot {
         PairingSnapshot {
+            schema_version: PAIRING_SNAPSHOT_VERSION,
             state: self.state,
             peer: self.peer.clone(),
             safety_verified: self.safety_verified,
@@ -231,8 +237,14 @@ impl PairingSession {
         let Some(bytes) = store.get(RecordClass::Contact, "pairing/state") else {
             return Ok(session);
         };
-        let snapshot: PairingSnapshot =
+        let mut snapshot: PairingSnapshot =
             serde_json::from_slice(&bytes).map_err(|_| StorageError::CorruptStore)?;
+        if snapshot.schema_version > PAIRING_SNAPSHOT_VERSION {
+            return Err(StorageError::CorruptStore);
+        }
+        // Legacy snapshots had no schema field. Their shape is unchanged, so
+        // migration is a version annotation rather than a lossy rewrite.
+        snapshot.schema_version = PAIRING_SNAPSHOT_VERSION;
         if snapshot.state == PairingState::Established && snapshot.peer.is_none() {
             return Err(StorageError::CorruptStore);
         }
@@ -245,7 +257,7 @@ impl PairingSession {
 
 #[cfg(test)]
 mod tests {
-    use super::{PairingError, PairingSession, PairingState};
+    use super::{PairingError, PairingSession, PairingState, PAIRING_SNAPSHOT_VERSION};
     use crate::bridge_http::VerifiedInvite;
 
     fn peer(account_id: &str, device_id: &str, expires_at: u64) -> VerifiedInvite {
@@ -386,5 +398,39 @@ mod tests {
         session.confirm_safety(&safety).unwrap();
         session.approve(20).unwrap();
         assert!(session.can_message());
+    }
+
+    #[test]
+    fn pairing_snapshot_migrates_legacy_and_rejects_future_schema() {
+        let path = std::env::temp_dir().join(format!(
+            "another-dimension-pairing-schema-{}",
+            std::process::id()
+        ));
+        let mut store =
+            crate::storage::EncryptedStore::initialize(&path, "correct horse battery staple")
+                .unwrap();
+        store
+            .put(
+                crate::storage::RecordClass::Contact,
+                "pairing/state",
+                br#"{"state":"Idle","peer":null,"safety_verified":false}"#,
+            )
+            .unwrap();
+        let restored = PairingSession::restore("local", "device", &store).unwrap();
+        assert_eq!(restored.snapshot().schema_version, PAIRING_SNAPSHOT_VERSION);
+
+        store
+            .put(
+                crate::storage::RecordClass::Contact,
+                "pairing/state",
+                br#"{"schema_version":99,"state":"Idle","peer":null,"safety_verified":false}"#,
+            )
+            .unwrap();
+        assert!(matches!(
+            PairingSession::restore("local", "device", &store),
+            Err(crate::storage::StorageError::CorruptStore)
+        ));
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(path.with_extension("revision"));
     }
 }
