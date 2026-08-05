@@ -4,6 +4,7 @@
 //! expiry, padded ciphertext, and padding. Identity, message type, filename,
 //! and exact application timestamps remain inside the MLS ciphertext.
 
+use crate::storage::{EncryptedStore, RecordClass, StorageError};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 
@@ -33,7 +34,7 @@ pub struct RelayEnvelope {
     pub padding: Vec<u8>,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum DeliveryState {
     Draft,
     Encrypted,
@@ -45,7 +46,7 @@ pub enum DeliveryState {
     Failed,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct DeliveryRecord {
     pub digest: String,
     pub state: DeliveryState,
@@ -134,6 +135,19 @@ impl DeliveryLedger {
 
     pub fn get(&self, digest: &str) -> Option<&DeliveryRecord> {
         self.records.get(digest)
+    }
+
+    pub fn persist(&self, store: &mut EncryptedStore) -> Result<(), StorageError> {
+        let bytes = serde_json::to_vec(&self.records).map_err(|_| StorageError::CorruptStore)?;
+        store.put(RecordClass::Outbox, "delivery/ledger", &bytes)
+    }
+
+    pub fn restore(store: &EncryptedStore) -> Result<Self, StorageError> {
+        let Some(bytes) = store.get(RecordClass::Outbox, "delivery/ledger") else {
+            return Ok(Self::default());
+        };
+        let records = serde_json::from_slice(&bytes).map_err(|_| StorageError::CorruptStore)?;
+        Ok(Self { records })
     }
 }
 
@@ -372,5 +386,27 @@ mod tests {
             ledger.get("digest-2").unwrap().state,
             super::DeliveryState::Failed
         );
+    }
+
+    #[test]
+    fn delivery_ledger_survives_encrypted_store_reload() {
+        let path =
+            std::env::temp_dir().join(format!("another-dimension-delivery-{}", std::process::id()));
+        let mut store =
+            crate::storage::EncryptedStore::initialize(&path, "correct horse battery staple")
+                .unwrap();
+        let mut ledger = super::DeliveryLedger::default();
+        ledger.register_encrypted("digest-persisted").unwrap();
+        ledger.persist(&mut store).unwrap();
+        drop(store);
+        let store =
+            crate::storage::EncryptedStore::open(&path, "correct horse battery staple").unwrap();
+        let restored = super::DeliveryLedger::restore(&store).unwrap();
+        assert_eq!(
+            restored.get("digest-persisted").unwrap().state,
+            super::DeliveryState::Encrypted
+        );
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(path.with_extension("revision"));
     }
 }
