@@ -225,3 +225,14 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .daemon-message p { margin: 0 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .daemon-message small { color: var(--muted); font-size: .72rem; }
 .delivery-state { margin: 0; color: var(--muted); font-size: .82rem; }
+.daemon-directory { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 20px; display: grid; gap: 12px; }
+.daemon-directory h2 { margin: 0; font-size: 1rem; }
+.daemon-contact-list { display: grid; gap: 8px; }
+.daemon-contact { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto; gap: 8px; align-items: end; border: 1px solid var(--line); padding: 10px; background: var(--surface); }
+.daemon-contact.selected { border-color: var(--accent); }
+.daemon-contact-select { display: grid; gap: 4px; text-align: left; border: 0; padding: 0; background: transparent; }
+.daemon-contact-select small { color: var(--muted); font-size: .72rem; overflow-wrap: anywhere; }
+.daemon-contact-alias { margin: 0; font-size: .7rem; }
+.daemon-contact-alias input { margin-top: 4px; padding: 7px; }
+.daemon-contact-save { white-space: nowrap; }
+@media (max-width: 600px) { .daemon-contact { grid-template-columns: 1fr; } }
