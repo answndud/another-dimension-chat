@@ -8,6 +8,7 @@ const CODE_GROUP_SIZE = 4;
 export const DEFAULT_INVITE_CODE_TTL_MS = 10 * 60 * 1000;
 export const MAX_INVITE_CODE_TTL_MS = 24 * 60 * 60 * 1000;
 export const INVITE_CODE_FORMAT = /^([0-9A-HJKMNP-TV-Z]{4}-?){6}[0-9A-HJKMNP-TV-Z]{2}$/;
+const CAPABILITY_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 function randomCode() {
   const output = [];
@@ -51,7 +52,7 @@ export function validateDaemonInvite(invite, expectedRelayOrigin, now = Date.now
   const payload = Buffer.from(parts[1], "hex");
   const signature = Buffer.from(parts[2], "hex");
   const lines = payload.toString("utf8").split("\n");
-  if (lines.length !== 6 || lines[0] !== "another-dimension/invite/v1") throw new Error("invalid_signed_invite");
+  if (![6, 7].includes(lines.length) || lines[0] !== "another-dimension/invite/v1") throw new Error("invalid_signed_invite");
   const accountId = lines[1];
   const publicKeyHex = accountId.startsWith("ad1pk") ? accountId.slice("ad1pk".length) : "";
   if (!/^[0-9a-f]{64}$/.test(publicKeyHex) || signature.length !== 64 || !/^[0-9a-f]{64}$/.test(lines[3])) throw new Error("invalid_signed_invite");
@@ -60,6 +61,14 @@ export function validateDaemonInvite(invite, expectedRelayOrigin, now = Date.now
   let relayOrigin;
   try { relayOrigin = new URL(lines[5]).origin; } catch { throw new Error("signed_invite_relay_binding_missing"); }
   if (relayOrigin !== expectedRelayOrigin) throw new Error("signed_invite_relay_binding_mismatch");
+  if (lines.length === 7 && lines[6]) {
+    let inbox;
+    try { inbox = new URL(lines[6]); } catch { throw new Error("signed_invite_inbox_binding_invalid"); }
+    const capability = inbox.pathname.split("/").at(-1);
+    if (inbox.origin !== relayOrigin || !inbox.pathname.startsWith("/api/v1/inbox/") || !CAPABILITY_PATTERN.test(capability || "") || inbox.search || inbox.hash) {
+      throw new Error("signed_invite_inbox_binding_invalid");
+    }
+  }
   const publicKeyDer = Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), Buffer.from(publicKeyHex, "hex")]);
   const publicKey = createPublicKey({ key: publicKeyDer, format: "der", type: "spki" });
   if (!verify(null, payload, publicKey, signature)) throw new Error("invalid_signed_invite_signature");

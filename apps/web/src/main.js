@@ -479,6 +479,7 @@ function render() {
         const staged = await state.daemonBridge.request("/local-api/invites/stage", { method: "POST", body: JSON.stringify({ invite_code: document.querySelector("#received-invite-code").value, signed_invite: result.invite, relay_receipt: result.receipt }) });
         state.daemonReceivedInvite = staged;
         state.daemonPairing = staged;
+        state.daemonPeerInboxUrl = staged.inbox_url || "";
         state.daemonConsumedInvite = "";
         state.notice = "relay 초대코드를 소비하고 daemon에서 상대 identity를 검증했습니다. 승인 전에는 연결되지 않습니다.";
         state.error = "";

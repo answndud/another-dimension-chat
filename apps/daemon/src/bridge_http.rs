@@ -13,7 +13,7 @@ use crate::{
 use axum::{
     body::{to_bytes, Body},
     extract::State,
-    http::{Request as HttpRequest, StatusCode},
+    http::{Request as HttpRequest, StatusCode, Uri},
     response::Response,
     routing::any,
     Router,
@@ -57,6 +57,7 @@ pub struct InviteAuthority {
     root: AccountRootKey,
     device_id: String,
     relay_origin: String,
+    inbox_url: Option<String>,
     relay_public_key: Option<[u8; 32]>,
     relay_trust: Option<RelayTrust>,
     pending: Option<([u8; 32], u64)>,
@@ -70,6 +71,8 @@ pub struct VerifiedInvite {
     pub device_id: String,
     pub expires_at: u64,
     pub relay_origin: String,
+    #[serde(default)]
+    pub inbox_url: Option<String>,
 }
 
 pub fn verify_signed_invite(code: &str, signed_invite: &str, now: u64) -> Option<VerifiedInvite> {
@@ -103,8 +106,15 @@ fn verify_signed_invite_with_code(
     let code_hash = lines.next()?;
     let expires_at = lines.next()?.parse::<u64>().ok()?;
     let relay_origin = lines.next()?.to_owned();
+    let inbox_url = lines
+        .next()
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned);
     if lines.next().is_some() || !account_id.starts_with("ad1pk") || now >= expires_at {
         return None;
+    }
+    if let Some(inbox_url) = &inbox_url {
+        validate_bound_inbox_url(&relay_origin, inbox_url).ok()?;
     }
     let public_key = hex_decode(account_id.strip_prefix("ad1pk")?)?;
     if public_key.len() != 32
@@ -134,6 +144,7 @@ fn verify_signed_invite_with_code(
         device_id,
         expires_at,
         relay_origin,
+        inbox_url,
     })
 }
 
@@ -183,11 +194,36 @@ fn verify_relay_receipt(
             })
 }
 
+fn validate_bound_inbox_url(relay_origin: &str, inbox_url: &str) -> Result<(), ()> {
+    let uri: Uri = inbox_url.parse().map_err(|_| ())?;
+    let scheme = uri.scheme_str().ok_or(())?;
+    if scheme != "http" && scheme != "https" {
+        return Err(());
+    }
+    let authority = uri.authority().ok_or(())?;
+    if format!("{scheme}://{authority}") != relay_origin
+        || uri.query().is_some()
+        || !uri.path().starts_with("/api/v1/inbox/")
+    {
+        return Err(());
+    }
+    let capability = uri.path().rsplit('/').next().ok_or(())?;
+    if capability.len() != 43
+        || !capability
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'-')
+    {
+        return Err(());
+    }
+    Ok(())
+}
+
 impl InviteAuthority {
     pub fn new(
         root: AccountRootKey,
         device_id: impl Into<String>,
         relay_origin: impl Into<String>,
+        inbox_url: Option<String>,
         relay_public_key: Option<[u8; 32]>,
         relay_trust: Option<RelayTrust>,
     ) -> Self {
@@ -197,6 +233,7 @@ impl InviteAuthority {
             root,
             device_id: device_id.clone(),
             relay_origin: relay_origin.into(),
+            inbox_url,
             relay_public_key,
             relay_trust,
             pending: None,
@@ -212,12 +249,13 @@ impl InviteAuthority {
         let expires_at = now.saturating_add(600);
         let code_hash: [u8; 32] = Sha256::digest(code.as_bytes()).into();
         let payload = format!(
-            "another-dimension/invite/v1\n{}\n{}\n{}\n{}\n{}",
+            "another-dimension/invite/v1\n{}\n{}\n{}\n{}\n{}\n{}",
             self.root.account_id().as_str(),
             self.device_id,
             hex_bytes(&code_hash),
             expires_at,
-            self.relay_origin
+            self.relay_origin,
+            self.inbox_url.as_deref().unwrap_or("")
         );
         let signature = self.root.sign(payload.as_bytes());
         self.pending = Some((code_hash, expires_at));
@@ -527,12 +565,18 @@ pub fn handle_request_with_context(
                 return pairing_error(error);
             }
             let safety_number = authority.pairing.safety_number().unwrap_or_default();
+            let inbox_url = invite
+                .inbox_url
+                .as_deref()
+                .map(|value| format!(r##""{}""##, json_escape(value)))
+                .unwrap_or_else(|| "null".to_owned());
             let body = format!(
-                r##"{{"staged":true,"state":"verified","safety_verified":false,"safety_number":"{}","account_id":"{}","device_id":"{}","expires_at":{}}}"##,
+                r##"{{"staged":true,"state":"verified","safety_verified":false,"safety_number":"{}","account_id":"{}","device_id":"{}","expires_at":{},"inbox_url":{}}}"##,
                 json_escape(&safety_number),
                 json_escape(&invite.account_id),
                 json_escape(&invite.device_id),
-                invite.expires_at
+                invite.expires_at,
+                inbox_url
             );
             response(200, &body, None, Some("application/json"))
         }
@@ -544,13 +588,24 @@ pub fn handle_request_with_context(
                 return response(503, "pairing_unavailable", None, None);
             };
             let snapshot = authority.pairing.snapshot();
-            let peer = snapshot.peer.map(|peer| format!(
-                r##",\"peer\":{{\"account_id\":\"{}\",\"device_id\":\"{}\",\"expires_at\":{},\"relay_origin\":\"{}\"}}"##,
-                json_escape(&peer.account_id),
-                json_escape(&peer.device_id),
-                peer.expires_at,
-                json_escape(&peer.relay_origin),
-            )).unwrap_or_default();
+            let peer = snapshot
+                .peer
+                .map(|peer| {
+                    let inbox_url = peer
+                        .inbox_url
+                        .as_deref()
+                        .map(|value| format!(r##""{}""##, json_escape(value)))
+                        .unwrap_or_else(|| "null".to_owned());
+                    format!(
+                        r##",\"peer\":{{\"account_id\":\"{}\",\"device_id\":\"{}\",\"expires_at\":{},\"relay_origin\":\"{}\",\"inbox_url\":{}}}"##,
+                        json_escape(&peer.account_id),
+                        json_escape(&peer.device_id),
+                        peer.expires_at,
+                        json_escape(&peer.relay_origin),
+                        inbox_url,
+                    )
+                })
+                .unwrap_or_default();
             let safety_number = authority
                 .pairing
                 .safety_number()
@@ -1906,6 +1961,7 @@ mod tests {
             local_root,
             "local-device",
             relay_origin,
+            None,
             Some(relay_key.verifying_key().to_bytes()),
             None,
         );

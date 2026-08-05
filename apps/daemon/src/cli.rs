@@ -167,6 +167,16 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         display_name: summary.display_name,
     };
     let relay_origin = option(args, "--relay-origin")?.unwrap_or_default();
+    let inbox_url = option(args, "--inbox-url")?;
+    if let Some(inbox_url) = &inbox_url {
+        let expected_prefix = format!("{relay_origin}/api/v1/inbox/");
+        if relay_origin.is_empty() || !inbox_url.starts_with(&expected_prefix) {
+            return Err(CliError::Usage(
+                "--inbox-url must belong to --relay-origin and use /api/v1/inbox/<capability>"
+                    .into(),
+            ));
+        }
+    }
     let relay_public_key = option(args, "--relay-public-key")?
         .map(|value| parse_hex_key(&value))
         .transpose()
@@ -217,6 +227,7 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         AccountRootKey::from_seed(root_seed),
         identity.device_id.clone(),
         relay_origin,
+        inbox_url,
         relay_public_key,
         relay_trust,
     );

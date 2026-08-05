@@ -117,6 +117,7 @@ impl PairingSession {
                 if trusted.account_id != peer.account_id
                     || trusted.device_id != peer.device_id
                     || trusted.relay_origin != peer.relay_origin
+                    || trusted.inbox_url != peer.inbox_url
                 {
                     Err(PairingError::BindingChanged)
                 } else {
@@ -241,6 +242,7 @@ mod tests {
             device_id: device_id.into(),
             expires_at,
             relay_origin: "https://relay.example".into(),
+            inbox_url: None,
         }
     }
 
