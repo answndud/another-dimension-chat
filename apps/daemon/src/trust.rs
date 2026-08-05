@@ -8,6 +8,27 @@ pub enum TrustError {
     Invalid,
 }
 
+/// A SHA-256 digest of the DER-encoded peer certificate. This is deliberately
+/// parsed as an explicit value instead of accepting an arbitrary URL fragment
+/// or silently falling back to a CA-only connection.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TlsCertificatePin(pub [u8; 32]);
+
+impl TlsCertificatePin {
+    pub fn parse(value: &str) -> Result<Self, TrustError> {
+        let value = value
+            .strip_prefix("sha256:")
+            .or_else(|| value.strip_prefix("sha256/"))
+            .ok_or(TrustError::Invalid)?;
+        let bytes = decode(value, 32).ok_or(TrustError::Invalid)?;
+        Ok(Self(bytes.try_into().map_err(|_| TrustError::Invalid)?))
+    }
+
+    pub const fn as_bytes(self) -> [u8; 32] {
+        self.0
+    }
+}
+
 pub struct RelayTrust {
     allowed_key_ids: Vec<String>,
     revoked_key_ids: Vec<String>,
@@ -129,7 +150,7 @@ impl RelayTrust {
 
 #[cfg(test)]
 mod tests {
-    use super::RelayTrust;
+    use super::{RelayTrust, TlsCertificatePin, TrustError};
     use ed25519_dalek::{Signer, SigningKey};
     use sha2::Digest;
     use std::{
@@ -167,5 +188,24 @@ mod tests {
         assert!(trust.allows(&relay));
         assert!(!trust.allows(&[8; 32]));
         fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn tls_certificate_pin_requires_an_explicit_sha256_prefix() {
+        let digest = "11".repeat(32);
+        assert_eq!(
+            TlsCertificatePin::parse(&format!("sha256:{digest}"))
+                .unwrap()
+                .as_bytes(),
+            [0x11; 32]
+        );
+        assert!(matches!(
+            TlsCertificatePin::parse(&digest),
+            Err(TrustError::Invalid)
+        ));
+        assert!(matches!(
+            TlsCertificatePin::parse("sha256:00"),
+            Err(TrustError::Invalid)
+        ));
     }
 }

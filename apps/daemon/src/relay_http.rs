@@ -6,6 +6,7 @@
 //! pinning, redirect policy, and endpoint re-trust flow.
 
 use crate::delivery::RelayEnvelope;
+use crate::trust::TlsCertificatePin;
 use axum::http::Uri;
 use serde::Deserialize;
 use std::{
@@ -24,6 +25,7 @@ const MAX_RESPONSE_BYTES: usize = 128 * 1024;
 #[derive(Debug, Eq, PartialEq)]
 pub enum RelayError {
     InvalidEndpoint,
+    TrustRequired,
     UnsupportedTransport,
     InvalidCapability,
     Connect,
@@ -38,15 +40,33 @@ pub struct RelayEndpoint {
     pub origin: String,
     pub path: String,
     pub capability: String,
+    pub tls_certificate_pin: Option<TlsCertificatePin>,
 }
 
 impl RelayEndpoint {
     pub fn from_inbox_url(value: &str) -> Result<Self, RelayError> {
+        Self::from_inbox_url_with_pin(value, None)
+    }
+
+    /// Parse an endpoint only when its transport trust decision is explicit.
+    /// Loopback HTTP remains the development-only default; HTTPS requires a
+    /// certificate pin before a TLS connector may use it.
+    pub fn from_inbox_url_with_pin(
+        value: &str,
+        tls_certificate_pin: Option<TlsCertificatePin>,
+    ) -> Result<Self, RelayError> {
         let uri: Uri = value.parse().map_err(|_| RelayError::InvalidEndpoint)?;
         let scheme = uri.scheme_str().ok_or(RelayError::InvalidEndpoint)?;
         let authority = uri.authority().ok_or(RelayError::InvalidEndpoint)?;
         let host = authority.host();
-        if scheme != "http" || !matches!(host, "127.0.0.1" | "localhost" | "[::1]") {
+        let loopback = matches!(host, "127.0.0.1" | "localhost" | "[::1]");
+        if scheme == "http" && (!loopback || tls_certificate_pin.is_some()) {
+            return Err(RelayError::UnsupportedTransport);
+        }
+        if scheme == "https" && tls_certificate_pin.is_none() {
+            return Err(RelayError::TrustRequired);
+        }
+        if scheme != "http" && scheme != "https" {
             return Err(RelayError::UnsupportedTransport);
         }
         if uri.query().is_some()
@@ -64,9 +84,10 @@ impl RelayEndpoint {
             return Err(RelayError::InvalidCapability);
         }
         Ok(Self {
-            origin: format!("http://{authority}"),
+            origin: format!("{scheme}://{authority}"),
             path: uri.path().to_owned(),
             capability: capability.to_owned(),
+            tls_certificate_pin,
         })
     }
 
@@ -326,6 +347,7 @@ fn parse_response(response: &[u8]) -> Result<(u16, Vec<u8>), RelayError> {
 #[cfg(test)]
 mod tests {
     use super::{RelayEndpoint, RelayError};
+    use crate::trust::TlsCertificatePin;
 
     #[test]
     fn endpoint_accepts_only_loopback_http_capability_urls() {
@@ -338,7 +360,23 @@ mod tests {
             RelayEndpoint::from_inbox_url(
                 "https://relay.example/api/v1/inbox/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopq"
             ),
-            Err(RelayError::UnsupportedTransport)
+            Err(RelayError::TrustRequired)
+        );
+        assert_eq!(
+            RelayEndpoint::from_inbox_url_with_pin(
+                "https://relay.example/api/v1/inbox/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopq",
+                Some(TlsCertificatePin([0x22; 32]))
+            )
+            .unwrap()
+            .tls_certificate_pin,
+            Some(TlsCertificatePin([0x22; 32]))
+        );
+        assert_eq!(
+            RelayEndpoint::from_inbox_url_with_pin(
+                "https://relay.example/api/v1/inbox/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopq",
+                None
+            ),
+            Err(RelayError::TrustRequired)
         );
         assert_eq!(
             RelayEndpoint::from_inbox_url("http://127.0.0.1:1421/api/v1/inbox/short"),
