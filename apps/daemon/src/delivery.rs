@@ -52,6 +52,8 @@ pub struct DeliveryRecord {
     pub state: DeliveryState,
     pub attempts: u8,
     pub next_retry_at: Option<u64>,
+    #[serde(default)]
+    pub relay_id: Option<String>,
 }
 
 #[derive(Default)]
@@ -72,6 +74,7 @@ impl DeliveryLedger {
                 state: DeliveryState::Encrypted,
                 attempts: 0,
                 next_retry_at: None,
+                relay_id: None,
             },
         );
         Ok(())
@@ -106,6 +109,39 @@ impl DeliveryLedger {
         }
         record.state = DeliveryState::RecipientReceived;
         Ok(true)
+    }
+
+    pub fn bind_relay_id(
+        &mut self,
+        digest: &str,
+        relay_id: impl Into<String>,
+    ) -> Result<(), EnvelopeError> {
+        let record = self
+            .records
+            .get_mut(digest)
+            .ok_or(EnvelopeError::InvalidWire)?;
+        record.relay_id = Some(relay_id.into());
+        Ok(())
+    }
+
+    pub fn acknowledge_relay_ids(&mut self, ids: &[String]) -> usize {
+        self.records
+            .values_mut()
+            .filter(|record| {
+                record
+                    .relay_id
+                    .as_ref()
+                    .is_some_and(|id| ids.iter().any(|candidate| candidate == id))
+            })
+            .filter_map(|record| {
+                if record.state == DeliveryState::RelayAccepted {
+                    record.state = DeliveryState::RecipientReceived;
+                    Some(())
+                } else {
+                    None
+                }
+            })
+            .count()
     }
 
     pub fn schedule_retry(&mut self, digest: &str, now: u64) -> Result<bool, EnvelopeError> {

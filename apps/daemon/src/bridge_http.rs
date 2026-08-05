@@ -872,9 +872,15 @@ pub fn handle_request_with_context(
                 Ok(value) => value,
                 Err(_) => {
                     let _ = ledger.schedule_retry(&digest, now);
+                    if let Some(store) = session_store.as_deref_mut() {
+                        let _ = ledger.persist(store);
+                    }
                     return response(503, "relay_unavailable", None, Some("application/json"));
                 }
             };
+            if ledger.bind_relay_id(&digest, &accepted.id).is_err() {
+                return response(503, "delivery_state_unavailable", None, None);
+            }
             let _ = ledger.transition(&digest, crate::delivery::DeliveryState::Queued);
             let _ = ledger.transition(&digest, crate::delivery::DeliveryState::RelayAccepted);
             if let Some(store) = session_store.as_deref_mut() {
@@ -956,9 +962,23 @@ pub fn handle_request_with_context(
                     return response(503, "relay_unavailable", None, Some("application/json"))
                 }
             };
+            let recipient_received = if let Some(ledger) = delivery_ledger.as_deref_mut() {
+                let count = ledger.acknowledge_relay_ids(&ids);
+                if let Some(store) = session_store.as_deref_mut() {
+                    if ledger.persist(store).is_err() {
+                        return response(503, "storage_unavailable", None, None);
+                    }
+                }
+                count
+            } else {
+                0
+            };
             response(
                 200,
-                &format!(r##"{{"acknowledged":{}}}"##, acknowledged),
+                &format!(
+                    r##"{{"acknowledged":{},"recipient_received":{}}}"##,
+                    acknowledged, recipient_received
+                ),
                 None,
                 Some("application/json"),
             )
