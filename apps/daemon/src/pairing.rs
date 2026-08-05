@@ -360,4 +360,29 @@ mod tests {
         session.reject().unwrap();
         assert_eq!(session.snapshot().state, PairingState::Rejected);
     }
+
+    #[test]
+    fn relay_rotation_requires_a_fresh_safety_verified_pairing() {
+        let mut session = PairingSession::new("local-account", "local-device");
+        session
+            .verify_peer(peer("peer-account", "peer-device", 100), 10)
+            .unwrap();
+        let safety = session.safety_number().unwrap();
+        session.confirm_safety(&safety).unwrap();
+        session.approve(10).unwrap();
+        assert!(session.can_message());
+
+        session.invalidate_binding().unwrap();
+        assert_eq!(session.snapshot().state, PairingState::Rejected);
+        assert!(!session.can_message());
+
+        session
+            .verify_peer(peer("peer-account", "peer-device", 200), 20)
+            .unwrap();
+        assert!(!session.can_message());
+        let safety = session.safety_number().unwrap();
+        session.confirm_safety(&safety).unwrap();
+        session.approve(20).unwrap();
+        assert!(session.can_message());
+    }
 }
