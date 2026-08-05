@@ -914,26 +914,50 @@ pub fn handle_request_with_context(
                     Some("application/json"),
                 );
             };
+            let capability = endpoint.capability.clone();
             let items = match RelayClient::new(endpoint).sync_blocking() {
                 Ok(items) => items,
                 Err(_) => {
                     return response(503, "relay_unavailable", None, Some("application/json"))
                 }
             };
-            let items = items
-                .into_iter()
-                .map(|item| {
-                    format!(
-                        r##"{{"id":"{}","envelope":"{}"}}"##,
-                        json_escape(&item.id),
-                        json_escape(&item.envelope)
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join(",");
+            let mut validated_items = Vec::with_capacity(items.len());
+            for item in items {
+                let Some(wire) = item.envelope.strip_prefix("ADENV1.") else {
+                    return response(
+                        502,
+                        "invalid_relay_envelope",
+                        None,
+                        Some("application/json"),
+                    );
+                };
+                let Ok(envelope) = RelayEnvelope::from_wire(wire, now) else {
+                    return response(
+                        502,
+                        "invalid_relay_envelope",
+                        None,
+                        Some("application/json"),
+                    );
+                };
+                if envelope.mailbox != capability
+                    || hex_bytes(&Sha256::digest(item.envelope.as_bytes())) != item.id
+                {
+                    return response(
+                        502,
+                        "invalid_relay_envelope",
+                        None,
+                        Some("application/json"),
+                    );
+                }
+                validated_items.push(format!(
+                    r##"{{"id":"{}","envelope":"{}"}}"##,
+                    json_escape(&item.id),
+                    json_escape(&item.envelope)
+                ));
+            }
             response(
                 200,
-                &format!(r##"{{"items":[{}]}}"##, items),
+                &format!(r##"{{"items":[{}]}}"##, validated_items.join(",")),
                 None,
                 Some("application/json"),
             )
