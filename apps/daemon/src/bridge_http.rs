@@ -1792,7 +1792,11 @@ pub fn handle_request_with_context(
                 return response(503, "delivery_unavailable", None, None);
             };
             if ledger
-                .register_encrypted_with_wire(digest.clone(), Some(wire))
+                .register_encrypted_with_wire_and_expiry(
+                    digest.clone(),
+                    Some(wire),
+                    Some(envelope.expires_at),
+                )
                 .is_err()
             {
                 return response(409, "duplicate_delivery", None, Some("application/json"));
@@ -2134,6 +2138,41 @@ pub fn handle_request_with_context(
                         .map_or_else(|| "null".to_owned(), |value| value.to_string()),
                     relay_id
                 ),
+                None,
+                Some("application/json"),
+            )
+        }
+        ("POST", "/local-api/delivery/cancel") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(digest) = json_string(request.body, "digest") else {
+                return response(
+                    400,
+                    "invalid_delivery_digest",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(ledger) = delivery_ledger.as_deref_mut() else {
+                return response(503, "delivery_unavailable", None, None);
+            };
+            let cancelled = match ledger.cancel(&digest) {
+                Ok(value) => value,
+                Err(_) => {
+                    return response(404, "delivery_not_found", None, Some("application/json"))
+                }
+            };
+            if cancelled {
+                if let Some(store) = session_store.as_deref_mut() {
+                    if ledger.persist(store).is_err() {
+                        return response(503, "storage_unavailable", None, None);
+                    }
+                }
+            }
+            response(
+                200,
+                &format!(r##"{{"cancelled":{cancelled}}}"##),
                 None,
                 Some("application/json"),
             )
@@ -2832,6 +2871,7 @@ fn delivery_state_name(state: crate::delivery::DeliveryState) -> &'static str {
         crate::delivery::DeliveryState::Decrypted => "decrypted",
         crate::delivery::DeliveryState::Retryable => "retryable",
         crate::delivery::DeliveryState::Failed => "failed",
+        crate::delivery::DeliveryState::Cancelled => "cancelled",
     }
 }
 

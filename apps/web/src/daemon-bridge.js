@@ -174,6 +174,10 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ digest }),
     }),
+    cancelDelivery: (digest) => request("/local-api/delivery/cancel", {
+      method: "POST",
+      body: JSON.stringify({ digest }),
+    }),
     retryDelivery: (inboxUrl, digest) => request("/local-api/delivery/retry", {
       method: "POST",
       body: JSON.stringify({ inbox_url: inboxUrl, digest }),

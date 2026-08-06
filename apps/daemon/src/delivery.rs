@@ -45,6 +45,7 @@ pub enum DeliveryState {
     Decrypted,
     Retryable,
     Failed,
+    Cancelled,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -57,6 +58,8 @@ pub struct DeliveryRecord {
     pub relay_id: Option<String>,
     #[serde(default)]
     pub wire: Option<String>,
+    #[serde(default)]
+    pub expires_at: Option<u64>,
 }
 
 #[derive(Default)]
@@ -74,6 +77,15 @@ impl DeliveryLedger {
         digest: impl Into<String>,
         wire: Option<String>,
     ) -> Result<(), EnvelopeError> {
+        self.register_encrypted_with_wire_and_expiry(digest, wire, None)
+    }
+
+    pub fn register_encrypted_with_wire_and_expiry(
+        &mut self,
+        digest: impl Into<String>,
+        wire: Option<String>,
+        expires_at: Option<u64>,
+    ) -> Result<(), EnvelopeError> {
         let digest = digest.into();
         if digest.is_empty() || self.records.contains_key(&digest) {
             return Err(EnvelopeError::InvalidWire);
@@ -87,6 +99,7 @@ impl DeliveryLedger {
                 next_retry_at: None,
                 relay_id: None,
                 wire,
+                expires_at,
             },
         );
         Ok(())
@@ -177,6 +190,7 @@ impl DeliveryLedger {
                 next_retry_at: None,
                 relay_id: Some(relay_id.into()),
                 wire: None,
+                expires_at: None,
             },
         );
         Ok(true)
@@ -195,6 +209,47 @@ impl DeliveryLedger {
         }
         record.state = DeliveryState::Decrypted;
         Ok(true)
+    }
+
+    pub fn cancel(&mut self, digest: &str) -> Result<bool, EnvelopeError> {
+        let record = self
+            .records
+            .get_mut(digest)
+            .ok_or(EnvelopeError::InvalidWire)?;
+        if matches!(
+            record.state,
+            DeliveryState::RelayAccepted
+                | DeliveryState::RecipientReceived
+                | DeliveryState::Decrypted
+                | DeliveryState::Failed
+                | DeliveryState::Cancelled
+        ) {
+            return Ok(false);
+        }
+        record.state = DeliveryState::Cancelled;
+        record.next_retry_at = None;
+        record.wire = None;
+        Ok(true)
+    }
+
+    pub fn expire_due(&mut self, now: u64) -> usize {
+        let mut expired = 0;
+        for record in self.records.values_mut() {
+            if record
+                .expires_at
+                .is_some_and(|expires_at| expires_at <= now)
+                && !matches!(
+                    record.state,
+                    DeliveryState::Decrypted | DeliveryState::Cancelled
+                )
+            {
+                record.state = DeliveryState::Failed;
+                record.next_retry_at = None;
+                record.wire = None;
+                expired += 1;
+            }
+        }
+        expired
     }
 
     pub fn schedule_retry(&mut self, digest: &str, now: u64) -> Result<bool, EnvelopeError> {
@@ -472,6 +527,29 @@ mod tests {
         assert_eq!(
             ledger.get("digest-1").unwrap().state,
             super::DeliveryState::Decrypted
+        );
+    }
+
+    #[test]
+    fn delivery_ledger_can_cancel_before_relay_acceptance_and_expire_stale_wire() {
+        let mut ledger = super::DeliveryLedger::default();
+        ledger
+            .register_encrypted_with_wire_and_expiry("draft-1", Some("wire".into()), Some(100))
+            .unwrap();
+        assert_eq!(ledger.cancel("draft-1"), Ok(true));
+        assert_eq!(ledger.cancel("draft-1"), Ok(false));
+        assert_eq!(
+            ledger.get("draft-1").unwrap().state,
+            super::DeliveryState::Cancelled
+        );
+
+        ledger
+            .register_encrypted_with_wire_and_expiry("draft-2", Some("wire".into()), Some(100))
+            .unwrap();
+        assert_eq!(ledger.expire_due(100), 1);
+        assert_eq!(
+            ledger.get("draft-2").unwrap().state,
+            super::DeliveryState::Failed
         );
     }
 
