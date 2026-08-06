@@ -140,6 +140,7 @@ export async function createSqliteRelayStore({
     await chmod(file, 0o600).catch(() => {});
     db.pragma("journal_mode = DELETE");
     db.pragma("synchronous = FULL");
+    if (db.pragma("integrity_check", { simple: true }) !== "ok") throw new Error("Relay SQLite integrity check failed.");
     db.exec(`
       CREATE TABLE IF NOT EXISTS relay_inbox (
         id TEXT PRIMARY KEY,

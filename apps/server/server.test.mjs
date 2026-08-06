@@ -543,6 +543,23 @@ test("relay refuses new envelopes when the bounded queue is full", async () => {
   await rm(dataDir, { recursive: true, force: true });
 });
 
+test("relay trims a migrated queue to its quota before serving it", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const records = Array.from({ length: 300 }, (_, index) => ({ id: `legacy-${index}`, envelope: `ADENVWEB1.legacy-${index}`, receivedAt: Date.now() + index }));
+  await writeFile(join(dataDir, "inbox.json"), JSON.stringify(records), { mode: 0o600 });
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
+  const listed = await call(port, "GET", inboxPath, undefined, localHeaders(runtime));
+  assert.equal(listed.body.items.length, 256);
+  const db = new Database(join(dataDir, "relay.sqlite"), { readonly: true });
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM relay_inbox").get().count, 256);
+  db.close();
+  await runtime.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
 test("capability records rotate after expiry and preserve private file permissions", async () => {
   const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
   const oldToken = "expired-capability-token";
