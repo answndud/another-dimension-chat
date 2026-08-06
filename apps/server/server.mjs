@@ -1,6 +1,6 @@
 import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, randomBytes, sign, timingSafeEqual, X509Certificate } from "node:crypto";
 import { createReadStream, realpathSync } from "node:fs";
-import { chmod, lstat, mkdir, open, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, open, readdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
 import { dirname, extname, join, normalize, resolve } from "node:path";
@@ -20,6 +20,8 @@ const MAX_INVITE_CODE_BODY_BYTES = 96 * 1024 + 4096;
 const MAX_BLOB_BYTES = 32 * 1024 * 1024;
 const MAX_BLOB_CHUNK_BYTES = 64 * 1024;
 const MAX_BLOB_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_BLOB_STORE_BYTES = 128 * 1024 * 1024;
+const MAX_BLOB_RECORDS = 256;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaultDist = resolve(__dirname, "../web/dist");
 
@@ -346,6 +348,21 @@ export async function createLocalServer({
       }
     }
   };
+  const blobUsage = async (excludeBlobId = "") => {
+    let bytes = 0;
+    let records = 0;
+    for (const name of await readdir(blobDir)) {
+      if (!name.endsWith(".meta.json")) continue;
+      const blobId = name.slice(0, -".meta.json".length);
+      if (blobId === excludeBlobId) continue;
+      try {
+        const info = await stat(join(blobDir, `${blobId}.blob`));
+        bytes += info.size;
+        records += 1;
+      } catch { /* metadata without a blob is repaired by the next upload */ }
+    }
+    return { bytes, records };
+  };
   await purgeBlobs();
   const capabilityFile = join(dataDir, "inbox-capability");
   const localAccessFile = join(dataDir, "local-access-capability");
@@ -604,6 +621,8 @@ export async function createLocalServer({
         if (meta && (meta.total !== total || meta.expiresAt <= Date.now())) throw new Error("blob_metadata_mismatch");
         if (!meta) {
           if (offset !== 0) throw new Error("blob_offset_mismatch");
+          const usage = await blobUsage(blobId);
+          if (usage.records >= MAX_BLOB_RECORDS || usage.bytes + total > MAX_BLOB_STORE_BYTES) throw new Error("blob_quota_exceeded");
           meta = { version: 1, total, received: 0, complete: false, expiresAt: Date.now() + Math.min(requestedTtl, MAX_BLOB_TTL_MS) };
         }
         const handle = await open(blobFile, offset === 0 ? "w" : "r+");
@@ -617,7 +636,7 @@ export async function createLocalServer({
         await writeFile(metaFile, `${JSON.stringify(meta)}\n`, { mode: 0o600 });
         json(res, meta.complete ? 201 : 202, { accepted: true, complete: meta.complete, received: meta.received, total: meta.total, expiresAt: meta.expiresAt, blobUrl: `/api/v1/blobs/${blobId}` }, headers);
       } catch (error) {
-        const status = ["blob_offset_mismatch", "blob_metadata_mismatch"].includes(error.message) ? 409 : error.message === "request_too_large" ? 413 : 400;
+        const status = ["blob_offset_mismatch", "blob_metadata_mismatch"].includes(error.message) ? 409 : error.message === "request_too_large" ? 413 : error.message === "blob_quota_exceeded" ? 507 : 400;
         json(res, status, { accepted: false, error: error.message }, headers);
       }
       return;

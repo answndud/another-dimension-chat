@@ -187,7 +187,7 @@ function renderDaemonSessionPanel() {
   const conversationId = state.daemonConversationId || "";
   const timeline = [...state.daemonOutgoingMessages, ...state.daemonMessages];
   const receivedMessages = timeline.length
-    ? timeline.map((message) => `<article class="daemon-message ${message.direction === "outgoing" ? "outgoing" : "incoming"}">${message.attachmentId ? `<p>암호화 첨부파일</p><button class="quiet daemon-attachment-download" data-daemon-attachment="${escapeHtml(message.attachmentId)}" type="button">파일 복호화·다운로드</button>` : `<p>${escapeHtml(message.text)}</p>`}<small>${message.direction === "outgoing" ? "내 메시지" : "상대 메시지 · daemon 복호화 완료"} · ${escapeHtml(message.state || "decrypted")} · ${escapeHtml(message.id.slice(0, 12))}</small></article>`).join("")
+    ? timeline.map((message) => `<article class="daemon-message ${message.direction === "outgoing" ? "outgoing" : "incoming"}">${message.attachmentId ? `<p>암호화 첨부파일</p><button class="quiet daemon-attachment-download" data-daemon-attachment="${escapeHtml(message.attachmentId)}" type="button">파일 복호화·다운로드</button><button class="quiet daemon-attachment-delete" data-daemon-attachment-delete="${escapeHtml(message.attachmentId)}" type="button">로컬 첨부 상태 삭제</button>` : `<p>${escapeHtml(message.text)}</p>`}<small>${message.direction === "outgoing" ? "내 메시지" : "상대 메시지 · daemon 복호화 완료"} · ${escapeHtml(message.state || "decrypted")} · ${escapeHtml(message.id.slice(0, 12))}</small></article>`).join("")
     : '<p class="field-note">아직 받은 메시지가 없습니다.</p>';
   const retryButton = state.daemonDeliveryState === "retryable" ? '<button id="daemon-delivery-retry" class="secondary" type="button">전달 다시 시도</button>' : "";
   const attachmentRetry = state.daemonAttachmentBlobId && /실패|retry/i.test(state.daemonAttachmentState) ? '<button id="daemon-attachment-retry" class="secondary" type="button">첨부파일 전송 다시 시도</button><button id="daemon-attachment-cancel" class="quiet" type="button">첨부파일 작업 취소</button>' : "";
@@ -295,6 +295,12 @@ function bindDaemonSession() {
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, "첨부파일을 daemon에서 검증·복호화해 다운로드했습니다.")));
+  document.querySelectorAll(".daemon-attachment-delete").forEach((button) => button.addEventListener("click", () => run(async () => {
+    const attachmentId = button.dataset.daemonAttachmentDelete || "";
+    if (!attachmentId) throw new Error("삭제할 첨부파일 정보가 없습니다.");
+    await bridge.cancelAttachment(attachmentId);
+    state.daemonMessages = state.daemonMessages.filter((message) => message.attachmentId !== attachmentId);
+  }, "daemon 암호화 저장소에서 첨부파일 상태를 삭제했습니다.")));
   document.querySelector("#daemon-attachment-send")?.addEventListener("click", () => run(async () => {
     const conversationId = getConversationId();
     const file = document.querySelector("#daemon-attachment-file")?.files?.[0];
