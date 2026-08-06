@@ -229,6 +229,9 @@ try {
   const received = await bob.api("POST", "/local-api/delivery/sync", { conversation_id: conversationId, inbox_url: bob.inboxUrl });
   assert.equal(received.status, 200);
   assert.equal(Buffer.from(received.body.messages[0].plaintext, "hex").toString(), "repair-flow");
+  const restoredMessages = await bob.api("POST", "/local-api/messages/list", { conversation_id: conversationId });
+  assert.equal(restoredMessages.status, 200);
+  assert.equal(Buffer.from(restoredMessages.body.messages[0].plaintext, "hex").toString(), "repair-flow");
   const metadata = await bob.api("GET", "/local-api/contacts");
   assert.equal(metadata.body.contacts[0].last_message_preview, "repair-flow");
 

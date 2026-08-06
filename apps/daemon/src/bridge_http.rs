@@ -47,6 +47,47 @@ struct MessagePayload {
     text: String,
 }
 
+#[derive(serde::Deserialize, serde::Serialize)]
+struct StoredMessage {
+    conversation_id: String,
+    message_id: String,
+    direction: String,
+    created_at: u64,
+    expires_at: u64,
+    text: String,
+}
+
+fn message_record_key(conversation_id: &str, message_id: &str) -> String {
+    format!(
+        "messages/{}",
+        hex_bytes(&Sha256::digest(
+            format!("{conversation_id}\n{message_id}").as_bytes()
+        ))
+    )
+}
+
+fn persist_message(
+    store: &mut EncryptedStore,
+    conversation_id: &str,
+    message: &MessagePayload,
+    direction: &str,
+) -> Result<(), StorageError> {
+    let record = StoredMessage {
+        conversation_id: conversation_id.to_owned(),
+        message_id: message.id.clone(),
+        direction: direction.to_owned(),
+        created_at: message.created_at,
+        expires_at: message.expires_at,
+        text: message.text.clone(),
+    };
+    let bytes = serde_json::to_vec(&record).map_err(|_| StorageError::CorruptStore)?;
+    store.put(
+        RecordClass::Message,
+        &message_record_key(conversation_id, &message.id),
+        &bytes,
+    )
+}
+
 fn encode_message_payload(text: &str, now: u64, expires_at: u64) -> Option<Vec<u8>> {
     let mut id = [0_u8; 16];
     getrandom::fill(&mut id).ok()?;
@@ -1281,6 +1322,47 @@ pub fn handle_request_with_context(
                 Some("application/json"),
             )
         }
+        ("POST", "/local-api/messages/list") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(conversation_id) = json_string(request.body, "conversation_id") else {
+                return response(400, "invalid_conversation", None, Some("application/json"));
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            let mut messages = Vec::new();
+            for (key, bytes) in store.records_with_prefix(RecordClass::Message, "messages/") {
+                let Ok(message) = serde_json::from_slice::<StoredMessage>(&bytes) else {
+                    return response(503, "message_storage_corrupt", None, None);
+                };
+                if message.conversation_id != conversation_id {
+                    continue;
+                }
+                if message.expires_at != 0 && message.expires_at <= now {
+                    let _ = store.delete(RecordClass::Message, &key);
+                    continue;
+                }
+                messages.push(format!(
+                    r##"{{"message_id":"{}","direction":"{}","created_at":{},"expires_at":{},"plaintext":"{}"}}"##,
+                    json_escape(&message.message_id),
+                    json_escape(&message.direction),
+                    message.created_at,
+                    message.expires_at,
+                    hex_bytes(message.text.as_bytes())
+                ));
+                if messages.len() >= 200 {
+                    break;
+                }
+            }
+            response(
+                200,
+                &format!(r##"{{"messages":[{}]}}"##, messages.join(",")),
+                None,
+                Some("application/json"),
+            )
+        }
         ("POST", "/local-api/pairing/reject") => {
             if let Err(reply) = authorize_api(bridge, &request, now) {
                 return reply;
@@ -1432,7 +1514,7 @@ pub fn handle_request_with_context(
             }) {
                 return response(403, "contact_blocked", None, Some("application/json"));
             }
-            let Some(plaintext) = json_string(request.body, "plaintext") else {
+            let Some(message_text) = json_string(request.body, "plaintext") else {
                 return response(400, "invalid_message", None, Some("application/json"));
             };
             let expires_at = json_u64(request.body, "expires_at").unwrap_or(0);
@@ -1446,7 +1528,7 @@ pub fn handle_request_with_context(
                     Some("application/json"),
                 );
             }
-            let Some(plaintext) = encode_message_payload(&plaintext, now, expires_at) else {
+            let Some(plaintext) = encode_message_payload(&message_text, now, expires_at) else {
                 return response(503, "randomness_unavailable", None, None);
             };
             let Some(catalog) = session_catalog.as_deref_mut() else {
@@ -1456,12 +1538,20 @@ pub fn handle_request_with_context(
                 return response(503, "storage_unavailable", None, None);
             };
             match catalog.send(conversation_id, &plaintext, store) {
-                Ok(ciphertext) => response(
-                    200,
-                    &format!(r##"{{"ciphertext":"{}"}}"##, hex_bytes(&ciphertext)),
-                    None,
-                    Some("application/json"),
-                ),
+                Ok(ciphertext) => {
+                    let Some(message) = decode_message_payload(&plaintext) else {
+                        return response(503, "message_encoding_failed", None, None);
+                    };
+                    if persist_message(store, conversation_id, &message, "outgoing").is_err() {
+                        return response(503, "message_storage_unavailable", None, None);
+                    }
+                    response(
+                        200,
+                        &format!(r##"{{"ciphertext":"{}"}}"##, hex_bytes(&ciphertext)),
+                        None,
+                        Some("application/json"),
+                    )
+                }
                 Err(error) => catalog_error(error),
             }
         }
@@ -2532,6 +2622,11 @@ pub fn handle_request_with_context(
                         .as_ref()
                         .map(|item| item.text.as_bytes())
                         .unwrap_or(&plaintext);
+                    if let Some(message) = message.as_ref().filter(|_| !expired) {
+                        if persist_message(store, conversation_id, message, "incoming").is_err() {
+                            return response(503, "message_storage_unavailable", None, None);
+                        }
+                    }
                     if let Some(authority) = invite_authority.as_deref_mut() {
                         if !expired {
                             let _ = authority.record_contact_message(

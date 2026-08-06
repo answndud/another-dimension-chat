@@ -196,6 +196,29 @@ function renderDaemonSessionPanel() {
 
 function bindDaemonSession() {
   const bridge = state.daemonBridge;
+  const historyButton = document.createElement("button");
+  historyButton.type = "button";
+  historyButton.className = "quiet";
+  historyButton.textContent = "로컬 대화 기록 불러오기";
+  historyButton.addEventListener("click", async () => {
+    try {
+      const conversationId = document.querySelector("#daemon-conversation-id")?.value.trim() || state.daemonConversationId;
+      if (!conversationId) throw new Error("대화 식별자를 입력하세요.");
+      const result = await bridge.messages(conversationId);
+      const restored = (result.messages || []).map((message) => ({
+        id: message.message_id || "복구된 메시지",
+        text: decodeHexText(message.plaintext),
+        state: message.direction === "outgoing" ? "내 기록" : "상대 기록",
+        direction: message.direction === "outgoing" ? "outgoing" : "incoming",
+      }));
+      state.daemonOutgoingMessages = restored.filter((message) => message.direction === "outgoing");
+      state.daemonMessages = restored.filter((message) => message.direction === "incoming");
+      state.notice = "daemon 암호화 저장소에서 대화 기록을 복구했습니다.";
+      state.error = "";
+    } catch (error) { state.error = error.message; }
+    render();
+  });
+  document.querySelector(".daemon-delivery")?.prepend(historyButton);
   const getConversationId = () => {
     const value = document.querySelector("#daemon-conversation-id")?.value.trim() || "";
     if (!value) throw new Error("대화 식별자를 입력하세요.");
