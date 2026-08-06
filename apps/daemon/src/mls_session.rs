@@ -309,6 +309,19 @@ impl MlsSessionCatalog {
             .map_err(Into::into)
     }
 
+    pub fn receive_delivery(
+        &mut self,
+        conversation_id: &str,
+        wire: &[u8],
+        store: &mut EncryptedStore,
+    ) -> Result<Option<Vec<u8>>, SessionCatalogError> {
+        self.sessions
+            .get_mut(conversation_id)
+            .ok_or(SessionCatalogError::UnknownConversation)?
+            .decrypt_delivery_and_persist(wire, store, conversation_id)
+            .map_err(Into::into)
+    }
+
     pub fn send_attachment(
         &mut self,
         conversation_id: &str,
@@ -572,6 +585,11 @@ impl MlsSession {
     }
 
     pub fn decrypt(&mut self, wire: &[u8]) -> Result<Vec<u8>, SessionError> {
+        self.decrypt_delivery(wire)?
+            .ok_or(SessionError::UnsupportedMessage)
+    }
+
+    fn decrypt_delivery(&mut self, wire: &[u8]) -> Result<Option<Vec<u8>>, SessionError> {
         self.ensure_usable()?;
         if wire.len() > MAX_WIRE_BYTES {
             return Err(SessionError::TooLarge);
@@ -589,12 +607,12 @@ impl MlsSession {
             .process_message(&self.provider, message)
             .map_err(|_| SessionError::OpenMls)?;
         match processed.into_content() {
-            ProcessedMessageContent::ApplicationMessage(message) => Ok(message.into_bytes()),
+            ProcessedMessageContent::ApplicationMessage(message) => Ok(Some(message.into_bytes())),
             ProcessedMessageContent::StagedCommitMessage(commit) => {
                 group
                     .merge_staged_commit(&self.provider, *commit)
                     .map_err(|_| SessionError::OpenMls)?;
-                Err(SessionError::UnsupportedMessage)
+                Ok(None)
             }
             _ => Err(SessionError::UnsupportedMessage),
         }
@@ -714,6 +732,17 @@ impl MlsSession {
         conversation_id: &str,
     ) -> Result<Vec<u8>, SessionError> {
         let plaintext = self.decrypt(wire)?;
+        self.persist_or_poison(store, conversation_id)?;
+        Ok(plaintext)
+    }
+
+    fn decrypt_delivery_and_persist(
+        &mut self,
+        wire: &[u8],
+        store: &mut EncryptedStore,
+        conversation_id: &str,
+    ) -> Result<Option<Vec<u8>>, SessionError> {
+        let plaintext = self.decrypt_delivery(wire)?;
         self.persist_or_poison(store, conversation_id)?;
         Ok(plaintext)
     }

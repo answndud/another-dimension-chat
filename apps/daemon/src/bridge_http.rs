@@ -1743,12 +1743,27 @@ pub fn handle_request_with_context(
             let Some(store) = session_store.as_deref_mut() else {
                 return response(503, "storage_unavailable", None, None);
             };
+            let Some(ledger) = delivery_ledger.as_deref_mut() else {
+                return response(503, "delivery_unavailable", None, None);
+            };
             let commits = match catalog
                 .remove_device(&mls_device_credential(&account_id, &device_id), store)
             {
                 Ok(commits) => commits,
                 Err(error) => return catalog_error(error),
             };
+            let delivered =
+                match deliver_device_change_commits(authority, &commits, ledger, store, now) {
+                    Ok(digests) => digests,
+                    Err(_) => {
+                        return response(
+                            503,
+                            "device_change_delivery_pending",
+                            None,
+                            Some("application/json"),
+                        )
+                    }
+                };
             let payload = commits
                 .iter()
                 .map(|(conversation_id, commit)| {
@@ -1762,7 +1777,11 @@ pub fn handle_request_with_context(
                 .join(",");
             response(
                 200,
-                &format!(r##"{{"removed":true,"commits":[{}]}}"##, payload),
+                &format!(
+                    r##"{{"removed":true,"commits":[{}],"delivered":{}}}"##,
+                    payload,
+                    delivered.len()
+                ),
                 None,
                 Some("application/json"),
             )
@@ -3314,6 +3333,60 @@ fn notify_new_messages(enabled: bool, count: usize) {
     let _ = Command::new("osascript").args(["-e", &script]).status();
 }
 
+fn deliver_device_change_commits(
+    authority: &InviteAuthority,
+    commits: &[(String, Vec<u8>)],
+    ledger: &mut DeliveryLedger,
+    store: &mut EncryptedStore,
+    now: u64,
+) -> Result<Vec<String>, RelayError> {
+    let expires_at = now.saturating_add(10 * 60);
+    let mut digests = Vec::new();
+    for (conversation_id, commit) in commits {
+        let contact = authority
+            .contacts
+            .for_conversation(conversation_id)
+            .ok_or(RelayError::InvalidEndpoint)?;
+        let inbox_url = contact.inbox_url.ok_or(RelayError::InvalidEndpoint)?;
+        let endpoint = RelayEndpoint::from_inbox_url_with_pin(&inbox_url, authority.relay_tls_pin)?;
+        let envelope = RelayEnvelope::create(&endpoint.capability, commit, expires_at, now)
+            .map_err(|_| RelayError::InvalidResponse)?;
+        let digest = envelope.digest().map_err(|_| RelayError::InvalidResponse)?;
+        let wire = envelope
+            .to_wire()
+            .map_err(|_| RelayError::InvalidResponse)?;
+        ledger
+            .register_encrypted_with_wire_and_expiry(
+                digest.clone(),
+                Some(wire),
+                Some(envelope.expires_at),
+            )
+            .map_err(|_| RelayError::InvalidResponse)?;
+        let accepted = match RelayClient::new(endpoint).post_blocking(&envelope) {
+            Ok(accepted) => accepted,
+            Err(error) => {
+                let _ = ledger.schedule_retry(&digest, now);
+                let _ = ledger.persist(store);
+                return Err(error);
+            }
+        };
+        ledger
+            .bind_relay_id(&digest, accepted.id)
+            .map_err(|_| RelayError::InvalidResponse)?;
+        ledger
+            .transition(&digest, crate::delivery::DeliveryState::Queued)
+            .map_err(|_| RelayError::InvalidResponse)?;
+        ledger
+            .transition(&digest, crate::delivery::DeliveryState::RelayAccepted)
+            .map_err(|_| RelayError::InvalidResponse)?;
+        digests.push(digest);
+    }
+    ledger
+        .persist(store)
+        .map_err(|_| RelayError::InvalidResponse)?;
+    Ok(digests)
+}
+
 /// Performs one bounded daemon-owned inbox pass. It tries each locally known
 /// conversation because the relay envelope intentionally does not contain a
 /// conversation identifier. Failed decryption never advances an MLS session.
@@ -3363,7 +3436,8 @@ fn background_sync_once(
         }
         let mut delivered = false;
         for conversation_id in &conversation_ids {
-            let Ok(plaintext) = catalog.receive(conversation_id, &envelope.ciphertext, store)
+            let Ok(plaintext) =
+                catalog.receive_delivery(conversation_id, &envelope.ciphertext, store)
             else {
                 continue;
             };
@@ -3374,28 +3448,30 @@ fn background_sync_once(
             {
                 return Err(RelayError::InvalidResponse);
             }
-            if let Some(descriptor) = attachment_descriptor_from_plaintext(&plaintext) {
-                authority
-                    .register_received_attachment(&digest, descriptor, store)
-                    .map_err(|_| RelayError::InvalidResponse)?;
-                let _ = authority.record_contact_message(
-                    conversation_id,
-                    b"[encrypted attachment]",
-                    now,
-                    true,
-                    store,
-                );
-            } else if let Some(message) = decode_message_payload(&plaintext) {
-                if message.expires_at == 0 || message.expires_at > now {
-                    persist_message(store, conversation_id, &message, "incoming")
+            if let Some(plaintext) = plaintext {
+                if let Some(descriptor) = attachment_descriptor_from_plaintext(&plaintext) {
+                    authority
+                        .register_received_attachment(&digest, descriptor, store)
                         .map_err(|_| RelayError::InvalidResponse)?;
                     let _ = authority.record_contact_message(
                         conversation_id,
-                        message.text.as_bytes(),
+                        b"[encrypted attachment]",
                         now,
                         true,
                         store,
                     );
+                } else if let Some(message) = decode_message_payload(&plaintext) {
+                    if message.expires_at == 0 || message.expires_at > now {
+                        persist_message(store, conversation_id, &message, "incoming")
+                            .map_err(|_| RelayError::InvalidResponse)?;
+                        let _ = authority.record_contact_message(
+                            conversation_id,
+                            message.text.as_bytes(),
+                            now,
+                            true,
+                            store,
+                        );
+                    }
                 }
             }
             delivered = true;

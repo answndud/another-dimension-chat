@@ -147,6 +147,13 @@ impl ContactDirectory {
         self.contacts.values().cloned().collect()
     }
 
+    pub fn for_conversation(&self, conversation_id: &str) -> Option<ContactRecord> {
+        self.contacts
+            .values()
+            .find(|contact| contact.conversation_id.as_deref() == Some(conversation_id))
+            .cloned()
+    }
+
     pub fn bind_conversation(
         &mut self,
         account_id: &str,
