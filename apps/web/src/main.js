@@ -35,7 +35,7 @@ import { connectDaemonBridge, consumeRelayInvite, createRelayInviteCode, revokeR
 import "./styles.css";
 
 const app = document.querySelector("#app");
-let state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", daemonReceivedInvite: null, daemonConsumedInvite: "", daemonInviteReceipt: "", daemonRelayOrigin: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false, daemonBridge: null, daemonBridgeMode: false, daemonStatus: "확인 중", daemonIdentity: null, daemonInvite: null, daemonPairing: null, daemonRelayTrust: null, daemonContacts: [], daemonContactSearch: "", daemonConversationIds: [], daemonSelectedContact: "", daemonLocked: false, daemonConversationId: "", daemonKeyPackage: "", daemonWelcome: "", daemonCiphertext: "", daemonPlaintext: "", daemonInboxUrl: "", daemonPeerInboxUrl: "", daemonMessages: [], daemonOutgoingMessages: [], daemonDeliveryDigest: "", daemonDeliveryState: "", daemonAttachmentState: "", daemonAttachmentProgress: 0, daemonAttachmentBlobId: "" };
+let state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", daemonReceivedInvite: null, daemonConsumedInvite: "", daemonInviteReceipt: "", daemonRelayOrigin: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false, daemonBridge: null, daemonBridgeMode: false, daemonStatus: "확인 중", daemonIdentity: null, daemonInvite: null, daemonPairing: null, daemonRelayTrust: null, daemonDevices: [], daemonContacts: [], daemonContactSearch: "", daemonConversationIds: [], daemonSelectedContact: "", daemonLocked: false, daemonConversationId: "", daemonKeyPackage: "", daemonWelcome: "", daemonCiphertext: "", daemonPlaintext: "", daemonInboxUrl: "", daemonPeerInboxUrl: "", daemonMessages: [], daemonOutgoingMessages: [], daemonDeliveryDigest: "", daemonDeliveryState: "", daemonAttachmentState: "", daemonAttachmentProgress: 0, daemonAttachmentBlobId: "" };
 let serviceWorkerStatus = "확인 중";
 let syncInFlight = false;
 let daemonSyncInFlight = false;
@@ -80,7 +80,7 @@ function renderDaemonBridgeState() {
     ? "이 화면은 암호화 키·로컬 저장소·메시지 상태를 보관하지 않습니다. 실제 작업은 로컬 보안 데몬의 인증된 API를 통해서만 열립니다."
     : "브라우저 프로토타입 경로는 고위험 통신에 사용할 수 없습니다. CLI 데몬을 실행하고 데몬이 발급한 주소로 다시 여세요.";
   const pairingReset = state.daemonPairing?.state === "rejected" ? '<p class="warning">relay capability가 폐기되어 기존 연결을 중단했습니다. 새 초대를 다시 교환하고 안전 번호를 재확인하세요.</p>' : "";
-  return `<main class="daemon-gate" aria-labelledby="daemon-gate-title"><div class="daemon-gate-mark" aria-hidden="true">⊡</div><p class="eyebrow">LOCAL SECURITY DAEMON</p><h1 id="daemon-gate-title">${title}</h1><p class="lede">${detail}</p><div class="notice" role="status">${escapeHtml(state.notice || "키와 메시지 상태는 로컬 daemon이 소유합니다.")}</div><dl class="daemon-facts"><div><dt>세션 상태</dt><dd>${escapeHtml(state.daemonStatus)}</dd></div><div><dt>브라우저 저장소</dt><dd>daemon 모드에서 사용하지 않음</dd></div><div><dt>현재 identity</dt><dd>${escapeHtml(state.daemonIdentity ? `${state.daemonIdentity.display_name} · ${state.daemonIdentity.account_id}` : "daemon에서만 확인")}</dd></div><div><dt>보안 상태</dt><dd>고위험 출시 전까지 차단</dd></div></dl>${connected ? `${pairingReset}<button id="daemon-create-invite" class="primary" type="button">${state.daemonPairing?.state === "rejected" ? "새 연결 시작" : "일회성 초대 생성"}</button><button id="daemon-lock" class="quiet" type="button">데몬 세션 잠그기</button>${renderDaemonContacts()}` : '<p class="field-note">다시 연결하려면 daemon이 발급한 새 주소를 사용하세요.</p>'}${state.daemonInvite ? `<section class="daemon-invite"><h2>초대 공유 자료</h2><p>코드와 signed invite를 별도 신뢰 채널로 전달하세요. 10분 후 만료되며 새 초대 생성 시 이전 초대는 더 이상 UI에서 재사용하지 마세요.</p><label>초대 코드<textarea readonly rows="2">${escapeHtml(state.daemonInvite.invite_code)}</textarea></label><button id="daemon-revoke-invite" class="quiet" type="button">초대 폐기</button><p class="field-note">서명 자료는 daemon과 relay 사이에서만 처리됩니다. 상대에게는 코드만 전달하세요.</p></section>` : ""}${connected ? `<section class="daemon-invite"><h2>받은 초대 검증</h2><label>상대 relay 주소<input id="received-relay-origin" value="${escapeHtml(state.daemonRelayOrigin)}" placeholder="https://relay.example"></label><label>초대 코드<textarea id="received-invite-code" rows="2" placeholder="상대방의 초대 코드"></textarea></label><button id="daemon-consume-invite" class="secondary" type="button">relay에서 초대 가져오기</button><p class="field-note">signed invite와 relay receipt는 relay 소비 직후 daemon에 자동 전달되어 검증됩니다.</p>${state.daemonReceivedInvite ? `<p class="field-note">검증됨: ${escapeHtml(state.daemonReceivedInvite.account_id)} · device ${escapeHtml(state.daemonReceivedInvite.device_id)}</p>${state.daemonPairing?.state === "verified" ? '<button id="daemon-approve-pairing" class="primary" type="button">연락처 승인</button><button id="daemon-reject-pairing" class="quiet" type="button">거절</button>' : state.daemonPairing?.state === "established" ? '<p class="verified">연락처 승인이 완료되었습니다.</p>' : ""}` : ""}</section>` : ""}${renderDaemonSessionPanel()}${state.error ? `<p class="error" role="alert">${escapeHtml(state.error)}</p>` : ""}<p class="disclaimer">prototype / non-high-risk · 독립 보안 검토와 지원 matrix가 완료되기 전 민감한 통신을 입력하지 마세요.</p></main>`;
+  return `<main class="daemon-gate" aria-labelledby="daemon-gate-title"><div class="daemon-gate-mark" aria-hidden="true">⊡</div><p class="eyebrow">LOCAL SECURITY DAEMON</p><h1 id="daemon-gate-title">${title}</h1><p class="lede">${detail}</p><div class="notice" role="status">${escapeHtml(state.notice || "키와 메시지 상태는 로컬 daemon이 소유합니다.")}</div><dl class="daemon-facts"><div><dt>세션 상태</dt><dd>${escapeHtml(state.daemonStatus)}</dd></div><div><dt>브라우저 저장소</dt><dd>daemon 모드에서 사용하지 않음</dd></div><div><dt>현재 identity</dt><dd>${escapeHtml(state.daemonIdentity ? `${state.daemonIdentity.display_name} · ${state.daemonIdentity.account_id}` : "daemon에서만 확인")}</dd></div><div><dt>보안 상태</dt><dd>고위험 출시 전까지 차단</dd></div></dl>${connected ? `${pairingReset}<button id="daemon-create-invite" class="primary" type="button">${state.daemonPairing?.state === "rejected" ? "새 연결 시작" : "일회성 초대 생성"}</button><button id="daemon-lock" class="quiet" type="button">데몬 세션 잠그기</button>${renderDaemonDevices()}${renderDaemonContacts()}` : '<p class="field-note">다시 연결하려면 daemon이 발급한 새 주소를 사용하세요.</p>'}${state.daemonInvite ? `<section class="daemon-invite"><h2>초대 공유 자료</h2><p>코드와 signed invite를 별도 신뢰 채널로 전달하세요. 10분 후 만료되며 새 초대 생성 시 이전 초대는 더 이상 UI에서 재사용하지 마세요.</p><label>초대 코드<textarea readonly rows="2">${escapeHtml(state.daemonInvite.invite_code)}</textarea></label><button id="daemon-revoke-invite" class="quiet" type="button">초대 폐기</button><p class="field-note">서명 자료는 daemon과 relay 사이에서만 처리됩니다. 상대에게는 코드만 전달하세요.</p></section>` : ""}${connected ? `<section class="daemon-invite"><h2>받은 초대 검증</h2><label>상대 relay 주소<input id="received-relay-origin" value="${escapeHtml(state.daemonRelayOrigin)}" placeholder="https://relay.example"></label><label>초대 코드<textarea id="received-invite-code" rows="2" placeholder="상대방의 초대 코드"></textarea></label><button id="daemon-consume-invite" class="secondary" type="button">relay에서 초대 가져오기</button><p class="field-note">signed invite와 relay receipt는 relay 소비 직후 daemon에 자동 전달되어 검증됩니다.</p>${state.daemonReceivedInvite ? `<p class="field-note">검증됨: ${escapeHtml(state.daemonReceivedInvite.account_id)} · device ${escapeHtml(state.daemonReceivedInvite.device_id)}</p>${state.daemonPairing?.state === "verified" ? '<button id="daemon-approve-pairing" class="primary" type="button">연락처 승인</button><button id="daemon-reject-pairing" class="quiet" type="button">거절</button>' : state.daemonPairing?.state === "established" ? '<p class="verified">연락처 승인이 완료되었습니다.</p>' : ""}` : ""}</section>` : ""}${renderDaemonSessionPanel()}${state.error ? `<p class="error" role="alert">${escapeHtml(state.error)}</p>` : ""}<p class="disclaimer">prototype / non-high-risk · 독립 보안 검토와 지원 matrix가 완료되기 전 민감한 통신을 입력하지 마세요.</p></main>`;
 }
 
 function renderDaemonRelayTrust() {
@@ -96,6 +96,16 @@ function renderDaemonContacts() {
     ? contacts.map((contact) => `<article class="daemon-contact ${state.daemonSelectedContact === contact.account_id ? "selected" : ""}"><button type="button" class="daemon-contact-select" data-contact-account="${escapeHtml(contact.account_id)}"><strong>${escapeHtml(contact.alias || contact.account_id.slice(0, 18))}${contact.unread_count ? ` <span class="unread-badge">${contact.unread_count}</span>` : ""}</strong><small>${escapeHtml(contact.state)} · ${escapeHtml(contact.device_id)}${contact.conversation_id ? ` · ${escapeHtml(contact.conversation_id)}` : " · 대화 미연결"}</small>${contact.last_message_preview ? `<span class="contact-preview">${escapeHtml(contact.last_message_preview)}</span>` : ""}</button><label class="daemon-contact-alias">별칭<input data-contact-alias="${escapeHtml(contact.account_id)}" value="${escapeHtml(contact.alias || "")}" maxlength="128"></label><div class="contact-actions"><button type="button" class="quiet daemon-contact-save" data-contact-save="${escapeHtml(contact.account_id)}">저장</button><button type="button" class="quiet daemon-contact-block" data-contact-block="${escapeHtml(contact.account_id)}">${contact.state === "blocked" ? "차단 해제" : "차단"}</button><button type="button" class="quiet daemon-contact-delete" data-contact-delete="${escapeHtml(contact.account_id)}">삭제</button></div></article>`).join("")
     : '<p class="field-note">저장된 연락처가 없습니다. 안전 번호 확인 후 승인하면 여기에 표시됩니다.</p>';
   return `<section class="daemon-directory"><div class="row-between"><div><h2>연락처</h2><p class="field-note">연락처와 별칭은 daemon의 암호화 저장소에서만 관리됩니다.</p></div><span class="pill">${state.daemonContacts.length}명 · ${state.daemonConversationIds.length}개 대화</span></div><label>이 기기에서 검색<input id="daemon-contact-search" value="${escapeHtml(state.daemonContactSearch)}" placeholder="별칭·account ID·device ID"></label><div class="daemon-contact-list">${rows}</div></section>`;
+}
+
+function renderDaemonDevices() {
+  const rows = state.daemonDevices.length
+    ? state.daemonDevices.map((device) => {
+      const current = device.device_id === state.daemonIdentity?.device_id;
+      return `<article class="daemon-contact"><strong>${escapeHtml(device.device_id)}${current ? " · 현재 기기" : ""}</strong><small>${escapeHtml(device.state)} · 만료 ${escapeHtml(String(device.expires_at))}</small><code>${escapeHtml(device.public_key)}</code>${device.state === "active" ? `<button type="button" class="quiet daemon-device-revoke" data-device-revoke="${escapeHtml(device.device_id)}" ${current ? "disabled" : ""}>${current ? "현재 기기" : "기기 폐기"}</button>` : '<span class="field-note">폐기됨</span>'}</article>`;
+    }).join("")
+    : '<p class="field-note">등록된 기기 정보를 불러오지 못했습니다.</p>';
+  return `<section class="daemon-directory"><div class="row-between"><div><h2>연결된 기기</h2><p class="field-note">기기 인증서와 폐기 상태는 daemon 암호화 저장소에서 관리됩니다.</p></div><span class="pill">${state.daemonDevices.length}대</span></div><div class="daemon-contact-list">${rows}</div></section>`;
 }
 
 function renderDaemonSafetyControls(pairing) {
@@ -614,6 +624,17 @@ function render() {
         render();
       }
     });
+    document.querySelectorAll("[data-device-revoke]").forEach((button) => button.addEventListener("click", async () => {
+      const deviceId = button.dataset.deviceRevoke || "";
+      if (!deviceId || !window.confirm(`기기 ${deviceId}를 폐기할까요? 해당 기기는 이후 daemon 인증에 사용할 수 없습니다.`)) return;
+      try {
+        await state.daemonBridge.revokeDevice(deviceId);
+        state.daemonDevices = (await state.daemonBridge.devices()).devices || [];
+        state.notice = `기기 ${deviceId}를 폐기했습니다.`;
+        state.error = "";
+      } catch (error) { state.error = error.message; }
+      render();
+    }));
     document.querySelector("#daemon-contact-search")?.addEventListener("input", (event) => {
       state.daemonContactSearch = event.currentTarget.value;
       render();
@@ -1048,10 +1069,12 @@ async function startApp() {
       state.daemonPairing = await daemonBridge.pairingStatus();
       state.daemonRelayTrust = await daemonBridge.relayTrust();
       try {
+        state.daemonDevices = (await daemonBridge.devices()).devices || [];
         state.daemonContacts = (await daemonBridge.contacts()).contacts || [];
         state.daemonConversationIds = (await daemonBridge.conversations()).conversations || [];
       } catch {
         // Older daemon binaries may not expose the directory endpoints yet.
+        state.daemonDevices = [];
         state.daemonContacts = [];
         state.daemonConversationIds = [];
       }

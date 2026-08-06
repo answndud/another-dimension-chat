@@ -263,6 +263,7 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         relay_tls_pin,
         relay_trust,
     );
+    authority.set_device_registry(registry);
     authority
         .restore_pairing(&store)
         .map_err(|_| CliError::Storage(StorageError::CorruptStore))?;

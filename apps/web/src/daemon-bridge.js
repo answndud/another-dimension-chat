@@ -193,6 +193,11 @@ export async function connectDaemonBridge({
     }),
     pairingStatus: () => request("/local-api/pairing/status"),
     contacts: () => request("/local-api/contacts"),
+    devices: () => request("/local-api/devices"),
+    revokeDevice: (deviceId) => request("/local-api/devices/revoke", {
+      method: "POST",
+      body: JSON.stringify({ device_id: deviceId }),
+    }),
     setContactAlias: (accountId, alias) => request("/local-api/contacts/alias", {
       method: "POST",
       body: JSON.stringify({ account_id: accountId, alias }),

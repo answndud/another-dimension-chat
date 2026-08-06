@@ -5,6 +5,7 @@ use crate::{
     bridge::{BridgeRequest, LocalBridge},
     contacts::{ContactDirectory, ContactDirectoryError},
     delivery::{DeliveryLedger, RelayEnvelope},
+    device::{DeviceRegistry, DeviceRegistryError},
     identity::AccountRootKey,
     mls_session::{attachment_descriptor_from_plaintext, MlsSessionCatalog, SessionCatalogError},
     pairing::{PairingError, PairingSession},
@@ -143,6 +144,7 @@ pub struct InviteAuthority {
     staged_peer: Option<VerifiedInvite>,
     pairing: PairingSession,
     contacts: ContactDirectory,
+    device_registry: DeviceRegistry,
     attachment_jobs: std::collections::BTreeMap<String, AttachmentJob>,
     attachment_job_started_at: std::collections::BTreeMap<String, u64>,
     completed_attachments: std::collections::BTreeMap<String, EncryptedAttachment>,
@@ -325,6 +327,7 @@ impl InviteAuthority {
     ) -> Self {
         let device_id = device_id.into();
         let local_account_id = root.account_id().as_str().to_owned();
+        let device_registry = DeviceRegistry::new(&root);
         Self {
             root,
             device_id: device_id.clone(),
@@ -337,6 +340,7 @@ impl InviteAuthority {
             staged_peer: None,
             pairing: PairingSession::new(local_account_id, device_id),
             contacts: ContactDirectory::new(),
+            device_registry,
             attachment_jobs: std::collections::BTreeMap::new(),
             attachment_job_started_at: std::collections::BTreeMap::new(),
             completed_attachments: std::collections::BTreeMap::new(),
@@ -704,6 +708,47 @@ impl InviteAuthority {
             .persist(store)
             .map_err(|_| PairingError::InvalidTransition)
     }
+
+    pub fn set_device_registry(&mut self, registry: DeviceRegistry) {
+        self.device_registry = registry;
+    }
+
+    fn revoke_device(
+        &mut self,
+        device_id: &str,
+        now: u64,
+        store: &mut EncryptedStore,
+    ) -> Result<(), DeviceActionError> {
+        if device_id == self.device_id {
+            return Err(DeviceActionError::CurrentDevice);
+        }
+        let previous = self
+            .device_registry
+            .encode()
+            .map_err(|_| DeviceActionError::Registry(DeviceRegistryError::Corrupt))?;
+        self.device_registry
+            .revoke(&self.root, device_id, now)
+            .map_err(DeviceActionError::Registry)?;
+        let encoded = self
+            .device_registry
+            .encode()
+            .map_err(|_| DeviceActionError::Registry(DeviceRegistryError::Corrupt))?;
+        if store
+            .put(RecordClass::Device, "registry", &encoded)
+            .is_err()
+        {
+            self.device_registry = DeviceRegistry::decode(&previous)
+                .map_err(|_| DeviceActionError::Registry(DeviceRegistryError::Corrupt))?;
+            return Err(DeviceActionError::Storage);
+        }
+        Ok(())
+    }
+}
+
+enum DeviceActionError {
+    Registry(DeviceRegistryError),
+    CurrentDevice,
+    Storage,
 }
 
 pub fn handle_request_with_context(
@@ -919,6 +964,84 @@ pub fn handle_request_with_context(
                     response(200, &body, None, Some("application/json"))
                 }
                 Err(error) => response(403, error_code(&error), None, Some("application/json")),
+            }
+        }
+        ("GET", "/local-api/devices") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority.as_deref() else {
+                return response(503, "device_unavailable", None, Some("application/json"));
+            };
+            let devices = authority
+                .device_registry
+                .records()
+                .map(|record| {
+                    let certificate = record.certificate();
+                    serde_json::json!({
+                        "device_id": certificate.device_id(),
+                        "state": if record.revoked_at().is_some() || certificate.is_revoked() { "revoked" } else { "active" },
+                        "issued_at": certificate.issued_at(),
+                        "expires_at": certificate.expires_at(),
+                        "public_key": hex_bytes(&certificate.device_public_key()),
+                        "revoked_at": record.revoked_at(),
+                    })
+                })
+                .collect::<Vec<_>>();
+            response(
+                200,
+                &serde_json::json!({ "devices": devices }).to_string(),
+                None,
+                Some("application/json"),
+            )
+        }
+        ("POST", "/local-api/devices/revoke") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(device_id) = json_string(request.body, "device_id") else {
+                return response(400, "device_id_required", None, Some("application/json"));
+            };
+            let Some(authority) = invite_authority.as_deref_mut() else {
+                return response(503, "device_unavailable", None, Some("application/json"));
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, Some("application/json"));
+            };
+            match authority.revoke_device(device_id, now, store) {
+                Ok(()) => response(
+                    200,
+                    &format!(
+                        r##"{{"revoked":true,"device_id":"{}"}}"##,
+                        json_escape(device_id)
+                    ),
+                    None,
+                    Some("application/json"),
+                ),
+                Err(DeviceActionError::CurrentDevice) => response(
+                    409,
+                    "current_device_revoke_forbidden",
+                    None,
+                    Some("application/json"),
+                ),
+                Err(DeviceActionError::Registry(DeviceRegistryError::UnknownDevice)) => {
+                    response(404, "device_not_found", None, Some("application/json"))
+                }
+                Err(DeviceActionError::Registry(DeviceRegistryError::DeviceNotActive)) => response(
+                    409,
+                    "device_already_revoked",
+                    None,
+                    Some("application/json"),
+                ),
+                Err(DeviceActionError::Storage) => {
+                    response(503, "storage_unavailable", None, Some("application/json"))
+                }
+                Err(DeviceActionError::Registry(_)) => response(
+                    422,
+                    "device_registry_invalid",
+                    None,
+                    Some("application/json"),
+                ),
             }
         }
         ("POST", "/local-api/invites") => {
@@ -2313,6 +2436,7 @@ pub fn handle_request_with_context(
                     }
                 }
             }
+
             response(
                 200,
                 &format!(r##"{{"cancelled":{cancelled}}}"##),
