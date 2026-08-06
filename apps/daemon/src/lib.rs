@@ -23,7 +23,7 @@ pub mod trust;
 /// authoritative for future storage, protocol, delivery, and UI contracts;
 /// the implementation gate remains closed until those slices are complete.
 pub const PRODUCT_ROLE: &str = "local-security-daemon";
-pub const IMPLEMENTATION_STATUS: &str = "architecture-contract-openmls-path-not-messaging-ready";
+pub const IMPLEMENTATION_STATUS: &str = "daemon-owned-openmls-messaging-path-active-development";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Command {
@@ -32,21 +32,29 @@ pub enum Command {
     Serve,
     Identity,
     Invite,
+    Contact,
     Device,
     Lock,
     Recovery,
+    Status,
+    Stop,
+    Wipe,
 }
 
 impl Command {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 12] = [
         Self::Doctor,
         Self::Init,
         Self::Serve,
         Self::Identity,
         Self::Invite,
+        Self::Contact,
         Self::Device,
         Self::Lock,
         Self::Recovery,
+        Self::Status,
+        Self::Stop,
+        Self::Wipe,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -56,9 +64,13 @@ impl Command {
             Self::Serve => "serve",
             Self::Identity => "identity",
             Self::Invite => "invite",
+            Self::Contact => "contact",
             Self::Device => "device",
             Self::Lock => "lock",
             Self::Recovery => "recovery",
+            Self::Status => "status",
+            Self::Stop => "stop",
+            Self::Wipe => "wipe",
         }
     }
 }
@@ -78,9 +90,9 @@ mod tests {
         assert_eq!(PRODUCT_ROLE, "local-security-daemon");
         assert_eq!(
             IMPLEMENTATION_STATUS,
-            "architecture-contract-openmls-path-not-messaging-ready"
+            "daemon-owned-openmls-messaging-path-active-development"
         );
-        assert_eq!(Command::ALL.len(), 8);
+        assert_eq!(Command::ALL.len(), 12);
         assert_eq!(command_from_name("serve"), Some(Command::Serve));
         assert_eq!(command_from_name("desktop"), None);
     }
