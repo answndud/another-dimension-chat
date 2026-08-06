@@ -1,4 +1,5 @@
 import { lstat, readFile as defaultReadFile } from "node:fs/promises";
+import Database from "better-sqlite3";
 
 /**
  * Small durable state boundary used by the relay while the SQLite adapter is
@@ -65,4 +66,33 @@ export async function createJsonStateStore({
       flush: () => chain,
     };
   }
+}
+
+export function createSqliteStateStore({ file, key, initial, validate, serialize = (value) => JSON.stringify(value), parse = JSON.parse }) {
+  if (typeof file !== "string" || !file || typeof key !== "string" || !key) throw new Error("sqlite_state_identity_required");
+  const db = new Database(file);
+  db.pragma("journal_mode = WAL");
+  db.pragma("synchronous = FULL");
+  db.exec("CREATE TABLE IF NOT EXISTS relay_state (state_key TEXT PRIMARY KEY, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+  const read = db.prepare("SELECT payload FROM relay_state WHERE state_key = ?").get(key);
+  let current;
+  if (read) {
+    try { current = parse(read.payload); } catch { db.close(); throw new Error(`sqlite_state_corrupt:${key}`); }
+    if (!validate(current)) { db.close(); throw new Error(`sqlite_state_invalid:${key}`); }
+  } else {
+    current = initial();
+    if (!validate(current)) { db.close(); throw new Error(`sqlite_state_invalid:initial:${key}`); }
+  }
+  const upsert = db.prepare("INSERT INTO relay_state (state_key, payload, updated_at) VALUES (?, ?, ?) ON CONFLICT(state_key) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at");
+  const commit = db.transaction((next) => upsert.run(key, serialize(next), Date.now()));
+  return {
+    get: () => current,
+    replace(next) {
+      if (!validate(next)) throw new Error(`sqlite_state_invalid:next:${key}`);
+      commit(next);
+      current = next;
+    },
+    flush: () => {},
+    close: () => db.close(),
+  };
 }

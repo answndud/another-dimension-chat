@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildServerConfig } from "../../scripts/configure_local_server.mjs";
 import { createLocalServer, loadServerConfig } from "./server.mjs";
-import { createJsonStateStore } from "./storage.mjs";
+import { createJsonStateStore, createSqliteStateStore } from "./storage.mjs";
 
 function call(port, method, path, body, headers = {}) {
   return new Promise((resolve, reject) => {
@@ -70,6 +70,18 @@ test("relay state store refuses malformed recovery data", async () => {
     () => createJsonStateStore({ file, initial: () => [], validate: Array.isArray, write: async (path, contents) => writeFile(path, contents, { mode: 0o600 }) }),
     /state_corrupt:recovery/,
   );
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("sqlite state adapter commits and reloads a bounded relay state", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-sqlite-"));
+  const file = join(dataDir, "relay.sqlite");
+  const first = createSqliteStateStore({ file, key: "inbox", initial: () => [], validate: Array.isArray });
+  first.replace([{ id: "one" }]);
+  first.close();
+  const second = createSqliteStateStore({ file, key: "inbox", initial: () => [], validate: Array.isArray });
+  assert.deepEqual(second.get(), [{ id: "one" }]);
+  second.close();
   await rm(dataDir, { recursive: true, force: true });
 });
 
