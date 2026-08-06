@@ -177,7 +177,11 @@ try {
   relayB.inboxUrl = relayB.inboxUrl.replace(`http://127.0.0.1:${relayB.port}`, relayB.origin);
   relayA.tlsPin = tlsFiles?.pin;
   relayB.tlsPin = tlsFiles?.pin;
-  assert.equal((await relayApi(relayB, "GET", "/api/v1/info", undefined, { "x-ad-local-access": relayB.localAccessCapability })).status, 200);
+  const relayInfoBefore = await relayApi(relayA, "GET", "/api/v1/info", undefined, { "x-ad-local-access": relayA.localAccessCapability });
+  assert.equal(relayInfoBefore.status, 200);
+  assert.equal(relayInfoBefore.body.blobStoreBytes, 0);
+  assert.equal(relayInfoBefore.body.blobStoreRecords, 0);
+  assert.ok(relayInfoBefore.body.maxBlobStoreBytes >= 128 * 1024 * 1024);
 
   const aliceDir = join(root, "alice");
   const bobDir = join(root, "bob");
@@ -272,6 +276,10 @@ try {
     }
   }
   assert.deepEqual(Buffer.concat(downloaded), attachmentBytes);
+  const relayInfoAfter = await relayApi(relayA, "GET", "/api/v1/info", undefined, { "x-ad-local-access": relayA.localAccessCapability });
+  assert.equal(relayInfoAfter.status, 200);
+  assert.ok(relayInfoAfter.body.blobStoreBytes >= attachmentBytes.length);
+  assert.ok(relayInfoAfter.body.blobStoreRecords >= 1);
 
   const oldAliceInbox = alice.inboxUrl;
   const rotation = await relayApi(relayA, "POST", "/api/v1/inbox/rotate", undefined, { "x-ad-local-access": relayA.localAccessCapability });
