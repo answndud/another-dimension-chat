@@ -105,6 +105,7 @@ pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError
             })?,
         ),
         "doctor" => doctor(args),
+        "status" => status(args),
         "lock" => Ok(
             "daemon session locked; no active daemon session was retained by this command".into(),
         ),
@@ -135,6 +136,8 @@ pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError
 }
 
 fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
+    let data_dir = data_dir(args)?;
+    let _instance_lock = InstanceLock::acquire(&data_dir)?;
     let port = option(args, "--port")?
         .map(|value| value.parse::<u16>())
         .transpose()
@@ -156,7 +159,7 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
             ui_dir.display()
         )));
     }
-    let mut store = open_store(&data_dir(args)?, passphrase)?;
+    let mut store = open_store(&data_dir, passphrase)?;
     let record = store
         .get(RecordClass::AccountRoot, "identity")
         .ok_or(CliError::NotInitialized)?;
@@ -283,6 +286,39 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
     )
     .map_err(CliError::from)?;
     Ok("daemon stopped".into())
+}
+
+struct InstanceLock {
+    path: PathBuf,
+}
+
+impl InstanceLock {
+    fn acquire(data_dir: &Path) -> Result<Self, CliError> {
+        fs::create_dir_all(data_dir)?;
+        let path = data_dir.join("daemon.lock");
+        let mut file = match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+        {
+            Ok(file) => file,
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+                return Err(CliError::Usage(
+                    "daemon is already running or daemon.lock is stale; inspect and remove it only after confirming no daemon process exists".into(),
+                ));
+            }
+            Err(error) => return Err(error.into()),
+        };
+        use std::io::Write;
+        writeln!(file, "pid={}", std::process::id())?;
+        Ok(Self { path })
+    }
+}
+
+impl Drop for InstanceLock {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
 }
 
 fn init(args: &[String], passphrase: &str) -> Result<String, CliError> {
@@ -447,6 +483,27 @@ fn doctor(args: &[String]) -> Result<String, CliError> {
             "profile not initialized"
         },
         checks.join("\n")
+    ))
+}
+
+fn status(args: &[String]) -> Result<String, CliError> {
+    let data_dir = data_dir(args)?;
+    let lock_path = data_dir.join("daemon.lock");
+    let running = lock_path.is_file();
+    Ok(format!(
+        "daemon status: {}\ndata directory: {}\nstore: {}\nlock file: {}",
+        if running {
+            "running or lock requires inspection"
+        } else {
+            "stopped"
+        },
+        data_dir.display(),
+        if store_path(&data_dir).is_file() {
+            "present"
+        } else {
+            "missing"
+        },
+        if running { "present" } else { "absent" }
     ))
 }
 
