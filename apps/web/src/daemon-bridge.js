@@ -138,9 +138,9 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ conversation_id: conversationId, ciphertext }),
     }),
-    startAttachment: (blobId, total) => request("/local-api/attachment/start", {
+    startAttachment: (blobId, total, fileName = "", mediaType = "") => request("/local-api/attachment/start", {
       method: "POST",
-      body: JSON.stringify({ blob_id: blobId, total }),
+      body: JSON.stringify({ blob_id: blobId, total, ...(fileName ? { file_name: fileName } : {}), ...(mediaType ? { media_type: mediaType } : {}) }),
     }),
     appendAttachment: (blobId, index, plaintext) => request("/local-api/attachment/append", {
       method: "POST",

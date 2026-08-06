@@ -47,6 +47,10 @@ pub struct AttachmentDescriptor {
     pub chunk_size: u32,
     pub original_size: u64,
     pub chunks: Vec<AttachmentChunkDescriptor>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub media_type: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -74,10 +78,21 @@ pub struct AttachmentJob {
     received: usize,
     chunks: Vec<AttachmentChunkDescriptor>,
     blob: Vec<u8>,
+    file_name: Option<String>,
+    media_type: Option<String>,
 }
 
 impl AttachmentJob {
     pub fn start(blob_id: &str, total: usize) -> Result<Self, AttachmentError> {
+        Self::start_with_metadata(blob_id, total, None, None)
+    }
+
+    pub fn start_with_metadata(
+        blob_id: &str,
+        total: usize,
+        file_name: Option<&str>,
+        media_type: Option<&str>,
+    ) -> Result<Self, AttachmentError> {
         if !valid_blob_id(blob_id) {
             return Err(AttachmentError::InvalidManifest);
         }
@@ -87,6 +102,8 @@ impl AttachmentJob {
         if total > MAX_ATTACHMENT_BYTES {
             return Err(AttachmentError::TooLarge);
         }
+        let file_name = sanitize_file_name(file_name)?;
+        let media_type = sanitize_media_type(media_type)?;
         Ok(Self {
             blob_id: blob_id.to_owned(),
             key: generate_key()?,
@@ -95,6 +112,8 @@ impl AttachmentJob {
             received: 0,
             chunks: Vec::new(),
             blob: Vec::with_capacity(total),
+            file_name,
+            media_type,
         })
     }
 
@@ -143,6 +162,8 @@ impl AttachmentJob {
             chunk_size: CHUNK_SIZE as u32,
             original_size: self.total as u64,
             chunks: self.chunks,
+            file_name: self.file_name,
+            media_type: self.media_type,
         };
         Ok(EncryptedAttachment {
             descriptor,
@@ -292,6 +313,8 @@ pub fn encrypt_for_blob(
             chunk_size: manifest.chunk_size,
             original_size: manifest.original_size,
             chunks,
+            file_name: None,
+            media_type: None,
         },
         blob,
     })
@@ -416,6 +439,26 @@ fn valid_blob_id(value: &str) -> bool {
         && value
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'-')
+}
+
+fn sanitize_file_name(value: Option<&str>) -> Result<Option<String>, AttachmentError> {
+    let Some(value) = value.filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    if value.len() > 255 || value.contains('/') || value.contains('\\') || value.contains('\0') {
+        return Err(AttachmentError::InvalidManifest);
+    }
+    Ok(Some(value.to_owned()))
+}
+
+fn sanitize_media_type(value: Option<&str>) -> Result<Option<String>, AttachmentError> {
+    let Some(value) = value.filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    if value.len() > 128 || !value.is_ascii() || value.contains('\r') || value.contains('\n') {
+        return Err(AttachmentError::InvalidManifest);
+    }
+    Ok(Some(value.to_owned()))
 }
 
 #[cfg(test)]

@@ -276,16 +276,22 @@ function bindDaemonSession() {
     const inboxUrl = document.querySelector("#daemon-inbox-url")?.value.trim() || state.daemonInboxUrl;
     if (!attachmentId || !inboxUrl) throw new Error("첨부파일 다운로드 정보가 없습니다.");
     const chunks = [];
+    let fileName = "encrypted-attachment.bin";
+    let mediaType = "application/octet-stream";
     for (let index = 0; ; index += 1) {
       const result = await bridge.downloadAttachmentChunk(attachmentId, inboxUrl, index);
+      if (index === 0) {
+        fileName = typeof result.file_name === "string" && result.file_name ? result.file_name : fileName;
+        mediaType = typeof result.media_type === "string" && result.media_type ? result.media_type : mediaType;
+      }
       chunks.push(decodeHexBytes(result.plaintext));
       if (result.complete) break;
     }
-    const blob = new Blob(chunks, { type: "application/octet-stream" });
+    const blob = new Blob(chunks, { type: mediaType });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "encrypted-attachment.bin";
+    anchor.download = fileName;
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, "첨부파일을 daemon에서 검증·복호화해 다운로드했습니다.")));
@@ -309,7 +315,7 @@ function bindDaemonSession() {
       if (node) node.textContent = `${message} · ${value}%`;
       if (bar) bar.value = value;
     };
-    await bridge.startAttachment(blobId, file.size);
+    await bridge.startAttachment(blobId, file.size, file.name, file.type);
     for (let index = 0, offset = 0; offset < file.size; index += 1, offset += chunkSize) {
       const bytes = new Uint8Array(await file.slice(offset, Math.min(offset + chunkSize, file.size)).arrayBuffer());
       await bridge.appendAttachment(blobId, index, encodeHex(bytes));

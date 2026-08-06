@@ -270,12 +270,16 @@ impl InviteAuthority {
         &mut self,
         blob_id: &str,
         total: usize,
+        file_name: Option<&str>,
+        media_type: Option<&str>,
     ) -> Result<(), crate::attachment::AttachmentError> {
         if self.attachment_jobs.contains_key(blob_id) {
             return Err(crate::attachment::AttachmentError::InvalidManifest);
         }
-        self.attachment_jobs
-            .insert(blob_id.to_owned(), AttachmentJob::start(blob_id, total)?);
+        self.attachment_jobs.insert(
+            blob_id.to_owned(),
+            AttachmentJob::start_with_metadata(blob_id, total, file_name, media_type)?,
+        );
         Ok(())
     }
 
@@ -1408,7 +1412,9 @@ pub fn handle_request_with_context(
                     Some("application/json"),
                 );
             };
-            match authority.attachment_start(&blob_id, total) {
+            let file_name = json_string(request.body, "file_name");
+            let media_type = json_string(request.body, "media_type");
+            match authority.attachment_start(&blob_id, total, file_name, media_type) {
                 Ok(()) => response(201, r##"{"started":true}"##, None, Some("application/json")),
                 Err(_) => response(400, "invalid_attachment", None, Some("application/json")),
             }
@@ -1726,13 +1732,25 @@ pub fn handle_request_with_context(
                 );
             };
             let complete = index + 1 == descriptor.chunks.len();
+            let file_name = descriptor
+                .file_name
+                .as_deref()
+                .map(|value| format!(r##""{}""##, json_escape(value)))
+                .unwrap_or_else(|| "null".to_owned());
+            let media_type = descriptor
+                .media_type
+                .as_deref()
+                .map(|value| format!(r##""{}""##, json_escape(value)))
+                .unwrap_or_else(|| "null".to_owned());
             response(
                 200,
                 &format!(
-                    r##"{{"attachment_id":"{}","index":{},"complete":{},"plaintext":"{}"}}"##,
+                    r##"{{"attachment_id":"{}","index":{},"complete":{},"file_name":{},"media_type":{},"plaintext":"{}"}}"##,
                     json_escape(attachment_id),
                     index,
                     complete,
+                    file_name,
+                    media_type,
                     hex_bytes(&plaintext)
                 ),
                 None,
