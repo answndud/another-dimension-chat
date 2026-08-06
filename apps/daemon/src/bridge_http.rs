@@ -1,7 +1,7 @@
 #![allow(clippy::module_name_repetitions)]
 
 use crate::{
-    attachment::AttachmentDescriptor,
+    attachment::{AttachmentDescriptor, AttachmentJob, EncryptedAttachment},
     bridge::{BridgeRequest, LocalBridge},
     contacts::{ContactDirectory, ContactDirectoryError},
     delivery::{DeliveryLedger, RelayEnvelope},
@@ -68,6 +68,8 @@ pub struct InviteAuthority {
     staged_peer: Option<VerifiedInvite>,
     pairing: PairingSession,
     contacts: ContactDirectory,
+    attachment_jobs: std::collections::BTreeMap<String, AttachmentJob>,
+    completed_attachments: std::collections::BTreeMap<String, EncryptedAttachment>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -257,7 +259,53 @@ impl InviteAuthority {
             staged_peer: None,
             pairing: PairingSession::new(local_account_id, device_id),
             contacts: ContactDirectory::new(),
+            attachment_jobs: std::collections::BTreeMap::new(),
+            completed_attachments: std::collections::BTreeMap::new(),
         }
+    }
+
+    fn attachment_start(
+        &mut self,
+        blob_id: &str,
+        total: usize,
+    ) -> Result<(), crate::attachment::AttachmentError> {
+        if self.attachment_jobs.contains_key(blob_id) {
+            return Err(crate::attachment::AttachmentError::InvalidManifest);
+        }
+        self.attachment_jobs
+            .insert(blob_id.to_owned(), AttachmentJob::start(blob_id, total)?);
+        Ok(())
+    }
+
+    fn attachment_append(
+        &mut self,
+        blob_id: &str,
+        index: u32,
+        plaintext: &[u8],
+    ) -> Result<(), crate::attachment::AttachmentError> {
+        self.attachment_jobs
+            .get_mut(blob_id)
+            .ok_or(crate::attachment::AttachmentError::InvalidManifest)?
+            .append(index, plaintext)
+    }
+
+    fn attachment_finish(
+        &mut self,
+        blob_id: &str,
+    ) -> Result<AttachmentDescriptor, crate::attachment::AttachmentError> {
+        let package = self
+            .attachment_jobs
+            .remove(blob_id)
+            .ok_or(crate::attachment::AttachmentError::InvalidManifest)?
+            .finish()?;
+        let descriptor = package.descriptor.clone();
+        self.completed_attachments
+            .insert(blob_id.to_owned(), package);
+        Ok(descriptor)
+    }
+
+    fn take_completed_attachment(&mut self, blob_id: &str) -> Option<EncryptedAttachment> {
+        self.completed_attachments.remove(blob_id)
     }
 
     pub fn restore_contacts(&mut self, store: &EncryptedStore) -> Result<(), StorageError> {
@@ -1314,6 +1362,152 @@ pub fn handle_request_with_context(
                 }
                 Err(_) => response(503, "relay_unavailable", None, Some("application/json")),
             }
+        }
+        ("POST", "/local-api/attachment/start") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority.as_deref_mut() else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let Some(blob_id) = json_string(request.body, "blob_id") else {
+                return response(400, "invalid_blob_id", None, Some("application/json"));
+            };
+            let Some(total) = json_u64(request.body, "total").and_then(|v| usize::try_from(v).ok())
+            else {
+                return response(
+                    400,
+                    "invalid_attachment_size",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            match authority.attachment_start(&blob_id, total) {
+                Ok(()) => response(201, r##"{"started":true}"##, None, Some("application/json")),
+                Err(_) => response(400, "invalid_attachment", None, Some("application/json")),
+            }
+        }
+        ("POST", "/local-api/attachment/append") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority.as_deref_mut() else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let Some(blob_id) = json_string(request.body, "blob_id") else {
+                return response(400, "invalid_blob_id", None, Some("application/json"));
+            };
+            let Some(index) = json_u64(request.body, "index").and_then(|v| u32::try_from(v).ok())
+            else {
+                return response(
+                    400,
+                    "invalid_attachment_index",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(plaintext) = json_string(request.body, "plaintext").and_then(hex_decode)
+            else {
+                return response(
+                    400,
+                    "invalid_attachment_chunk",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            match authority.attachment_append(&blob_id, index, &plaintext) {
+                Ok(()) => response(
+                    202,
+                    r##"{"accepted":true}"##,
+                    None,
+                    Some("application/json"),
+                ),
+                Err(_) => response(
+                    409,
+                    "invalid_attachment_chunk",
+                    None,
+                    Some("application/json"),
+                ),
+            }
+        }
+        ("POST", "/local-api/attachment/finish") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority.as_deref_mut() else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let Some(blob_id) = json_string(request.body, "blob_id") else {
+                return response(400, "invalid_blob_id", None, Some("application/json"));
+            };
+            match authority.attachment_finish(&blob_id) {
+                Ok(descriptor) => match serde_json::to_string(&descriptor) {
+                    Ok(payload) => response(
+                        200,
+                        &format!(r##"{{"finished":true,"descriptor":{payload}}}"##),
+                        None,
+                        Some("application/json"),
+                    ),
+                    Err(_) => response(503, "descriptor_unavailable", None, None),
+                },
+                Err(_) => response(
+                    409,
+                    "attachment_not_complete",
+                    None,
+                    Some("application/json"),
+                ),
+            }
+        }
+        ("POST", "/local-api/attachment/upload-completed") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(authority) = invite_authority.as_deref_mut() else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let Some(inbox_url) = json_string(request.body, "inbox_url") else {
+                return response(400, "invalid_inbox_url", None, Some("application/json"));
+            };
+            let Some(blob_id) = json_string(request.body, "blob_id") else {
+                return response(400, "invalid_blob_id", None, Some("application/json"));
+            };
+            let Some(endpoint) =
+                RelayEndpoint::from_inbox_url_with_pin(&inbox_url, authority.relay_tls_pin).ok()
+            else {
+                return response(
+                    422,
+                    "unsupported_relay_endpoint",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(package) = authority.completed_attachments.get(blob_id) else {
+                return response(404, "attachment_not_found", None, Some("application/json"));
+            };
+            let client = RelayClient::new(endpoint);
+            for (offset, chunk) in package
+                .blob
+                .chunks(crate::attachment::CHUNK_SIZE)
+                .enumerate()
+            {
+                let offset = offset * crate::attachment::CHUNK_SIZE;
+                if client
+                    .upload_blob_chunk_blocking(&blob_id, offset, package.blob.len(), chunk)
+                    .is_err()
+                {
+                    return response(503, "relay_unavailable", None, Some("application/json"));
+                }
+            }
+            authority.take_completed_attachment(&blob_id);
+            response(
+                200,
+                r##"{"uploaded":true}"##,
+                None,
+                Some("application/json"),
+            )
         }
         ("POST", "/local-api/delivery/post") => {
             if let Err(reply) = authorize_api(bridge, &request, now) {

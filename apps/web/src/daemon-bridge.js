@@ -130,6 +130,30 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ conversation_id: conversationId, ciphertext }),
     }),
+    sendAttachment: (conversationId, descriptor) => request("/local-api/session/send-attachment", {
+      method: "POST",
+      body: JSON.stringify({ conversation_id: conversationId, descriptor: JSON.stringify(descriptor) }),
+    }),
+    receiveAttachment: (conversationId, ciphertext) => request("/local-api/session/receive-attachment", {
+      method: "POST",
+      body: JSON.stringify({ conversation_id: conversationId, ciphertext }),
+    }),
+    startAttachment: (blobId, total) => request("/local-api/attachment/start", {
+      method: "POST",
+      body: JSON.stringify({ blob_id: blobId, total }),
+    }),
+    appendAttachment: (blobId, index, plaintext) => request("/local-api/attachment/append", {
+      method: "POST",
+      body: JSON.stringify({ blob_id: blobId, index, plaintext }),
+    }),
+    finishAttachment: (blobId) => request("/local-api/attachment/finish", {
+      method: "POST",
+      body: JSON.stringify({ blob_id: blobId }),
+    }),
+    uploadCompletedAttachment: (inboxUrl, blobId) => request("/local-api/attachment/upload-completed", {
+      method: "POST",
+      body: JSON.stringify({ inbox_url: inboxUrl, blob_id: blobId }),
+    }),
     postDelivery: (inboxUrl, ciphertext, expiresAt) => request("/local-api/delivery/post", {
       method: "POST",
       body: JSON.stringify({ inbox_url: inboxUrl, ciphertext, expires_at: expiresAt }),

@@ -63,6 +63,94 @@ pub struct EncryptedAttachment {
     pub blob: Vec<u8>,
 }
 
+/// In-memory daemon job for streaming plaintext chunks from the local UI.
+/// Restarting or locking the daemon drops the job; no plaintext is persisted.
+#[derive(Debug)]
+pub struct AttachmentJob {
+    blob_id: String,
+    key: AttachmentKey,
+    total: usize,
+    next_index: u32,
+    received: usize,
+    chunks: Vec<AttachmentChunkDescriptor>,
+    blob: Vec<u8>,
+}
+
+impl AttachmentJob {
+    pub fn start(blob_id: &str, total: usize) -> Result<Self, AttachmentError> {
+        if !valid_blob_id(blob_id) {
+            return Err(AttachmentError::InvalidManifest);
+        }
+        if total == 0 {
+            return Err(AttachmentError::Empty);
+        }
+        if total > MAX_ATTACHMENT_BYTES {
+            return Err(AttachmentError::TooLarge);
+        }
+        Ok(Self {
+            blob_id: blob_id.to_owned(),
+            key: generate_key()?,
+            total,
+            next_index: 0,
+            received: 0,
+            chunks: Vec::new(),
+            blob: Vec::with_capacity(total),
+        })
+    }
+
+    pub fn append(&mut self, index: u32, plaintext: &[u8]) -> Result<(), AttachmentError> {
+        if index != self.next_index || plaintext.is_empty() || plaintext.len() > CHUNK_SIZE {
+            return Err(AttachmentError::InvalidChunk);
+        }
+        let offset = self.received;
+        if offset + plaintext.len() > self.total
+            || (offset + plaintext.len() < self.total && plaintext.len() != CHUNK_SIZE)
+        {
+            return Err(AttachmentError::InvalidChunk);
+        }
+        let cipher =
+            Aes256Gcm::new_from_slice(&self.key.0).map_err(|_| AttachmentError::InvalidKey)?;
+        let mut nonce = [0_u8; 12];
+        secure_random(&mut nonce).map_err(|_| AttachmentError::RandomnessUnavailable)?;
+        let ciphertext = cipher
+            .encrypt(
+                Nonce::from_slice(&nonce),
+                aes_gcm::aead::Payload {
+                    msg: plaintext,
+                    aad: &aad(index, self.total as u64),
+                },
+            )
+            .map_err(|_| AttachmentError::AuthenticationFailed)?;
+        self.blob.extend_from_slice(&ciphertext);
+        self.chunks.push(AttachmentChunkDescriptor {
+            index,
+            nonce: hex(&nonce),
+            ciphertext_size: ciphertext.len() as u32,
+        });
+        self.received += plaintext.len();
+        self.next_index = self.next_index.saturating_add(1);
+        Ok(())
+    }
+
+    pub fn finish(self) -> Result<EncryptedAttachment, AttachmentError> {
+        if self.received != self.total || self.blob.is_empty() {
+            return Err(AttachmentError::InvalidManifest);
+        }
+        let descriptor = AttachmentDescriptor {
+            version: ATTACHMENT_VERSION,
+            blob_id: self.blob_id,
+            key: self.key,
+            chunk_size: CHUNK_SIZE as u32,
+            original_size: self.total as u64,
+            chunks: self.chunks,
+        };
+        Ok(EncryptedAttachment {
+            descriptor,
+            blob: self.blob,
+        })
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum AttachmentError {
     Empty,
@@ -343,6 +431,22 @@ mod tests {
         assert_eq!(
             decrypt_blob(&package.descriptor, &package.blob[..3]),
             Err(AttachmentError::InvalidChunk)
+        );
+    }
+
+    #[test]
+    fn streaming_job_encrypts_ordered_plaintext_without_persisting_it() {
+        let mut job = AttachmentJob::start(&"d".repeat(32), CHUNK_SIZE + 4).unwrap();
+        job.append(0, &vec![4_u8; CHUNK_SIZE]).unwrap();
+        job.append(1, b"tail").unwrap();
+        let package = job.finish().unwrap();
+        assert_eq!(
+            decrypt_blob(&package.descriptor, &package.blob).unwrap(),
+            [vec![4_u8; CHUNK_SIZE], b"tail".to_vec()].concat()
+        );
+        assert_eq!(
+            AttachmentJob::start(&"d".repeat(32), 0).unwrap_err(),
+            AttachmentError::Empty
         );
     }
 }
