@@ -33,6 +33,9 @@ use std::{
 const MAX_REQUEST_BYTES: usize = 192 * 1024;
 const EXCHANGE_PATH: &str = "/local-session/exchange";
 const MAX_INVITE_TTL_SECONDS: u64 = 10 * 60;
+const COMPLETED_ATTACHMENT_TTL_SECONDS: u64 = 60 * 60;
+const MAX_COMPLETED_ATTACHMENT_COUNT: usize = 2;
+const MAX_COMPLETED_ATTACHMENT_BYTES: usize = 64 * 1024 * 1024;
 
 /// Minimal HTTP boundary for the local bridge. It intentionally exposes only
 /// session bootstrap/status/lock; identity and message APIs remain absent.
@@ -69,7 +72,9 @@ pub struct InviteAuthority {
     pairing: PairingSession,
     contacts: ContactDirectory,
     attachment_jobs: std::collections::BTreeMap<String, AttachmentJob>,
+    attachment_job_started_at: std::collections::BTreeMap<String, u64>,
     completed_attachments: std::collections::BTreeMap<String, EncryptedAttachment>,
+    completed_attachment_created_at: std::collections::BTreeMap<String, u64>,
     received_attachments: std::collections::BTreeMap<String, AttachmentDescriptor>,
 }
 
@@ -261,7 +266,9 @@ impl InviteAuthority {
             pairing: PairingSession::new(local_account_id, device_id),
             contacts: ContactDirectory::new(),
             attachment_jobs: std::collections::BTreeMap::new(),
+            attachment_job_started_at: std::collections::BTreeMap::new(),
             completed_attachments: std::collections::BTreeMap::new(),
+            completed_attachment_created_at: std::collections::BTreeMap::new(),
             received_attachments: std::collections::BTreeMap::new(),
         }
     }
@@ -272,14 +279,29 @@ impl InviteAuthority {
         total: usize,
         file_name: Option<&str>,
         media_type: Option<&str>,
+        now: u64,
     ) -> Result<(), crate::attachment::AttachmentError> {
         if self.attachment_jobs.contains_key(blob_id) {
             return Err(crate::attachment::AttachmentError::InvalidManifest);
+        }
+        if self.attachment_jobs.len() >= 1
+            || self.completed_attachments.len() >= MAX_COMPLETED_ATTACHMENT_COUNT
+            || self
+                .completed_attachments
+                .values()
+                .map(|item| item.blob.len())
+                .sum::<usize>()
+                .saturating_add(total)
+                > MAX_COMPLETED_ATTACHMENT_BYTES
+        {
+            return Err(crate::attachment::AttachmentError::TooLarge);
         }
         self.attachment_jobs.insert(
             blob_id.to_owned(),
             AttachmentJob::start_with_metadata(blob_id, total, file_name, media_type)?,
         );
+        self.attachment_job_started_at
+            .insert(blob_id.to_owned(), now);
         Ok(())
     }
 
@@ -298,18 +320,23 @@ impl InviteAuthority {
     fn attachment_finish(
         &mut self,
         blob_id: &str,
+        now: u64,
     ) -> Result<(), crate::attachment::AttachmentError> {
         let package = self
             .attachment_jobs
             .remove(blob_id)
             .ok_or(crate::attachment::AttachmentError::InvalidManifest)?
             .finish()?;
+        self.attachment_job_started_at.remove(blob_id);
         self.completed_attachments
             .insert(blob_id.to_owned(), package);
+        self.completed_attachment_created_at
+            .insert(blob_id.to_owned(), now);
         Ok(())
     }
 
     fn take_completed_attachment(&mut self, blob_id: &str) -> Option<EncryptedAttachment> {
+        self.completed_attachment_created_at.remove(blob_id);
         self.completed_attachments.remove(blob_id)
     }
 
@@ -317,6 +344,8 @@ impl InviteAuthority {
         let cancelled = self.attachment_jobs.remove(blob_id).is_some()
             || self.completed_attachments.remove(blob_id).is_some()
             || self.received_attachments.remove(blob_id).is_some();
+        self.attachment_job_started_at.remove(blob_id);
+        self.completed_attachment_created_at.remove(blob_id);
         if cancelled {
             let _ = store.delete(RecordClass::Attachment, &format!("received/{blob_id}"));
         }
@@ -346,8 +375,37 @@ impl InviteAuthority {
 
     fn clear_attachment_state(&mut self) {
         self.attachment_jobs.clear();
+        self.attachment_job_started_at.clear();
         self.completed_attachments.clear();
+        self.completed_attachment_created_at.clear();
         self.received_attachments.clear();
+    }
+
+    fn purge_attachment_state(&mut self, now: u64) {
+        let expired_jobs = self
+            .attachment_job_started_at
+            .iter()
+            .filter_map(|(id, started)| {
+                (now.saturating_sub(*started) > COMPLETED_ATTACHMENT_TTL_SECONDS)
+                    .then_some(id.clone())
+            })
+            .collect::<Vec<_>>();
+        for id in expired_jobs {
+            self.attachment_job_started_at.remove(&id);
+            self.attachment_jobs.remove(&id);
+        }
+        let expired_completed = self
+            .completed_attachment_created_at
+            .iter()
+            .filter_map(|(id, created)| {
+                (now.saturating_sub(*created) > COMPLETED_ATTACHMENT_TTL_SECONDS)
+                    .then_some(id.clone())
+            })
+            .collect::<Vec<_>>();
+        for id in expired_completed {
+            self.completed_attachment_created_at.remove(&id);
+            self.completed_attachments.remove(&id);
+        }
     }
 
     pub fn restore_contacts(&mut self, store: &EncryptedStore) -> Result<(), StorageError> {
@@ -562,6 +620,9 @@ pub fn handle_request_with_context(
     let Ok(request) = parse_request(raw) else {
         return response(400, "invalid_request", None, None);
     };
+    if let Some(authority) = invite_authority.as_deref_mut() {
+        authority.purge_attachment_state(now);
+    }
     let origin = request.header("origin").unwrap_or("");
     let host = request.header("host").unwrap_or("");
     match (request.method, request.path) {
@@ -1455,7 +1516,7 @@ pub fn handle_request_with_context(
             };
             let file_name = json_string(request.body, "file_name");
             let media_type = json_string(request.body, "media_type");
-            match authority.attachment_start(&blob_id, total, file_name, media_type) {
+            match authority.attachment_start(&blob_id, total, file_name, media_type, now) {
                 Ok(()) => response(201, r##"{"started":true}"##, None, Some("application/json")),
                 Err(_) => response(400, "invalid_attachment", None, Some("application/json")),
             }
@@ -1513,7 +1574,7 @@ pub fn handle_request_with_context(
             let Some(blob_id) = json_string(request.body, "blob_id") else {
                 return response(400, "invalid_blob_id", None, Some("application/json"));
             };
-            match authority.attachment_finish(&blob_id) {
+            match authority.attachment_finish(&blob_id, now) {
                 Ok(_) => response(
                     200,
                     r##"{"finished":true}"##,
