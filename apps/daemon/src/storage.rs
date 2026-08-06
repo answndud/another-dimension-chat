@@ -325,6 +325,21 @@ impl EncryptedStore {
         self.locked = true;
     }
 
+    pub fn wipe_files(&mut self) -> Result<(), StorageError> {
+        self.lock();
+        match fs::remove_file(&self.path) {
+            Ok(()) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
+        match fs::remove_file(&self.marker_path) {
+            Ok(()) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
+        Ok(())
+    }
+
     /// Re-encrypts every record under a freshly derived key and salt without
     /// exposing plaintext outside this process. The destination must not
     /// exist; callers can atomically replace the active store afterwards.

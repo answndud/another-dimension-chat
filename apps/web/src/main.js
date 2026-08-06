@@ -581,6 +581,25 @@ function render() {
     app.innerHTML = renderDaemonBridgeState();
     if (state.daemonBridge && !state.daemonLocked) {
       document.querySelector(".daemon-gate")?.insertAdjacentHTML("beforeend", renderDaemonRelayTrust());
+      const wipeButton = document.createElement("button");
+      wipeButton.type = "button";
+      wipeButton.className = "danger";
+      wipeButton.textContent = "이 기기의 daemon 데이터 긴급 삭제";
+      wipeButton.addEventListener("click", async () => {
+        if (!window.confirm("이 기기의 daemon store와 메모리 세션을 삭제할까요? relay·백업·SSD 잔존 데이터는 삭제되지 않습니다.")) return;
+        try {
+          const result = await state.daemonBridge.wipe();
+          state.daemonBridge = null;
+          state.daemonLocked = true;
+          state.daemonStatus = "삭제됨 · daemon 재초기화 필요";
+          state.notice = result.remote_data === "not_deleted"
+            ? "이 기기의 daemon 데이터만 삭제했습니다. relay와 백업은 별도로 폐기해야 합니다."
+            : "daemon 데이터를 삭제했습니다.";
+          state.error = "";
+        } catch (error) { state.error = error.message; }
+        render();
+      });
+      document.querySelector(".daemon-gate")?.append(wipeButton);
     }
     document.querySelector("#daemon-save-relay-pin")?.addEventListener("click", async () => {
       try {

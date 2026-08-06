@@ -2796,6 +2796,33 @@ pub fn handle_request_with_context(
                 Err(error) => response(403, error_code(&error), None, Some("application/json")),
             }
         }
+        ("POST", "/local-api/session/wipe") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if let Some(catalog) = session_catalog.as_deref_mut() {
+                catalog.lock();
+            }
+            if let Some(authority) = invite_authority.as_deref_mut() {
+                authority.clear_attachment_state();
+            }
+            if let Some(ledger) = delivery_ledger.as_deref_mut() {
+                ledger.wipe();
+            }
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            if store.wipe_files().is_err() {
+                return response(503, "wipe_incomplete", None, Some("application/json"));
+            }
+            bridge.invalidate_session();
+            response(
+                200,
+                r##"{"wiped":true,"remote_data":"not_deleted","browser_cache":"not_deleted"}"##,
+                None,
+                Some("application/json"),
+            )
+        }
         _ => response(404, "not_found", None, None),
     }
 }

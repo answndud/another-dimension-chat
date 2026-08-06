@@ -7,6 +7,7 @@
 use crate::storage::{EncryptedStore, RecordClass, StorageError};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
+use zeroize::Zeroize;
 
 const VERSION: u8 = 1;
 const BLOCK_SIZE: usize = 256;
@@ -68,6 +69,14 @@ pub struct DeliveryLedger {
 }
 
 impl DeliveryLedger {
+    pub fn wipe(&mut self) {
+        for record in self.records.values_mut() {
+            if let Some(wire) = record.wire.as_mut() {
+                wire.zeroize();
+            }
+        }
+        self.records.clear();
+    }
     pub fn register_encrypted(&mut self, digest: impl Into<String>) -> Result<(), EnvelopeError> {
         self.register_encrypted_with_wire(digest, None)
     }

@@ -106,6 +106,7 @@ export async function connectDaemonBridge({
       body: JSON.stringify({ tls_pin: tlsPin, retrust }),
     }),
     lock: () => request("/local-api/session/lock", { method: "POST" }),
+    wipe: () => request("/local-api/session/wipe", { method: "POST" }),
     createConversation: (conversationId) => request("/local-api/session/create", {
       method: "POST",
       body: JSON.stringify({ conversation_id: conversationId }),

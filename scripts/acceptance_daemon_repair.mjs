@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { createHash, X509Certificate } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { execFileSync, spawn } from "node:child_process";
@@ -297,6 +298,11 @@ try {
   assert.equal(failed.body.raw, "relay_capability_expired", JSON.stringify(failed.body));
   const pairing = await bob.api("GET", "/local-api/pairing/status");
   assert.equal(pairing.body.state, "rejected");
+  const wiped = await alice.api("POST", "/local-api/session/wipe");
+  assert.equal(wiped.status, 200, JSON.stringify(wiped.body));
+  assert.equal(wiped.body.remote_data, "not_deleted");
+  assert.equal((await alice.api("GET", "/local-api/status")).status, 403);
+  assert.equal(existsSync(join(aliceDir, "store.adstore")), false);
   console.log("daemon repair acceptance passed: two daemons -> pairing -> OpenMLS text + attachment -> daemon decrypt/download -> relay rotation -> trust revocation");
 } finally {
   for (const daemon of [alice, bob]) daemon?.child.kill("SIGTERM");
