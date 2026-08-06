@@ -2,6 +2,7 @@ use crate::{
     bridge::{BridgeConfig, LocalBridge},
     bridge_http::{serve_forever, IdentityView, InviteAuthority},
     device::{DeviceRegistry, DeviceRegistryError},
+    device_link::{DeviceLinkApproval, DeviceLinkRequest, PendingDeviceKey},
     identity::{AccountRootKey, DeviceIdentity, ProfileIdentity},
     mls_session::MlsSessionCatalog,
     storage::{EncryptedStore, RecordClass, StorageError},
@@ -819,6 +820,11 @@ fn registry_error(error: DeviceRegistryError) -> CliError {
 }
 
 fn device_command(args: &[String], passphrase: &str) -> Result<String, CliError> {
+    match args.get(1).map(String::as_str) {
+        Some("link-request") => return device_link_request(args, passphrase),
+        Some("link-complete") => return device_link_complete(args, passphrase),
+        _ => {}
+    }
     let data_dir = data_dir(args)?;
     let mut store = open_store(&data_dir, passphrase)?;
     let mut registry = decode_registry(&store)?;
@@ -858,6 +864,84 @@ fn device_command(args: &[String], passphrase: &str) -> Result<String, CliError>
             "use device list or device revoke --id DEVICE_ID".into(),
         )),
     }
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+struct PendingLinkArtifact {
+    schema_version: u16,
+    request: String,
+    private_seed: String,
+    approval: Option<String>,
+}
+
+fn device_link_request(args: &[String], passphrase: &str) -> Result<String, CliError> {
+    let output = option(args, "--output")?
+        .ok_or_else(|| CliError::Usage("device link-request requires --output PATH".into()))?;
+    let output = PathBuf::from(output);
+    if output.exists() || output.with_extension("revision").exists() {
+        return Err(CliError::Usage(
+            "device link-request refuses to overwrite an existing artifact".into(),
+        ));
+    }
+    let device_id = option(args, "--id")?
+        .ok_or_else(|| CliError::Usage("device link-request requires --id DEVICE_ID".into()))?;
+    let (pending, code) =
+        PendingDeviceKey::create(device_id, [0; 32], now_seconds()).map_err(|_| CliError::Io)?;
+    let request = pending
+        .request()
+        .encode()
+        .map_err(|_| CliError::InvalidRecovery)?;
+    let seed = pending.seed_bytes();
+    let artifact = PendingLinkArtifact {
+        schema_version: 1,
+        request: request.clone(),
+        private_seed: hex_bytes(&*seed),
+        approval: None,
+    };
+    let mut store = EncryptedStore::initialize(&output, passphrase)?;
+    store.put(
+        RecordClass::Device,
+        "pending-link",
+        &serde_json::to_vec(&artifact).map_err(|_| StorageError::CorruptStore)?,
+    )?;
+    Ok(format!(
+        "device link request created\nrequest: {request}\ncode: {code}\nprivate key: encrypted in the pending artifact\nnext: paste the request and code into an approved existing device"
+    ))
+}
+
+fn device_link_complete(args: &[String], passphrase: &str) -> Result<String, CliError> {
+    let input = option(args, "--input")?
+        .ok_or_else(|| CliError::Usage("device link-complete requires --input PATH".into()))?;
+    let approval = option(args, "--approval")?
+        .ok_or_else(|| CliError::Usage("device link-complete requires --approval VALUE".into()))?;
+    let mut store = EncryptedStore::open(Path::new(&input), passphrase)?;
+    let bytes = store
+        .get(RecordClass::Device, "pending-link")
+        .ok_or(CliError::InvalidRecovery)?;
+    let mut artifact: PendingLinkArtifact =
+        serde_json::from_slice(&bytes).map_err(|_| CliError::InvalidRecovery)?;
+    if artifact.schema_version != 1 || artifact.approval.is_some() {
+        return Err(CliError::InvalidRecovery);
+    }
+    let request =
+        DeviceLinkRequest::parse(&artifact.request).map_err(|_| CliError::InvalidRecovery)?;
+    let parsed_approval =
+        DeviceLinkApproval::parse(&approval).map_err(|_| CliError::InvalidRecovery)?;
+    parsed_approval
+        .verify_for(&request, now_seconds())
+        .map_err(|_| CliError::InvalidRecovery)?;
+    artifact.approval = Some(approval);
+    store.put(
+        RecordClass::Device,
+        "pending-link",
+        &serde_json::to_vec(&artifact).map_err(|_| StorageError::CorruptStore)?,
+    )?;
+    Ok(format!(
+        "device link approval verified\ndevice_id: {}\naccount_id: {}\nnext: activate this encrypted artifact as a rootless device profile",
+        request.device_id(),
+        parsed_approval.certificate().account_id().as_str()
+    ))
 }
 
 fn now_seconds() -> u64 {
@@ -989,7 +1073,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CliError> {
     Ok(())
 }
 fn help_text() -> String {
-    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  status [--data-dir PATH]\n  stop [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery inspect --input PATH [--data-dir PATH]\n  recovery rotate --data-dir PATH  # stdin: old passphrase\\nnew passphrase\n  recovery import --input PATH [--data-dir PATH]\n  wipe --data-dir PATH              # irreversible local store deletion\n\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\nPassphrases are read from stdin and are never accepted as arguments.".into()
+    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  status [--data-dir PATH]\n  stop [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  device link-request --id DEVICE_ID --output PATH\n  device link-complete --input PATH --approval VALUE\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery inspect --input PATH [--data-dir PATH]\n  recovery rotate --data-dir PATH  # stdin: old passphrase\\nnew passphrase\n  recovery import --input PATH [--data-dir PATH]\n  wipe --data-dir PATH              # irreversible local store deletion\n\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\nPassphrases are read from stdin and are never accepted as arguments.".into()
 }
 
 #[cfg(test)]
