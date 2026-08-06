@@ -36,6 +36,36 @@ const MAX_INVITE_TTL_SECONDS: u64 = 10 * 60;
 const COMPLETED_ATTACHMENT_TTL_SECONDS: u64 = 60 * 60;
 const MAX_COMPLETED_ATTACHMENT_COUNT: usize = 2;
 const MAX_COMPLETED_ATTACHMENT_BYTES: usize = 64 * 1024 * 1024;
+const MESSAGE_PREFIX: &[u8] = b"ADMSG1.";
+const MAX_MESSAGE_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
+
+#[derive(serde::Deserialize, serde::Serialize)]
+struct MessagePayload {
+    id: String,
+    created_at: u64,
+    expires_at: u64,
+    text: String,
+}
+
+fn encode_message_payload(text: &str, now: u64, expires_at: u64) -> Option<Vec<u8>> {
+    let mut id = [0_u8; 16];
+    getrandom::fill(&mut id).ok()?;
+    let payload = MessagePayload {
+        id: hex_bytes(&id),
+        created_at: now,
+        expires_at,
+        text: text.to_owned(),
+    };
+    let mut encoded = MESSAGE_PREFIX.to_vec();
+    encoded.extend(serde_json::to_vec(&payload).ok()?);
+    Some(encoded)
+}
+
+fn decode_message_payload(plaintext: &[u8]) -> Option<MessagePayload> {
+    plaintext
+        .strip_prefix(MESSAGE_PREFIX)
+        .and_then(|value| serde_json::from_slice(value).ok())
+}
 
 /// Minimal HTTP boundary for the local bridge. It intentionally exposes only
 /// session bootstrap/status/lock; identity and message APIs remain absent.
@@ -1405,13 +1435,27 @@ pub fn handle_request_with_context(
             let Some(plaintext) = json_string(request.body, "plaintext") else {
                 return response(400, "invalid_message", None, Some("application/json"));
             };
+            let expires_at = json_u64(request.body, "expires_at").unwrap_or(0);
+            if expires_at != 0
+                && (expires_at <= now || expires_at > now.saturating_add(MAX_MESSAGE_TTL_SECONDS))
+            {
+                return response(
+                    422,
+                    "invalid_message_expiry",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            let Some(plaintext) = encode_message_payload(&plaintext, now, expires_at) else {
+                return response(503, "randomness_unavailable", None, None);
+            };
             let Some(catalog) = session_catalog.as_deref_mut() else {
                 return response(503, "session_unavailable", None, None);
             };
             let Some(store) = session_store.as_deref_mut() else {
                 return response(503, "storage_unavailable", None, None);
             };
-            match catalog.send(conversation_id, plaintext.as_bytes(), store) {
+            match catalog.send(conversation_id, &plaintext, store) {
                 Ok(ciphertext) => response(
                     200,
                     &format!(r##"{{"ciphertext":"{}"}}"##, hex_bytes(&ciphertext)),
@@ -1447,12 +1491,20 @@ pub fn handle_request_with_context(
                 return response(503, "storage_unavailable", None, None);
             };
             match catalog.receive(conversation_id, &ciphertext, store) {
-                Ok(plaintext) => response(
-                    200,
-                    &format!(r##"{{"plaintext":"{}"}}"##, hex_bytes(&plaintext)),
-                    None,
-                    Some("application/json"),
-                ),
+                Ok(plaintext) => {
+                    let (plaintext, metadata) = decode_message_payload(&plaintext)
+                        .map(|message| {
+                            let expired = message.expires_at != 0 && message.expires_at <= now;
+                            (message.text.into_bytes(), format!(r##","message_id":"{}","created_at":{},"expires_at":{},"expired":{}"##, json_escape(&message.id), message.created_at, message.expires_at, expired))
+                        })
+                        .unwrap_or_else(|| (plaintext, String::new()));
+                    response(
+                        200,
+                        &format!(r##"{{"plaintext":"{}"{metadata}}}"##, hex_bytes(&plaintext)),
+                        None,
+                        Some("application/json"),
+                    )
+                }
                 Err(error) => catalog_error(error),
             }
         }
@@ -2472,20 +2524,39 @@ pub fn handle_request_with_context(
                         json_escape(&digest)
                     ));
                 } else {
+                    let message = decode_message_payload(&plaintext);
+                    let expired = message
+                        .as_ref()
+                        .is_some_and(|item| item.expires_at != 0 && item.expires_at <= now);
+                    let display_text = message
+                        .as_ref()
+                        .map(|item| item.text.as_bytes())
+                        .unwrap_or(&plaintext);
                     if let Some(authority) = invite_authority.as_deref_mut() {
-                        let _ = authority.record_contact_message(
-                            &conversation_id,
-                            &plaintext,
-                            now,
-                            background,
-                            store,
-                        );
+                        if !expired {
+                            let _ = authority.record_contact_message(
+                                &conversation_id,
+                                display_text,
+                                now,
+                                background,
+                                store,
+                            );
+                        }
                     }
+                    let metadata = message
+                        .as_ref()
+                        .map(|item| format!(r##","message_id":"{}","created_at":{},"expires_at":{},"expired":{}"##, json_escape(&item.id), item.created_at, item.expires_at, expired))
+                        .unwrap_or_default();
                     messages.push(format!(
-                        r##"{{"id":"{}","digest":"{}","plaintext":"{}"}}"##,
+                        r##"{{"id":"{}","digest":"{}","plaintext":"{}"{} }}"##,
                         json_escape(&relay_id),
                         json_escape(&digest),
-                        hex_bytes(&plaintext)
+                        if expired {
+                            "".to_owned()
+                        } else {
+                            hex_bytes(display_text)
+                        },
+                        metadata
                     ));
                 }
                 acknowledged_ids.push(relay_id.clone());

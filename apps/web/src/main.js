@@ -386,7 +386,7 @@ function bindDaemonSession() {
     const result = await bridge.syncDelivery(conversationId, inboxUrl);
     const received = (result.messages || []).map((message) => ({
       id: message.id || "수신 메시지",
-      text: message.attachment_id ? "암호화 첨부파일" : decodeHexText(message.plaintext),
+      text: message.attachment_id ? "암호화 첨부파일" : message.expired ? "만료된 메시지" : decodeHexText(message.plaintext),
       attachmentId: message.attachment_id || "",
       state: "decrypted",
       direction: "incoming",
