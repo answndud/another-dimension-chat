@@ -122,12 +122,28 @@ impl From<SessionError> for SessionCatalogError {
 /// serialized KeyPackages, welcomes, ciphertexts, and decrypted text.
 pub struct MlsSessionCatalog {
     sessions: BTreeMap<String, MlsSession>,
+    device_private_signature_key: Option<Zeroizing<[u8; 32]>>,
 }
 
 impl MlsSessionCatalog {
     pub fn new() -> Self {
         Self {
             sessions: BTreeMap::new(),
+            device_private_signature_key: None,
+        }
+    }
+
+    pub fn new_with_device_private_key(device_private_signature_key: [u8; 32]) -> Self {
+        Self {
+            sessions: BTreeMap::new(),
+            device_private_signature_key: Some(Zeroizing::new(device_private_signature_key)),
+        }
+    }
+
+    fn new_session(&self, identity: Vec<u8>) -> Result<MlsSession, SessionCatalogError> {
+        match &self.device_private_signature_key {
+            Some(key) => MlsSession::new_with_signature_key(identity, **key).map_err(Into::into),
+            None => MlsSession::new(identity).map_err(Into::into),
         }
     }
 
@@ -144,7 +160,7 @@ impl MlsSessionCatalog {
         if self.sessions.contains_key(conversation_id) {
             return Err(SessionCatalogError::DuplicateConversation);
         }
-        let mut session = MlsSession::new(identity)?;
+        let mut session = self.new_session(identity)?;
         session.create_group_and_persist(store, conversation_id)?;
         self.sessions.insert(conversation_id.to_owned(), session);
         Ok(())
@@ -161,7 +177,7 @@ impl MlsSessionCatalog {
             session.join_and_persist(welcome, store, conversation_id)?;
             return Ok(());
         }
-        let mut session = MlsSession::new(identity)?;
+        let mut session = self.new_session(identity)?;
         session.join_and_persist(welcome, store, conversation_id)?;
         self.sessions.insert(conversation_id.to_owned(), session);
         Ok(())
@@ -175,7 +191,7 @@ impl MlsSessionCatalog {
         if self.sessions.contains_key(conversation_id) {
             return Err(SessionCatalogError::DuplicateConversation);
         }
-        let session = MlsSession::new(identity)?;
+        let session = self.new_session(identity)?;
         let key_package = session.key_package()?;
         self.sessions.insert(conversation_id.to_owned(), session);
         Ok(key_package)
@@ -329,6 +345,44 @@ impl MlsSession {
             .crypto()
             .signature_key_gen(SignatureScheme::ED25519)
             .map_err(|_| SessionError::Crypto)?;
+        Self::from_signature_key(
+            identity,
+            provider,
+            private_signature_key,
+            public_signature_key,
+        )
+    }
+
+    pub fn new_with_signature_key(
+        identity: Vec<u8>,
+        private_signature_key: [u8; 32],
+    ) -> Result<Self, SessionError> {
+        if identity.is_empty() || identity.len() > MAX_IDENTITY_BYTES {
+            return Err(SessionError::IdentityTooLarge);
+        }
+        let provider = DaemonProvider::new().map_err(|_| SessionError::Provider)?;
+        provider
+            .crypto()
+            .supports(SELECTED_CIPHERSUITE)
+            .map_err(|_| SessionError::Provider)?;
+        let public_signature_key = ed25519_dalek::SigningKey::from_bytes(&private_signature_key)
+            .verifying_key()
+            .to_bytes()
+            .to_vec();
+        Self::from_signature_key(
+            identity,
+            provider,
+            private_signature_key.to_vec(),
+            public_signature_key,
+        )
+    }
+
+    fn from_signature_key(
+        identity: Vec<u8>,
+        provider: DaemonProvider,
+        private_signature_key: Vec<u8>,
+        public_signature_key: Vec<u8>,
+    ) -> Result<Self, SessionError> {
         let credential = CredentialWithKey {
             credential: BasicCredential::new(identity).into(),
             signature_key: public_signature_key.into(),
@@ -768,6 +822,13 @@ mod tests {
             alice.join(&vec![0; 4 * 1024 * 1024 + 1]),
             Err(SessionError::TooLarge)
         );
+    }
+
+    #[test]
+    fn linked_device_seed_can_sign_an_openmls_key_package() {
+        let session =
+            MlsSession::new_with_signature_key(b"linked-device".to_vec(), [79; 32]).unwrap();
+        assert!(!session.key_package().unwrap().is_empty());
     }
 
     #[test]

@@ -176,7 +176,7 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         .authorize(&summary.device_id, now_seconds())
         .map_err(registry_error)?;
     let root_seed = summary.root_seed;
-    let mut session_catalog = MlsSessionCatalog::new();
+    let mut session_catalog = MlsSessionCatalog::new_with_device_private_key(summary.device_seed);
     session_catalog
         .restore_all(&store)
         .map_err(|_| StorageError::CorruptStore)?;
@@ -782,6 +782,7 @@ fn encode_linked_identity(
 
 struct IdentitySummary {
     root_seed: Option<[u8; 32]>,
+    device_seed: [u8; 32],
     account_public_key: [u8; 32],
     account_id: String,
     device_id: String,
@@ -811,10 +812,11 @@ fn decode_identity_summary(bytes: &[u8]) -> Option<IdentitySummary> {
             return None;
         }
         let root_seed: [u8; 32] = root.try_into().ok()?;
-        let _: [u8; 32] = device_seed.try_into().ok()?;
+        let device_seed: [u8; 32] = device_seed.try_into().ok()?;
         let root = AccountRootKey::from_seed(root_seed);
         return Some(IdentitySummary {
             root_seed: Some(root_seed),
+            device_seed,
             account_public_key: root.public_key(),
             account_id: root.account_id().as_str().into(),
             device_id: String::from_utf8(device_id.to_vec()).ok()?,
@@ -832,9 +834,10 @@ fn decode_identity_summary(bytes: &[u8]) -> Option<IdentitySummary> {
         return None;
     }
     let account_public_key: [u8; 32] = account_public_key.try_into().ok()?;
-    let _: [u8; 32] = device_seed.try_into().ok()?;
+    let device_seed: [u8; 32] = device_seed.try_into().ok()?;
     Some(IdentitySummary {
         root_seed: None,
+        device_seed,
         account_public_key,
         account_id: AccountRootKey::account_id_from_public_key(account_public_key)
             .as_str()
@@ -1319,6 +1322,7 @@ mod tests {
         let bytes = super::encode_linked_identity(account, [72; 32], "phone", "Linked phone");
         let summary = super::decode_identity_summary(&bytes).unwrap();
         assert_eq!(summary.root_seed, None);
+        assert_eq!(summary.device_seed, [72; 32]);
         assert_eq!(summary.account_public_key, account);
         assert_eq!(summary.device_id, "phone");
     }
