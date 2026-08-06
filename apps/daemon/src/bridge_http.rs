@@ -2823,7 +2823,36 @@ pub fn serve_forever(
         .map_err(|error| io::Error::other(error.to_string()))?;
     runtime.block_on(async move {
         let listener = tokio::net::TcpListener::bind(address).await?;
+        let maintenance_state = state.clone();
         let app = Router::new().fallback(any(axum_handler)).with_state(state);
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(15));
+            loop {
+                interval.tick().await;
+                let now = unix_now();
+                let Ok(mut ledger) = maintenance_state.delivery_ledger.lock() else {
+                    continue;
+                };
+                let Ok(mut store) = maintenance_state.session_store.lock() else {
+                    continue;
+                };
+                let changed = ledger.expire_due(now) > 0;
+                let expired_messages = store
+                    .records_with_prefix(RecordClass::Message, "messages/")
+                    .into_iter()
+                    .filter_map(|(key, bytes)| {
+                        let message = serde_json::from_slice::<StoredMessage>(&bytes).ok()?;
+                        (message.expires_at != 0 && message.expires_at <= now).then_some(key)
+                    })
+                    .collect::<Vec<_>>();
+                for key in expired_messages {
+                    let _ = store.delete(RecordClass::Message, &key);
+                }
+                if changed {
+                    let _ = ledger.persist(&mut store);
+                }
+            }
+        });
         axum::serve(listener, app)
             .await
             .map_err(|error| io::Error::other(error.to_string()))
