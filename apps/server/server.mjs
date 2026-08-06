@@ -734,8 +734,14 @@ export async function createLocalServer({
     : `${scheme}://${urlHost(localHost)}:${port}`;
   const localUiUrl = `${localUiOrigin}/#relay=${encodeURIComponent(originFor(bindHost))}&local=${localAccessCapability.token}`;
   await privateFileWriter(localUiUrlFile, `${localUiUrl}\n`);
+  const close = async () => {
+    await Promise.all([inboxStore.flush(), inviteCodeStore.flush()]);
+    if (!server.listening) return;
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  };
   return {
     server,
+    close,
     bindHost,
     port,
     inboxCapability: inboxCapability.token,
@@ -763,6 +769,15 @@ if (launchedDirectly) {
     }
     const options = args.length ? await loadServerConfig(args[1]) : {};
     const runtime = await createLocalServer(options);
+    let stopping = false;
+    const shutdown = async (signal) => {
+      if (stopping) return;
+      stopping = true;
+      try { await runtime.close(); process.exitCode = 0; }
+      catch (error) { console.error(`Server shutdown failed after ${signal}: ${error.message}`); process.exitCode = 1; }
+    };
+    process.once("SIGTERM", () => { void shutdown("SIGTERM"); });
+    process.once("SIGINT", () => { void shutdown("SIGINT"); });
     runtime.server.listen(runtime.port, runtime.bindHost, () => {
       console.log(`Another Dimension local server listening at ${runtime.listenerTls ? "https" : "http"}://${runtime.bindHost}:${runtime.port}`);
       console.log(`Advertised origin: ${runtime.publicOrigin}`);
