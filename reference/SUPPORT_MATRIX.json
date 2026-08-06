@@ -19,58 +19,13 @@
       "scope": "current-host bundled-runtime install, permission, tamper, update, rollback and relay acceptance only"
     },
     {
-      "id": "codex-in-app-browser-production-ui",
+      "id": "macos-arm64-chromium-production-ui",
       "surface": "browser-ui",
-      "platform": "Codex in-app browser",
-      "runtime": "embedded browser (version not asserted)",
-      "status": "verified-local",
+      "platform": "macOS arm64 Chromium",
+      "runtime": "Chromium version must be recorded in evidence",
+      "status": "unverified",
       "evidence": "reference/browser-evidence/codex-in-app-browser.json",
-      "scope": "production UI, security headers, WASM initialization, IndexedDB profile create/unlock, Service Worker active-registration status, bidirectional invite validation, safety confirmation, manual Olm handshake, encrypted message round-trip, single-active-session multi-tab replacement, and inline profile wipe only; service-worker runtime update/cache and real browser/OS matrix remain unverified"
-    },
-    {
-      "id": "chrome",
-      "surface": "browser-ui",
-      "platform": "Chrome",
-      "runtime": "version not tested",
-      "status": "unverified",
-      "evidence": null,
-      "scope": "no support claim"
-    },
-    {
-      "id": "safari",
-      "surface": "browser-ui",
-      "platform": "Safari",
-      "runtime": "version not tested",
-      "status": "unverified",
-      "evidence": null,
-      "scope": "no support claim"
-    },
-    {
-      "id": "firefox",
-      "surface": "browser-ui",
-      "platform": "Firefox",
-      "runtime": "version not tested",
-      "status": "unverified",
-      "evidence": null,
-      "scope": "no support claim"
-    },
-    {
-      "id": "windows",
-      "surface": "server-runtime",
-      "platform": "Windows",
-      "runtime": "not tested",
-      "status": "unverified",
-      "evidence": null,
-      "scope": "no support claim"
-    },
-    {
-      "id": "linux",
-      "surface": "server-runtime",
-      "platform": "Linux",
-      "runtime": "not tested",
-      "status": "unverified",
-      "evidence": null,
-      "scope": "no support claim"
+      "scope": "no support claim until macOS arm64 Chromium exact version and release archive hash are recorded"
     }
   ]
 }

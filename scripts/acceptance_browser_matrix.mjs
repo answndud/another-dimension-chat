@@ -36,4 +36,4 @@ if (serviceWorkerRuntimeResult.code !== 0) { process.stderr.write(serviceWorkerR
 process.stdout.write(serviceWorkerRuntimeResult.stdout);
 console.log("browser acceptance: production artifact boundary checked");
 console.log("browser acceptance: WASM CSP boundary checked without broad unsafe-eval");
-console.log("browser acceptance: in-app browser profile-creation result is scoped verified-local; full browser matrix remains unverified");
+console.log("browser acceptance: in-app browser checks are local evidence; exact macOS Chromium version evidence remains unverified");
