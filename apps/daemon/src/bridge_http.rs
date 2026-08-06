@@ -313,19 +313,31 @@ impl InviteAuthority {
         self.completed_attachments.remove(blob_id)
     }
 
-    fn cancel_attachment(&mut self, blob_id: &str) -> bool {
-        self.attachment_jobs.remove(blob_id).is_some()
+    fn cancel_attachment(&mut self, blob_id: &str, store: &mut EncryptedStore) -> bool {
+        let cancelled = self.attachment_jobs.remove(blob_id).is_some()
             || self.completed_attachments.remove(blob_id).is_some()
-            || self.received_attachments.remove(blob_id).is_some()
+            || self.received_attachments.remove(blob_id).is_some();
+        if cancelled {
+            let _ = store.delete(RecordClass::Attachment, &format!("received/{blob_id}"));
+        }
+        cancelled
     }
 
     fn register_received_attachment(
         &mut self,
         attachment_id: &str,
         descriptor: AttachmentDescriptor,
-    ) {
+        store: &mut EncryptedStore,
+    ) -> Result<(), StorageError> {
+        let encoded = serde_json::to_vec(&descriptor).map_err(|_| StorageError::CorruptStore)?;
+        store.put(
+            RecordClass::Attachment,
+            &format!("received/{attachment_id}"),
+            &encoded,
+        )?;
         self.received_attachments
             .insert(attachment_id.to_owned(), descriptor);
+        Ok(())
     }
 
     fn received_attachment(&self, attachment_id: &str) -> Option<&AttachmentDescriptor> {
@@ -340,6 +352,23 @@ impl InviteAuthority {
 
     pub fn restore_contacts(&mut self, store: &EncryptedStore) -> Result<(), StorageError> {
         self.contacts = ContactDirectory::restore(store)?;
+        Ok(())
+    }
+
+    pub fn restore_received_attachments(
+        &mut self,
+        store: &EncryptedStore,
+    ) -> Result<(), StorageError> {
+        self.received_attachments.clear();
+        for (key, value) in store.records_with_prefix(RecordClass::Attachment, "received/") {
+            let attachment_id = key
+                .strip_prefix("received/")
+                .ok_or(StorageError::CorruptStore)?;
+            let descriptor: AttachmentDescriptor =
+                serde_json::from_slice(&value).map_err(|_| StorageError::CorruptStore)?;
+            self.received_attachments
+                .insert(attachment_id.to_owned(), descriptor);
+        }
         Ok(())
     }
 
@@ -554,6 +583,18 @@ pub fn handle_request_with_context(
             let Some(ui_version) = json_string(request.body, "ui_version") else {
                 return response(400, "invalid_bootstrap", None, None);
             };
+            if let (Some(authority), Some(store)) =
+                (invite_authority.as_deref_mut(), session_store.as_deref())
+            {
+                if authority.restore_received_attachments(store).is_err() {
+                    return response(
+                        503,
+                        "attachment_state_unavailable",
+                        None,
+                        Some("application/json"),
+                    );
+                }
+            }
             match bridge.exchange(origin, host, token, ui_version, now) {
                 Ok(credentials) => {
                     let body = format!(
@@ -1767,7 +1808,10 @@ pub fn handle_request_with_context(
             let Some(blob_id) = json_string(request.body, "blob_id") else {
                 return response(400, "invalid_attachment_id", None, Some("application/json"));
             };
-            let cancelled = authority.cancel_attachment(blob_id);
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            let cancelled = authority.cancel_attachment(blob_id, store);
             response(
                 200,
                 &format!(r##"{{"cancelled":{cancelled}}}"##),
@@ -2194,7 +2238,12 @@ pub fn handle_request_with_context(
                 let attachment = attachment_descriptor_from_plaintext(&plaintext);
                 if let Some(descriptor) = attachment {
                     if let Some(authority) = invite_authority.as_deref_mut() {
-                        authority.register_received_attachment(&digest, descriptor);
+                        if authority
+                            .register_received_attachment(&digest, descriptor, store)
+                            .is_err()
+                        {
+                            return response(503, "attachment_state_unavailable", None, None);
+                        }
                         let _ = authority.record_contact_message(
                             &conversation_id,
                             b"[encrypted attachment]",

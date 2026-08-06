@@ -250,6 +250,9 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
     authority
         .restore_contacts(&store)
         .map_err(|_| CliError::Storage(StorageError::CorruptStore))?;
+    authority
+        .restore_received_attachments(&store)
+        .map_err(|_| CliError::Storage(StorageError::CorruptStore))?;
     let bridge = LocalBridge::new(config.clone()).map_err(|_| CliError::Io)?;
     let url = bridge.bootstrap_url("/").map_err(|_| CliError::Io)?;
     eprintln!("daemon bridge listening on 127.0.0.1:{port}");
