@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { chmod, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import Database from "better-sqlite3";
 import { request } from "node:http";
 import { connect } from "node:net";
 import { test } from "node:test";
@@ -234,9 +235,11 @@ test("invite codes are relay-bound, hash-only, single-use rendezvous records", a
   const created = await call(port, "POST", "/api/v1/invite-codes", { invite }, localHeaders(runtime));
   assert.equal(created.status, 201);
   assert.match(created.body.code, /^(?:[0-9A-HJKMNP-TV-Z]{4}-){6}[0-9A-HJKMNP-TV-Z]{2}$/);
-  const persisted = await readFile(join(dataDir, "invite-codes.json"), "utf8");
-  assert.doesNotMatch(persisted, new RegExp(created.body.code.replaceAll("-", ""), "i"));
-  assert.match(persisted, /codeHash/);
+  const persistedDb = new Database(join(dataDir, "relay.sqlite"), { readonly: true });
+  const persisted = persistedDb.prepare("SELECT code_hash AS codeHash FROM relay_invite_codes").all();
+  assert.equal(persisted.length, 1);
+  assert.notEqual(persisted[0].codeHash, created.body.code.replaceAll("-", ""));
+  persistedDb.close();
 
   const consumed = await call(port, "POST", "/api/v1/invite-codes/consume", { code: created.body.code });
   assert.equal(consumed.status, 200);
@@ -589,11 +592,12 @@ test("relay bounds slow client settings and closes an incomplete body", async ()
 
 test("relay fails queue writes safely when the data directory becomes read-only", async () => {
   const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
-  const failingWriter = async (file, contents) => {
-    if (file.endsWith("inbox.json")) throw new Error("disk_full");
-    await writeFile(file, contents, { mode: 0o600 });
-  };
-  const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist"), privateFileWriter: failingWriter });
+  const runtime = await createLocalServer({
+    port: 0,
+    dataDir,
+    distDir: join(dataDir, "missing-dist"),
+    beforeRelayCommit: () => { throw new Error("disk_full"); },
+  });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
   const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;

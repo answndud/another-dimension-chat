@@ -43,7 +43,16 @@ put an HTTPS reverse proxy in front of the HTTP server for LAN/VPN/public use:
 - `AD_PUBLIC_URL` — externally reachable HTTP(S) origin used in invites. It
   must contain only a scheme and host (plus an optional port), with no path,
   credentials, query, or fragment. It is required with `0.0.0.0`.
-- `AD_SERVER_DATA_DIR` — private queue and capability storage directory.
+- `AD_SERVER_DATA_DIR` — private SQLite, blob, capability, and local UI storage directory.
+
+Relay state is stored in `relay.sqlite` with separate inbox and invite-code
+tables, primary-key deduplication, expiry indexes, and synchronous SQLite
+transactions. Older `inbox.json` / `invite-codes.json` files (including a
+valid interrupted `.tmp` snapshot) are imported once at startup and removed
+only after the database schema and migration transaction succeed. A corrupt
+legacy file is rejected when the corresponding SQLite table is empty; once a
+table already contains migrated state, stale legacy files are ignored and
+removed instead of blocking restart.
 - `AD_WEB_DIST_DIR` — browser bundle directory.
 - `AD_INBOX_TTL_MS` — envelope retention period; default seven days.
 - `AD_TLS_KEY_FILE` and `AD_TLS_CERT_FILE` — optional paired PEM files for

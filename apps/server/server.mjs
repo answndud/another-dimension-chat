@@ -6,7 +6,7 @@ import { createServer as createHttpsServer } from "node:https";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { consumeInviteCode, createInviteCode, inviteCodeHash, invitePayloadDigest, purgeInviteCodes, revokeInviteCode, validateDaemonInvite } from "./invite-code.mjs";
-import { createJsonStateStore } from "./storage.mjs";
+import { createSqliteRelayStore } from "./storage.mjs";
 
 const MAX_ENVELOPE_BYTES = 96 * 1024;
 const MAX_INBOX_ITEMS = 256;
@@ -311,6 +311,7 @@ export async function createLocalServer({
   keepAliveTimeoutMs = 5_000,
   privateFileWriter = writePrivateFile,
   relayReceiptSigningKeyFile = process.env.AD_RELAY_RECEIPT_SIGNING_KEY || "",
+  beforeRelayCommit = null,
 } = {}) {
   if (Boolean(tlsKeyFile) !== Boolean(tlsCertFile)) throw new Error("AD_TLS_KEY_FILE and AD_TLS_CERT_FILE must be configured together.");
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("AD_PORT must be an integer between 0 and 65535.");
@@ -370,40 +371,37 @@ export async function createLocalServer({
   const localUiUrlFile = join(dataDir, "local-ui-url");
   const queueFile = join(dataDir, "inbox.json");
   const inviteCodeFile = join(dataDir, "invite-codes.json");
+  const relayDatabaseFile = join(dataDir, "relay.sqlite");
   let inboxCapability = await loadCapability(capabilityFile, "inbox-write", privateFileWriter);
   const retiredInboxPrefixes = new Set();
   const relayReceiptKey = await loadRelayReceiptKey(dataDir, privateFileWriter, relayReceiptSigningKeyFile);
   let localAccessCapability = await loadCapability(localAccessFile, "local-control", privateFileWriter);
-  const inboxStore = await createJsonStateStore({
-    file: queueFile,
-    initial: () => [],
-    validate: Array.isArray,
-    write: privateFileWriter,
-    onCorrupt: (source) => new Error(source === "recovery" ? "Server inbox recovery file is corrupt." : "Server inbox file is corrupt; refusing to discard it."),
+  const relayStore = await createSqliteRelayStore({
+    file: relayDatabaseFile,
+    inboxLegacyFile: queueFile,
+    inviteLegacyFile: inviteCodeFile,
+    writeLegacy: privateFileWriter,
+    beforeCommit: beforeRelayCommit,
   });
-  let inbox = inboxStore.get();
-  const inviteCodeStore = await createJsonStateStore({
-    file: inviteCodeFile,
-    initial: () => [],
-    validate: Array.isArray,
-    write: privateFileWriter,
-    onCorrupt: (source) => new Error(source === "recovery" ? "Server invite-code recovery file is corrupt." : "Server invite-code file is corrupt; refusing to discard it."),
-  });
-  let inviteCodes = inviteCodeStore.get();
+  relayStore.purgeInbox(Date.now() - ttlMs);
+  relayStore.purgeInviteCodes(Date.now());
+  let inbox = relayStore.listInbox();
+  let inviteCodes = relayStore.listInviteCodes();
   inviteCodes = purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS);
   const purge = () => {
     const cutoff = Date.now() - ttlMs;
+    relayStore.purgeInbox(cutoff);
     inbox = Array.isArray(inbox) ? inbox.filter((item) => Number.isSafeInteger(item.receivedAt) && item.receivedAt >= cutoff).slice(-MAX_INBOX_ITEMS) : [];
   };
   purge();
 
   const persist = () => {
     purge();
-    return inboxStore.replace(inbox);
+    relayStore.replaceInbox(inbox);
   };
   const persistInviteCodes = () => {
     inviteCodes = purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS);
-    return inviteCodeStore.replace(inviteCodes);
+    relayStore.replaceInviteCodes(inviteCodes);
   };
   const scheme = tlsKeyFile && tlsCertFile ? "https" : "http";
   const originFor = (address) => normalizedPublicUrl || `${scheme}://${urlHost(address)}:${port}`;
@@ -734,10 +732,19 @@ export async function createLocalServer({
     : `${scheme}://${urlHost(localHost)}:${port}`;
   const localUiUrl = `${localUiOrigin}/#relay=${encodeURIComponent(originFor(bindHost))}&local=${localAccessCapability.token}`;
   await privateFileWriter(localUiUrlFile, `${localUiUrl}\n`);
+  let relayStoreClosed = false;
+  const closeRelayStore = () => {
+    if (relayStoreClosed) return;
+    relayStoreClosed = true;
+    relayStore.close();
+  };
+  server.once("close", closeRelayStore);
   const close = async () => {
-    await Promise.all([inboxStore.flush(), inviteCodeStore.flush()]);
-    if (!server.listening) return;
-    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    if (server.listening) {
+      await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    } else {
+      closeRelayStore();
+    }
   };
   return {
     server,
