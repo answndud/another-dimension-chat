@@ -53,6 +53,20 @@ only after the database schema and migration transaction succeed. A corrupt
 legacy file is rejected when the corresponding SQLite table is empty; once a
 table already contains migrated state, stale legacy files are ignored and
 removed instead of blocking restart.
+
+The installed launcher also supports an encrypted relay-only backup. Stop the
+relay first, then enter the passphrase through stdin; it never belongs in the
+command line or shell history:
+
+```sh
+printf '%s\n' 'backup passphrase' | ./another-dimension-server backup --file /secure/path/relay.adrelaybackup
+printf '%s\n' 'backup passphrase' | ./another-dimension-server restore --file /secure/path/relay.adrelaybackup
+```
+
+Restore is accepted only for an empty data directory and validates the AES-GCM
+authentication tag, every file hash, SQLite integrity, and the allowed file
+list before atomically replacing the empty directory. The backup contains relay
+transport state and encrypted blobs, not decrypted chat text.
 - `AD_WEB_DIST_DIR` — browser bundle directory.
 - `AD_INBOX_TTL_MS` — envelope retention period; default seven days.
 - `AD_TLS_KEY_FILE` and `AD_TLS_CERT_FILE` — optional paired PEM files for

@@ -64,6 +64,7 @@ await Promise.all([
   copy("scripts/verify_web_artifact.mjs"),
   copy("scripts/release_manifest.mjs"),
   copy("scripts/install_local_server.sh"),
+  copy("scripts/relay_backup.mjs"),
   copy("scripts/update_local_server.sh"),
   copy("scripts/verify_install_state.mjs"),
 ]);

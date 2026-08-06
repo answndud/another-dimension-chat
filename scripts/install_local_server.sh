@@ -136,10 +136,18 @@ case "${1:-start}" in
   doctor) verify; node_info=$("$ROOT/runtime-node" -e 'const fs=require("node:fs"),crypto=require("node:crypto"),p=process.argv[1]; console.log(`runtime sha256=${crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex")}`)' "$ROOT/runtime-node"); echo "$node_info · high-risk=disabled" ;;
   update) shift; exec sh "$ROOT/scripts/update_local_server.sh" --install-root "$ROOT" "$@" ;;
   rollback) exec sh "$ROOT/scripts/update_local_server.sh" --install-root "$ROOT" --rollback ;;
+  backup)
+    [ "${2:-}" = "--file" ] && [ -n "${3:-}" ] || { echo "사용법: $0 backup --file PATH (passphrase는 stdin)" >&2; exit 2; }
+    if pid_is_ours; then echo "백업 전 서버를 stop해야 합니다." >&2; exit 1; fi
+    exec "$ROOT/runtime-node" "$ROOT/scripts/relay_backup.mjs" backup --data-dir "$(data_dir)" --file "$3" ;;
+  restore)
+    [ "${2:-}" = "--file" ] && [ -n "${3:-}" ] || { echo "사용법: $0 restore --file PATH (passphrase는 stdin)" >&2; exit 2; }
+    if pid_is_ours; then echo "복원 전 서버를 stop해야 합니다." >&2; exit 1; fi
+    exec "$ROOT/runtime-node" "$ROOT/scripts/relay_backup.mjs" restore --data-dir "$(data_dir)" --file "$3" ;;
   uninstall)
     verify >/dev/null; "$0" stop; case "$ROOT" in /|"$HOME"|"$HOME"/|*..*) echo "unsafe installation path; refusing uninstall" >&2; exit 1;; esac
     rm -rf "$ROOT"; echo "server installation removed; data directory retained" ;;
-  *) echo "사용법: $0 {start|open-ui|stop|restart|status|doctor|update|rollback|uninstall}" >&2; exit 2 ;;
+  *) echo "사용법: $0 {start|open-ui|stop|restart|status|doctor|update|rollback|backup|restore|uninstall}" >&2; exit 2 ;;
 esac
 EOF
 chmod 700 "$destination/another-dimension-server"
