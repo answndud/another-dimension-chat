@@ -7,6 +7,7 @@ pub mod cli;
 pub mod contacts;
 pub mod delivery;
 pub mod device;
+pub mod device_link;
 pub mod identity;
 pub mod mls_provider;
 pub mod mls_session;

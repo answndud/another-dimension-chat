@@ -198,6 +198,10 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ device_id: deviceId }),
     }),
+    approveDeviceLink: (linkRequest, code) => request("/local-api/devices/link/approve", {
+      method: "POST",
+      body: JSON.stringify({ link_request: linkRequest, code }),
+    }),
     setContactAlias: (accountId, alias) => request("/local-api/contacts/alias", {
       method: "POST",
       body: JSON.stringify({ account_id: accountId, alias }),

@@ -6,6 +6,7 @@ use crate::{
     contacts::{ContactDirectory, ContactDirectoryError},
     delivery::{DeliveryLedger, RelayEnvelope},
     device::{DeviceRegistry, DeviceRegistryError},
+    device_link::{DeviceLinkError, DeviceLinkRequest},
     identity::AccountRootKey,
     mls_session::{attachment_descriptor_from_plaintext, MlsSessionCatalog, SessionCatalogError},
     pairing::{PairingError, PairingSession},
@@ -743,10 +744,43 @@ impl InviteAuthority {
         }
         Ok(())
     }
+
+    fn approve_device_link(
+        &mut self,
+        request: &DeviceLinkRequest,
+        code: &str,
+        now: u64,
+        store: &mut EncryptedStore,
+    ) -> Result<String, DeviceActionError> {
+        let approval = request
+            .approve(code, &self.root, now)
+            .map_err(DeviceActionError::Link)?;
+        let previous = self
+            .device_registry
+            .encode()
+            .map_err(|_| DeviceActionError::Registry(DeviceRegistryError::Corrupt))?;
+        self.device_registry
+            .register(approval.certificate().clone(), now)
+            .map_err(DeviceActionError::Registry)?;
+        let encoded = self
+            .device_registry
+            .encode()
+            .map_err(|_| DeviceActionError::Registry(DeviceRegistryError::Corrupt))?;
+        if store
+            .put(RecordClass::Device, "registry", &encoded)
+            .is_err()
+        {
+            self.device_registry = DeviceRegistry::decode(&previous)
+                .map_err(|_| DeviceActionError::Registry(DeviceRegistryError::Corrupt))?;
+            return Err(DeviceActionError::Storage);
+        }
+        approval.encode().map_err(DeviceActionError::Link)
+    }
 }
 
 enum DeviceActionError {
     Registry(DeviceRegistryError),
+    Link(DeviceLinkError),
     CurrentDevice,
     Storage,
 }
@@ -1039,6 +1073,79 @@ pub fn handle_request_with_context(
                 Err(DeviceActionError::Registry(_)) => response(
                     422,
                     "device_registry_invalid",
+                    None,
+                    Some("application/json"),
+                ),
+                Err(DeviceActionError::Link(_)) => response(
+                    422,
+                    "device_registry_invalid",
+                    None,
+                    Some("application/json"),
+                ),
+            }
+        }
+        ("POST", "/local-api/devices/link/approve") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(link_request) = json_string(request.body, "link_request") else {
+                return response(400, "link_request_required", None, Some("application/json"));
+            };
+            let Some(code) = json_string(request.body, "code") else {
+                return response(400, "link_code_required", None, Some("application/json"));
+            };
+            let Ok(parsed) = DeviceLinkRequest::parse(link_request) else {
+                return response(
+                    422,
+                    "invalid_device_link_request",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(authority) = invite_authority.as_deref_mut() else {
+                return response(503, "device_unavailable", None, Some("application/json"));
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, Some("application/json"));
+            };
+            match authority.approve_device_link(&parsed, code, now, store) {
+                Ok(approval) => response(
+                    200,
+                    &format!(
+                        r##"{{"approved":true,"device_id":"{}","approval":"{}"}}"##,
+                        json_escape(parsed.device_id()),
+                        json_escape(&approval)
+                    ),
+                    None,
+                    Some("application/json"),
+                ),
+                Err(DeviceActionError::Link(DeviceLinkError::Expired)) => {
+                    response(410, "device_link_expired", None, Some("application/json"))
+                }
+                Err(DeviceActionError::Link(DeviceLinkError::InvalidCode)) => response(
+                    422,
+                    "invalid_device_link_code",
+                    None,
+                    Some("application/json"),
+                ),
+                Err(DeviceActionError::Registry(DeviceRegistryError::DuplicateDevice)) => response(
+                    409,
+                    "device_already_registered",
+                    None,
+                    Some("application/json"),
+                ),
+                Err(DeviceActionError::Storage) => {
+                    response(503, "storage_unavailable", None, Some("application/json"))
+                }
+                Err(DeviceActionError::Link(_)) | Err(DeviceActionError::Registry(_)) => response(
+                    422,
+                    "invalid_device_link_request",
+                    None,
+                    Some("application/json"),
+                ),
+                Err(DeviceActionError::CurrentDevice) => response(
+                    409,
+                    "current_device_revoke_forbidden",
                     None,
                     Some("application/json"),
                 ),
