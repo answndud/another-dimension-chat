@@ -6,6 +6,7 @@ import { createServer as createHttpsServer } from "node:https";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { consumeInviteCode, createInviteCode, inviteCodeHash, invitePayloadDigest, purgeInviteCodes, revokeInviteCode, validateDaemonInvite } from "./invite-code.mjs";
+import { createJsonStateStore } from "./storage.mjs";
 
 const MAX_ENVELOPE_BYTES = 96 * 1024;
 const MAX_INBOX_ITEMS = 256;
@@ -373,31 +374,22 @@ export async function createLocalServer({
   const retiredInboxPrefixes = new Set();
   const relayReceiptKey = await loadRelayReceiptKey(dataDir, privateFileWriter, relayReceiptSigningKeyFile);
   let localAccessCapability = await loadCapability(localAccessFile, "local-control", privateFileWriter);
-  let inbox;
-  const queueContents = await readRegularPrivateFile(queueFile);
-  if (queueContents === null) {
-    const temporaryQueue = await readRegularPrivateFile(`${queueFile}.tmp`);
-    if (temporaryQueue !== null) {
-      try { JSON.parse(temporaryQueue); } catch { throw new Error("Server inbox recovery file is corrupt."); }
-      await privateFileWriter(queueFile, temporaryQueue);
-      inbox = JSON.parse(temporaryQueue);
-    } else inbox = [];
-  } else {
-    try { inbox = JSON.parse(queueContents); } catch { throw new Error("Server inbox file is corrupt; refusing to discard it."); }
-  }
-  if (!Array.isArray(inbox)) throw new Error("Server inbox file must contain an array.");
-  const inviteCodeContents = await readRegularPrivateFile(inviteCodeFile);
-  let inviteCodes;
-  if (inviteCodeContents === null) {
-    const temporaryInviteCodes = await readRegularPrivateFile(`${inviteCodeFile}.tmp`);
-    if (temporaryInviteCodes !== null) {
-      try { inviteCodes = JSON.parse(temporaryInviteCodes); } catch { throw new Error("Server invite-code recovery file is corrupt."); }
-      await privateFileWriter(inviteCodeFile, temporaryInviteCodes);
-    } else inviteCodes = [];
-  } else {
-    try { inviteCodes = JSON.parse(inviteCodeContents); } catch { throw new Error("Server invite-code file is corrupt; refusing to discard it."); }
-  }
-  if (!Array.isArray(inviteCodes)) throw new Error("Server invite-code file must contain an array.");
+  const inboxStore = await createJsonStateStore({
+    file: queueFile,
+    initial: () => [],
+    validate: Array.isArray,
+    write: privateFileWriter,
+    onCorrupt: (source) => new Error(source === "recovery" ? "Server inbox recovery file is corrupt." : "Server inbox file is corrupt; refusing to discard it."),
+  });
+  let inbox = inboxStore.get();
+  const inviteCodeStore = await createJsonStateStore({
+    file: inviteCodeFile,
+    initial: () => [],
+    validate: Array.isArray,
+    write: privateFileWriter,
+    onCorrupt: (source) => new Error(source === "recovery" ? "Server invite-code recovery file is corrupt." : "Server invite-code file is corrupt; refusing to discard it."),
+  });
+  let inviteCodes = inviteCodeStore.get();
   inviteCodes = purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS);
   const purge = () => {
     const cutoff = Date.now() - ttlMs;
@@ -405,24 +397,13 @@ export async function createLocalServer({
   };
   purge();
 
-  let persistChain = Promise.resolve();
   const persist = () => {
     purge();
-    const snapshot = JSON.stringify(inbox);
-    const operation = persistChain.then(async () => {
-      await privateFileWriter(queueFile, snapshot);
-    });
-    persistChain = operation.catch(() => {});
-    return operation;
+    return inboxStore.replace(inbox);
   };
-  let invitePersistChain = Promise.resolve();
   const persistInviteCodes = () => {
-    const snapshot = JSON.stringify(purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS));
-    const operation = invitePersistChain.then(async () => {
-      await privateFileWriter(inviteCodeFile, snapshot);
-    });
-    invitePersistChain = operation.catch(() => {});
-    return operation;
+    inviteCodes = purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS);
+    return inviteCodeStore.replace(inviteCodes);
   };
   const scheme = tlsKeyFile && tlsCertFile ? "https" : "http";
   const originFor = (address) => normalizedPublicUrl || `${scheme}://${urlHost(address)}:${port}`;
@@ -640,6 +621,7 @@ export async function createLocalServer({
         if (offset + body.length > total) throw new Error("blob_chunk_out_of_bounds");
         let meta = null;
         try { meta = JSON.parse(await readFile(metaFile, "utf8")); } catch { /* first chunk */ }
+        const existingMeta = Boolean(meta);
         if (meta && (meta.total !== total || meta.expiresAt <= Date.now())) throw new Error("blob_metadata_mismatch");
         if (!meta) {
           if (offset !== 0) throw new Error("blob_offset_mismatch");
@@ -647,7 +629,7 @@ export async function createLocalServer({
           if (usage.records >= MAX_BLOB_RECORDS || usage.bytes + total > MAX_BLOB_STORE_BYTES) throw new Error("blob_quota_exceeded");
           meta = { version: 1, total, received: 0, complete: false, expiresAt: Date.now() + Math.min(requestedTtl, MAX_BLOB_TTL_MS) };
         }
-        const handle = await open(blobFile, offset === 0 ? "w" : "r+");
+        const handle = await open(blobFile, existingMeta ? "r+" : "w");
         try {
           const current = (await handle.stat()).size;
           if (current !== offset) throw new Error("blob_offset_mismatch");

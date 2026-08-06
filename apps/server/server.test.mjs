@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildServerConfig } from "../../scripts/configure_local_server.mjs";
 import { createLocalServer, loadServerConfig } from "./server.mjs";
+import { createJsonStateStore } from "./storage.mjs";
 
 function call(port, method, path, body, headers = {}) {
   return new Promise((resolve, reject) => {
@@ -48,6 +49,29 @@ function binaryCall(port, method, path, body, headers = {}) {
 function localHeaders(runtime) {
   return { "x-ad-local-access": runtime.localAccessCapability };
 }
+
+test("relay state store recovers a valid interrupted snapshot and serializes commits", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-storage-"));
+  const file = join(dataDir, "queue.json");
+  await writeFile(`${file}.tmp`, "[\"recovered\"]", { mode: 0o600 });
+  const store = await createJsonStateStore({ file, initial: () => [], validate: Array.isArray, write: async (path, contents) => writeFile(path, contents, { mode: 0o600 }) });
+  assert.deepEqual(store.get(), ["recovered"]);
+  assert.deepEqual(JSON.parse(await readFile(file, "utf8")), ["recovered"]);
+  await Promise.all([store.replace(["first"]), store.replace(["second"])]);
+  assert.deepEqual(JSON.parse(await readFile(file, "utf8")), ["second"]);
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("relay state store refuses malformed recovery data", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-storage-"));
+  const file = join(dataDir, "queue.json");
+  await writeFile(`${file}.tmp`, "not-json", { mode: 0o600 });
+  await assert.rejects(
+    () => createJsonStateStore({ file, initial: () => [], validate: Array.isArray, write: async (path, contents) => writeFile(path, contents, { mode: 0o600 }) }),
+    /state_corrupt:recovery/,
+  );
+  await rm(dataDir, { recursive: true, force: true });
+});
 
 test("local server exposes health and a capability-scoped opaque inbox", async () => {
   const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
