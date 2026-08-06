@@ -474,6 +474,7 @@ export async function createLocalServer({
         return;
       }
       const publicOrigin = originFor(bindHost);
+      const blobStoreUsage = await blobUsage();
       json(res, 200, {
         protocol: 1,
         protocolVersions: [1],
@@ -490,6 +491,10 @@ export async function createLocalServer({
         maxEnvelopeBytes: MAX_ENVELOPE_BYTES,
         maxTextBytes: 64 * 1024,
         maxAttachmentBytes: 32 * 1024 * 1024,
+        blobStoreBytes: blobStoreUsage.bytes,
+        blobStoreRecords: blobStoreUsage.records,
+        maxBlobStoreBytes: MAX_BLOB_STORE_BYTES,
+        maxBlobRecords: MAX_BLOB_RECORDS,
         relayReceiptPublicKey: relayReceiptKey.publicKeyHex,
         relayReceiptPublicKeyFingerprint: relayReceiptKey.publicKeyFingerprint,
         relayReceiptKeyId: relayReceiptKey.publicKeyFingerprint,
