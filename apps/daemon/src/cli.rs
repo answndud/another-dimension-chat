@@ -167,6 +167,7 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         display_name: summary.display_name,
     };
     let relay_origin = option(args, "--relay-origin")?.unwrap_or_default();
+    let notifications_enabled = args.iter().any(|arg| arg == "--notify");
     let relay_tls_retrust = args.iter().any(|arg| arg == "--relay-tls-retrust");
     let inbox_url = option(args, "--inbox-url")?;
     if let Some(inbox_url) = &inbox_url {
@@ -264,6 +265,7 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         Some(authority),
         session_catalog,
         store,
+        notifications_enabled,
     )
     .map_err(CliError::from)?;
     Ok("daemon stopped".into())
@@ -716,7 +718,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CliError> {
     Ok(())
 }
 fn help_text() -> String {
-    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery import --input PATH [--data-dir PATH]\n\nPassphrases are read from stdin and are never accepted as arguments.".into()
+    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery import --input PATH [--data-dir PATH]\n\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\nPassphrases are read from stdin and are never accepted as arguments.".into()
 }
 
 #[cfg(test)]

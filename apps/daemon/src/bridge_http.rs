@@ -26,6 +26,7 @@ use std::{
     fs, io,
     net::SocketAddr,
     path::{Path, PathBuf},
+    process::Command,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -2803,6 +2804,7 @@ pub fn serve_forever(
     invite_authority: Option<InviteAuthority>,
     session_catalog: MlsSessionCatalog,
     session_store: EncryptedStore,
+    notifications_enabled: bool,
 ) -> std::io::Result<()> {
     let address = SocketAddr::new(bridge.bind_host(), bridge.port());
     let delivery_ledger = DeliveryLedger::restore(&session_store)
@@ -2830,12 +2832,32 @@ pub fn serve_forever(
             loop {
                 interval.tick().await;
                 let now = unix_now();
-                let Ok(mut ledger) = maintenance_state.delivery_ledger.lock() else {
+                let Some(authority) = maintenance_state
+                    .invite_authority
+                    .as_ref()
+                    .and_then(|value| value.lock().ok())
+                else {
+                    continue;
+                };
+                let Ok(mut catalog) = maintenance_state.session_catalog.lock() else {
                     continue;
                 };
                 let Ok(mut store) = maintenance_state.session_store.lock() else {
                     continue;
                 };
+                let Ok(mut ledger) = maintenance_state.delivery_ledger.lock() else {
+                    continue;
+                };
+                let mut authority = authority;
+                let processed = background_sync_once(
+                    &mut authority,
+                    &mut catalog,
+                    &mut store,
+                    &mut ledger,
+                    now,
+                )
+                .unwrap_or(0);
+                notify_new_messages(notifications_enabled, processed);
                 let changed = ledger.expire_due(now) > 0;
                 let expired_messages = store
                     .records_with_prefix(RecordClass::Message, "messages/")
@@ -2857,6 +2879,123 @@ pub fn serve_forever(
             .await
             .map_err(|error| io::Error::other(error.to_string()))
     })
+}
+
+fn notify_new_messages(enabled: bool, count: usize) {
+    if !enabled || count == 0 || !cfg!(target_os = "macos") {
+        return;
+    }
+    let message = if count == 1 {
+        "새 암호화 메시지가 도착했습니다."
+    } else {
+        "새 암호화 메시지가 도착했습니다. 앱을 열어 확인하세요."
+    };
+    let script = format!(
+        "display notification {:?} with title \"Another Dimension\"",
+        message
+    );
+    let _ = Command::new("osascript").args(["-e", &script]).status();
+}
+
+/// Performs one bounded daemon-owned inbox pass. It tries each locally known
+/// conversation because the relay envelope intentionally does not contain a
+/// conversation identifier. Failed decryption never advances an MLS session.
+fn background_sync_once(
+    authority: &mut InviteAuthority,
+    catalog: &mut MlsSessionCatalog,
+    store: &mut EncryptedStore,
+    ledger: &mut DeliveryLedger,
+    now: u64,
+) -> Result<usize, RelayError> {
+    let Some(inbox_url) = authority.inbox_url.clone() else {
+        return Ok(0);
+    };
+    let endpoint = RelayEndpoint::from_inbox_url_with_pin(&inbox_url, authority.relay_tls_pin)
+        .map_err(|_| RelayError::InvalidEndpoint)?;
+    let capability = endpoint.capability.clone();
+    let client = RelayClient::new(endpoint);
+    let items = match client.sync_blocking() {
+        Ok(items) => items,
+        Err(RelayError::Rejected(410)) => {
+            let _ = authority.invalidate_relay_binding(store);
+            return Err(RelayError::Rejected(410));
+        }
+        Err(error) => return Err(error),
+    };
+    let conversation_ids = catalog.conversation_ids();
+    let mut acknowledged_ids = Vec::new();
+    let mut processed = 0;
+    for item in items {
+        let Some(wire) = item.envelope.strip_prefix("ADENV1.") else {
+            return Err(RelayError::InvalidResponse);
+        };
+        let envelope =
+            RelayEnvelope::from_wire(wire, now).map_err(|_| RelayError::InvalidResponse)?;
+        if envelope.mailbox != capability
+            || hex_bytes(&Sha256::digest(item.envelope.as_bytes())) != item.id
+        {
+            return Err(RelayError::InvalidResponse);
+        }
+        let digest = envelope.digest().map_err(|_| RelayError::InvalidResponse)?;
+        if ledger
+            .get(&digest)
+            .is_some_and(|record| record.state == crate::delivery::DeliveryState::Decrypted)
+        {
+            acknowledged_ids.push(item.id);
+            continue;
+        }
+        let mut delivered = false;
+        for conversation_id in &conversation_ids {
+            let Ok(plaintext) = catalog.receive(conversation_id, &envelope.ciphertext, store)
+            else {
+                continue;
+            };
+            if ledger
+                .register_recipient_received(&digest, item.id.clone())
+                .is_err()
+                || ledger.mark_decrypted(&digest).is_err()
+            {
+                return Err(RelayError::InvalidResponse);
+            }
+            if let Some(descriptor) = attachment_descriptor_from_plaintext(&plaintext) {
+                authority
+                    .register_received_attachment(&digest, descriptor, store)
+                    .map_err(|_| RelayError::InvalidResponse)?;
+                let _ = authority.record_contact_message(
+                    conversation_id,
+                    b"[encrypted attachment]",
+                    now,
+                    true,
+                    store,
+                );
+            } else if let Some(message) = decode_message_payload(&plaintext) {
+                if message.expires_at == 0 || message.expires_at > now {
+                    persist_message(store, conversation_id, &message, "incoming")
+                        .map_err(|_| RelayError::InvalidResponse)?;
+                    let _ = authority.record_contact_message(
+                        conversation_id,
+                        message.text.as_bytes(),
+                        now,
+                        true,
+                        store,
+                    );
+                }
+            }
+            delivered = true;
+            processed += 1;
+            break;
+        }
+        if delivered {
+            acknowledged_ids.push(item.id);
+        }
+    }
+    if !acknowledged_ids.is_empty() {
+        client.ack_blocking(&acknowledged_ids)?;
+    }
+    ledger
+        .persist(store)
+        .map_err(|_| RelayError::InvalidResponse)?;
+    Ok(processed)
 }
 
 #[derive(Clone)]
