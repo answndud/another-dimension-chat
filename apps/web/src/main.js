@@ -196,6 +196,13 @@ function renderDaemonSessionPanel() {
 
 function bindDaemonSession() {
   const bridge = state.daemonBridge;
+  const expiry = document.createElement("select");
+  expiry.id = "daemon-message-expiry";
+  expiry.innerHTML = '<option value="0">메시지 만료 없음</option><option value="3600">1시간 후 만료</option><option value="86400">24시간 후 만료</option><option value="604800">7일 후 만료</option>';
+  const expiryLabel = document.createElement("label");
+  expiryLabel.textContent = "메시지 보존 기간";
+  expiryLabel.append(expiry);
+  document.querySelector("#daemon-message")?.parentElement?.insertAdjacentElement("afterend", expiryLabel);
   const historyButton = document.createElement("button");
   historyButton.type = "button";
   historyButton.className = "quiet";
@@ -278,13 +285,15 @@ function bindDaemonSession() {
     const conversationId = getConversationId();
     const message = document.querySelector("#daemon-message")?.value || "";
     if (!message.trim()) throw new Error("메시지를 입력하세요.");
-    const result = await bridge.sendMessage(conversationId, message);
+    const ttl = Number(document.querySelector("#daemon-message-expiry")?.value || 0);
+    const messageExpiresAt = ttl ? Math.floor(Date.now() / 1000) + ttl : 0;
+    const result = await bridge.sendMessage(conversationId, message, messageExpiresAt);
     state.daemonCiphertext = result.ciphertext || "";
     if (!state.daemonCiphertext) throw new Error("데몬이 암호문을 반환하지 않았습니다.");
     const peerInboxUrl = document.querySelector("#daemon-peer-inbox-url")?.value.trim() || "";
     if (!peerInboxUrl) throw new Error("상대방 inbox 주소를 입력하세요.");
     state.daemonPeerInboxUrl = peerInboxUrl;
-    const accepted = await bridge.postDelivery(peerInboxUrl, state.daemonCiphertext, Math.floor(Date.now() / 1000) + 3600);
+    const accepted = await bridge.postDelivery(peerInboxUrl, state.daemonCiphertext, messageExpiresAt || Math.floor(Date.now() / 1000) + 3600);
     state.daemonDeliveryDigest = accepted.digest || "";
     state.daemonDeliveryState = accepted.state || "relay-accepted";
     state.daemonOutgoingMessages = [...state.daemonOutgoingMessages, {

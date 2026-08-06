@@ -122,9 +122,9 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ conversation_id: conversationId, key_package: keyPackage }),
     }),
-    sendMessage: (conversationId, plaintext) => request("/local-api/session/send", {
+    sendMessage: (conversationId, plaintext, expiresAt = 0) => request("/local-api/session/send", {
       method: "POST",
-      body: JSON.stringify({ conversation_id: conversationId, plaintext }),
+      body: JSON.stringify({ conversation_id: conversationId, plaintext, ...(expiresAt ? { expires_at: expiresAt } : {}) }),
     }),
     receiveMessage: (conversationId, ciphertext) => request("/local-api/session/receive", {
       method: "POST",

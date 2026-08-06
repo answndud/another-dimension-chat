@@ -224,6 +224,8 @@ try {
   assert.equal((await bob.api("POST", "/local-api/contacts/bind-conversation", { account_id: bobContacts.body.contacts[0].account_id, conversation_id: conversationId })).status, 200);
   const ciphertext = await alice.api("POST", "/local-api/session/send", { conversation_id: conversationId, plaintext: "repair-flow" });
   assert.equal(ciphertext.status, 200);
+  const invalidExpiry = await alice.api("POST", "/local-api/session/send", { conversation_id: conversationId, plaintext: "expired", expires_at: Math.floor(Date.now() / 1000) - 1 });
+  assert.equal(invalidExpiry.status, 422);
   const posted = await alice.api("POST", "/local-api/delivery/post", { inbox_url: bob.inboxUrl, ciphertext: ciphertext.body.ciphertext, expires_at: Math.floor(Date.now() / 1000) + 3600 });
   assert.equal(posted.status, 202, JSON.stringify(posted.body));
   const received = await bob.api("POST", "/local-api/delivery/sync", { conversation_id: conversationId, inbox_url: bob.inboxUrl });
