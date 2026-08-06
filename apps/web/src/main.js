@@ -628,10 +628,9 @@ function render() {
       const deviceId = button.dataset.deviceRevoke || "";
       if (!deviceId || !window.confirm(`기기 ${deviceId}를 폐기할까요? 해당 기기는 이후 daemon 인증에 사용할 수 없습니다.`)) return;
       try {
-        await state.daemonBridge.revokeDevice(deviceId);
-        const sessionResult = await state.daemonBridge.removeDeviceFromSessions(state.daemonIdentity?.account_id || "", deviceId);
+        const result = await state.daemonBridge.revokeDevice(deviceId);
         state.daemonDevices = (await state.daemonBridge.devices()).devices || [];
-        state.notice = `기기 ${deviceId}를 폐기했고 현재 기기의 MLS 세션에서 제거한 commit ${sessionResult.delivered || 0}개를 relay로 전달했습니다.`;
+        state.notice = `기기 ${deviceId}를 폐기했고 MLS 세션 ${result.sessions_removed || 0}개에서 제거한 commit ${result.delivered || 0}개를 relay로 전달했습니다.`;
         state.error = "";
       } catch (error) { state.error = `기기 폐기 또는 로컬 MLS 제거에 실패했습니다: ${error.message}`; }
       render();

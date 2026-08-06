@@ -1116,16 +1116,46 @@ pub fn handle_request_with_context(
             let Some(store) = session_store.as_deref_mut() else {
                 return response(503, "storage_unavailable", None, Some("application/json"));
             };
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, Some("application/json"));
+            };
+            let Some(ledger) = delivery_ledger.as_deref_mut() else {
+                return response(503, "delivery_unavailable", None, Some("application/json"));
+            };
             match authority.revoke_device(device_id, now, store) {
-                Ok(()) => response(
-                    200,
-                    &format!(
-                        r##"{{"revoked":true,"device_id":"{}"}}"##,
-                        json_escape(device_id)
-                    ),
-                    None,
-                    Some("application/json"),
-                ),
+                Ok(()) => {
+                    let commits = match catalog.remove_device(
+                        &mls_device_credential(&authority.account_id, device_id),
+                        store,
+                    ) {
+                        Ok(commits) => commits,
+                        Err(error) => return catalog_error(error),
+                    };
+                    let delivered = match deliver_device_change_commits(
+                        authority, &commits, ledger, store, now,
+                    ) {
+                        Ok(digests) => digests.len(),
+                        Err(_) => {
+                            return response(
+                                503,
+                                "device_change_delivery_pending",
+                                None,
+                                Some("application/json"),
+                            )
+                        }
+                    };
+                    response(
+                        200,
+                        &format!(
+                            r##"{{"revoked":true,"device_id":"{}","sessions_removed":{},"delivered":{}}}"##,
+                            json_escape(device_id),
+                            commits.len(),
+                            delivered
+                        ),
+                        None,
+                        Some("application/json"),
+                    )
+                }
                 Err(DeviceActionError::CurrentDevice) => response(
                     409,
                     "current_device_revoke_forbidden",
