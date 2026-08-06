@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
-import { chmod, cp, mkdir, mkdtemp, readFile, stat, symlink, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -56,6 +56,8 @@ await Promise.all([
   copy("reference/browser-evidence/codex-in-app-browser.json"),
   copy("apps/server/server.mjs"),
   copy("apps/server/storage.mjs"),
+  copy("apps/server/package.json"),
+  copy("apps/server/package-lock.json"),
   copy("scripts/verify_public_release_gate.mjs"),
   copy("scripts/verify_release_trust.mjs"),
   copy("scripts/product_boundary.mjs"),
@@ -65,9 +67,16 @@ await Promise.all([
   copy("scripts/update_local_server.sh"),
   copy("scripts/verify_install_state.mjs"),
 ]);
+const serverDependencies = await run("npm", ["ci", "--prefix", join(archive, "apps/server"), "--omit=dev", "--no-audit", "--no-fund", "--workspaces=false"]);
+assert.equal(serverDependencies.code, 0, serverDependencies.output);
+await rm(join(archive, "apps/server/node_modules/.bin"), { recursive: true, force: true });
 await mkdir(join(archive, "apps/web/dist"), { recursive: true });
 await writeFile(join(archive, "apps/web/dist/index.html"), "<!doctype html><title>fixture</title>\n");
 await writeFile(join(archive, "apps/web/dist/asset-integrity.json"), JSON.stringify({ format: "another-dimension-asset-integrity", version: 1, assets: {} }) + "\n");
+const daemonBinary = process.env.AD_DAEMON_BINARY || join(projectDir, "target/debug/another-dimension-daemon");
+await mkdir(join(archive, "bin"), { recursive: true });
+await cp(daemonBinary, join(archive, "bin/another-dimension-daemon"));
+await chmod(join(archive, "bin/another-dimension-daemon"), 0o700);
 await mkdir(join(archive, "runtime"), { recursive: true });
 await cp(process.execPath, join(archive, "runtime/node"));
 await chmod(join(archive, "runtime/node"), 0o700);
