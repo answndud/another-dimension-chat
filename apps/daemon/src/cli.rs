@@ -106,6 +106,7 @@ pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError
         ),
         "doctor" => doctor(args),
         "status" => status(args),
+        "stop" => stop(args),
         "lock" => Ok(
             "daemon session locked; no active daemon session was retained by this command".into(),
         ),
@@ -284,7 +285,15 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         store,
         notifications_enabled,
     )
-    .map_err(CliError::from)?;
+    .map_err(|error| {
+        if error.kind() == io::ErrorKind::AddrInUse {
+            CliError::Usage(format!(
+                "port {port} is already in use; choose another --port or stop the existing daemon"
+            ))
+        } else {
+            CliError::from(error)
+        }
+    })?;
     Ok("daemon stopped".into())
 }
 
@@ -296,22 +305,35 @@ impl InstanceLock {
     fn acquire(data_dir: &Path) -> Result<Self, CliError> {
         fs::create_dir_all(data_dir)?;
         let path = data_dir.join("daemon.lock");
-        let mut file = match fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&path)
-        {
-            Ok(file) => file,
-            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
-                return Err(CliError::Usage(
-                    "daemon is already running or daemon.lock is stale; inspect and remove it only after confirming no daemon process exists".into(),
-                ));
-            }
-            Err(error) => return Err(error.into()),
-        };
-        use std::io::Write;
-        writeln!(file, "pid={}", std::process::id())?;
-        Ok(Self { path })
+        for attempt in 0..2 {
+            let mut file = match fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+            {
+                Ok(file) => file,
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists && attempt == 0 => {
+                    let Some(pid) = lock_pid(&path) else {
+                        return Err(CliError::Usage(
+                            "daemon.lock exists but has no valid PID; inspect it before removal"
+                                .into(),
+                        ));
+                    };
+                    if process_is_alive(pid) {
+                        return Err(CliError::Usage(format!(
+                            "daemon is already running with PID {pid}"
+                        )));
+                    }
+                    fs::remove_file(&path)?;
+                    continue;
+                }
+                Err(error) => return Err(error.into()),
+            };
+            use std::io::Write;
+            writeln!(file, "pid={}", std::process::id())?;
+            return Ok(Self { path });
+        }
+        Err(CliError::Usage("could not acquire daemon.lock".into()))
     }
 }
 
@@ -489,11 +511,15 @@ fn doctor(args: &[String]) -> Result<String, CliError> {
 fn status(args: &[String]) -> Result<String, CliError> {
     let data_dir = data_dir(args)?;
     let lock_path = data_dir.join("daemon.lock");
-    let running = lock_path.is_file();
+    let pid = lock_pid(&lock_path);
+    let running = pid.is_some_and(process_is_alive);
+    let stale = lock_path.is_file() && !running;
     Ok(format!(
-        "daemon status: {}\ndata directory: {}\nstore: {}\nlock file: {}",
+        "daemon status: {}\ndata directory: {}\nstore: {}\nlock file: {}{}",
         if running {
-            "running or lock requires inspection"
+            "running"
+        } else if stale {
+            "stale lock"
         } else {
             "stopped"
         },
@@ -503,7 +529,51 @@ fn status(args: &[String]) -> Result<String, CliError> {
         } else {
             "missing"
         },
-        if running { "present" } else { "absent" }
+        if lock_path.is_file() {
+            "present"
+        } else {
+            "absent"
+        },
+        pid.map_or(String::new(), |pid| format!("\nlock PID: {pid}"))
+    ))
+}
+
+fn lock_pid(path: &Path) -> Option<u32> {
+    let contents = fs::read_to_string(path).ok()?;
+    contents
+        .strip_prefix("pid=")
+        .and_then(|value| value.lines().next())
+        .and_then(|value| value.trim().parse().ok())
+}
+
+fn process_is_alive(pid: u32) -> bool {
+    if pid <= 1 {
+        return false;
+    }
+    std::process::Command::new("kill")
+        .args(["-0", &pid.to_string()])
+        .status()
+        .is_ok_and(|status| status.success())
+}
+
+fn stop(args: &[String]) -> Result<String, CliError> {
+    let data_dir = data_dir(args)?;
+    let path = data_dir.join("daemon.lock");
+    let Some(pid) = lock_pid(&path) else {
+        return Ok("daemon is not running; no valid lock file found".into());
+    };
+    if !process_is_alive(pid) {
+        fs::remove_file(&path)?;
+        return Ok("removed stale daemon lock; no process was running".into());
+    }
+    let status = std::process::Command::new("kill")
+        .args(["-TERM", &pid.to_string()])
+        .status()?;
+    if !status.success() {
+        return Err(CliError::Usage(format!("could not stop daemon PID {pid}")));
+    }
+    Ok(format!(
+        "stop signal sent to daemon PID {pid}; wait for daemon.lock to disappear"
     ))
 }
 
