@@ -33,6 +33,7 @@ pub enum ContactDirectoryError {
     ContactNotFound,
     InvalidAlias,
     Corrupt,
+    InvalidState,
 }
 
 pub struct ContactDirectory {
@@ -78,6 +79,10 @@ impl ContactDirectory {
             .contacts
             .get(&account_id)
             .map_or(0, |item| item.unread_count);
+        let state = self
+            .contacts
+            .get(&account_id)
+            .map_or_else(|| "verified".to_owned(), |item| item.state.clone());
         self.contacts.insert(
             account_id.clone(),
             ContactRecord {
@@ -85,7 +90,7 @@ impl ContactDirectory {
                 device_id,
                 relay_origin: relay_origin.into(),
                 alias,
-                state: "verified".into(),
+                state,
                 conversation_id: self
                     .contacts
                     .get(&account_id)
@@ -158,6 +163,37 @@ impl ContactDirectory {
         contact.unread_count = contact.unread_count.saturating_add(1);
         contact.last_message_at = Some(now);
         Ok(())
+    }
+
+    pub fn block(&mut self, account_id: &str) -> Result<(), ContactDirectoryError> {
+        let contact = self
+            .contacts
+            .get_mut(account_id)
+            .ok_or(ContactDirectoryError::ContactNotFound)?;
+        contact.state = "blocked".into();
+        Ok(())
+    }
+
+    pub fn unblock(&mut self, account_id: &str) -> Result<(), ContactDirectoryError> {
+        let contact = self
+            .contacts
+            .get_mut(account_id)
+            .ok_or(ContactDirectoryError::ContactNotFound)?;
+        contact.state = "verified".into();
+        Ok(())
+    }
+
+    pub fn remove(&mut self, account_id: &str) -> Result<ContactRecord, ContactDirectoryError> {
+        self.contacts
+            .remove(account_id)
+            .ok_or(ContactDirectoryError::ContactNotFound)
+    }
+
+    pub fn is_blocked_conversation(&self, conversation_id: &str) -> bool {
+        self.contacts.values().any(|contact| {
+            contact.state == "blocked"
+                && contact.conversation_id.as_deref() == Some(conversation_id)
+        })
     }
 
     pub fn record_message(
@@ -237,5 +273,15 @@ mod tests {
         assert_eq!(directory.list()[0].unread_count, 1);
         directory.mark_read("account-a").unwrap();
         assert_eq!(directory.list()[0].unread_count, 0);
+        directory.block("account-a").unwrap();
+        assert!(directory.is_blocked_conversation("conversation-a"));
+        directory
+            .upsert_verified("account-a", "device-a", "https://relay-b", 40)
+            .unwrap();
+        assert_eq!(directory.list()[0].state, "blocked");
+        directory.unblock("account-a").unwrap();
+        assert!(!directory.is_blocked_conversation("conversation-a"));
+        let removed = directory.remove("account-a").unwrap();
+        assert_eq!(removed.account_id, "account-a");
     }
 }

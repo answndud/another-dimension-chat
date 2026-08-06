@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { consumeInviteCode, createInviteCode, inviteCodeHash, invitePayloadDigest, purgeInviteCodes, validateDaemonInvite } from "./invite-code.mjs";
+import { consumeInviteCode, createInviteCode, inviteCodeHash, invitePayloadDigest, purgeInviteCodes, revokeInviteCode, validateDaemonInvite } from "./invite-code.mjs";
 
 const MAX_ENVELOPE_BYTES = 96 * 1024;
 const MAX_INBOX_ITEMS = 256;
@@ -558,6 +558,23 @@ export async function createLocalServer({
       } catch (error) {
         const status = error.message === "request_too_large" ? 413 : error.message === "request_timeout" ? 408 : 400;
         json(res, status, { consumed: false, error: error.message }, headers);
+      }
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/v1/invite-codes/revoke" && req.method === "POST") {
+      if (!consumeRateLimit(req, "invite-code-revoke", 20)) { json(res, 429, { revoked: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
+      try {
+        if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
+        const body = JSON.parse(await readBody(req, 8 * 1024, requestTimeoutMs));
+        const before = inviteCodes.slice();
+        const result = revokeInviteCode(inviteCodes, body?.code);
+        if (!result.ok) { json(res, 404, { revoked: false, error: result.reason }, headers); return; }
+        try { await persistInviteCodes(); } catch (error) { inviteCodes = before; throw error; }
+        json(res, 200, { revoked: true }, headers);
+      } catch (error) {
+        const status = error.message === "request_too_large" ? 413 : error.message === "request_timeout" ? 408 : 400;
+        json(res, status, { revoked: false, error: error.message }, headers);
       }
       return;
     }

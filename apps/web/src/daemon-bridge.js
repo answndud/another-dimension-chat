@@ -192,6 +192,18 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ account_id: accountId, alias }),
     }),
+    blockContact: (accountId) => request("/local-api/contacts/block", {
+      method: "POST",
+      body: JSON.stringify({ account_id: accountId }),
+    }),
+    unblockContact: (accountId) => request("/local-api/contacts/unblock", {
+      method: "POST",
+      body: JSON.stringify({ account_id: accountId }),
+    }),
+    deleteContact: (accountId) => request("/local-api/contacts/delete", {
+      method: "POST",
+      body: JSON.stringify({ account_id: accountId }),
+    }),
     bindContactConversation: (accountId, conversationId) => request("/local-api/contacts/bind-conversation", {
       method: "POST",
       body: JSON.stringify({ account_id: accountId, conversation_id: conversationId }),
@@ -248,4 +260,14 @@ export async function createRelayInviteCode(relayOrigin, signedInvite, { fetchIm
   const body = await jsonResponse(response);
   if (body.created !== true || typeof body.code !== "string" || typeof body.inviteDigest !== "string") throw new DaemonBridgeError("invite-create-failed", "relay가 초대코드를 발급하지 않았습니다.");
   return body;
+}
+
+export async function revokeRelayInviteCode(relayOrigin, code, { fetchImpl = globalThis.fetch } = {}) {
+  const origin = new URL(String(relayOrigin)).origin;
+  const response = await fetchImpl(`${origin}/api/v1/invite-codes/revoke`, {
+    method: "POST",
+    headers: { accept: "application/json", "content-type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  return jsonResponse(response);
 }

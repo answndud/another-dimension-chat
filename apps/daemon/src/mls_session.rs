@@ -206,6 +206,23 @@ impl MlsSessionCatalog {
         Ok(conversation_ids.len())
     }
 
+    pub fn remove(
+        &mut self,
+        conversation_id: &str,
+        store: &mut EncryptedStore,
+    ) -> Result<(), SessionCatalogError> {
+        if self.sessions.remove(conversation_id).is_none() {
+            return Err(SessionCatalogError::UnknownConversation);
+        }
+        store
+            .delete(
+                RecordClass::ProtocolSession,
+                &format!("mls/session/{conversation_id}"),
+            )
+            .map_err(|_| SessionError::Storage)?;
+        Ok(())
+    }
+
     pub fn lock(&mut self) {
         self.sessions.clear();
     }

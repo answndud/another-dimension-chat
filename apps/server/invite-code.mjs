@@ -137,3 +137,12 @@ export function consumeInviteCode(records, suppliedCode, now = Date.now()) {
   const [record] = records.splice(index, 1);
   return { ok: true, record };
 }
+
+export function revokeInviteCode(records, suppliedCode, now = Date.now()) {
+  let hash;
+  try { hash = inviteCodeHash(suppliedCode); } catch { return { ok: false, reason: "invalid_or_expired" }; }
+  const index = records.findIndex((record) => record.codeHash === hash && record.expiresAt > now);
+  if (index < 0) return { ok: false, reason: "invalid_or_expired" };
+  records.splice(index, 1);
+  return { ok: true };
+}

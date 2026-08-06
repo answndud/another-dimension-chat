@@ -463,6 +463,34 @@ impl InviteAuthority {
             .map_err(|_| ContactDirectoryError::Corrupt)
     }
 
+    fn set_contact_blocked(
+        &mut self,
+        account_id: &str,
+        blocked: bool,
+        store: &mut EncryptedStore,
+    ) -> Result<(), ContactDirectoryError> {
+        if blocked {
+            self.contacts.block(account_id)?;
+        } else {
+            self.contacts.unblock(account_id)?;
+        }
+        self.contacts
+            .persist(store)
+            .map_err(|_| ContactDirectoryError::Corrupt)
+    }
+
+    fn remove_contact(
+        &mut self,
+        account_id: &str,
+        store: &mut EncryptedStore,
+    ) -> Result<crate::contacts::ContactRecord, ContactDirectoryError> {
+        let removed = self.contacts.remove(account_id)?;
+        self.contacts
+            .persist(store)
+            .map_err(|_| ContactDirectoryError::Corrupt)?;
+        Ok(removed)
+    }
+
     fn bind_contact_conversation(
         &mut self,
         account_id: &str,
@@ -1103,6 +1131,66 @@ pub fn handle_request_with_context(
                 Err(error) => contact_directory_error(error),
             }
         }
+        ("POST", "/local-api/contacts/block") | ("POST", "/local-api/contacts/unblock") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "contacts_unavailable", None, None);
+            };
+            let Some(account_id) = json_string(request.body, "account_id") else {
+                return response(400, "account_id_required", None, Some("application/json"));
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            let blocked = request.path.ends_with("/block");
+            match authority.set_contact_blocked(&account_id, blocked, store) {
+                Ok(()) => response(
+                    200,
+                    if blocked {
+                        r##"{"blocked":true}"##
+                    } else {
+                        r##"{"blocked":false}"##
+                    },
+                    None,
+                    Some("application/json"),
+                ),
+                Err(error) => contact_directory_error(error),
+            }
+        }
+        ("POST", "/local-api/contacts/delete") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "contacts_unavailable", None, None);
+            };
+            let Some(account_id) = json_string(request.body, "account_id") else {
+                return response(400, "account_id_required", None, Some("application/json"));
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            let removed = match authority.remove_contact(&account_id, store) {
+                Ok(contact) => contact,
+                Err(error) => return contact_directory_error(error),
+            };
+            if let Some(conversation_id) = removed.conversation_id.as_deref() {
+                if let Some(catalog) = session_catalog.as_deref_mut() {
+                    match catalog.remove(conversation_id, store) {
+                        Ok(()) | Err(SessionCatalogError::UnknownConversation) => {}
+                        Err(error) => return catalog_error(error),
+                    }
+                } else {
+                    let _ = store.delete(
+                        RecordClass::ProtocolSession,
+                        &format!("mls/session/{conversation_id}"),
+                    );
+                }
+            }
+            response(200, r##"{"deleted":true}"##, None, Some("application/json"))
+        }
         ("POST", "/local-api/contacts/bind-conversation") => {
             if let Err(reply) = authorize_api(bridge, &request, now) {
                 return reply;
@@ -1309,6 +1397,11 @@ pub fn handle_request_with_context(
             let Some(conversation_id) = json_string(request.body, "conversation_id") else {
                 return response(400, "invalid_conversation", None, Some("application/json"));
             };
+            if invite_authority.as_deref().is_some_and(|authority| {
+                authority.contacts.is_blocked_conversation(&conversation_id)
+            }) {
+                return response(403, "contact_blocked", None, Some("application/json"));
+            }
             let Some(plaintext) = json_string(request.body, "plaintext") else {
                 return response(400, "invalid_message", None, Some("application/json"));
             };
@@ -1338,6 +1431,11 @@ pub fn handle_request_with_context(
             let Some(conversation_id) = json_string(request.body, "conversation_id") else {
                 return response(400, "invalid_conversation", None, Some("application/json"));
             };
+            if invite_authority.as_deref().is_some_and(|authority| {
+                authority.contacts.is_blocked_conversation(&conversation_id)
+            }) {
+                return response(403, "contact_blocked", None, Some("application/json"));
+            }
             let Some(ciphertext) = json_string(request.body, "ciphertext").and_then(hex_decode)
             else {
                 return response(400, "invalid_ciphertext", None, Some("application/json"));
@@ -1368,6 +1466,11 @@ pub fn handle_request_with_context(
             let Some(conversation_id) = json_string(request.body, "conversation_id") else {
                 return response(400, "invalid_conversation", None, Some("application/json"));
             };
+            if invite_authority.as_deref().is_some_and(|authority| {
+                authority.contacts.is_blocked_conversation(&conversation_id)
+            }) {
+                return response(403, "contact_blocked", None, Some("application/json"));
+            }
             let Some(descriptor_json) = json_string(request.body, "descriptor") else {
                 return response(
                     400,
@@ -1415,6 +1518,11 @@ pub fn handle_request_with_context(
             let Some(conversation_id) = json_string(request.body, "conversation_id") else {
                 return response(400, "invalid_conversation", None, Some("application/json"));
             };
+            if invite_authority.as_deref().is_some_and(|authority| {
+                authority.contacts.is_blocked_conversation(&conversation_id)
+            }) {
+                return response(403, "contact_blocked", None, Some("application/json"));
+            }
             let Some(ciphertext) = json_string(request.body, "ciphertext").and_then(hex_decode)
             else {
                 return response(400, "invalid_ciphertext", None, Some("application/json"));
@@ -2178,6 +2286,11 @@ pub fn handle_request_with_context(
             let Some(conversation_id) = json_string(request.body, "conversation_id") else {
                 return response(400, "invalid_conversation", None, Some("application/json"));
             };
+            if invite_authority.as_deref().is_some_and(|authority| {
+                authority.contacts.is_blocked_conversation(&conversation_id)
+            }) {
+                return response(403, "contact_blocked", None, Some("application/json"));
+            }
             let background = json_bool(request.body, "background").unwrap_or(false);
             let Ok(endpoint) = RelayEndpoint::from_inbox_url_with_pin(
                 inbox_url,
@@ -2851,6 +2964,7 @@ fn contact_directory_error(error: ContactDirectoryError) -> Vec<u8> {
         ContactDirectoryError::ContactNotFound => (404, "contact_not_found"),
         ContactDirectoryError::InvalidAlias => (422, "invalid_alias"),
         ContactDirectoryError::Corrupt => (503, "contacts_storage_corrupt"),
+        ContactDirectoryError::InvalidState => (422, "invalid_contact_state"),
     };
     response(status, code, None, Some("application/json"))
 }

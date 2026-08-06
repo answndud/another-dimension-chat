@@ -241,4 +241,6 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .daemon-contact-alias { margin: 0; font-size: .7rem; }
 .daemon-contact-alias input { margin-top: 4px; padding: 7px; }
 .daemon-contact-save { white-space: nowrap; }
+.contact-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.contact-actions button { white-space: nowrap; }
 @media (max-width: 600px) { .daemon-contact { grid-template-columns: 1fr; } }
