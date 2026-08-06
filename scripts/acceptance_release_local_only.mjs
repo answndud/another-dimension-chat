@@ -55,6 +55,7 @@ await Promise.all([
   copy("reference/SUPPORT_MATRIX.json"),
   copy("reference/browser-evidence/codex-in-app-browser.json"),
   copy("apps/server/server.mjs"),
+  copy("apps/server/storage.mjs"),
   copy("scripts/verify_public_release_gate.mjs"),
   copy("scripts/verify_release_trust.mjs"),
   copy("scripts/product_boundary.mjs"),

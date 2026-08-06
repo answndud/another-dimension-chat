@@ -8,6 +8,7 @@ const root = path.resolve(process.argv[2] || ".");
 const requiredSource = [
   "apps/web/package.json",
   "apps/server/server.mjs",
+  "apps/server/storage.mjs",
   "apps/daemon/Cargo.toml",
   "apps/daemon/src/lib.rs",
   "apps/daemon/src/model.rs",
