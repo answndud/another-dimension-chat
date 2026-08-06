@@ -74,6 +74,13 @@ pub fn needs_passphrase(args: &[String]) -> bool {
             (Some("identity"), Some("show"))
         )
         || matches!(args.first().map(String::as_str), Some("device"))
+        || matches!(
+            (
+                args.first().map(String::as_str),
+                args.get(1).map(String::as_str)
+            ),
+            (Some("recovery"), Some("rotate"))
+        )
 }
 
 pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError> {
@@ -100,7 +107,7 @@ pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError
         "lock" => Ok(
             "daemon session locked; no active daemon session was retained by this command".into(),
         ),
-        "recovery" => recovery(args),
+        "recovery" => recovery(args, passphrase),
         "serve" => serve(
             args,
             passphrase.ok_or_else(|| {
@@ -419,7 +426,7 @@ fn doctor(args: &[String]) -> Result<String, CliError> {
     ))
 }
 
-fn recovery(args: &[String]) -> Result<String, CliError> {
+fn recovery(args: &[String], passphrase: Option<&str>) -> Result<String, CliError> {
     match args.get(1).map(String::as_str) {
         Some("export") => {
             let data_dir = data_dir(args)?;
@@ -438,8 +445,14 @@ fn recovery(args: &[String]) -> Result<String, CliError> {
                 .ok_or_else(|| CliError::Usage("recovery inspect requires --input".into()))?;
             inspect_recovery(Path::new(&input))
         }
+        Some("rotate") => {
+            let data_dir = data_dir(args)?;
+            let credentials = passphrase
+                .ok_or_else(|| CliError::Usage("recovery rotate requires old and new passphrases on stdin".into()))?;
+            rotate_recovery(&data_dir, credentials)
+        }
         _ => Err(CliError::Usage(
-            "use recovery export --output PATH, recovery import --input PATH, or recovery inspect --input PATH".into(),
+            "use recovery export --output PATH, recovery inspect --input PATH, recovery rotate, or recovery import --input PATH".into(),
         )),
     }
 }
@@ -526,6 +539,50 @@ fn inspect_recovery(input: &Path) -> Result<String, CliError> {
         manifest.store_bytes,
         manifest.revision_bytes
     ))
+}
+
+fn rotate_recovery(data_dir: &Path, credentials: &str) -> Result<String, CliError> {
+    let mut lines = credentials.lines();
+    let old_passphrase = lines.next().unwrap_or("").trim();
+    let new_passphrase = lines.next().unwrap_or("").trim();
+    if old_passphrase.is_empty() || new_passphrase.is_empty() || lines.next().is_some() {
+        return Err(CliError::Usage(
+            "recovery rotate stdin must contain exactly two lines: old passphrase, new passphrase"
+                .into(),
+        ));
+    }
+    if old_passphrase == new_passphrase {
+        return Err(CliError::Usage(
+            "new passphrase must differ from the old passphrase".into(),
+        ));
+    }
+    let store = open_store(data_dir, old_passphrase)?;
+    let temporary = data_dir.join(format!("store.adstore.rotate-{}", std::process::id()));
+    let temporary_revision = PathBuf::from(format!("{}.revision", temporary.display()));
+    let _ = fs::remove_file(&temporary);
+    let _ = fs::remove_file(&temporary_revision);
+    store.rekey_to(&temporary, new_passphrase)?;
+    let active = store_path(data_dir);
+    let active_revision = revision_path(data_dir);
+    let old_store = data_dir.join(format!("store.adstore.old-{}", std::process::id()));
+    let old_revision = data_dir.join(format!("store.adstore.revision.old-{}", std::process::id()));
+    fs::rename(&active, &old_store)?;
+    fs::rename(&active_revision, &old_revision)?;
+    if let Err(error) = fs::rename(&temporary, &active) {
+        let _ = fs::rename(&old_store, &active);
+        let _ = fs::rename(&old_revision, &active_revision);
+        let _ = fs::remove_file(&temporary_revision);
+        return Err(error.into());
+    }
+    if let Err(error) = fs::rename(&temporary_revision, &active_revision) {
+        let _ = fs::remove_file(&active);
+        let _ = fs::rename(&old_store, &active);
+        let _ = fs::rename(&old_revision, &active_revision);
+        return Err(error.into());
+    }
+    fs::remove_file(old_store)?;
+    fs::remove_file(old_revision)?;
+    Ok("database key rewrapped with the new passphrase; existing records were preserved".into())
 }
 
 fn encode_identity(
@@ -780,7 +837,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CliError> {
     Ok(())
 }
 fn help_text() -> String {
-    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery inspect --input PATH [--data-dir PATH]\n  recovery import --input PATH [--data-dir PATH]\n\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\nPassphrases are read from stdin and are never accepted as arguments.".into()
+    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery inspect --input PATH [--data-dir PATH]\n  recovery rotate --data-dir PATH  # stdin: old passphrase\\nnew passphrase\n  recovery import --input PATH [--data-dir PATH]\n\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\nPassphrases are read from stdin and are never accepted as arguments.".into()
 }
 
 #[cfg(test)]
@@ -900,6 +957,21 @@ mod tests {
         )
         .unwrap();
         assert_eq!(identity, restored_identity);
+        run(
+            &arg(&["recovery", "rotate", "--data-dir", source.to_str().unwrap()]),
+            Some("correct horse battery staple\nnew correct horse battery staple"),
+        )
+        .unwrap();
+        assert!(run(
+            &arg(&["identity", "show", "--data-dir", source.to_str().unwrap()]),
+            Some("correct horse battery staple"),
+        )
+        .is_err());
+        assert!(run(
+            &arg(&["identity", "show", "--data-dir", source.to_str().unwrap()]),
+            Some("new correct horse battery staple"),
+        )
+        .is_ok());
         fs::remove_dir_all(source).unwrap();
         fs::remove_file(backup).unwrap();
         fs::remove_dir_all(restored).unwrap();

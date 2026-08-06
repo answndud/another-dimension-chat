@@ -311,6 +311,23 @@ impl EncryptedStore {
         self.revision
     }
 
+    /// Re-encrypts every record under a freshly derived key and salt without
+    /// exposing plaintext outside this process. The destination must not
+    /// exist; callers can atomically replace the active store afterwards.
+    pub fn rekey_to(
+        &self,
+        destination: impl AsRef<Path>,
+        new_passphrase: &str,
+    ) -> Result<(), StorageError> {
+        let mut replacement = Self::initialize(destination, new_passphrase)?;
+        let mutations = self
+            .records
+            .iter()
+            .map(|((class, key), value)| RecordMutation::Put(*class, key.clone(), value.clone()))
+            .collect::<Vec<_>>();
+        replacement.apply_batch(&mutations)
+    }
+
     pub fn put(&mut self, class: RecordClass, key: &str, value: &[u8]) -> Result<(), StorageError> {
         validate_record_key(key)?;
         if value.len() > MAX_VALUE_BYTES {
