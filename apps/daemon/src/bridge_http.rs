@@ -579,8 +579,13 @@ impl InviteAuthority {
             .snapshot()
             .peer
             .ok_or(ContactDirectoryError::ContactNotFound)?;
-        self.contacts
-            .upsert_verified(peer.account_id, peer.device_id, peer.relay_origin, now)?;
+        self.contacts.upsert_verified_with_inbox(
+            peer.account_id,
+            peer.device_id,
+            peer.relay_origin,
+            peer.inbox_url,
+            now,
+        )?;
         self.contacts
             .persist(store)
             .map_err(|_| ContactDirectoryError::Corrupt)

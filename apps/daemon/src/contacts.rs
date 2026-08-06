@@ -11,6 +11,8 @@ pub struct ContactRecord {
     pub account_id: String,
     pub device_id: String,
     pub relay_origin: String,
+    #[serde(default)]
+    pub inbox_url: Option<String>,
     pub alias: Option<String>,
     pub state: String,
     #[serde(default)]
@@ -60,6 +62,17 @@ impl ContactDirectory {
         relay_origin: impl Into<String>,
         now: u64,
     ) -> Result<(), ContactDirectoryError> {
+        self.upsert_verified_with_inbox(account_id, device_id, relay_origin, None, now)
+    }
+
+    pub fn upsert_verified_with_inbox(
+        &mut self,
+        account_id: impl Into<String>,
+        device_id: impl Into<String>,
+        relay_origin: impl Into<String>,
+        inbox_url: Option<String>,
+        now: u64,
+    ) -> Result<(), ContactDirectoryError> {
         let account_id = account_id.into();
         let device_id = device_id.into();
         if let Some(existing) = self.contacts.get(&account_id) {
@@ -89,6 +102,11 @@ impl ContactDirectory {
                 account_id: account_id.clone(),
                 device_id,
                 relay_origin: relay_origin.into(),
+                inbox_url: inbox_url.or_else(|| {
+                    self.contacts
+                        .get(&account_id)
+                        .and_then(|item| item.inbox_url.clone())
+                }),
                 alias,
                 state,
                 conversation_id: self
@@ -252,6 +270,19 @@ mod tests {
         directory
             .upsert_verified("account-a", "device-a", "https://relay-a", 10)
             .unwrap();
+        directory
+            .upsert_verified_with_inbox(
+                "account-a",
+                "device-a",
+                "https://relay-a",
+                Some("https://relay-a/api/v1/inbox/capability".into()),
+                15,
+            )
+            .unwrap();
+        assert_eq!(
+            directory.list()[0].inbox_url.as_deref(),
+            Some("https://relay-a/api/v1/inbox/capability")
+        );
         directory.set_alias("account-a", "Reporter").unwrap();
         directory
             .upsert_verified("account-a", "device-a", "https://relay-b", 20)
