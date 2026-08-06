@@ -61,6 +61,10 @@ pub struct DeliveryRecord {
     pub wire: Option<String>,
     #[serde(default)]
     pub expires_at: Option<u64>,
+    /// The capability-bearing inbox URL is encrypted with the ledger at rest.
+    /// Older ledgers omit it and remain manually retryable through the local API.
+    #[serde(default)]
+    pub destination: Option<String>,
 }
 
 #[derive(Default)]
@@ -73,6 +77,9 @@ impl DeliveryLedger {
         for record in self.records.values_mut() {
             if let Some(wire) = record.wire.as_mut() {
                 wire.zeroize();
+            }
+            if let Some(destination) = record.destination.as_mut() {
+                destination.zeroize();
             }
         }
         self.records.clear();
@@ -95,6 +102,16 @@ impl DeliveryLedger {
         wire: Option<String>,
         expires_at: Option<u64>,
     ) -> Result<(), EnvelopeError> {
+        self.register_encrypted_with_destination(digest, wire, expires_at, None)
+    }
+
+    pub fn register_encrypted_with_destination(
+        &mut self,
+        digest: impl Into<String>,
+        wire: Option<String>,
+        expires_at: Option<u64>,
+        destination: Option<String>,
+    ) -> Result<(), EnvelopeError> {
         let digest = digest.into();
         if digest.is_empty() || self.records.contains_key(&digest) {
             return Err(EnvelopeError::InvalidWire);
@@ -109,6 +126,7 @@ impl DeliveryLedger {
                 relay_id: None,
                 wire,
                 expires_at,
+                destination,
             },
         );
         Ok(())
@@ -200,6 +218,7 @@ impl DeliveryLedger {
                 relay_id: Some(relay_id.into()),
                 wire: None,
                 expires_at: None,
+                destination: None,
             },
         );
         Ok(true)
@@ -286,8 +305,36 @@ impl DeliveryLedger {
         Ok(true)
     }
 
+    pub fn mark_failed(&mut self, digest: &str) -> Result<bool, EnvelopeError> {
+        let record = self
+            .records
+            .get_mut(digest)
+            .ok_or(EnvelopeError::InvalidWire)?;
+        if record.state == DeliveryState::Failed {
+            return Ok(false);
+        }
+        record.state = DeliveryState::Failed;
+        record.next_retry_at = None;
+        record.wire = None;
+        record.destination = None;
+        Ok(true)
+    }
+
     pub fn get(&self, digest: &str) -> Option<&DeliveryRecord> {
         self.records.get(digest)
+    }
+
+    pub fn due_retries(&self, now: u64) -> Vec<DeliveryRecord> {
+        self.records
+            .values()
+            .filter(|record| {
+                record.state == DeliveryState::Retryable
+                    && record.next_retry_at.is_none_or(|retry_at| retry_at <= now)
+                    && record.wire.is_some()
+                    && record.destination.is_some()
+            })
+            .cloned()
+            .collect()
     }
 
     pub fn persist(&self, store: &mut EncryptedStore) -> Result<(), StorageError> {
@@ -581,6 +628,30 @@ mod tests {
             ledger.get("digest-2").unwrap().state,
             super::DeliveryState::Failed
         );
+    }
+
+    #[test]
+    fn automatic_retry_candidates_require_a_persisted_destination() {
+        let mut ledger = super::DeliveryLedger::default();
+        ledger
+            .register_encrypted_with_destination(
+                "digest-due",
+                Some("wire".into()),
+                Some(10_000),
+                Some("https://relay.example/api/v1/inbox/cap".into()),
+            )
+            .unwrap();
+        ledger.schedule_retry("digest-due", 100).unwrap();
+        assert!(ledger.due_retries(104).is_empty());
+        assert_eq!(ledger.due_retries(105).len(), 1);
+        assert_eq!(
+            ledger.due_retries(105)[0].destination.as_deref(),
+            Some("https://relay.example/api/v1/inbox/cap")
+        );
+
+        ledger.mark_failed("digest-due").unwrap();
+        assert!(ledger.due_retries(u64::MAX).is_empty());
+        assert!(ledger.get("digest-due").unwrap().wire.is_none());
     }
 
     #[test]

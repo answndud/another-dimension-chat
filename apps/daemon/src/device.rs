@@ -8,6 +8,22 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+const MAX_DEVICE_EVENTS: usize = 64;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeviceChangeKind {
+    Registered,
+    Revoked,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct DeviceChangeEvent {
+    pub device_id: String,
+    pub kind: DeviceChangeKind,
+    pub at: u64,
+}
+
 #[derive(Debug)]
 pub struct DeviceRecord {
     certificate: DeviceCertificate,
@@ -33,6 +49,7 @@ impl DeviceRecord {
 pub struct DeviceRegistry {
     account_public_key: [u8; 32],
     devices: BTreeMap<String, DeviceRecord>,
+    events: Vec<DeviceChangeEvent>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -75,6 +92,7 @@ impl DeviceRegistry {
         Self {
             account_public_key,
             devices: BTreeMap::new(),
+            events: Vec::new(),
         }
     }
 
@@ -105,6 +123,7 @@ impl DeviceRegistry {
                     revoked_at: record.revoked_at,
                 })
                 .collect(),
+            events: self.events.clone(),
         };
         serde_json::to_vec(&wire).map_err(|_| DeviceRegistryError::Corrupt)
     }
@@ -150,9 +169,15 @@ impl DeviceRegistry {
                 },
             );
         }
+        if wire.events.len() > MAX_DEVICE_EVENTS
+            || wire.events.iter().any(|event| event.device_id.is_empty())
+        {
+            return Err(DeviceRegistryError::Corrupt);
+        }
         Ok(Self {
             account_public_key,
             devices,
+            events: wire.events,
         })
     }
 
@@ -170,13 +195,18 @@ impl DeviceRegistry {
         }
         let device_id = certificate.device_id().to_owned();
         self.devices.insert(
-            device_id,
+            device_id.clone(),
             DeviceRecord {
                 certificate,
                 state: DeviceState::Active,
                 revoked_at: None,
             },
         );
+        self.record_event(DeviceChangeEvent {
+            device_id: device_id.clone(),
+            kind: DeviceChangeKind::Registered,
+            at: now,
+        });
         Ok(())
     }
 
@@ -200,7 +230,20 @@ impl DeviceRegistry {
         record.certificate.apply_revocation(&revocation)?;
         record.state = DeviceState::Revoked;
         record.revoked_at = Some(revoked_at);
+        self.record_event(DeviceChangeEvent {
+            device_id: device_id.to_owned(),
+            kind: DeviceChangeKind::Revoked,
+            at: revoked_at,
+        });
         Ok(revocation)
+    }
+
+    fn record_event(&mut self, event: DeviceChangeEvent) {
+        self.events.push(event);
+        if self.events.len() > MAX_DEVICE_EVENTS {
+            let excess = self.events.len() - MAX_DEVICE_EVENTS;
+            self.events.drain(0..excess);
+        }
     }
 
     pub fn authorize(&self, device_id: &str, now: u64) -> Result<(), DeviceRegistryError> {
@@ -221,6 +264,10 @@ impl DeviceRegistry {
 
     pub fn records(&self) -> impl Iterator<Item = &DeviceRecord> {
         self.devices.values()
+    }
+
+    pub fn events(&self) -> &[DeviceChangeEvent] {
+        &self.events
     }
 
     pub fn len(&self) -> usize {
@@ -295,6 +342,7 @@ mod tests {
         assert!(!encoded.windows(32).any(|window| window == &[10; 32]));
         let decoded = DeviceRegistry::decode(&encoded).unwrap();
         assert_eq!(decoded.len(), 1);
+        assert_eq!(decoded.events().len(), 1);
         assert_eq!(decoded.authorize("laptop", 200), Ok(()));
     }
 }
@@ -303,6 +351,8 @@ mod tests {
 struct RegistryWire {
     account_public_key: Vec<u8>,
     devices: Vec<DeviceRecordWire>,
+    #[serde(default)]
+    events: Vec<DeviceChangeEvent>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

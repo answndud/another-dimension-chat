@@ -35,7 +35,7 @@ import { connectDaemonBridge, consumeRelayInvite, createRelayInviteCode, revokeR
 import "./styles.css";
 
 const app = document.querySelector("#app");
-let state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", daemonReceivedInvite: null, daemonConsumedInvite: "", daemonInviteReceipt: "", daemonRelayOrigin: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false, daemonBridge: null, daemonBridgeMode: false, daemonStatus: "확인 중", daemonIdentity: null, daemonInvite: null, daemonPairing: null, daemonRelayTrust: null, daemonDevices: [], daemonLinkApproval: "", daemonContacts: [], daemonContactSearch: "", daemonConversationIds: [], daemonSelectedContact: "", daemonLocked: false, daemonConversationId: "", daemonKeyPackage: "", daemonWelcome: "", daemonCiphertext: "", daemonPlaintext: "", daemonInboxUrl: "", daemonPeerInboxUrl: "", daemonMessages: [], daemonOutgoingMessages: [], daemonDeliveryDigest: "", daemonDeliveryState: "", daemonAttachmentState: "", daemonAttachmentProgress: 0, daemonAttachmentBlobId: "" };
+let state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", daemonReceivedInvite: null, daemonConsumedInvite: "", daemonInviteReceipt: "", daemonRelayOrigin: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false, daemonBridge: null, daemonBridgeMode: false, daemonStatus: "확인 중", daemonIdentity: null, daemonInvite: null, daemonPairing: null, daemonRelayTrust: null, daemonDevices: [], daemonDeviceEvents: [], daemonLinkApproval: "", daemonContacts: [], daemonContactSearch: "", daemonConversationIds: [], daemonSelectedContact: "", daemonLocked: false, daemonConversationId: "", daemonKeyPackage: "", daemonWelcome: "", daemonCiphertext: "", daemonPlaintext: "", daemonInboxUrl: "", daemonPeerInboxUrl: "", daemonMessages: [], daemonOutgoingMessages: [], daemonDeliveryDigest: "", daemonDeliveryState: "", daemonAttachmentState: "", daemonAttachmentProgress: 0, daemonAttachmentBlobId: "" };
 let serviceWorkerStatus = "확인 중";
 let syncInFlight = false;
 let daemonSyncInFlight = false;
@@ -68,7 +68,7 @@ function downloadPassphrase(value) {
 }
 
 function lockedState(message) {
-  state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: message, riskAcknowledged: false, wipeConfirmOpen: false, daemonMessages: [], daemonOutgoingMessages: [], daemonDeliveryDigest: "", daemonDeliveryState: "" };
+  state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: message, riskAcknowledged: false, wipeConfirmOpen: false, daemonDevices: [], daemonDeviceEvents: [], daemonMessages: [], daemonOutgoingMessages: [], daemonDeliveryDigest: "", daemonDeliveryState: "" };
   render();
 }
 
@@ -105,7 +105,10 @@ function renderDaemonDevices() {
       return `<article class="daemon-contact"><strong>${escapeHtml(device.device_id)}${current ? " · 현재 기기" : ""}</strong><small>${escapeHtml(device.state)} · 만료 ${escapeHtml(String(device.expires_at))}</small><code>${escapeHtml(device.public_key)}</code>${device.state === "active" ? `<button type="button" class="quiet daemon-device-revoke" data-device-revoke="${escapeHtml(device.device_id)}" ${current ? "disabled" : ""}>${current ? "현재 기기" : "기기 폐기"}</button>` : '<span class="field-note">폐기됨</span>'}</article>`;
     }).join("")
     : '<p class="field-note">등록된 기기 정보를 불러오지 못했습니다.</p>';
-  return `<section class="daemon-directory"><div class="row-between"><div><h2>연결된 기기</h2><p class="field-note">기기 인증서와 폐기 상태는 daemon 암호화 저장소에서 관리됩니다.</p></div><span class="pill">${state.daemonDevices.length}대</span></div><div class="daemon-contact-list">${rows}</div><div class="daemon-device-link"><h3>새 기기 승인</h3><p class="field-note">새 기기에서 생성한 요청 payload와 별도 채널로 확인한 일회성 코드를 입력하세요. 승인 결과에는 새 기기의 개인키가 포함되지 않습니다.</p><label>기기 연결 요청<textarea id="daemon-link-request" rows="4" placeholder="ADDLINKREQ1...."></textarea></label><label>일회성 승인 코드<input id="daemon-link-code" autocomplete="off" placeholder="ABCD-EFGH-...."></label><button id="daemon-link-approve" type="button" class="secondary">기기 승인 및 인증서 발급</button>${state.daemonLinkApproval ? `<label>새 기기로 전달할 승인 자료<textarea readonly rows="4">${escapeHtml(state.daemonLinkApproval)}</textarea></label>` : ""}</div></section>`;
+  const eventRows = state.daemonDeviceEvents.length
+    ? state.daemonDeviceEvents.slice().reverse().slice(0, 8).map((event) => `<li><strong>${event.kind === "revoked" ? "기기 폐기" : "기기 등록"}</strong><span>${escapeHtml(event.device_id)} · ${escapeHtml(new Date(Number(event.at) * 1000).toLocaleString("ko-KR"))}</span></li>`).join("")
+    : '<li class="field-note">아직 기기 변경 이력이 없습니다.</li>';
+  return `<section class="daemon-directory"><div class="row-between"><div><h2>연결된 기기</h2><p class="field-note">기기 인증서와 폐기 상태는 daemon 암호화 저장소에서 관리됩니다.</p></div><span class="pill">${state.daemonDevices.length}대</span></div><div class="daemon-contact-list">${rows}</div><details class="daemon-device-events"><summary>기기 변경 이력</summary><ul>${eventRows}</ul></details><div class="daemon-device-link"><h3>새 기기 승인</h3><p class="field-note">새 기기에서 생성한 요청 payload와 별도 채널로 확인한 일회성 코드를 입력하세요. 승인 결과에는 새 기기의 개인키가 포함되지 않습니다.</p><label>기기 연결 요청<textarea id="daemon-link-request" rows="4" placeholder="ADDLINKREQ1...."></textarea></label><label>일회성 승인 코드<input id="daemon-link-code" autocomplete="off" placeholder="ABCD-EFGH-...."></label><button id="daemon-link-approve" type="button" class="secondary">기기 승인 및 인증서 발급</button>${state.daemonLinkApproval ? `<label>새 기기로 전달할 승인 자료<textarea readonly rows="4">${escapeHtml(state.daemonLinkApproval)}</textarea></label>` : ""}</div></section>`;
 }
 
 function renderDaemonSafetyControls(pairing) {
@@ -629,7 +632,9 @@ function render() {
       if (!deviceId || !window.confirm(`기기 ${deviceId}를 폐기할까요? 해당 기기는 이후 daemon 인증에 사용할 수 없습니다.`)) return;
       try {
         const result = await state.daemonBridge.revokeDevice(deviceId);
-        state.daemonDevices = (await state.daemonBridge.devices()).devices || [];
+        const devices = await state.daemonBridge.devices();
+        state.daemonDevices = devices.devices || [];
+        state.daemonDeviceEvents = devices.events || [];
         state.notice = `기기 ${deviceId}를 폐기했고 MLS 세션 ${result.sessions_removed || 0}개에서 제거한 commit ${result.delivered || 0}개를 relay로 전달했습니다.`;
         state.error = "";
       } catch (error) { state.error = `기기 폐기 또는 로컬 MLS 제거에 실패했습니다: ${error.message}`; }
@@ -645,7 +650,9 @@ function render() {
       }
       try {
         const result = await state.daemonBridge.approveDeviceLink(linkRequest, code);
-        state.daemonDevices = (await state.daemonBridge.devices()).devices || [];
+        const devices = await state.daemonBridge.devices();
+        state.daemonDevices = devices.devices || [];
+        state.daemonDeviceEvents = devices.events || [];
         state.daemonLinkApproval = result.approval || "";
         state.notice = `기기 ${result.device_id}의 인증서를 발급했습니다. 승인 자료를 새 기기에만 전달하세요.`;
         state.error = "";
@@ -1086,12 +1093,15 @@ async function startApp() {
       state.daemonPairing = await daemonBridge.pairingStatus();
       state.daemonRelayTrust = await daemonBridge.relayTrust();
       try {
-        state.daemonDevices = (await daemonBridge.devices()).devices || [];
+        const devices = await daemonBridge.devices();
+        state.daemonDevices = devices.devices || [];
+        state.daemonDeviceEvents = devices.events || [];
         state.daemonContacts = (await daemonBridge.contacts()).contacts || [];
         state.daemonConversationIds = (await daemonBridge.conversations()).conversations || [];
       } catch {
         // Older daemon binaries may not expose the directory endpoints yet.
         state.daemonDevices = [];
+        state.daemonDeviceEvents = [];
         state.daemonContacts = [];
         state.daemonConversationIds = [];
       }

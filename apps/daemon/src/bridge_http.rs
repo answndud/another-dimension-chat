@@ -41,6 +41,7 @@ const MAX_COMPLETED_ATTACHMENT_COUNT: usize = 2;
 const MAX_COMPLETED_ATTACHMENT_BYTES: usize = 64 * 1024 * 1024;
 const MESSAGE_PREFIX: &[u8] = b"ADMSG1.";
 const MAX_MESSAGE_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
+const MAX_AUTOMATIC_RETRIES_PER_TICK: usize = 2;
 
 #[derive(serde::Deserialize, serde::Serialize)]
 struct MessagePayload {
@@ -1098,7 +1099,11 @@ pub fn handle_request_with_context(
                 .collect::<Vec<_>>();
             response(
                 200,
-                &serde_json::json!({ "devices": devices }).to_string(),
+                &serde_json::json!({
+                    "devices": devices,
+                    "events": authority.device_registry.events(),
+                })
+                .to_string(),
                 None,
                 Some("application/json"),
             )
@@ -2370,10 +2375,11 @@ pub fn handle_request_with_context(
                 return response(503, "delivery_unavailable", None, None);
             };
             if ledger
-                .register_encrypted_with_wire_and_expiry(
+                .register_encrypted_with_destination(
                     digest.clone(),
                     Some(wire),
                     Some(envelope.expires_at),
+                    Some(inbox_url.to_owned()),
                 )
                 .is_err()
             {
@@ -2630,7 +2636,12 @@ pub fn handle_request_with_context(
                 return response(503, "delivery_unavailable", None, None);
             };
             if ledger
-                .register_encrypted_with_wire(digest.clone(), Some(wire))
+                .register_encrypted_with_destination(
+                    digest.clone(),
+                    Some(wire),
+                    Some(envelope.expires_at),
+                    Some(inbox_url.to_owned()),
+                )
                 .is_err()
             {
                 return response(409, "duplicate_delivery", None, Some("application/json"));
@@ -3324,7 +3335,8 @@ pub fn serve_forever(
                 )
                 .unwrap_or(0);
                 notify_new_messages(notifications_enabled, processed);
-                let changed = ledger.expire_due(now) > 0;
+                let retried = retry_due_deliveries(&mut authority, &mut ledger, &mut store, now);
+                let changed = ledger.expire_due(now) > 0 || retried > 0;
                 let expired_messages = store
                     .records_with_prefix(RecordClass::Message, "messages/")
                     .into_iter()
@@ -3386,10 +3398,11 @@ fn deliver_device_change_commits(
             .to_wire()
             .map_err(|_| RelayError::InvalidResponse)?;
         ledger
-            .register_encrypted_with_wire_and_expiry(
+            .register_encrypted_with_destination(
                 digest.clone(),
                 Some(wire),
                 Some(envelope.expires_at),
+                Some(inbox_url),
             )
             .map_err(|_| RelayError::InvalidResponse)?;
         let accepted = match RelayClient::new(endpoint).post_blocking(&envelope) {
@@ -3415,6 +3428,73 @@ fn deliver_device_change_commits(
         .persist(store)
         .map_err(|_| RelayError::InvalidResponse)?;
     Ok(digests)
+}
+
+/// Retries only daemon-owned outbox records whose destination was persisted
+/// with the encrypted ledger. A small per-tick bound prevents a dead relay
+/// from monopolizing the single-thread daemon runtime after a restart.
+fn retry_due_deliveries(
+    authority: &mut InviteAuthority,
+    ledger: &mut DeliveryLedger,
+    store: &mut EncryptedStore,
+    now: u64,
+) -> usize {
+    let due = ledger
+        .due_retries(now)
+        .into_iter()
+        .take(MAX_AUTOMATIC_RETRIES_PER_TICK)
+        .collect::<Vec<_>>();
+    let mut accepted_count = 0;
+    for record in due {
+        let Some(destination) = record.destination.as_deref() else {
+            continue;
+        };
+        let Some(wire) = record.wire.as_deref() else {
+            continue;
+        };
+        let Ok(endpoint) =
+            RelayEndpoint::from_inbox_url_with_pin(destination, authority.relay_tls_pin)
+        else {
+            let _ = ledger.mark_failed(&record.digest);
+            continue;
+        };
+        let Ok(envelope) = RelayEnvelope::from_wire(wire, now) else {
+            let _ = ledger.mark_failed(&record.digest);
+            continue;
+        };
+        if envelope.mailbox != endpoint.capability {
+            let _ = ledger.mark_failed(&record.digest);
+            continue;
+        }
+        match RelayClient::new(endpoint).post_blocking(&envelope) {
+            Ok(accepted) => {
+                if ledger.bind_relay_id(&record.digest, accepted.id).is_ok()
+                    && ledger
+                        .transition(&record.digest, crate::delivery::DeliveryState::Queued)
+                        .is_ok()
+                    && ledger
+                        .transition(
+                            &record.digest,
+                            crate::delivery::DeliveryState::RelayAccepted,
+                        )
+                        .is_ok()
+                {
+                    accepted_count += 1;
+                } else {
+                    let _ = ledger.mark_failed(&record.digest);
+                }
+            }
+            Err(RelayError::Rejected(410)) => {
+                let _ = authority.invalidate_relay_binding(store);
+                let _ = ledger.mark_failed(&record.digest);
+            }
+            Err(_) => {
+                let _ = ledger.schedule_retry(&record.digest, now);
+            }
+        }
+        let _ = ledger.persist(store);
+    }
+    accepted_count
 }
 
 /// Performs one bounded daemon-owned inbox pass. It tries each locally known
