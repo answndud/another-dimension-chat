@@ -133,6 +133,10 @@ pub struct IdentityView {
     pub display_name: String,
 }
 
+fn mls_device_credential(account_id: &str, device_id: &str) -> Vec<u8> {
+    format!("ADDEVICE1\n{account_id}\n{device_id}").into_bytes()
+}
+
 pub struct InviteAuthority {
     root: Option<AccountRootKey>,
     account_id: String,
@@ -1699,6 +1703,65 @@ pub fn handle_request_with_context(
                 Err(error) => pairing_error(error),
             }
         }
+        ("POST", "/local-api/session/remove-device") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "device_unavailable", None, None);
+            };
+            if authority.root.is_none() {
+                return response(
+                    403,
+                    "root_authority_unavailable",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            let Some(account_id) = json_string(request.body, "account_id") else {
+                return response(400, "account_id_required", None, Some("application/json"));
+            };
+            let Some(device_id) = json_string(request.body, "device_id") else {
+                return response(400, "device_id_required", None, Some("application/json"));
+            };
+            if account_id != authority.account_id {
+                return response(
+                    422,
+                    "device_account_mismatch",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            let commits = match catalog
+                .remove_device(&mls_device_credential(&account_id, &device_id), store)
+            {
+                Ok(commits) => commits,
+                Err(error) => return catalog_error(error),
+            };
+            let payload = commits
+                .iter()
+                .map(|(conversation_id, commit)| {
+                    format!(
+                        r##"{{"conversation_id":"{}","commit":"{}"}}"##,
+                        json_escape(conversation_id),
+                        hex_bytes(commit)
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(",");
+            response(
+                200,
+                &format!(r##"{{"removed":true,"commits":[{}]}}"##, payload),
+                None,
+                Some("application/json"),
+            )
+        }
         ("POST", "/local-api/session/create") => {
             if let Err(reply) = authorize_api(bridge, &request, now) {
                 return reply;
@@ -1720,7 +1783,7 @@ pub fn handle_request_with_context(
             };
             match catalog.create(
                 conversation_id,
-                identity.account_id.as_bytes().to_vec(),
+                mls_device_credential(&identity.account_id, &identity.device_id),
                 store,
             ) {
                 Ok(()) => response(201, r##"{"created":true}"##, None, Some("application/json")),
@@ -1743,7 +1806,10 @@ pub fn handle_request_with_context(
             let Some(catalog) = session_catalog.as_deref_mut() else {
                 return response(503, "session_unavailable", None, None);
             };
-            match catalog.prepare(conversation_id, identity.account_id.as_bytes().to_vec()) {
+            match catalog.prepare(
+                conversation_id,
+                mls_device_credential(&identity.account_id, &identity.device_id),
+            ) {
                 Ok(key_package) => response(
                     200,
                     &format!(r##"{{"key_package":"{}"}}"##, hex_bytes(&key_package)),
@@ -1777,7 +1843,7 @@ pub fn handle_request_with_context(
             };
             match catalog.join(
                 conversation_id,
-                identity.account_id.as_bytes().to_vec(),
+                mls_device_credential(&identity.account_id, &identity.device_id),
                 &welcome,
                 store,
             ) {

@@ -264,6 +264,25 @@ impl MlsSessionCatalog {
             .map_err(Into::into)
     }
 
+    /// Remove every matching device leaf and return the authenticated MLS
+    /// commit for each changed conversation. The caller is responsible for
+    /// delivering those commits to the remaining members.
+    pub fn remove_device(
+        &mut self,
+        device_credential: &[u8],
+        store: &mut EncryptedStore,
+    ) -> Result<Vec<(String, Vec<u8>)>, SessionCatalogError> {
+        let mut commits = Vec::new();
+        for (conversation_id, session) in &mut self.sessions {
+            let Some(commit) = session.remove_member(device_credential)? else {
+                continue;
+            };
+            session.persist_or_poison(store, conversation_id)?;
+            commits.push((conversation_id.clone(), commit));
+        }
+        Ok(commits)
+    }
+
     pub fn send(
         &mut self,
         conversation_id: &str,
@@ -475,6 +494,32 @@ impl MlsSession {
         welcome
             .tls_serialize_detached()
             .map_err(|_| SessionError::InvalidWire)
+    }
+
+    fn remove_member(&mut self, device_credential: &[u8]) -> Result<Option<Vec<u8>>, SessionError> {
+        self.ensure_usable()?;
+        let group = self.group.as_mut().ok_or(SessionError::NotJoined)?;
+        let Some(member) = group
+            .members()
+            .find(|member| member.credential.serialized_content() == device_credential)
+        else {
+            return Ok(None);
+        };
+        let signer = SessionSigner {
+            crypto: self.provider.crypto(),
+            private_key: &self.private_signature_key,
+        };
+        let (commit, _, _) = group
+            .remove_members(&self.provider, &signer, &[member.index])
+            .map_err(|_| SessionError::OpenMls)?;
+        group
+            .merge_pending_commit(&self.provider)
+            .map_err(|_| SessionError::OpenMls)?;
+        Ok(Some(
+            commit
+                .tls_serialize_detached()
+                .map_err(|_| SessionError::InvalidWire)?,
+        ))
     }
 
     pub fn join(&mut self, welcome_wire: &[u8]) -> Result<(), SessionError> {
@@ -829,6 +874,21 @@ mod tests {
         let session =
             MlsSession::new_with_signature_key(b"linked-device".to_vec(), [79; 32]).unwrap();
         assert!(!session.key_package().unwrap().is_empty());
+    }
+
+    #[test]
+    fn device_member_can_be_removed_with_an_authenticated_commit() {
+        let mut alice = MlsSession::new(b"ADDEVICE1\nalice\nroot".to_vec()).unwrap();
+        let mut bob = MlsSession::new(b"ADDEVICE1\nalice\nphone".to_vec()).unwrap();
+        alice.create_group().unwrap();
+        let welcome = alice.add_member(&bob.key_package().unwrap()).unwrap();
+        bob.join(&welcome).unwrap();
+        let commit = alice
+            .remove_member(b"ADDEVICE1\nalice\nphone")
+            .unwrap()
+            .unwrap();
+        assert_eq!(bob.decrypt(&commit), Err(SessionError::UnsupportedMessage));
+        assert!(bob.encrypt(b"after removal").is_err());
     }
 
     #[test]

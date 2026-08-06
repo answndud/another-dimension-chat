@@ -202,6 +202,10 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ link_request: linkRequest, code }),
     }),
+    removeDeviceFromSessions: (accountId, deviceId) => request("/local-api/session/remove-device", {
+      method: "POST",
+      body: JSON.stringify({ account_id: accountId, device_id: deviceId }),
+    }),
     setContactAlias: (accountId, alias) => request("/local-api/contacts/alias", {
       method: "POST",
       body: JSON.stringify({ account_id: accountId, alias }),
