@@ -309,6 +309,12 @@ impl InviteAuthority {
         self.completed_attachments.remove(blob_id)
     }
 
+    fn cancel_attachment(&mut self, blob_id: &str) -> bool {
+        self.attachment_jobs.remove(blob_id).is_some()
+            || self.completed_attachments.remove(blob_id).is_some()
+            || self.received_attachments.remove(blob_id).is_some()
+    }
+
     fn register_received_attachment(
         &mut self,
         attachment_id: &str,
@@ -1729,6 +1735,24 @@ pub fn handle_request_with_context(
                     complete,
                     hex_bytes(&plaintext)
                 ),
+                None,
+                Some("application/json"),
+            )
+        }
+        ("POST", "/local-api/attachment/cancel") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority.as_deref_mut() else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let Some(blob_id) = json_string(request.body, "blob_id") else {
+                return response(400, "invalid_attachment_id", None, Some("application/json"));
+            };
+            let cancelled = authority.cancel_attachment(blob_id);
+            response(
+                200,
+                &format!(r##"{{"cancelled":{cancelled}}}"##),
                 None,
                 Some("application/json"),
             )

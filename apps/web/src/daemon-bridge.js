@@ -162,6 +162,10 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ attachment_id: attachmentId, inbox_url: inboxUrl, index }),
     }),
+    cancelAttachment: (blobId) => request("/local-api/attachment/cancel", {
+      method: "POST",
+      body: JSON.stringify({ blob_id: blobId }),
+    }),
     postDelivery: (inboxUrl, ciphertext, expiresAt) => request("/local-api/delivery/post", {
       method: "POST",
       body: JSON.stringify({ inbox_url: inboxUrl, ciphertext, expires_at: expiresAt }),
