@@ -286,11 +286,9 @@ function bindDaemonSession() {
       await bridge.appendAttachment(blobId, index, encodeHex(bytes));
       progress(`파일 청크 ${index + 1} 암호화 중`, Math.floor((Math.min(offset + bytes.length, file.size) / file.size) * 60));
     }
-    const finished = await bridge.finishAttachment(blobId);
-    await bridge.uploadCompletedAttachment(inboxUrl, blobId);
-    progress("암호화 blob relay 업로드 완료", 80);
-    const encrypted = await bridge.sendAttachment(conversationId, finished.descriptor);
-    const accepted = await bridge.postDelivery(inboxUrl, encrypted.ciphertext, Math.floor(Date.now() / 1000) + 3600);
+    await bridge.finishAttachment(blobId);
+    progress("daemon이 암호화 blob을 relay로 전송 중", 80);
+    const accepted = await bridge.sendCompletedAttachment(conversationId, inboxUrl, blobId);
     state.daemonPeerInboxUrl = inboxUrl;
     state.daemonDeliveryDigest = accepted.digest || "";
     state.daemonDeliveryState = accepted.state || "relay-accepted";

@@ -150,6 +150,10 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ blob_id: blobId }),
     }),
+    sendCompletedAttachment: (conversationId, inboxUrl, blobId) => request("/local-api/attachment/send", {
+      method: "POST",
+      body: JSON.stringify({ conversation_id: conversationId, inbox_url: inboxUrl, blob_id: blobId }),
+    }),
     uploadCompletedAttachment: (inboxUrl, blobId) => request("/local-api/attachment/upload-completed", {
       method: "POST",
       body: JSON.stringify({ inbox_url: inboxUrl, blob_id: blobId }),

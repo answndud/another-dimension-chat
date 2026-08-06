@@ -292,16 +292,15 @@ impl InviteAuthority {
     fn attachment_finish(
         &mut self,
         blob_id: &str,
-    ) -> Result<AttachmentDescriptor, crate::attachment::AttachmentError> {
+    ) -> Result<(), crate::attachment::AttachmentError> {
         let package = self
             .attachment_jobs
             .remove(blob_id)
             .ok_or(crate::attachment::AttachmentError::InvalidManifest)?
             .finish()?;
-        let descriptor = package.descriptor.clone();
         self.completed_attachments
             .insert(blob_id.to_owned(), package);
-        Ok(descriptor)
+        Ok(())
     }
 
     fn take_completed_attachment(&mut self, blob_id: &str) -> Option<EncryptedAttachment> {
@@ -1441,15 +1440,12 @@ pub fn handle_request_with_context(
                 return response(400, "invalid_blob_id", None, Some("application/json"));
             };
             match authority.attachment_finish(&blob_id) {
-                Ok(descriptor) => match serde_json::to_string(&descriptor) {
-                    Ok(payload) => response(
-                        200,
-                        &format!(r##"{{"finished":true,"descriptor":{payload}}}"##),
-                        None,
-                        Some("application/json"),
-                    ),
-                    Err(_) => response(503, "descriptor_unavailable", None, None),
-                },
+                Ok(_) => response(
+                    200,
+                    r##"{"finished":true}"##,
+                    None,
+                    Some("application/json"),
+                ),
                 Err(_) => response(
                     409,
                     "attachment_not_complete",
@@ -1457,6 +1453,132 @@ pub fn handle_request_with_context(
                     Some("application/json"),
                 ),
             }
+        }
+        ("POST", "/local-api/attachment/send") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(conversation_id) = json_string(request.body, "conversation_id") else {
+                return response(400, "invalid_conversation", None, Some("application/json"));
+            };
+            let Some(inbox_url) = json_string(request.body, "inbox_url") else {
+                return response(400, "invalid_inbox_url", None, Some("application/json"));
+            };
+            let Some(blob_id) = json_string(request.body, "blob_id") else {
+                return response(400, "invalid_blob_id", None, Some("application/json"));
+            };
+            let Some(authority) = invite_authority.as_deref_mut() else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let Some(endpoint) =
+                RelayEndpoint::from_inbox_url_with_pin(inbox_url, authority.relay_tls_pin).ok()
+            else {
+                return response(
+                    422,
+                    "unsupported_relay_endpoint",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(package) = authority.completed_attachments.get(blob_id) else {
+                return response(404, "attachment_not_found", None, Some("application/json"));
+            };
+            let client = RelayClient::new(endpoint.clone());
+            for (index, chunk) in package
+                .blob
+                .chunks(crate::attachment::CHUNK_SIZE)
+                .enumerate()
+            {
+                let offset = index * crate::attachment::CHUNK_SIZE;
+                if client
+                    .upload_blob_chunk_blocking(blob_id, offset, package.blob.len(), chunk)
+                    .is_err()
+                {
+                    return response(503, "relay_unavailable", None, Some("application/json"));
+                }
+            }
+            let descriptor = package.descriptor.clone();
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            let Ok(ciphertext) = catalog.send_attachment(conversation_id, &descriptor, store)
+            else {
+                return response(
+                    409,
+                    "attachment_session_failed",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Ok(expires_at) = now.checked_add(3600).ok_or(()) else {
+                return response(422, "invalid_expiry", None, Some("application/json"));
+            };
+            let Ok(envelope) =
+                RelayEnvelope::create(&endpoint.capability, &ciphertext, expires_at, now)
+            else {
+                return response(
+                    422,
+                    "invalid_delivery_envelope",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Ok(digest) = envelope.digest() else {
+                return response(
+                    422,
+                    "invalid_delivery_envelope",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Ok(wire) = envelope.to_wire() else {
+                return response(
+                    422,
+                    "invalid_delivery_envelope",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(ledger) = delivery_ledger.as_deref_mut() else {
+                return response(503, "delivery_unavailable", None, None);
+            };
+            if ledger
+                .register_encrypted_with_wire(digest.clone(), Some(wire))
+                .is_err()
+            {
+                return response(409, "duplicate_delivery", None, Some("application/json"));
+            }
+            let accepted = match client.post_blocking(&envelope) {
+                Ok(value) => value,
+                Err(_) => {
+                    let _ = ledger.schedule_retry(&digest, now);
+                    let _ = ledger.persist(store);
+                    return response(503, "relay_unavailable", None, Some("application/json"));
+                }
+            };
+            let _ = ledger.bind_relay_id(&digest, &accepted.id);
+            let _ = ledger.transition(&digest, crate::delivery::DeliveryState::Queued);
+            let _ = ledger.transition(&digest, crate::delivery::DeliveryState::RelayAccepted);
+            if ledger.persist(store).is_err() {
+                return response(503, "storage_unavailable", None, None);
+            }
+            authority.take_completed_attachment(blob_id);
+            response(
+                202,
+                &format!(
+                    r##"{{"accepted":true,"id":"{}","digest":"{}","state":"relay-accepted"}}"##,
+                    json_escape(&accepted.id),
+                    json_escape(&digest)
+                ),
+                None,
+                Some("application/json"),
+            )
         }
         ("POST", "/local-api/attachment/upload-completed") => {
             if let Err(reply) = authorize_api(bridge, &request, now) {
