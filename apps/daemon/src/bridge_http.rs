@@ -2658,7 +2658,7 @@ fn parse_request(raw: &[u8]) -> Result<Request<'_>, ()> {
         headers.push((key.trim(), value.trim()));
     }
     let body = &raw[separator + 4..];
-    if body.len() > 8 * 1024 {
+    if body.len() > MAX_REQUEST_BYTES {
         return Err(());
     }
     Ok(Request {

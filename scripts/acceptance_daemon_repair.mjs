@@ -13,6 +13,10 @@ const daemonBinary = process.env.AD_DAEMON_BINARY || "target/debug/another-dimen
 const passphrase = "acceptance-only-passphrase";
 const useTls = process.env.AD_ACCEPTANCE_TLS === "1";
 
+function hex(value) {
+  return Buffer.from(value).toString("hex");
+}
+
 function httpCall(origin, method, path, body, headers = {}) {
   const url = new URL(path, origin);
   return new Promise((resolve, reject) => {
@@ -224,6 +228,51 @@ try {
   const metadata = await bob.api("GET", "/local-api/contacts");
   assert.equal(metadata.body.contacts[0].last_message_preview, "repair-flow");
 
+  const attachmentBytes = Buffer.concat([Buffer.from("attachment-"), Buffer.alloc(70_000, 0x41)]);
+  const attachmentId = "f".repeat(32);
+  assert.equal((await alice.api("POST", "/local-api/attachment/start", {
+    blob_id: attachmentId,
+    total: attachmentBytes.length,
+    file_name: "evidence.txt",
+    media_type: "text/plain",
+  })).status, 201);
+  const attachmentChunkSize = 64 * 1024;
+  for (let index = 0, offset = 0; offset < attachmentBytes.length; index += 1, offset += attachmentChunkSize) {
+    const chunk = attachmentBytes.subarray(offset, Math.min(offset + attachmentChunkSize, attachmentBytes.length));
+    assert.equal((await alice.api("POST", "/local-api/attachment/append", {
+      blob_id: attachmentId,
+      index,
+      plaintext: chunk.toString("hex"),
+    })).status, 202);
+  }
+  assert.equal((await alice.api("POST", "/local-api/attachment/finish", { blob_id: attachmentId })).status, 200);
+  const attachmentPosted = await alice.api("POST", "/local-api/attachment/send", {
+    conversation_id: conversationId,
+    inbox_url: bob.inboxUrl,
+    blob_id: attachmentId,
+  });
+  assert.equal(attachmentPosted.status, 202, JSON.stringify(attachmentPosted.body));
+  const attachmentReceived = await bob.api("POST", "/local-api/delivery/sync", { conversation_id: conversationId, inbox_url: bob.inboxUrl });
+  assert.equal(attachmentReceived.status, 200, JSON.stringify(attachmentReceived.body));
+  const attachmentMessage = attachmentReceived.body.messages.find((message) => message.attachment_id);
+  assert.ok(attachmentMessage?.attachment_id, JSON.stringify(attachmentReceived.body));
+  const downloaded = [];
+  for (let index = 0; ; index += 1) {
+    const chunk = await bob.api("POST", "/local-api/attachment/download-chunk", {
+      attachment_id: attachmentMessage.attachment_id,
+      inbox_url: bob.inboxUrl,
+      index,
+    });
+    assert.equal(chunk.status, 200, JSON.stringify(chunk.body));
+    downloaded.push(Buffer.from(chunk.body.plaintext, "hex"));
+    if (chunk.body.complete) {
+      assert.equal(chunk.body.file_name, "evidence.txt");
+      assert.equal(chunk.body.media_type, "text/plain");
+      break;
+    }
+  }
+  assert.deepEqual(Buffer.concat(downloaded), attachmentBytes);
+
   const oldAliceInbox = alice.inboxUrl;
   const rotation = await relayApi(relayA, "POST", "/api/v1/inbox/rotate", undefined, { "x-ad-local-access": relayA.localAccessCapability });
   assert.equal(rotation.status, 200);
@@ -235,7 +284,7 @@ try {
   assert.equal(failed.body.raw, "relay_capability_expired", JSON.stringify(failed.body));
   const pairing = await bob.api("GET", "/local-api/pairing/status");
   assert.equal(pairing.body.state, "rejected");
-  console.log("daemon repair acceptance passed: two daemons -> bidirectional pairing -> OpenMLS message -> relay rotation -> trust revocation");
+  console.log("daemon repair acceptance passed: two daemons -> pairing -> OpenMLS text + attachment -> daemon decrypt/download -> relay rotation -> trust revocation");
 } finally {
   for (const daemon of [alice, bob]) daemon?.child.kill("SIGTERM");
   for (const relay of [relayA, relayB]) await closeRelay(relay);

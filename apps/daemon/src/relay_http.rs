@@ -476,7 +476,7 @@ impl RelayClient {
         offset: usize,
         length: usize,
     ) -> Result<Vec<u8>, RelayError> {
-        if length == 0 || length > crate::attachment::CHUNK_SIZE {
+        if length == 0 || length > crate::attachment::CHUNK_SIZE + 16 {
             return Err(RelayError::InvalidResponse);
         }
         let path = self.blob_path(blob_id)?;
@@ -489,7 +489,7 @@ impl RelayClient {
             &path,
             &[],
             &headers,
-            crate::attachment::CHUNK_SIZE,
+            crate::attachment::CHUNK_SIZE + 16 + 4096,
         )?;
         if !(200..300).contains(&status) {
             return Err(RelayError::Rejected(status));
