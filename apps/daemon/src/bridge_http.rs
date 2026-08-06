@@ -2782,6 +2782,9 @@ pub fn handle_request_with_context(
                     if let Some(authority) = invite_authority.as_deref_mut() {
                         authority.clear_attachment_state();
                     }
+                    if let Some(store) = session_store.as_deref_mut() {
+                        store.lock();
+                    }
                     bridge.invalidate_session();
                     response(
                         200,

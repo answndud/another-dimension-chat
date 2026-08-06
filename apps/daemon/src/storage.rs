@@ -81,6 +81,7 @@ pub enum StorageError {
     RecordTooLarge,
     TooManyRecords,
     OsKeyStoreUnavailable,
+    Locked,
 }
 
 impl fmt::Display for StorageError {
@@ -97,6 +98,7 @@ impl fmt::Display for StorageError {
             Self::OsKeyStoreUnavailable => {
                 "OS key store is unavailable; refusing insecure fallback"
             }
+            Self::Locked => "encrypted storage is locked",
         })
     }
 }
@@ -195,6 +197,7 @@ pub struct EncryptedStore {
     salt: [u8; SALT_BYTES],
     revision: u64,
     records: BTreeMap<(RecordClass, String), Vec<u8>>,
+    locked: bool,
 }
 
 impl fmt::Debug for EncryptedStore {
@@ -244,6 +247,7 @@ impl EncryptedStore {
             salt,
             revision: 0,
             records: BTreeMap::new(),
+            locked: false,
         };
         store.persist()?;
         Ok(store)
@@ -297,6 +301,7 @@ impl EncryptedStore {
             salt: parsed.salt,
             revision: parsed.revision,
             records,
+            locked: false,
         };
         if read_marker(&store.marker_path)?
             .map(|marker| marker < store.revision)
@@ -311,6 +316,15 @@ impl EncryptedStore {
         self.revision
     }
 
+    pub fn lock(&mut self) {
+        for value in self.records.values_mut() {
+            value.zeroize();
+        }
+        self.records.clear();
+        self.key.zeroize();
+        self.locked = true;
+    }
+
     /// Re-encrypts every record under a freshly derived key and salt without
     /// exposing plaintext outside this process. The destination must not
     /// exist; callers can atomically replace the active store afterwards.
@@ -319,6 +333,9 @@ impl EncryptedStore {
         destination: impl AsRef<Path>,
         new_passphrase: &str,
     ) -> Result<(), StorageError> {
+        if self.locked {
+            return Err(StorageError::Locked);
+        }
         let mut replacement = Self::initialize(destination, new_passphrase)?;
         let mutations = self
             .records
@@ -329,6 +346,9 @@ impl EncryptedStore {
     }
 
     pub fn put(&mut self, class: RecordClass, key: &str, value: &[u8]) -> Result<(), StorageError> {
+        if self.locked {
+            return Err(StorageError::Locked);
+        }
         validate_record_key(key)?;
         if value.len() > MAX_VALUE_BYTES {
             return Err(StorageError::RecordTooLarge);
@@ -351,10 +371,16 @@ impl EncryptedStore {
     }
 
     pub fn get(&self, class: RecordClass, key: &str) -> Option<Vec<u8>> {
+        if self.locked {
+            return None;
+        }
         self.records.get(&(class, key.to_string())).cloned()
     }
 
     pub fn records_with_prefix(&self, class: RecordClass, prefix: &str) -> Vec<(String, Vec<u8>)> {
+        if self.locked {
+            return Vec::new();
+        }
         self.records
             .iter()
             .filter(|((record_class, key), _)| *record_class == class && key.starts_with(prefix))
@@ -365,6 +391,9 @@ impl EncryptedStore {
     /// Applies a protocol-state batch as one encrypted store revision. This is
     /// the transaction boundary a future MLS StorageProvider adapter must use.
     pub fn apply_batch(&mut self, mutations: &[RecordMutation]) -> Result<(), StorageError> {
+        if self.locked {
+            return Err(StorageError::Locked);
+        }
         let previous = self.records.clone();
         for mutation in mutations {
             match mutation {
@@ -389,6 +418,9 @@ impl EncryptedStore {
     }
 
     pub fn delete(&mut self, class: RecordClass, key: &str) -> Result<bool, StorageError> {
+        if self.locked {
+            return Err(StorageError::Locked);
+        }
         let previous = self.records.remove(&(class, key.to_string()));
         if previous.is_none() {
             return Ok(false);
@@ -402,10 +434,16 @@ impl EncryptedStore {
     }
 
     pub fn record_count(&self) -> usize {
+        if self.locked {
+            return 0;
+        }
         self.records.len()
     }
 
     fn commit(&mut self) -> Result<(), StorageError> {
+        if self.locked {
+            return Err(StorageError::Locked);
+        }
         if self.records.len() > MAX_RECORDS {
             return Err(StorageError::TooManyRecords);
         }
@@ -737,6 +775,25 @@ mod tests {
         assert!(!bytes
             .windows(b"private-root-material".len())
             .any(|window| window == b"private-root-material"));
+        fs::remove_file(&path).unwrap();
+        fs::remove_file(format!("{}.revision", path.display())).unwrap();
+    }
+
+    #[test]
+    fn lock_zeroizes_in_memory_records_and_refuses_further_mutation() {
+        let path = temp_path("locked-store");
+        let mut store = EncryptedStore::initialize(&path, "correct horse battery staple").unwrap();
+        store
+            .put(RecordClass::Message, "message-1", b"secret")
+            .unwrap();
+        store.lock();
+        assert_eq!(store.get(RecordClass::Message, "message-1"), None);
+        assert_eq!(store.record_count(), 0);
+        assert_eq!(
+            store.put(RecordClass::Message, "message-2", b"secret"),
+            Err(StorageError::Locked)
+        );
+        drop(store);
         fs::remove_file(&path).unwrap();
         fs::remove_file(format!("{}.revision", path.display())).unwrap();
     }

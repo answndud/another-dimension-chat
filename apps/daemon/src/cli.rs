@@ -81,6 +81,7 @@ pub fn needs_passphrase(args: &[String]) -> bool {
             ),
             (Some("recovery"), Some("rotate"))
         )
+        || matches!(args.first().map(String::as_str), Some("wipe"))
 }
 
 pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError> {
@@ -118,6 +119,12 @@ pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError
             args,
             passphrase.ok_or_else(|| {
                 CliError::Usage("device command requires the profile passphrase from stdin".into())
+            })?,
+        ),
+        "wipe" => wipe(
+            args,
+            passphrase.ok_or_else(|| {
+                CliError::Usage("wipe requires the profile passphrase from stdin".into())
             })?,
         ),
         "invite" | "contact" | "update" | "rollback" => Err(CliError::Unsupported(args[0].clone())),
@@ -324,6 +331,23 @@ fn identity_show(args: &[String], passphrase: &str) -> Result<String, CliError> 
     Ok(format!(
         "account_id: {}\ndevice_id: {}\ndisplay_name: {}\nrelay: none configured",
         summary.account_id, summary.device_id, summary.display_name
+    ))
+}
+
+fn wipe(args: &[String], passphrase: &str) -> Result<String, CliError> {
+    let data_dir = data_dir(args)?;
+    let store = open_store(&data_dir, passphrase)?;
+    drop(store);
+    let store_path = store_path(&data_dir);
+    let revision_path = revision_path(&data_dir);
+    if !store_path.is_file() || !revision_path.is_file() {
+        return Err(CliError::NotInitialized);
+    }
+    fs::remove_file(&store_path)?;
+    fs::remove_file(&revision_path)?;
+    Ok(format!(
+        "local daemon store deleted: {}\nrelay-side blobs, exported backups, OS/SSD remnants, and browser caches are not deleted",
+        data_dir.display()
     ))
 }
 
@@ -837,7 +861,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CliError> {
     Ok(())
 }
 fn help_text() -> String {
-    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery inspect --input PATH [--data-dir PATH]\n  recovery rotate --data-dir PATH  # stdin: old passphrase\\nnew passphrase\n  recovery import --input PATH [--data-dir PATH]\n\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\nPassphrases are read from stdin and are never accepted as arguments.".into()
+    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery inspect --input PATH [--data-dir PATH]\n  recovery rotate --data-dir PATH  # stdin: old passphrase\\nnew passphrase\n  recovery import --input PATH [--data-dir PATH]\n  wipe --data-dir PATH              # irreversible local store deletion\n\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\nPassphrases are read from stdin and are never accepted as arguments.".into()
 }
 
 #[cfg(test)]
