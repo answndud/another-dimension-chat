@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
-import { chmod, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import Database from "better-sqlite3";
 import { request } from "node:http";
 import { connect } from "node:net";
@@ -128,6 +128,34 @@ test("relay stores only opaque resumable encrypted blobs with bounded TTL", asyn
   assert.deepEqual((await binaryCall(port, "GET", `/api/v1/blobs/${blobId}`, undefined, auth)).body, Buffer.from("encrypt"));
   assert.equal((await binaryCall(port, "POST", `/api/v1/blobs/${blobId}`, Buffer.from("x"), { ...auth, "x-ad-blob-offset": "0", "x-ad-blob-total": "7" })).status, 409);
   await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("relay removes orphan blob files during startup cleanup", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const blobDir = join(dataDir, "blobs");
+  await mkdir(blobDir);
+  await writeFile(join(blobDir, `${"b".repeat(32)}.blob`), "orphan", { mode: 0o600 });
+  await writeFile(join(blobDir, `${"c".repeat(32)}.meta.json`), JSON.stringify({ version: 1, total: 3, received: 3, complete: true, expiresAt: Date.now() + 60_000 }), { mode: 0o600 });
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
+  assert.deepEqual(await readdir(blobDir), []);
+  await runtime.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("sqlite relay serializes concurrent enqueue and acknowledgement", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
+  await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
+  const port = runtime.server.address().port;
+  const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
+  const accepted = await Promise.all(Array.from({ length: 6 }, (_, index) => call(port, "POST", inboxPath, { envelope: `ADENVWEB1.concurrent-${index}` })));
+  assert.equal(accepted.filter((response) => response.status === 202).length, 6);
+  const listed = await call(port, "GET", inboxPath, undefined, localHeaders(runtime));
+  assert.equal(listed.body.items.length, 6);
+  const ack = await call(port, "POST", `${inboxPath}/ack`, { ids: listed.body.items.map((item) => item.id) }, localHeaders(runtime));
+  assert.equal(ack.body.acknowledged, 6);
+  await runtime.close();
   await rm(dataDir, { recursive: true, force: true });
 });
 

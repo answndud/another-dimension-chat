@@ -336,17 +336,26 @@ export async function createLocalServer({
   const blobDir = join(dataDir, "blobs");
   await ensurePrivateDirectory(blobDir);
   const purgeBlobs = async () => {
-    for (const name of await readdir(blobDir)) {
+    const names = await readdir(blobDir);
+    const nameSet = new Set(names);
+    for (const name of names) {
+      if (name.endsWith(".blob") && !nameSet.has(`${name.slice(0, -5)}.meta.json`)) {
+        await unlink(join(blobDir, name)).catch(() => {});
+        continue;
+      }
       if (!name.endsWith(".meta.json")) continue;
       const metaFile = join(blobDir, name);
+      const blobFile = join(blobDir, name.replace(/\.meta\.json$/, ".blob"));
       try {
         const meta = JSON.parse(await readFile(metaFile, "utf8"));
-        if (!Number.isSafeInteger(meta.expiresAt) || meta.expiresAt <= Date.now()) {
+        const blobExists = await stat(blobFile).then(() => true).catch(() => false);
+        if (!blobExists || !Number.isSafeInteger(meta.expiresAt) || meta.expiresAt <= Date.now()) {
           await unlink(metaFile).catch(() => {});
-          await unlink(join(blobDir, name.replace(/\.meta\.json$/, ".blob"))).catch(() => {});
+          await unlink(blobFile).catch(() => {});
         }
       } catch {
         await unlink(metaFile).catch(() => {});
+        await unlink(blobFile).catch(() => {});
       }
     }
   };
@@ -385,6 +394,7 @@ export async function createLocalServer({
   });
   relayStore.purgeInbox(Date.now() - ttlMs);
   relayStore.purgeInviteCodes(Date.now());
+  relayStore.trimInbox(MAX_INBOX_ITEMS);
   let inbox = relayStore.listInbox();
   let inviteCodes = relayStore.listInviteCodes();
   inviteCodes = purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS);

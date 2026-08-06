@@ -193,6 +193,7 @@ export async function createSqliteRelayStore({
   const listInviteCodes = (now = Date.now()) => db.prepare("SELECT version, code_hash AS codeHash, invite, invite_digest AS inviteDigest, created_at AS createdAt, expires_at AS expiresAt FROM relay_invite_codes WHERE expires_at > ? ORDER BY created_at ASC, code_hash ASC").all(now);
   const purgeInbox = db.prepare("DELETE FROM relay_inbox WHERE received_at < ?");
   const purgeInviteCodes = db.prepare("DELETE FROM relay_invite_codes WHERE expires_at <= ?");
+  const trimInbox = db.prepare("DELETE FROM relay_inbox WHERE id NOT IN (SELECT id FROM relay_inbox ORDER BY received_at DESC, id DESC LIMIT ?)");
   const replaceInbox = db.transaction((items) => {
     db.exec("DELETE FROM relay_inbox");
     const insert = db.prepare("INSERT OR IGNORE INTO relay_inbox (id, envelope, received_at) VALUES (?, ?, ?)");
@@ -208,6 +209,7 @@ export async function createSqliteRelayStore({
     listInviteCodes,
     purgeInbox: (cutoff) => purgeInbox.run(cutoff),
     purgeInviteCodes: (now) => purgeInviteCodes.run(now),
+    trimInbox: (limit) => trimInbox.run(limit),
     replaceInbox(items) {
       beforeCommit?.("inbox");
       replaceInbox(items);
