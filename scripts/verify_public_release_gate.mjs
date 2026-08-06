@@ -27,6 +27,7 @@ const boundary = await loadProductBoundary(root);
 const required = boundary.requiredReleaseFiles;
 for (const file of required) await access(path.join(root, file), constants.R_OK);
 await access(path.join(root, "runtime/node"), constants.X_OK);
+await access(path.join(root, "bin/another-dimension-daemon"), constants.X_OK);
 await verifyWebArtifact(path.join(root, "apps/web/dist"));
 const releaseEntries = [];
 const walk = async (dir, prefix = "") => {

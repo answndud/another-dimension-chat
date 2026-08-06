@@ -30,6 +30,7 @@
     "apps/web/dist/asset-integrity.json",
     "apps/server/server.mjs",
     "runtime/node",
+    "bin/another-dimension-daemon",
     "scripts/update_local_server.sh",
     "scripts/verify_install_state.mjs"
   ],
