@@ -569,9 +569,20 @@ export async function createLocalServer({
         try {
           const meta = JSON.parse(await readFile(metaFile, "utf8"));
           if (meta.expiresAt <= Date.now()) throw new Error("expired");
-          const body = await readFile(blobFile);
-          res.writeHead(200, { ...headers, "cache-control": "no-store", "content-type": "application/octet-stream", "content-length": body.length, "x-ad-blob-complete": String(meta.complete) });
-          res.end(body);
+          const requestedOffset = Number(req.headers["x-ad-blob-offset"] || 0);
+          const requestedLength = Number(req.headers["x-ad-blob-length"] || 0);
+          if (![requestedOffset, requestedLength].every(Number.isSafeInteger) || requestedOffset < 0 || requestedLength < 0 || requestedLength > MAX_BLOB_CHUNK_BYTES) throw new Error("invalid_blob_range");
+          const handle = await open(blobFile, "r");
+          try {
+            const size = (await handle.stat()).size;
+            if (requestedOffset > size) throw new Error("invalid_blob_range");
+            const length = requestedLength ? Math.min(requestedLength, size - requestedOffset) : size;
+            if (!requestedLength && length > MAX_BLOB_BYTES) throw new Error("blob_too_large");
+            const body = Buffer.alloc(length);
+            if (length) await handle.read(body, 0, length, requestedOffset);
+            res.writeHead(200, { ...headers, "cache-control": "no-store", "content-type": "application/octet-stream", "content-length": body.length, "x-ad-blob-offset": String(requestedOffset), "x-ad-blob-total": String(size), "x-ad-blob-complete": String(meta.complete) });
+            res.end(body);
+          } finally { await handle.close(); }
         } catch { json(res, 404, { error: "blob_not_found" }, headers); }
         return;
       }

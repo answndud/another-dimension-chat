@@ -344,6 +344,45 @@ pub fn decrypt_blob(
     )
 }
 
+pub fn decrypt_blob_chunk(
+    descriptor: &AttachmentDescriptor,
+    index: u32,
+    ciphertext: &[u8],
+) -> Result<Vec<u8>, AttachmentError> {
+    if descriptor.version != ATTACHMENT_VERSION
+        || descriptor.chunk_size as usize != CHUNK_SIZE
+        || descriptor.original_size == 0
+    {
+        return Err(AttachmentError::InvalidManifest);
+    }
+    let chunk = descriptor
+        .chunks
+        .get(index as usize)
+        .ok_or(AttachmentError::InvalidChunk)?;
+    if chunk.index != index
+        || chunk.ciphertext_size as usize != ciphertext.len()
+        || ciphertext.len() < 16
+        || ciphertext.len() > CHUNK_SIZE + 16
+    {
+        return Err(AttachmentError::InvalidChunk);
+    }
+    let nonce = decode_hex(&chunk.nonce).ok_or(AttachmentError::InvalidChunk)?;
+    if nonce.len() != 12 {
+        return Err(AttachmentError::InvalidChunk);
+    }
+    let cipher =
+        Aes256Gcm::new_from_slice(&descriptor.key.0).map_err(|_| AttachmentError::InvalidKey)?;
+    cipher
+        .decrypt(
+            Nonce::from_slice(&nonce),
+            aes_gcm::aead::Payload {
+                msg: ciphertext,
+                aad: &aad(index, descriptor.original_size),
+            },
+        )
+        .map_err(|_| AttachmentError::AuthenticationFailed)
+}
+
 pub fn deserialize(value: &str) -> Result<AttachmentManifest, AttachmentError> {
     serde_json::from_str(value).map_err(|_| AttachmentError::InvalidManifest)
 }
@@ -447,6 +486,21 @@ mod tests {
         assert_eq!(
             AttachmentJob::start(&"d".repeat(32), 0).unwrap_err(),
             AttachmentError::Empty
+        );
+    }
+
+    #[test]
+    fn individual_ciphertext_chunks_can_be_verified_and_decrypted() {
+        let package =
+            encrypt_for_blob(b"chunked", generate_key().unwrap(), &"e".repeat(32)).unwrap();
+        let chunk = &package.blob;
+        assert_eq!(
+            decrypt_blob_chunk(&package.descriptor, 0, chunk).unwrap(),
+            b"chunked"
+        );
+        assert_eq!(
+            decrypt_blob_chunk(&package.descriptor, 0, b"tampered"),
+            Err(AttachmentError::InvalidChunk)
         );
     }
 }

@@ -6,7 +6,7 @@ use crate::{
     contacts::{ContactDirectory, ContactDirectoryError},
     delivery::{DeliveryLedger, RelayEnvelope},
     identity::AccountRootKey,
-    mls_session::{MlsSessionCatalog, SessionCatalogError},
+    mls_session::{attachment_descriptor_from_plaintext, MlsSessionCatalog, SessionCatalogError},
     pairing::{PairingError, PairingSession},
     relay_http::{RelayClient, RelayEndpoint, RelayError},
     storage::{EncryptedStore, RecordClass, StorageError},
@@ -70,6 +70,7 @@ pub struct InviteAuthority {
     contacts: ContactDirectory,
     attachment_jobs: std::collections::BTreeMap<String, AttachmentJob>,
     completed_attachments: std::collections::BTreeMap<String, EncryptedAttachment>,
+    received_attachments: std::collections::BTreeMap<String, AttachmentDescriptor>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -261,6 +262,7 @@ impl InviteAuthority {
             contacts: ContactDirectory::new(),
             attachment_jobs: std::collections::BTreeMap::new(),
             completed_attachments: std::collections::BTreeMap::new(),
+            received_attachments: std::collections::BTreeMap::new(),
         }
     }
 
@@ -305,6 +307,25 @@ impl InviteAuthority {
 
     fn take_completed_attachment(&mut self, blob_id: &str) -> Option<EncryptedAttachment> {
         self.completed_attachments.remove(blob_id)
+    }
+
+    fn register_received_attachment(
+        &mut self,
+        attachment_id: &str,
+        descriptor: AttachmentDescriptor,
+    ) {
+        self.received_attachments
+            .insert(attachment_id.to_owned(), descriptor);
+    }
+
+    fn received_attachment(&self, attachment_id: &str) -> Option<&AttachmentDescriptor> {
+        self.received_attachments.get(attachment_id)
+    }
+
+    fn clear_attachment_state(&mut self) {
+        self.attachment_jobs.clear();
+        self.completed_attachments.clear();
+        self.received_attachments.clear();
     }
 
     pub fn restore_contacts(&mut self, store: &EncryptedStore) -> Result<(), StorageError> {
@@ -1631,6 +1652,87 @@ pub fn handle_request_with_context(
                 Some("application/json"),
             )
         }
+        ("POST", "/local-api/attachment/download-chunk") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            if !pairing_ready(invite_authority.as_deref()) {
+                return response(403, "pairing_not_ready", None, Some("application/json"));
+            }
+            let Some(authority) = invite_authority.as_deref() else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let Some(attachment_id) = json_string(request.body, "attachment_id") else {
+                return response(400, "invalid_attachment_id", None, Some("application/json"));
+            };
+            let Some(inbox_url) = json_string(request.body, "inbox_url") else {
+                return response(400, "invalid_inbox_url", None, Some("application/json"));
+            };
+            let Some(index) = json_u64(request.body, "index").and_then(|v| usize::try_from(v).ok())
+            else {
+                return response(
+                    400,
+                    "invalid_attachment_index",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(descriptor) = authority.received_attachment(attachment_id) else {
+                return response(404, "attachment_not_found", None, Some("application/json"));
+            };
+            let Some(chunk) = descriptor.chunks.get(index) else {
+                return response(
+                    416,
+                    "attachment_chunk_not_found",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let offset: usize = descriptor.chunks[..index]
+                .iter()
+                .map(|item| item.ciphertext_size as usize)
+                .sum();
+            let Ok(endpoint) =
+                RelayEndpoint::from_inbox_url_with_pin(inbox_url, authority.relay_tls_pin)
+            else {
+                return response(
+                    422,
+                    "unsupported_relay_endpoint",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Ok(ciphertext) = RelayClient::new(endpoint).download_blob_chunk_blocking(
+                &descriptor.blob_id,
+                offset,
+                chunk.ciphertext_size as usize,
+            ) else {
+                return response(503, "relay_unavailable", None, Some("application/json"));
+            };
+            let Ok(plaintext) =
+                crate::attachment::decrypt_blob_chunk(descriptor, index as u32, &ciphertext)
+            else {
+                return response(
+                    409,
+                    "attachment_verification_failed",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let complete = index + 1 == descriptor.chunks.len();
+            response(
+                200,
+                &format!(
+                    r##"{{"attachment_id":"{}","index":{},"complete":{},"plaintext":"{}"}}"##,
+                    json_escape(attachment_id),
+                    index,
+                    complete,
+                    hex_bytes(&plaintext)
+                ),
+                None,
+                Some("application/json"),
+            )
+        }
         ("POST", "/local-api/delivery/post") => {
             if let Err(reply) = authorize_api(bridge, &request, now) {
                 return reply;
@@ -2047,22 +2149,42 @@ pub fn handle_request_with_context(
                         return response(503, "storage_unavailable", None, None);
                     }
                 }
-                if let Some(authority) = invite_authority.as_deref_mut() {
-                    let _ = authority.record_contact_message(
-                        &conversation_id,
-                        &plaintext,
-                        now,
-                        background,
-                        store,
-                    );
+                let attachment = attachment_descriptor_from_plaintext(&plaintext);
+                if let Some(descriptor) = attachment {
+                    if let Some(authority) = invite_authority.as_deref_mut() {
+                        authority.register_received_attachment(&digest, descriptor);
+                        let _ = authority.record_contact_message(
+                            &conversation_id,
+                            b"[encrypted attachment]",
+                            now,
+                            background,
+                            store,
+                        );
+                    }
+                    messages.push(format!(
+                        r##"{{"id":"{}","digest":"{}","attachment_id":"{}"}}"##,
+                        json_escape(&relay_id),
+                        json_escape(&digest),
+                        json_escape(&digest)
+                    ));
+                } else {
+                    if let Some(authority) = invite_authority.as_deref_mut() {
+                        let _ = authority.record_contact_message(
+                            &conversation_id,
+                            &plaintext,
+                            now,
+                            background,
+                            store,
+                        );
+                    }
+                    messages.push(format!(
+                        r##"{{"id":"{}","digest":"{}","plaintext":"{}"}}"##,
+                        json_escape(&relay_id),
+                        json_escape(&digest),
+                        hex_bytes(&plaintext)
+                    ));
                 }
                 acknowledged_ids.push(relay_id.clone());
-                messages.push(format!(
-                    r##"{{"id":"{}","digest":"{}","plaintext":"{}"}}"##,
-                    json_escape(&relay_id),
-                    json_escape(&digest),
-                    hex_bytes(&plaintext)
-                ));
             }
             let acknowledged = if acknowledged_ids.is_empty() {
                 0
@@ -2185,6 +2307,9 @@ pub fn handle_request_with_context(
                 Ok(()) => {
                     if let Some(catalog) = session_catalog.as_deref_mut() {
                         catalog.lock();
+                    }
+                    if let Some(authority) = invite_authority.as_deref_mut() {
+                        authority.clear_attachment_state();
                     }
                     bridge.invalidate_session();
                     response(

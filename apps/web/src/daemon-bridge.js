@@ -158,6 +158,10 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ inbox_url: inboxUrl, blob_id: blobId }),
     }),
+    downloadAttachmentChunk: (attachmentId, inboxUrl, index) => request("/local-api/attachment/download-chunk", {
+      method: "POST",
+      body: JSON.stringify({ attachment_id: attachmentId, inbox_url: inboxUrl, index }),
+    }),
     postDelivery: (inboxUrl, ciphertext, expiresAt) => request("/local-api/delivery/post", {
       method: "POST",
       body: JSON.stringify({ inbox_url: inboxUrl, ciphertext, expires_at: expiresAt }),

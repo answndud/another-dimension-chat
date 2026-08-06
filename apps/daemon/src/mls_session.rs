@@ -28,6 +28,12 @@ const MAX_IDENTITY_BYTES: usize = 1024;
 const MAX_MESSAGE_BYTES: usize = 1024 * 1024;
 const MAX_WIRE_BYTES: usize = 4 * 1024 * 1024;
 const ATTACHMENT_MESSAGE_PREFIX: &[u8] = b"ADATT1.";
+
+pub fn attachment_descriptor_from_plaintext(plaintext: &[u8]) -> Option<AttachmentDescriptor> {
+    plaintext
+        .strip_prefix(ATTACHMENT_MESSAGE_PREFIX)
+        .and_then(|encoded| serde_json::from_slice(encoded).ok())
+}
 const DEFAULT_KEY_PACKAGE_LIFETIME_SECONDS: u64 = 7 * 24 * 60 * 60;
 const MAX_KEY_PACKAGE_LIFETIME_SECONDS: u64 = 7 * 24 * 60 * 60;
 

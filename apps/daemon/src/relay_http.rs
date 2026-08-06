@@ -470,6 +470,36 @@ impl RelayClient {
         Ok(response)
     }
 
+    pub fn download_blob_chunk_blocking(
+        &self,
+        blob_id: &str,
+        offset: usize,
+        length: usize,
+    ) -> Result<Vec<u8>, RelayError> {
+        if length == 0 || length > crate::attachment::CHUNK_SIZE {
+            return Err(RelayError::InvalidResponse);
+        }
+        let path = self.blob_path(blob_id)?;
+        let headers = [
+            ("X-Ad-Blob-Offset", offset.to_string()),
+            ("X-Ad-Blob-Length", length.to_string()),
+        ];
+        let (status, response) = self.request_blocking_with_headers(
+            "GET",
+            &path,
+            &[],
+            &headers,
+            crate::attachment::CHUNK_SIZE,
+        )?;
+        if !(200..300).contains(&status) {
+            return Err(RelayError::Rejected(status));
+        }
+        if response.len() > length {
+            return Err(RelayError::ResponseTooLarge);
+        }
+        Ok(response)
+    }
+
     async fn request(
         &self,
         method: &str,

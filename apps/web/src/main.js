@@ -162,6 +162,12 @@ function decodeHexText(value) {
   return new TextDecoder().decode(bytes);
 }
 
+function decodeHexBytes(value) {
+  const hex = String(value || "");
+  if (!hex || hex.length % 2 || !/^[0-9a-f]+$/i.test(hex)) throw new Error("데몬이 반환한 파일 청크 형식이 올바르지 않습니다.");
+  return Uint8Array.from(hex.match(/.{2}/g), (pair) => Number.parseInt(pair, 16));
+}
+
 function encodeHex(bytes) {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
@@ -181,7 +187,7 @@ function renderDaemonSessionPanel() {
   const conversationId = state.daemonConversationId || "";
   const timeline = [...state.daemonOutgoingMessages, ...state.daemonMessages];
   const receivedMessages = timeline.length
-    ? timeline.map((message) => `<article class="daemon-message ${message.direction === "outgoing" ? "outgoing" : "incoming"}"><p>${escapeHtml(message.text)}</p><small>${message.direction === "outgoing" ? "내 메시지" : "상대 메시지 · daemon 복호화 완료"} · ${escapeHtml(message.state || "decrypted")} · ${escapeHtml(message.id.slice(0, 12))}</small></article>`).join("")
+    ? timeline.map((message) => `<article class="daemon-message ${message.direction === "outgoing" ? "outgoing" : "incoming"}">${message.attachmentId ? `<p>암호화 첨부파일</p><button class="quiet daemon-attachment-download" data-daemon-attachment="${escapeHtml(message.attachmentId)}" type="button">파일 복호화·다운로드</button>` : `<p>${escapeHtml(message.text)}</p>`}<small>${message.direction === "outgoing" ? "내 메시지" : "상대 메시지 · daemon 복호화 완료"} · ${escapeHtml(message.state || "decrypted")} · ${escapeHtml(message.id.slice(0, 12))}</small></article>`).join("")
     : '<p class="field-note">아직 받은 메시지가 없습니다.</p>';
   const retryButton = state.daemonDeliveryState === "retryable" ? '<button id="daemon-delivery-retry" class="secondary" type="button">전달 다시 시도</button>' : "";
   return `<details class="daemon-session-tools"><summary>대화 세션 연결 및 메시지</summary><p class="field-note">브라우저는 평문 입력·출력만 담당하고 OpenMLS 키와 세션 상태는 데몬이 보관합니다.</p><label>대화 식별자<input id="daemon-conversation-id" value="${escapeHtml(conversationId)}" autocomplete="off" placeholder="새 대화 식별자"></label><div class="daemon-action-row"><button id="daemon-session-create" class="secondary" type="button">대화 만들기</button><button id="daemon-session-prepare" class="secondary" type="button">내 연결 자료 만들기</button></div><label>내 KeyPackage (상대 장치에 전달)<textarea id="daemon-key-package" readonly rows="3" placeholder="대화 만들기 후 생성됩니다">${escapeHtml(state.daemonKeyPackage)}</textarea></label><label>상대 장치의 Welcome<textarea id="daemon-welcome" rows="3" placeholder="상대 장치가 만든 Welcome을 붙여 넣으세요">${escapeHtml(state.daemonWelcome)}</textarea></label><button id="daemon-session-join" class="secondary" type="button">Welcome으로 참여</button><label>상대 장치의 KeyPackage<textarea id="daemon-peer-key-package" rows="3" placeholder="상대 장치의 KeyPackage를 붙여 넣으세요"></textarea></label><button id="daemon-session-add-member" class="secondary" type="button">상대 장치 추가</button><div class="daemon-divider"></div><label>메시지<textarea id="daemon-message" rows="3" placeholder="데몬이 암호화할 메시지"></textarea></label><label>상대방 inbox 주소<input id="daemon-peer-inbox-url" value="${escapeHtml(state.daemonPeerInboxUrl)}" autocomplete="off" placeholder="http://127.0.0.1:1421/api/v1/inbox/..."></label><button id="daemon-message-send" class="primary" type="button">암호화 후 릴레이로 보내기</button><section class="daemon-attachment"><h3>암호화 첨부파일</h3><p class="field-note">파일은 daemon에서 청크별 암호화됩니다. 브라우저와 relay에는 평문 파일이 저장되지 않습니다.</p><input id="daemon-attachment-file" type="file"><button id="daemon-attachment-send" class="secondary" type="button">파일 암호화·전송</button>${state.daemonAttachmentState ? `<p class="delivery-state" role="status">${escapeHtml(state.daemonAttachmentState)} · ${state.daemonAttachmentProgress}%</p><progress max="100" value="${state.daemonAttachmentProgress}">${state.daemonAttachmentProgress}%</progress>` : ""}</section>${state.daemonDeliveryState ? `<p class="delivery-state">전달 상태: <strong>${escapeHtml(state.daemonDeliveryState)}</strong>${state.daemonDeliveryDigest ? ` · ${escapeHtml(state.daemonDeliveryDigest.slice(0, 12))}` : ""}</p><button id="daemon-delivery-status" class="quiet" type="button">전달 상태 새로고침</button>${retryButton}` : ""}<label>생성된 암호문<textarea id="daemon-ciphertext" readonly rows="3" placeholder="daemon이 생성한 암호문">${escapeHtml(state.daemonCiphertext)}</textarea></label><section class="daemon-delivery"><h3>받은 메시지 동기화</h3><p class="field-note">릴레이에서 가져온 봉투는 daemon이 검증·복호화·저장한 뒤에만 이 목록에 표시됩니다.</p><label>내 inbox 주소<input id="daemon-inbox-url" value="${escapeHtml(state.daemonInboxUrl)}" autocomplete="off" placeholder="http://127.0.0.1:1421/api/v1/inbox/..."></label><button id="daemon-delivery-sync" class="secondary" type="button">받은 메시지 동기화</button><div class="daemon-message-list" aria-live="polite">${receivedMessages}</div></section><label>받은 암호문<textarea id="daemon-incoming-ciphertext" rows="3" placeholder="수동 복구용 암호문"></textarea></label><button id="daemon-message-receive" class="secondary" type="button">복호화하여 보기</button><label>복호화된 메시지<textarea id="daemon-plaintext" readonly rows="3" placeholder="복호화 결과">${escapeHtml(state.daemonPlaintext)}</textarea></label></details>`;
@@ -261,6 +267,24 @@ function bindDaemonSession() {
       direction: "outgoing",
     }];
   }, "메시지를 daemon에서 암호화하고 relay에 접수했습니다."));
+  document.querySelectorAll(".daemon-attachment-download").forEach((button) => button.addEventListener("click", () => run(async () => {
+    const attachmentId = button.dataset.daemonAttachment || "";
+    const inboxUrl = document.querySelector("#daemon-inbox-url")?.value.trim() || state.daemonInboxUrl;
+    if (!attachmentId || !inboxUrl) throw new Error("첨부파일 다운로드 정보가 없습니다.");
+    const chunks = [];
+    for (let index = 0; ; index += 1) {
+      const result = await bridge.downloadAttachmentChunk(attachmentId, inboxUrl, index);
+      chunks.push(decodeHexBytes(result.plaintext));
+      if (result.complete) break;
+    }
+    const blob = new Blob(chunks, { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "encrypted-attachment.bin";
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, "첨부파일을 daemon에서 검증·복호화해 다운로드했습니다.")));
   document.querySelector("#daemon-attachment-send")?.addEventListener("click", () => run(async () => {
     const conversationId = getConversationId();
     const file = document.querySelector("#daemon-attachment-file")?.files?.[0];
@@ -325,7 +349,8 @@ function bindDaemonSession() {
     const result = await bridge.syncDelivery(conversationId, inboxUrl);
     const received = (result.messages || []).map((message) => ({
       id: message.id || "수신 메시지",
-      text: decodeHexText(message.plaintext),
+      text: message.attachment_id ? "암호화 첨부파일" : decodeHexText(message.plaintext),
+      attachmentId: message.attachment_id || "",
       state: "decrypted",
       direction: "incoming",
     }));
@@ -829,7 +854,8 @@ async function receiveDaemonMessages(background = false) {
     const result = await bridge.syncDelivery(state.daemonConversationId, state.daemonInboxUrl, background);
     const received = (result.messages || []).map((message) => ({
       id: message.id || "수신 메시지",
-      text: decodeHexText(message.plaintext),
+      text: message.attachment_id ? "암호화 첨부파일" : decodeHexText(message.plaintext),
+      attachmentId: message.attachment_id || "",
       state: "decrypted",
       direction: "incoming",
     }));

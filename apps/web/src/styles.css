@@ -227,6 +227,7 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .daemon-attachment { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; display: grid; gap: 8px; }
 .daemon-attachment input[type="file"] { padding: 8px; }
 .daemon-attachment progress { width: 100%; height: 8px; accent-color: var(--accent); }
+.daemon-attachment-download { margin: 0 0 6px; width: fit-content; }
 .delivery-state { margin: 0; color: var(--muted); font-size: .82rem; }
 .daemon-directory { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 20px; display: grid; gap: 12px; }
 .daemon-directory h2 { margin: 0; font-size: 1rem; }
