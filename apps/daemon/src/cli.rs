@@ -14,7 +14,7 @@ use std::{
 };
 
 const IDENTITY_RECORD_MAGIC: &[u8; 13] = b"ADIDENTITY1\0\0";
-const RECOVERY_MAGIC: &[u8; 13] = b"ADRECOVERY1\0\0";
+const RECOVERY_MAGIC: &[u8; 13] = b"ADRECOVERY2\0\0";
 const STORE_FILE: &str = "store.adstore";
 const REVISION_FILE: &str = "store.adstore.revision";
 
@@ -433,8 +433,13 @@ fn recovery(args: &[String]) -> Result<String, CliError> {
                 .ok_or_else(|| CliError::Usage("recovery import requires --input".into()))?;
             import_recovery(&data_dir, Path::new(&input))
         }
+        Some("inspect") => {
+            let input = option(args, "--input")?
+                .ok_or_else(|| CliError::Usage("recovery inspect requires --input".into()))?;
+            inspect_recovery(Path::new(&input))
+        }
         _ => Err(CliError::Usage(
-            "use recovery export --output PATH or recovery import --input PATH".into(),
+            "use recovery export --output PATH, recovery import --input PATH, or recovery inspect --input PATH".into(),
         )),
     }
 }
@@ -445,8 +450,18 @@ fn export_recovery(data_dir: &Path, output: &Path) -> Result<String, CliError> {
     }
     let store = fs::read(store_path(data_dir))?;
     let revision = fs::read(revision_path(data_dir))?;
-    let mut artifact = Vec::with_capacity(12 + 8 + store.len() + 8 + revision.len());
+    let manifest = RecoveryManifest {
+        schema_version: 2,
+        created_at: now_seconds(),
+        store_bytes: store.len() as u64,
+        revision_bytes: revision.len() as u64,
+        store_sha256: hex_bytes(&Sha256::digest(&store)),
+        revision_sha256: hex_bytes(&Sha256::digest(&revision)),
+    };
+    let manifest = serde_json::to_vec(&manifest).map_err(|_| CliError::InvalidRecovery)?;
+    let mut artifact = Vec::with_capacity(12 + manifest.len() + store.len() + revision.len());
     artifact.extend_from_slice(RECOVERY_MAGIC);
+    append_blob(&mut artifact, &manifest);
     append_blob(&mut artifact, &store);
     append_blob(&mut artifact, &revision);
     atomic_write(output, &artifact)?;
@@ -464,10 +479,23 @@ fn import_recovery(data_dir: &Path, input: &Path) -> Result<String, CliError> {
     if bytes.len() < RECOVERY_MAGIC.len() || &bytes[..RECOVERY_MAGIC.len()] != RECOVERY_MAGIC {
         return Err(CliError::InvalidRecovery);
     }
-    let (store, offset) =
+    let (manifest_bytes, offset) =
         read_blob(&bytes, RECOVERY_MAGIC.len()).ok_or(CliError::InvalidRecovery)?;
+    let manifest: RecoveryManifest =
+        serde_json::from_slice(manifest_bytes).map_err(|_| CliError::InvalidRecovery)?;
+    if manifest.schema_version != 2 {
+        return Err(CliError::InvalidRecovery);
+    }
+    let (store, offset) = read_blob(&bytes, offset).ok_or(CliError::InvalidRecovery)?;
     let (revision, end) = read_blob(&bytes, offset).ok_or(CliError::InvalidRecovery)?;
-    if end != bytes.len() || store.len() < 32 || revision.is_empty() {
+    if end != bytes.len()
+        || store.len() as u64 != manifest.store_bytes
+        || revision.len() as u64 != manifest.revision_bytes
+        || hex_bytes(&Sha256::digest(store)) != manifest.store_sha256
+        || hex_bytes(&Sha256::digest(revision)) != manifest.revision_sha256
+        || store.len() < 32
+        || revision.is_empty()
+    {
         return Err(CliError::InvalidRecovery);
     }
     fs::create_dir_all(data_dir)?;
@@ -477,6 +505,26 @@ fn import_recovery(data_dir: &Path, input: &Path) -> Result<String, CliError> {
     Ok(format!(
         "encrypted recovery imported to {}\nunlock with the original passphrase",
         data_dir.display()
+    ))
+}
+
+fn inspect_recovery(input: &Path) -> Result<String, CliError> {
+    let bytes = fs::read(input)?;
+    if bytes.len() < RECOVERY_MAGIC.len() || &bytes[..RECOVERY_MAGIC.len()] != RECOVERY_MAGIC {
+        return Err(CliError::InvalidRecovery);
+    }
+    let (manifest, _) = read_blob(&bytes, RECOVERY_MAGIC.len()).ok_or(CliError::InvalidRecovery)?;
+    let manifest: RecoveryManifest =
+        serde_json::from_slice(manifest).map_err(|_| CliError::InvalidRecovery)?;
+    if manifest.schema_version != 2 {
+        return Err(CliError::InvalidRecovery);
+    }
+    Ok(format!(
+        "backup schema: {}\ncreated_at: {}\nstore bytes: {}\nrevision bytes: {}\ncontents: encrypted daemon store",
+        manifest.schema_version,
+        manifest.created_at,
+        manifest.store_bytes,
+        manifest.revision_bytes
     ))
 }
 
@@ -501,6 +549,17 @@ struct IdentitySummary {
     account_id: String,
     device_id: String,
     display_name: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+struct RecoveryManifest {
+    schema_version: u16,
+    created_at: u64,
+    store_bytes: u64,
+    revision_bytes: u64,
+    store_sha256: String,
+    revision_sha256: String,
 }
 fn decode_identity_summary(bytes: &[u8]) -> Option<IdentitySummary> {
     if bytes.len() < IDENTITY_RECORD_MAGIC.len()
@@ -686,6 +745,9 @@ fn parse_hex_key(value: &str) -> Result<[u8; 32], ()> {
     }
     Ok(result)
 }
+fn hex_bytes(value: &[u8]) -> String {
+    value.iter().map(|byte| format!("{byte:02x}")).collect()
+}
 fn read_blob(bytes: &[u8], offset: usize) -> Option<(&[u8], usize)> {
     let end_length = offset.checked_add(8)?;
     if end_length > bytes.len() {
@@ -718,7 +780,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CliError> {
     Ok(())
 }
 fn help_text() -> String {
-    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery import --input PATH [--data-dir PATH]\n\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\nPassphrases are read from stdin and are never accepted as arguments.".into()
+    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery inspect --input PATH [--data-dir PATH]\n  recovery import --input PATH [--data-dir PATH]\n\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\nPassphrases are read from stdin and are never accepted as arguments.".into()
 }
 
 #[cfg(test)]
@@ -814,6 +876,12 @@ mod tests {
             None,
         )
         .unwrap();
+        let inspected = run(
+            &arg(&["recovery", "inspect", "--input", backup.to_str().unwrap()]),
+            None,
+        )
+        .unwrap();
+        assert!(inspected.contains("backup schema: 2"));
         run(
             &arg(&[
                 "recovery",
