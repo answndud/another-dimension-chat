@@ -332,9 +332,14 @@ impl InstanceLock {
                                 .into(),
                         ));
                     };
-                    if process_is_alive(pid) {
+                    if process_is_daemon(pid) {
                         return Err(CliError::Usage(format!(
                             "daemon is already running with PID {pid}"
+                        )));
+                    }
+                    if process_is_alive(pid) {
+                        return Err(CliError::Usage(format!(
+                            "daemon.lock PID {pid} belongs to another process; inspect it before removal"
                         )));
                     }
                     fs::remove_file(&path)?;
@@ -525,7 +530,7 @@ fn status(args: &[String]) -> Result<String, CliError> {
     let data_dir = data_dir(args)?;
     let lock_path = data_dir.join("daemon.lock");
     let pid = lock_pid(&lock_path);
-    let running = pid.is_some_and(process_is_alive);
+    let running = pid.is_some_and(process_is_daemon);
     let stale = lock_path.is_file() && !running;
     Ok(format!(
         "daemon status: {}\ndata directory: {}\nstore: {}\nlock file: {}{}",
@@ -569,6 +574,25 @@ fn process_is_alive(pid: u32) -> bool {
         .is_ok_and(|status| status.success())
 }
 
+fn process_command(pid: u32) -> Option<String> {
+    std::process::Command::new("ps")
+        .args(["-p", &pid.to_string(), "-o", "command="])
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_owned())
+        .filter(|command| !command.is_empty())
+}
+
+fn process_is_daemon(pid: u32) -> bool {
+    process_command(pid).is_some_and(|command| {
+        command
+            .split_whitespace()
+            .next()
+            .is_some_and(|executable| executable.ends_with("another-dimension-daemon"))
+    })
+}
+
 fn stop(args: &[String]) -> Result<String, CliError> {
     let data_dir = data_dir(args)?;
     let path = data_dir.join("daemon.lock");
@@ -578,6 +602,11 @@ fn stop(args: &[String]) -> Result<String, CliError> {
     if !process_is_alive(pid) {
         fs::remove_file(&path)?;
         return Ok("removed stale daemon lock; no process was running".into());
+    }
+    if !process_is_daemon(pid) {
+        return Err(CliError::Usage(format!(
+            "daemon.lock PID {pid} belongs to another process; refusing to send TERM"
+        )));
     }
     let status = std::process::Command::new("kill")
         .args(["-TERM", &pid.to_string()])
@@ -1325,5 +1354,35 @@ mod tests {
         assert_eq!(summary.device_seed, [72; 32]);
         assert_eq!(summary.account_public_key, account);
         assert_eq!(summary.device_id, "phone");
+    }
+
+    #[test]
+    fn stale_lock_is_recovered_but_foreign_live_pid_is_not_killed() {
+        let data_dir = temp_dir();
+        fs::create_dir_all(&data_dir).unwrap();
+        let lock_path = data_dir.join("daemon.lock");
+        let mut exited = std::process::Command::new("sh")
+            .args(["-c", "exit 0"])
+            .spawn()
+            .unwrap();
+        let stale_pid = exited.id();
+        exited.wait().unwrap();
+        fs::write(&lock_path, format!("pid={stale_pid}\n")).unwrap();
+        assert!(run(
+            &arg(&["status", "--data-dir", data_dir.to_str().unwrap()]),
+            None
+        )
+        .unwrap()
+        .contains("daemon status: stale lock"));
+        let lock = super::InstanceLock::acquire(&data_dir).unwrap();
+        drop(lock);
+
+        let current_pid = std::process::id();
+        fs::write(&lock_path, format!("pid={current_pid}\n")).unwrap();
+        assert!(matches!(
+            super::InstanceLock::acquire(&data_dir),
+            Err(CliError::Usage(message)) if message.contains("another process")
+        ));
+        fs::remove_dir_all(data_dir).unwrap();
     }
 }
