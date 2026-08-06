@@ -89,6 +89,10 @@ impl AccountRootKey {
         account_id_from_public(&self.public_key())
     }
 
+    pub fn account_id_from_public_key(public_key: [u8; KEY_BYTES]) -> AccountId {
+        account_id_from_public(&public_key)
+    }
+
     pub fn sign(&self, message: &[u8]) -> [u8; SIGNATURE_BYTES] {
         self.signing_key.sign(message).to_bytes()
     }

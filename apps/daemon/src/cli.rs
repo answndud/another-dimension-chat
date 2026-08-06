@@ -5,7 +5,7 @@ use crate::{
     device_link::{DeviceLinkApproval, DeviceLinkRequest, PendingDeviceKey},
     identity::{AccountRootKey, DeviceIdentity, ProfileIdentity},
     mls_session::MlsSessionCatalog,
-    storage::{EncryptedStore, RecordClass, StorageError},
+    storage::{EncryptedStore, RecordClass, RecordMutation, StorageError},
     trust::{relay_tls_pin_record_key, RelayTrust, TlsCertificatePin},
 };
 use sha2::{Digest, Sha256};
@@ -15,6 +15,7 @@ use std::{
 };
 
 const IDENTITY_RECORD_MAGIC: &[u8; 13] = b"ADIDENTITY1\0\0";
+const LINKED_IDENTITY_RECORD_MAGIC: &[u8; 13] = b"ADIDENTITY2\0\0";
 const RECOVERY_MAGIC: &[u8; 13] = b"ADRECOVERY2\0\0";
 const STORE_FILE: &str = "store.adstore";
 const REVISION_FILE: &str = "store.adstore.revision";
@@ -167,9 +168,8 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         .ok_or(CliError::NotInitialized)?;
     let summary =
         decode_identity_summary(&record).ok_or(CliError::Storage(StorageError::CorruptStore))?;
-    let root = AccountRootKey::from_seed(summary.root_seed);
     let registry = decode_registry(&store)?;
-    if !registry.belongs_to(&root) {
+    if registry.account_public_key() != summary.account_public_key {
         return Err(StorageError::CorruptStore.into());
     }
     registry
@@ -255,15 +255,26 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         ),
         _ => None,
     };
-    let mut authority = InviteAuthority::new(
-        AccountRootKey::from_seed(root_seed),
-        identity.device_id.clone(),
-        relay_origin,
-        inbox_url,
-        relay_public_key,
-        relay_tls_pin,
-        relay_trust,
-    );
+    let mut authority = match root_seed {
+        Some(seed) => InviteAuthority::new(
+            AccountRootKey::from_seed(seed),
+            identity.device_id.clone(),
+            relay_origin,
+            inbox_url,
+            relay_public_key,
+            relay_tls_pin,
+            relay_trust,
+        ),
+        None => InviteAuthority::new_rootless(
+            summary.account_public_key,
+            identity.device_id.clone(),
+            relay_origin,
+            inbox_url,
+            relay_public_key,
+            relay_tls_pin,
+            relay_trust,
+        ),
+    };
     authority.set_device_registry(registry);
     authority
         .restore_pairing(&store)
@@ -754,8 +765,24 @@ fn encode_identity(
     bytes
 }
 
+fn encode_linked_identity(
+    account_public_key: [u8; 32],
+    device_seed: [u8; 32],
+    device_id: &str,
+    display_name: &str,
+) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(LINKED_IDENTITY_RECORD_MAGIC);
+    append_blob(&mut bytes, &account_public_key);
+    append_blob(&mut bytes, &device_seed);
+    append_blob(&mut bytes, device_id.as_bytes());
+    append_blob(&mut bytes, display_name.as_bytes());
+    bytes
+}
+
 struct IdentitySummary {
-    root_seed: [u8; 32],
+    root_seed: Option<[u8; 32]>,
+    account_public_key: [u8; 32],
     account_id: String,
     device_id: String,
     display_name: String,
@@ -772,23 +799,46 @@ struct RecoveryManifest {
     revision_sha256: String,
 }
 fn decode_identity_summary(bytes: &[u8]) -> Option<IdentitySummary> {
-    if bytes.len() < IDENTITY_RECORD_MAGIC.len()
-        || &bytes[..IDENTITY_RECORD_MAGIC.len()] != IDENTITY_RECORD_MAGIC
-    {
+    if bytes.len() < IDENTITY_RECORD_MAGIC.len() {
         return None;
     }
-    let (root, offset) = read_blob(bytes, IDENTITY_RECORD_MAGIC.len())?;
-    let (_, offset) = read_blob(bytes, offset)?;
+    if &bytes[..IDENTITY_RECORD_MAGIC.len()] == IDENTITY_RECORD_MAGIC {
+        let (root, offset) = read_blob(bytes, IDENTITY_RECORD_MAGIC.len())?;
+        let (device_seed, offset) = read_blob(bytes, offset)?;
+        let (device_id, offset) = read_blob(bytes, offset)?;
+        let (display_name, end) = read_blob(bytes, offset)?;
+        if end != bytes.len() || root.len() != 32 || device_seed.len() != 32 {
+            return None;
+        }
+        let root_seed: [u8; 32] = root.try_into().ok()?;
+        let _: [u8; 32] = device_seed.try_into().ok()?;
+        let root = AccountRootKey::from_seed(root_seed);
+        return Some(IdentitySummary {
+            root_seed: Some(root_seed),
+            account_public_key: root.public_key(),
+            account_id: root.account_id().as_str().into(),
+            device_id: String::from_utf8(device_id.to_vec()).ok()?,
+            display_name: String::from_utf8(display_name.to_vec()).ok()?,
+        });
+    }
+    if &bytes[..LINKED_IDENTITY_RECORD_MAGIC.len()] != LINKED_IDENTITY_RECORD_MAGIC {
+        return None;
+    }
+    let (account_public_key, offset) = read_blob(bytes, LINKED_IDENTITY_RECORD_MAGIC.len())?;
+    let (device_seed, offset) = read_blob(bytes, offset)?;
     let (device_id, offset) = read_blob(bytes, offset)?;
     let (display_name, end) = read_blob(bytes, offset)?;
-    if end != bytes.len() || root.len() != 32 {
+    if end != bytes.len() || account_public_key.len() != 32 || device_seed.len() != 32 {
         return None;
     }
-    let seed: [u8; 32] = root.try_into().ok()?;
-    let root = AccountRootKey::from_seed(seed);
+    let account_public_key: [u8; 32] = account_public_key.try_into().ok()?;
+    let _: [u8; 32] = device_seed.try_into().ok()?;
     Some(IdentitySummary {
-        root_seed: seed,
-        account_id: root.account_id().as_str().into(),
+        root_seed: None,
+        account_public_key,
+        account_id: AccountRootKey::account_id_from_public_key(account_public_key)
+            .as_str()
+            .into(),
         device_id: String::from_utf8(device_id.to_vec()).ok()?,
         display_name: String::from_utf8(display_name.to_vec()).ok()?,
     })
@@ -849,7 +899,12 @@ fn device_command(args: &[String], passphrase: &str) -> Result<String, CliError>
                 .ok_or(CliError::NotInitialized)?;
             let summary = decode_identity_summary(&record)
                 .ok_or(CliError::Storage(StorageError::CorruptStore))?;
-            let root = AccountRootKey::from_seed(summary.root_seed);
+            let Some(root_seed) = summary.root_seed else {
+                return Err(CliError::Usage(
+                    "device revoke requires the account root device".into(),
+                ));
+            };
+            let root = AccountRootKey::from_seed(root_seed);
             registry
                 .revoke(&root, &device_id, now_seconds())
                 .map_err(registry_error)?;
@@ -913,13 +968,19 @@ fn device_link_request(args: &[String], passphrase: &str) -> Result<String, CliE
 fn device_link_complete(args: &[String], passphrase: &str) -> Result<String, CliError> {
     let input = option(args, "--input")?
         .ok_or_else(|| CliError::Usage("device link-complete requires --input PATH".into()))?;
+    let data_dir = data_dir(args)?;
     let approval = option(args, "--approval")?
         .ok_or_else(|| CliError::Usage("device link-complete requires --approval VALUE".into()))?;
-    let mut store = EncryptedStore::open(Path::new(&input), passphrase)?;
+    if store_path(&data_dir).exists() {
+        return Err(CliError::Usage(
+            "device link-complete refuses to overwrite an existing profile".into(),
+        ));
+    }
+    let store = EncryptedStore::open(Path::new(&input), passphrase)?;
     let bytes = store
         .get(RecordClass::Device, "pending-link")
         .ok_or(CliError::InvalidRecovery)?;
-    let mut artifact: PendingLinkArtifact =
+    let artifact: PendingLinkArtifact =
         serde_json::from_slice(&bytes).map_err(|_| CliError::InvalidRecovery)?;
     if artifact.schema_version != 1 || artifact.approval.is_some() {
         return Err(CliError::InvalidRecovery);
@@ -931,16 +992,45 @@ fn device_link_complete(args: &[String], passphrase: &str) -> Result<String, Cli
     parsed_approval
         .verify_for(&request, now_seconds())
         .map_err(|_| CliError::InvalidRecovery)?;
-    artifact.approval = Some(approval);
-    store.put(
-        RecordClass::Device,
-        "pending-link",
-        &serde_json::to_vec(&artifact).map_err(|_| StorageError::CorruptStore)?,
-    )?;
+    let device_seed =
+        parse_hex_key(&artifact.private_seed).map_err(|_| CliError::InvalidRecovery)?;
+    let device_key = ed25519_dalek::SigningKey::from_bytes(&device_seed);
+    if device_key.verifying_key().to_bytes() != request.device_public_key() {
+        return Err(CliError::InvalidRecovery);
+    }
+    fs::create_dir_all(&data_dir)?;
+    set_private_dir(&data_dir)?;
+    let mut activated = EncryptedStore::initialize(store_path(&data_dir), passphrase)?;
+    let display_name = option(args, "--display-name")?
+        .unwrap_or_else(|| format!("linked-{}", request.device_id()));
+    let mut registry =
+        DeviceRegistry::new_for_public_key(parsed_approval.certificate().account_public_key());
+    registry
+        .register(parsed_approval.certificate().clone(), now_seconds())
+        .map_err(registry_error)?;
+    activated.apply_batch(&[
+        RecordMutation::Put(
+            RecordClass::AccountRoot,
+            "identity".into(),
+            encode_linked_identity(
+                parsed_approval.certificate().account_public_key(),
+                device_seed,
+                request.device_id(),
+                &display_name,
+            ),
+        ),
+        RecordMutation::Put(
+            RecordClass::Device,
+            "registry".into(),
+            registry.encode().map_err(registry_error)?,
+        ),
+    ])?;
     Ok(format!(
-        "device link approval verified\ndevice_id: {}\naccount_id: {}\nnext: activate this encrypted artifact as a rootless device profile",
+        "device link approval verified\nprofile activated: {}\ndevice_id: {}\naccount_id: {}\nroot private key: not present\nnext: run serve with --data-dir {}",
+        data_dir.display(),
         request.device_id(),
-        parsed_approval.certificate().account_id().as_str()
+        parsed_approval.certificate().account_id().as_str(),
+        data_dir.display()
     ))
 }
 
@@ -1221,5 +1311,15 @@ mod tests {
             ),
             Err(CliError::UnsafeSecretArgument)
         ));
+    }
+
+    #[test]
+    fn linked_identity_record_has_no_root_seed() {
+        let account = [71; 32];
+        let bytes = super::encode_linked_identity(account, [72; 32], "phone", "Linked phone");
+        let summary = super::decode_identity_summary(&bytes).unwrap();
+        assert_eq!(summary.root_seed, None);
+        assert_eq!(summary.account_public_key, account);
+        assert_eq!(summary.device_id, "phone");
     }
 }

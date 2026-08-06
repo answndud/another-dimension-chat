@@ -68,8 +68,12 @@ impl From<IdentityError> for DeviceRegistryError {
 
 impl DeviceRegistry {
     pub fn new(root: &AccountRootKey) -> Self {
+        Self::new_for_public_key(root.public_key())
+    }
+
+    pub fn new_for_public_key(account_public_key: [u8; 32]) -> Self {
         Self {
-            account_public_key: root.public_key(),
+            account_public_key,
             devices: BTreeMap::new(),
         }
     }

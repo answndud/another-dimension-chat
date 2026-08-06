@@ -134,7 +134,8 @@ pub struct IdentityView {
 }
 
 pub struct InviteAuthority {
-    root: AccountRootKey,
+    root: Option<AccountRootKey>,
+    account_id: String,
     device_id: String,
     relay_origin: String,
     inbox_url: Option<String>,
@@ -326,11 +327,59 @@ impl InviteAuthority {
         relay_tls_pin: Option<TlsCertificatePin>,
         relay_trust: Option<RelayTrust>,
     ) -> Self {
+        Self::new_internal(
+            Some(root),
+            device_id,
+            relay_origin,
+            inbox_url,
+            relay_public_key,
+            relay_tls_pin,
+            relay_trust,
+        )
+    }
+
+    pub fn new_rootless(
+        account_public_key: [u8; 32],
+        device_id: impl Into<String>,
+        relay_origin: impl Into<String>,
+        inbox_url: Option<String>,
+        relay_public_key: Option<[u8; 32]>,
+        relay_tls_pin: Option<TlsCertificatePin>,
+        relay_trust: Option<RelayTrust>,
+    ) -> Self {
+        Self::new_internal(
+            None,
+            device_id,
+            relay_origin,
+            inbox_url,
+            relay_public_key,
+            relay_tls_pin,
+            relay_trust,
+        )
+        .with_public_account_key(account_public_key)
+    }
+
+    fn new_internal(
+        root: Option<AccountRootKey>,
+        device_id: impl Into<String>,
+        relay_origin: impl Into<String>,
+        inbox_url: Option<String>,
+        relay_public_key: Option<[u8; 32]>,
+        relay_tls_pin: Option<TlsCertificatePin>,
+        relay_trust: Option<RelayTrust>,
+    ) -> Self {
         let device_id = device_id.into();
-        let local_account_id = root.account_id().as_str().to_owned();
-        let device_registry = DeviceRegistry::new(&root);
+        let local_account_id = root
+            .as_ref()
+            .map(|value| value.account_id().as_str().to_owned())
+            .unwrap_or_default();
+        let device_registry = root
+            .as_ref()
+            .map(DeviceRegistry::new)
+            .unwrap_or_else(|| DeviceRegistry::new_for_public_key([0; 32]));
         Self {
             root,
+            account_id: local_account_id.clone(),
             device_id: device_id.clone(),
             relay_origin: relay_origin.into(),
             inbox_url,
@@ -348,6 +397,15 @@ impl InviteAuthority {
             completed_attachment_created_at: std::collections::BTreeMap::new(),
             received_attachments: std::collections::BTreeMap::new(),
         }
+    }
+
+    fn with_public_account_key(mut self, account_public_key: [u8; 32]) -> Self {
+        self.account_id = AccountRootKey::account_id_from_public_key(account_public_key)
+            .as_str()
+            .to_owned();
+        self.pairing = PairingSession::new(self.account_id.clone(), self.device_id.clone());
+        self.device_registry = DeviceRegistry::new_for_public_key(account_public_key);
+        self
     }
 
     fn attachment_start(
@@ -613,6 +671,7 @@ impl InviteAuthority {
     }
 
     fn create(&mut self, now: u64) -> Option<(String, String)> {
+        let root = self.root.as_ref()?;
         let mut bytes = [0_u8; 32];
         getrandom::fill(&mut bytes).ok()?;
         let code = hex_bytes(&bytes).to_ascii_uppercase();
@@ -625,14 +684,14 @@ impl InviteAuthority {
         let code_hash: [u8; 32] = Sha256::digest(normalized_code.as_bytes()).into();
         let payload = format!(
             "another-dimension/invite/v1\n{}\n{}\n{}\n{}\n{}\n{}",
-            self.root.account_id().as_str(),
+            root.account_id().as_str(),
             self.device_id,
             hex_bytes(&code_hash),
             expires_at,
             self.relay_origin,
             self.inbox_url.as_deref().unwrap_or("")
         );
-        let signature = self.root.sign(payload.as_bytes());
+        let signature = root.sign(payload.as_bytes());
         self.pending = Some((code_hash, expires_at));
         Some((
             code,
@@ -645,11 +704,8 @@ impl InviteAuthority {
     }
 
     pub fn restore_pairing(&mut self, store: &EncryptedStore) -> Result<(), StorageError> {
-        self.pairing = PairingSession::restore(
-            self.root.account_id().as_str(),
-            self.device_id.clone(),
-            store,
-        )?;
+        self.pairing =
+            PairingSession::restore(self.account_id.clone(), self.device_id.clone(), store)?;
         Ok(())
     }
 
@@ -727,8 +783,12 @@ impl InviteAuthority {
             .device_registry
             .encode()
             .map_err(|_| DeviceActionError::Registry(DeviceRegistryError::Corrupt))?;
+        let root = self
+            .root
+            .as_ref()
+            .ok_or(DeviceActionError::RootUnavailable)?;
         self.device_registry
-            .revoke(&self.root, device_id, now)
+            .revoke(root, device_id, now)
             .map_err(DeviceActionError::Registry)?;
         let encoded = self
             .device_registry
@@ -752,8 +812,12 @@ impl InviteAuthority {
         now: u64,
         store: &mut EncryptedStore,
     ) -> Result<String, DeviceActionError> {
+        let root = self
+            .root
+            .as_ref()
+            .ok_or(DeviceActionError::RootUnavailable)?;
         let approval = request
-            .approve(code, &self.root, now)
+            .approve(code, root, now)
             .map_err(DeviceActionError::Link)?;
         let previous = self
             .device_registry
@@ -782,6 +846,7 @@ enum DeviceActionError {
     Registry(DeviceRegistryError),
     Link(DeviceLinkError),
     CurrentDevice,
+    RootUnavailable,
     Storage,
 }
 
@@ -1082,6 +1147,12 @@ pub fn handle_request_with_context(
                     None,
                     Some("application/json"),
                 ),
+                Err(DeviceActionError::RootUnavailable) => response(
+                    403,
+                    "root_authority_unavailable",
+                    None,
+                    Some("application/json"),
+                ),
             }
         }
         ("POST", "/local-api/devices/link/approve") => {
@@ -1149,6 +1220,12 @@ pub fn handle_request_with_context(
                     None,
                     Some("application/json"),
                 ),
+                Err(DeviceActionError::RootUnavailable) => response(
+                    403,
+                    "root_authority_unavailable",
+                    None,
+                    Some("application/json"),
+                ),
             }
         }
         ("POST", "/local-api/invites") => {
@@ -1167,6 +1244,14 @@ pub fn handle_request_with_context(
             let Some(authority) = invite_authority else {
                 return response(503, "invite_unavailable", None, None);
             };
+            if authority.root.is_none() {
+                return response(
+                    403,
+                    "root_authority_unavailable",
+                    None,
+                    Some("application/json"),
+                );
+            }
             match bridge.authorize(&authorization, now) {
                 Ok(()) => {
                     let Some(store) = session_store.as_deref_mut() else {
@@ -3879,7 +3964,7 @@ mod tests {
             None,
         );
         let identity = IdentityView {
-            account_id: authority.root.account_id().as_str().into(),
+            account_id: authority.account_id.clone(),
             device_id: "local-device".into(),
             display_name: "Pairing stage test".into(),
         };
