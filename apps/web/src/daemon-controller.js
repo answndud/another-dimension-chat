@@ -2,6 +2,13 @@ import { consumeRelayInvite, createRelayInviteCode, revokeRelayInviteCode } from
 import { state } from "./daemon-state.js";
 import { renderDaemonRelayTrust, renderDaemonSafetyControls, decodeHexText, decodeHexBytes, encodeHex, mergeDaemonMessages, newAttachmentBlobId, newDaemonConversationId } from "./daemon-view.js";
 
+let activeBindingController;
+
+function bindListener(target, eventName, handler) {
+  if (!target) return;
+  target.addEventListener(eventName, handler, { signal: activeBindingController.signal });
+}
+
 export function bindDaemonSession({ render }) {
   const bridge = state.daemonBridge;
   const expiry = document.createElement("select");
@@ -15,7 +22,7 @@ export function bindDaemonSession({ render }) {
   historyButton.type = "button";
   historyButton.className = "quiet";
   historyButton.textContent = "로컬 대화 기록 불러오기";
-  historyButton.addEventListener("click", async () => {
+  bindListener(historyButton, "click", async () => {
     try {
       const conversationId = document.querySelector("#daemon-conversation-id")?.value.trim() || state.daemonConversationId;
       if (!conversationId) throw new Error("대화 식별자를 입력하세요.");
@@ -67,7 +74,7 @@ export function bindDaemonSession({ render }) {
     }
     render();
   };
-  document.querySelector("#daemon-session-create")?.addEventListener("click", () => run(async () => {
+  bindListener(document.querySelector("#daemon-session-create"), "click", () => run(async () => {
     let conversationId = document.querySelector("#daemon-conversation-id")?.value.trim() || "";
     if (!conversationId && state.daemonSelectedContact) {
       conversationId = newDaemonConversationId();
@@ -79,20 +86,20 @@ export function bindDaemonSession({ render }) {
     state.daemonConversationIds = [...new Set([...state.daemonConversationIds, conversationId])];
     if (state.daemonSelectedContact) state.daemonContacts = (await bridge.contacts()).contacts || state.daemonContacts;
   }, "대화 세션을 만들었습니다. 다음으로 연결 자료를 생성하세요."));
-  document.querySelector("#daemon-session-prepare")?.addEventListener("click", () => run(async () => {
+  bindListener(document.querySelector("#daemon-session-prepare"), "click", () => run(async () => {
     const conversationId = getConversationId();
     const result = await bridge.prepareConversation(conversationId);
     state.daemonKeyPackage = result.key_package || "";
     if (!state.daemonKeyPackage) throw new Error("데몬이 KeyPackage를 반환하지 않았습니다.");
   }, "내 연결 자료를 만들었습니다. 안전한 별도 채널로 상대 장치에 전달하세요."));
-  document.querySelector("#daemon-session-join")?.addEventListener("click", () => run(async () => {
+  bindListener(document.querySelector("#daemon-session-join"), "click", () => run(async () => {
     const conversationId = getConversationId();
     const welcome = document.querySelector("#daemon-welcome")?.value.trim() || "";
     if (!welcome) throw new Error("상대 장치의 Welcome을 입력하세요.");
     state.daemonWelcome = welcome;
     await bridge.joinConversation(conversationId, welcome);
   }, "상대 장치의 Welcome을 검증하고 대화에 참여했습니다."));
-  document.querySelector("#daemon-session-add-member")?.addEventListener("click", () => run(async () => {
+  bindListener(document.querySelector("#daemon-session-add-member"), "click", () => run(async () => {
     const conversationId = getConversationId();
     const keyPackage = document.querySelector("#daemon-peer-key-package")?.value.trim() || "";
     if (!keyPackage) throw new Error("상대 장치의 KeyPackage를 입력하세요.");
@@ -100,7 +107,7 @@ export function bindDaemonSession({ render }) {
     state.daemonWelcome = result.welcome || "";
     if (!state.daemonWelcome) throw new Error("데몬이 Welcome을 반환하지 않았습니다.");
   }, "상대 장치를 추가했습니다. 생성된 Welcome을 상대 장치에 전달하세요."));
-  document.querySelector("#daemon-message-send")?.addEventListener("click", () => run(async () => {
+  bindListener(document.querySelector("#daemon-message-send"), "click", () => run(async () => {
     const conversationId = getConversationId();
     const message = document.querySelector("#daemon-message")?.value || "";
     if (!message.trim()) throw new Error("메시지를 입력하세요.");
@@ -139,7 +146,7 @@ export function bindDaemonSession({ render }) {
       direction: "outgoing",
     }];
   }, "메시지를 daemon에서 암호화하고 relay에 접수했습니다."));
-  document.querySelectorAll(".daemon-attachment-download").forEach((button) => button.addEventListener("click", () => run(async () => {
+  document.querySelectorAll(".daemon-attachment-download").forEach((button) => bindListener(button, "click", () => run(async () => {
     const attachmentId = button.dataset.daemonAttachment || "";
     const inboxUrl = document.querySelector("#daemon-inbox-url")?.value.trim() || state.daemonInboxUrl;
     if (!attachmentId || !inboxUrl) throw new Error("첨부파일 다운로드 정보가 없습니다.");
@@ -163,16 +170,16 @@ export function bindDaemonSession({ render }) {
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, "첨부파일을 daemon에서 검증·복호화해 다운로드했습니다.")));
-  document.querySelectorAll(".daemon-attachment-delete").forEach((button) => button.addEventListener("click", () => run(async () => {
+  document.querySelectorAll(".daemon-attachment-delete").forEach((button) => bindListener(button, "click", () => run(async () => {
     const attachmentId = button.dataset.daemonAttachmentDelete || "";
     if (!attachmentId) throw new Error("삭제할 첨부파일 정보가 없습니다.");
     await bridge.cancelAttachment(attachmentId);
     state.daemonMessages = state.daemonMessages.filter((message) => message.attachmentId !== attachmentId);
   }, "daemon 암호화 저장소에서 첨부파일 상태를 삭제했습니다.")));
-  document.querySelectorAll(".daemon-message-copy").forEach((button) => button.addEventListener("click", () => run(async () => {
+  document.querySelectorAll(".daemon-message-copy").forEach((button) => bindListener(button, "click", () => run(async () => {
     await copyToClipboard(button.dataset.daemonCopy || "");
   }, "메시지 내용을 클립보드에 복사했습니다. 공유 후 클립보드 기록을 정리하세요.")));
-  document.querySelector("#daemon-attachment-send")?.addEventListener("click", () => run(async () => {
+  bindListener(document.querySelector("#daemon-attachment-send"), "click", () => run(async () => {
     const conversationId = getConversationId();
     const file = document.querySelector("#daemon-attachment-file")?.files?.[0];
     const inboxUrl = document.querySelector("#daemon-peer-inbox-url")?.value.trim() || state.daemonPeerInboxUrl;
@@ -220,7 +227,7 @@ export function bindDaemonSession({ render }) {
     state.daemonAttachmentState = "첨부파일 암호화·전송 완료";
     state.daemonOutgoingMessages = [...state.daemonOutgoingMessages, { id: state.daemonDeliveryDigest || "attachment", text: `첨부파일: ${file.name}`, state: state.daemonDeliveryState, direction: "outgoing" }];
   }, "첨부파일을 daemon에서 암호화하고 relay에 접수했습니다."));
-  document.querySelector("#daemon-attachment-retry")?.addEventListener("click", () => run(async () => {
+  bindListener(document.querySelector("#daemon-attachment-retry"), "click", () => run(async () => {
     const conversationId = getConversationId();
     const inboxUrl = document.querySelector("#daemon-peer-inbox-url")?.value.trim() || state.daemonPeerInboxUrl;
     if (!state.daemonAttachmentBlobId || !inboxUrl) throw new Error("재시도할 첨부파일 정보가 없습니다.");
@@ -232,20 +239,20 @@ export function bindDaemonSession({ render }) {
     state.daemonAttachmentProgress = 100;
     state.daemonAttachmentState = "첨부파일 재전송 완료";
   }, "첨부파일을 암호화 blob 재사용으로 다시 전송했습니다."));
-  document.querySelector("#daemon-attachment-cancel")?.addEventListener("click", () => run(async () => {
+  bindListener(document.querySelector("#daemon-attachment-cancel"), "click", () => run(async () => {
     if (state.daemonAttachmentBlobId) await bridge.cancelAttachment(state.daemonAttachmentBlobId);
     state.daemonAttachmentBlobId = "";
     state.daemonAttachmentProgress = 0;
     state.daemonAttachmentState = "첨부파일 작업을 취소했습니다";
   }, "첨부파일 암호화 상태를 daemon에서 폐기했습니다."));
-  document.querySelector("#daemon-delivery-status")?.addEventListener("click", () => run(async () => {
+  bindListener(document.querySelector("#daemon-delivery-status"), "click", () => run(async () => {
     if (!state.daemonDeliveryDigest) throw new Error("조회할 전달 기록이 없습니다.");
     const result = await bridge.deliveryStatus(state.daemonDeliveryDigest);
     state.daemonRelayState = "online";
     state.daemonDeliveryState = result.state || state.daemonDeliveryState;
     state.daemonOutgoingMessages = state.daemonOutgoingMessages.map((item) => item.id === state.daemonDeliveryDigest ? { ...item, state: state.daemonDeliveryState } : item);
   }, "전달 상태를 갱신했습니다."));
-  document.querySelector("#daemon-delivery-retry")?.addEventListener("click", () => run(async () => {
+  bindListener(document.querySelector("#daemon-delivery-retry"), "click", () => run(async () => {
     if (!state.daemonDeliveryDigest) throw new Error("재시도할 전달 기록이 없습니다.");
     const inboxUrl = document.querySelector("#daemon-peer-inbox-url")?.value.trim() || state.daemonPeerInboxUrl;
     if (!inboxUrl) throw new Error("상대방 inbox 주소를 입력하세요.");
@@ -254,14 +261,14 @@ export function bindDaemonSession({ render }) {
     state.daemonDeliveryState = result.state || "relay-accepted";
     state.daemonOutgoingMessages = state.daemonOutgoingMessages.map((item) => item.id === state.daemonDeliveryDigest ? { ...item, state: state.daemonDeliveryState } : item);
   }, "암호화된 봉투를 relay로 다시 접수했습니다."));
-  document.querySelector("#daemon-message-receive")?.addEventListener("click", () => run(async () => {
+  bindListener(document.querySelector("#daemon-message-receive"), "click", () => run(async () => {
     const conversationId = getConversationId();
     const ciphertext = document.querySelector("#daemon-incoming-ciphertext")?.value.trim() || "";
     if (!ciphertext) throw new Error("받은 암호문을 입력하세요.");
     const result = await bridge.receiveMessage(conversationId, ciphertext);
     state.daemonPlaintext = decodeHexText(result.plaintext);
   }, "암호문을 데몬에서 복호화했습니다."));
-  document.querySelector("#daemon-delivery-sync")?.addEventListener("click", () => run(async () => {
+  bindListener(document.querySelector("#daemon-delivery-sync"), "click", () => run(async () => {
     const conversationId = getConversationId();
     const inboxUrl = document.querySelector("#daemon-inbox-url")?.value.trim() || "";
     if (!inboxUrl) throw new Error("내 inbox 주소를 입력하세요.");
@@ -292,13 +299,15 @@ async function copyToClipboard(value) {
 
 export function bindDaemonWorkspace({ render }) {
   if (!state.daemonBridgeMode) return;
+  activeBindingController?.abort();
+  activeBindingController = new AbortController();
     if (state.daemonBridge && !state.daemonLocked) {
       document.querySelector(".daemon-gate")?.insertAdjacentHTML("beforeend", renderDaemonRelayTrust(state));
       const wipeButton = document.createElement("button");
       wipeButton.type = "button";
       wipeButton.className = "danger";
       wipeButton.textContent = "이 기기의 daemon 데이터 긴급 삭제";
-      wipeButton.addEventListener("click", async () => {
+      bindListener(wipeButton, "click", async () => {
         if (!window.confirm("이 기기의 daemon store와 메모리 세션을 삭제할까요? relay·백업·SSD 잔존 데이터는 삭제되지 않습니다.")) return;
         try {
           const result = await state.daemonBridge.wipe();
@@ -316,7 +325,7 @@ export function bindDaemonWorkspace({ render }) {
       recoveryButton.type = "button";
       recoveryButton.className = "secondary";
       recoveryButton.textContent = "암호화 복구 백업 다운로드";
-      recoveryButton.addEventListener("click", async () => {
+      bindListener(recoveryButton, "click", async () => {
         if (!window.confirm("현재 daemon 저장소의 암호화 복구 백업을 다운로드할까요? 원래 프로필 암호 문구가 있어야 복구할 수 있습니다.")) return;
         try {
           const result = await state.daemonBridge.recoveryExport();
@@ -341,10 +350,10 @@ export function bindDaemonWorkspace({ render }) {
       restoreButton.className = "secondary";
       restoreButton.textContent = "복구 백업 검증 후 적용 예약";
       restoreButton.disabled = true;
-      recoveryInput.addEventListener("change", () => {
+      bindListener(recoveryInput, "change", () => {
         restoreButton.disabled = !recoveryInput.files?.[0];
       });
-      restoreButton.addEventListener("click", async () => {
+      bindListener(restoreButton, "click", async () => {
         const file = recoveryInput.files?.[0];
         if (!file) return;
         if (!window.confirm("선택한 복구 백업을 daemon의 다음 시작 때 적용하도록 예약할까요? 현재 저장소는 지금 바뀌지 않습니다.")) return;
@@ -363,7 +372,7 @@ export function bindDaemonWorkspace({ render }) {
       recoveryNote.textContent = "복구 백업에는 daemon 저장소와 revision marker가 암호화된 상태로 포함됩니다. relay 자료·OS/SSD 잔존 데이터는 포함되지 않습니다.";
       document.querySelector(".daemon-gate")?.append(recoveryNote, recoveryButton, recoveryInput, restoreButton, wipeButton);
     }
-    document.querySelector("#daemon-save-relay-pin")?.addEventListener("click", async () => {
+    bindListener(document.querySelector("#daemon-save-relay-pin"), "click", async () => {
       try {
         const pin = document.querySelector("#daemon-tls-pin")?.value.trim() || "";
         const retrust = Boolean(document.querySelector("#daemon-tls-retrust")?.checked);
@@ -376,7 +385,7 @@ export function bindDaemonWorkspace({ render }) {
         render();
       }
     });
-    document.querySelectorAll("[data-device-revoke]").forEach((button) => button.addEventListener("click", async () => {
+    document.querySelectorAll("[data-device-revoke]").forEach((button) => bindListener(button, "click", async () => {
       const deviceId = button.dataset.deviceRevoke || "";
       if (!deviceId || !window.confirm(`기기 ${deviceId}를 폐기할까요? 해당 기기는 이후 daemon 인증에 사용할 수 없습니다.`)) return;
       try {
@@ -389,7 +398,7 @@ export function bindDaemonWorkspace({ render }) {
       } catch (error) { state.error = `기기 폐기 또는 로컬 MLS 제거에 실패했습니다: ${error.message}`; }
       render();
     }));
-    document.querySelector("#daemon-link-approve")?.addEventListener("click", async () => {
+    bindListener(document.querySelector("#daemon-link-approve"), "click", async () => {
       const linkRequest = document.querySelector("#daemon-link-request")?.value.trim() || "";
       const code = document.querySelector("#daemon-link-code")?.value.trim() || "";
       if (!linkRequest || !code) {
@@ -408,11 +417,11 @@ export function bindDaemonWorkspace({ render }) {
       } catch (error) { state.error = error.message; }
       render();
     });
-    document.querySelector("#daemon-contact-search")?.addEventListener("input", (event) => {
+    bindListener(document.querySelector("#daemon-contact-search"), "input", (event) => {
       state.daemonContactSearch = event.currentTarget.value;
       render();
     });
-    document.querySelectorAll("[data-contact-account]").forEach((button) => button.addEventListener("click", () => {
+    document.querySelectorAll("[data-contact-account]").forEach((button) => bindListener(button, "click", () => {
       state.daemonSelectedContact = button.dataset.contactAccount || "";
       const contact = state.daemonContacts.find((item) => item.account_id === state.daemonSelectedContact);
       state.daemonConversationId = contact?.conversation_id || "";
@@ -445,7 +454,7 @@ export function bindDaemonWorkspace({ render }) {
       });
       render();
     }));
-    document.querySelectorAll("[data-contact-save]").forEach((button) => button.addEventListener("click", async () => {
+    document.querySelectorAll("[data-contact-save]").forEach((button) => bindListener(button, "click", async () => {
       try {
         const accountId = button.dataset.contactSave || "";
         const alias = [...document.querySelectorAll("[data-contact-alias]")].find((input) => input.dataset.contactAlias === accountId)?.value || "";
@@ -456,7 +465,7 @@ export function bindDaemonWorkspace({ render }) {
       } catch (error) { state.error = error.message; }
       render();
     }));
-    document.querySelectorAll("[data-contact-block]").forEach((button) => button.addEventListener("click", async () => {
+    document.querySelectorAll("[data-contact-block]").forEach((button) => bindListener(button, "click", async () => {
       try {
         const accountId = button.dataset.contactBlock || "";
         const contact = state.daemonContacts.find((item) => item.account_id === accountId);
@@ -469,7 +478,7 @@ export function bindDaemonWorkspace({ render }) {
       } catch (error) { state.error = error.message; }
       render();
     }));
-    document.querySelectorAll("[data-contact-delete]").forEach((button) => button.addEventListener("click", async () => {
+    document.querySelectorAll("[data-contact-delete]").forEach((button) => bindListener(button, "click", async () => {
       try {
         const accountId = button.dataset.contactDelete || "";
         if (!window.confirm("연락처와 이 기기의 대화 세션을 삭제할까요? 복구할 수 없습니다.")) return;
@@ -486,7 +495,7 @@ export function bindDaemonWorkspace({ render }) {
       inviteSection?.insertAdjacentHTML("beforeend", renderDaemonSafetyControls(state.daemonPairing));
       if (!state.daemonPairing.safety_verified) document.querySelector("#daemon-approve-pairing")?.remove();
     }
-    document.querySelector("#daemon-lock")?.addEventListener("click", async () => {
+    bindListener(document.querySelector("#daemon-lock"), "click", async () => {
       try {
         await state.daemonBridge.lock();
         state.daemonBridge = null;
@@ -499,7 +508,7 @@ export function bindDaemonWorkspace({ render }) {
         render();
       }
     });
-    document.querySelector("#daemon-create-invite")?.addEventListener("click", async () => {
+    bindListener(document.querySelector("#daemon-create-invite"), "click", async () => {
       try {
         const localInvite = await state.daemonBridge.request("/local-api/invites", { method: "POST" });
         if (!state.daemonRelayOrigin) throw new Error("daemon에 relay 주소가 설정되지 않았습니다.");
@@ -513,7 +522,7 @@ export function bindDaemonWorkspace({ render }) {
         render();
       }
     });
-    document.querySelector("#daemon-revoke-invite")?.addEventListener("click", async () => {
+    bindListener(document.querySelector("#daemon-revoke-invite"), "click", async () => {
       try {
         if (!window.confirm("이 초대코드를 즉시 폐기할까요? 상대는 더 이상 사용할 수 없습니다.")) return;
         await revokeRelayInviteCode(state.daemonRelayOrigin, state.daemonInvite.invite_code);
@@ -523,7 +532,7 @@ export function bindDaemonWorkspace({ render }) {
       } catch (error) { state.error = error.message; }
       render();
     });
-    document.querySelector("#daemon-approve-pairing")?.addEventListener("click", async () => {
+    bindListener(document.querySelector("#daemon-approve-pairing"), "click", async () => {
       try {
         state.daemonPairing = { ...state.daemonPairing, ...(await state.daemonBridge.approvePairing()), safety_verified: true };
         state.daemonContacts = (await state.daemonBridge.contacts()).contacts || state.daemonContacts;
@@ -532,7 +541,7 @@ export function bindDaemonWorkspace({ render }) {
       } catch (error) { state.error = error.message; }
       render();
     });
-    document.querySelector("#daemon-verify-safety")?.addEventListener("click", async () => {
+    bindListener(document.querySelector("#daemon-verify-safety"), "click", async () => {
       try {
         const verified = await state.daemonBridge.verifySafety(document.querySelector("#daemon-safety-confirmation").value);
         state.daemonPairing = { ...state.daemonPairing, ...verified, safety_verified: true };
@@ -542,7 +551,7 @@ export function bindDaemonWorkspace({ render }) {
       } catch (error) { state.error = error.message; }
       render();
     });
-    document.querySelector("#daemon-unverify-safety")?.addEventListener("click", async () => {
+    bindListener(document.querySelector("#daemon-unverify-safety"), "click", async () => {
       if (!window.confirm("안전 번호를 다시 확인할 때까지 이 연락처로 메시지를 보낼 수 없게 됩니다. 계속할까요?")) return;
       try {
         const result = await state.daemonBridge.unverifySafety();
@@ -553,7 +562,7 @@ export function bindDaemonWorkspace({ render }) {
       } catch (error) { state.error = `안전 번호 재확인 준비에 실패했습니다: ${error.message}`; }
       render();
     });
-    document.querySelector("#daemon-reject-pairing")?.addEventListener("click", async () => {
+    bindListener(document.querySelector("#daemon-reject-pairing"), "click", async () => {
       try {
         state.daemonPairing = await state.daemonBridge.rejectPairing();
         state.daemonReceivedInvite = null;
@@ -562,7 +571,7 @@ export function bindDaemonWorkspace({ render }) {
       } catch (error) { state.error = error.message; }
       render();
     });
-    document.querySelector("#daemon-consume-invite")?.addEventListener("click", async () => {
+    bindListener(document.querySelector("#daemon-consume-invite"), "click", async () => {
       try {
         const result = await consumeRelayInvite(document.querySelector("#received-relay-origin").value, document.querySelector("#received-invite-code").value);
         state.daemonConsumedInvite = result.invite;
