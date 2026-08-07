@@ -1745,7 +1745,7 @@ pub fn handle_request_with_context(
                     r##"{{"messages":[{}],"next_offset":{}}}"##,
                     messages.join(","),
                     if truncated {
-                        (offset + messages.len()).to_string()
+                        (offset + limit).to_string()
                     } else {
                         "null".into()
                     }

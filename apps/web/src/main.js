@@ -756,8 +756,23 @@ function render() {
         : "연락처를 선택했습니다. 먼저 이 연락처의 대화를 준비하세요.";
       state.daemonBridge.markContactRead(state.daemonSelectedContact).then(async () => {
         state.daemonContacts = (await state.daemonBridge.contacts()).contacts || state.daemonContacts;
+        if (contact?.conversation_id) {
+          const result = await state.daemonBridge.messages(contact.conversation_id);
+          const restored = (result.messages || []).map((message) => ({
+            id: message.message_id || "복구된 메시지",
+            text: decodeHexText(message.plaintext),
+            state: message.direction === "outgoing" ? "내 기록" : "상대 기록",
+            direction: message.direction === "outgoing" ? "outgoing" : "incoming",
+          }));
+          state.daemonOutgoingMessages = restored.filter((message) => message.direction === "outgoing");
+          state.daemonMessages = restored.filter((message) => message.direction === "incoming");
+          state.notice = restored.length ? `${restored.length}개의 로컬 대화 기록을 불러왔습니다.` : "새 대화를 시작할 수 있습니다.";
+        }
         render();
-      }).catch(() => {});
+      }).catch((error) => {
+        state.error = `대화 기록을 불러오지 못했습니다: ${error.message}`;
+        render();
+      });
       render();
     }));
     document.querySelectorAll("[data-contact-save]").forEach((button) => button.addEventListener("click", async () => {
