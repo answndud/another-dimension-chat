@@ -22,8 +22,12 @@ const boundary = await loadProductBoundary(root);
 const daemonManifest = await readFile(path.join(root, "apps/daemon/Cargo.toml"), "utf8");
 const daemonSource = await readFile(path.join(root, "apps/daemon/src/lib.rs"), "utf8");
 const protocolGate = await readFile(path.join(root, "apps/daemon/src/protocol_gate.rs"), "utf8");
+const webEntry = await readFile(path.join(root, "apps/web/src/main.js"), "utf8");
 if (!daemonManifest.includes("name = \"another-dimension-daemon\"")) {
   throw new Error("daemon manifest is not the current product owner");
+}
+if (/from\s+["']\.\/web-runtime\.js["']/.test(webEntry)) {
+  throw new Error("daemon web entrypoint must not import browser-owned web-runtime");
 }
 for (const marker of ["pub mod model;", "local-security-daemon", "openmls-1"]) {
   const source = marker === "openmls-1" ? protocolGate : daemonSource;
