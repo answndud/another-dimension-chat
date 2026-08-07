@@ -711,10 +711,36 @@ function render() {
         } catch (error) { state.error = `복구 백업을 만들지 못했습니다: ${error.message}`; }
         render();
       });
+      const recoveryInput = document.createElement("input");
+      recoveryInput.type = "file";
+      recoveryInput.accept = ".adbackup,application/octet-stream";
+      recoveryInput.setAttribute("aria-label", "암호화 복구 백업 파일 선택");
+      const restoreButton = document.createElement("button");
+      restoreButton.type = "button";
+      restoreButton.className = "secondary";
+      restoreButton.textContent = "복구 백업 검증 후 적용 예약";
+      restoreButton.disabled = true;
+      recoveryInput.addEventListener("change", () => {
+        restoreButton.disabled = !recoveryInput.files?.[0];
+      });
+      restoreButton.addEventListener("click", async () => {
+        const file = recoveryInput.files?.[0];
+        if (!file) return;
+        if (!window.confirm("선택한 복구 백업을 daemon의 다음 시작 때 적용하도록 예약할까요? 현재 저장소는 지금 바뀌지 않습니다.")) return;
+        try {
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const result = await state.daemonBridge.recoveryStage(encodeHex(bytes));
+          state.notice = result.restart_required
+            ? "복구 백업을 검증하고 적용 예약했습니다. daemon을 정상 종료한 뒤 같은 data directory로 다시 시작하세요."
+            : "복구 백업 적용을 예약했습니다.";
+          state.error = "";
+        } catch (error) { state.error = `복구 백업을 예약하지 못했습니다: ${error.message}`; }
+        render();
+      });
       const recoveryNote = document.createElement("p");
       recoveryNote.className = "field-note daemon-recovery-note";
       recoveryNote.textContent = "복구 백업에는 daemon 저장소와 revision marker가 암호화된 상태로 포함됩니다. relay 자료·OS/SSD 잔존 데이터는 포함되지 않습니다.";
-      document.querySelector(".daemon-gate")?.append(recoveryNote, recoveryButton, wipeButton);
+      document.querySelector(".daemon-gate")?.append(recoveryNote, recoveryButton, recoveryInput, restoreButton, wipeButton);
     }
     document.querySelector("#daemon-save-relay-pin")?.addEventListener("click", async () => {
       try {

@@ -21,6 +21,7 @@ const NONCE_BYTES: usize = 12;
 const KEY_BYTES: usize = 32;
 pub const MAX_RECORDS: usize = 4096;
 pub const RECOVERY_MAGIC: &[u8; 13] = b"ADRECOVERY2\0\0";
+const MAX_RECOVERY_ARTIFACT_BYTES: usize = 64 * 1024 * 1024;
 const MAX_KEY_BYTES: usize = 256;
 const MAX_VALUE_BYTES: usize = 4 * 1024 * 1024;
 const MAX_PASSPHRASE_CHARS: usize = 1024;
@@ -202,6 +203,18 @@ pub struct EncryptedStore {
     locked: bool,
 }
 
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RecoveryManifest {
+    schema_version: u16,
+    #[allow(dead_code)]
+    created_at: u64,
+    store_bytes: u64,
+    revision_bytes: u64,
+    store_sha256: String,
+    revision_sha256: String,
+}
+
 impl fmt::Debug for EncryptedStore {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("EncryptedStore")
@@ -344,6 +357,16 @@ impl EncryptedStore {
         append_blob(&mut artifact, &store);
         append_blob(&mut artifact, &revision);
         Ok(artifact)
+    }
+
+    /// Validates and stages an encrypted recovery artifact for the next
+    /// daemon start. The active store is not replaced by this method.
+    pub fn stage_recovery_artifact(&self, artifact: &[u8]) -> Result<(), StorageError> {
+        if self.locked {
+            return Err(StorageError::Locked);
+        }
+        let _ = parse_recovery_artifact(artifact)?;
+        atomic_write(&recovery_pending_path(&self.path), artifact)
     }
 
     pub fn lock(&mut self) {
@@ -797,6 +820,52 @@ fn hex_bytes(bytes: &[u8]) -> String {
 fn append_blob(output: &mut Vec<u8>, value: &[u8]) {
     output.extend_from_slice(&(value.len() as u64).to_be_bytes());
     output.extend_from_slice(value);
+}
+
+pub fn recovery_pending_path(path: impl AsRef<Path>) -> PathBuf {
+    path.as_ref().with_extension("recovery.pending")
+}
+
+pub fn parse_recovery_artifact(bytes: &[u8]) -> Result<(Vec<u8>, Vec<u8>), StorageError> {
+    if bytes.len() > MAX_RECOVERY_ARTIFACT_BYTES || !bytes.starts_with(RECOVERY_MAGIC) {
+        return Err(StorageError::CorruptStore);
+    }
+    let (manifest_bytes, offset) = read_blob(bytes, RECOVERY_MAGIC.len())?;
+    let manifest: RecoveryManifest =
+        serde_json::from_slice(manifest_bytes).map_err(|_| StorageError::CorruptStore)?;
+    let (store, offset) = read_blob(bytes, offset)?;
+    let (revision, end) = read_blob(bytes, offset)?;
+    if end != bytes.len()
+        || manifest.schema_version != 2
+        || manifest.store_bytes != store.len() as u64
+        || manifest.revision_bytes != revision.len() as u64
+        || manifest.store_sha256 != hex_bytes(&Sha256::digest(store))
+        || manifest.revision_sha256 != hex_bytes(&Sha256::digest(revision))
+        || store.is_empty()
+        || revision.is_empty()
+    {
+        return Err(StorageError::CorruptStore);
+    }
+    Ok((store.to_vec(), revision.to_vec()))
+}
+
+fn read_blob(bytes: &[u8], offset: usize) -> Result<(&[u8], usize), StorageError> {
+    let end_length = offset.checked_add(8).ok_or(StorageError::CorruptStore)?;
+    if end_length > bytes.len() {
+        return Err(StorageError::CorruptStore);
+    }
+    let length = u64::from_be_bytes(
+        bytes[offset..end_length]
+            .try_into()
+            .map_err(|_| StorageError::CorruptStore)?,
+    ) as usize;
+    let end = end_length
+        .checked_add(length)
+        .ok_or(StorageError::CorruptStore)?;
+    if end > bytes.len() {
+        return Err(StorageError::CorruptStore);
+    }
+    Ok((&bytes[end_length..end], end))
 }
 
 #[cfg(test)]

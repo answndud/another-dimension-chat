@@ -995,6 +995,37 @@ pub fn handle_request_with_context(
                 Some("application/json"),
             )
         }
+        ("POST", "/local-api/recovery/stage") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(artifact) = json_string(request.body, "artifact_hex").and_then(hex_decode)
+            else {
+                return response(
+                    400,
+                    "invalid_recovery_artifact",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(store) = session_store.as_deref() else {
+                return response(503, "storage_unavailable", None, Some("application/json"));
+            };
+            match store.stage_recovery_artifact(&artifact) {
+                Ok(()) => response(
+                    202,
+                    r##"{"staged":true,"restart_required":true}"##,
+                    None,
+                    Some("application/json"),
+                ),
+                Err(_) => response(
+                    422,
+                    "invalid_recovery_artifact",
+                    None,
+                    Some("application/json"),
+                ),
+            }
+        }
         ("GET", "/local-api/relay/trust") => {
             if let Err(reply) = authorize_api(bridge, &request, now) {
                 return reply;

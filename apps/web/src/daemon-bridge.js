@@ -110,6 +110,10 @@ export async function connectDaemonBridge({
     lock: () => request("/local-api/session/lock", { method: "POST" }),
     wipe: () => request("/local-api/session/wipe", { method: "POST" }),
     recoveryExport: () => request("/local-api/recovery/export", { method: "POST" }),
+    recoveryStage: (artifactHex) => request("/local-api/recovery/stage", {
+      method: "POST",
+      body: JSON.stringify({ artifact_hex: artifactHex }),
+    }),
     createConversation: (conversationId) => request("/local-api/session/create", {
       method: "POST",
       body: JSON.stringify({ conversation_id: conversationId }),

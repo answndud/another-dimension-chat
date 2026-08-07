@@ -5,7 +5,10 @@ use crate::{
     device_link::{DeviceLinkApproval, DeviceLinkRequest, PendingDeviceKey},
     identity::{AccountRootKey, DeviceIdentity, ProfileIdentity},
     mls_session::MlsSessionCatalog,
-    storage::{EncryptedStore, RecordClass, RecordMutation, StorageError},
+    storage::{
+        parse_recovery_artifact, recovery_pending_path, EncryptedStore, RecordClass,
+        RecordMutation, StorageError,
+    },
     trust::{relay_tls_pin_record_key, RelayTrust, TlsCertificatePin},
 };
 use sha2::{Digest, Sha256};
@@ -162,6 +165,7 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
             ui_dir.display()
         )));
     }
+    apply_pending_recovery(&data_dir, passphrase)?;
     let mut store = open_store(&data_dir, passphrase)?;
     let record = store
         .get(RecordClass::AccountRoot, "identity")
@@ -898,6 +902,87 @@ fn open_store(data_dir: &Path, passphrase: &str) -> Result<EncryptedStore, CliEr
         return Err(CliError::NotInitialized);
     }
     Ok(EncryptedStore::open(store_path(data_dir), passphrase)?)
+}
+
+fn apply_pending_recovery(data_dir: &Path, passphrase: &str) -> Result<(), CliError> {
+    let pending = recovery_pending_path(store_path(data_dir));
+    if !pending.is_file() {
+        return Ok(());
+    }
+    let artifact = fs::read(&pending)?;
+    let (candidate_store, candidate_revision) =
+        parse_recovery_artifact(&artifact).map_err(|_| CliError::InvalidRecovery)?;
+    let check_path = data_dir.join(format!(
+        "store.adstore.recovery-check-{}",
+        std::process::id()
+    ));
+    let check_revision = PathBuf::from(format!("{}.revision", check_path.display()));
+    atomic_write(&check_path, &candidate_store)?;
+    atomic_write(&check_revision, &candidate_revision)?;
+    let mut candidate = match EncryptedStore::open(&check_path, passphrase) {
+        Ok(store) => store,
+        Err(error) => {
+            let _ = fs::remove_file(&check_path);
+            let _ = fs::remove_file(&check_revision);
+            return Err(error.into());
+        }
+    };
+    let validation = (|| {
+        let record = candidate
+            .get(RecordClass::AccountRoot, "identity")
+            .ok_or(CliError::InvalidRecovery)?;
+        let summary = decode_identity_summary(&record).ok_or(CliError::InvalidRecovery)?;
+        let registry = decode_registry(&candidate)?;
+        registry
+            .authorize(&summary.device_id, now_seconds())
+            .map_err(registry_error)?;
+        Ok::<(), CliError>(())
+    })();
+    candidate.lock();
+    drop(candidate);
+    fs::remove_file(&check_path)?;
+    fs::remove_file(&check_revision)?;
+    validation?;
+
+    let live_store = store_path(data_dir);
+    let live_revision = revision_path(data_dir);
+    let old_store = data_dir.join(format!(
+        "store.adstore.before-recovery-{}",
+        std::process::id()
+    ));
+    let old_revision = data_dir.join(format!(
+        "store.adstore.revision.before-recovery-{}",
+        std::process::id()
+    ));
+    if old_store.exists() || old_revision.exists() {
+        return Err(CliError::InvalidRecovery);
+    }
+    if live_store.exists() {
+        fs::rename(&live_store, &old_store)?;
+    }
+    if live_revision.exists() {
+        fs::rename(&live_revision, &old_revision)?;
+    }
+    let install = (|| {
+        atomic_write(&live_store, &candidate_store)?;
+        atomic_write(&live_revision, &candidate_revision)?;
+        Ok::<(), CliError>(())
+    })();
+    if let Err(error) = install {
+        let _ = fs::remove_file(&live_store);
+        let _ = fs::remove_file(&live_revision);
+        if old_store.exists() {
+            let _ = fs::rename(&old_store, &live_store);
+        }
+        if old_revision.exists() {
+            let _ = fs::rename(&old_revision, &live_revision);
+        }
+        return Err(error);
+    }
+    let _ = fs::remove_file(&old_store);
+    let _ = fs::remove_file(&old_revision);
+    fs::remove_file(&pending)?;
+    Ok(())
 }
 
 fn decode_registry(store: &EncryptedStore) -> Result<DeviceRegistry, CliError> {
