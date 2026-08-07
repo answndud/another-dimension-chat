@@ -1,6 +1,6 @@
 # Another Dimension Chat
 
-브라우저에서 사용하는 사용자 소유형 1:1 암호화 메시징 프로토타입입니다.
+로컬 보안 데몬과 브라우저 UI, 사용자가 직접 운영하는 relay로 구성된 사용자 소유형 1:1 암호화 메시징 프로토타입입니다. 브라우저는 화면과 평문 입력·출력만 담당하고, 계정 키·OpenMLS 세션·암호화 로컬 저장소는 로컬 daemon이 소유합니다.
 
 이 프로젝트는 중앙에 하나의 채팅 서버를 두고 모든 사용자의 메시지를 모으는
 방식이 아닙니다. 각 사용자가 자신의 기기에서 작은 서버를 실행하고, 두 서버는
@@ -10,8 +10,8 @@
 
 > **중요:** 현재 버전은 실험용 프로토타입입니다. 아직 독립적인 보안 감사를 받은
 > 완성형 상용 메신저가 아니며, 민감한 통신이나 생명·재산에 영향을 주는 통신에
-> 사용하지 마세요. 기반 Olm 구현에는 외부 감사 이력이 있지만 이 앱의 프로토콜
-> 조합, 브라우저 연동, 서버 운영 환경 전체가 감사된 것은 아닙니다.
+> 사용하지 마세요. OpenMLS·Rust 암호 provider·브라우저 연동·relay 운영 환경
+> 전체가 감사된 것은 아닙니다.
 
 > **앱 코드 공급망 경고:** relay는 기본적으로 API만 제공하며 브라우저
 > JavaScript/WASM을 제공하지 않습니다. `AD_SERVE_UI=1` combined mode는 개발용
@@ -52,14 +52,17 @@ node scripts/acceptance_p3.mjs
 
 이 앱은 다음 세 부분으로 구성됩니다.
 
-1. **브라우저 UI** — 프로필, 초대, 안전 문구, 메시지 평문을 처리합니다.
-   메시지는 브라우저 안에서 암호화·복호화됩니다.
-2. **사용자 소유 relay** — 사용자의 기기에서 직접 실행합니다. 기본적으로 정적
+1. **로컬 보안 daemon** — 계정·기기 인증서·OpenMLS 키·세션 checkpoint·암호화
+   메시지 저장·relay 통신을 소유합니다. private key와 protocol state는 브라우저로
+   반환하지 않습니다.
+2. **브라우저 UI** — daemon의 인증된 loopback API를 통해 초대 승인, 안전 번호 확인,
+   평문 입력·출력과 상태 표시만 담당합니다. daemon 모드에서는 browser crypto와
+   IndexedDB에 장기 메시지 키를 저장하지 않습니다.
+3. **사용자 소유 relay** — 사용자의 기기에서 직접 실행합니다. 기본적으로 정적
    웹 UI를 제공하지 않고, 상대 서버에서 온 암호화 봉투를 잠시 보관·전달합니다.
    서버는 평문 메시지나 개인 키를 알 수 없습니다.
-3. **두 브라우저 사이의 암호화 세션** — 서명된 초대를 교환한 뒤 Rust
-   `vodozemac`의 Olm v2 Double Ratchet을 WebAssembly로 사용합니다. 세션 상태는
-   브라우저의 암호화된 IndexedDB에 저장됩니다.
+4. **두 daemon 사이의 암호화 세션** — 서명된 초대와 안전 번호 확인 뒤 OpenMLS
+   1:1 세션을 사용합니다. relay는 opaque envelope만 보관합니다.
 
 일반적인 사용 흐름은 다음과 같습니다.
 
@@ -68,17 +71,17 @@ node scripts/acceptance_p3.mjs
         ↓
 각자 서버가 제공하는 private UI 주소로 접속
         ↓
-각자 브라우저 프로필 생성·잠금 해제
+각자 daemon 프로필 생성·잠금 해제
         ↓
 서로 public invite 교환
         ↓
 두 사람이 safety phrase를 직접 비교
         ↓
-Olm 초기화 봉투 자동 교환
+OpenMLS 세션 자료 자동 교환
         ↓
-브라우저에서 암호화된 메시지를 상대 서버로 전달
+daemon에서 암호화된 메시지를 상대 relay로 전달
         ↓
-상대 브라우저가 가져와 로컬에서 복호화
+상대 daemon이 가져와 로컬에서 복호화한 뒤 브라우저에 표시
 ```
 
 서버를 항상 공개 인터넷에 노출해야 하는 것은 아닙니다. 같은 컴퓨터에서
@@ -508,13 +511,21 @@ npm --prefix apps/web run build:crypto --workspaces=false
 필요가 없습니다. 생성된 WebAssembly 파일은 저장소에 포함되어 있으므로 일반
 release build는 Rust를 다시 컴파일하지 않습니다.
 
-## 11. 보안 경계와 아직 제공하지 않는 기능
+## 11. 보안 경계와 legacy 데이터 정책
 
-브라우저는 P-256 서명과 passphrase wrapping에 Web Crypto를 사용하고, Olm v2
-3DH 초기화와 Double Ratchet 메시지 암호화에는 Rust `vodozemac`을 사용합니다.
-서버에는 제한된 크기의 opaque envelope만 저장됩니다. 서버의 읽기·acknowledge는
-소유자의 별도 local-access capability로 보호되고, 상대에게 공유되는 capability는
-쓰기 전용입니다.
+현재 daemon 제품은 OpenMLS와 검증된 Rust crypto provider를 사용해 세션·메시지를
+처리하고, 브라우저에는 평문과 표시 상태만 전달합니다. relay에는 제한된 크기의
+opaque envelope와 암호화 blob만 저장됩니다. relay의 읽기·acknowledge는 소유자의
+별도 local-access capability로 보호되고, 상대에게 공유되는 capability는 쓰기
+전용입니다.
+
+이전 browser Olm 프로토타입의 `ADBACKUP1`, `ADSESSION1`, `ADTRANSCRIPT1` 자료는
+현재 daemon의 account root, device certificate, OpenMLS session으로 자동 변환되지
+않습니다. Olm 개인키·pickle·ratchet 상태를 새 MLS credential로 재사용하지 않는
+것이 안전한 정책입니다. 기존 자료는 원본을 덮어쓰지 않고 오프라인 보관하거나
+폐기할 수 있지만, daemon에서 사용하려면 새 profile을 만들고 상대와 초대·안전 번호
+검증·새 대화를 다시 시작해야 합니다. 이 경계를 우회하는 import 도구를 사용하지
+마세요.
 
 그래도 다음은 보장하지 않습니다.
 

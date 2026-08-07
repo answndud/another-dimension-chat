@@ -524,6 +524,7 @@ function renderStart() {
         <h1>프로필을 잠금 해제하세요</h1>
         <p class="lede">이 브라우저에 저장된 로컬 프로필로 암호화된 1:1 연결을 시작합니다.</p>
         <div class="notice" role="status">${escapeHtml(state.notice || browserStatus())}</div>
+        <div class="warning legacy-migration-notice" role="note"><strong>이 화면은 legacy 브라우저 프로토타입입니다.</strong><br>기존 browser profile·Olm session·transcript는 현재 daemon identity나 OpenMLS 대화로 자동 변환되지 않습니다. 기존 encrypted backup은 원본 보존용으로만 따로 보관하고, 고위험 통신은 새 daemon 프로필을 만든 뒤 상대와 다시 pairing하세요.</div>
         <div class="start-grid">
           <form id="unlock-form" class="form-panel">
             <div class="panel-heading"><span class="step-number">01</span><div><h2>기존 프로필</h2><p>저장된 프로필을 잠금 해제합니다.</p></div></div>
