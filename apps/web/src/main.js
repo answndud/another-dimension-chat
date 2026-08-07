@@ -29,9 +29,8 @@ import {
   touchActivity,
   checkAutoLock,
   onSessionEvent,
-  ready,
 } from "./web-runtime.js";
-import { connectDaemonBridge, consumeRelayInvite, createRelayInviteCode, revokeRelayInviteCode, DaemonBridgeError } from "./daemon-bridge.js";
+import { connectDaemonBridge, consumeRelayInvite, createRelayInviteCode, revokeRelayInviteCode } from "./daemon-bridge.js";
 import "./styles.css";
 
 const app = document.querySelector("#app");
@@ -1236,22 +1235,23 @@ async function refresh() {
 
 for (const eventName of ["pointerdown", "keydown", "touchstart"]) document.addEventListener(eventName, touchActivity, { passive: true });
 window.setInterval(() => {
+  if (state.daemonBridgeMode) return;
   if (checkAutoLock()) {
     state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", messages: [], error: "", notice: "Session auto-locked after inactivity." };
     render();
   } else if (!document.hidden) receiveMessages(false);
 }, 5_000);
 window.setInterval(() => {
-  if (!document.hidden) return;
+  if (!state.daemonBridgeMode || !document.hidden) return;
   receiveDaemonMessages(true);
 }, 15_000);
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) {
+  if (!state.daemonBridgeMode && !document.hidden) {
     receiveMessages(false);
-    receiveDaemonMessages(false);
   }
+  if (state.daemonBridgeMode && !document.hidden) receiveDaemonMessages(false);
 });
-window.addEventListener("pagehide", () => lockProfile({ reason: "pagehide" }), { once: true });
+window.addEventListener("pagehide", () => { if (!state.daemonBridgeMode) lockProfile({ reason: "pagehide" }); }, { once: true });
 
 async function startApp() {
   try {
@@ -1286,10 +1286,13 @@ async function startApp() {
       render();
       return;
     }
-    await ready;
+    state.daemonBridgeMode = true;
+    state.daemonStatus = "데몬 연결 대기";
+    state.notice = "고위험 통신을 시작하려면 CLI 데몬이 발급한 일회성 주소로 이 화면을 여세요.";
     render();
   } catch (error) {
-    state.daemonBridgeMode = Boolean(error instanceof DaemonBridgeError || window.location?.hash);
+    state.daemonBridgeMode = true;
+    state.daemonStatus = "데몬 연결 실패";
     state.error = error.message;
     render();
   }

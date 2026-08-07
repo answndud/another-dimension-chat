@@ -45,9 +45,9 @@ async function jsonResponse(response) {
 }
 
 /**
- * Connect once to a daemon bootstrap URL. Returns null for an ordinary
- * prototype page, so the existing low-risk web path can remain visibly
- * separated until the daemon HTTP server is implemented.
+ * Connect once to a daemon bootstrap URL. Returns null when the page was not
+ * opened by a daemon-issued one-time URL; the caller must keep the product
+ * locked in that case rather than falling back to browser-owned state.
  */
 export async function connectDaemonBridge({
   location = globalThis.location,
