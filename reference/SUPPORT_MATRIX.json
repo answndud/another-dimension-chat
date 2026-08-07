@@ -1,7 +1,7 @@
 {
   "format": "another-dimension-support-matrix",
   "version": 1,
-  "generatedFor": "web-first prototype",
+  "generatedFor": "local daemon product",
   "claimsPolicy": "Only entries with an attached, reproducible evidence file may be verified.",
   "releasePolicy": {
     "blockedStatusesFail": true,
@@ -11,21 +11,21 @@
   "entries": [
     {
       "id": "macos-arm64-node20-local-gate",
-      "surface": "server-runtime",
+      "surface": "installed-runtime",
       "platform": "macOS arm64",
-      "runtime": "bundled Node.js 20+",
+      "runtime": "Rust daemon binary + bundled Node.js 20+ relay runtime",
       "status": "verified-local",
       "evidence": "scripts/acceptance_os_matrix.mjs",
-      "scope": "current-host bundled-runtime install, permission, tamper, update, rollback and relay acceptance only"
+      "scope": "current-host only: signed archive install, daemon and relay permissions, tamper rejection, update, rollback and process ownership"
     },
     {
       "id": "macos-arm64-chromium-production-ui",
       "surface": "browser-ui",
       "platform": "macOS arm64 Chromium",
-      "runtime": "Chromium version must be recorded in evidence",
+      "runtime": "daemon-served production UI; exact Chromium version must be recorded in future evidence",
       "status": "unverified",
-      "evidence": "reference/browser-evidence/codex-in-app-browser.json",
-      "scope": "no support claim until macOS arm64 Chromium exact version and release archive hash are recorded"
+      "evidence": null,
+      "scope": "no support claim until the daemon bootstrap, profile, invite, verification, messaging, restart, recovery and lock journeys are recorded against an exact Chromium version and release archive hash"
     }
   ]
 }

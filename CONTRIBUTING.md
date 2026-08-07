@@ -4,7 +4,7 @@ Another Dimension Chat is not a secure messenger release today.
 
 This repository currently uses a maintainer-driven main-branch workflow. Public
 contributions are welcome as issues or small patches, but every public change
-must preserve the unsigned experimental web prototype boundary and the
+must preserve the daemon-owned security boundary and the
 no-central-trusted-server product direction.
 
 ## Scope Boundaries
@@ -18,11 +18,10 @@ Allowed v0.1 direction:
 - no central message server
 - no push notification service
 - no cloud backup
-- explicit user action before network/onion work
-- user-owned web/server prototype with manual local release verification
+- explicit user action before relay trust changes
+- authenticated browser UI + local OpenMLS daemon + user-owned relay
 
-Do not add App Store distribution, notarization, Developer ID signing,
-telemetry, crash upload, cloud reporting, auto-update, centralized account
+Do not add telemetry, crash upload, cloud reporting, unverified auto-update, centralized account
 infrastructure, centralized contact discovery, central message relay, push
 notification, or cloud backup paths unless the project direction is explicitly
 changed in public documentation first.
@@ -35,9 +34,7 @@ Do not describe the current beta as:
 - production-ready
 - audited
 - safe for sensitive communication
-- reliable real-network onion delivery
-- independently verified external two-machine onion delivery
-- reviewed bridge/censorship support
+- anonymous or censorship-resistant delivery
 - supply-chain audited
 - signed, notarized, auto-updating, or reproducible
 
@@ -77,18 +74,16 @@ repository's [MIT License](LICENSE).
 
 ## Release Discipline
 
-The current product's lightweight verification is web/server focused:
+The current product's lightweight verification is daemon/web/relay focused:
 
 ```bash
-scripts/verify_light.sh  # browser runtime + local server + transport smoke
+scripts/verify_light.sh
 ```
 
 `scripts/verify_light.sh` is the canonical current-product entrypoint.
-`scripts/verify_full.sh`, `scripts/verify_source_build_path.sh`,
-`apps/desktop-tauri/`, `apps/cli/`, and `apps/engine/` are legacy/native
-prototype verification paths. They are not evidence that the current web
-product is production-ready and are run only when their separate boundary is
-explicitly being maintained.
+`scripts/verify_full.sh` adds daemon tests, formatting, and lints. Historical
+Tauri, native CLI/engine, browser Olm, and onion prototypes were removed from
+the workspace; git history is the archive.
 
 Older release packaging or evidence-generation scripts referenced in historical
 documents are not part of the current development baseline unless they are
@@ -96,14 +91,14 @@ restored deliberately in a separate task.
 
 Every public release update must keep:
 
-- `unsigned experimental public beta`
-- `sensitive communication prohibited`
+- `high-risk use disabled`
+- `sensitive communication prohibited until approval`
 - `not audited`
 - `not production-ready`
-- external two-machine onion delivery non-claim
+- anonymity and censorship-resistance non-claims
 - public diagnostics redaction boundary
 - public intake redaction boundary
-- no signing/notarization/auto-update claim
+- no unverified signing/update claim
 
 ## Development Notes
 

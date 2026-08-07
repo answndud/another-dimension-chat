@@ -38,11 +38,13 @@ done
 install_root=$(CDPATH= cd -- "$install_root" && pwd)
 verify() { "$install_root/runtime-node" "$install_root/scripts/verify_install_state.mjs" "$install_root" >/dev/null; }
 is_running() {
-  [ -f "$install_root/server.pid" ] || return 1
-  pid=$(cat "$install_root/server.pid")
-  case "$pid" in *[!0-9]*|"") return 1;; esac
-  kill -0 "$pid" 2>/dev/null || return 1
-  ps -p "$pid" -o command= 2>/dev/null | grep -F -- "$install_root/runtime-node" >/dev/null
+  daemon_data=$("$install_root/runtime-node" -e 'console.log(JSON.parse(require("node:fs").readFileSync(process.argv[1],"utf8")).daemonDataDir)' "$install_root/server-config.json")
+  daemon_status=$("$install_root/bin/another-dimension-daemon" status --data-dir "$daemon_data" 2>/dev/null || true)
+  printf '%s\n' "$daemon_status" | grep -Fq "daemon status: running" && return 0
+  [ -f "$install_root/relay.pid" ] || return 1
+  relay_pid=$(cat "$install_root/relay.pid")
+  case "$relay_pid" in *[!0-9]*|"") return 1;; esac
+  kill -0 "$relay_pid" 2>/dev/null
 }
 
 if [ "$rollback" -eq 1 ]; then
@@ -70,9 +72,10 @@ fi
 verify
 if is_running; then
   [ "$allow_stop" -eq 1 ] || { echo "서버가 실행 중입니다. --stop을 명시해야 atomic update를 진행합니다." >&2; exit 1; }
-  "$install_root/another-dimension-server" stop
+  "$install_root/another-dimension" stop >/dev/null 2>&1 || true
+  "$install_root/another-dimension" relay-stop >/dev/null 2>&1 || true
 fi
-data_dir=$("$install_root/runtime-node" -e 'console.log(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")).dataDir)' "$install_root/server-config.json")
+data_dir=$("$install_root/runtime-node" -e 'const path=require("node:path"),c=JSON.parse(require("node:fs").readFileSync(process.argv[1],"utf8")); console.log(path.dirname(c.daemonDataDir))' "$install_root/server-config.json")
 parent=$(CDPATH= cd -- "$(dirname -- "$install_root")" && pwd)
 stage="$parent/$(basename -- "$install_root").new.$$"
 previous="$parent/$(basename -- "$install_root").previous"

@@ -1,5 +1,9 @@
 # 독립 보안 검토 Evidence Index
 
+> **상태: 폐기된 browser 제품 evidence index.** 삭제된 generated WASM,
+> `web-runtime.js`, IndexedDB/Olm 경로를 현재 daemon 증거로 제출하면 안 됩니다.
+> 새 검토 bundle이 작성되기 전까지 역사 기록으로만 보존합니다.
+
 이 문서는 자동 검증 결과와 독립 보안 검토의 경계를 고정하는 인덱스다.
 테스트가 통과해도 reviewer의 판단·서명·감사 보고서를 대신하지 않는다.
 `blocked` 항목이 남아 있는 동안 이 프로젝트는 실험용 저위험 제품이며,

@@ -1,21 +1,6 @@
 [workspace]
-# This workspace still contains legacy/native prototype crates. The current
-# product path is apps/web + apps/daemon + apps/server; do not use a full
-# workspace build as current product evidence.
 members = [
     "apps/daemon",
-    "crates/identity",
-    "crates/pairing",
-    "crates/crypto",
-    "crates/protocol",
-    "crates/transport",
-    "crates/storage",
-    "crates/core",
-    "apps/engine",
-    "apps/cli",
-]
-exclude = [
-    "apps/desktop-tauri/src-tauri",
 ]
 resolver = "2"
 

@@ -1,5 +1,9 @@
 # Pairing and browser protocol state machine
 
+> **상태: daemon 전환 과정의 혼합 스냅샷.** 후반부 browser Olm 상태 기계는
+> 삭제된 프로토타입을 설명합니다. 현재 동작 계약은 `apps/daemon` 소스와 테스트이며,
+> 이 문서를 릴리스 증거로 사용하지 않습니다.
+
 The invite-code rendezvous below is a transport helper for the current
 prototype. It does not replace the signed invite, safety comparison, or future
 daemon-owned identity. A code bearer can retrieve one short-lived signed invite

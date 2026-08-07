@@ -7,8 +7,15 @@ import { fileURLToPath } from "node:url";
 
 const REQUIRED = [
   "runtime-node",
+  "bin/another-dimension-daemon",
+  "another-dimension",
   "server-config.json",
   "apps/server/server.mjs",
+  "apps/server/routes.mjs",
+  "apps/server/http.mjs",
+  "apps/server/errors.mjs",
+  "apps/server/invite-code.mjs",
+  "apps/server/storage.mjs",
   "scripts/verify_install_state.mjs",
   "apps/web/dist/index.html",
   "apps/web/dist/asset-integrity.json",
@@ -64,18 +71,25 @@ export async function verifyInstallState(rootValue) {
   const manifestHash = createHash("sha256").update(await readFile(path.join(root, "release-manifest.json"))).digest("hex");
   if (manifestHash !== marker.manifestSha256) throw new Error("Installed release manifest changed after installation.");
   const manifestFiles = new Map((manifest.files || []).map((file) => [file.path, file]));
-  for (const [local, release] of [["apps", "apps"], ["scripts", "scripts"]]) await verifyInstalledFile(path.join(root, local), release, manifestFiles);
+  for (const [local, release] of [["apps", "apps"], ["bin", "bin"], ["scripts", "scripts"]]) await verifyInstalledFile(path.join(root, local), release, manifestFiles);
   for (const file of ["README.md", "README.ko.md", "SECURITY.md", "SUPPORT.md", "RELEASE-PROVENANCE.json", "SBOM.cyclonedx.json"]) {
     await verifyInstalledFile(path.join(root, file), file, manifestFiles);
   }
   await verifyInstalledFile(path.join(root, "runtime-node"), "runtime/node", manifestFiles);
   const config = JSON.parse(await readFile(path.join(root, "server-config.json"), "utf8"));
-  if (!config || typeof config.dataDir !== "string" || path.resolve(config.dataDir).startsWith(`${root}${path.sep}`)) throw new Error("Installed data directory must remain outside the code installation.");
+  for (const key of ["daemonDataDir", "relayDataDir", "dataDir", "distDir"]) {
+    if (typeof config?.[key] !== "string") throw new Error(`Installed config is missing ${key}.`);
+  }
+  if (config.dataDir !== config.relayDataDir || config.serveStatic !== false || !Number.isInteger(config.daemonPort)) throw new Error("Installed daemon/relay separation is invalid.");
+  for (const dataPath of [config.daemonDataDir, config.relayDataDir]) {
+    if (path.resolve(dataPath).startsWith(`${root}${path.sep}`)) throw new Error("Installed data directories must remain outside the code installation.");
+  }
   const runtime = await assertRegular(root, "runtime-node");
   const configInfo = await assertRegular(root, "server-config.json");
-  const launcherPath = path.join(root, "another-dimension-server");
-  const launcherInfo = await lstat(launcherPath).catch((error) => error.code === "ENOENT" ? null : Promise.reject(error));
-  if (launcherInfo && (!launcherInfo.isFile() || launcherInfo.isSymbolicLink() || !modeIs(launcherInfo, 0o700))) throw new Error("Installed launcher permissions are too broad.");
+  const launcherInfo = await assertRegular(root, "another-dimension");
+  const daemonInfo = await assertRegular(root, "bin/another-dimension-daemon");
+  if (!modeIs(launcherInfo, 0o700) || !modeIs(daemonInfo, 0o700)) throw new Error("Installed launcher or daemon permissions are too broad.");
+  if (!Buffer.from(await readFile(path.join(root, "another-dimension"))).equals(await readFile(path.join(root, "scripts/installed_launcher.sh")))) throw new Error("Installed launcher does not match the signed launcher template.");
   if (!modeIs(runtime, 0o700) || !modeIs(configInfo, 0o600)) throw new Error("Installed runtime or config permissions are too broad.");
   const dataInfo = await lstat(config.dataDir).catch((error) => error.code === "ENOENT" ? null : Promise.reject(error));
   if (dataInfo && (!dataInfo.isDirectory() || dataInfo.isSymbolicLink() || !modeIs(dataInfo, 0o700))) throw new Error("Installed data directory must be a real owner-only directory.");

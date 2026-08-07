@@ -53,8 +53,11 @@ await Promise.all([
   copy("reference/PRODUCT_BOUNDARY.md"),
   copy("reference/product_boundary.json"),
   copy("reference/SUPPORT_MATRIX.json"),
-  copy("reference/browser-evidence/codex-in-app-browser.json"),
   copy("apps/server/server.mjs"),
+  copy("apps/server/routes.mjs"),
+  copy("apps/server/http.mjs"),
+  copy("apps/server/errors.mjs"),
+  copy("apps/server/invite-code.mjs"),
   copy("apps/server/storage.mjs"),
   copy("apps/server/package.json"),
   copy("apps/server/package-lock.json"),
@@ -64,6 +67,7 @@ await Promise.all([
   copy("scripts/verify_web_artifact.mjs"),
   copy("scripts/release_manifest.mjs"),
   copy("scripts/install_local_server.sh"),
+  copy("scripts/installed_launcher.sh"),
   copy("scripts/relay_backup.mjs"),
   copy("scripts/update_local_server.sh"),
   copy("scripts/verify_install_state.mjs"),
@@ -109,25 +113,30 @@ const installResult = await run("sh", [join(archive, "scripts/install_local_serv
 assert.equal(installResult.code, 0, installResult.output);
 const config = JSON.parse(await readFile(join(install, "server-config.json"), "utf8"));
 assert.equal(config.bindHost, "127.0.0.1");
-assert.equal(config.serveStatic, true);
+assert.equal(config.serveStatic, false);
 assert.equal(config.distDir, join(install, "apps/web/dist"));
+assert.equal(config.daemonDataDir, join(data, "daemon"));
+assert.equal(config.relayDataDir, join(data, "relay"));
 assert.equal((await stat(join(install, "runtime-node"))).mode & 0o777, 0o700);
 assert.equal((await stat(join(install, "server-config.json"))).mode & 0o777, 0o600);
 assert.equal((await stat(data)).mode & 0o777, 0o700);
-assert.equal((await run(join(install, "another-dimension-server"), ["doctor"], noNodeEnvironment)).code, 0);
-assert.equal((await run(join(install, "another-dimension-server"), ["status"], noNodeEnvironment)).code, 1);
+assert.equal((await stat(join(install, "bin/another-dimension-daemon"))).mode & 0o777, 0o700);
+assert.equal((await run(join(install, "another-dimension"), ["doctor"], noNodeEnvironment)).code, 0);
+const initialStatus = await run(join(install, "another-dimension"), ["status"], noNodeEnvironment);
+assert.equal(initialStatus.code, 0);
+assert.match(initialStatus.output, /not initialized|stopped/i);
 const installedServerFile = join(install, "apps/server/server.mjs");
 const originalServerFile = await readFile(installedServerFile, "utf8");
 await writeFile(installedServerFile, `${originalServerFile}\n// tampered fixture\n`);
 await assert.rejects(() => verifyInstallState(install), /Installed file hash mismatch/);
 await writeFile(installedServerFile, originalServerFile);
 await verifyInstallState(install);
-assert.equal((await run(join(install, "another-dimension-server"), ["doctor"], noNodeEnvironment)).code, 0);
+assert.equal((await run(join(install, "another-dimension"), ["doctor"], noNodeEnvironment)).code, 0);
 await writeFile(join(data, "retained-sentinel"), "keep-me\n", { mode: 0o600 });
-await writeFile(join(install, "server.pid"), `${process.pid}\n`, { mode: 0o600 });
-const foreignPid = await run(join(install, "another-dimension-server"), ["start"], noNodeEnvironment);
+await writeFile(join(install, "relay.pid"), `${process.pid}\n`, { mode: 0o600 });
+const foreignPid = await run(join(install, "another-dimension"), ["relay-start"], noNodeEnvironment);
 assert.notEqual(foreignPid.code, 0);
-await writeFile(join(install, "server.pid"), "999999\n", { mode: 0o600 });
+await writeFile(join(install, "relay.pid"), "999999\n", { mode: 0o600 });
 const symlinkDestination = join(root, "install-symlink");
 await symlink(install, symlinkDestination);
 const symlinkInstall = await run("sh", [join(archive, "scripts/install_local_server.sh"), "--archive", archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile, "--destination", symlinkDestination, "--data-dir", join(root, "data-symlink")], noNodeEnvironment);
@@ -135,12 +144,12 @@ assert.notEqual(symlinkInstall.code, 0);
 await cp(archive, archive2, { recursive: true });
 await writeFile(join(archive2, "README.md"), "updated release fixture\n");
 await writeManifest(archive2, { version: "0.2.0", privateKey });
-const update = await run(join(install, "another-dimension-server"), ["update", "--archive", archive2, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile, "--stop"], noNodeEnvironment);
+const update = await run(join(install, "another-dimension"), ["update", "--archive", archive2, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile, "--stop"], noNodeEnvironment);
 assert.equal(update.code, 0, update.output);
 const updatedMarker = JSON.parse(await readFile(join(install, ".another-dimension-install.json"), "utf8"));
 assert.equal(updatedMarker.releaseVersion, "0.2.0");
 assert.equal((await readFile(join(data, "retained-sentinel"), "utf8")), "keep-me\n");
-const rollback = await run(join(install, "another-dimension-server"), ["rollback"], noNodeEnvironment);
+const rollback = await run(join(install, "another-dimension"), ["rollback"], noNodeEnvironment);
 assert.equal(rollback.code, 0, rollback.output);
 const rolledBackMarker = JSON.parse(await readFile(join(install, ".another-dimension-install.json"), "utf8"));
 assert.equal(rolledBackMarker.releaseVersion, "0.1.0");

@@ -1,5 +1,9 @@
 # Independent security review scope
 
+> **상태: 재작성 대기 중인 과거 scope.** WASM, browser-owned storage, legacy
+> session 항목은 현재 제품에서 제거되었습니다. 현재 daemon 릴리스에 대한 검토
+> 범위나 sign-off 입력물로 사용하지 않습니다.
+
 This repository is an experimental web-first prototype whose production
 candidate is daemon-first. An audit must review the daemon, its browser bridge,
 the user-owned relay, and the distribution boundary as one composition. It

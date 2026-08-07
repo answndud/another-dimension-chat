@@ -1,5 +1,9 @@
 # Crypto Decision Notes
 
+> **상태: 폐기된 설계 스냅샷.** 이 문서의 browser Olm, WASM, legacy crate
+> 설명은 현재 제품에 적용되지 않습니다. 현재 경계는 `PRODUCT_BOUNDARY.md`와
+> `apps/daemon` 소스이며, 이 파일을 구현·릴리스·감사 증거로 사용하면 안 됩니다.
+
 Another Dimension Chat has a browser message-encryption implementation, but
 does not have production security assurance today.
 

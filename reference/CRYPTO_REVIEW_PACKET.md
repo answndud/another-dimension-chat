@@ -1,5 +1,9 @@
 # Crypto review packet
 
+> **상태: 폐기된 browser Olm 검토 입력물.** 언급된 WASM/runtime 경로는 삭제되었습니다.
+> 현재 daemon/OpenMLS 제품의 독립 검토 packet으로 제출하거나 현재 보안 증거로
+> 인용하면 안 됩니다.
+
 This packet is an input for an independent review of the application-level
 composition around the audited `vodozemac` implementation. It is not an audit
 report and must not be used as a security certificate.

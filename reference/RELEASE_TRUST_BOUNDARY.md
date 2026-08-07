@@ -1,5 +1,9 @@
 # Release trust boundary
 
+> **상태: 배포 구조 전환 전 기록.** 정적 browser-only 배포와 generated WASM
+> 단계는 현재 릴리스에 적용되지 않습니다. 현재 archive는 daemon binary, daemon UI,
+> bundled relay runtime을 함께 서명·검증합니다.
+
 This document fixes the browser distribution boundary for TM-02 and TM-07.
 
 The operator procedure and redacted receipt template are in

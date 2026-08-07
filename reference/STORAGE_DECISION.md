@@ -1,5 +1,9 @@
 # Storage Decision Notes
 
+> **상태: 폐기된 legacy/browser 저장소 기록.** 현재 제품은 daemon 소유 암호화
+> 저장소와 `ADRECOVERY2`를 사용합니다. IndexedDB·ADREC1·legacy crate 설명은
+> 현재 구현 또는 복구 호환성 증거가 아닙니다.
+
 Another Dimension Chat does not have a complete production encrypted local
 storage lifecycle today.
 

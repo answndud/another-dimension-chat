@@ -1,50 +1,37 @@
-# Reproducible Build Notes for macOS
+# macOS 재현 빌드 메모
 
-This document collects the build inputs for the optional, legacy macOS Tauri
-wrapper. It does not describe the current browser deployment path.
+현재 제품은 Tauri 앱이 아니라 Rust daemon, 정적 웹 UI, Node relay로 구성됩니다.
 
-## Keep Fixed
+## 고정해야 하는 입력
 
-- `apps/desktop-tauri/package-lock.json`
+- source commit
 - `Cargo.lock`
-- `apps/desktop-tauri/src-tauri/Cargo.lock`
-- macOS version
-- Xcode Command Line Tools version
-- Node.js major version
-- Rust toolchain major version
-- Tauri CLI major version
+- `apps/web/package-lock.json`
+- `apps/server/package-lock.json`
+- Rust toolchain과 macOS/Xcode Command Line Tools 버전
+- Node.js 20 runtime 버전
+- `AD_RELEASE_SOURCE_DATE_EPOCH`
 
-## Build Command
-
-Use the source-build command from the install guide:
+## 빌드
 
 ```sh
-npm --prefix apps/desktop-tauri run tauri:build:beta-onion
+CARGO_BUILD_JOBS=2 cargo build -p another-dimension-daemon --release --locked
+npm ci --prefix apps/web --workspaces=false
+npm ci --prefix apps/server --workspaces=false
+npm --prefix apps/web run build --workspaces=false
 ```
 
-For the unsigned DMG candidate workflow, the release job uses the same source
-inputs and then packages the resulting DMG with:
+완성 아카이브는 daemon binary와 Node runtime을 명시적으로 전달해 생성합니다.
 
 ```sh
-npm --prefix apps/desktop-tauri run tauri:build:macos-dmg:beta-onion
+AD_DAEMON_BINARY="$PWD/target/release/another-dimension-daemon" \
+AD_NODE_RUNTIME="$(command -v node)" \
+AD_RELEASE_SOURCE_DATE_EPOCH=0 \
+scripts/build_release.sh
 ```
 
-## What This Does Not Guarantee
+## 현재 비보장
 
-- It does not guarantee byte-for-byte identical artifacts across every machine.
-- It does not make a failing local toolchain produce a valid build.
-- It does not turn the source-build path into a signed or notarized release path.
-
-## If Builds Drift
-
-If two builds differ, compare these first:
-
-1. macOS version
-2. Xcode Command Line Tools version
-3. Node.js version
-4. Rust toolchain version
-5. Tauri CLI version
-6. lockfile changes
-
-If those match, the difference is usually in the local environment rather than
-in the documented source-build path.
+이 절차는 입력을 고정하고 manifest·SBOM·provenance를 생성하지만 서로 다른 Mac에서
+byte-for-byte 동일한 daemon binary가 나온다는 증거는 아닙니다. 공개 배포 승인은
+별도의 clean-builder 비교, signing key 신뢰 경로, 서명 검증이 필요합니다.

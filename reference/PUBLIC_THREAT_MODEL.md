@@ -1,5 +1,9 @@
 # Public Threat Model
 
+> **상태: daemon 전환 중인 위협 모델 스냅샷.** daemon trust-boundary 절은 방향을
+> 설명하지만 browser Olm/WASM 구현 주장과 상태 표는 최신 판정이 아닙니다. 현재
+> 공개 non-claim은 `SECURITY.md`, 제품 경계는 `PRODUCT_BOUNDARY.md`를 따릅니다.
+
 Another Dimension Chat is not a secure messenger release today.
 
 This document is the public-safe threat model for the unsigned experimental

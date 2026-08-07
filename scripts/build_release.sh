@@ -13,17 +13,15 @@ npm --prefix "$PROJECT_DIR/apps/web" run build --workspaces=false
 node "$PROJECT_DIR/scripts/verify_web_artifact.mjs" "$PROJECT_DIR/apps/web/dist"
 
 mkdir -p "$STAGE/another-dimension-$VERSION/apps/server" "$STAGE/another-dimension-$VERSION/apps/web" "$STAGE/another-dimension-$VERSION/scripts"
-cp "$PROJECT_DIR/apps/server/server.mjs" "$PROJECT_DIR/apps/server/storage.mjs" "$PROJECT_DIR/apps/server/package.json" "$PROJECT_DIR/apps/server/package-lock.json" "$PROJECT_DIR/apps/server/README.md" "$STAGE/another-dimension-$VERSION/apps/server/"
-npm --prefix "$STAGE/another-dimension-$VERSION/apps/server" ci --omit=dev --no-audit --no-fund
+cp "$PROJECT_DIR/apps/server/server.mjs" "$PROJECT_DIR/apps/server/routes.mjs" "$PROJECT_DIR/apps/server/http.mjs" "$PROJECT_DIR/apps/server/errors.mjs" "$PROJECT_DIR/apps/server/invite-code.mjs" "$PROJECT_DIR/apps/server/storage.mjs" "$PROJECT_DIR/apps/server/package.json" "$PROJECT_DIR/apps/server/package-lock.json" "$PROJECT_DIR/apps/server/README.md" "$STAGE/another-dimension-$VERSION/apps/server/"
+npm --prefix "$STAGE/another-dimension-$VERSION/apps/server" ci --omit=dev --no-audit --no-fund --workspaces=false
 rm -rf "$STAGE/another-dimension-$VERSION/apps/server/node_modules/.bin"
 cp -R "$PROJECT_DIR/apps/web/dist" "$STAGE/another-dimension-$VERSION/apps/web/"
 cp "$PROJECT_DIR/apps/web/package.json" "$PROJECT_DIR/apps/web/package-lock.json" "$STAGE/another-dimension-$VERSION/apps/web/"
-cp "$PROJECT_DIR/scripts/start_local_server.sh" "$PROJECT_DIR/scripts/install_local_server.sh" "$PROJECT_DIR/scripts/update_local_server.sh" "$PROJECT_DIR/scripts/relay_backup.mjs" "$PROJECT_DIR/scripts/verify_install_state.mjs" "$PROJECT_DIR/scripts/configure_local_server.mjs" "$PROJECT_DIR/scripts/preflight_local_server.mjs" "$PROJECT_DIR/scripts/generate_tls_cert.sh" "$PROJECT_DIR/scripts/check_https_endpoint.mjs" "$PROJECT_DIR/scripts/release_manifest.mjs" "$PROJECT_DIR/scripts/product_boundary.mjs" "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$PROJECT_DIR/scripts/verify_public_release_gate.mjs" "$PROJECT_DIR/scripts/verify_release_trust.mjs" "$PROJECT_DIR/scripts/verify_release_trust_receipt.mjs" "$PROJECT_DIR/scripts/verify_security_review_handoff.mjs" "$PROJECT_DIR/scripts/verify_security_review_signoff.mjs" "$PROJECT_DIR/scripts/verify_web_artifact.mjs" "$PROJECT_DIR/scripts/verify_support_matrix.mjs" "$PROJECT_DIR/scripts/verify_release_support_gate.mjs" "$PROJECT_DIR/scripts/verify_service_worker.mjs" "$PROJECT_DIR/scripts/verify_service_worker_runtime.mjs" "$PROJECT_DIR/scripts/acceptance_os_matrix.mjs" "$PROJECT_DIR/scripts/acceptance_browser_matrix.mjs" "$STAGE/another-dimension-$VERSION/scripts/"
+cp "$PROJECT_DIR/scripts/start_local_server.sh" "$PROJECT_DIR/scripts/install_local_server.sh" "$PROJECT_DIR/scripts/installed_launcher.sh" "$PROJECT_DIR/scripts/update_local_server.sh" "$PROJECT_DIR/scripts/relay_backup.mjs" "$PROJECT_DIR/scripts/verify_install_state.mjs" "$PROJECT_DIR/scripts/configure_local_server.mjs" "$PROJECT_DIR/scripts/preflight_local_server.mjs" "$PROJECT_DIR/scripts/generate_tls_cert.sh" "$PROJECT_DIR/scripts/check_https_endpoint.mjs" "$PROJECT_DIR/scripts/release_manifest.mjs" "$PROJECT_DIR/scripts/product_boundary.mjs" "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$PROJECT_DIR/scripts/verify_public_release_gate.mjs" "$PROJECT_DIR/scripts/verify_release_trust.mjs" "$PROJECT_DIR/scripts/verify_release_trust_receipt.mjs" "$PROJECT_DIR/scripts/verify_security_review_handoff.mjs" "$PROJECT_DIR/scripts/verify_security_review_signoff.mjs" "$PROJECT_DIR/scripts/verify_web_artifact.mjs" "$PROJECT_DIR/scripts/verify_support_matrix.mjs" "$PROJECT_DIR/scripts/verify_release_support_gate.mjs" "$PROJECT_DIR/scripts/verify_service_worker.mjs" "$PROJECT_DIR/scripts/verify_service_worker_runtime.mjs" "$PROJECT_DIR/scripts/acceptance_os_matrix.mjs" "$PROJECT_DIR/scripts/verify_daemon_ui_artifact.mjs" "$STAGE/another-dimension-$VERSION/scripts/"
 cp "$PROJECT_DIR/README.md" "$PROJECT_DIR/README.ko.md" "$PROJECT_DIR/SECURITY.md" "$PROJECT_DIR/SUPPORT.md" "$STAGE/another-dimension-$VERSION/"
 mkdir -p "$STAGE/another-dimension-$VERSION/reference"
 cp "$PROJECT_DIR/reference/PRODUCT_BOUNDARY.md" "$PROJECT_DIR/reference/product_boundary.json" "$PROJECT_DIR/reference/SUPPORT_MATRIX.json" "$STAGE/another-dimension-$VERSION/reference/"
-mkdir -p "$STAGE/another-dimension-$VERSION/reference/browser-evidence"
-cp "$PROJECT_DIR/reference/browser-evidence/codex-in-app-browser.json" "$STAGE/another-dimension-$VERSION/reference/browser-evidence/"
 cp "$PROJECT_DIR/Cargo.lock" "$STAGE/another-dimension-$VERSION/Cargo.lock"
 if [ -n "${AD_DAEMON_BINARY:-}" ]; then
   if [ ! -x "$AD_DAEMON_BINARY" ]; then
@@ -33,8 +31,8 @@ if [ -n "${AD_DAEMON_BINARY:-}" ]; then
   mkdir -p "$STAGE/another-dimension-$VERSION/bin"
   cp "$AD_DAEMON_BINARY" "$STAGE/another-dimension-$VERSION/bin/another-dimension-daemon"
   chmod 700 "$STAGE/another-dimension-$VERSION/bin/another-dimension-daemon"
-elif [ "${AD_RELEASE_PROFILE:-development}" = "public" ]; then
-  printf '%s\n' "Public release requires AD_DAEMON_BINARY." >&2
+else
+  printf '%s\n' "A complete release requires AD_DAEMON_BINARY." >&2
   exit 1
 fi
 if [ -n "${AD_NODE_RUNTIME:-}" ]; then
@@ -46,8 +44,8 @@ if [ -n "${AD_NODE_RUNTIME:-}" ]; then
   cp "$AD_NODE_RUNTIME" "$STAGE/another-dimension-$VERSION/runtime/node"
   chmod 700 "$STAGE/another-dimension-$VERSION/runtime/node"
   "$STAGE/another-dimension-$VERSION/runtime/node" -e 'const major=Number(process.versions.node.split(".")[0]); if (major < 20) { console.error(`bundled runtime must be Node.js 20 or newer (found ${process.version})`); process.exit(1); }'
-elif [ "${AD_RELEASE_PROFILE:-development}" = "public" ]; then
-  printf '%s\n' "Public release requires AD_NODE_RUNTIME so users do not need Node/npm." >&2
+else
+  printf '%s\n' "A complete release requires AD_NODE_RUNTIME so users do not need Node/npm." >&2
   exit 1
 fi
 SOURCE_COMMIT=${AD_RELEASE_SOURCE_COMMIT:-$(git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || printf '%s' unknown)}

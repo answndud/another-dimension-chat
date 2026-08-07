@@ -1,5 +1,9 @@
 # daemon 1:1 protocol review packet
 
+> **상태: 구현 전 작성된 역사적 후보 검토 기록.** 아래의 `not implemented`,
+> 후보 버전 및 미완료 체크리스트는 현재 소스 상태가 아닙니다. 새 daemon/OpenMLS
+> 검토 packet이 작성되기 전까지 현재 구현 증거로 사용하지 않습니다.
+
 이 문서는 daemon에 실제 메시징 구현을 추가하기 전 승인 기준이다. 현재 daemon은
 `openmls-1` admission gate만 가지고 있으며, 이 문서가 `approved`가 되기 전에는
 session·prekey·message API를 열지 않는다.

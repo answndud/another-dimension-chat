@@ -2,15 +2,16 @@
 
 ## Current status
 
-Another Dimension Chat is an experimental web-first prototype and is not
-ready for real communication. It is not audited, not production-ready, and
-not for sensitive communication.
+Another Dimension Chat is a daemon-first security messenger under active
+development. It is not independently audited, not approved for production,
+and not for sensitive communication yet.
 
-The current direction is a user-owned local server plus a browser UI. No
-ChatGPT Sites project or central message host is required by the product. The
-Tauri, CLI, engine, and native transport targets are legacy/research source,
-not alternative clients or evidence for the supported web product. The current
-product boundary is recorded in `reference/PRODUCT_BOUNDARY.md`.
+The current direction is a user-owned relay plus a local daemon and browser UI.
+No ChatGPT Sites project or central message host is required by the product.
+The former Tauri, native CLI/engine, browser Olm, and onion transport prototypes
+were removed; git history is their archive. They are not alternative clients or
+evidence for the supported product. The current product boundary is recorded in
+`reference/PRODUCT_BOUNDARY.md`.
 
 The current relay defaults to API-only mode and does not serve the browser UI.
 An explicit `serveStatic`/`AD_SERVE_UI=1` development mode still exists for local
@@ -56,12 +57,13 @@ distribution remains a release blocker.
 
 
 
-The executable security requirement register is in
-`reference/SECURITY_REQUIREMENTS.md`. The application crypto review input is in
-`reference/CRYPTO_REVIEW_PACKET.md`. The requirement-to-evidence index is in
-`reference/SECURITY_REVIEW_EVIDENCE.md`, and incident/key compromise procedures
-are in `reference/INCIDENT_RESPONSE.md`. None of these documents is an audit
-report or reviewer sign-off.
+The current executable product boundary is `reference/PRODUCT_BOUNDARY.md` and
+`reference/product_boundary.json`. Several older requirement, crypto, storage,
+UI, and evidence notes under `reference/` are retained only as explicitly
+labelled historical snapshots while the daemon review packet is rebuilt. They
+must not be used as current implementation evidence. Incident/key compromise
+procedures remain in `reference/INCIDENT_RESPONSE.md`; no repository document is
+an audit report or reviewer sign-off.
 
 The operational release trust procedure, including offline bootstrap, two-channel
 fingerprint confirmation, rotation, revocation, and the redacted receipt template,
@@ -82,11 +84,13 @@ This prototype does not claim:
 - post-quantum security or protection when a compromised endpoint remains under attacker control
 - anonymity, untraceability, or protection from global traffic correlation
 - reliable automatic delivery, Tor/onion delivery, or censorship resistance
-- secure deletion, backup recovery, rollback protection, or multi-device recovery
+- secure deletion, guaranteed recovery from every corruption or device-loss case,
+  or complete multi-device recovery
 - protection from compromised browsers, extensions, devices, local malware, or coercion
 - protection when a server or reverse proxy serves an altered browser bundle
-- independently trusted signing-key distribution, reproducible builds, or safe automatic updates
-- identity continuity, prekey replenishment, revocation, or device lifecycle recovery
+- an independently exercised signing-key distribution path or safe unattended updates
+- independently reviewed identity continuity, KeyPackage lifecycle, revocation,
+  or device recovery
 - rate-limited, spam-resistant, highly available relay delivery
 
 Using OpenMLS and libcrux does not audit this application's identity signatures,
@@ -128,9 +132,10 @@ Use [`reference/INCIDENT_RESPONSE.md`](reference/INCIDENT_RESPONSE.md) for
 capability leakage, altered releases, CVE handling, signing-key compromise, and
 rollback decisions.
 
-## Related review notes
+## Related historical review notes
 
-The files under `reference/` are design review notes, not security claims:
+The following files contain earlier design history and are not current product
+evidence unless their own status notice says otherwise:
 
 - [Public Threat Model](reference/PUBLIC_THREAT_MODEL.md)
 - [Crypto Decision](reference/CRYPTO_DECISION.md)

@@ -4,17 +4,17 @@
 [`RELEASE_TRUST_OPERATIONS.md`](RELEASE_TRUST_OPERATIONS.md)에 있다. 이 문서는 사고
 발생 시 중지·격리·회전 순서를 우선한다.
 
-이 runbook은 사용자가 비밀값을 공개하지 않고 로컬 relay와 브라우저 세션을
+이 runbook은 사용자가 비밀값을 공개하지 않고 로컬 daemon, relay와 브라우저 세션을
 중지하는 절차다. 모든 사고에서 “조사 전에 더 실행해 보기”를 하지 않는다.
 운영자나 reviewer가 실제 조치를 수행했는지 자동 테스트가 증명할 수 없으므로,
 실행하지 않은 절차를 완료했다고 표시하지 않는다.
 
 ## 공통 즉시 조치
 
-1. 브라우저 방을 잠그고 private UI 탭을 닫는다.
-2. local server를 중지한다. capability URL, private UI URL, invite, envelope,
+1. 브라우저 세션을 잠그고 private UI 탭을 닫는다.
+2. daemon과 relay를 중지한다. capability URL, bootstrap URL, invite, envelope,
    passphrase, plaintext, safety material은 복사·게시·로그 수집을 하지 않는다.
-3. 의심되는 data directory와 브라우저 profile을 원본 보존용으로 별도 이동한다.
+3. 의심되는 daemon·relay data directory를 원본 보존용으로 별도 이동한다.
    원본을 덮어쓰거나 공개 업로드하지 않는다.
 4. 새 verified release와 fresh pairing 없이는 메시지를 보내지 않는다.
 5. 사건 ID, 시간대, version, commit, 일반적인 실패 분류만 기록한다.
@@ -28,7 +28,7 @@
    신뢰 채널에서 다시 확인한다.
 4. 공격자가 봉투를 제출했을 수 있으므로 전송 성공·수신 성공을 추정하지 않는다.
 
-## 변조된 UI/WASM·manifest·runtime
+## 변조된 UI·daemon·manifest·runtime
 
 1. `doctor` 또는 `verify_public_release_gate.mjs`가 실패하면 실행을 중지한다.
 2. 해당 archive를 삭제하지 말고 hash와 source revision만 private incident record에

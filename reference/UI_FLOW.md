@@ -1,5 +1,9 @@
 # Another Dimension UI 흐름 계약
 
+> **상태: browser-owned profile 시기의 역사적 화면 계약.** 현재 daemon UI의
+> 구현 계약으로 사용하지 않으며, IndexedDB·Olm·수동 legacy envelope 화면은
+> 현재 제품 범위가 아닙니다.
+
 이 문서는 현재 웹 제품의 화면 상태와 사용자 액션을 정의한다. 디자인 개편은 이 계약의
 기능과 보안 경계를 보존해야 하며, 화면을 단순하게 보이게 하기 위해 안전 검증 단계를
 생략해서는 안 된다.

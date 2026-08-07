@@ -19,28 +19,23 @@ verification/install tooling, public documentation, SBOM, provenance, and the
 runtime explicitly required by that package. A package is not a supported
 release merely because its files compile.
 
-The current implementation is being migrated onto this single path:
+The implementation uses this single path:
 
 ```text
 apps/daemon = local OpenMLS security-daemon product owner
 ```
 
-The daemon currently exposes the authoritative domain and protocol boundary,
-but message-session and relay implementations are still in progress. The
-`highRiskAllowed` release flag remains false until the implementation and
-functional evidence are complete. Its presence in the Rust workspace must not
-be interpreted as high-risk readiness.
+The daemon exposes the authoritative domain and protocol boundary. The
+`highRiskAllowed` release flag remains false until all implementation,
+independent review, and release evidence gates are complete.
 
 ## Explicitly unsupported legacy surfaces
 
-`apps/desktop-tauri`, `apps/cli`, `apps/engine`, and the native transport/onion
-spikes under `crates/transport` remain source/research material only. They are
-not a second client, not an alternative security boundary, not evidence for
-the web release, and not covered by the web product's security claims.
-
-Legacy workflows may run only when explicitly requested for legacy maintenance.
-They must not publish a current product release, advertise high-risk transport,
-or be used as evidence that the supported web package passed its release gate.
+The former Tauri, native CLI/engine, browser Olm, and onion transport trees were
+removed from the working source. Git history is the only archive. Their data
+formats are not imported into the daemon because cryptographic state migration
+would create a false identity-continuity claim; users create a fresh daemon
+identity and verify contacts again.
 
 ## Security boundary consequences
 

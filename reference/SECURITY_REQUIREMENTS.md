@@ -1,5 +1,9 @@
 # Security requirements
 
+> **상태: daemon 전환 전 요구사항 스냅샷.** 아래 상태값과 browser/WASM 경로는
+> 현재 구현 현황이 아니며 release gate나 완료 판정에 사용할 수 없습니다. 현재
+> 강제되는 경계는 `product_boundary.json`과 관련 verifier입니다.
+
 This is the executable security requirement register for the supported web
 product. A requirement is not complete because a document describes it: the
 release gate must point to source, a focused test, and an observable artifact.
