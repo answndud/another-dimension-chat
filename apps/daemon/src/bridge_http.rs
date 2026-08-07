@@ -762,6 +762,13 @@ impl InviteAuthority {
             .map_err(|_| PairingError::InvalidTransition)
     }
 
+    fn unverify_safety(&mut self, store: &mut EncryptedStore) -> Result<(), PairingError> {
+        self.pairing.unverify_safety()?;
+        self.pairing
+            .persist(store)
+            .map_err(|_| PairingError::InvalidTransition)
+    }
+
     fn reject_pairing(&mut self, store: &mut EncryptedStore) -> Result<(), PairingError> {
         self.pairing.reject()?;
         self.pairing
@@ -1585,6 +1592,26 @@ pub fn handle_request_with_context(
                 Ok(()) => response(
                     200,
                     r##"{"safety_verified":true}"##,
+                    None,
+                    Some("application/json"),
+                ),
+                Err(error) => pairing_error(error),
+            }
+        }
+        ("POST", "/local-api/pairing/unverify-safety") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            match authority.unverify_safety(store) {
+                Ok(()) => response(
+                    200,
+                    r##"{"safety_verified":false,"messaging_blocked":true}"##,
                     None,
                     Some("application/json"),
                 ),

@@ -112,7 +112,7 @@ function renderDaemonDevices() {
 
 function renderDaemonSafetyControls(pairing) {
   if (!pairing?.safety_number) return "";
-  if (pairing.safety_verified) return `<div class="daemon-safety"><strong>안전 번호</strong><code>${escapeHtml(pairing.safety_number)}</code><p class="verified">안전 번호 확인 완료</p></div>`;
+  if (pairing.safety_verified) return `<div class="daemon-safety"><strong>안전 번호</strong><code>${escapeHtml(pairing.safety_number)}</code><p class="verified">안전 번호 확인 완료 · 메시지 송신 허용</p><button id="daemon-unverify-safety" class="quiet" type="button">안전 번호 다시 확인</button></div>`;
   return `<div class="daemon-safety"><strong>안전 번호</strong><code>${escapeHtml(pairing.safety_number)}</code><p class="field-note">상대방에게 별도 신뢰 채널로 전체 번호를 읽어 확인하세요.</p><label>확인한 안전 번호<input id="daemon-safety-confirmation" autocomplete="off" /></label><button id="daemon-verify-safety" class="secondary" type="button">안전 번호 확인</button></div>`;
 }
 
@@ -919,6 +919,17 @@ function render() {
         state.notice = "안전 번호를 확인했습니다. 이제 연락처 승인을 진행할 수 있습니다.";
         state.error = "";
       } catch (error) { state.error = error.message; }
+      render();
+    });
+    document.querySelector("#daemon-unverify-safety")?.addEventListener("click", async () => {
+      if (!window.confirm("안전 번호를 다시 확인할 때까지 이 연락처로 메시지를 보낼 수 없게 됩니다. 계속할까요?")) return;
+      try {
+        const result = await state.daemonBridge.unverifySafety();
+        state.daemonPairing = { ...state.daemonPairing, ...result, safety_verified: false };
+        state.daemonReceivedInvite = { ...state.daemonReceivedInvite, safety_verified: false };
+        state.notice = "안전 번호를 다시 확인해야 합니다. 확인 전까지 메시지 송신이 차단됩니다.";
+        state.error = "";
+      } catch (error) { state.error = `안전 번호 재확인 준비에 실패했습니다: ${error.message}`; }
       render();
     });
     document.querySelector("#daemon-reject-pairing")?.addEventListener("click", async () => {

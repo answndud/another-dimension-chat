@@ -279,6 +279,7 @@ export async function connectDaemonBridge({
       method: "POST",
       body: JSON.stringify({ safety_number: safetyNumber }),
     }),
+    unverifySafety: () => request("/local-api/pairing/unverify-safety", { method: "POST" }),
     approvePairing: () => request("/local-api/pairing/approve", { method: "POST" }),
     rejectPairing: () => request("/local-api/pairing/reject", { method: "POST" }),
   });

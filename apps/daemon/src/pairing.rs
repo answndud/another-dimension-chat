@@ -156,12 +156,20 @@ impl PairingSession {
     }
 
     pub fn confirm_safety(&mut self, value: &str) -> Result<(), PairingError> {
-        if self.state != PairingState::Verified
-            || self.safety_number().as_deref() != Some(value.trim())
-        {
+        let can_reconfirm = self.state == PairingState::Verified
+            || (self.state == PairingState::Established && !self.safety_verified);
+        if !can_reconfirm || self.safety_number().as_deref() != Some(value.trim()) {
             return Err(PairingError::SafetyMismatch);
         }
         self.safety_verified = true;
+        Ok(())
+    }
+
+    pub fn unverify_safety(&mut self) -> Result<(), PairingError> {
+        if self.state != PairingState::Established || !self.safety_verified {
+            return Err(PairingError::InvalidTransition);
+        }
+        self.safety_verified = false;
         Ok(())
     }
 
@@ -321,6 +329,27 @@ mod tests {
         session.confirm_safety(&safety).unwrap();
         assert!(!session.can_message());
         session.approve(10).unwrap();
+        assert!(session.can_message());
+    }
+
+    #[test]
+    fn established_pairing_can_be_locked_until_safety_is_reconfirmed() {
+        let mut session = PairingSession::new("local-account", "local-device");
+        session
+            .verify_peer(peer("peer-account", "peer-device", 100), 10)
+            .unwrap();
+        let safety = session.safety_number().unwrap();
+        session.confirm_safety(&safety).unwrap();
+        session.approve(10).unwrap();
+        assert!(session.can_message());
+
+        session.unverify_safety().unwrap();
+        assert!(!session.can_message());
+        assert_eq!(
+            session.confirm_safety("sha256-not-the-number"),
+            Err(PairingError::SafetyMismatch)
+        );
+        session.confirm_safety(&safety).unwrap();
         assert!(session.can_message());
     }
 

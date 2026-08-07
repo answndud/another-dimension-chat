@@ -98,13 +98,15 @@ test("pairing approval is an authenticated daemon mutation", async () => {
   });
   await bridge.pairingStatus();
   await bridge.verifySafety("sha256-example");
+  await bridge.unverifySafety();
   await bridge.approvePairing();
   await bridge.rejectPairing();
   assert.equal(calls[2].url, "http://127.0.0.1:1420/local-api/pairing/verify-safety");
   assert.deepEqual(JSON.parse(calls[2].options.body), { safety_number: "sha256-example" });
-  assert.equal(calls[3].url, "http://127.0.0.1:1420/local-api/pairing/approve");
-  assert.equal(calls[3].options.headers.get("x-ad-csrf"), "f".repeat(32));
-  assert.equal(calls[4].url, "http://127.0.0.1:1420/local-api/pairing/reject");
+  assert.equal(calls[3].url, "http://127.0.0.1:1420/local-api/pairing/unverify-safety");
+  assert.equal(calls[4].url, "http://127.0.0.1:1420/local-api/pairing/approve");
+  assert.equal(calls[4].options.headers.get("x-ad-csrf"), "f".repeat(32));
+  assert.equal(calls[5].url, "http://127.0.0.1:1420/local-api/pairing/reject");
 });
 
 test("delivery helpers keep relay material in authenticated daemon request bodies", async () => {
