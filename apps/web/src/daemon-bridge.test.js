@@ -40,6 +40,25 @@ test("mutating daemon requests use the session cookie and CSRF header", async ()
   assert.equal(request.headers.get("x-ad-ui-version"), "web-v1");
 });
 
+test("expired daemon UI sessions renew once and retry the original request", async () => {
+  const calls = [];
+  const bridge = await connectDaemonBridge({
+    location: location(),
+    history: { replaceState() {} },
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (calls.length === 2) return { ok: false, json: async () => ({ error: "session_invalid" }) };
+      if (calls.length === 3) return { ok: true, json: async () => ({ csrf_token: "n".repeat(32) }) };
+      return { ok: true, json: async () => ({ csrf_token: "d".repeat(32), renewed: true }) };
+    },
+  });
+  await bridge.request("/local-api/session/lock", { method: "POST" });
+  assert.equal(calls[1].url, "http://127.0.0.1:1420/local-api/session/lock");
+  assert.equal(calls[2].url, "http://127.0.0.1:1420/local-session/renew");
+  assert.equal(calls[3].url, "http://127.0.0.1:1420/local-api/session/lock");
+  assert.equal(calls[3].options.headers.get("x-ad-csrf"), "n".repeat(32));
+});
+
 test("daemon session helpers use typed routes and never put message material in URLs", async () => {
   const calls = [];
   const bridge = await connectDaemonBridge({

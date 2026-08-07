@@ -926,6 +926,29 @@ pub fn handle_request_with_context(
                 Err(error) => response(403, error_code(&error), None, Some("application/json")),
             }
         }
+        ("POST", "/local-session/renew") => {
+            let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session")
+            else {
+                return response(401, "session_invalid", None, None);
+            };
+            let csrf_token = request.header("x-ad-csrf").unwrap_or("");
+            let ui_version = request.header("x-ad-ui-version").unwrap_or("");
+            match bridge.renew(origin, host, cookie, csrf_token, ui_version, now) {
+                Ok(credentials) => {
+                    let body = format!(
+                        r##"{{"csrf_token":"{}","expires_at":{},"ui_version":"{}"}}"##,
+                        credentials.csrf_token, credentials.expires_at, credentials.ui_version
+                    );
+                    response(
+                        200,
+                        &body,
+                        Some(&credentials.set_cookie),
+                        Some("application/json"),
+                    )
+                }
+                Err(error) => response(403, error_code(&error), None, Some("application/json")),
+            }
+        }
         ("GET", "/local-api/status") => {
             let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session")
             else {

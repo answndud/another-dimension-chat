@@ -213,6 +213,35 @@ impl LocalBridge {
         }
         self.bootstrap_hash = None;
         self.bootstrap_token = None;
+        self.issue_session(now)
+    }
+
+    /// Rotates an existing browser session without requiring the one-time
+    /// bootstrap fragment again. The old cookie and CSRF token are both
+    /// required, including when the idle TTL has elapsed.
+    pub fn renew(
+        &mut self,
+        origin: &str,
+        host: &str,
+        cookie: &str,
+        csrf_token: &str,
+        ui_version: &str,
+        now: u64,
+    ) -> Result<SessionCredentials, BridgeError> {
+        self.check_origin_host(origin, host)?;
+        if ui_version != self.config.ui_version {
+            return Err(BridgeError::SessionInvalid);
+        }
+        let session = self.session.as_ref().ok_or(BridgeError::SessionInvalid)?;
+        if !constant_time_equal(&session.cookie_hash, &hash_token(cookie))
+            || !constant_time_equal(&session.csrf_hash, &hash_token(csrf_token))
+        {
+            return Err(BridgeError::SessionInvalid);
+        }
+        self.issue_session(now)
+    }
+
+    fn issue_session(&mut self, now: u64) -> Result<SessionCredentials, BridgeError> {
         let cookie = random_token()?;
         let csrf_token = random_token()?;
         let ttl = TtlContract {
@@ -414,6 +443,28 @@ mod tests {
             ..request
         };
         assert_eq!(bridge.authorize(&authorized, 110), Ok(()));
+        let renewed = bridge
+            .renew(
+                "http://127.0.0.1:1420",
+                "127.0.0.1:1420",
+                &credentials.cookie,
+                &credentials.csrf_token,
+                "web-v1",
+                200,
+            )
+            .unwrap();
+        assert_ne!(renewed.cookie, credentials.cookie);
+        assert_eq!(
+            bridge.authorize(
+                &BridgeRequest {
+                    cookie: &renewed.cookie,
+                    csrf_token: Some(&renewed.csrf_token),
+                    ..authorized
+                },
+                201
+            ),
+            Ok(())
+        );
     }
 
     #[test]

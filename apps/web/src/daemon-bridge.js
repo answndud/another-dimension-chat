@@ -86,8 +86,32 @@ export async function connectDaemonBridge({
   if (typeof credentials.csrf_token !== "string" || credentials.csrf_token.length < 32) {
     throw new DaemonBridgeError("invalid-session", "데몬이 유효한 브라우저 세션을 반환하지 않았습니다.");
   }
-  const csrfToken = credentials.csrf_token;
-  const request = async (path, options = {}) => {
+  let csrfToken = credentials.csrf_token;
+  let renewInFlight = null;
+  const renewSession = async () => {
+    if (renewInFlight) return renewInFlight;
+    renewInFlight = (async () => {
+      const result = await fetchImpl(`${origin}/local-session/renew`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          "x-ad-ui-version": uiVersion,
+          "x-ad-csrf": csrfToken,
+        },
+        body: "{}",
+      });
+      const renewed = await jsonResponse(result);
+      if (typeof renewed.csrf_token !== "string" || renewed.csrf_token.length < 32) {
+        throw new DaemonBridgeError("invalid-session", "데몬이 새 브라우저 세션을 반환하지 않았습니다.");
+      }
+      csrfToken = renewed.csrf_token;
+      return renewed;
+    })().finally(() => { renewInFlight = null; });
+    return renewInFlight;
+  };
+  const request = async (path, options = {}, retried = false) => {
     const method = options.method || "GET";
     const headers = new Headers(options.headers || {});
     headers.set("accept", "application/json");
@@ -95,13 +119,22 @@ export async function connectDaemonBridge({
     if (options.body && !headers.has("content-type")) headers.set("content-type", "application/json");
     if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) headers.set("x-ad-csrf", csrfToken);
     const result = await fetchImpl(`${origin}${path}`, { ...options, method, credentials: "include", headers });
-    return jsonResponse(result);
+    try {
+      return await jsonResponse(result);
+    } catch (error) {
+      if (!retried && error.code === "session_invalid" && path !== "/local-session/renew") {
+        await renewSession();
+        return request(path, options, true);
+      }
+      throw error;
+    }
   };
   return Object.freeze({
     origin,
     uiVersion,
-    csrfToken,
+    get csrfToken() { return csrfToken; },
     request,
+    renewSession,
     relayTrust: () => request("/local-api/relay/trust"),
     saveRelayTlsPin: (tlsPin, retrust = false) => request("/local-api/relay/trust", {
       method: "POST",
