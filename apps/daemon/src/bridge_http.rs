@@ -12,6 +12,8 @@ mod http_support;
 mod maintenance;
 #[path = "message_service.rs"]
 mod message_service;
+#[path = "route_context.rs"]
+mod route_context;
 
 use authority::{
     mls_device_credential, verify_relay_receipt, verify_signed_invite, verify_signed_invite_unbound,
@@ -31,6 +33,7 @@ use maintenance::{
 use message_service::{
     decode_message_payload, encode_message_payload, persist_message, StoredMessage,
 };
+use route_context::RouteContext;
 
 use crate::{
     attachment::{AttachmentDescriptor, AttachmentJob, EncryptedAttachment},
@@ -88,11 +91,37 @@ pub fn handle_request_with_context(
     now: u64,
     ui_root: Option<&Path>,
     identity: Option<&IdentityView>,
-    mut invite_authority: Option<&mut InviteAuthority>,
-    mut session_catalog: Option<&mut MlsSessionCatalog>,
-    mut session_store: Option<&mut EncryptedStore>,
-    mut delivery_ledger: Option<&mut DeliveryLedger>,
+    invite_authority: Option<&mut InviteAuthority>,
+    session_catalog: Option<&mut MlsSessionCatalog>,
+    session_store: Option<&mut EncryptedStore>,
+    delivery_ledger: Option<&mut DeliveryLedger>,
 ) -> Vec<u8> {
+    handle_request_with_route_context(
+        raw,
+        RouteContext {
+            bridge,
+            now,
+            ui_root,
+            identity,
+            invite_authority,
+            session_catalog,
+            session_store,
+            delivery_ledger,
+        },
+    )
+}
+
+pub(crate) fn handle_request_with_route_context(raw: &[u8], context: RouteContext<'_>) -> Vec<u8> {
+    let RouteContext {
+        bridge,
+        now,
+        ui_root,
+        identity,
+        mut invite_authority,
+        mut session_catalog,
+        mut session_store,
+        mut delivery_ledger,
+    } = context;
     let Ok(request) = parse_request(raw) else {
         return response(400, "invalid_request", None, None);
     };

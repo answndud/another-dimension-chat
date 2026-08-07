@@ -1,7 +1,7 @@
 use super::{
-    axum_request_bytes, axum_response, background_sync_once, handle_request_with_context,
+    axum_request_bytes, axum_response, background_sync_once, handle_request_with_route_context,
     notify_new_messages, response, retry_due_deliveries, unix_now, IdentityView, InviteAuthority,
-    StoredMessage, MAX_REQUEST_BYTES,
+    RouteContext, StoredMessage, MAX_REQUEST_BYTES,
 };
 use crate::{
     bridge::LocalBridge,
@@ -173,16 +173,18 @@ async fn axum_handler(State(state): State<AppState>, request: HttpRequest<Body>)
     let Ok(mut delivery_ledger) = state.delivery_ledger.lock() else {
         return axum_response(response(503, "delivery_unavailable", None, None));
     };
-    let output = handle_request_with_context(
-        &mut bridge,
+    let output = handle_request_with_route_context(
         &raw,
-        unix_now(),
-        state.ui_root.as_deref(),
-        state.identity.as_ref(),
-        invite_guard.as_deref_mut(),
-        Some(&mut catalog),
-        Some(&mut store),
-        Some(&mut delivery_ledger),
+        RouteContext {
+            bridge: &mut bridge,
+            now: unix_now(),
+            ui_root: state.ui_root.as_deref(),
+            identity: state.identity.as_ref(),
+            invite_authority: invite_guard.as_deref_mut(),
+            session_catalog: Some(&mut catalog),
+            session_store: Some(&mut store),
+            delivery_ledger: Some(&mut delivery_ledger),
+        },
     );
     axum_response(output)
 }
