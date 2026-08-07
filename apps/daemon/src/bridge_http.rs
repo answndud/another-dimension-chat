@@ -2415,7 +2415,15 @@ pub fn handle_request_with_context(
                 Err(_) => {
                     let _ = ledger.schedule_retry(&digest, now);
                     let _ = ledger.persist(store);
-                    return response(503, "relay_unavailable", None, Some("application/json"));
+                    return response(
+                        503,
+                        &format!(
+                            r##"{{"error":"relay_unavailable","digest":"{}","state":"retryable"}}"##,
+                            json_escape(&digest)
+                        ),
+                        None,
+                        Some("application/json"),
+                    );
                 }
             };
             let _ = ledger.bind_relay_id(&digest, &accepted.id);
@@ -2693,7 +2701,15 @@ pub fn handle_request_with_context(
                     if let Some(store) = session_store.as_deref_mut() {
                         let _ = ledger.persist(store);
                     }
-                    return response(503, "relay_unavailable", None, Some("application/json"));
+                    return response(
+                        503,
+                        &format!(
+                            r##"{{"error":"relay_unavailable","digest":"{}","state":"retryable"}}"##,
+                            json_escape(&digest)
+                        ),
+                        None,
+                        Some("application/json"),
+                    );
                 }
             };
             if ledger.bind_relay_id(&digest, &accepted.id).is_err() {

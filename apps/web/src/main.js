@@ -35,7 +35,7 @@ import { connectDaemonBridge, consumeRelayInvite, createRelayInviteCode, revokeR
 import "./styles.css";
 
 const app = document.querySelector("#app");
-let state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", daemonReceivedInvite: null, daemonConsumedInvite: "", daemonInviteReceipt: "", daemonRelayOrigin: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false, daemonBridge: null, daemonBridgeMode: false, daemonStatus: "확인 중", daemonStorage: null, daemonIdentity: null, daemonInvite: null, daemonPairing: null, daemonRelayTrust: null, daemonDevices: [], daemonDeviceEvents: [], daemonLinkApproval: "", daemonContacts: [], daemonContactSearch: "", daemonConversationIds: [], daemonSelectedContact: "", daemonLocked: false, daemonConversationId: "", daemonKeyPackage: "", daemonWelcome: "", daemonCiphertext: "", daemonPlaintext: "", daemonInboxUrl: "", daemonPeerInboxUrl: "", daemonMessages: [], daemonOutgoingMessages: [], daemonDeliveryDigest: "", daemonDeliveryState: "", daemonAttachmentState: "", daemonAttachmentProgress: 0, daemonAttachmentBlobId: "" };
+let state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", daemonReceivedInvite: null, daemonConsumedInvite: "", daemonInviteReceipt: "", daemonRelayOrigin: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: "", riskAcknowledged: false, wipeConfirmOpen: false, daemonBridge: null, daemonBridgeMode: false, daemonStatus: "확인 중", daemonRelayState: "unknown", daemonStorage: null, daemonIdentity: null, daemonInvite: null, daemonPairing: null, daemonRelayTrust: null, daemonDevices: [], daemonDeviceEvents: [], daemonLinkApproval: "", daemonContacts: [], daemonContactSearch: "", daemonConversationIds: [], daemonSelectedContact: "", daemonLocked: false, daemonConversationId: "", daemonKeyPackage: "", daemonWelcome: "", daemonCiphertext: "", daemonPlaintext: "", daemonInboxUrl: "", daemonPeerInboxUrl: "", daemonMessages: [], daemonOutgoingMessages: [], daemonDeliveryDigest: "", daemonDeliveryState: "", daemonAttachmentState: "", daemonAttachmentProgress: 0, daemonAttachmentBlobId: "" };
 let serviceWorkerStatus = "확인 중";
 let syncInFlight = false;
 let daemonSyncInFlight = false;
@@ -68,7 +68,7 @@ function downloadPassphrase(value) {
 }
 
 function lockedState(message) {
-  state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: message, riskAcknowledged: false, wipeConfirmOpen: false, daemonStorage: null, daemonDevices: [], daemonDeviceEvents: [], daemonMessages: [], daemonOutgoingMessages: [], daemonDeliveryDigest: "", daemonDeliveryState: "" };
+  state = { profile: null, peer: null, activeView: "connect", generatedPassphrase: "", serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", sessionBackup: "", transcriptExport: "", messages: [], error: "", notice: message, riskAcknowledged: false, wipeConfirmOpen: false, daemonRelayState: "unknown", daemonStorage: null, daemonDevices: [], daemonDeviceEvents: [], daemonMessages: [], daemonOutgoingMessages: [], daemonDeliveryDigest: "", daemonDeliveryState: "" };
   render();
 }
 
@@ -185,6 +185,25 @@ function encodeHex(bytes) {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+function daemonDeliveryLabel(value) {
+  return {
+    draft: "작성 중",
+    encrypted: "암호화 완료",
+    queued: "전달 대기 중",
+    "relay-accepted": "릴레이 접수됨 · 상대 수신 대기",
+    "recipient-received": "상대 데몬 수신됨",
+    decrypted: "상대 데몬에서 복호화됨",
+    retryable: "전달 실패 · 다시 시도 가능",
+    failed: "전달 실패 · 재시도 한도 초과",
+    cancelled: "전달 취소됨",
+  }[value] || String(value || "상태 확인 중");
+}
+
+function mergeDaemonMessages(existing, incoming) {
+  const known = new Set(existing.map((message) => message.id));
+  return [...existing, ...incoming.filter((message) => message.id && !known.has(message.id))];
+}
+
 function newAttachmentBlobId() {
   const bytes = new Uint8Array(24);
   window.crypto.getRandomValues(bytes);
@@ -202,7 +221,7 @@ function renderDaemonSessionPanel() {
   const peerInboxUrl = state.daemonPeerInboxUrl || selectedContact?.inbox_url || "";
   const timeline = [...state.daemonOutgoingMessages, ...state.daemonMessages];
   const receivedMessages = timeline.length
-    ? timeline.map((message) => `<article class="daemon-message ${message.direction === "outgoing" ? "outgoing" : "incoming"}">${message.attachmentId ? `<p>암호화 첨부파일</p><button class="quiet daemon-attachment-download" data-daemon-attachment="${escapeHtml(message.attachmentId)}" type="button">파일 복호화·다운로드</button><button class="quiet daemon-attachment-delete" data-daemon-attachment-delete="${escapeHtml(message.attachmentId)}" type="button">로컬 첨부 상태 삭제</button>` : `<p>${escapeHtml(message.text)}</p><button class="quiet daemon-message-copy" data-daemon-copy="${escapeHtml(message.text)}" type="button">내용 복사</button>`}<small>${message.direction === "outgoing" ? "내 메시지" : "상대 메시지 · 암호화 저장소에서 복호화됨"} · ${escapeHtml(message.state || "decrypted")} · ${escapeHtml(message.id.slice(0, 12))}</small></article>`).join("")
+    ? timeline.map((message) => `<article class="daemon-message ${message.direction === "outgoing" ? "outgoing" : "incoming"}">${message.attachmentId ? `<p>암호화 첨부파일</p><button class="quiet daemon-attachment-download" data-daemon-attachment="${escapeHtml(message.attachmentId)}" type="button">파일 복호화·다운로드</button><button class="quiet daemon-attachment-delete" data-daemon-attachment-delete="${escapeHtml(message.attachmentId)}" type="button">로컬 첨부 상태 삭제</button>` : `<p>${escapeHtml(message.text)}</p><button class="quiet daemon-message-copy" data-daemon-copy="${escapeHtml(message.text)}" type="button">내용 복사</button>`}<small>${message.direction === "outgoing" ? "내 메시지" : "상대 메시지 · 암호화 저장소에서 복호화됨"} · ${escapeHtml(daemonDeliveryLabel(message.state || "decrypted"))} · ${escapeHtml(message.id.slice(0, 12))}</small></article>`).join("")
     : '<p class="field-note">아직 받은 메시지가 없습니다.</p>';
   const retryButton = state.daemonDeliveryState === "retryable" ? '<button id="daemon-delivery-retry" class="secondary" type="button">전달 다시 시도</button>' : "";
   const attachmentRetry = state.daemonAttachmentBlobId && /실패|retry/i.test(state.daemonAttachmentState) ? '<button id="daemon-attachment-retry" class="secondary" type="button">첨부파일 전송 다시 시도</button><button id="daemon-attachment-cancel" class="quiet" type="button">첨부파일 작업 취소</button>' : "";
@@ -213,7 +232,7 @@ function renderDaemonSessionPanel() {
       ? '<section class="daemon-session-setup"><strong>왼쪽 연락처에서 대화 상대를 선택하세요.</strong><p class="field-note">선택한 연락처의 대화 상태와 전달 경로가 자동으로 사용됩니다.</p></section>'
       : `<p class="field-note daemon-session-ready">이 연락처의 로컬 대화 상태가 준비되었습니다.</p>`;
   const deliveryState = state.daemonDeliveryState
-    ? `<p class="delivery-state">전달 상태: <strong>${escapeHtml(state.daemonDeliveryState)}</strong>${state.daemonDeliveryDigest ? ` · ${escapeHtml(state.daemonDeliveryDigest.slice(0, 12))}` : ""}</p><button id="daemon-delivery-status" class="quiet" type="button">전달 상태 새로고침</button>${retryButton}`
+    ? `<p class="delivery-state">전달 상태: <strong>${escapeHtml(daemonDeliveryLabel(state.daemonDeliveryState))}</strong>${state.daemonDeliveryDigest ? ` · ${escapeHtml(state.daemonDeliveryDigest.slice(0, 12))}` : ""}</p><button id="daemon-delivery-status" class="quiet" type="button">전달 상태 새로고침</button>${retryButton}`
     : "";
   return `<section class="daemon-session-tools daemon-conversation-panel"><header class="daemon-conversation-heading"><div><span class="eyebrow">LOCAL CONVERSATION</span><h2>${escapeHtml(contactTitle)}</h2><p class="field-note">브라우저는 입력과 표시만 담당하고, 암호화 키와 대화 상태는 daemon이 보관합니다.</p></div>${selectedContact ? `<span class="pill">${escapeHtml(selectedContact.state)}${selectedContact.conversation_id ? " · 연결됨" : " · 준비 필요"}</span>` : ""}</header>${sessionSetup}<input id="daemon-conversation-id" type="hidden" value="${escapeHtml(conversationId)}"><input id="daemon-peer-inbox-url" type="hidden" value="${escapeHtml(peerInboxUrl)}"><div class="daemon-message-list" aria-live="polite">${receivedMessages}</div><label>메시지<textarea id="daemon-message" rows="3" placeholder="메시지를 입력하세요" ${conversationId ? "" : "disabled"}></textarea><button id="daemon-message-send" class="primary" type="button" ${conversationId ? "" : "disabled"}>보내기</button><section class="daemon-attachment"><h3>파일 보내기</h3><p class="field-note">파일은 daemon에서 암호화한 뒤 전달됩니다. 상대방의 전달 경로는 선택한 연락처에서 사용합니다.</p><input id="daemon-attachment-file" type="file" ${conversationId ? "" : "disabled"}><button id="daemon-attachment-send" class="secondary" type="button" ${conversationId ? "" : "disabled"}>파일 암호화·전송</button>${state.daemonAttachmentState ? `<p class="delivery-state" role="status">${escapeHtml(state.daemonAttachmentState)} · ${state.daemonAttachmentProgress}%</p><progress max="100" value="${state.daemonAttachmentProgress}">${state.daemonAttachmentProgress}%</progress>` : ""}${attachmentRetry}</section>${deliveryState}<section class="daemon-delivery"><h3>받은 메시지</h3><p class="field-note">내 inbox가 설정된 경우 새 암호화 봉투를 확인하고 로컬 저장소에 반영합니다.</p><input id="daemon-inbox-url" type="hidden" value="${escapeHtml(state.daemonInboxUrl)}"><button id="daemon-delivery-sync" class="secondary" type="button" ${conversationId ? "" : "disabled"}>받은 메시지 동기화</button></section><details class="daemon-advanced-tools"><summary>고급 연결·복구 도구</summary><p class="field-note">아래 항목은 두 기기 간 연결 자료를 수동 교환하거나 장애를 복구할 때만 사용합니다. 일반 대화에서는 열지 마세요.</p><div class="daemon-advanced-grid"><label>내 연결 자료<textarea id="daemon-key-package" readonly rows="3" placeholder="대화 준비 후 생성됩니다">${escapeHtml(state.daemonKeyPackage)}</textarea></label><button id="daemon-session-prepare" class="secondary" type="button">연결 자료 생성</button><label>상대 기기의 참여 승인 자료<textarea id="daemon-welcome" rows="3" placeholder="별도 신뢰 채널로 받은 자료"></textarea></label><button id="daemon-session-join" class="secondary" type="button">참여 승인 자료 적용</button><label>상대 기기의 연결 자료<textarea id="daemon-peer-key-package" rows="3" placeholder="별도 신뢰 채널로 받은 자료"></textarea></label><button id="daemon-session-add-member" class="secondary" type="button">상대 기기 추가</button><label>생성된 암호화 봉투<textarea id="daemon-ciphertext" readonly rows="3" placeholder="daemon이 생성한 봉투">${escapeHtml(state.daemonCiphertext)}</textarea></label><label>받은 암호화 봉투<textarea id="daemon-incoming-ciphertext" rows="3" placeholder="수동 복구용"></textarea></label><button id="daemon-message-receive" class="secondary" type="button">복호화하여 보기</button><label>복호화 결과<textarea id="daemon-plaintext" readonly rows="3" placeholder="복호화 결과">${escapeHtml(state.daemonPlaintext)}</textarea></label></div></details></section>`;
 }
@@ -273,7 +292,13 @@ function bindDaemonSession() {
         state.daemonDeliveryState = "";
         state.notice = "relay capability가 폐기되어 기존 pairing을 중단했습니다. 새 연결을 시작하세요.";
       }
-      state.error = error.message;
+      if (error.code === "relay_unavailable") {
+        state.daemonRelayState = "offline";
+        state.notice = "릴레이에 연결할 수 없습니다. 로컬 암호화 상태는 유지되며, 연결 후 다시 시도할 수 있습니다.";
+        state.error = "";
+      } else {
+        state.error = error.message;
+      }
     }
     render();
   };
@@ -322,7 +347,24 @@ function bindDaemonSession() {
     const peerInboxUrl = document.querySelector("#daemon-peer-inbox-url")?.value.trim() || "";
     if (!peerInboxUrl) throw new Error("상대방 inbox 주소를 입력하세요.");
     state.daemonPeerInboxUrl = peerInboxUrl;
-    const accepted = await bridge.postDelivery(peerInboxUrl, state.daemonCiphertext, messageExpiresAt || Math.floor(Date.now() / 1000) + 3600);
+    let accepted;
+    try {
+      accepted = await bridge.postDelivery(peerInboxUrl, state.daemonCiphertext, messageExpiresAt || Math.floor(Date.now() / 1000) + 3600);
+      state.daemonRelayState = "online";
+    } catch (error) {
+      if (error.code === "relay_unavailable") {
+        state.daemonRelayState = "offline";
+        state.daemonDeliveryDigest = error.digest || "";
+        state.daemonDeliveryState = error.state || "retryable";
+        state.daemonOutgoingMessages = [...state.daemonOutgoingMessages, {
+          id: state.daemonDeliveryDigest || "queued-outgoing",
+          text: message,
+          state: state.daemonDeliveryState,
+          direction: "outgoing",
+        }];
+      }
+      throw error;
+    }
     state.daemonDeliveryDigest = accepted.digest || "";
     state.daemonDeliveryState = accepted.state || "relay-accepted";
     state.daemonOutgoingMessages = [...state.daemonOutgoingMessages, {
@@ -393,7 +435,19 @@ function bindDaemonSession() {
     }
     await bridge.finishAttachment(blobId);
     progress("daemon이 암호화 blob을 relay로 전송 중", 80);
-    const accepted = await bridge.sendCompletedAttachment(conversationId, inboxUrl, blobId);
+    let accepted;
+    try {
+      accepted = await bridge.sendCompletedAttachment(conversationId, inboxUrl, blobId);
+      state.daemonRelayState = "online";
+    } catch (error) {
+      if (error.code === "relay_unavailable") {
+        state.daemonRelayState = "offline";
+        state.daemonDeliveryDigest = error.digest || "";
+        state.daemonDeliveryState = error.state || "retryable";
+        state.daemonAttachmentState = "첨부파일 전달 대기 중 · 다시 시도할 수 있습니다";
+      }
+      throw error;
+    }
     state.daemonPeerInboxUrl = inboxUrl;
     state.daemonDeliveryDigest = accepted.digest || "";
     state.daemonDeliveryState = accepted.state || "relay-accepted";
@@ -406,6 +460,7 @@ function bindDaemonSession() {
     const inboxUrl = document.querySelector("#daemon-peer-inbox-url")?.value.trim() || state.daemonPeerInboxUrl;
     if (!state.daemonAttachmentBlobId || !inboxUrl) throw new Error("재시도할 첨부파일 정보가 없습니다.");
     const accepted = await bridge.sendCompletedAttachment(conversationId, inboxUrl, state.daemonAttachmentBlobId);
+    state.daemonRelayState = "online";
     state.daemonPeerInboxUrl = inboxUrl;
     state.daemonDeliveryDigest = accepted.digest || "";
     state.daemonDeliveryState = accepted.state || "relay-accepted";
@@ -421,6 +476,7 @@ function bindDaemonSession() {
   document.querySelector("#daemon-delivery-status")?.addEventListener("click", () => run(async () => {
     if (!state.daemonDeliveryDigest) throw new Error("조회할 전달 기록이 없습니다.");
     const result = await bridge.deliveryStatus(state.daemonDeliveryDigest);
+    state.daemonRelayState = "online";
     state.daemonDeliveryState = result.state || state.daemonDeliveryState;
     state.daemonOutgoingMessages = state.daemonOutgoingMessages.map((item) => item.id === state.daemonDeliveryDigest ? { ...item, state: state.daemonDeliveryState } : item);
   }, "전달 상태를 갱신했습니다."));
@@ -429,6 +485,7 @@ function bindDaemonSession() {
     const inboxUrl = document.querySelector("#daemon-peer-inbox-url")?.value.trim() || state.daemonPeerInboxUrl;
     if (!inboxUrl) throw new Error("상대방 inbox 주소를 입력하세요.");
     const result = await bridge.retryDelivery(inboxUrl, state.daemonDeliveryDigest);
+    state.daemonRelayState = "online";
     state.daemonDeliveryState = result.state || "relay-accepted";
     state.daemonOutgoingMessages = state.daemonOutgoingMessages.map((item) => item.id === state.daemonDeliveryDigest ? { ...item, state: state.daemonDeliveryState } : item);
   }, "암호화된 봉투를 relay로 다시 접수했습니다."));
@@ -445,6 +502,7 @@ function bindDaemonSession() {
     if (!inboxUrl) throw new Error("내 inbox 주소를 입력하세요.");
     state.daemonInboxUrl = inboxUrl;
     const result = await bridge.syncDelivery(conversationId, inboxUrl);
+    state.daemonRelayState = "online";
     const received = (result.messages || []).map((message) => ({
       id: message.id || "수신 메시지",
       text: message.attachment_id ? "암호화 첨부파일" : message.expired ? "만료된 메시지" : decodeHexText(message.plaintext),
@@ -452,7 +510,7 @@ function bindDaemonSession() {
       state: "decrypted",
       direction: "incoming",
     }));
-    state.daemonMessages = [...state.daemonMessages, ...received];
+    state.daemonMessages = mergeDaemonMessages(state.daemonMessages, received);
     state.daemonPlaintext = received.at(-1)?.text || state.daemonPlaintext;
   }, "받은 봉투를 daemon에서 검증·복호화했습니다."));
 }
@@ -609,6 +667,11 @@ function renderWorkspace() {
 function render() {
   if (state.daemonBridgeMode) {
     app.innerHTML = renderDaemonBridgeState();
+    if (state.daemonRelayState === "offline") {
+      document.querySelector(".daemon-gate .notice")?.insertAdjacentHTML("beforebegin", '<div class="daemon-connection-banner offline" role="status"><strong>릴레이 연결이 끊겼습니다.</strong><span>로컬 대화와 암호화 상태는 유지됩니다. 연결이 복구되면 전달 대기 항목을 다시 시도하세요.</span></div>');
+    } else if (state.daemonRelayState === "online") {
+      document.querySelector(".daemon-gate .notice")?.insertAdjacentHTML("beforebegin", '<div class="daemon-connection-banner online" role="status"><strong>릴레이 연결됨</strong><span>릴레이 접수는 상대방이 읽었다는 뜻이 아닙니다.</span></div>');
+    }
     if (state.daemonBridge && !state.daemonLocked) {
       document.querySelector(".daemon-gate")?.insertAdjacentHTML("beforeend", renderDaemonRelayTrust());
       const wipeButton = document.createElement("button");
@@ -1046,6 +1109,7 @@ async function receiveDaemonMessages(background = false) {
   daemonSyncInFlight = true;
   try {
     const result = await bridge.syncDelivery(state.daemonConversationId, state.daemonInboxUrl, background);
+    state.daemonRelayState = "online";
     const received = (result.messages || []).map((message) => ({
       id: message.id || "수신 메시지",
       text: message.attachment_id ? "암호화 첨부파일" : decodeHexText(message.plaintext),
@@ -1054,13 +1118,22 @@ async function receiveDaemonMessages(background = false) {
       direction: "incoming",
     }));
     if (received.length) {
-      state.daemonMessages = [...state.daemonMessages, ...received];
+      state.daemonMessages = mergeDaemonMessages(state.daemonMessages, received);
       state.daemonContacts = (await bridge.contacts()).contacts || state.daemonContacts;
       state.notice = background ? `${received.length}개의 새 암호화 메시지를 받았습니다.` : "받은 암호화 메시지를 동기화했습니다.";
       state.error = "";
       render();
     }
   } catch (error) {
+    if (error.code === "relay_unavailable") {
+      state.daemonRelayState = "offline";
+      if (!background) {
+        state.notice = "릴레이에 연결할 수 없습니다. 로컬 대화 기록은 유지됩니다.";
+        state.error = "";
+        render();
+      }
+      return;
+    }
     if (error.code === "relay_capability_expired") {
       state.daemonPairing = { state: "rejected", safety_verified: false };
       state.daemonInboxUrl = "";
@@ -1113,6 +1186,7 @@ async function startApp() {
       state.daemonBridge = daemonBridge;
       state.daemonBridgeMode = true;
       const daemonStatus = await daemonBridge.request("/local-api/status");
+      state.daemonRelayState = "online";
       state.daemonStorage = { records: daemonStatus.storage_records || 0, limit: daemonStatus.storage_record_limit || 0 };
       state.daemonStatus = daemonStatus.status
         ? `${daemonStatus.status} · 저장 ${state.daemonStorage.records}/${state.daemonStorage.limit}`

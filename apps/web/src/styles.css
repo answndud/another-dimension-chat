@@ -199,6 +199,10 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .daemon-gate-mark { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--line); font-size: 1.4rem; margin-bottom: 32px; }
 .daemon-gate h1 { max-width: 620px; margin: 8px 0 14px; font-size: clamp(1.8rem, 4vw, 3rem); letter-spacing: -.04em; }
 .daemon-gate .lede { max-width: 600px; color: var(--muted); line-height: 1.7; }
+.daemon-connection-banner { display: grid; gap: 3px; margin: 20px 0; border-left: 3px solid var(--accent); padding: 10px 12px; background: var(--surface-muted); font-size: .82rem; }
+.daemon-connection-banner span { color: var(--muted); line-height: 1.5; }
+.daemon-connection-banner.offline { border-left-color: #9a4b3f; }
+.daemon-connection-banner.online { border-left-color: #4d7a5d; }
 .daemon-facts { margin: 28px 0; border-top: 1px solid var(--line); }
 .daemon-facts div { display: grid; grid-template-columns: 150px 1fr; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); }
 .daemon-facts dt { color: var(--muted); font-size: .78rem; }

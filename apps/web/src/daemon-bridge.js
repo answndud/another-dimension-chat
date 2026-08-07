@@ -37,7 +37,9 @@ async function jsonResponse(response) {
   let body = null;
   try { body = await response.json(); } catch { /* preserve generic network error */ }
   if (!response.ok) {
-    throw new DaemonBridgeError(body?.error || "exchange-failed", body?.error || "로컬 보안 데몬 세션을 열 수 없습니다.");
+    const error = new DaemonBridgeError(body?.error || "exchange-failed", body?.error || "로컬 보안 데몬 세션을 열 수 없습니다.");
+    if (body && typeof body === "object") Object.assign(error, body);
+    throw error;
   }
   return body || {};
 }
