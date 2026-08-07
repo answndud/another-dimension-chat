@@ -4,6 +4,8 @@
 mod authority;
 #[path = "http_support.rs"]
 mod http_support;
+#[path = "message_service.rs"]
+mod message_service;
 
 use authority::{
     mls_device_credential, verify_relay_receipt, verify_signed_invite, verify_signed_invite_unbound,
@@ -12,6 +14,9 @@ pub use authority::{IdentityView, InviteAuthority, VerifiedInvite};
 use http_support::{
     axum_request_bytes, axum_response, cookie_value, delivery_state_name, json_bool, json_escape,
     json_string, json_string_array, json_u64, parse_request, response, static_file, Request,
+};
+use message_service::{
+    decode_message_payload, encode_message_payload, persist_message, StoredMessage,
 };
 
 use crate::{
@@ -53,78 +58,8 @@ const MAX_INVITE_TTL_SECONDS: u64 = 10 * 60;
 const COMPLETED_ATTACHMENT_TTL_SECONDS: u64 = 60 * 60;
 const MAX_COMPLETED_ATTACHMENT_COUNT: usize = 2;
 const MAX_COMPLETED_ATTACHMENT_BYTES: usize = 64 * 1024 * 1024;
-const MESSAGE_PREFIX: &[u8] = b"ADMSG1.";
 const MAX_MESSAGE_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
 const MAX_AUTOMATIC_RETRIES_PER_TICK: usize = 2;
-
-#[derive(serde::Deserialize, serde::Serialize)]
-struct MessagePayload {
-    id: String,
-    created_at: u64,
-    expires_at: u64,
-    text: String,
-}
-
-#[derive(serde::Deserialize, serde::Serialize)]
-struct StoredMessage {
-    conversation_id: String,
-    message_id: String,
-    direction: String,
-    created_at: u64,
-    expires_at: u64,
-    text: String,
-}
-
-fn message_record_key(conversation_id: &str, message_id: &str) -> String {
-    format!(
-        "messages/{}",
-        hex_bytes(&Sha256::digest(
-            format!("{conversation_id}\n{message_id}").as_bytes()
-        ))
-    )
-}
-
-fn persist_message(
-    store: &mut EncryptedStore,
-    conversation_id: &str,
-    message: &MessagePayload,
-    direction: &str,
-) -> Result<(), StorageError> {
-    let record = StoredMessage {
-        conversation_id: conversation_id.to_owned(),
-        message_id: message.id.clone(),
-        direction: direction.to_owned(),
-        created_at: message.created_at,
-        expires_at: message.expires_at,
-        text: message.text.clone(),
-    };
-    let bytes = serde_json::to_vec(&record).map_err(|_| StorageError::CorruptStore)?;
-    store.put(
-        RecordClass::Message,
-        &message_record_key(conversation_id, &message.id),
-        &bytes,
-    )
-}
-
-fn encode_message_payload(text: &str, now: u64, expires_at: u64) -> Option<Vec<u8>> {
-    let mut id = [0_u8; 16];
-    getrandom::fill(&mut id).ok()?;
-    let payload = MessagePayload {
-        id: hex_bytes(&id),
-        created_at: now,
-        expires_at,
-        text: text.to_owned(),
-    };
-    let mut encoded = MESSAGE_PREFIX.to_vec();
-    encoded.extend(serde_json::to_vec(&payload).ok()?);
-    Some(encoded)
-}
-
-fn decode_message_payload(plaintext: &[u8]) -> Option<MessagePayload> {
-    plaintext
-        .strip_prefix(MESSAGE_PREFIX)
-        .and_then(|value| serde_json::from_slice(value).ok())
-}
 
 /// Minimal HTTP boundary for the local bridge. It intentionally exposes only
 /// session bootstrap/status/lock; identity and message APIs remain absent.
