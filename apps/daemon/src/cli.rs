@@ -289,6 +289,9 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
     let url = bridge.bootstrap_url("/").map_err(|_| CliError::Io)?;
     eprintln!("daemon bridge listening on 127.0.0.1:{port}");
     eprintln!("open once: {url}");
+    if args.iter().any(|arg| arg == "--open") {
+        open_browser(&url);
+    }
     serve_forever(
         bridge,
         Some(&ui_dir),
@@ -308,6 +311,19 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         }
     })?;
     Ok("daemon stopped".into())
+}
+
+fn open_browser(url: &str) {
+    if !cfg!(target_os = "macos") {
+        eprintln!("browser auto-open is only supported on macOS; copy the URL above");
+        return;
+    }
+    match std::process::Command::new("open").arg(url).status() {
+        Ok(status) if status.success() => eprintln!("browser opened"),
+        _ => eprintln!(
+            "could not open the browser automatically; copy the one-time URL above into Chromium"
+        ),
+    }
 }
 
 struct InstanceLock {
@@ -1196,7 +1212,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CliError> {
     Ok(())
 }
 fn help_text() -> String {
-    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  status [--data-dir PATH]\n  stop [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  device link-request --id DEVICE_ID --output PATH\n  device link-complete --input PATH --approval VALUE\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery inspect --input PATH [--data-dir PATH]\n  recovery rotate --data-dir PATH  # stdin: old passphrase\\nnew passphrase\n  recovery import --input PATH [--data-dir PATH]\n  wipe --data-dir PATH              # irreversible local store deletion\n\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\nPassphrases are read from stdin and are never accepted as arguments.".into()
+    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  status [--data-dir PATH]\n  stop [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify] [--open]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  device link-request --id DEVICE_ID --output PATH\n  device link-complete --input PATH --approval VALUE\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery inspect --input PATH [--data-dir PATH]\n  recovery rotate --data-dir PATH  # stdin: old passphrase\\nnew passphrase\n  recovery import --input PATH [--data-dir PATH]\n  wipe --data-dir PATH              # irreversible local store deletion\n\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\n--open is opt-in; if macOS cannot open a browser, copy the one-time URL printed above.\nPassphrases are read from stdin and are never accepted as arguments.".into()
 }
 
 #[cfg(test)]
