@@ -3353,10 +3353,31 @@ pub fn serve_forever(
                 }
             }
         });
-        axum::serve(listener, app)
-            .await
-            .map_err(|error| io::Error::other(error.to_string()))
+        tokio::select! {
+            result = axum::serve(listener, app) => result.map_err(|error| io::Error::other(error.to_string())),
+            _ = shutdown_signal() => Ok(()),
+        }
     })
+}
+
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    {
+        let Ok(mut terminate) =
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+        else {
+            let _ = tokio::signal::ctrl_c().await;
+            return;
+        };
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {},
+            _ = terminate.recv() => {},
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = tokio::signal::ctrl_c().await;
+    }
 }
 
 fn notify_new_messages(enabled: bool, count: usize) {
