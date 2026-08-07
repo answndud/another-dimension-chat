@@ -1,13 +1,13 @@
-import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, randomBytes, sign, timingSafeEqual, X509Certificate } from "node:crypto";
-import { createReadStream, realpathSync } from "node:fs";
-import { chmod, lstat, mkdir, open, readdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
+import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, randomBytes, timingSafeEqual, X509Certificate } from "node:crypto";
+import { realpathSync } from "node:fs";
+import { chmod, lstat, mkdir, readdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
-import { dirname, extname, join, normalize, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { consumeInviteCode, createInviteCode, inviteCodeHash, invitePayloadDigest, purgeInviteCodes, revokeInviteCode, validateDaemonInvite } from "./invite-code.mjs";
-import { errorBody, errorStatus } from "./errors.mjs";
+import { purgeInviteCodes } from "./invite-code.mjs";
 import { createSqliteRelayStore } from "./storage.mjs";
+import { createRelayRequestHandler } from "./routes.mjs";
 
 const MAX_ENVELOPE_BYTES = 96 * 1024;
 const MAX_INBOX_ITEMS = 256;
@@ -45,111 +45,9 @@ async function loadRelayReceiptKey(dataDir, privateFileWriter, configuredFile = 
   return { privateKey: generated.privateKey, publicKeyHex, publicKeyFingerprint: createHash("sha256").update(Buffer.from(publicKeyHex, "hex")).digest("hex") };
 }
 
-const mimeTypes = {
-  ".css": "text/css; charset=utf-8",
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".map": "application/json; charset=utf-8",
-  ".wasm": "application/wasm",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-};
-
-function json(res, status, body, headers = {}) {
-  const payload = JSON.stringify(body);
-  res.writeHead(status, {
-    "content-type": "application/json; charset=utf-8",
-    "content-length": Buffer.byteLength(payload),
-    ...headers,
-  });
-  res.end(payload);
-}
-
-function securityHeaders({ api = false, hsts = false } = {}) {
-  return {
-    "cache-control": api ? "no-store" : "no-cache",
-    // WebAssembly compilation is required by the audited Rust/WASM crypto boundary.
-    // `wasm-unsafe-eval` permits WASM compilation only; it does not enable JavaScript eval.
-    "content-security-policy": "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; worker-src 'self';",
-    "cross-origin-opener-policy": "same-origin",
-    "cross-origin-resource-policy": "same-origin",
-    "form-action": "'self'",
-    "permissions-policy": "camera=(), microphone=(), geolocation=()",
-    "referrer-policy": "no-referrer",
-    "x-content-type-options": "nosniff",
-    "x-frame-options": "DENY",
-    ...(hsts ? { "strict-transport-security": "max-age=31536000" } : {}),
-  };
-}
-
-function corsHeaders(req, allowedOrigins, options = {}) {
-  const headers = securityHeaders(options);
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.has(origin)) {
-    headers["access-control-allow-origin"] = origin;
-    headers["access-control-allow-headers"] = "content-type,x-ad-local-access";
-    headers["access-control-allow-methods"] = "GET,POST,OPTIONS";
-    headers.vary = "Origin";
-  }
-  return headers;
-}
-
-function hasJsonContentType(req) {
-  return typeof req.headers["content-type"] === "string"
-    && req.headers["content-type"].toLowerCase().startsWith("application/json");
-}
-
 function parseOrigins(value) {
   if (!value) return [];
   return String(value).split(",").map((origin) => normalizePublicUrl(origin.trim())).filter(Boolean);
-}
-
-async function readBody(req, limit = MAX_ENVELOPE_BYTES + 4096, timeoutMs = 15_000) {
-  let timer;
-  const read = (async () => {
-    const chunks = [];
-    let size = 0;
-    for await (const chunk of req) {
-      size += chunk.length;
-      if (size > limit) throw new Error("request_too_large");
-      chunks.push(chunk);
-    }
-    return Buffer.concat(chunks).toString("utf8");
-  })();
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => {
-      req.destroy();
-      req.socket.destroy();
-      reject(new Error("request_timeout"));
-    }, timeoutMs);
-  });
-  try { return await Promise.race([read, timeout]); } finally { clearTimeout(timer); }
-}
-
-async function readBodyBuffer(req, limit, timeoutMs = 15_000) {
-  let timer;
-  const read = (async () => {
-    const chunks = [];
-    let size = 0;
-    for await (const chunk of req) {
-      size += chunk.length;
-      if (size > limit) throw new Error("request_too_large");
-      chunks.push(chunk);
-    }
-    return Buffer.concat(chunks);
-  })();
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => { req.destroy(); req.socket.destroy(); reject(new Error("request_timeout")); }, timeoutMs);
-  });
-  try { return await Promise.race([read, timeout]); } finally { clearTimeout(timer); }
-}
-
-function validBlobId(value) { return /^[A-Za-z0-9_-]{32,128}$/.test(String(value || "")); }
-
-function safeFile(distDir, pathname) {
-  const relative = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
-  const candidate = resolve(distDir, normalize(relative));
-  return candidate.startsWith(`${resolve(distDir)}${process.platform === "win32" ? "\\" : "/"}`) ? candidate : null;
 }
 
 function capability() {
@@ -382,7 +280,7 @@ export async function createLocalServer({
   const queueFile = join(dataDir, "inbox.json");
   const inviteCodeFile = join(dataDir, "invite-codes.json");
   const relayDatabaseFile = join(dataDir, "relay.sqlite");
-  let inboxCapability = await loadCapability(capabilityFile, "inbox-write", privateFileWriter);
+  const capabilityState = { inbox: await loadCapability(capabilityFile, "inbox-write", privateFileWriter) };
   const retiredInboxPrefixes = new Set();
   const relayReceiptKey = await loadRelayReceiptKey(dataDir, privateFileWriter, relayReceiptSigningKeyFile);
   let localAccessCapability = await loadCapability(localAccessFile, "local-control", privateFileWriter);
@@ -396,32 +294,33 @@ export async function createLocalServer({
   relayStore.purgeInbox(Date.now() - ttlMs);
   relayStore.purgeInviteCodes(Date.now());
   relayStore.trimInbox(MAX_INBOX_ITEMS);
-  let inbox = relayStore.listInbox();
-  let inviteCodes = relayStore.listInviteCodes();
-  inviteCodes = purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS);
+  const routeState = {
+    inbox: relayStore.listInbox(),
+    inviteCodes: purgeInviteCodes(relayStore.listInviteCodes()).slice(-MAX_INVITE_CODE_RECORDS),
+  };
   const purge = () => {
     const cutoff = Date.now() - ttlMs;
     relayStore.purgeInbox(cutoff);
-    inbox = Array.isArray(inbox) ? inbox.filter((item) => Number.isSafeInteger(item.receivedAt) && item.receivedAt >= cutoff).slice(-MAX_INBOX_ITEMS) : [];
+    routeState.inbox = Array.isArray(routeState.inbox) ? routeState.inbox.filter((item) => Number.isSafeInteger(item.receivedAt) && item.receivedAt >= cutoff).slice(-MAX_INBOX_ITEMS) : [];
   };
   purge();
 
   const persist = () => {
     purge();
-    relayStore.replaceInbox(inbox);
+    relayStore.replaceInbox(routeState.inbox);
   };
   const persistInviteCodes = () => {
-    inviteCodes = purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS);
-    relayStore.replaceInviteCodes(inviteCodes);
+    routeState.inviteCodes = purgeInviteCodes(routeState.inviteCodes).slice(-MAX_INVITE_CODE_RECORDS);
+    relayStore.replaceInviteCodes(routeState.inviteCodes);
   };
   const scheme = tlsKeyFile && tlsCertFile ? "https" : "http";
   const originFor = (address) => normalizedPublicUrl || `${scheme}://${urlHost(address)}:${port}`;
-  const inboxUrlFor = (address) => `${originFor(address)}${capabilityPath(inboxCapability.token)}`;
+  const inboxUrlFor = (address) => `${originFor(address)}${capabilityPath(capabilityState.inbox.token)}`;
   const rotateInboxCapability = async () => {
-    retiredInboxPrefixes.add(capabilityPath(inboxCapability.token));
-    inboxCapability = newCapability("inbox-write");
-    await privateFileWriter(capabilityFile, `${JSON.stringify(inboxCapability)}\n`);
-    return inboxCapability;
+    retiredInboxPrefixes.add(capabilityPath(capabilityState.inbox.token));
+    capabilityState.inbox = newCapability("inbox-write");
+    await privateFileWriter(capabilityFile, `${JSON.stringify(capabilityState.inbox)}\n`);
+    return capabilityState.inbox;
   };
   const requestWindows = new Map();
   const consumeRateLimit = (req, bucket, limit) => {
@@ -439,287 +338,52 @@ export async function createLocalServer({
     return true;
   };
 
-  const handleRequest = async (req, res) => {
-    const requestUrl = new URL(req.url || "/", `http://${req.headers.host || `${bindHost}:${port}`}`);
-    const isApi = requestUrl.pathname.startsWith("/api/");
-    const headers = corsHeaders(req, allowedCorsOrigins, { api: isApi, hsts: Boolean(tlsKeyFile || normalizedPublicUrl.startsWith("https://")) });
-    if (isApi && req.headers.origin && !allowedCorsOrigins.has(req.headers.origin)) {
-      json(res, 403, { error: "origin_not_allowed" }, headers);
-      return;
-    }
-    if (req.method === "OPTIONS") {
-      if (!isApi || !req.headers.origin || allowedCorsOrigins.has(req.headers.origin)) { res.writeHead(204, headers); res.end(); }
-      else json(res, 403, { error: "origin_not_allowed" }, headers);
-      return;
-    }
-
-    if (requestUrl.pathname === "/api/v1/health" && req.method === "GET") {
-      json(res, 200, { ok: true, protocol: 1 }, headers);
-      return;
-    }
-    if (requestUrl.pathname === "/api/v1/info" && req.method === "GET") {
-      if (!consumeRateLimit(req, "local-info", 30)) { json(res, 429, { error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      if (!capabilityValid(localAccessCapability) || !hasLocalAccess(req, localAccessCapability)) {
-        json(res, 403, { error: "local_access_required" }, headers);
-        return;
-      }
-      const publicOrigin = originFor(bindHost);
-      const blobStoreUsage = await blobUsage();
-      json(res, 200, {
-        protocol: 1,
-        protocolVersions: [1],
-        inboxUrl: inboxUrlFor(bindHost),
-        publicOrigin,
-        externalSecure: publicOrigin.startsWith("https://"),
-        listenerTls: Boolean(tlsKeyFile && tlsCertFile),
-        serveStatic,
-        highRiskAllowed: false,
-        highRiskTransport: "disabled",
-        supportedTransports: ["loopback", "direct-https-low-risk", "manual-envelope"],
-        transportMode: publicOrigin.startsWith("https://") ? "direct-https-low-risk" : "local-or-http-low-risk",
-        networkScope: isLoopbackHost(bindHost) ? "loopback" : "non-loopback",
-        maxEnvelopeBytes: MAX_ENVELOPE_BYTES,
-        maxTextBytes: 64 * 1024,
-        maxAttachmentBytes: 32 * 1024 * 1024,
-        blobStoreBytes: blobStoreUsage.bytes,
-        blobStoreRecords: blobStoreUsage.records,
-        maxBlobStoreBytes: MAX_BLOB_STORE_BYTES,
-        maxBlobRecords: MAX_BLOB_RECORDS,
-        relayReceiptPublicKey: relayReceiptKey.publicKeyHex,
-        relayReceiptPublicKeyFingerprint: relayReceiptKey.publicKeyFingerprint,
-        relayReceiptKeyId: relayReceiptKey.publicKeyFingerprint,
-        relayReceiptKeySource: relayReceiptSigningKeyFile ? "external-configured" : "generated-development",
-      }, headers);
-      return;
-    }
-
-    if (requestUrl.pathname === "/api/v1/invite-codes" && req.method === "POST") {
-      if (!consumeRateLimit(req, "invite-code-create", 5)) { json(res, 429, { created: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      if (!capabilityValid(localAccessCapability) || !hasLocalAccess(req, localAccessCapability)) {
-        json(res, 403, { created: false, error: "local_access_required" }, headers);
-        return;
-      }
-      try {
-        if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
-        const body = JSON.parse(await readBody(req, MAX_INVITE_CODE_BODY_BYTES, requestTimeoutMs));
-        const created = createInviteCode({ invite: body?.invite, expectedRelayOrigin: originFor(bindHost), ttlMs: body?.ttlMs });
-        if (inviteCodes.length >= MAX_INVITE_CODE_RECORDS) inviteCodes = purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS + 1);
-        inviteCodes.push(created.record);
-        try { await persistInviteCodes(); } catch (error) { inviteCodes = inviteCodes.filter((record) => record !== created.record); throw error; }
-        // The clear-text code is returned exactly once. It is never persisted or logged.
-        json(res, 201, { created: true, code: created.code, expiresAt: created.record.expiresAt, inviteDigest: created.record.inviteDigest }, headers);
-      } catch (error) {
-        json(res, errorStatus(error), errorBody(error, { created: false }), headers);
-      }
-      return;
-    }
-
-    if (requestUrl.pathname === "/api/v1/invite-codes/public" && req.method === "POST") {
-      if (!consumeRateLimit(req, "public-invite-code-create", 10)) { json(res, 429, { created: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      try {
-        if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
-        const body = JSON.parse(await readBody(req, MAX_INVITE_CODE_BODY_BYTES, requestTimeoutMs));
-        validateDaemonInvite(body?.invite, originFor(bindHost));
-        const created = createInviteCode({ invite: body.invite, expectedRelayOrigin: originFor(bindHost) });
-        if (inviteCodes.length >= MAX_INVITE_CODE_RECORDS) inviteCodes = purgeInviteCodes(inviteCodes).slice(-MAX_INVITE_CODE_RECORDS + 1);
-        inviteCodes.push(created.record);
-        try { await persistInviteCodes(); } catch (error) { inviteCodes = inviteCodes.filter((record) => record !== created.record); throw error; }
-        json(res, 201, { created: true, code: created.code, expiresAt: created.record.expiresAt, inviteDigest: created.record.inviteDigest }, headers);
-      } catch (error) {
-        json(res, errorStatus(error), errorBody(error, { created: false }), headers);
-      }
-      return;
-    }
-
-    if (requestUrl.pathname === "/api/v1/invite-codes/consume" && req.method === "POST") {
-      if (!consumeRateLimit(req, "invite-code-consume", 20)) { json(res, 429, { consumed: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      try {
-        if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
-        const body = JSON.parse(await readBody(req, 8 * 1024, requestTimeoutMs));
-        const before = inviteCodes.slice();
-        const result = consumeInviteCode(inviteCodes, body?.code);
-        if (!result.ok) { json(res, 404, { consumed: false, error: result.reason }, headers); return; }
-        try { await persistInviteCodes(); } catch (error) { inviteCodes = before; throw error; }
-        const receiptBody = `ADRECEIPT1.${relayReceiptKey.publicKeyFingerprint}.${Buffer.from(originFor(bindHost), "utf8").toString("hex")}.${inviteCodeHash(body?.code)}.${invitePayloadDigest(result.record.invite)}.${Math.floor(Date.now() / 1000)}`;
-        const receipt = `${receiptBody}.${sign(null, Buffer.from(receiptBody), relayReceiptKey.privateKey).toString("hex")}`;
-        json(res, 200, { consumed: true, invite: result.record.invite, inviteDigest: result.record.inviteDigest, receipt }, headers);
-      } catch (error) {
-        json(res, errorStatus(error), errorBody(error, { consumed: false }), headers);
-      }
-      return;
-    }
-
-    if (requestUrl.pathname === "/api/v1/invite-codes/revoke" && req.method === "POST") {
-      if (!consumeRateLimit(req, "invite-code-revoke", 20)) { json(res, 429, { revoked: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      try {
-        if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
-        const body = JSON.parse(await readBody(req, 8 * 1024, requestTimeoutMs));
-        const before = inviteCodes.slice();
-        const result = revokeInviteCode(inviteCodes, body?.code);
-        if (!result.ok) { json(res, 404, { revoked: false, error: result.reason }, headers); return; }
-        try { await persistInviteCodes(); } catch (error) { inviteCodes = before; throw error; }
-        json(res, 200, { revoked: true }, headers);
-      } catch (error) {
-        json(res, errorStatus(error), errorBody(error, { revoked: false }), headers);
-      }
-      return;
-    }
-
-    const inboxPrefix = capabilityPath(inboxCapability.token);
-    if (requestUrl.pathname === "/api/v1/inbox/rotate" && req.method === "POST") {
-      if (!consumeRateLimit(req, "local-rotate", 10)) { json(res, 429, { rotated: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      if (!capabilityValid(localAccessCapability) || !hasLocalAccess(req, localAccessCapability)) {
-        json(res, 403, { rotated: false, error: "local_access_required" }, headers);
-        return;
-      }
-      await rotateInboxCapability();
-      json(res, 200, { rotated: true, inboxUrl: inboxUrlFor(bindHost) }, headers);
-      return;
-    }
-    if (retiredInboxPrefixes.has(requestUrl.pathname.replace(/\/ack$/, ""))) {
-      json(res, 410, req.method === "GET" ? { error: "capability_expired" } : { accepted: false, error: "capability_expired" }, headers);
-      return;
-    }
-    const blobMatch = requestUrl.pathname.match(/^\/api\/v1\/blobs\/([A-Za-z0-9_-]{32,128})$/);
-    if (blobMatch && ["POST", "GET", "DELETE"].includes(req.method)) {
-      if (!capabilityValid(inboxCapability) || !hasRelayCapability(req, inboxCapability)) {
-        json(res, 403, { error: "relay_capability_required" }, headers);
-        return;
-      }
-      await purgeBlobs();
-      const blobId = blobMatch[1];
-      const blobFile = join(blobDir, `${blobId}.blob`);
-      const metaFile = join(blobDir, `${blobId}.meta.json`);
-      if (req.method === "GET") {
-        try {
-          const meta = JSON.parse(await readFile(metaFile, "utf8"));
-          if (meta.expiresAt <= Date.now()) throw new Error("expired");
-          const requestedOffset = Number(req.headers["x-ad-blob-offset"] || 0);
-          const requestedLength = Number(req.headers["x-ad-blob-length"] || 0);
-          if (![requestedOffset, requestedLength].every(Number.isSafeInteger) || requestedOffset < 0 || requestedLength < 0 || requestedLength > MAX_BLOB_CHUNK_BYTES) throw new Error("invalid_blob_range");
-          const handle = await open(blobFile, "r");
-          try {
-            const size = (await handle.stat()).size;
-            if (requestedOffset > size) throw new Error("invalid_blob_range");
-            const length = requestedLength ? Math.min(requestedLength, size - requestedOffset) : size;
-            if (!requestedLength && length > MAX_BLOB_BYTES) throw new Error("blob_too_large");
-            const body = Buffer.alloc(length);
-            if (length) await handle.read(body, 0, length, requestedOffset);
-            res.writeHead(200, { ...headers, "cache-control": "no-store", "content-type": "application/octet-stream", "content-length": body.length, "x-ad-blob-offset": String(requestedOffset), "x-ad-blob-total": String(size), "x-ad-blob-complete": String(meta.complete) });
-            res.end(body);
-          } finally { await handle.close(); }
-        } catch { json(res, 404, { error: "blob_not_found" }, headers); }
-        return;
-      }
-      if (req.method === "DELETE") {
-        await unlink(blobFile).catch(() => {});
-        await unlink(metaFile).catch(() => {});
-        json(res, 200, { deleted: true }, headers);
-        return;
-      }
-      try {
-        const offset = Number(req.headers["x-ad-blob-offset"] || 0);
-        const total = Number(req.headers["x-ad-blob-total"] || 0);
-        const requestedTtl = Number(req.headers["x-ad-blob-ttl-ms"] || MAX_BLOB_TTL_MS);
-        if (![offset, total, requestedTtl].every(Number.isSafeInteger) || offset < 0 || total <= 0 || total > MAX_BLOB_BYTES || offset > total || requestedTtl <= 0) throw new Error("invalid_blob_metadata");
-        const body = await readBodyBuffer(req, MAX_BLOB_CHUNK_BYTES, requestTimeoutMs);
-        if (offset + body.length > total) throw new Error("blob_chunk_out_of_bounds");
-        let meta = null;
-        try { meta = JSON.parse(await readFile(metaFile, "utf8")); } catch { /* first chunk */ }
-        const existingMeta = Boolean(meta);
-        if (meta && (meta.total !== total || meta.expiresAt <= Date.now())) throw new Error("blob_metadata_mismatch");
-        if (!meta) {
-          if (offset !== 0) throw new Error("blob_offset_mismatch");
-          const usage = await blobUsage(blobId);
-          if (usage.records >= MAX_BLOB_RECORDS || usage.bytes + total > MAX_BLOB_STORE_BYTES) throw new Error("blob_quota_exceeded");
-          meta = { version: 1, total, received: 0, complete: false, expiresAt: Date.now() + Math.min(requestedTtl, MAX_BLOB_TTL_MS) };
-        }
-        const handle = await open(blobFile, existingMeta ? "r+" : "w");
-        try {
-          const current = (await handle.stat()).size;
-          if (current !== offset) throw new Error("blob_offset_mismatch");
-          await handle.write(body, 0, body.length, offset);
-        } finally { await handle.close(); }
-        meta.received = offset + body.length;
-        meta.complete = meta.received === meta.total;
-        await writeFile(metaFile, `${JSON.stringify(meta)}\n`, { mode: 0o600 });
-        json(res, meta.complete ? 201 : 202, { accepted: true, complete: meta.complete, received: meta.received, total: meta.total, expiresAt: meta.expiresAt, blobUrl: `/api/v1/blobs/${blobId}` }, headers);
-      } catch (error) {
-        json(res, errorStatus(error), errorBody(error, { accepted: false }), headers);
-      }
-      return;
-    }
-    if (requestUrl.pathname === inboxPrefix && req.method === "GET") {
-      if (!capabilityValid(inboxCapability)) { json(res, 410, { error: "capability_expired" }, headers); return; }
-      if (!consumeRateLimit(req, "inbox-read", MAX_LOCAL_READS_PER_WINDOW)) { json(res, 429, { error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      const readAuthorized = (capabilityValid(localAccessCapability) && hasLocalAccess(req, localAccessCapability)) || hasRelayCapability(req, inboxCapability);
-      if (!readAuthorized) {
-        json(res, 403, { error: "local_access_required" }, headers);
-        return;
-      }
-      purge();
-      json(res, 200, { protocol: 1, items: inbox }, headers);
-      return;
-    }
-    if (requestUrl.pathname === inboxPrefix && req.method === "POST") {
-      if (!capabilityValid(inboxCapability)) { json(res, 410, { accepted: false, error: "capability_expired" }, headers); return; }
-      if (!consumeRateLimit(req, "inbox-post", MAX_POSTS_PER_WINDOW)) { json(res, 429, { accepted: false, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      try {
-        if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
-        const body = JSON.parse(await readBody(req, MAX_ENVELOPE_BYTES + 4096, requestTimeoutMs));
-        const envelope = String(body?.envelope || "").trim();
-        if (!/^(?:ADENVWEB(?:1|2|3)|ADENV1)\./.test(envelope) || Buffer.byteLength(envelope) > MAX_ENVELOPE_BYTES) throw new Error("invalid_envelope");
-        const id = storeId(envelope);
-        if (!inbox.some((item) => item.id === id)) {
-        if (inbox.length >= MAX_INBOX_ITEMS) {
-            json(res, 429, { accepted: false, error: "queue_full" }, { ...headers, "retry-after": "60" });
-            return;
-        }
-        const previousInbox = inbox.slice();
-        inbox.push({ id, envelope, receivedAt: Date.now() });
-        inbox = inbox.slice(-MAX_INBOX_ITEMS);
-        try { await persist(); } catch (error) { inbox = previousInbox; throw error; }
-        }
-        json(res, 202, { accepted: true, id }, headers);
-      } catch (error) {
-        json(res, errorStatus(error), errorBody(error, { accepted: false }), headers);
-      }
-      return;
-    }
-    if (requestUrl.pathname === `${inboxPrefix}/ack` && req.method === "POST") {
-      if (!capabilityValid(inboxCapability)) { json(res, 410, { acknowledged: 0, error: "capability_expired" }, headers); return; }
-      if (!consumeRateLimit(req, "inbox-ack", MAX_LOCAL_READS_PER_WINDOW)) { json(res, 429, { acknowledged: 0, error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
-      const ackAuthorized = (capabilityValid(localAccessCapability) && hasLocalAccess(req, localAccessCapability)) || hasRelayCapability(req, inboxCapability);
-      if (!ackAuthorized) {
-        json(res, 403, { acknowledged: 0, error: "local_access_required" }, headers);
-        return;
-      }
-      try {
-        if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
-        const body = JSON.parse(await readBody(req, 32 * 1024, requestTimeoutMs));
-        if (!Array.isArray(body?.ids) || body.ids.length > MAX_INBOX_ITEMS) throw new Error("too_many_ids");
-        const ids = new Set(body.ids.map(String));
-        const previousInbox = inbox;
-        const previousLength = inbox.length;
-        inbox = inbox.filter((item) => !ids.has(item.id));
-        try { await persist(); } catch (error) { inbox = previousInbox; throw error; }
-        json(res, 200, { acknowledged: previousLength - inbox.length }, headers);
-      } catch (error) { json(res, errorStatus(error), errorBody(error, { acknowledged: 0 }), headers); }
-      return;
-    }
-
-    // TM-02: the relay must not become an implicit browser-code distribution boundary.
-    if (!serveStatic) { json(res, 404, { error: "relay_only" }, headers); return; }
-    if (req.method !== "GET") { json(res, 405, { error: "method_not_allowed" }, headers); return; }
-    const file = safeFile(distDir, requestUrl.pathname);
-    try {
-      const target = file && await readFile(file).then(() => file).catch(() => null);
-      const fallback = target || safeFile(distDir, "/");
-      if (!fallback) { json(res, 500, { error: "web_dist_unavailable" }); return; }
-      res.writeHead(200, { ...securityHeaders({ hsts: Boolean(tlsKeyFile || normalizedPublicUrl.startsWith("https://")) }), "content-type": mimeTypes[extname(fallback)] || "application/octet-stream" });
-      createReadStream(fallback).pipe(res);
-    } catch { json(res, 500, { error: "web_dist_unavailable" }); }
-  };
+  const handleRequest = createRelayRequestHandler({
+    allowedCorsOrigins,
+    bindHost,
+    blobDir,
+    blobUsage,
+    capabilityPath,
+    capabilityState,
+    capabilityValid,
+    consumeRateLimit,
+    distDir,
+    hasLocalAccess,
+    hasRelayCapability,
+    inboxUrlFor,
+    isLoopbackHost,
+    localAccessCapability,
+    normalizedPublicUrl,
+    originFor,
+    persist,
+    persistInviteCodes,
+    port,
+    purge,
+    purgeBlobs,
+    relayReceiptKey,
+    relayReceiptSigningKeyFile,
+    requestTimeoutMs,
+    retiredInboxPrefixes,
+    rotateInboxCapability,
+    routeState,
+    serveStatic,
+    storeId,
+    tlsCertFile,
+    tlsKeyFile,
+    limits: {
+      MAX_BLOB_BYTES,
+      MAX_BLOB_CHUNK_BYTES,
+      MAX_BLOB_RECORDS,
+      MAX_BLOB_STORE_BYTES,
+      MAX_BLOB_TTL_MS,
+      MAX_ENVELOPE_BYTES,
+      MAX_INBOX_ITEMS,
+      MAX_INVITE_CODE_BODY_BYTES,
+      MAX_INVITE_CODE_RECORDS,
+      MAX_LOCAL_READS_PER_WINDOW,
+      MAX_POSTS_PER_WINDOW,
+    },
+  });
 
   const serverOptions = {
     requestTimeout: requestTimeoutMs,
@@ -757,7 +421,7 @@ export async function createLocalServer({
     close,
     bindHost,
     port,
-    inboxCapability: inboxCapability.token,
+    inboxCapability: capabilityState.inbox.token,
     inboxUrl: inboxUrlFor(bindHost),
     publicOrigin: originFor(bindHost),
     externalSecure: originFor(bindHost).startsWith("https://"),
