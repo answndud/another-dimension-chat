@@ -231,9 +231,9 @@ export async function connectDaemonBridge({
       body: JSON.stringify({ account_id: accountId }),
     }),
     conversations: () => request("/local-api/conversations"),
-    messages: (conversationId) => request("/local-api/messages/list", {
+    messages: (conversationId, limit = 200, offset = 0) => request("/local-api/messages/list", {
       method: "POST",
-      body: JSON.stringify({ conversation_id: conversationId }),
+      body: JSON.stringify({ conversation_id: conversationId, limit, offset }),
     }),
     verifySafety: (safetyNumber) => request("/local-api/pairing/verify-safety", {
       method: "POST",

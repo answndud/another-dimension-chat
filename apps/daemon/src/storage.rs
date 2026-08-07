@@ -18,7 +18,7 @@ const FILE_VERSION: u8 = 1;
 const SALT_BYTES: usize = 16;
 const NONCE_BYTES: usize = 12;
 const KEY_BYTES: usize = 32;
-const MAX_RECORDS: usize = 4096;
+pub const MAX_RECORDS: usize = 4096;
 const MAX_KEY_BYTES: usize = 256;
 const MAX_VALUE_BYTES: usize = 4 * 1024 * 1024;
 const MAX_PASSPHRASE_CHARS: usize = 1024;
@@ -393,14 +393,30 @@ impl EncryptedStore {
     }
 
     pub fn records_with_prefix(&self, class: RecordClass, prefix: &str) -> Vec<(String, Vec<u8>)> {
+        self.records_with_prefix_page(class, prefix, 0, MAX_RECORDS)
+    }
+
+    pub fn records_with_prefix_page(
+        &self,
+        class: RecordClass,
+        prefix: &str,
+        offset: usize,
+        limit: usize,
+    ) -> Vec<(String, Vec<u8>)> {
         if self.locked {
             return Vec::new();
         }
         self.records
             .iter()
             .filter(|((record_class, key), _)| *record_class == class && key.starts_with(prefix))
+            .skip(offset)
+            .take(limit)
             .map(|((_, key), value)| (key.clone(), value.clone()))
             .collect()
+    }
+
+    pub const fn record_limit() -> usize {
+        MAX_RECORDS
     }
 
     /// Applies a protocol-state batch as one encrypted store revision. This is

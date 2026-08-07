@@ -945,11 +945,17 @@ pub fn handle_request_with_context(
                         .as_ref()
                         .map(|authority| authority.relay_origin.as_str())
                         .unwrap_or("");
+                    let (storage_records, storage_record_limit) = session_store
+                        .as_deref()
+                        .map(|store| (store.record_count(), EncryptedStore::record_limit()))
+                        .unwrap_or((0, EncryptedStore::record_limit()));
                     response(
                         200,
                         &format!(
-                            r##"{{"status":"daemon-session-active","high_risk":false,"private_state":"daemon-owned","relay_origin":"{}"}}"##,
-                            json_escape(relay_origin)
+                            r##"{{"status":"daemon-session-active","high_risk":false,"private_state":"daemon-owned","relay_origin":"{}","storage_records":{},"storage_record_limit":{}}}"##,
+                            json_escape(relay_origin),
+                            storage_records,
+                            storage_record_limit,
                         ),
                         None,
                         Some("application/json"),
@@ -1692,8 +1698,22 @@ pub fn handle_request_with_context(
             let Some(store) = session_store.as_deref_mut() else {
                 return response(503, "storage_unavailable", None, None);
             };
+            let limit = json_u64(request.body, "limit")
+                .and_then(|value| usize::try_from(value).ok())
+                .unwrap_or(200)
+                .clamp(1, 200);
+            let offset = json_u64(request.body, "offset")
+                .and_then(|value| usize::try_from(value).ok())
+                .unwrap_or(0);
             let mut messages = Vec::new();
-            for (key, bytes) in store.records_with_prefix(RecordClass::Message, "messages/") {
+            let page = store.records_with_prefix_page(
+                RecordClass::Message,
+                "messages/",
+                offset,
+                limit.saturating_add(1),
+            );
+            let truncated = page.len() > limit;
+            for (key, bytes) in page.into_iter().take(limit) {
                 let Ok(message) = serde_json::from_slice::<StoredMessage>(&bytes) else {
                     return response(503, "message_storage_corrupt", None, None);
                 };
@@ -1712,13 +1732,18 @@ pub fn handle_request_with_context(
                     message.expires_at,
                     hex_bytes(message.text.as_bytes())
                 ));
-                if messages.len() >= 200 {
-                    break;
-                }
             }
             response(
                 200,
-                &format!(r##"{{"messages":[{}]}}"##, messages.join(",")),
+                &format!(
+                    r##"{{"messages":[{}],"next_offset":{}}}"##,
+                    messages.join(","),
+                    if truncated {
+                        (offset + messages.len()).to_string()
+                    } else {
+                        "null".into()
+                    }
+                ),
                 None,
                 Some("application/json"),
             )
