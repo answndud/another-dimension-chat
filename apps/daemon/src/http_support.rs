@@ -1,8 +1,4 @@
-use axum::{
-    body::Body,
-    http::StatusCode,
-    response::Response,
-};
+use axum::{body::Body, http::StatusCode, response::Response};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -10,7 +6,10 @@ use std::{
 
 const MAX_REQUEST_BYTES: usize = 192 * 1024;
 
-pub(crate) fn axum_request_bytes(parts: &axum::http::request::Parts, body: &[u8]) -> Option<Vec<u8>> {
+pub(crate) fn axum_request_bytes(
+    parts: &axum::http::request::Parts,
+    body: &[u8],
+) -> Option<Vec<u8>> {
     let target = parts.uri.path_and_query()?.as_str();
     if target.contains('?') || target.contains('#') {
         return None;
