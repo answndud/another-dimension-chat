@@ -65,7 +65,7 @@ const groupedMessages = [
     "invalid_relay_envelope",
   ]],
   [RELAY_MESSAGE, [
-    "relay_unavailable", "relay_capability_expired", "relay_retrust_required",
+    "relay_unavailable", "relay_rejected", "relay_capability_expired", "relay_retrust_required",
     "relay_trust_unavailable", "unsupported_relay_endpoint", "invalid_inbox_url",
     "invalid_tls_pin", "tls_pin_requires_https",
   ]],
