@@ -1,6 +1,7 @@
 import { consumeRelayInvite, createRelayInviteCode, revokeRelayInviteCode } from "./daemon-bridge.js";
 import { state } from "./daemon-state.js";
 import { renderDaemonRelayTrust, renderDaemonSafetyControls, decodeHexText, decodeHexBytes, encodeHex, mergeDaemonMessages, newAttachmentBlobId, newDaemonConversationId } from "./daemon-view.js";
+import { daemonErrorMessage } from "./daemon-errors.js";
 
 let activeBindingController;
 
@@ -37,7 +38,7 @@ export function bindDaemonSession({ render }) {
       state.daemonMessages = restored.filter((message) => message.direction === "incoming");
       state.notice = "daemon 암호화 저장소에서 대화 기록을 복구했습니다.";
       state.error = "";
-    } catch (error) { state.error = error.message; }
+    } catch (error) { state.error = daemonErrorMessage(error); }
     render();
   });
   document.querySelector(".daemon-delivery")?.prepend(historyButton);
@@ -69,7 +70,7 @@ export function bindDaemonSession({ render }) {
         state.notice = "릴레이에 연결할 수 없습니다. 로컬 암호화 상태는 유지되며, 연결 후 다시 시도할 수 있습니다.";
         state.error = "";
       } else {
-        state.error = error.message;
+        state.error = daemonErrorMessage(error);
       }
     }
     render();
@@ -318,7 +319,7 @@ export function bindDaemonWorkspace({ render }) {
             ? "이 기기의 daemon 데이터만 삭제했습니다. relay와 백업은 별도로 폐기해야 합니다."
             : "daemon 데이터를 삭제했습니다.";
           state.error = "";
-        } catch (error) { state.error = error.message; }
+        } catch (error) { state.error = daemonErrorMessage(error); }
         render();
       });
       const recoveryButton = document.createElement("button");
@@ -338,7 +339,7 @@ export function bindDaemonWorkspace({ render }) {
           setTimeout(() => URL.revokeObjectURL(url), 1000);
           state.notice = "암호화 복구 백업을 다운로드했습니다. 원본 암호 문구와 별도 오프라인 저장소에 보관하세요.";
           state.error = "";
-        } catch (error) { state.error = `복구 백업을 만들지 못했습니다: ${error.message}`; }
+        } catch (error) { state.error = `복구 백업을 만들지 못했습니다: ${daemonErrorMessage(error)}`; }
         render();
       });
       const recoveryInput = document.createElement("input");
@@ -364,7 +365,7 @@ export function bindDaemonWorkspace({ render }) {
             ? "복구 백업을 검증하고 적용 예약했습니다. daemon을 정상 종료한 뒤 같은 data directory로 다시 시작하세요."
             : "복구 백업 적용을 예약했습니다.";
           state.error = "";
-        } catch (error) { state.error = `복구 백업을 예약하지 못했습니다: ${error.message}`; }
+        } catch (error) { state.error = `복구 백업을 예약하지 못했습니다: ${daemonErrorMessage(error)}`; }
         render();
       });
       const recoveryNote = document.createElement("p");
@@ -381,7 +382,7 @@ export function bindDaemonWorkspace({ render }) {
         state.error = "";
         render();
       } catch (error) {
-        state.error = error.message;
+        state.error = daemonErrorMessage(error);
         render();
       }
     });
@@ -395,7 +396,7 @@ export function bindDaemonWorkspace({ render }) {
         state.daemonDeviceEvents = devices.events || [];
         state.notice = `기기 ${deviceId}를 폐기했고 MLS 세션 ${result.sessions_removed || 0}개에서 제거한 commit ${result.delivered || 0}개를 relay로 전달했습니다.`;
         state.error = "";
-      } catch (error) { state.error = `기기 폐기 또는 로컬 MLS 제거에 실패했습니다: ${error.message}`; }
+      } catch (error) { state.error = `기기 폐기 또는 로컬 MLS 제거에 실패했습니다: ${daemonErrorMessage(error)}`; }
       render();
     }));
     bindListener(document.querySelector("#daemon-link-approve"), "click", async () => {
@@ -414,7 +415,7 @@ export function bindDaemonWorkspace({ render }) {
         state.daemonLinkApproval = result.approval || "";
         state.notice = `기기 ${result.device_id}의 인증서를 발급했습니다. 승인 자료를 새 기기에만 전달하세요.`;
         state.error = "";
-      } catch (error) { state.error = error.message; }
+      } catch (error) { state.error = daemonErrorMessage(error); }
       render();
     });
     bindListener(document.querySelector("#daemon-contact-search"), "input", (event) => {
@@ -449,7 +450,7 @@ export function bindDaemonWorkspace({ render }) {
         }
         render();
       }).catch((error) => {
-        state.error = `대화 기록을 불러오지 못했습니다: ${error.message}`;
+        state.error = `대화 기록을 불러오지 못했습니다: ${daemonErrorMessage(error)}`;
         render();
       });
       render();
@@ -462,7 +463,7 @@ export function bindDaemonWorkspace({ render }) {
         state.daemonContacts = (await state.daemonBridge.contacts()).contacts || [];
         state.notice = "연락처 별칭을 저장했습니다.";
         state.error = "";
-      } catch (error) { state.error = error.message; }
+      } catch (error) { state.error = daemonErrorMessage(error); }
       render();
     }));
     document.querySelectorAll("[data-contact-block]").forEach((button) => bindListener(button, "click", async () => {
@@ -475,7 +476,7 @@ export function bindDaemonWorkspace({ render }) {
         state.daemonContacts = (await state.daemonBridge.contacts()).contacts || [];
         state.notice = contact?.state === "blocked" ? "연락처 차단을 해제했습니다." : "연락처를 차단했습니다. 해당 대화의 송수신이 중단됩니다.";
         state.error = "";
-      } catch (error) { state.error = error.message; }
+      } catch (error) { state.error = daemonErrorMessage(error); }
       render();
     }));
     document.querySelectorAll("[data-contact-delete]").forEach((button) => bindListener(button, "click", async () => {
@@ -487,7 +488,7 @@ export function bindDaemonWorkspace({ render }) {
         if (state.daemonSelectedContact === accountId) state.daemonSelectedContact = "";
         state.notice = "연락처와 로컬 대화 세션을 삭제했습니다.";
         state.error = "";
-      } catch (error) { state.error = error.message; }
+      } catch (error) { state.error = daemonErrorMessage(error); }
       render();
     }));
     if (state.daemonPairing?.safety_number) {
@@ -504,7 +505,7 @@ export function bindDaemonWorkspace({ render }) {
         state.notice = "데몬 세션을 잠갔습니다. 브라우저에는 키와 메시지 상태가 없습니다.";
         render();
       } catch (error) {
-        state.error = error.message;
+        state.error = daemonErrorMessage(error);
         render();
       }
     });
@@ -518,7 +519,7 @@ export function bindDaemonWorkspace({ render }) {
         state.error = "";
         render();
       } catch (error) {
-        state.error = error.message;
+        state.error = daemonErrorMessage(error);
         render();
       }
     });
@@ -529,7 +530,7 @@ export function bindDaemonWorkspace({ render }) {
         state.daemonInvite = null;
         state.notice = "초대코드를 relay에서 폐기했습니다.";
         state.error = "";
-      } catch (error) { state.error = error.message; }
+      } catch (error) { state.error = daemonErrorMessage(error); }
       render();
     });
     bindListener(document.querySelector("#daemon-approve-pairing"), "click", async () => {
@@ -538,7 +539,7 @@ export function bindDaemonWorkspace({ render }) {
         state.daemonContacts = (await state.daemonBridge.contacts()).contacts || state.daemonContacts;
         state.notice = "상대 연락처를 승인했습니다. 이제 후속 세션 연결을 진행할 수 있습니다.";
         state.error = "";
-      } catch (error) { state.error = error.message; }
+      } catch (error) { state.error = daemonErrorMessage(error); }
       render();
     });
     bindListener(document.querySelector("#daemon-verify-safety"), "click", async () => {
@@ -548,7 +549,7 @@ export function bindDaemonWorkspace({ render }) {
         state.daemonReceivedInvite = { ...state.daemonReceivedInvite, safety_verified: true };
         state.notice = "안전 번호를 확인했습니다. 이제 연락처 승인을 진행할 수 있습니다.";
         state.error = "";
-      } catch (error) { state.error = error.message; }
+      } catch (error) { state.error = daemonErrorMessage(error); }
       render();
     });
     bindListener(document.querySelector("#daemon-unverify-safety"), "click", async () => {
@@ -559,7 +560,7 @@ export function bindDaemonWorkspace({ render }) {
         state.daemonReceivedInvite = { ...state.daemonReceivedInvite, safety_verified: false };
         state.notice = "안전 번호를 다시 확인해야 합니다. 확인 전까지 메시지 송신이 차단됩니다.";
         state.error = "";
-      } catch (error) { state.error = `안전 번호 재확인 준비에 실패했습니다: ${error.message}`; }
+      } catch (error) { state.error = `안전 번호 재확인 준비에 실패했습니다: ${daemonErrorMessage(error)}`; }
       render();
     });
     bindListener(document.querySelector("#daemon-reject-pairing"), "click", async () => {
@@ -568,7 +569,7 @@ export function bindDaemonWorkspace({ render }) {
         state.daemonReceivedInvite = null;
         state.notice = "상대 연락처 요청을 거절했습니다.";
         state.error = "";
-      } catch (error) { state.error = error.message; }
+      } catch (error) { state.error = daemonErrorMessage(error); }
       render();
     });
     bindListener(document.querySelector("#daemon-consume-invite"), "click", async () => {
@@ -583,7 +584,7 @@ export function bindDaemonWorkspace({ render }) {
         state.daemonConsumedInvite = "";
         state.notice = "relay 초대코드를 소비하고 daemon에서 상대 identity를 검증했습니다. 승인 전에는 연결되지 않습니다.";
         state.error = "";
-      } catch (error) { state.error = error.message; }
+      } catch (error) { state.error = daemonErrorMessage(error); }
       render();
     });
     bindDaemonSession({ render });

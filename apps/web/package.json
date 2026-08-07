@@ -9,7 +9,7 @@
     "build:crypto": "../../scripts/build_web_crypto_wasm.sh",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 1420 --strictPort",
-    "test": "node --test src/product-entry.test.js src/daemon-bridge.test.js",
+    "test": "node --test src/product-entry.test.js src/daemon-bridge.test.js src/daemon-errors.test.js",
     "test:legacy": "node --test src/web-runtime.test.js"
   },
   "devDependencies": {
