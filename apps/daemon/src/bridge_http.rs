@@ -970,6 +970,31 @@ pub fn handle_request_with_context(
                 Err(error) => response(403, error_code(&error), None, Some("application/json")),
             }
         }
+        ("POST", "/local-api/recovery/export") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(store) = session_store.as_deref() else {
+                return response(503, "storage_unavailable", None, Some("application/json"));
+            };
+            let Ok(artifact) = store.export_recovery_artifact(now) else {
+                return response(
+                    503,
+                    "recovery_export_unavailable",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            response(
+                200,
+                &format!(
+                    r##"{{"schema_version":2,"artifact_hex":"{}"}}"##,
+                    hex_bytes(&artifact)
+                ),
+                None,
+                Some("application/json"),
+            )
+        }
         ("GET", "/local-api/relay/trust") => {
             if let Err(reply) = authorize_api(bridge, &request, now) {
                 return reply;

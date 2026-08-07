@@ -4,6 +4,7 @@ use aes_gcm::{
 };
 use argon2::{Algorithm, Argon2, Params, Version};
 use getrandom::fill as secure_random;
+use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
     fmt, fs,
@@ -19,6 +20,7 @@ const SALT_BYTES: usize = 16;
 const NONCE_BYTES: usize = 12;
 const KEY_BYTES: usize = 32;
 pub const MAX_RECORDS: usize = 4096;
+pub const RECOVERY_MAGIC: &[u8; 13] = b"ADRECOVERY2\0\0";
 const MAX_KEY_BYTES: usize = 256;
 const MAX_VALUE_BYTES: usize = 4 * 1024 * 1024;
 const MAX_PASSPHRASE_CHARS: usize = 1024;
@@ -314,6 +316,34 @@ impl EncryptedStore {
 
     pub fn revision(&self) -> u64 {
         self.revision
+    }
+
+    /// Returns the encrypted store and rollback marker in the same format as
+    /// the CLI recovery artifact. No plaintext records or database key leave
+    /// this process.
+    pub fn export_recovery_artifact(&self, created_at: u64) -> Result<Vec<u8>, StorageError> {
+        if self.locked {
+            return Err(StorageError::Locked);
+        }
+        let store = fs::read(&self.path)?;
+        let revision = fs::read(&self.marker_path)?;
+        let manifest = serde_json::json!({
+            "schema_version": 2,
+            "created_at": created_at,
+            "store_bytes": store.len() as u64,
+            "revision_bytes": revision.len() as u64,
+            "store_sha256": hex_bytes(&Sha256::digest(&store)),
+            "revision_sha256": hex_bytes(&Sha256::digest(&revision)),
+        });
+        let manifest = serde_json::to_vec(&manifest).map_err(|_| StorageError::Io)?;
+        let mut artifact = Vec::with_capacity(
+            RECOVERY_MAGIC.len() + 8 + manifest.len() + 8 + store.len() + 8 + revision.len(),
+        );
+        artifact.extend_from_slice(RECOVERY_MAGIC);
+        append_blob(&mut artifact, &manifest);
+        append_blob(&mut artifact, &store);
+        append_blob(&mut artifact, &revision);
+        Ok(artifact)
     }
 
     pub fn lock(&mut self) {
@@ -764,11 +794,16 @@ fn hex_bytes(bytes: &[u8]) -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
+fn append_blob(output: &mut Vec<u8>, value: &[u8]) {
+    output.extend_from_slice(&(value.len() as u64).to_be_bytes());
+    output.extend_from_slice(value);
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         EncryptedStore, OsKeyStore, RecordClass, RecordMutation, StorageError,
-        UnavailableOsKeyStore,
+        UnavailableOsKeyStore, RECOVERY_MAGIC,
     };
     use std::{
         fs,
@@ -804,6 +839,14 @@ mod tests {
         ));
         let bytes = fs::read(&path).unwrap();
         assert!(!bytes
+            .windows(b"private-root-material".len())
+            .any(|window| window == b"private-root-material"));
+        let artifact = EncryptedStore::open(&path, "correct horse battery staple")
+            .unwrap()
+            .export_recovery_artifact(42)
+            .unwrap();
+        assert!(artifact.starts_with(RECOVERY_MAGIC));
+        assert!(!artifact
             .windows(b"private-root-material".len())
             .any(|window| window == b"private-root-material"));
         fs::remove_file(&path).unwrap();

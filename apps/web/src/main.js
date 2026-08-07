@@ -691,7 +691,30 @@ function render() {
         } catch (error) { state.error = error.message; }
         render();
       });
-      document.querySelector(".daemon-gate")?.append(wipeButton);
+      const recoveryButton = document.createElement("button");
+      recoveryButton.type = "button";
+      recoveryButton.className = "secondary";
+      recoveryButton.textContent = "암호화 복구 백업 다운로드";
+      recoveryButton.addEventListener("click", async () => {
+        if (!window.confirm("현재 daemon 저장소의 암호화 복구 백업을 다운로드할까요? 원래 프로필 암호 문구가 있어야 복구할 수 있습니다.")) return;
+        try {
+          const result = await state.daemonBridge.recoveryExport();
+          const bytes = decodeHexBytes(result.artifact_hex || "");
+          const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+          const anchor = document.createElement("a");
+          anchor.href = url;
+          anchor.download = "another-dimension-recovery.adbackup";
+          anchor.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          state.notice = "암호화 복구 백업을 다운로드했습니다. 원본 암호 문구와 별도 오프라인 저장소에 보관하세요.";
+          state.error = "";
+        } catch (error) { state.error = `복구 백업을 만들지 못했습니다: ${error.message}`; }
+        render();
+      });
+      const recoveryNote = document.createElement("p");
+      recoveryNote.className = "field-note daemon-recovery-note";
+      recoveryNote.textContent = "복구 백업에는 daemon 저장소와 revision marker가 암호화된 상태로 포함됩니다. relay 자료·OS/SSD 잔존 데이터는 포함되지 않습니다.";
+      document.querySelector(".daemon-gate")?.append(recoveryNote, recoveryButton, wipeButton);
     }
     document.querySelector("#daemon-save-relay-pin")?.addEventListener("click", async () => {
       try {
