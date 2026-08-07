@@ -14,7 +14,13 @@ test("daemon errors map stable codes to recovery guidance", () => {
 
 test("every directly returned daemon error code has user recovery guidance", () => {
   const sourceRoot = resolve(import.meta.dirname, "../../daemon/src");
-  const files = ["bridge_http.rs", "session_routes.rs", "http_errors.rs", "http_server.rs"];
+  const files = [
+    "bridge_http.rs",
+    "session_routes.rs",
+    "mls_routes.rs",
+    "http_errors.rs",
+    "http_server.rs",
+  ];
   const codes = new Set();
   for (const file of files) {
     const source = readFileSync(resolve(sourceRoot, file), "utf8");
