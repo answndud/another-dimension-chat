@@ -8,6 +8,7 @@ import { test } from "node:test";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildServerConfig } from "../../scripts/configure_local_server.mjs";
+import { errorBody, errorStatus } from "./errors.mjs";
 import { createLocalServer, loadServerConfig } from "./server.mjs";
 import { createJsonStateStore, createSqliteStateStore } from "./storage.mjs";
 
@@ -652,4 +653,11 @@ test("relay fails queue writes safely when the data directory becomes read-only"
   assert.equal((await call(port, "GET", inboxPath, undefined, localHeaders(runtime))).body.items.length, 0);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
+});
+
+test("relay errors expose stable codes and statuses", () => {
+  const error = new Error("blob_offset_mismatch");
+  assert.equal(errorStatus(error), 409);
+  assert.deepEqual(errorBody(error, { accepted: false }), { accepted: false, error: "blob_offset_mismatch" });
+  assert.equal(errorStatus(new Error("unexpected")), 400);
 });

@@ -6,6 +6,7 @@ import { createServer as createHttpsServer } from "node:https";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { consumeInviteCode, createInviteCode, inviteCodeHash, invitePayloadDigest, purgeInviteCodes, revokeInviteCode, validateDaemonInvite } from "./invite-code.mjs";
+import { errorBody, errorStatus } from "./errors.mjs";
 import { createSqliteRelayStore } from "./storage.mjs";
 
 const MAX_ENVELOPE_BYTES = 96 * 1024;
@@ -508,8 +509,7 @@ export async function createLocalServer({
         // The clear-text code is returned exactly once. It is never persisted or logged.
         json(res, 201, { created: true, code: created.code, expiresAt: created.record.expiresAt, inviteDigest: created.record.inviteDigest }, headers);
       } catch (error) {
-        const status = error.message === "request_too_large" ? 413 : error.message === "request_timeout" ? 408 : error.message === "content_type_not_allowed" ? 400 : 400;
-        json(res, status, { created: false, error: error.message }, headers);
+        json(res, errorStatus(error), errorBody(error, { created: false }), headers);
       }
       return;
     }
@@ -526,8 +526,7 @@ export async function createLocalServer({
         try { await persistInviteCodes(); } catch (error) { inviteCodes = inviteCodes.filter((record) => record !== created.record); throw error; }
         json(res, 201, { created: true, code: created.code, expiresAt: created.record.expiresAt, inviteDigest: created.record.inviteDigest }, headers);
       } catch (error) {
-        const status = error.message === "request_too_large" ? 413 : error.message === "request_timeout" ? 408 : 400;
-        json(res, status, { created: false, error: error.message }, headers);
+        json(res, errorStatus(error), errorBody(error, { created: false }), headers);
       }
       return;
     }
@@ -545,8 +544,7 @@ export async function createLocalServer({
         const receipt = `${receiptBody}.${sign(null, Buffer.from(receiptBody), relayReceiptKey.privateKey).toString("hex")}`;
         json(res, 200, { consumed: true, invite: result.record.invite, inviteDigest: result.record.inviteDigest, receipt }, headers);
       } catch (error) {
-        const status = error.message === "request_too_large" ? 413 : error.message === "request_timeout" ? 408 : 400;
-        json(res, status, { consumed: false, error: error.message }, headers);
+        json(res, errorStatus(error), errorBody(error, { consumed: false }), headers);
       }
       return;
     }
@@ -562,8 +560,7 @@ export async function createLocalServer({
         try { await persistInviteCodes(); } catch (error) { inviteCodes = before; throw error; }
         json(res, 200, { revoked: true }, headers);
       } catch (error) {
-        const status = error.message === "request_too_large" ? 413 : error.message === "request_timeout" ? 408 : 400;
-        json(res, status, { revoked: false, error: error.message }, headers);
+        json(res, errorStatus(error), errorBody(error, { revoked: false }), headers);
       }
       return;
     }
@@ -648,8 +645,7 @@ export async function createLocalServer({
         await writeFile(metaFile, `${JSON.stringify(meta)}\n`, { mode: 0o600 });
         json(res, meta.complete ? 201 : 202, { accepted: true, complete: meta.complete, received: meta.received, total: meta.total, expiresAt: meta.expiresAt, blobUrl: `/api/v1/blobs/${blobId}` }, headers);
       } catch (error) {
-        const status = ["blob_offset_mismatch", "blob_metadata_mismatch"].includes(error.message) ? 409 : error.message === "request_too_large" ? 413 : error.message === "blob_quota_exceeded" ? 507 : 400;
-        json(res, status, { accepted: false, error: error.message }, headers);
+        json(res, errorStatus(error), errorBody(error, { accepted: false }), headers);
       }
       return;
     }
@@ -686,7 +682,7 @@ export async function createLocalServer({
         }
         json(res, 202, { accepted: true, id }, headers);
       } catch (error) {
-        json(res, error.message === "request_too_large" ? 413 : error.message === "request_timeout" ? 408 : 400, { accepted: false, error: error.message }, headers);
+        json(res, errorStatus(error), errorBody(error, { accepted: false }), headers);
       }
       return;
     }
@@ -708,7 +704,7 @@ export async function createLocalServer({
         inbox = inbox.filter((item) => !ids.has(item.id));
         try { await persist(); } catch (error) { inbox = previousInbox; throw error; }
         json(res, 200, { acknowledged: previousLength - inbox.length }, headers);
-      } catch (error) { json(res, error.message === "request_timeout" ? 408 : 400, { acknowledged: 0, error: error.message }, headers); }
+      } catch (error) { json(res, errorStatus(error), errorBody(error, { acknowledged: 0 }), headers); }
       return;
     }
 
