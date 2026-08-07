@@ -957,11 +957,20 @@ fn apply_pending_recovery(data_dir: &Path, passphrase: &str) -> Result<(), CliEr
     if old_store.exists() || old_revision.exists() {
         return Err(CliError::InvalidRecovery);
     }
-    if live_store.exists() {
+    let moved_store = live_store.exists();
+    if moved_store {
         fs::rename(&live_store, &old_store)?;
     }
-    if live_revision.exists() {
-        fs::rename(&live_revision, &old_revision)?;
+    let moved_revision = live_revision.exists();
+    if let Err(error) = if moved_revision {
+        fs::rename(&live_revision, &old_revision)
+    } else {
+        Ok(())
+    } {
+        if moved_store {
+            let _ = fs::rename(&old_store, &live_store);
+        }
+        return Err(error.into());
     }
     let install = (|| {
         atomic_write(&live_store, &candidate_store)?;
@@ -971,10 +980,10 @@ fn apply_pending_recovery(data_dir: &Path, passphrase: &str) -> Result<(), CliEr
     if let Err(error) = install {
         let _ = fs::remove_file(&live_store);
         let _ = fs::remove_file(&live_revision);
-        if old_store.exists() {
+        if moved_store && old_store.exists() {
             let _ = fs::rename(&old_store, &live_store);
         }
-        if old_revision.exists() {
+        if moved_revision && old_revision.exists() {
             let _ = fs::rename(&old_revision, &live_revision);
         }
         return Err(error);
