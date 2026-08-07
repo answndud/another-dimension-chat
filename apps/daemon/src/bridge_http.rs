@@ -945,6 +945,11 @@ pub fn handle_request_with_context(
                         .as_ref()
                         .map(|authority| authority.relay_origin.as_str())
                         .unwrap_or("");
+                    let inbox_url = invite_authority
+                        .as_ref()
+                        .and_then(|authority| authority.inbox_url.as_deref())
+                        .map(|value| format!(r##""{}""##, json_escape(value)))
+                        .unwrap_or_else(|| "null".to_owned());
                     let (storage_records, storage_record_limit) = session_store
                         .as_deref()
                         .map(|store| (store.record_count(), EncryptedStore::record_limit()))
@@ -952,8 +957,9 @@ pub fn handle_request_with_context(
                     response(
                         200,
                         &format!(
-                            r##"{{"status":"daemon-session-active","high_risk":false,"private_state":"daemon-owned","relay_origin":"{}","storage_records":{},"storage_record_limit":{}}}"##,
+                            r##"{{"status":"daemon-session-active","high_risk":false,"private_state":"daemon-owned","relay_origin":"{}","inbox_url":{},"storage_records":{},"storage_record_limit":{}}}"##,
                             json_escape(relay_origin),
+                            inbox_url,
                             storage_records,
                             storage_record_limit,
                         ),

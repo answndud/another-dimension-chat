@@ -74,7 +74,6 @@ function lockedState(message) {
 
 function renderDaemonBridgeState() {
   const connected = Boolean(state.daemonBridge) && !state.daemonLocked;
-  if (connected && !state.daemonConversationId) state.daemonConversationId = newDaemonConversationId();
   const title = connected ? "보안 데몬 세션이 연결되었습니다" : "보안 데몬 연결이 필요합니다";
   const detail = connected
     ? "이 화면은 암호화 키·로컬 저장소·메시지 상태를 보관하지 않습니다. 실제 작업은 로컬 보안 데몬의 인증된 API를 통해서만 열립니다."
@@ -1186,12 +1185,12 @@ async function startApp() {
       state.daemonBridge = daemonBridge;
       state.daemonBridgeMode = true;
       const daemonStatus = await daemonBridge.request("/local-api/status");
-      state.daemonRelayState = "online";
       state.daemonStorage = { records: daemonStatus.storage_records || 0, limit: daemonStatus.storage_record_limit || 0 };
       state.daemonStatus = daemonStatus.status
         ? `${daemonStatus.status} · 저장 ${state.daemonStorage.records}/${state.daemonStorage.limit}`
         : "인증됨";
       state.daemonRelayOrigin = daemonStatus.relay_origin || "";
+      state.daemonInboxUrl = daemonStatus.inbox_url || "";
       state.daemonIdentity = await daemonBridge.request("/local-api/identity");
       state.daemonPairing = await daemonBridge.pairingStatus();
       state.daemonRelayTrust = await daemonBridge.relayTrust();
