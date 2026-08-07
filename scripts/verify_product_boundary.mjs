@@ -29,6 +29,9 @@ if (!daemonManifest.includes("name = \"another-dimension-daemon\"")) {
 if (/from\s+["']\.\/web-runtime\.js["']/.test(webEntry)) {
   throw new Error("daemon web entrypoint must not import browser-owned web-runtime");
 }
+for (const marker of ["renderLegacy", "bindAuth", "bindRoom", "browserStatus"]) {
+  if (webEntry.includes(marker)) throw new Error(`legacy browser UI marker leaked into daemon entrypoint: ${marker}`);
+}
 for (const marker of ["pub mod model;", "local-security-daemon", "openmls-1"]) {
   const source = marker === "openmls-1" ? protocolGate : daemonSource;
   if (!source.includes(marker)) throw new Error(`daemon product contract missing marker: ${marker}`);

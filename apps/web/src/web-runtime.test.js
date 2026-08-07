@@ -51,46 +51,34 @@ test("web runtime uses browser crypto and IndexedDB rather than preview storage"
   assert.match(runtime, /stopArgon2Worker/);
 });
 
-test("web UI exposes the complete manual pairing and sealed-envelope flow", () => {
+test("web product entry is daemon-only and keeps browser state out of the product path", () => {
+  for (const text of [
+    "LOCAL SECURITY DAEMON",
+    "daemonBridgeMode",
+    "connectDaemonBridge",
+    "renderDaemonBridgeState",
+    "키와 메시지 상태는 daemon이 소유합니다",
+    "고위험 통신을 시작하려면 CLI 데몬",
+    "안전 번호 다시 확인",
+    "암호화 복구 백업 다운로드",
+  ]) assert.match(ui, new RegExp(text.replace(/[.*+?^$\\{}()|[\\]\\\\]/g, "\\\\$&")));
   for (const text of [
     "로컬 프로필 만들기",
     "기존 프로필 잠금 해제",
-    "초대 공유",
-    "초대 확인 후 페어링",
-    "안전 문구",
-    "암호화 봉투 내보내기",
-    "가져와 복호화",
-    "대화",
-  ]) assert.match(ui, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), text === "Safety material" ? "i" : ""));
+    "renderLegacy",
+    "bindAuth",
+    "bindRoom",
+    "web-runtime.js",
+    "serviceWorkerStatus",
+    "IndexedDB",
+    "Olm handshake",
+  ]) assert.doesNotMatch(ui, new RegExp(text.replace(/[.*+?^$\\{}()|[\\]\\\\]/g, "\\\\$&")));
   assert.doesNotMatch(ui, /browser-preview-tauri/);
   assert.doesNotMatch(ui, /production_onion/);
-  assert.match(ui, /자동 전달을 사용할 수 없습니다/);
-  assert.match(ui, /onboardingStep/);
-  assert.match(ui, /안전한 시작 순서/);
-  assert.match(ui, /원인:/);
-  assert.match(ui, /보안 영향:/);
-  assert.match(ui, /재시도:/);
-  assert.match(ui, /wipe-confirm-form/);
-  assert.match(ui, /프로필 삭제 실행/);
-  assert.doesNotMatch(ui, /window\.prompt/);
   assert.match(ui, /copyToClipboard/);
-  assert.match(ui, /Clipboard is unavailable/);
-  assert.match(ui, /profileBackup/);
-  assert.match(ui, /setInterval[\s\S]*5_000/);
   assert.match(ui, /visibilitychange/);
-  assert.match(ui, /Service Worker \$\{serviceWorkerStatus\}/);
-  assert.match(ui, /serviceWorkerStatus = "활성"/);
-  assert.match(ui, /serviceWorkerStatus = "등록 실패"/);
-  assert.match(serviceWorker, /pathname\.startsWith\("\/api\/"\)/);
-  assert.match(serviceWorker, /request\.mode === "navigate"/);
-  assert.match(serviceWorker, /caches\.delete/);
-  assert.match(serviceWorker, /another-dimension-web-v6-integrity/);
-  assert.match(serviceWorker, /asset-integrity\.json/);
-  assert.match(serviceWorker, /verifiedShellResponse/);
-  assert.match(serviceWorker, /cache: "no-store"/);
-  assert.match(serviceWorker, /fetch\(event\.request\)/);
-  assert.doesNotMatch(serviceWorker, /skipWaiting/);
 });
+
 
 class MemoryIndexedDb {
   constructor() { this.stores = new Map(); }
