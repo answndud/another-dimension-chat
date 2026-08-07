@@ -24,7 +24,6 @@ const sourceFiles = [
   "apps/daemon/src/storage.rs",
   "apps/daemon/src/relay_http.rs",
   "apps/web/src/main.js",
-  "apps/web/public/sw.js",
   "apps/server/server.mjs",
   "scripts/build_release.sh",
   "scripts/verify_public_release_gate.mjs",

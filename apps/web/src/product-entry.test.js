@@ -12,11 +12,11 @@ const productUi = `${ui}\n${daemonView}\n${daemonController}`;
 
 test("web product entry is daemon-only and keeps browser state out of the product path", () => {
   for (const text of [
-    "LOCAL SECURITY DAEMON",
+    "ANOTHER DIMENSION",
     "daemonBridgeMode",
     "connectDaemonBridge",
     "renderDaemonBridgeState",
-    "키와 메시지 상태는 daemon이 소유합니다",
+    "암호화 키와 메시지 상태는 로컬 보안 데몬이 소유합니다",
     "고위험 통신을 시작하려면 CLI 데몬",
     "안전 번호 다시 확인",
     "암호화 복구 백업 다운로드",

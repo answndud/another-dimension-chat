@@ -36,8 +36,6 @@ node --check scripts/acceptance_daemon_e2e.mjs
 node --check scripts/acceptance_daemon_repair.mjs
 node --check scripts/verify_support_matrix.mjs
 node --check scripts/verify_release_support_gate.mjs
-node --check scripts/verify_service_worker.mjs
-node --check scripts/verify_service_worker_runtime.mjs
 node --check scripts/acceptance_os_matrix.mjs
 echo "[2/8] product boundary"
 node scripts/verify_product_boundary.mjs

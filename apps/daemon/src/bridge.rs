@@ -159,6 +159,10 @@ impl LocalBridge {
         self.config.port()
     }
 
+    pub(crate) fn ui_origin(&self) -> &str {
+        self.config.ui_origin()
+    }
+
     pub fn new(config: BridgeConfig) -> Result<Self, BridgeError> {
         let bootstrap = random_token()?;
         Ok(Self {

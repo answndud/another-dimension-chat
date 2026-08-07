@@ -10,9 +10,9 @@ function render() {
   if (state.daemonBridgeMode) {
     app.innerHTML = renderDaemonBridgeState(state);
     if (state.daemonRelayState === "offline") {
-      document.querySelector(".daemon-gate .notice")?.insertAdjacentHTML("beforebegin", '<div class="daemon-connection-banner offline" role="status"><strong>릴레이 연결이 끊겼습니다.</strong><span>로컬 대화와 암호화 상태는 유지됩니다. 연결이 복구되면 전달 대기 항목을 다시 시도하세요.</span></div>');
+      document.querySelector(".daemon-workspace > .notice, .daemon-gate .notice")?.insertAdjacentHTML("beforebegin", '<div class="daemon-connection-banner offline" role="status"><strong>릴레이 연결이 끊겼습니다.</strong><span>로컬 대화와 암호화 상태는 유지됩니다. 연결이 복구되면 전달 대기 항목을 다시 시도하세요.</span></div>');
     } else if (state.daemonRelayState === "online") {
-      document.querySelector(".daemon-gate .notice")?.insertAdjacentHTML("beforebegin", '<div class="daemon-connection-banner online" role="status"><strong>릴레이 연결됨</strong><span>릴레이 접수는 상대방이 읽었다는 뜻이 아닙니다.</span></div>');
+      document.querySelector(".daemon-workspace > .notice, .daemon-gate .notice")?.insertAdjacentHTML("beforebegin", '<div class="daemon-connection-banner online" role="status"><strong>릴레이 연결됨</strong><span>릴레이 접수는 상대방이 읽었다는 뜻이 아닙니다.</span></div>');
     }
     bindDaemonWorkspace({ render });
     return;
@@ -28,7 +28,7 @@ async function startApp() {
       const daemonStatus = await daemonBridge.request("/local-api/status");
       state.daemonStorage = { records: daemonStatus.storage_records || 0, limit: daemonStatus.storage_record_limit || 0 };
       state.daemonStatus = daemonStatus.status
-        ? `${daemonStatus.status} · 저장 ${state.daemonStorage.records}/${state.daemonStorage.limit}`
+        ? `연결됨 · 암호화 레코드 ${state.daemonStorage.records}/${state.daemonStorage.limit}`
         : "인증됨";
       state.daemonRelayOrigin = daemonStatus.relay_origin || "";
       state.daemonInboxUrl = daemonStatus.inbox_url || "";
@@ -48,7 +48,7 @@ async function startApp() {
         state.daemonContacts = [];
         state.daemonConversationIds = [];
       }
-      state.notice = "브라우저 보안 경계를 확인했습니다. 암호화 키와 메시지 상태는 daemon이 소유합니다.";
+      state.notice = "브라우저 보안 경계를 확인했습니다. 암호화 키와 메시지 상태는 로컬 보안 데몬이 소유합니다.";
       render();
       return;
     }

@@ -2,7 +2,7 @@ use super::{
     authorize_api, cookie_value, error_code, hex_bytes, hex_decode, json_escape, json_string,
     response, Request, RouteContext, EXCHANGE_PATH,
 };
-use crate::{bridge::BridgeRequest, storage::EncryptedStore};
+use crate::storage::EncryptedStore;
 
 pub(crate) fn handle_session_route(
     request: &Request<'_>,
@@ -76,53 +76,39 @@ pub(crate) fn handle_session_route(
                 Err(error) => response(403, error_code(&error), None, Some("application/json")),
             }
         }
-        ("GET", "/local-api/status") => {
-            let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session")
-            else {
-                return Some(response(401, "session_invalid", None, None));
-            };
-            let authorization = BridgeRequest {
-                origin,
-                host,
-                method: "GET",
-                cookie,
-                csrf_token: None,
-                ui_version: request.header("x-ad-ui-version").unwrap_or(""),
-            };
-            match context.bridge.authorize(&authorization, context.now) {
-                Ok(()) => {
-                    let relay_origin = context
-                        .invite_authority
-                        .as_deref()
-                        .map(|authority| authority.relay_origin.as_str())
-                        .unwrap_or("");
-                    let inbox_url = context
-                        .invite_authority
-                        .as_deref()
-                        .and_then(|authority| authority.inbox_url.as_deref())
-                        .map(|value| format!(r##""{}""##, json_escape(value)))
-                        .unwrap_or_else(|| "null".to_owned());
-                    let (storage_records, storage_record_limit) = context
-                        .session_store
-                        .as_deref()
-                        .map(|store| (store.record_count(), EncryptedStore::record_limit()))
-                        .unwrap_or((0, EncryptedStore::record_limit()));
-                    response(
-                        200,
-                        &format!(
-                            r##"{{"status":"daemon-session-active","high_risk":false,"private_state":"daemon-owned","relay_origin":"{}","inbox_url":{},"storage_records":{},"storage_record_limit":{}}}"##,
-                            json_escape(relay_origin),
-                            inbox_url,
-                            storage_records,
-                            storage_record_limit,
-                        ),
-                        None,
-                        Some("application/json"),
-                    )
-                }
-                Err(error) => response(403, error_code(&error), None, Some("application/json")),
+        ("GET", "/local-api/status") => match authorize_api(context.bridge, request, context.now) {
+            Ok(()) => {
+                let relay_origin = context
+                    .invite_authority
+                    .as_deref()
+                    .map(|authority| authority.relay_origin.as_str())
+                    .unwrap_or("");
+                let inbox_url = context
+                    .invite_authority
+                    .as_deref()
+                    .and_then(|authority| authority.inbox_url.as_deref())
+                    .map(|value| format!(r##""{}""##, json_escape(value)))
+                    .unwrap_or_else(|| "null".to_owned());
+                let (storage_records, storage_record_limit) = context
+                    .session_store
+                    .as_deref()
+                    .map(|store| (store.record_count(), EncryptedStore::record_limit()))
+                    .unwrap_or((0, EncryptedStore::record_limit()));
+                response(
+                    200,
+                    &format!(
+                        r##"{{"status":"daemon-session-active","high_risk":false,"private_state":"daemon-owned","relay_origin":"{}","inbox_url":{},"storage_records":{},"storage_record_limit":{}}}"##,
+                        json_escape(relay_origin),
+                        inbox_url,
+                        storage_records,
+                        storage_record_limit,
+                    ),
+                    None,
+                    Some("application/json"),
+                )
             }
-        }
+            Err(reply) => reply,
+        },
         ("POST", "/local-api/recovery/export") => {
             if let Err(reply) = authorize_api(context.bridge, request, context.now) {
                 return Some(reply);
@@ -190,39 +176,25 @@ pub(crate) fn handle_session_route(
             }
         }
         ("POST", "/local-api/session/lock") => {
-            let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session")
-            else {
-                return Some(response(401, "session_invalid", None, None));
-            };
-            let authorization = BridgeRequest {
-                origin,
-                host,
-                method: "POST",
-                cookie,
-                csrf_token: request.header("x-ad-csrf"),
-                ui_version: request.header("x-ad-ui-version").unwrap_or(""),
-            };
-            match context.bridge.authorize(&authorization, context.now) {
-                Ok(()) => {
-                    if let Some(catalog) = context.session_catalog.as_deref_mut() {
-                        catalog.lock();
-                    }
-                    if let Some(authority) = context.invite_authority.as_deref_mut() {
-                        authority.clear_attachment_state();
-                    }
-                    if let Some(store) = context.session_store.as_deref_mut() {
-                        store.lock();
-                    }
-                    context.bridge.invalidate_session();
-                    response(
-                        200,
-                        r##"{"status":"locked"}"##,
-                        None,
-                        Some("application/json"),
-                    )
-                }
-                Err(error) => response(403, error_code(&error), None, Some("application/json")),
+            if let Err(reply) = authorize_api(context.bridge, request, context.now) {
+                return Some(reply);
             }
+            if let Some(catalog) = context.session_catalog.as_deref_mut() {
+                catalog.lock();
+            }
+            if let Some(authority) = context.invite_authority.as_deref_mut() {
+                authority.clear_attachment_state();
+            }
+            if let Some(store) = context.session_store.as_deref_mut() {
+                store.lock();
+            }
+            context.bridge.invalidate_session();
+            response(
+                200,
+                r##"{"status":"locked"}"##,
+                None,
+                Some("application/json"),
+            )
         }
         ("POST", "/local-api/session/wipe") => {
             if let Err(reply) = authorize_api(context.bridge, request, context.now) {

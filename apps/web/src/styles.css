@@ -264,3 +264,45 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .contact-actions button { white-space: nowrap; }
 @media (max-width: 600px) { .daemon-contact { grid-template-columns: 1fr; } .daemon-gate { padding-inline: 16px; } .daemon-conversation-heading { display: block; } .daemon-conversation-heading .pill { display: inline-block; margin-top: 9px; } .daemon-action-row, .contact-actions { justify-content: flex-start; } }
 @media (max-width: 480px) { .daemon-facts div { grid-template-columns: 1fr; gap: 4px; padding: 11px 0; } .daemon-gate h1 { font-size: 1.8rem; } .daemon-gate-mark { margin-bottom: 22px; } .daemon-action-row button, .daemon-safety button, .daemon-invite > button { width: 100%; } }
+
+/* Daemon product workspace */
+.daemon-app { min-height: 100vh; display: grid; grid-template-columns: 220px minmax(0, 1fr); background: var(--canvas); }
+.daemon-nav { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--surface); padding: 24px 14px 16px; }
+.daemon-brand { display: flex; align-items: center; gap: 9px; padding: 0 8px 28px; }
+.daemon-brand span { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid var(--text); }
+.daemon-brand strong { font-size: .9rem; }
+.daemon-nav nav { display: grid; gap: 3px; }
+.daemon-nav-item { width: 100%; border: 0; background: transparent; color: var(--muted); padding: 11px 10px; text-align: left; }
+.daemon-nav-item.active { background: var(--surface-muted); color: var(--text); }
+.daemon-nav-footer { display: grid; gap: 8px; margin-top: auto; border-top: 1px solid var(--line); padding: 14px 8px 0; color: var(--muted); font-size: .78rem; }
+.daemon-nav-footer button { justify-self: start; }
+.daemon-workspace { width: min(980px, 100%); min-width: 0; margin: 0 auto; padding: 48px clamp(24px, 5vw, 64px) 64px; }
+.daemon-workspace-header { margin-bottom: 22px; }
+.daemon-workspace-header h1 { margin: 7px 0 10px; }
+.daemon-workspace > .notice { margin-bottom: 18px; }
+.daemon-workspace > .error { margin-bottom: 18px; }
+.daemon-view[hidden] { display: none; }
+.daemon-view { min-width: 0; }
+.daemon-view-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 22px 0 8px; }
+.daemon-view-heading h2 { margin-bottom: 5px; font-size: 1.15rem; }
+.daemon-view-heading p { margin: 0; color: var(--muted); font-size: .84rem; line-height: 1.5; }
+.daemon-device { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; align-items: start; border: 1px solid var(--line); background: var(--surface); padding: 14px; }
+.daemon-device > div { display: grid; gap: 4px; }
+.daemon-device small { color: var(--muted); font-size: .75rem; }
+.daemon-device code { grid-column: 1 / -1; min-width: 0; overflow-wrap: anywhere; color: var(--muted); font-size: .72rem; }
+.daemon-device > button, .daemon-device > span { grid-column: 2; grid-row: 1; }
+.daemon-security-content { display: grid; gap: 12px; }
+.daemon-recovery-note { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 18px; }
+#daemon-security-content > input[type="file"], #daemon-security-content > button { margin-top: 8px; }
+@media (max-width: 760px) {
+  .daemon-app { display: block; }
+  .daemon-nav { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 14px; }
+  .daemon-brand { padding: 0 4px 12px; }
+  .daemon-nav nav { display: flex; gap: 4px; overflow-x: auto; }
+  .daemon-nav-item { min-width: max-content; width: auto; }
+  .daemon-nav-footer { display: none; }
+  .daemon-workspace { padding: 24px 16px 40px; }
+  .daemon-view-heading { display: grid; }
+  .daemon-directory > .row-between { display: grid; justify-content: stretch; }
+  .daemon-directory > .row-between .pill { justify-self: start; }
+}

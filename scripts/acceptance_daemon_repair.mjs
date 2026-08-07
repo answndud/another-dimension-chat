@@ -147,22 +147,18 @@ async function relayApi(relay, method, path, body, headers = {}) {
 }
 
 async function publicInvite(daemon, relay) {
-  const local = await daemon.api("POST", "/local-api/invites");
-  assert.equal(local.status, 200, JSON.stringify(local.body));
-  const created = await relayApi(relay, "POST", "/api/v1/invite-codes/public", { invite: local.body.signed_invite });
-  assert.equal(created.status, 201, `${JSON.stringify(created.body)} payload=${Buffer.from(local.body.signed_invite.split(".")[1], "hex").toString()}`);
-  return { code: created.body.code, signedInvite: local.body.signed_invite, relay };
+  const created = await daemon.api("POST", "/local-api/invites");
+  assert.equal(created.status, 200, JSON.stringify(created.body));
+  assert.equal(typeof created.body.signed_invite, "undefined", "browser API must not expose signed invite material");
+  return { code: created.body.invite_code, relay };
 }
 
 async function stageInvite(daemon, invitation) {
-  const consumed = await relayApi(invitation.relay, "POST", "/api/v1/invite-codes/consume", { code: invitation.code });
-  assert.equal(consumed.status, 200, JSON.stringify(consumed.body));
-  const staged = await daemon.api("POST", "/local-api/invites/stage", {
+  const staged = await daemon.api("POST", "/local-api/invites/consume", {
     invite_code: invitation.code,
-    signed_invite: consumed.body.invite,
-    relay_receipt: consumed.body.receipt,
+    relay_origin: invitation.relay.origin,
   });
-  assert.equal(staged.status, 200, `${JSON.stringify(staged.body)} payload=${Buffer.from(consumed.body.invite.split(".")[1], "hex").toString()}`);
+  assert.equal(staged.status, 200, JSON.stringify(staged.body));
   return staged.body;
 }
 

@@ -1,4 +1,3 @@
-import { consumeRelayInvite, createRelayInviteCode, revokeRelayInviteCode } from "./daemon-bridge.js";
 import { state } from "./daemon-state.js";
 import { renderDaemonRelayTrust, renderDaemonSafetyControls, decodeHexText, decodeHexBytes, encodeHex, mergeDaemonMessages, newAttachmentBlobId, newDaemonConversationId } from "./daemon-view.js";
 import { daemonErrorMessage } from "./daemon-errors.js";
@@ -293,7 +292,7 @@ export function bindDaemonSession({ render }) {
 
 async function copyToClipboard(value) {
   if (!window.isSecureContext || typeof navigator === "undefined" || typeof navigator.clipboard?.writeText !== "function") {
-    throw new Error("Clipboard is unavailable. Copy the displayed encrypted material manually and clear clipboard history after delivery.");
+    throw new Error("클립보드를 사용할 수 없습니다. 표시된 내용을 직접 복사하고 전달 후 클립보드 기록을 지우세요.");
   }
   await navigator.clipboard.writeText(value);
 }
@@ -302,22 +301,27 @@ export function bindDaemonWorkspace({ render }) {
   if (!state.daemonBridgeMode) return;
   activeBindingController?.abort();
   activeBindingController = new AbortController();
+    document.querySelectorAll("[data-daemon-view]").forEach((button) => bindListener(button, "click", () => {
+      state.daemonActiveView = button.dataset.daemonView || "conversation";
+      state.error = "";
+      render();
+    }));
     if (state.daemonBridge && !state.daemonLocked) {
-      document.querySelector(".daemon-gate")?.insertAdjacentHTML("beforeend", renderDaemonRelayTrust(state));
+      document.querySelector("#daemon-security-content")?.insertAdjacentHTML("beforeend", renderDaemonRelayTrust(state));
       const wipeButton = document.createElement("button");
       wipeButton.type = "button";
       wipeButton.className = "danger";
-      wipeButton.textContent = "이 기기의 daemon 데이터 긴급 삭제";
+      wipeButton.textContent = "이 기기의 모든 로컬 데이터 삭제";
       bindListener(wipeButton, "click", async () => {
-        if (!window.confirm("이 기기의 daemon store와 메모리 세션을 삭제할까요? relay·백업·SSD 잔존 데이터는 삭제되지 않습니다.")) return;
+        if (!window.confirm("이 기기의 암호화 저장소와 현재 세션을 삭제할까요? 릴레이 자료·별도 백업·디스크 잔존 데이터는 삭제되지 않습니다.")) return;
         try {
           const result = await state.daemonBridge.wipe();
           state.daemonBridge = null;
           state.daemonLocked = true;
-          state.daemonStatus = "삭제됨 · daemon 재초기화 필요";
+          state.daemonStatus = "삭제됨 · 보안 데몬 재초기화 필요";
           state.notice = result.remote_data === "not_deleted"
-            ? "이 기기의 daemon 데이터만 삭제했습니다. relay와 백업은 별도로 폐기해야 합니다."
-            : "daemon 데이터를 삭제했습니다.";
+            ? "이 기기의 로컬 데이터만 삭제했습니다. 릴레이 자료와 별도 백업은 따로 폐기해야 합니다."
+            : "이 기기의 로컬 데이터를 삭제했습니다.";
           state.error = "";
         } catch (error) { state.error = daemonErrorMessage(error); }
         render();
@@ -327,7 +331,7 @@ export function bindDaemonWorkspace({ render }) {
       recoveryButton.className = "secondary";
       recoveryButton.textContent = "암호화 복구 백업 다운로드";
       bindListener(recoveryButton, "click", async () => {
-        if (!window.confirm("현재 daemon 저장소의 암호화 복구 백업을 다운로드할까요? 원래 프로필 암호 문구가 있어야 복구할 수 있습니다.")) return;
+        if (!window.confirm("현재 암호화 저장소의 복구 백업을 다운로드할까요? 원래 프로필 암호 문구가 있어야 복구할 수 있습니다.")) return;
         try {
           const result = await state.daemonBridge.recoveryExport();
           const bytes = decodeHexBytes(result.artifact_hex || "");
@@ -362,7 +366,7 @@ export function bindDaemonWorkspace({ render }) {
           const bytes = new Uint8Array(await file.arrayBuffer());
           const result = await state.daemonBridge.recoveryStage(encodeHex(bytes));
           state.notice = result.restart_required
-            ? "복구 백업을 검증하고 적용 예약했습니다. daemon을 정상 종료한 뒤 같은 data directory로 다시 시작하세요."
+            ? "복구 백업을 검증하고 적용 예약했습니다. 보안 데몬을 정상 종료한 뒤 같은 데이터 폴더로 다시 시작하세요."
             : "복구 백업 적용을 예약했습니다.";
           state.error = "";
         } catch (error) { state.error = `복구 백업을 예약하지 못했습니다: ${daemonErrorMessage(error)}`; }
@@ -370,8 +374,8 @@ export function bindDaemonWorkspace({ render }) {
       });
       const recoveryNote = document.createElement("p");
       recoveryNote.className = "field-note daemon-recovery-note";
-      recoveryNote.textContent = "복구 백업에는 daemon 저장소와 revision marker가 암호화된 상태로 포함됩니다. relay 자료·OS/SSD 잔존 데이터는 포함되지 않습니다.";
-      document.querySelector(".daemon-gate")?.append(recoveryNote, recoveryButton, recoveryInput, restoreButton, wipeButton);
+      recoveryNote.textContent = "복구 백업에는 로컬 암호화 저장소와 복구 판정 정보가 포함됩니다. 릴레이 자료와 운영체제·디스크의 잔존 데이터는 포함되지 않습니다.";
+      document.querySelector("#daemon-security-content")?.append(recoveryNote, recoveryButton, recoveryInput, restoreButton, wipeButton);
     }
     bindListener(document.querySelector("#daemon-save-relay-pin"), "click", async () => {
       try {
@@ -511,11 +515,10 @@ export function bindDaemonWorkspace({ render }) {
     });
     bindListener(document.querySelector("#daemon-create-invite"), "click", async () => {
       try {
-        const localInvite = await state.daemonBridge.request("/local-api/invites", { method: "POST" });
+        const localInvite = await state.daemonBridge.createInvite();
         if (!state.daemonRelayOrigin) throw new Error("daemon에 relay 주소가 설정되지 않았습니다.");
-        const relayCode = await createRelayInviteCode(state.daemonRelayOrigin, localInvite.signed_invite);
-        state.daemonInvite = { ...localInvite, invite_code: relayCode.code, expires_at: relayCode.expiresAt, invite_digest: relayCode.inviteDigest };
-        state.notice = "relay가 일회성 초대코드를 발급했습니다. 코드만 별도 신뢰 채널로 전달하세요.";
+        state.daemonInvite = localInvite;
+        state.notice = "릴레이가 일회성 초대 코드를 발급했습니다. 코드만 별도 신뢰 채널로 전달하세요.";
         state.error = "";
         render();
       } catch (error) {
@@ -526,9 +529,17 @@ export function bindDaemonWorkspace({ render }) {
     bindListener(document.querySelector("#daemon-revoke-invite"), "click", async () => {
       try {
         if (!window.confirm("이 초대코드를 즉시 폐기할까요? 상대는 더 이상 사용할 수 없습니다.")) return;
-        await revokeRelayInviteCode(state.daemonRelayOrigin, state.daemonInvite.invite_code);
+        await state.daemonBridge.revokeInvite(state.daemonInvite.invite_code);
         state.daemonInvite = null;
         state.notice = "초대코드를 relay에서 폐기했습니다.";
+        state.error = "";
+      } catch (error) { state.error = daemonErrorMessage(error); }
+      render();
+    });
+    bindListener(document.querySelector("#daemon-copy-invite"), "click", async () => {
+      try {
+        await copyToClipboard(state.daemonInvite?.invite_code || "");
+        state.notice = "초대 코드를 복사했습니다. 전달한 뒤 클립보드 기록을 지우세요.";
         state.error = "";
       } catch (error) { state.error = daemonErrorMessage(error); }
       render();
@@ -574,15 +585,12 @@ export function bindDaemonWorkspace({ render }) {
     });
     bindListener(document.querySelector("#daemon-consume-invite"), "click", async () => {
       try {
-        const result = await consumeRelayInvite(document.querySelector("#received-relay-origin").value, document.querySelector("#received-invite-code").value);
-        state.daemonConsumedInvite = result.invite;
-        state.daemonInviteReceipt = result.receipt;
-        const staged = await state.daemonBridge.request("/local-api/invites/stage", { method: "POST", body: JSON.stringify({ invite_code: document.querySelector("#received-invite-code").value, signed_invite: result.invite, relay_receipt: result.receipt }) });
+        const staged = await state.daemonBridge.consumeInvite(document.querySelector("#received-relay-origin").value, document.querySelector("#received-invite-code").value);
         state.daemonReceivedInvite = staged;
         state.daemonPairing = staged;
         state.daemonPeerInboxUrl = staged.inbox_url || "";
         state.daemonConsumedInvite = "";
-        state.notice = "relay 초대코드를 소비하고 daemon에서 상대 identity를 검증했습니다. 승인 전에는 연결되지 않습니다.";
+        state.notice = "초대 코드를 한 번만 사용하도록 폐기하고 보안 데몬에서 상대 신원을 검증했습니다. 승인 전에는 연결되지 않습니다.";
         state.error = "";
       } catch (error) { state.error = daemonErrorMessage(error); }
       render();

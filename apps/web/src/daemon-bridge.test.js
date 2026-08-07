@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { connectDaemonBridge, consumeRelayInvite, createRelayInviteCode } from "./daemon-bridge.js";
+import { connectDaemonBridge } from "./daemon-bridge.js";
 
 function location(hash = "#ad_bootstrap=secret") {
   return { origin: "http://127.0.0.1:1420", pathname: "/", search: "", hash };
@@ -135,27 +135,22 @@ test("ordinary prototype pages do not create a daemon session", async () => {
   assert.equal(called, false);
 });
 
-test("relay invite consumption rejects remote HTTP and returns only relay payload", async () => {
-  await assert.rejects(() => consumeRelayInvite("http://relay.example", "CODE"), /HTTPS/);
-  const result = await consumeRelayInvite("http://127.0.0.1:37421", "CODE", {
+test("invite rendezvous stays behind authenticated daemon routes", async () => {
+  const calls = [];
+  const bridge = await connectDaemonBridge({
+    location: location(),
+    history: { replaceState() {} },
     fetchImpl: async (url, options) => {
-      assert.equal(url, "http://127.0.0.1:37421/api/v1/invite-codes/consume");
-      assert.equal(options.method, "POST");
-      return { ok: true, json: async () => ({ consumed: true, invite: "ADWEB3.signed", inviteDigest: "digest", receipt: "ADRECEIPT1.keyid.http://127.0.0.1:37421.hash.digest.1" }) };
+      calls.push({ url, options });
+      return { ok: true, json: async () => ({ csrf_token: "i".repeat(32) }) };
     },
   });
-  assert.deepEqual(result, { consumed: true, invite: "ADWEB3.signed", inviteDigest: "digest", receipt: "ADRECEIPT1.keyid.http://127.0.0.1:37421.hash.digest.1" });
-});
-
-test("relay invite creation accepts HTTPS only and returns a short code without exposing a receipt", async () => {
-  await assert.rejects(() => createRelayInviteCode("http://relay.example", "ADDAINV1.x.y"), /HTTPS/);
-  const result = await createRelayInviteCode("http://127.0.0.1:37421", "ADDAINV1.x.y", {
-    fetchImpl: async (url, options) => {
-      assert.equal(url, "http://127.0.0.1:37421/api/v1/invite-codes/public");
-      assert.equal(options.method, "POST");
-      return { ok: true, json: async () => ({ created: true, code: "ABCD-EFGH-JKMN-PQRS-TVWX-YZ01-23", expiresAt: 1, inviteDigest: "digest" }) };
-    },
-  });
-  assert.equal(result.code, "ABCD-EFGH-JKMN-PQRS-TVWX-YZ01-23");
-  assert.equal(result.receipt, undefined);
+  await bridge.createInvite();
+  await bridge.consumeInvite("https://relay.example", "CODE");
+  await bridge.revokeInvite("CODE");
+  assert.deepEqual(calls.slice(1).map(({ url, options }) => [url, JSON.parse(options.body || "{}")]), [
+    ["http://127.0.0.1:1420/local-api/invites", {}],
+    ["http://127.0.0.1:1420/local-api/invites/consume", { relay_origin: "https://relay.example", invite_code: "CODE" }],
+    ["http://127.0.0.1:1420/local-api/invites/revoke", { invite_code: "CODE" }],
+  ]);
 });

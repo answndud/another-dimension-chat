@@ -26,8 +26,6 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
     let session_catalog = &mut context.session_catalog;
     let session_store = &mut context.session_store;
     let delivery_ledger = &mut context.delivery_ledger;
-    let origin = request.header("origin").unwrap_or("");
-    let host = request.header("host").unwrap_or("");
     match (request.method, request.path) {
         ("GET", "/local-api/relay/trust") => {
             if let Err(reply) = authorize_api(bridge, &request, now) {
@@ -118,33 +116,19 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             )
         }
         ("GET", "/local-api/identity") => {
-            let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session")
-            else {
-                return response(401, "session_invalid", None, None);
-            };
-            let authorization = BridgeRequest {
-                origin,
-                host,
-                method: "GET",
-                cookie,
-                csrf_token: None,
-                ui_version: request.header("x-ad-ui-version").unwrap_or(""),
-            };
+            if let Err(reply) = authorize_api(bridge, request, now) {
+                return reply;
+            }
             let Some(identity) = identity else {
                 return response(503, "identity_unavailable", None, None);
             };
-            match bridge.authorize(&authorization, now) {
-                Ok(()) => {
-                    let body = format!(
-                        r##"{{"account_id":"{}","device_id":"{}","display_name":"{}","private_state":"daemon-owned"}}"##,
-                        json_escape(&identity.account_id),
-                        json_escape(&identity.device_id),
-                        json_escape(&identity.display_name),
-                    );
-                    response(200, &body, None, Some("application/json"))
-                }
-                Err(error) => response(403, error_code(&error), None, Some("application/json")),
-            }
+            let body = format!(
+                r##"{{"account_id":"{}","device_id":"{}","display_name":"{}","private_state":"daemon-owned"}}"##,
+                json_escape(&identity.account_id),
+                json_escape(&identity.device_id),
+                json_escape(&identity.display_name),
+            );
+            response(200, &body, None, Some("application/json"))
         }
         ("GET", "/local-api/devices") => {
             if let Err(reply) = authorize_api(bridge, &request, now) {
@@ -344,18 +328,9 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             }
         }
         ("POST", "/local-api/invites") => {
-            let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session")
-            else {
-                return response(401, "session_invalid", None, None);
-            };
-            let authorization = BridgeRequest {
-                origin,
-                host,
-                method: "POST",
-                cookie,
-                csrf_token: request.header("x-ad-csrf"),
-                ui_version: request.header("x-ad-ui-version").unwrap_or(""),
-            };
+            if let Err(reply) = authorize_api(bridge, request, now) {
+                return reply;
+            }
             let Some(authority) = invite_authority else {
                 return response(503, "invite_unavailable", None, None);
             };
@@ -367,41 +342,131 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
                     Some("application/json"),
                 );
             }
-            match bridge.authorize(&authorization, now) {
-                Ok(()) => {
-                    let Some(store) = session_store.as_deref_mut() else {
-                        return response(503, "storage_unavailable", None, None);
-                    };
-                    if let Err(error) = authority.mark_invite_created(store) {
-                        return pairing_error(error);
-                    }
-                    let Some((code, signed_invite)) = authority.create(now) else {
-                        return response(503, "randomness_unavailable", None, None);
-                    };
-                    let body = format!(
-                        r##"{{"invite_code":"{}","signed_invite":"{}","expires_in":600}}"##,
-                        code, signed_invite
-                    );
-                    response(200, &body, None, Some("application/json"))
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            if let Err(error) = authority.mark_invite_created(store) {
+                return pairing_error(error);
+            }
+            let Some((_internal_code, signed_invite)) = authority.create(now) else {
+                return response(503, "randomness_unavailable", None, None);
+            };
+            let Some(inbox_url) = authority.inbox_url.as_deref() else {
+                return response(503, "relay_unavailable", None, Some("application/json"));
+            };
+            let Ok(endpoint) =
+                RelayEndpoint::from_inbox_url_with_pin(inbox_url, authority.relay_tls_pin)
+            else {
+                return response(503, "relay_unavailable", None, Some("application/json"));
+            };
+            let Ok(invite_code) =
+                RelayClient::new(endpoint).create_invite_code_blocking(&signed_invite)
+            else {
+                return response(503, "relay_unavailable", None, Some("application/json"));
+            };
+            let body = format!(
+                r##"{{"invite_code":"{}","expires_at":{},"invite_digest":"{}"}}"##,
+                json_escape(&invite_code.code),
+                invite_code.expires_at,
+                json_escape(&invite_code.invite_digest),
+            );
+            response(200, &body, None, Some("application/json"))
+        }
+        ("POST", "/local-api/invites/consume") => {
+            if let Err(reply) = authorize_api(bridge, request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "invite_unavailable", None, None);
+            };
+            let Some(code) = json_string(request.body, "invite_code") else {
+                return response(400, "invalid_invite", None, Some("application/json"));
+            };
+            let requested_origin = json_string(request.body, "relay_origin")
+                .unwrap_or(authority.relay_origin.as_str());
+            let Ok(endpoint) = RelayEndpoint::for_public_origin_with_pin(
+                requested_origin,
+                authority.relay_tls_pin,
+            ) else {
+                return response(
+                    409,
+                    "relay_retrust_required",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Ok(consumed) = RelayClient::new(endpoint).consume_invite_code_blocking(code) else {
+                return response(422, "invalid_invite", None, Some("application/json"));
+            };
+            let Some(invite) = verify_signed_invite_unbound(&consumed.invite, now) else {
+                return response(422, "invalid_invite", None, Some("application/json"));
+            };
+            if !verify_relay_receipt(
+                code,
+                &consumed.invite,
+                &consumed.receipt,
+                &invite,
+                authority.relay_public_key,
+                authority.relay_trust.as_ref(),
+                now,
+            ) {
+                return response(422, "invalid_relay_receipt", None, Some("application/json"));
+            }
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            if let Err(error) = authority.stage_peer(invite.clone(), now, store) {
+                return pairing_error(error);
+            }
+            let safety_number = authority.pairing.safety_number().unwrap_or_default();
+            let inbox_url = invite
+                .inbox_url
+                .as_deref()
+                .map(|value| format!(r##""{}""##, json_escape(value)))
+                .unwrap_or_else(|| "null".to_owned());
+            response(
+                200,
+                &format!(
+                    r##"{{"staged":true,"state":"verified","safety_verified":false,"safety_number":"{}","account_id":"{}","device_id":"{}","expires_at":{},"inbox_url":{}}}"##,
+                    json_escape(&safety_number),
+                    json_escape(&invite.account_id),
+                    json_escape(&invite.device_id),
+                    invite.expires_at,
+                    inbox_url,
+                ),
+                None,
+                Some("application/json"),
+            )
+        }
+        ("POST", "/local-api/invites/revoke") => {
+            if let Err(reply) = authorize_api(bridge, request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "invite_unavailable", None, None);
+            };
+            let Some(code) = json_string(request.body, "invite_code") else {
+                return response(400, "invalid_invite", None, Some("application/json"));
+            };
+            let Some(inbox_url) = authority.inbox_url.as_deref() else {
+                return response(503, "relay_unavailable", None, Some("application/json"));
+            };
+            let Ok(endpoint) =
+                RelayEndpoint::from_inbox_url_with_pin(inbox_url, authority.relay_tls_pin)
+            else {
+                return response(503, "relay_unavailable", None, Some("application/json"));
+            };
+            match RelayClient::new(endpoint).revoke_invite_code_blocking(code) {
+                Ok(()) => response(200, r##"{"revoked":true}"##, None, Some("application/json")),
+                Err(RelayError::Rejected(status)) => {
+                    response(status, "relay_rejected", None, Some("application/json"))
                 }
-                Err(error) => response(403, error_code(&error), None, Some("application/json")),
+                Err(_) => response(503, "relay_unavailable", None, Some("application/json")),
             }
         }
         ("POST", "/local-api/invites/verify") => {
-            let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session")
-            else {
-                return response(401, "session_invalid", None, None);
-            };
-            let authorization = BridgeRequest {
-                origin,
-                host,
-                method: "POST",
-                cookie,
-                csrf_token: request.header("x-ad-csrf"),
-                ui_version: request.header("x-ad-ui-version").unwrap_or(""),
-            };
-            if let Err(error) = bridge.authorize(&authorization, now) {
-                return response(403, error_code(&error), None, Some("application/json"));
+            if let Err(reply) = authorize_api(bridge, request, now) {
+                return reply;
             }
             let Some(code) = json_string(request.body, "invite_code") else {
                 return response(400, "invalid_invite", None, Some("application/json"));
@@ -422,20 +487,8 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             response(200, &body, None, Some("application/json"))
         }
         ("POST", "/local-api/invites/stage") => {
-            let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session")
-            else {
-                return response(401, "session_invalid", None, None);
-            };
-            let authorization = BridgeRequest {
-                origin,
-                host,
-                method: "POST",
-                cookie,
-                csrf_token: request.header("x-ad-csrf"),
-                ui_version: request.header("x-ad-ui-version").unwrap_or(""),
-            };
-            if let Err(error) = bridge.authorize(&authorization, now) {
-                return response(403, error_code(&error), None, Some("application/json"));
+            if let Err(reply) = authorize_api(bridge, request, now) {
+                return reply;
             }
             let Some(authority) = invite_authority else {
                 return response(503, "invite_unavailable", None, None);

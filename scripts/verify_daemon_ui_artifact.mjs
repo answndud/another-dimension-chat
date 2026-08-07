@@ -24,12 +24,18 @@ const index = await readFile(resolve(root, "apps/web/dist/index.html"), "utf8");
 if (index.includes("/@vite/client") || index.includes("/src/main.js")) {
   throw new Error("daemon UI artifact contains Vite development paths");
 }
+try {
+  await access(resolve(root, "apps/web/dist/sw.js"));
+  throw new Error("daemon UI artifact must not contain a persistent service worker");
+} catch (error) {
+  if (error?.code !== "ENOENT") throw error;
+}
 const serverHttp = await readFile(resolve(root, "apps/server/http.mjs"), "utf8");
 if (!serverHttp.includes("script-src 'self';")) throw new Error("relay CSP does not restrict scripts to local assets");
 if (/script-src[^;]*(?:unsafe-eval|wasm-unsafe-eval)/.test(serverHttp)) {
   throw new Error("relay CSP permits runtime code generation");
 }
-for (const script of ["scripts/verify_support_matrix.mjs", "scripts/verify_service_worker.mjs", "scripts/verify_service_worker_runtime.mjs"]) {
+for (const script of ["scripts/verify_support_matrix.mjs"]) {
   const result = await run(process.execPath, [script]);
   if (result.code !== 0) {
     process.stderr.write(result.stderr);
@@ -37,5 +43,5 @@ for (const script of ["scripts/verify_support_matrix.mjs", "scripts/verify_servi
   }
   process.stdout.write(result.stdout);
 }
-console.log("daemon UI artifact verified: production paths, CSP, support claims and cache lifecycle");
+console.log("daemon UI artifact verified: production paths, CSP, support claims and no persistent service worker");
 console.log("note: this static verifier is not Chromium end-to-end evidence");

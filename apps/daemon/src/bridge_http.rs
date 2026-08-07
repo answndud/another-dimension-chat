@@ -52,7 +52,7 @@ use session_routes::handle_session_route;
 
 use crate::{
     attachment::{AttachmentDescriptor, AttachmentJob, EncryptedAttachment},
-    bridge::{BridgeRequest, LocalBridge},
+    bridge::LocalBridge,
     contacts::{ContactDirectory, ContactDirectoryError},
     delivery::{DeliveryLedger, RelayEnvelope},
     device::{DeviceRegistry, DeviceRegistryError},
@@ -153,11 +153,7 @@ pub(crate) fn handle_request_with_route_context(raw: &[u8], context: RouteContex
     match (request.method, request.path) {
         ("GET", "/") | ("GET", "/index.html") => static_file(ui_root, "index.html")
             .unwrap_or_else(|| response(404, "ui_not_found", None, None)),
-        ("GET", path)
-            if path.starts_with("/assets/")
-                || path == "/sw.js"
-                || path == "/manifest.webmanifest" =>
-        {
+        ("GET", path) if path.starts_with("/assets/") || path == "/manifest.webmanifest" => {
             let relative = path.trim_start_matches('/');
             static_file(ui_root, relative)
                 .unwrap_or_else(|| response(404, "ui_not_found", None, None))
@@ -269,6 +265,40 @@ mod tests {
         ))
         .unwrap()
         .starts_with("HTTP/1.1 403"));
+    }
+
+    #[test]
+    fn chromium_same_origin_get_may_omit_origin_but_wrong_origin_is_rejected() {
+        let mut daemon = bridge();
+        let bootstrap = token(&daemon);
+        let credentials = daemon
+            .exchange(
+                "http://127.0.0.1:1420",
+                "127.0.0.1:1420",
+                &bootstrap,
+                "web-v1",
+                10,
+            )
+            .unwrap();
+        let browser_get = format!(
+            "GET /local-api/status HTTP/1.1\r\nHost: 127.0.0.1:1420\r\nX-Ad-Ui-Version: web-v1\r\nCookie: ad_session={}\r\nContent-Length: 0\r\n\r\n",
+            credentials.cookie
+        );
+        assert!(
+            String::from_utf8(handle_request(&mut daemon, browser_get.as_bytes(), 11))
+                .unwrap()
+                .starts_with("HTTP/1.1 200")
+        );
+
+        let cross_site = browser_get.replace(
+            "Host: 127.0.0.1:1420\r\n",
+            "Host: 127.0.0.1:1420\r\nOrigin: https://attacker.example\r\n",
+        );
+        assert!(
+            String::from_utf8(handle_request(&mut daemon, cross_site.as_bytes(), 12))
+                .unwrap()
+                .starts_with("HTTP/1.1 403")
+        );
     }
 
     #[test]

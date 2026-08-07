@@ -186,6 +186,36 @@ impl RelayEndpoint {
         })
     }
 
+    pub fn for_public_origin_with_pin(
+        value: &str,
+        tls_certificate_pin: Option<TlsCertificatePin>,
+    ) -> Result<Self, RelayError> {
+        let uri: Uri = value.parse().map_err(|_| RelayError::InvalidEndpoint)?;
+        let scheme = uri.scheme_str().ok_or(RelayError::InvalidEndpoint)?;
+        let authority = uri.authority().ok_or(RelayError::InvalidEndpoint)?;
+        let host = authority.host();
+        let loopback = matches!(host, "127.0.0.1" | "localhost" | "[::1]");
+        if uri.path() != "/" || uri.query().is_some() {
+            return Err(RelayError::InvalidEndpoint);
+        }
+        if scheme == "http" && (!loopback || tls_certificate_pin.is_some()) {
+            return Err(RelayError::UnsupportedTransport);
+        }
+        if scheme == "https" && tls_certificate_pin.is_none() {
+            return Err(RelayError::TrustRequired);
+        }
+        if scheme != "http" && scheme != "https" {
+            return Err(RelayError::UnsupportedTransport);
+        }
+        Ok(Self {
+            origin: format!("{scheme}://{authority}"),
+            path: "/api/v1/invite-codes".to_owned(),
+            capability: "public-rendezvous".to_owned(),
+            tls_certificate_pin,
+            tls_server_name: host.to_owned(),
+        })
+    }
+
     fn address(&self) -> Result<String, RelayError> {
         self.origin
             .split_once("://")
@@ -217,6 +247,19 @@ pub struct BlobChunkAccepted {
     pub received: usize,
     pub total: usize,
     pub expires_at: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RelayInviteCode {
+    pub code: String,
+    pub expires_at: u64,
+    pub invite_digest: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ConsumedRelayInvite {
+    pub invite: String,
+    pub receipt: String,
 }
 
 #[derive(Deserialize)]
@@ -251,6 +294,28 @@ struct BlobChunkResponse {
     expires_at: u64,
 }
 
+#[derive(Deserialize)]
+struct InviteCodeResponse {
+    created: bool,
+    code: String,
+    #[serde(rename = "expiresAt")]
+    expires_at: u64,
+    #[serde(rename = "inviteDigest")]
+    invite_digest: String,
+}
+
+#[derive(Deserialize)]
+struct ConsumeInviteResponse {
+    consumed: bool,
+    invite: String,
+    receipt: String,
+}
+
+#[derive(Deserialize)]
+struct RevokeInviteResponse {
+    revoked: bool,
+}
+
 impl RelayClient {
     pub fn new(endpoint: RelayEndpoint) -> Self {
         Self {
@@ -261,6 +326,67 @@ impl RelayClient {
 
     pub fn endpoint(&self) -> &RelayEndpoint {
         &self.endpoint
+    }
+
+    pub fn create_invite_code_blocking(
+        &self,
+        signed_invite: &str,
+    ) -> Result<RelayInviteCode, RelayError> {
+        let body = serde_json::to_vec(&serde_json::json!({ "invite": signed_invite }))
+            .map_err(|_| RelayError::InvalidResponse)?;
+        let (status, response) =
+            self.request_blocking("POST", "/api/v1/invite-codes/public", &body)?;
+        if !(200..300).contains(&status) {
+            return Err(RelayError::Rejected(status));
+        }
+        let parsed: InviteCodeResponse =
+            serde_json::from_slice(&response).map_err(|_| RelayError::InvalidResponse)?;
+        if !parsed.created || parsed.code.is_empty() || parsed.invite_digest.is_empty() {
+            return Err(RelayError::InvalidResponse);
+        }
+        Ok(RelayInviteCode {
+            code: parsed.code,
+            expires_at: parsed.expires_at,
+            invite_digest: parsed.invite_digest,
+        })
+    }
+
+    pub fn consume_invite_code_blocking(
+        &self,
+        code: &str,
+    ) -> Result<ConsumedRelayInvite, RelayError> {
+        let body = serde_json::to_vec(&serde_json::json!({ "code": code }))
+            .map_err(|_| RelayError::InvalidResponse)?;
+        let (status, response) =
+            self.request_blocking("POST", "/api/v1/invite-codes/consume", &body)?;
+        if !(200..300).contains(&status) {
+            return Err(RelayError::Rejected(status));
+        }
+        let parsed: ConsumeInviteResponse =
+            serde_json::from_slice(&response).map_err(|_| RelayError::InvalidResponse)?;
+        if !parsed.consumed || parsed.invite.is_empty() || parsed.receipt.is_empty() {
+            return Err(RelayError::InvalidResponse);
+        }
+        Ok(ConsumedRelayInvite {
+            invite: parsed.invite,
+            receipt: parsed.receipt,
+        })
+    }
+
+    pub fn revoke_invite_code_blocking(&self, code: &str) -> Result<(), RelayError> {
+        let body = serde_json::to_vec(&serde_json::json!({ "code": code }))
+            .map_err(|_| RelayError::InvalidResponse)?;
+        let (status, response) =
+            self.request_blocking("POST", "/api/v1/invite-codes/revoke", &body)?;
+        if !(200..300).contains(&status) {
+            return Err(RelayError::Rejected(status));
+        }
+        let parsed: RevokeInviteResponse =
+            serde_json::from_slice(&response).map_err(|_| RelayError::InvalidResponse)?;
+        if !parsed.revoked {
+            return Err(RelayError::InvalidResponse);
+        }
+        Ok(())
     }
 
     pub async fn post(&self, envelope: &RelayEnvelope) -> Result<RelayAccepted, RelayError> {

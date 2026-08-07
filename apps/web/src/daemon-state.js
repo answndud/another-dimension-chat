@@ -1,6 +1,7 @@
 export const state = {
   daemonBridge: null,
   daemonBridgeMode: false,
+  daemonActiveView: "conversation",
   daemonStatus: "확인 중",
   daemonRelayState: "unknown",
   daemonStorage: null,

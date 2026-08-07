@@ -1,4 +1,5 @@
 use super::*;
+use crate::bridge::BridgeRequest;
 
 pub(crate) fn authorize_api(
     bridge: &LocalBridge,
@@ -8,8 +9,17 @@ pub(crate) fn authorize_api(
     let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session") else {
         return Err(response(401, "session_invalid", None, None));
     };
+    // Chromium and embedded Chromium may omit Origin and Fetch Metadata on a
+    // same-origin GET. This exception is read-only: exact Host, HttpOnly
+    // session cookie and UI version remain mandatory, responses expose no CORS
+    // permission, and every mutation still requires exact Origin plus CSRF.
+    let origin = match request.header("origin") {
+        Some(origin) => origin,
+        None if request.method == "GET" => bridge.ui_origin(),
+        None => "",
+    };
     let authorization = BridgeRequest {
-        origin: request.header("origin").unwrap_or(""),
+        origin,
         host: request.header("host").unwrap_or(""),
         method: request.method,
         cookie,

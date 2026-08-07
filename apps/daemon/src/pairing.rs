@@ -91,13 +91,11 @@ impl PairingSession {
 
     pub fn mark_invite_created(&mut self) -> Result<(), PairingError> {
         match self.state {
-            PairingState::Idle | PairingState::Rejected => {
+            PairingState::Idle | PairingState::InviteCreated | PairingState::Rejected => {
                 self.state = PairingState::InviteCreated;
                 Ok(())
             }
-            PairingState::InviteCreated | PairingState::Verified => {
-                Err(PairingError::InvalidTransition)
-            }
+            PairingState::Verified => Err(PairingError::InvalidTransition),
             PairingState::Established => Err(PairingError::Duplicate),
         }
     }
@@ -293,6 +291,14 @@ mod tests {
         session.approve(10).unwrap();
         assert_eq!(session.snapshot().state, PairingState::Established);
         assert_eq!(session.approve(10), Err(PairingError::Duplicate));
+    }
+
+    #[test]
+    fn pending_invite_can_be_replaced_after_browser_or_daemon_restart() {
+        let mut session = PairingSession::new("local-account", "local-device");
+        session.mark_invite_created().unwrap();
+        session.mark_invite_created().unwrap();
+        assert_eq!(session.snapshot().state, PairingState::InviteCreated);
     }
 
     #[test]
