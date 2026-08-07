@@ -856,6 +856,21 @@ mod tests {
     }
 
     #[test]
+    fn application_messages_allow_bounded_reordering_but_reject_replay() {
+        let mut alice = MlsSession::new(b"alice-account".to_vec()).unwrap();
+        let mut bob = MlsSession::new(b"bob-account".to_vec()).unwrap();
+        alice.create_group().unwrap();
+        let welcome = alice.add_member(&bob.key_package().unwrap()).unwrap();
+        bob.join(&welcome).unwrap();
+
+        let first = alice.encrypt(b"first").unwrap();
+        let second = alice.encrypt(b"second").unwrap();
+        assert_eq!(bob.decrypt(&second).unwrap(), b"second");
+        assert_eq!(bob.decrypt(&first).unwrap(), b"first");
+        assert_eq!(bob.decrypt(&second), Err(SessionError::OpenMls));
+    }
+
+    #[test]
     fn attachment_descriptor_is_carried_inside_authenticated_mls_message() {
         let mut alice = MlsSession::new(b"alice-account".to_vec()).unwrap();
         let mut bob = MlsSession::new(b"bob-account".to_vec()).unwrap();

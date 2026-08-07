@@ -32,6 +32,8 @@ node --check scripts/verify_release_trust_receipt.mjs
 node --check scripts/verify_security_review_signoff.mjs
 node --check scripts/verify_security_review_handoff.mjs
 node --check scripts/verify_daemon_ui_artifact.mjs
+node --check scripts/acceptance_daemon_e2e.mjs
+node --check scripts/acceptance_daemon_repair.mjs
 node --check scripts/verify_support_matrix.mjs
 node --check scripts/verify_release_support_gate.mjs
 node --check scripts/verify_service_worker.mjs

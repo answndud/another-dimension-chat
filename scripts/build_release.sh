@@ -48,6 +48,7 @@ else
   printf '%s\n' "A complete release requires AD_NODE_RUNTIME so users do not need Node/npm." >&2
   exit 1
 fi
+AD_DAEMON_BINARY="$AD_DAEMON_BINARY" node "$PROJECT_DIR/scripts/acceptance_daemon_e2e.mjs"
 SOURCE_COMMIT=${AD_RELEASE_SOURCE_COMMIT:-$(git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || printf '%s' unknown)}
 node -e 'const fs=require("fs"); const [file, version, commit, epoch] = process.argv.slice(1); fs.writeFileSync(file, JSON.stringify({format:"another-dimension-release-provenance", version, sourceCommit:commit, node:process.version, sourceDateEpoch:Number(epoch)}, null, 2)+"\n")' "$STAGE/another-dimension-$VERSION/RELEASE-PROVENANCE.json" "$VERSION" "$SOURCE_COMMIT" "${AD_RELEASE_SOURCE_DATE_EPOCH:-0}"
 node "$PROJECT_DIR/scripts/generate_sbom.mjs" "$STAGE/another-dimension-$VERSION/apps/web/package-lock.json" "$STAGE/another-dimension-$VERSION/SBOM.cyclonedx.json" --cargo-lock "$PROJECT_DIR/Cargo.lock" --node-version "$(node --version)"

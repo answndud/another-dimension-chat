@@ -983,6 +983,28 @@ mod tests {
     }
 
     #[test]
+    fn authenticated_store_rejects_ciphertext_corruption() {
+        let path = temp_path("corrupt-ciphertext");
+        let mut store = EncryptedStore::initialize(&path, "correct horse battery staple").unwrap();
+        store
+            .put(RecordClass::Message, "message-1", b"sensitive message")
+            .unwrap();
+        drop(store);
+
+        let mut bytes = fs::read(&path).unwrap();
+        let last = bytes.len() - 1;
+        bytes[last] ^= 0x01;
+        fs::write(&path, bytes).unwrap();
+        assert!(matches!(
+            EncryptedStore::open(&path, "correct horse battery staple"),
+            Err(StorageError::AuthenticationFailed | StorageError::CorruptStore)
+        ));
+
+        fs::remove_file(&path).unwrap();
+        fs::remove_file(format!("{}.revision", path.display())).unwrap();
+    }
+
+    #[test]
     fn deletion_is_persisted_and_os_key_store_does_not_fallback() {
         let path = temp_path("delete");
         let mut store = EncryptedStore::initialize(&path, "correct horse battery staple").unwrap();

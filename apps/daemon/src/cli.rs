@@ -1333,6 +1333,8 @@ mod tests {
     fn init_identity_doctor_and_recovery_flow_is_local_and_encrypted() {
         let source = temp_dir();
         let backup = source.with_extension("adbackup");
+        let tampered_backup = source.with_extension("tampered-adbackup");
+        let tampered_restore = temp_dir();
         let restored = temp_dir();
         let init = run(
             &arg(&[
@@ -1402,6 +1404,25 @@ mod tests {
             None,
         )
         .unwrap();
+        let mut tampered = fs::read(&backup).unwrap();
+        let last = tampered.len() - 1;
+        tampered[last] ^= 0x01;
+        fs::write(&tampered_backup, tampered).unwrap();
+        assert!(matches!(
+            run(
+                &arg(&[
+                    "recovery",
+                    "import",
+                    "--data-dir",
+                    tampered_restore.to_str().unwrap(),
+                    "--input",
+                    tampered_backup.to_str().unwrap(),
+                ]),
+                None,
+            ),
+            Err(CliError::InvalidRecovery)
+        ));
+        assert!(!tampered_restore.join("store.adstore").exists());
         let inspected = run(
             &arg(&["recovery", "inspect", "--input", backup.to_str().unwrap()]),
             None,
@@ -1420,6 +1441,20 @@ mod tests {
             None,
         )
         .unwrap();
+        assert!(matches!(
+            run(
+                &arg(&[
+                    "recovery",
+                    "import",
+                    "--data-dir",
+                    restored.to_str().unwrap(),
+                    "--input",
+                    backup.to_str().unwrap(),
+                ]),
+                None,
+            ),
+            Err(CliError::AlreadyInitialized)
+        ));
         let restored_identity = run(
             &arg(&["identity", "show", "--data-dir", restored.to_str().unwrap()]),
             Some("correct horse battery staple"),
@@ -1443,6 +1478,8 @@ mod tests {
         .is_ok());
         fs::remove_dir_all(source).unwrap();
         fs::remove_file(backup).unwrap();
+        fs::remove_file(tampered_backup).unwrap();
+        let _ = fs::remove_dir_all(tampered_restore);
         fs::remove_dir_all(restored).unwrap();
     }
     #[test]

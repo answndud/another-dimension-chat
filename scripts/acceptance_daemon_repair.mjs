@@ -79,6 +79,28 @@ async function initDaemon(dataDir, displayName) {
   });
 }
 
+async function runDaemonCommand(args, input = "") {
+  const child = spawn(daemonBinary, args, { stdio: ["pipe", "pipe", "pipe"] });
+  child.stdin.end(input);
+  return await new Promise((resolve) => {
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
+    child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+    child.once("exit", (code) => resolve({ code, stdout, stderr }));
+  });
+}
+
+async function stopDaemon(daemon) {
+  if (!daemon?.child || daemon.child.exitCode !== null) return;
+  const exited = new Promise((resolve) => daemon.child.once("exit", resolve));
+  daemon.child.kill("SIGTERM");
+  await Promise.race([
+    exited,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("daemon did not stop")), 5_000)),
+  ]);
+}
+
 async function startDaemon(dataDir, port, relay) {
   const origin = `http://127.0.0.1:${port}`;
   const inboxUrl = relay.inboxUrl.replace(":0", `:${relay.port}`);
@@ -96,7 +118,17 @@ async function startDaemon(dataDir, port, relay) {
   });
   child.stdin.end(`${passphrase}\n`);
   const bootstrap = await waitForDaemon(child, port);
-  const exchange = await httpCall(origin, "POST", "/local-session/exchange", { token: bootstrap, ui_version: "web-v1" }, { origin, host: `127.0.0.1:${port}`, "x-ad-ui-version": "web-v1" });
+  let exchange;
+  let exchangeError;
+  for (let attempt = 0; attempt < 50 && !exchange; attempt += 1) {
+    try {
+      exchange = await httpCall(origin, "POST", "/local-session/exchange", { token: bootstrap, ui_version: "web-v1" }, { origin, host: `127.0.0.1:${port}`, "x-ad-ui-version": "web-v1" });
+    } catch (error) {
+      exchangeError = error;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
+  if (!exchange) throw exchangeError || new Error(`daemon session exchange unavailable on ${port}`);
   assert.equal(exchange.status, 200);
   const cookie = String(exchange.headers["set-cookie"]?.[0] || "").split(";", 1)[0];
   const csrf = exchange.body.csrf_token;
@@ -198,6 +230,8 @@ try {
   const aliceInvite = await publicInvite(alice, relayA);
   const bobInvite = await publicInvite(bob, relayA);
   const bobStaged = await stageInvite(bob, aliceInvite);
+  const reusedInvite = await relayApi(relayA, "POST", "/api/v1/invite-codes/consume", { code: aliceInvite.code });
+  assert.equal(reusedInvite.status, 404, JSON.stringify(reusedInvite.body));
   const aliceStaged = await stageInvite(alice, bobInvite);
   assert.equal(bobStaged.safety_number, aliceStaged.safety_number);
   assert.equal((await bob.api("POST", "/local-api/pairing/verify-safety", { safety_number: bobStaged.safety_number })).status, 200);
@@ -287,6 +321,53 @@ try {
   assert.ok(relayInfoAfter.body.blobStoreBytes >= attachmentBytes.length);
   assert.ok(relayInfoAfter.body.blobStoreRecords >= 1);
 
+  await stopDaemon(alice);
+  await stopDaemon(bob);
+  alice = await startDaemon(aliceDir, 17420, relayA);
+  bob = await startDaemon(bobDir, 17421, relayA);
+  assert.equal((await alice.api("GET", "/local-api/contacts")).body.contacts.length, 1);
+  assert.deepEqual((await bob.api("GET", "/local-api/conversations")).body.conversations, [conversationId]);
+  const afterRestart = await alice.api("POST", "/local-api/session/send", { conversation_id: conversationId, plaintext: "after-daemon-restart" });
+  assert.equal(afterRestart.status, 200, JSON.stringify(afterRestart.body));
+  assert.equal((await alice.api("POST", "/local-api/delivery/post", { inbox_url: bob.inboxUrl, ciphertext: afterRestart.body.ciphertext, expires_at: Math.floor(Date.now() / 1000) + 3600 })).status, 202);
+  const receivedAfterRestart = await bob.api("POST", "/local-api/delivery/sync", { conversation_id: conversationId, inbox_url: bob.inboxUrl });
+  assert.equal(Buffer.from(receivedAfterRestart.body.messages[0].plaintext, "hex").toString(), "after-daemon-restart");
+
+  const duringOutage = await alice.api("POST", "/local-api/session/send", { conversation_id: conversationId, plaintext: "relay-outage" });
+  assert.equal(duringOutage.status, 200);
+  await closeRelay(relayA);
+  const unavailable = await alice.api("POST", "/local-api/delivery/post", { inbox_url: bob.inboxUrl, ciphertext: duringOutage.body.ciphertext, expires_at: Math.floor(Date.now() / 1000) + 3600 });
+  assert.equal(unavailable.status, 503, JSON.stringify(unavailable.body));
+  assert.equal(unavailable.body.state, "retryable", JSON.stringify(unavailable.body));
+  relayA = await createLocalServer(relayOptions(relayAPort, "relay-a"));
+  await new Promise((resolve) => relayA.server.listen(relayAPort, "127.0.0.1", resolve));
+  relayA.port = relayAPort;
+  relayA.origin = useTls ? `https://localhost:${relayA.port}` : `http://127.0.0.1:${relayA.port}`;
+  relayA.inboxUrl = relayA.inboxUrl.replace(`http://127.0.0.1:${relayA.port}`, relayA.origin);
+  relayA.tlsPin = tlsFiles?.pin;
+  const relayRecovered = await relayApi(relayA, "GET", "/api/v1/info", undefined, { "x-ad-local-access": relayA.localAccessCapability });
+  assert.equal(relayRecovered.status, 200);
+  assert.ok(relayRecovered.body.blobStoreRecords >= 1);
+  const afterRelayRestart = await alice.api("POST", "/local-api/session/send", { conversation_id: conversationId, plaintext: "after-relay-restart" });
+  assert.equal((await alice.api("POST", "/local-api/delivery/post", { inbox_url: bob.inboxUrl, ciphertext: afterRelayRestart.body.ciphertext, expires_at: Math.floor(Date.now() / 1000) + 3600 })).status, 202);
+  const receivedAfterRelayRestart = await bob.api("POST", "/local-api/delivery/sync", { conversation_id: conversationId, inbox_url: bob.inboxUrl });
+  assert.equal(Buffer.from(receivedAfterRelayRestart.body.messages[0].plaintext, "hex").toString(), "after-relay-restart");
+
+  await stopDaemon(alice);
+  const recoveryFile = join(root, "alice.adrecovery");
+  const restoredAliceDir = join(root, "alice-restored");
+  const exported = await runDaemonCommand(["recovery", "export", "--data-dir", aliceDir, "--output", recoveryFile]);
+  assert.equal(exported.code, 0, exported.stderr);
+  const imported = await runDaemonCommand(["recovery", "import", "--data-dir", restoredAliceDir, "--input", recoveryFile]);
+  assert.equal(imported.code, 0, imported.stderr);
+  alice = await startDaemon(restoredAliceDir, 17420, relayA);
+  assert.equal((await alice.api("GET", "/local-api/contacts")).body.contacts.length, 1);
+  assert.deepEqual((await alice.api("GET", "/local-api/conversations")).body.conversations, [conversationId]);
+  const afterRecovery = await alice.api("POST", "/local-api/session/send", { conversation_id: conversationId, plaintext: "after-recovery" });
+  assert.equal((await alice.api("POST", "/local-api/delivery/post", { inbox_url: bob.inboxUrl, ciphertext: afterRecovery.body.ciphertext, expires_at: Math.floor(Date.now() / 1000) + 3600 })).status, 202);
+  const receivedAfterRecovery = await bob.api("POST", "/local-api/delivery/sync", { conversation_id: conversationId, inbox_url: bob.inboxUrl });
+  assert.equal(Buffer.from(receivedAfterRecovery.body.messages[0].plaintext, "hex").toString(), "after-recovery");
+
   const oldAliceInbox = alice.inboxUrl;
   const rotation = await relayApi(relayA, "POST", "/api/v1/inbox/rotate", undefined, { "x-ad-local-access": relayA.localAccessCapability });
   assert.equal(rotation.status, 200);
@@ -295,17 +376,17 @@ try {
   assert.equal(oldRelayRead.status, 410, JSON.stringify(oldRelayRead.body));
   const failed = await bob.api("POST", "/local-api/delivery/sync", { conversation_id: conversationId, inbox_url: oldAliceInbox });
   assert.equal(failed.status, 409, JSON.stringify(failed.body));
-  assert.equal(failed.body.raw, "relay_capability_expired", JSON.stringify(failed.body));
+  assert.equal(failed.body.error, "relay_capability_expired", JSON.stringify(failed.body));
   const pairing = await bob.api("GET", "/local-api/pairing/status");
   assert.equal(pairing.body.state, "rejected");
   const wiped = await alice.api("POST", "/local-api/session/wipe");
   assert.equal(wiped.status, 200, JSON.stringify(wiped.body));
   assert.equal(wiped.body.remote_data, "not_deleted");
   assert.equal((await alice.api("GET", "/local-api/status")).status, 403);
-  assert.equal(existsSync(join(aliceDir, "store.adstore")), false);
-  console.log("daemon repair acceptance passed: two daemons -> pairing -> OpenMLS text + attachment -> daemon decrypt/download -> relay rotation -> trust revocation");
+  assert.equal(existsSync(join(restoredAliceDir, "store.adstore")), false);
+  console.log("daemon E2E acceptance passed: one-time pairing -> OpenMLS text/file -> daemon and relay restart -> outage recovery -> backup restore -> trust revocation");
 } finally {
-  for (const daemon of [alice, bob]) daemon?.child.kill("SIGTERM");
+  for (const daemon of [alice, bob]) await stopDaemon(daemon).catch(() => {});
   for (const relay of [relayA, relayB]) await closeRelay(relay);
   await rm(root, { recursive: true, force: true });
 }
