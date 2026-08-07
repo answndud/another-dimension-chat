@@ -18,9 +18,9 @@ axum = { version = "0.8.8", default-features = false, features = ["http1", "toki
 argon2 = { version = "0.5.3", default-features = false, features = ["alloc", "zeroize"] }
 ed25519-dalek = { version = "2.2.0", default-features = false, features = ["zeroize"] }
 getrandom = "0.4.2"
-openmls = { version = "=0.8.1", default-features = false, features = ["libcrux-provider"] }
-openmls_libcrux_crypto = "=0.3.1"
-openmls_traits = "=0.5.0"
+openmls = { version = "=0.8.1", default-features = false }
+openmls_libcrux_crypto = { version = "=0.3.1", default-features = false }
+openmls_traits = { version = "=0.5.0", default-features = false }
 rustls = { version = "0.23.35", default-features = false, features = ["ring", "std", "tls12"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"

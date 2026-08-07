@@ -20,6 +20,8 @@ const requiredSource = [
 for (const file of requiredSource) await access(path.join(root, file), constants.R_OK);
 const boundary = await loadProductBoundary(root);
 const daemonManifest = await readFile(path.join(root, "apps/daemon/Cargo.toml"), "utf8");
+const workspaceManifest = await readFile(path.join(root, "Cargo.toml"), "utf8");
+const cargoLock = await readFile(path.join(root, "Cargo.lock"), "utf8");
 const daemonSource = await readFile(path.join(root, "apps/daemon/src/lib.rs"), "utf8");
 const protocolGate = await readFile(path.join(root, "apps/daemon/src/protocol_gate.rs"), "utf8");
 const webEntry = await readFile(path.join(root, "apps/web/src/main.js"), "utf8");
@@ -28,6 +30,23 @@ if (!daemonManifest.includes("name = \"another-dimension-daemon\"")) {
 }
 if (/from\s+["']\.\/web-runtime\.js["']/.test(webEntry)) {
   throw new Error("daemon web entrypoint must not import browser-owned web-runtime");
+}
+for (const legacyCrypto of [
+  "apps/web/src/web-runtime.js",
+  "apps/web/src/argon2-worker.js",
+  "apps/web/src/generated/ad_crypto_bg.wasm",
+  "crates/web-crypto-wasm/Cargo.toml",
+]) {
+  try {
+    await access(path.join(root, legacyCrypto), constants.F_OK);
+    throw new Error(`legacy browser crypto remains in product source: ${legacyCrypto}`);
+  } catch (error) {
+    if (error.message?.startsWith("legacy browser crypto")) throw error;
+    if (error.code !== "ENOENT") throw error;
+  }
+}
+for (const marker of ["web-crypto-wasm", "vodozemac"]) {
+  if (workspaceManifest.includes(marker) || cargoLock.includes(marker)) throw new Error(`legacy crypto dependency remains: ${marker}`);
 }
 for (const marker of ["renderLegacy", "bindAuth", "bindRoom", "browserStatus"]) {
   if (webEntry.includes(marker)) throw new Error(`legacy browser UI marker leaked into daemon entrypoint: ${marker}`);

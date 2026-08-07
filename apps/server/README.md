@@ -23,9 +23,9 @@ reverse-proxy/Tailscale Serve, or direct-TLS configuration. It validates and
 saves `.another-dimension-server/server-config.json` with owner-only
 permissions, then starts the server. Later starts reuse it automatically.
 
-The web bundle includes the committed Rust `vodozemac` Olm WebAssembly module.
-Only crypto-source changes require `npm --prefix apps/web run build:crypto
---workspaces=false`; ordinary server starts and release builds do not compile Rust.
+The browser bundle contains presentation code only. Identity keys, OpenMLS
+sessions, message encryption, and encrypted persistence belong to the local
+daemon binary and are never compiled into browser WebAssembly.
 
 The private URL file contains a `#relay=...&local=...` fragment. The `local`
 value authorizes the browser to read the inbox setting and is a bearer secret.

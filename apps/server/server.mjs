@@ -460,7 +460,7 @@ if (launchedDirectly) {
       console.log(`Advertised origin: ${runtime.publicOrigin}`);
       console.log(`Private local UI URL written to ${runtime.localUiUrlFile} (mode 600); do not print or share its contents.`);
       if (!isLoopbackHost(runtime.bindHost)) console.warn("Warning: non-loopback bind exposes this server to the configured network.");
-      if (!isLoopbackHost(runtime.bindHost) && !runtime.externalSecure) console.warn("Warning: remote browser Web Crypto requires an HTTPS public URL or reverse proxy.");
+      if (!isLoopbackHost(runtime.bindHost) && !runtime.externalSecure) console.warn("Warning: remote browser access requires an HTTPS public URL or reverse proxy.");
       if (runtime.externalSecure && !runtime.listenerTls) console.log(`External HTTPS is expected at ${runtime.publicOrigin}; keep the reverse proxy running.`);
     });
   };

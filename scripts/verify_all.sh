@@ -20,11 +20,9 @@ node --check scripts/verify_public_release_gate.mjs
 node --check scripts/product_boundary_negative.test.mjs
 node --check scripts/verify_relay_logs.mjs
 node --check scripts/verify_web_artifact.mjs
-node --check scripts/verify_web_crypto_binding.mjs
 node --check scripts/verify_transport_boundary.mjs
 node --check scripts/verify_web_artifact_fixture.mjs
 node --check scripts/acceptance_p3.mjs
-node --check scripts/acceptance_local_only.mjs
 node --check scripts/acceptance_release_local_only.mjs
 node --check scripts/verify_security_requirements.mjs
 node --check scripts/prepare_security_review.mjs
@@ -44,7 +42,6 @@ node scripts/verify_product_boundary.mjs
 node scripts/product_boundary_negative.test.mjs
 node scripts/verify_relay_logs.mjs
 node scripts/verify_web_artifact_fixture.mjs
-node scripts/verify_web_crypto_binding.mjs
 node scripts/verify_transport_boundary.mjs
 echo "[3/8] focused server tests"
 node --test apps/server/server.test.mjs
@@ -52,7 +49,6 @@ echo "[4/8] focused browser runtime tests"
 npm --prefix apps/web test --workspaces=false
 echo "[5/8] relay restart and capability smoke"
 node scripts/smoke_user_owned_servers.mjs
-node scripts/acceptance_local_only.mjs
 node scripts/acceptance_release_local_only.mjs
 echo "[6/8] release manifest tests"
 node --test scripts/release_manifest.test.mjs

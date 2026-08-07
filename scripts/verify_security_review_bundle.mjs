@@ -11,7 +11,7 @@ const projectDir = projectIndex >= 0 && process.argv[projectIndex + 1] ? path.re
 const forbidden = [
   { name: "private-key-pem", pattern: /-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----/i },
   { name: "bearer-fragment", pattern: /#(?:relay|local)=(?!\.\.\.)[^\s)"'<>]+/i },
-  { name: "invite-or-envelope-value", pattern: /(?:ADINVITE|ADENVWEB)\.[A-Za-z0-9+/_=-]{16,}/ },
+  { name: "invite-or-envelope-value", pattern: /(?:ADINVITE|ADENV1)\.[A-Za-z0-9+/_=-]{16,}/ },
   { name: "ipv4-address", pattern: /\b(?:\d{1,3}\.){3}\d{1,3}\b/ },
 ];
 const required = ["REVIEW-MANIFEST.json", "source", "review", "evidence/STATUS.json"];

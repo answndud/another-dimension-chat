@@ -97,7 +97,7 @@ test("local server exposes health and a capability-scoped opaque inbox", async (
   const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
   const relayCapability = inboxPath.split("/").at(-1);
   const relayHeaders = { "x-ad-relay-capability": relayCapability };
-  const envelope = "ADENVWEB3.test-envelope";
+  const envelope = "ADENV1.test-envelope";
   const accepted = await call(port, "POST", inboxPath, { envelope });
   assert.equal(accepted.status, 202);
   assert.equal((await call(port, "GET", inboxPath)).status, 403);
@@ -150,7 +150,7 @@ test("sqlite relay serializes concurrent enqueue and acknowledgement", async () 
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
   const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
-  const accepted = await Promise.all(Array.from({ length: 6 }, (_, index) => call(port, "POST", inboxPath, { envelope: `ADENVWEB1.concurrent-${index}` })));
+  const accepted = await Promise.all(Array.from({ length: 6 }, (_, index) => call(port, "POST", inboxPath, { envelope: `ADENV1.concurrent-${index}` })));
   assert.equal(accepted.filter((response) => response.status === 202).length, 6);
   const listed = await call(port, "GET", inboxPath, undefined, localHeaders(runtime));
   assert.equal(listed.body.items.length, 6);
@@ -246,8 +246,8 @@ test("local access can rotate the inbox capability and invalidate the old URL", 
   assert.equal(rotated.status, 200);
   const newPath = new URL(rotated.body.inboxUrl.replace(":0", `:${port}`)).pathname;
   assert.notEqual(newPath, oldPath);
-  assert.equal((await call(port, "POST", oldPath, { envelope: "ADENVWEB1.old-capability" })).status, 410);
-  assert.equal((await call(port, "POST", newPath, { envelope: "ADENVWEB1.new-capability" })).status, 202);
+  assert.equal((await call(port, "POST", oldPath, { envelope: "ADENV1.old-capability" })).status, 410);
+  assert.equal((await call(port, "POST", newPath, { envelope: "ADENV1.new-capability" })).status, 202);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
 });
@@ -374,7 +374,7 @@ test("local server validates its advertised public origin", async () => {
   assert.equal(info.body.networkScope, "non-loopback");
   assert.equal(info.body.highRiskAllowed, false);
   assert.equal(info.body.highRiskTransport, "disabled");
-  assert.deepEqual(info.body.supportedTransports, ["loopback", "direct-https-low-risk", "manual-envelope"]);
+  assert.deepEqual(info.body.supportedTransports, ["loopback", "direct-https-low-risk"]);
   assert.equal(info.body.transportMode, "direct-https-low-risk");
   assert.match(info.body.inboxUrl, /^https:\/\/chat\.example\.test\/api\/v1\/inbox\//);
   await runtime.server.close();
@@ -419,7 +419,7 @@ test("relay rejects non-JSON envelope writes", async () => {
       res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(text) }));
     });
     req.on("error", reject);
-    req.end(JSON.stringify({ envelope: "ADENVWEB3.invalid-content-type" }));
+    req.end(JSON.stringify({ envelope: "ADENV1.invalid-content-type" }));
   });
   assert.equal(response.status, 400);
   assert.equal(response.body.error, "content_type_not_allowed");
@@ -440,7 +440,7 @@ test("relay requires JSON content type for envelope and acknowledgement writes",
       res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(text) }));
     });
     req.on("error", reject);
-    req.end(JSON.stringify({ envelope: "ADENVWEB3.missing-content-type" }));
+    req.end(JSON.stringify({ envelope: "ADENV1.missing-content-type" }));
   });
   assert.equal(response.status, 400);
   assert.equal(response.body.error, "content_type_not_allowed");
@@ -492,7 +492,7 @@ test("local server rejects malformed inbox requests without storing them", async
   const port = runtime.server.address().port;
   const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
   assert.equal((await rawCall(port, "POST", inboxPath, "not-json")).status, 400);
-  assert.equal((await call(port, "POST", `${inboxPath}/../inbox`, { envelope: "ADENVWEB1.invalid-path" })).status, 404);
+  assert.equal((await call(port, "POST", `${inboxPath}/../inbox`, { envelope: "ADENV1.invalid-path" })).status, 404);
   assert.equal((await call(port, "GET", inboxPath, undefined, localHeaders(runtime))).body.items.length, 0);
   await runtime.server.close();
   await rm(dataDir, { recursive: true, force: true });
@@ -504,7 +504,7 @@ test("local server recovers its bounded queue and purges expired envelopes", asy
   await new Promise((resolve) => first.server.listen(0, "127.0.0.1", resolve));
   const port = first.server.address().port;
   const inboxPath = new URL(first.inboxUrl.replace(":0", `:${port}`)).pathname;
-  await call(port, "POST", inboxPath, { envelope: "ADENVWEB1.persisted" });
+  await call(port, "POST", inboxPath, { envelope: "ADENV1.persisted" });
   await first.server.close();
   await new Promise((resolve) => setTimeout(resolve, 5));
   const second = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist"), ttlMs: 1 });
@@ -522,7 +522,7 @@ test("ack reports only envelopes that were actually removed", async () => {
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
   const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
-  const accepted = await call(port, "POST", inboxPath, { envelope: "ADENVWEB1.ack-count" });
+  const accepted = await call(port, "POST", inboxPath, { envelope: "ADENV1.ack-count" });
   assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id, "missing"] }, localHeaders(runtime))).body.acknowledged, 1);
   assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: [accepted.body.id] }, localHeaders(runtime))).body.acknowledged, 0);
   assert.equal((await call(port, "POST", `${inboxPath}/ack`, { ids: Array.from({ length: 257 }, (_, index) => String(index)) }, localHeaders(runtime))).status, 400);
@@ -532,12 +532,12 @@ test("ack reports only envelopes that were actually removed", async () => {
 
 test("relay refuses new envelopes when the bounded queue is full", async () => {
   const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
-  await writeFile(join(dataDir, "inbox.json"), JSON.stringify(Array.from({ length: 256 }, (_, index) => ({ id: `existing-${index}`, envelope: `ADENVWEB1.existing-${index}`, receivedAt: Date.now() }))));
+  await writeFile(join(dataDir, "inbox.json"), JSON.stringify(Array.from({ length: 256 }, (_, index) => ({ id: `existing-${index}`, envelope: `ADENV1.existing-${index}`, receivedAt: Date.now() }))));
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
   const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
-  const response = await call(port, "POST", inboxPath, { envelope: "ADENVWEB1.queue-full" });
+  const response = await call(port, "POST", inboxPath, { envelope: "ADENV1.queue-full" });
   assert.equal(response.status, 429);
   assert.equal(response.body.error, "queue_full");
   await runtime.server.close();
@@ -546,7 +546,7 @@ test("relay refuses new envelopes when the bounded queue is full", async () => {
 
 test("relay trims a migrated queue to its quota before serving it", async () => {
   const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
-  const records = Array.from({ length: 300 }, (_, index) => ({ id: `legacy-${index}`, envelope: `ADENVWEB1.legacy-${index}`, receivedAt: Date.now() + index }));
+  const records = Array.from({ length: 300 }, (_, index) => ({ id: `legacy-${index}`, envelope: `ADENV1.legacy-${index}`, receivedAt: Date.now() + index }));
   await writeFile(join(dataDir, "inbox.json"), JSON.stringify(records), { mode: 0o600 });
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
@@ -604,7 +604,7 @@ test("relay refuses corrupt queue state and recovers a valid interrupted queue w
   await rm(corruptDir, { recursive: true, force: true });
 
   const recoveryDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
-  await writeFile(join(recoveryDir, "inbox.json.tmp"), JSON.stringify([{ id: "recovered", envelope: "ADENVWEB1.recovered", receivedAt: Date.now() }]));
+  await writeFile(join(recoveryDir, "inbox.json.tmp"), JSON.stringify([{ id: "recovered", envelope: "ADENV1.recovered", receivedAt: Date.now() }]));
   const runtime = await createLocalServer({ port: 0, dataDir: recoveryDir, distDir: join(recoveryDir, "missing-dist") });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -647,7 +647,7 @@ test("relay fails queue writes safely when the data directory becomes read-only"
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
   const inboxPath = new URL(runtime.inboxUrl.replace(":0", `:${port}`)).pathname;
-  const response = await call(port, "POST", inboxPath, { envelope: "ADENVWEB1.read-only" });
+  const response = await call(port, "POST", inboxPath, { envelope: "ADENV1.read-only" });
   assert.equal(response.status, 400);
   assert.equal(response.body.accepted, false);
   assert.equal((await call(port, "GET", inboxPath, undefined, localHeaders(runtime))).body.items.length, 0);

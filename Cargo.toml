@@ -1,7 +1,7 @@
 [workspace]
 # This workspace still contains legacy/native prototype crates. The current
-# product path is apps/web + apps/server + crates/web-crypto-wasm; do not use a
-# full workspace build as current web product evidence.
+# product path is apps/web + apps/daemon + apps/server; do not use a full
+# workspace build as current product evidence.
 members = [
     "apps/daemon",
     "crates/identity",
@@ -11,7 +11,6 @@ members = [
     "crates/transport",
     "crates/storage",
     "crates/core",
-    "crates/web-crypto-wasm",
     "apps/engine",
     "apps/cli",
 ]

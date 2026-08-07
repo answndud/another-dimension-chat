@@ -3,9 +3,9 @@ import { loadProductBoundary } from "./product_boundary.mjs";
 
 const boundary = await loadProductBoundary(".");
 const files = new Map([
-  ["apps/server/server.mjs", ["highRiskAllowed: false", "highRiskTransport: \"disabled\"", "supportedTransports"]],
-  ["apps/web/src/web-runtime.js", ["Onion/Tor endpoints are not supported", "Remote relay endpoints require HTTPS"]],
-  ["apps/web/src/main.js", ["고위험 통신 사용 불가"]],
+  ["apps/server/routes.mjs", ["highRiskAllowed: false", "highRiskTransport: \"disabled\"", "supportedTransports"]],
+  ["apps/daemon/src/relay_http.rs", ["does not accept an HTTPS endpoint without a configured trust pin"]],
+  ["apps/web/src/main.js", ["고위험 통신을 시작하려면 CLI 데몬"]],
   ["scripts/configure_local_server.mjs", ["Onion/Tor public URLs are not supported"]],
   ["reference/PRODUCT_BOUNDARY.md", ["high-risk route is permanently disabled"]],
   ["reference/TRANSPORT_DECISION.md", ["permanently disabled in the v0.1 web product"]],
@@ -17,7 +17,7 @@ for (const [file, markers] of files) {
   const source = await readFile(file, "utf8");
   for (const marker of markers) if (!source.includes(marker)) failures.push(`${file}: missing transport boundary marker: ${marker}`);
 }
-const currentProductSources = ["apps/web/src/web-runtime.js", "apps/web/src/main.js", "apps/server/server.mjs"];
+const currentProductSources = ["apps/daemon/src/relay_http.rs", "apps/web/src/main.js", "apps/server/server.mjs", "apps/server/routes.mjs"];
 for (const file of currentProductSources) {
   const source = await readFile(file, "utf8");
   if (/production_onion|TransportRoute::OnionService|arti-adapter-spike/.test(source)) failures.push(`${file}: legacy onion implementation leaked into current product source`);

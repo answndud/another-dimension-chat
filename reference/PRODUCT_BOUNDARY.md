@@ -52,7 +52,7 @@ or be used as evidence that the supported web package passed its release gate.
   endpoints are rejected by the browser and server configuration; a future
   anonymity transport would require a new product-boundary decision and
   independent review before any implementation could ship.
-- A changed JavaScript/WASM bundle, missing signature, revoked key, missing
+- A changed web bundle or daemon binary, missing signature, revoked key, missing
   provenance/SBOM, or legacy artifact in a public package is a release failure.
 - This boundary does not claim anonymity, secure deletion, coercion resistance,
   compromised-device protection, or independent audit status.

@@ -90,7 +90,7 @@ export function createRelayRequestHandler(context) {
         serveStatic,
         highRiskAllowed: false,
         highRiskTransport: "disabled",
-        supportedTransports: ["loopback", "direct-https-low-risk", "manual-envelope"],
+        supportedTransports: ["loopback", "direct-https-low-risk"],
         transportMode: publicOrigin.startsWith("https://") ? "direct-https-low-risk" : "local-or-http-low-risk",
         networkScope: isLoopbackHost(bindHost) ? "loopback" : "non-loopback",
         maxEnvelopeBytes: MAX_ENVELOPE_BYTES,
@@ -283,7 +283,7 @@ export function createRelayRequestHandler(context) {
         if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
         const body = JSON.parse(await readBody(req, MAX_ENVELOPE_BYTES + 4096, requestTimeoutMs));
         const envelope = String(body?.envelope || "").trim();
-        if (!/^(?:ADENVWEB(?:1|2|3)|ADENV1)\./.test(envelope) || Buffer.byteLength(envelope) > MAX_ENVELOPE_BYTES) throw new Error("invalid_envelope");
+        if (!/^ADENV1\./.test(envelope) || Buffer.byteLength(envelope) > MAX_ENVELOPE_BYTES) throw new Error("invalid_envelope");
         const id = storeId(envelope);
         if (!routeState.inbox.some((item) => item.id === id)) {
           if (routeState.inbox.length >= MAX_INBOX_ITEMS) {

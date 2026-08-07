@@ -31,7 +31,7 @@ try {
   let pathB = new URL(serverB.inboxUrl.replace(":0", `:${portB}`)).pathname;
   assert.deepEqual((await call(portA, "GET", "/api/v1/health")).body, { ok: true, protocol: 1 });
   assert.deepEqual((await call(portB, "GET", "/api/v1/health")).body, { ok: true, protocol: 1 });
-  const envelope = "ADENVWEB1.smoke-opaque-envelope";
+  const envelope = "ADENV1.smoke-opaque-envelope";
   const accepted = await call(portB, "POST", pathB, { envelope });
   assert.equal(accepted.status, 202);
   assert.equal((await call(portB, "GET", pathB)).status, 403);

@@ -18,11 +18,11 @@ const sourceFiles = [
   "Cargo.lock",
   "apps/web/package.json",
   "apps/web/package-lock.json",
-  "apps/web/src/generated/ad_crypto.js",
-  "apps/web/src/generated/ad_crypto.d.ts",
-  "apps/web/src/generated/ad_crypto_bg.wasm",
-  "apps/web/src/generated/ad_crypto_bg.wasm.d.ts",
-  "apps/web/src/web-runtime.js",
+  "apps/daemon/Cargo.toml",
+  "apps/daemon/src/mls_provider.rs",
+  "apps/daemon/src/mls_session.rs",
+  "apps/daemon/src/storage.rs",
+  "apps/daemon/src/relay_http.rs",
   "apps/web/src/main.js",
   "apps/web/public/sw.js",
   "apps/server/server.mjs",
@@ -50,7 +50,7 @@ const reviewDocs = [
 const forbidden = [
   { name: "private-key-pem", pattern: /-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----/i },
   { name: "bearer-fragment", pattern: /#(?:relay|local)=(?!\.\.\.)[^\s)"'<>]+/i },
-  { name: "invite-or-envelope-value", pattern: /(?:ADINVITE|ADENVWEB)\.[A-Za-z0-9+/_=-]{16,}/ },
+  { name: "invite-or-envelope-value", pattern: /(?:ADINVITE|ADENV1)\.[A-Za-z0-9+/_=-]{16,}/ },
   { name: "ipv4-address", pattern: /\b(?:\d{1,3}\.){3}\d{1,3}\b/ },
 ];
 

@@ -35,7 +35,7 @@ assert.equal(inboxUrl.protocol, "https:", "The signed invite would advertise a n
 assert.equal(inboxUrl.origin, origin.origin, "The advertised inbox origin does not match the checked server.");
 assert.equal(info.externalSecure, true);
 
-const envelope = `ADENVWEB1.acceptance-${randomBytes(18).toString("base64url")}`;
+const envelope = `ADENV1.acceptance-${randomBytes(18).toString("base64url")}`;
 const accepted = await getJson("public inbox delivery", inboxUrl, {
   method: "POST",
   headers: { "content-type": "application/json" },

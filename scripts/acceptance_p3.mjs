@@ -14,9 +14,8 @@ const timeoutMs = 30_000;
 const maxOldSpaceMb = 256;
 const commands = [
   ["server", process.execPath, ["--test", "apps/server/server.test.mjs"]],
-  ["web-runtime", process.execPath, ["--test", "apps/web/src/web-runtime.test.js"]],
+  ["web", "npm", ["--prefix", "apps/web", "test", "--workspaces=false"]],
   ["relay-smoke", process.execPath, ["scripts/smoke_user_owned_servers.mjs"]],
-  ["local-only-acceptance", process.execPath, ["scripts/acceptance_local_only.mjs"]],
   ["release-local-only-acceptance", process.execPath, ["scripts/acceptance_release_local_only.mjs"]],
   ["release-tests", process.execPath, ["--test", "scripts/release_manifest.test.mjs"]],
   ["transport-boundary", process.execPath, ["scripts/verify_transport_boundary.mjs"]],
@@ -55,7 +54,6 @@ try {
     });
   }
   for (const [name, command, args] of commands) await run(name, command, args);
-  await access("apps/web/src/generated/ad_crypto_bg.wasm", constants.R_OK);
   const artifact = {
     format: "another-dimension-p3-acceptance",
     status: "passed",
@@ -63,7 +61,7 @@ try {
     seed,
     policy: { timeoutMs, maxOldSpaceMb, workers: 1, artifact: "redacted-temp-only" },
     checks: [ ...(releaseMode ? ["signed-public-release"] : []), ...commands.map(([name]) => name) ],
-    wasmFreshness: "committed-module-present",
+    browserCryptoBoundary: "absent-daemon-owned-crypto-only",
   };
   const serialized = JSON.stringify(artifact);
   for (const forbidden of ["passphrase", "plaintext", "capability", "invite", "envelope", "127.0.0.1:"]) {
