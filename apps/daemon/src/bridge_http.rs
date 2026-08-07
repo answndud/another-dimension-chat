@@ -4012,6 +4012,14 @@ fn response(
         _ => "Error",
     };
     let content_type = content_type.unwrap_or("text/plain; charset=utf-8");
+    let body = if content_type.eq_ignore_ascii_case("application/json")
+        && !body.trim_start().starts_with('{')
+        && !body.trim_start().starts_with('[')
+    {
+        format!(r##"{{"error":"{}"}}"##, json_escape(body))
+    } else {
+        body.to_owned()
+    };
     let cookie = set_cookie
         .map(|value| format!("Set-Cookie: {value}\r\n"))
         .unwrap_or_default();
@@ -4427,5 +4435,18 @@ mod tests {
         drop(store);
         let _ = std::fs::remove_file(&path);
         let _ = std::fs::remove_file(path.with_extension("revision"));
+    }
+
+    #[test]
+    fn json_error_responses_expose_stable_error_code() {
+        let raw = String::from_utf8(super::response(
+            403,
+            "pairing_not_ready",
+            None,
+            Some("application/json"),
+        ))
+        .unwrap();
+        let body = raw.split_once("\r\n\r\n").unwrap().1;
+        assert_eq!(body, r##"{"error":"pairing_not_ready"}"##);
     }
 }
