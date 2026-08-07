@@ -2,6 +2,8 @@
 
 #[path = "authority.rs"]
 mod authority;
+#[path = "http_errors.rs"]
+mod http_errors;
 #[path = "http_support.rs"]
 mod http_support;
 #[path = "maintenance.rs"]
@@ -13,6 +15,9 @@ use authority::{
     mls_device_credential, verify_relay_receipt, verify_signed_invite, verify_signed_invite_unbound,
 };
 pub use authority::{IdentityView, InviteAuthority, VerifiedInvite};
+use http_errors::{
+    authorize_api, catalog_error, contact_directory_error, error_code, pairing_error, pairing_ready,
+};
 use http_support::{
     axum_request_bytes, axum_response, cookie_value, delivery_state_name, json_bool, json_escape,
     json_string, json_string_array, json_u64, parse_request, response, static_file, Request,
@@ -2811,80 +2816,6 @@ async fn axum_handler(State(state): State<AppState>, request: HttpRequest<Body>)
     axum_response(output)
 }
 
-fn authorize_api(bridge: &LocalBridge, request: &Request<'_>, now: u64) -> Result<(), Vec<u8>> {
-    let Some(cookie) = cookie_value(request.header("cookie").unwrap_or(""), "ad_session") else {
-        return Err(response(401, "session_invalid", None, None));
-    };
-    let authorization = BridgeRequest {
-        origin: request.header("origin").unwrap_or(""),
-        host: request.header("host").unwrap_or(""),
-        method: request.method,
-        cookie,
-        csrf_token: request.header("x-ad-csrf"),
-        ui_version: request.header("x-ad-ui-version").unwrap_or(""),
-    };
-    bridge
-        .authorize(&authorization, now)
-        .map_err(|error| response(403, error_code(&error), None, Some("application/json")))
-}
-
-fn catalog_error(error: SessionCatalogError) -> Vec<u8> {
-    match error {
-        SessionCatalogError::DuplicateConversation => {
-            response(409, "conversation_exists", None, Some("application/json"))
-        }
-        SessionCatalogError::UnknownConversation => response(
-            404,
-            "conversation_not_found",
-            None,
-            Some("application/json"),
-        ),
-        SessionCatalogError::Session(_) => response(
-            422,
-            "session_operation_failed",
-            None,
-            Some("application/json"),
-        ),
-    }
-}
-
-fn pairing_ready(authority: Option<&InviteAuthority>) -> bool {
-    authority.is_none_or(|value| value.pairing.can_message())
-}
-
-fn pairing_error(error: PairingError) -> Vec<u8> {
-    let (status, code) = match error {
-        PairingError::InvalidTransition => (409, "pairing_invalid_transition"),
-        PairingError::SelfInvite => (422, "self_invite"),
-        PairingError::Expired => (410, "pairing_expired"),
-        PairingError::Duplicate => (409, "pairing_duplicate"),
-        PairingError::SafetyMismatch => (422, "safety_number_mismatch"),
-        PairingError::BindingChanged => (409, "pairing_binding_changed"),
-    };
-    response(status, code, None, Some("application/json"))
-}
-
-fn contact_directory_error(error: ContactDirectoryError) -> Vec<u8> {
-    let (status, code) = match error {
-        ContactDirectoryError::DuplicateDevice => (409, "contact_device_conflict"),
-        ContactDirectoryError::ContactNotFound => (404, "contact_not_found"),
-        ContactDirectoryError::InvalidAlias => (422, "invalid_alias"),
-        ContactDirectoryError::Corrupt => (503, "contacts_storage_corrupt"),
-        ContactDirectoryError::InvalidState => (422, "invalid_contact_state"),
-    };
-    response(status, code, None, Some("application/json"))
-}
-
-fn error_code(error: &crate::bridge::BridgeError) -> &'static str {
-    match error {
-        crate::bridge::BridgeError::InvalidRequestOrigin => "invalid_origin",
-        crate::bridge::BridgeError::InvalidHost => "invalid_host",
-        crate::bridge::BridgeError::CsrfRequired => "csrf_required",
-        crate::bridge::BridgeError::SessionInvalid => "session_invalid",
-        crate::bridge::BridgeError::BootstrapAlreadyConsumed => "bootstrap_consumed",
-        _ => "bridge_rejected",
-    }
-}
 fn unix_now() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
