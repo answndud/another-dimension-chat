@@ -1,35 +1,3 @@
-import {
-  createProfile,
-  unlockProfile,
-  listProfiles,
-  exportInvite,
-  revokeInvite,
-  importInvite,
-  safetyPhrase,
-  getSafetyPhrase,
-  exportEnvelope,
-  sendEnvelope,
-  importEnvelope,
-  syncInbox,
-  listMessages,
-  lockProfile,
-  getLocalServerInfo,
-  confirmPendingEnvelopeDelivered,
-  confirmSafetyVerification,
-  isSafetyVerified,
-  getPendingEnvelope,
-  getSessionStatus,
-  deleteProfile,
-  exportProfileBackup,
-  importProfileBackup,
-  exportSessionBackup,
-  importSessionBackup,
-  exportTranscript,
-  importTranscript,
-  touchActivity,
-  checkAutoLock,
-  onSessionEvent,
-} from "./web-runtime.js";
 import { connectDaemonBridge, consumeRelayInvite, createRelayInviteCode, revokeRelayInviteCode } from "./daemon-bridge.js";
 import "./styles.css";
 
@@ -114,10 +82,6 @@ function renderDaemonSafetyControls(pairing) {
   if (pairing.safety_verified) return `<div class="daemon-safety" aria-live="polite"><strong>안전 번호</strong><code>${escapeHtml(pairing.safety_number)}</code><p class="verified">안전 번호 확인 완료 · 메시지 송신 허용</p><button id="daemon-unverify-safety" class="quiet" type="button">안전 번호 다시 확인</button></div>`;
   return `<div class="daemon-safety" aria-live="polite"><strong>안전 번호</strong><code>${escapeHtml(pairing.safety_number)}</code><p class="field-note">상대방에게 별도 신뢰 채널로 전체 번호를 읽어 확인하세요.</p><label>확인한 안전 번호<input id="daemon-safety-confirmation" autocomplete="off" inputmode="text" /></label><button id="daemon-verify-safety" class="secondary" type="button">안전 번호 확인</button></div>`;
 }
-
-onSessionEvent(({ message }) => {
-  if (message) lockedState(message);
-});
 
 function registerServiceWorker() {
   if (!window.isSecureContext) {
@@ -1233,25 +1197,13 @@ async function refresh() {
   render();
 }
 
-for (const eventName of ["pointerdown", "keydown", "touchstart"]) document.addEventListener(eventName, touchActivity, { passive: true });
-window.setInterval(() => {
-  if (state.daemonBridgeMode) return;
-  if (checkAutoLock()) {
-    state = { profile: null, peer: null, serverInfo: null, sessionStatus: "not-paired", pendingHandshake: "", safety: "", invite: "", peerInvite: "", envelope: "", profileBackup: "", messages: [], error: "", notice: "Session auto-locked after inactivity." };
-    render();
-  } else if (!document.hidden) receiveMessages(false);
-}, 5_000);
 window.setInterval(() => {
   if (!state.daemonBridgeMode || !document.hidden) return;
   receiveDaemonMessages(true);
 }, 15_000);
 document.addEventListener("visibilitychange", () => {
-  if (!state.daemonBridgeMode && !document.hidden) {
-    receiveMessages(false);
-  }
   if (state.daemonBridgeMode && !document.hidden) receiveDaemonMessages(false);
 });
-window.addEventListener("pagehide", () => { if (!state.daemonBridgeMode) lockProfile({ reason: "pagehide" }); }, { once: true });
 
 async function startApp() {
   try {
