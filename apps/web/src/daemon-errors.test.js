@@ -20,6 +20,7 @@ test("every directly returned daemon error code has user recovery guidance", () 
     "mls_routes.rs",
     "attachment_routes.rs",
     "delivery_routes.rs",
+    "authority_routes.rs",
     "http_errors.rs",
     "http_server.rs",
   ];
