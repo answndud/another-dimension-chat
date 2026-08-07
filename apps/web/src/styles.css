@@ -174,16 +174,16 @@ h2 { font-size: 1rem; }
 
 /* Cold white, square-edged workspace */
 :root {
-  --canvas: #f4f4f2;
+  --canvas: #f5f5f4;
   --surface: #ffffff;
   --surface-muted: #ededeb;
-  --line: #d0d0cc;
-  --text: #1d1d1b;
-  --muted: #686864;
-  --subtle: #8b8b86;
-  --accent: #3f4548;
+  --line: #cececa;
+  --text: #1c1c1a;
+  --muted: #62625e;
+  --subtle: #858580;
+  --accent: #4a4b49;
   --accent-surface: #eff0ef;
-  --focus: #33383b;
+  --focus: #242624;
 }
 body { background: var(--canvas); }
 button, input, textarea, select, .notice, .global-status, .error, .warning,
@@ -194,7 +194,7 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .app-rail, .local-list { background: #ffffff; }
 .start-shell, .workspace-main { background: var(--canvas); }
 .start-card, .view-stack { background: transparent; }
-.security-panel { border-color: #b7cedf; background: var(--accent-surface); }
+.security-panel { border-color: #c6c8c5; background: var(--accent-surface); }
 .daemon-gate { min-height: 100vh; width: min(680px, 100%); margin: 0 auto; padding: clamp(48px, 12vh, 120px) 24px; }
 .daemon-gate-mark { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--line); font-size: 1.4rem; margin-bottom: 32px; }
 .daemon-gate h1 { max-width: 620px; margin: 8px 0 14px; font-size: clamp(1.8rem, 4vw, 3rem); letter-spacing: -.04em; }
@@ -219,6 +219,9 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .daemon-conversation-panel { display: grid; gap: 14px; }
 .daemon-conversation-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
 .daemon-conversation-heading h2 { margin: 4px 0 0; }
+.daemon-safety { display: grid; gap: 9px; margin-top: 16px; border-top: 1px solid var(--line); padding-top: 16px; }
+.daemon-safety code { display: block; overflow-wrap: anywhere; font: 700 1rem/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; }
+.daemon-safety .verified { margin: 0; }
 .daemon-session-setup { border: 1px solid var(--line); padding: 14px; display: grid; gap: 8px; background: var(--surface-muted); }
 .daemon-session-setup p { margin: 0; }
 .daemon-session-ready { border-left: 2px solid var(--accent); padding-left: 10px; }
@@ -259,4 +262,5 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .daemon-contact-save { white-space: nowrap; }
 .contact-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .contact-actions button { white-space: nowrap; }
-@media (max-width: 600px) { .daemon-contact { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .daemon-contact { grid-template-columns: 1fr; } .daemon-gate { padding-inline: 16px; } .daemon-conversation-heading { display: block; } .daemon-conversation-heading .pill { display: inline-block; margin-top: 9px; } .daemon-action-row, .contact-actions { justify-content: flex-start; } }
+@media (max-width: 480px) { .daemon-facts div { grid-template-columns: 1fr; gap: 4px; padding: 11px 0; } .daemon-gate h1 { font-size: 1.8rem; } .daemon-gate-mark { margin-bottom: 22px; } .daemon-action-row button, .daemon-safety button, .daemon-invite > button { width: 100%; } }
