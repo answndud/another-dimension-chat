@@ -9,7 +9,8 @@ const srcDir = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const runtime = readFileSync(resolve(srcDir, "web-runtime.js"), "utf8");
 const ui = readFileSync(resolve(srcDir, "main.js"), "utf8");
 const daemonView = readFileSync(resolve(srcDir, "daemon-view.js"), "utf8");
-const productUi = `${ui}\n${daemonView}`;
+const daemonController = readFileSync(resolve(srcDir, "daemon-controller.js"), "utf8");
+const productUi = `${ui}\n${daemonView}\n${daemonController}`;
 const serviceWorker = readFileSync(resolve(srcDir, "../public/sw.js"), "utf8");
 globalThis.__AD_CRYPTO_WASM_BYTES__ = readFileSync(resolve(srcDir, "generated/ad_crypto_bg.wasm"));
 
@@ -78,7 +79,7 @@ test("web product entry is daemon-only and keeps browser state out of the produc
   assert.doesNotMatch(productUi, /browser-preview-tauri/);
   assert.doesNotMatch(productUi, /production_onion/);
   assert.match(productUi, /copyToClipboard/);
-  assert.match(productUi, /visibilitychange/);
+  assert.doesNotMatch(productUi, /receiveDaemonMessages/);
 });
 
 
