@@ -1,5 +1,5 @@
 import { state } from "./daemon-state.js";
-import { renderDaemonRelayTrust, renderDaemonSafetyControls, decodeHexText, decodeHexBytes, encodeHex, mergeDaemonMessages, newAttachmentBlobId } from "./daemon-view.js";
+import { decodeHexText, decodeHexBytes, encodeHex, mergeDaemonMessages, newAttachmentBlobId } from "./daemon-view.js";
 import { daemonErrorMessage } from "./daemon-errors.js";
 
 let activeBindingController;
@@ -18,7 +18,7 @@ function bindListener(target, eventName, handler) {
       ? event.target.closest(`[data-ad-listener="${marker}"]`)
       : null;
     if (!matched) return;
-    handler({ ...event, currentTarget: matched, target: matched });
+    handler(event);
   }, { signal: activeBindingController.signal });
 }
 
@@ -369,7 +369,6 @@ export function bindDaemonWorkspace({ render }) {
       render();
     }));
     if (state.daemonBridge && !state.daemonLocked) {
-      document.querySelector("#daemon-security-content")?.insertAdjacentHTML("beforeend", renderDaemonRelayTrust(state));
       const wipeButton = document.createElement("button");
       wipeButton.type = "button";
       wipeButton.className = "danger";
@@ -552,11 +551,6 @@ export function bindDaemonWorkspace({ render }) {
       } catch (error) { state.error = daemonErrorMessage(error); }
       render();
     }));
-    if (state.daemonPairing?.safety_number) {
-      const inviteSection = document.querySelector("#daemon-consume-invite")?.closest("section");
-      inviteSection?.insertAdjacentHTML("beforeend", renderDaemonSafetyControls(state.daemonPairing));
-      if (!state.daemonPairing.safety_verified) document.querySelector("#daemon-approve-pairing")?.remove();
-    }
     bindListener(document.querySelector("#daemon-lock"), "click", async () => {
       try {
         await state.daemonBridge.lock();

@@ -33,15 +33,53 @@ function restoreInteractionState(snapshot) {
   }
 }
 
+function sameElement(left, right) {
+  return left.nodeType === right.nodeType
+    && (left.nodeType !== Node.ELEMENT_NODE || left.tagName === right.tagName);
+}
+
+function syncAttributes(current, next) {
+  for (const attribute of [...current.attributes]) {
+    if (attribute.name.startsWith("data-ad-listener")) continue;
+    if (!next.hasAttribute(attribute.name)) current.removeAttribute(attribute.name);
+  }
+  for (const attribute of [...next.attributes]) {
+    if (current.getAttribute(attribute.name) !== attribute.value) current.setAttribute(attribute.name, attribute.value);
+  }
+}
+
+function syncChildren(currentParent, nextParent) {
+  const currentChildren = [...currentParent.childNodes];
+  const nextChildren = [...nextParent.childNodes];
+  const commonLength = Math.min(currentChildren.length, nextChildren.length);
+  for (let index = 0; index < commonLength; index += 1) {
+    const current = currentChildren[index];
+    const next = nextChildren[index];
+    if (!sameElement(current, next)) {
+      currentParent.replaceChild(next, current);
+      continue;
+    }
+    if (current.nodeType === Node.TEXT_NODE) {
+      if (current.nodeValue !== next.nodeValue) current.nodeValue = next.nodeValue;
+      continue;
+    }
+    syncAttributes(current, next);
+    syncChildren(current, next);
+  }
+  for (let index = commonLength; index < nextChildren.length; index += 1) currentParent.append(nextChildren[index]);
+  for (let index = currentChildren.length - 1; index >= nextChildren.length; index -= 1) currentParent.removeChild(currentChildren[index]);
+}
+
+function patchApplication(markup) {
+  const template = document.createElement("template");
+  template.innerHTML = markup;
+  syncChildren(app, template.content);
+}
+
 function render() {
   if (state.daemonBridgeMode) {
     const interaction = captureInteractionState();
-    app.innerHTML = renderDaemonBridgeState(state);
-    if (state.daemonRelayState === "offline") {
-      document.querySelector(".daemon-workspace > .notice, .daemon-gate .notice")?.insertAdjacentHTML("beforebegin", '<div class="daemon-connection-banner offline" role="status"><strong>릴레이 연결이 끊겼습니다.</strong><span>로컬 대화와 암호화 상태는 유지됩니다. 연결이 복구되면 전달 대기 항목을 다시 시도하세요.</span></div>');
-    } else if (state.daemonRelayState === "online") {
-      document.querySelector(".daemon-workspace > .notice, .daemon-gate .notice")?.insertAdjacentHTML("beforebegin", '<div class="daemon-connection-banner online" role="status"><strong>릴레이 연결됨</strong><span>릴레이 접수는 상대방이 읽었다는 뜻이 아닙니다.</span></div>');
-    }
+    patchApplication(renderDaemonBridgeState(state));
     restoreInteractionState(interaction);
     bindDaemonWorkspace({ render });
     return;
