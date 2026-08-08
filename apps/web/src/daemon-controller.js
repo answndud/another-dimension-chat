@@ -97,6 +97,7 @@ function applyMessagePage(result, replace) {
 
 export function bindDaemonSession({ render }) {
   const bridge = state.daemonBridge;
+  let sessionActionBusy = false;
   bindListener(document.querySelector("#daemon-history-load"), "click", async () => {
     try {
       const conversationId = document.querySelector("#daemon-conversation-id")?.value.trim() || state.daemonConversationId;
@@ -128,6 +129,8 @@ export function bindDaemonSession({ render }) {
     return value;
   };
   const run = async (action, success) => {
+    if (sessionActionBusy) return;
+    sessionActionBusy = true;
     try {
       await action();
       state.notice = success;
@@ -151,6 +154,8 @@ export function bindDaemonSession({ render }) {
       } else {
         state.error = daemonErrorMessage(error);
       }
+    } finally {
+      sessionActionBusy = false;
     }
     render();
   };
@@ -181,6 +186,7 @@ export function bindDaemonSession({ render }) {
           state: state.daemonDeliveryState,
           direction: "outgoing",
         }];
+        if (messageInput) messageInput.value = "";
       }
       throw error;
     }
@@ -192,7 +198,13 @@ export function bindDaemonSession({ render }) {
       state: state.daemonDeliveryState,
       direction: "outgoing",
     }];
+    if (messageInput) messageInput.value = "";
   }, "메시지를 daemon에서 암호화하고 relay에 접수했습니다."));
+  bindListener(messageInput, "keydown", (event) => {
+    if (event.key !== "Enter" || (!event.ctrlKey && !event.metaKey) || event.shiftKey) return;
+    event.preventDefault();
+    document.querySelector("#daemon-message-send")?.click();
+  });
   document.querySelectorAll(".daemon-attachment-download").forEach((button) => bindListener(button, "click", () => run(async () => {
     const attachmentId = button.dataset.daemonAttachment || "";
     const inboxUrl = document.querySelector("#daemon-inbox-url")?.value.trim() || state.daemonInboxUrl;
