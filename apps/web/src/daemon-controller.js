@@ -41,7 +41,7 @@ function schedulePairingSync(render) {
         state.daemonReceivedInvite = result;
         state.daemonPeerInboxUrl = result.inbox_url || "";
         state.daemonConversationId = result.conversation_id || state.daemonConversationId;
-        state.notice = "상대 데몬이 연결 자료를 준비했습니다. 안전 번호를 비교한 뒤 승인하세요.";
+        state.notice = "상대 기기가 연결 자료를 준비했습니다. 안전 번호를 비교한 뒤 승인하세요.";
         render();
         return;
       }
@@ -105,7 +105,7 @@ export function bindDaemonSession({ render }) {
       if (!conversationId) throw new Error("대화 식별자를 입력하세요.");
       const result = await bridge.messages(conversationId, 200, 0);
       const restoredCount = applyMessagePage(result, true);
-      state.notice = `daemon 암호화 저장소에서 대화 기록 ${restoredCount}개를 복구했습니다.`;
+      state.notice = `로컬 암호화 저장소에서 대화 기록 ${restoredCount}개를 복구했습니다.`;
       state.error = "";
     } catch (error) { state.error = daemonErrorMessage(error); }
     render();
@@ -146,11 +146,11 @@ export function bindDaemonSession({ render }) {
         state.daemonPeerInboxUrl = "";
         state.daemonDeliveryDigest = "";
         state.daemonDeliveryState = "";
-        state.notice = "relay capability가 폐기되어 기존 pairing을 중단했습니다. 새 연결을 시작하세요.";
+        state.notice = "전달 권한이 폐기되어 기존 연결을 중단했습니다. 새 연결을 시작하세요.";
       }
       if (error.code === "relay_unavailable") {
         state.daemonRelayState = "offline";
-        state.notice = "릴레이에 연결할 수 없습니다. 로컬 암호화 상태는 유지되며, 연결 후 다시 시도할 수 있습니다.";
+        state.notice = "전달 경로에 연결할 수 없습니다. 로컬 암호화 상태는 유지되며, 연결 후 다시 시도할 수 있습니다.";
         state.error = "";
       } else {
         state.error = daemonErrorMessage(error);
@@ -168,9 +168,9 @@ export function bindDaemonSession({ render }) {
     const messageExpiresAt = ttl ? Math.floor(Date.now() / 1000) + ttl : 0;
     const result = await bridge.sendMessage(conversationId, message, messageExpiresAt);
     state.daemonCiphertext = result.ciphertext || "";
-    if (!state.daemonCiphertext) throw new Error("데몬이 암호문을 반환하지 않았습니다.");
+    if (!state.daemonCiphertext) throw new Error("보안 서비스가 암호문을 반환하지 않았습니다.");
     const peerInboxUrl = document.querySelector("#daemon-peer-inbox-url")?.value.trim() || "";
-    if (!peerInboxUrl) throw new Error("상대방 inbox 주소를 입력하세요.");
+    if (!peerInboxUrl) throw new Error("상대방의 전달 경로를 아직 준비하지 못했습니다.");
     state.daemonPeerInboxUrl = peerInboxUrl;
     let accepted;
     try {
@@ -202,7 +202,7 @@ export function bindDaemonSession({ render }) {
       createdAt: Math.floor(Date.now() / 1000),
     }];
     if (messageInput) messageInput.value = "";
-  }, "메시지를 daemon에서 암호화하고 relay에 접수했습니다."));
+  }, "메시지를 로컬 보안 서비스에서 암호화하고 전달 경로에 접수했습니다."));
   bindListener(messageInput, "keydown", (event) => {
     if (event.key !== "Enter" || (!event.ctrlKey && !event.metaKey) || event.shiftKey) return;
     event.preventDefault();
@@ -231,13 +231,13 @@ export function bindDaemonSession({ render }) {
     anchor.download = fileName;
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }, "첨부파일을 daemon에서 검증·복호화해 다운로드했습니다.")));
+  }, "첨부파일을 로컬 보안 서비스에서 검증·복호화해 다운로드했습니다.")));
   document.querySelectorAll(".daemon-attachment-delete").forEach((button) => bindListener(button, "click", () => run(async () => {
     const attachmentId = button.dataset.daemonAttachmentDelete || "";
     if (!attachmentId) throw new Error("삭제할 첨부파일 정보가 없습니다.");
     await bridge.cancelAttachment(attachmentId);
     state.daemonMessages = state.daemonMessages.filter((message) => message.attachmentId !== attachmentId);
-  }, "daemon 암호화 저장소에서 첨부파일 상태를 삭제했습니다.")));
+  }, "로컬 암호화 저장소에서 첨부파일 상태를 삭제했습니다.")));
   document.querySelectorAll(".daemon-message-copy").forEach((button) => bindListener(button, "click", () => run(async () => {
     await copyToClipboard(button.dataset.daemonCopy || "");
   }, "메시지 내용을 클립보드에 복사했습니다. 공유 후 클립보드 기록을 정리하세요.")));
@@ -246,12 +246,12 @@ export function bindDaemonSession({ render }) {
     const file = document.querySelector("#daemon-attachment-file")?.files?.[0];
     const inboxUrl = document.querySelector("#daemon-peer-inbox-url")?.value.trim() || state.daemonPeerInboxUrl;
     if (!file) throw new Error("전송할 파일을 선택하세요.");
-    if (!inboxUrl) throw new Error("상대방 inbox 주소를 입력하세요.");
+    if (!inboxUrl) throw new Error("상대방의 전달 경로를 아직 준비하지 못했습니다.");
     if (file.size === 0 || file.size > 32 * 1024 * 1024) throw new Error("첨부파일은 1바이트 이상 32MiB 이하여야 합니다.");
     const blobId = newAttachmentBlobId();
     state.daemonAttachmentBlobId = blobId;
     const chunkSize = 64 * 1024;
-    state.daemonAttachmentState = "daemon에서 암호화 준비 중";
+    state.daemonAttachmentState = "안전한 파일 전송을 준비하는 중";
     state.daemonAttachmentProgress = 0;
     const progress = (message, value) => {
       state.daemonAttachmentState = message;
@@ -268,7 +268,7 @@ export function bindDaemonSession({ render }) {
       progress(`파일 청크 ${index + 1} 암호화 중`, Math.floor((Math.min(offset + bytes.length, file.size) / file.size) * 60));
     }
     await bridge.finishAttachment(blobId);
-    progress("daemon이 암호화 blob을 relay로 전송 중", 80);
+    progress("암호화한 파일을 전달 경로로 보내는 중", 80);
     let accepted;
     try {
       accepted = await bridge.sendCompletedAttachment(conversationId, inboxUrl, blobId);
@@ -288,7 +288,7 @@ export function bindDaemonSession({ render }) {
     state.daemonAttachmentProgress = 100;
     state.daemonAttachmentState = "첨부파일 암호화·전송 완료";
     state.daemonOutgoingMessages = [...state.daemonOutgoingMessages, { id: state.daemonDeliveryDigest || "attachment", text: `첨부파일: ${file.name}`, state: state.daemonDeliveryState, direction: "outgoing", createdAt: Math.floor(Date.now() / 1000) }];
-  }, "첨부파일을 daemon에서 암호화하고 relay에 접수했습니다."));
+  }, "첨부파일을 암호화하고 전달 경로에 접수했습니다."));
   bindListener(document.querySelector("#daemon-attachment-retry"), "click", () => run(async () => {
     const conversationId = getConversationId();
     const inboxUrl = document.querySelector("#daemon-peer-inbox-url")?.value.trim() || state.daemonPeerInboxUrl;
@@ -306,7 +306,7 @@ export function bindDaemonSession({ render }) {
     state.daemonAttachmentBlobId = "";
     state.daemonAttachmentProgress = 0;
     state.daemonAttachmentState = "첨부파일 작업을 취소했습니다";
-  }, "첨부파일 암호화 상태를 daemon에서 폐기했습니다."));
+  }, "첨부파일 암호화 상태를 폐기했습니다."));
   bindListener(document.querySelector("#daemon-delivery-status"), "click", () => run(async () => {
     if (!state.daemonDeliveryDigest) throw new Error("조회할 전달 기록이 없습니다.");
     const result = await bridge.deliveryStatus(state.daemonDeliveryDigest);
@@ -317,16 +317,16 @@ export function bindDaemonSession({ render }) {
   bindListener(document.querySelector("#daemon-delivery-retry"), "click", () => run(async () => {
     if (!state.daemonDeliveryDigest) throw new Error("재시도할 전달 기록이 없습니다.");
     const inboxUrl = document.querySelector("#daemon-peer-inbox-url")?.value.trim() || state.daemonPeerInboxUrl;
-    if (!inboxUrl) throw new Error("상대방 inbox 주소를 입력하세요.");
+    if (!inboxUrl) throw new Error("상대방의 전달 경로를 아직 준비하지 못했습니다.");
     const result = await bridge.retryDelivery(inboxUrl, state.daemonDeliveryDigest);
     state.daemonRelayState = "online";
     state.daemonDeliveryState = result.state || "relay-accepted";
     state.daemonOutgoingMessages = state.daemonOutgoingMessages.map((item) => item.id === state.daemonDeliveryDigest ? { ...item, state: state.daemonDeliveryState } : item);
-  }, "암호화된 봉투를 relay로 다시 접수했습니다."));
+  }, "암호화된 메시지를 전달 경로로 다시 보냈습니다."));
   bindListener(document.querySelector("#daemon-delivery-sync"), "click", () => run(async () => {
     const conversationId = getConversationId();
     const inboxUrl = document.querySelector("#daemon-inbox-url")?.value.trim() || "";
-    if (!inboxUrl) throw new Error("내 inbox 주소를 입력하세요.");
+    if (!inboxUrl) throw new Error("내 전달 경로를 아직 준비하지 못했습니다.");
     state.daemonInboxUrl = inboxUrl;
     const result = await bridge.syncDelivery(conversationId, inboxUrl);
     state.daemonRelayState = "online";
@@ -340,7 +340,7 @@ export function bindDaemonSession({ render }) {
     }));
     state.daemonMessages = mergeDaemonMessages(state.daemonMessages, received);
     state.daemonPlaintext = received.at(-1)?.text || state.daemonPlaintext;
-  }, "받은 봉투를 daemon에서 검증·복호화했습니다."));
+  }, "받은 메시지를 검증·복호화했습니다."));
 }
 
 
@@ -363,14 +363,14 @@ export function bindDaemonWorkspace({ render }) {
     }));
     if (state.daemonBridge && !state.daemonLocked) {
       bindListener(document.querySelector("#daemon-wipe"), "click", async () => {
-        if (!window.confirm("이 기기의 암호화 저장소와 현재 세션을 삭제할까요? 릴레이 자료·별도 백업·디스크 잔존 데이터는 삭제되지 않습니다.")) return;
+        if (!window.confirm("이 기기의 암호화 저장소와 현재 연결을 삭제할까요? 전달 경로 자료·별도 백업·디스크 잔존 데이터는 삭제되지 않습니다.")) return;
         try {
           const result = await state.daemonBridge.wipe();
           state.daemonBridge = null;
           state.daemonLocked = true;
-          state.daemonStatus = "삭제됨 · 보안 데몬 재초기화 필요";
+          state.daemonStatus = "삭제됨 · 보안 서비스 재초기화 필요";
           state.notice = result.remote_data === "not_deleted"
-            ? "이 기기의 로컬 데이터만 삭제했습니다. 릴레이 자료와 별도 백업은 따로 폐기해야 합니다."
+            ? "이 기기의 로컬 데이터만 삭제했습니다. 전달 경로 자료와 별도 백업은 따로 폐기해야 합니다."
             : "이 기기의 로컬 데이터를 삭제했습니다.";
           state.error = "";
         } catch (error) { state.error = daemonErrorMessage(error); }
@@ -400,12 +400,12 @@ export function bindDaemonWorkspace({ render }) {
       bindListener(restoreButton, "click", async () => {
         const file = recoveryInput.files?.[0];
         if (!file) return;
-        if (!window.confirm("선택한 복구 백업을 daemon의 다음 시작 때 적용하도록 예약할까요? 현재 저장소는 지금 바뀌지 않습니다.")) return;
+        if (!window.confirm("선택한 복구 백업을 보안 서비스의 다음 시작 때 적용하도록 예약할까요? 현재 저장소는 지금 바뀌지 않습니다.")) return;
         try {
           const bytes = new Uint8Array(await file.arrayBuffer());
           const result = await state.daemonBridge.recoveryStage(encodeHex(bytes));
           state.notice = result.restart_required
-            ? "복구 백업을 검증하고 적용 예약했습니다. 보안 데몬을 정상 종료한 뒤 같은 데이터 폴더로 다시 시작하세요."
+            ? "복구 백업을 검증하고 적용 예약했습니다. 보안 서비스를 정상 종료한 뒤 같은 데이터 폴더로 다시 시작하세요."
             : "복구 백업 적용을 예약했습니다.";
           state.error = "";
         } catch (error) { state.error = `복구 백업을 예약하지 못했습니다: ${daemonErrorMessage(error)}`; }
@@ -418,7 +418,7 @@ export function bindDaemonWorkspace({ render }) {
         const pin = document.querySelector("#daemon-tls-pin")?.value.trim() || "";
         const retrust = Boolean(document.querySelector("#daemon-tls-retrust")?.checked);
         state.daemonRelayTrust = await state.daemonBridge.saveRelayTlsPin(pin, retrust);
-        state.notice = "relay TLS pin을 daemon 암호화 저장소에 저장했습니다.";
+        state.notice = "전달 경로 인증서 지문을 로컬 암호화 저장소에 저장했습니다.";
         state.error = "";
         render();
       } catch (error) {
@@ -428,15 +428,15 @@ export function bindDaemonWorkspace({ render }) {
     });
     document.querySelectorAll("[data-device-revoke]").forEach((button) => bindListener(button, "click", async () => {
       const deviceId = button.dataset.deviceRevoke || "";
-      if (!deviceId || !window.confirm(`기기 ${deviceId}를 폐기할까요? 해당 기기는 이후 daemon 인증에 사용할 수 없습니다.`)) return;
+      if (!deviceId || !window.confirm(`기기 ${deviceId}를 폐기할까요? 해당 기기는 이후 이 계정에 연결할 수 없습니다.`)) return;
       try {
         const result = await state.daemonBridge.revokeDevice(deviceId);
         const devices = await state.daemonBridge.devices();
         state.daemonDevices = devices.devices || [];
         state.daemonDeviceEvents = devices.events || [];
-        state.notice = `기기 ${deviceId}를 폐기했고 MLS 세션 ${result.sessions_removed || 0}개에서 제거한 commit ${result.delivered || 0}개를 relay로 전달했습니다.`;
+        state.notice = `기기 ${deviceId}를 폐기했고 관련 암호화 연결 ${result.sessions_removed || 0}개를 정리했습니다. 변경 사항 ${result.delivered || 0}개를 전달했습니다.`;
         state.error = "";
-      } catch (error) { state.error = `기기 폐기 또는 로컬 MLS 제거에 실패했습니다: ${daemonErrorMessage(error)}`; }
+      } catch (error) { state.error = `기기 폐기 또는 암호화 연결 정리에 실패했습니다: ${daemonErrorMessage(error)}`; }
       render();
     }));
     bindListener(document.querySelector("#daemon-link-approve"), "click", async () => {
@@ -532,7 +532,7 @@ export function bindDaemonWorkspace({ render }) {
         state.daemonBridge = null;
         state.daemonLocked = true;
         state.daemonStatus = "잠김";
-        state.notice = "데몬 세션을 잠갔습니다. 브라우저에는 키와 메시지 상태가 없습니다.";
+        state.notice = "보안 서비스 연결을 잠갔습니다. 브라우저에는 키와 메시지 상태가 없습니다.";
         render();
       } catch (error) {
         state.error = daemonErrorMessage(error);
@@ -542,9 +542,9 @@ export function bindDaemonWorkspace({ render }) {
     bindListener(document.querySelector("#daemon-create-invite"), "click", async () => {
       try {
         const localInvite = await state.daemonBridge.createInvite();
-        if (!state.daemonRelayOrigin) throw new Error("daemon에 relay 주소가 설정되지 않았습니다.");
+        if (!state.daemonRelayOrigin) throw new Error("보안 서비스에 전달 경로가 설정되지 않았습니다.");
         state.daemonInvite = localInvite;
-        state.notice = "릴레이가 일회성 초대 코드를 발급했습니다. 코드만 별도 신뢰 채널로 전달하세요.";
+        state.notice = "일회성 초대 코드를 만들었습니다. 코드만 별도 신뢰 채널로 전달하세요.";
         state.error = "";
         render();
       } catch (error) {
@@ -557,7 +557,7 @@ export function bindDaemonWorkspace({ render }) {
         if (!window.confirm("이 초대코드를 즉시 폐기할까요? 상대는 더 이상 사용할 수 없습니다.")) return;
         await state.daemonBridge.revokeInvite(state.daemonInvite.invite_code);
         state.daemonInvite = null;
-        state.notice = "초대코드를 relay에서 폐기했습니다.";
+        state.notice = "초대 코드를 폐기했습니다.";
         state.error = "";
       } catch (error) { state.error = daemonErrorMessage(error); }
       render();
@@ -612,14 +612,14 @@ export function bindDaemonWorkspace({ render }) {
     bindListener(document.querySelector("#daemon-consume-invite"), "click", async () => {
       try {
         const relayOrigin = state.daemonRelayOrigin.trim();
-        if (!relayOrigin) throw new Error("이 데몬에 릴레이 주소가 설정되지 않았습니다.");
+        if (!relayOrigin) throw new Error("이 보안 서비스에 전달 경로가 설정되지 않았습니다.");
         const staged = await state.daemonBridge.consumeInvite(relayOrigin, document.querySelector("#received-invite-code").value);
         state.daemonReceivedInvite = staged;
         state.daemonPairing = staged;
         state.daemonPeerInboxUrl = staged.inbox_url || "";
         state.daemonConversationId = staged.conversation_id || state.daemonConversationId;
         state.daemonConsumedInvite = document.querySelector("#received-invite-code").value.trim();
-        state.notice = "초대 코드를 한 번만 사용하도록 폐기하고 보안 데몬에서 상대 신원을 검증했습니다. 승인 전에는 연결되지 않습니다.";
+        state.notice = "초대 코드를 한 번만 사용하도록 폐기하고 상대 신원을 확인했습니다. 승인 전에는 연결되지 않습니다.";
         state.error = "";
       } catch (error) { state.error = daemonErrorMessage(error); }
       render();
