@@ -22,7 +22,7 @@ cp "$PROJECT_DIR/apps/web/package.json" "$PROJECT_DIR/apps/web/package-lock.json
 cp "$PROJECT_DIR/scripts/start_local_server.sh" "$PROJECT_DIR/scripts/install_local_server.sh" "$PROJECT_DIR/scripts/installed_launcher.sh" "$PROJECT_DIR/scripts/update_local_server.sh" "$PROJECT_DIR/scripts/relay_backup.mjs" "$PROJECT_DIR/scripts/verify_install_state.mjs" "$PROJECT_DIR/scripts/configure_local_server.mjs" "$PROJECT_DIR/scripts/preflight_local_server.mjs" "$PROJECT_DIR/scripts/generate_tls_cert.sh" "$PROJECT_DIR/scripts/check_https_endpoint.mjs" "$PROJECT_DIR/scripts/release_manifest.mjs" "$PROJECT_DIR/scripts/product_boundary.mjs" "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$PROJECT_DIR/scripts/verify_public_release_gate.mjs" "$PROJECT_DIR/scripts/verify_release_trust.mjs" "$PROJECT_DIR/scripts/verify_release_trust_receipt.mjs" "$PROJECT_DIR/scripts/verify_security_review_handoff.mjs" "$PROJECT_DIR/scripts/verify_security_review_signoff.mjs" "$PROJECT_DIR/scripts/verify_web_artifact.mjs" "$PROJECT_DIR/scripts/verify_support_matrix.mjs" "$PROJECT_DIR/scripts/verify_release_support_gate.mjs" "$PROJECT_DIR/scripts/acceptance_os_matrix.mjs" "$PROJECT_DIR/scripts/verify_daemon_ui_artifact.mjs" "$STAGE/another-dimension-$VERSION/scripts/"
 cp "$PROJECT_DIR/README.md" "$PROJECT_DIR/README.ko.md" "$PROJECT_DIR/SECURITY.md" "$PROJECT_DIR/SUPPORT.md" "$STAGE/another-dimension-$VERSION/"
 mkdir -p "$STAGE/another-dimension-$VERSION/reference"
-cp "$PROJECT_DIR/reference/PRODUCT_BOUNDARY.md" "$PROJECT_DIR/reference/product_boundary.json" "$PROJECT_DIR/reference/SUPPORT_MATRIX.json" "$STAGE/another-dimension-$VERSION/reference/"
+cp "$PROJECT_DIR/reference/PRODUCT_BOUNDARY.md" "$PROJECT_DIR/reference/product_boundary.json" "$PROJECT_DIR/reference/SUPPORT_MATRIX.json" "$PROJECT_DIR/reference/DEPENDENCY_POLICY.json" "$PROJECT_DIR/reference/RESOURCE_LIMITS.json" "$STAGE/another-dimension-$VERSION/reference/"
 cp "$PROJECT_DIR/Cargo.lock" "$STAGE/another-dimension-$VERSION/Cargo.lock"
 if [ -n "${AD_DAEMON_BINARY:-}" ]; then
   if [ ! -x "$AD_DAEMON_BINARY" ]; then
@@ -49,7 +49,7 @@ else
   printf '%s\n' "A complete release requires AD_NODE_RUNTIME so users do not need Node/npm." >&2
   exit 1
 fi
-AD_DAEMON_BINARY="$AD_DAEMON_BINARY" node "$PROJECT_DIR/scripts/acceptance_daemon_e2e.mjs"
+AD_DAEMON_BINARY="$STAGE/another-dimension-$VERSION/bin/another-dimension-daemon" node "$PROJECT_DIR/scripts/acceptance_daemon_e2e.mjs"
 SOURCE_COMMIT=${AD_RELEASE_SOURCE_COMMIT:-$(git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || printf '%s' unknown)}
 node -e 'const fs=require("fs"); const [file, version, commit, epoch] = process.argv.slice(1); fs.writeFileSync(file, JSON.stringify({format:"another-dimension-release-provenance", version, sourceCommit:commit, node:process.version, sourceDateEpoch:Number(epoch)}, null, 2)+"\n")' "$STAGE/another-dimension-$VERSION/RELEASE-PROVENANCE.json" "$VERSION" "$SOURCE_COMMIT" "${AD_RELEASE_SOURCE_DATE_EPOCH:-0}"
 node "$PROJECT_DIR/scripts/generate_sbom.mjs" "$STAGE/another-dimension-$VERSION/apps/web/package-lock.json" "$STAGE/another-dimension-$VERSION/SBOM.cyclonedx.json" --cargo-lock "$PROJECT_DIR/Cargo.lock" --node-version "$(node --version)"
