@@ -1,14 +1,14 @@
-# Pairing and browser protocol state machine
+# Pairing and daemon protocol state machine
 
-> **상태: daemon 전환 과정의 혼합 스냅샷.** 후반부 browser Olm 상태 기계는
-> 삭제된 프로토타입을 설명합니다. 현재 동작 계약은 `apps/daemon` 소스와 테스트이며,
-> 이 문서를 릴리스 증거로 사용하지 않습니다.
+> **상태: daemon-first 상태 계약과 legacy prototype 부록.** 현재 동작 계약은
+> `apps/daemon` 소스와 focused evidence를 기준으로 한다. 문서 하단의 browser
+> Olm/WASM 절은 삭제된 prototype의 역사적 참고이며 현재 release evidence가 아니다.
 
-The invite-code rendezvous below is a transport helper for the current
-prototype. It does not replace the signed invite, safety comparison, or future
-daemon-owned identity. A code bearer can retrieve one short-lived signed invite
-payload, but cannot create an identity, obtain a private key, or decrypt a
-session from the code alone.
+The invite-code rendezvous is a transport helper for the daemon-owned product.
+It does not replace the signed invite, safety comparison, or account/device
+identity. A code bearer can retrieve one short-lived signed invite payload, but
+cannot create an identity, obtain a private key, or decrypt a session from the
+code alone.
 
 ## Daemon identity ownership state
 
@@ -43,30 +43,27 @@ daemon start → URL fragment bootstrap → Origin/Host/version check
   immediately.
 - The daemon stores only hashes of bootstrap, cookie, and CSRF values. The UI
   must call `history.replaceState` to remove the fragment before normal use.
-- All API requests require the exact configured loopback Origin and Host. State
-  changes additionally require the session CSRF token. Missing Origin,
-  alternate Host, stale cookie, expired session, wrong UI version, and daemon
-  restart fail closed.
+- State-changing API requests and bootstrap/renewal require the exact configured
+  loopback Origin and Host. Same-origin read-only GET status calls may omit
+  `Origin` in Chromium, but still require the exact Host, session cookie, and UI
+  version. State changes additionally require the session CSRF token. Missing
+  Origin on a mutation, alternate Host, stale cookie, expired session, wrong UI
+  version, and daemon restart fail closed.
 - The bridge is not a trust upgrade for a compromised browser, extension, or
   operating system. It prevents arbitrary web origins from using the daemon API;
   it does not protect an endpoint that can read the browser's live memory.
-- The current Rust HTTP handler exposes only `POST /local-session/exchange`,
-  `GET /local-api/status`, `GET /local-api/identity`, and
-  `POST /local-api/invites`, `POST /local-api/invites/verify`,
-  `POST /local-api/invites/stage`, and
-  `POST /local-api/session/lock`. Requests are
-  loopback-bound, capped at a small body size, marked `no-store`, and unknown
-  routes are rejected. `serve --ui-dir` serves only the built web bundle after
-  rejecting traversal, encoded paths, and symlink escapes. The identity endpoint
-  returns only the public account/device/display summary
-  after the daemon has unlocked its encrypted store; it never returns seeds or
-  store records. Invite creation signs a short-lived code binding with the
-  account root key and keeps only its hash in daemon memory; verification checks
-  the same binding and signature but does not consume a relay code, add a peer,
-  unlock a profile, or authorize a message. Staging is memory-only and is
-  discarded on daemon restart or lock; it is not peer trust or a session.
-  Pairing and message APIs are intentionally absent until the vetted protocol
-  adapter exists.
+- The current Rust HTTP handler exposes authenticated daemon-owned status,
+  identity, invite, pairing, device, contact, session, attachment, delivery,
+  recovery, lock, and wipe routes. Requests are loopback-bound, capped at a
+  small body size, marked `no-store`, and unknown routes are rejected.
+  `serve --ui-dir` serves only the built web bundle after rejecting traversal,
+  encoded paths, and symlink escapes. The identity endpoint returns only the
+  public account/device/display summary after the daemon has unlocked its
+  encrypted store; it never returns seeds, raw store records, ratchet state, or
+  private capabilities. Every state-changing route requires the daemon session
+  CSRF token, exact Origin/Host, and UI-version binding. Pairing, contact
+  approval, safety verification, device revocation, and message delivery remain
+  daemon-owned transitions; the browser is a presentation client.
 - The canonical invite envelope is `ADDAINV1`. The relay stores and consumes it
   opaquely after checking the signed payload's advertised relay origin; the
   daemon remains responsible for signature, code binding, and expiry checks.
@@ -81,6 +78,27 @@ daemon start → URL fragment bootstrap → Origin/Host/version check
   of that raw public key; the relay response and `/api/v1/info` value are
   display/reference material, not a trust bootstrap. A key/fingerprint mismatch
   fails before staging.
+
+## Current daemon protocol boundary
+
+The current implementation boundary is the Rust daemon, not the deleted browser
+Olm/WASM runtime:
+
+```text
+Account Root Key
+  └─ root-signed Device Certificate / Device Key
+       └─ invite + safety verification + contact approval
+            └─ daemon-owned session catalog and encrypted persistence
+                 └─ opaque relay delivery / local browser presentation
+```
+
+The daemon admission gate accepts only the pinned `openmls-1` protocol identity
+and rejects legacy browser envelopes. Session state, replay handling, delivery
+ledger, device registry, and recovery records stay in the encrypted daemon
+store. The relay and browser never become owners of these state transitions.
+This is implementation evidence, not an independent cryptographic audit; the
+selected protocol composition and high-risk release remain blocked until
+external review and release evidence are complete.
 
 ## Invite-code lifecycle
 
@@ -111,9 +129,12 @@ Protocol rules:
   alone must never authorize private-key export, profile unlock, device
   addition, or message sending.
 
-This is the executable state contract for the current `ADDAINV1`/`ADENVWEB3`
-1:1 browser protocol. It is a composition boundary around vodozemac Olm v2;
-it does not introduce a new cryptographic primitive.
+## Legacy browser prototype appendix
+
+The `ADDAINV1`/`ADENVWEB3` and vodozemac Olm v2 state tables below are retained
+only as historical design material. They are not part of the current daemon
+release path, are not imported into daemon state, and must not be used as
+evidence that the current product has a browser-owned ratchet.
 
 ## Profile and invite invariants
 

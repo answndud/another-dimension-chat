@@ -1,9 +1,9 @@
 # 독립 보안 검토 Evidence Index
 
-> **상태: daemon 전환 이전 경로를 설명하는 역사적 evidence index.** 삭제된
-> generated WASM, `web-runtime.js`, IndexedDB/Olm 경로를 현재 daemon 증거로
-> 제출하면 안 됩니다. 현재 검토 패킷은 `scripts/prepare_security_review.mjs`로
-> clean Git revision에서 생성하고, source/review 해시는
+> **상태: 현재 daemon-first 검토 evidence index.** 아래의 legacy/browser
+> prototype 언급은 역사적 범위를 명시하기 위한 것이며 현재 release evidence가
+> 아니다. 현재 검토 패킷은 `scripts/prepare_security_review.mjs`로 clean Git
+> revision에서 생성하고, source/review 해시는
 > `verify_security_review_bundle.mjs`와 public handoff gate에서 검증합니다.
 > 이 자동화는 실제 독립 검토자의 판단·서명·신원 확인을 대신하지 않습니다.
 
@@ -19,7 +19,7 @@
 | 입력물 | 위치/생성 방법 | 검토자가 확인할 점 |
 | --- | --- | --- |
 | 소스와 lockfile | git revision, `Cargo.lock`, `apps/web/package-lock.json` | 실제 검토 대상과 빌드 입력이 고정됐는가 |
-| 브라우저 암호 모듈 | `apps/web/src/generated/`, `scripts/verify_web_crypto_binding.mjs` | 생성물 hash·export가 source boundary와 일치하는가 |
+| daemon·bridge·web 경계 | `apps/daemon/src/bridge.rs`, `apps/daemon/src/bridge_http.rs`, `apps/web/src/daemon-bridge.js` | loopback bootstrap, Origin/Host/version/CSRF, least-privilege API가 일치하는가 |
 | 프로토콜·위협 모델 | `reference/PROTOCOL_STATE_MACHINE.md`, `reference/PUBLIC_THREAT_MODEL.md` | 상태 전이·가정·non-claim이 코드와 일치하는가 |
 | 자동 evidence | `./scripts/verify_all.sh --focused` 출력 | 재현 가능한 focused fixture가 실제 실패 경계를 증명하는가 |
 | signed release evidence | `./scripts/verify_all.sh --release`, public archive, manifest, SBOM, provenance | 빌드 생략·변조·잘못된 키·rollback이 거부되는가 |
@@ -33,12 +33,12 @@ capability, passphrase, plaintext, IP를 넣지 않는다.
 
 | 범위 | source boundary | focused evidence | 산출물/판정 | 현재 제한 |
 | --- | --- | --- | --- | --- |
-| protocol composition | `apps/web/src/web-runtime.js`, `reference/PROTOCOL_STATE_MACHINE.md` | `npm --prefix apps/web test --workspaces=false` | fixed-seed vector, replay/tamper/identity rejection | 독립 암호 검토 없음 |
+| protocol composition | `apps/daemon/src/mls_session.rs`, `apps/daemon/src/protocol_gate.rs`, `reference/PROTOCOL_STATE_MACHINE.md` | `CARGO_BUILD_JOBS=2 cargo check -p another-dimension-daemon --locked`, daemon focused acceptance | daemon-owned session/persistence/replay boundary and protocol admission gate | selected composition의 독립 암호 검토 없음 |
 | browser integration | `apps/web/src/main.js`, `apps/web/src/daemon-bridge.js`, `apps/web/src/daemon-view.js` | `npm --prefix apps/web test --workspaces=false`, `node scripts/verify_web_artifact.mjs apps/web/dist`, `node scripts/verify_daemon_ui_artifact.mjs --daemon-ui-artifact` | daemon 인증 경계, 브라우저 비밀 저장 금지, 정적 자산 검증, 영속 service worker 부재 | macOS Chromium 이외 실제 OS/browser matrix 없음 |
-| storage/backup/wipe | `apps/web/src/web-runtime.js`, `apps/web/src/main.js` | focused browser tests, quota-style storage failure, clipboard-unavailable fallback, local acceptance | passphrase-wrapped backup, quota-style fail-closed lock, clipboard failure with manual encrypted backup recovery, and fail-closed import evidence | secure deletion·actual quota/eviction/private-mode matrix는 non-claim 또는 미검증 |
+| storage/backup/wipe | `apps/daemon/src/storage.rs`, `apps/daemon/src/cli.rs`, `apps/daemon/src/authority_routes.rs` | daemon focused storage/recovery fixtures, local release acceptance | encrypted daemon store, recovery conflict checks, lock/wipe boundary, redacted failure codes | secure deletion·seizure/coercion 방어·OS matrix는 non-claim 또는 미검증 |
 | relay/capability | `apps/server/server.mjs`, `scripts/verify_relay_logs.mjs` | `node --test apps/server/server.test.mjs`, `node scripts/smoke_user_owned_servers.mjs` | bounds, rotation, restart, redacted log scan | relay 운영자·traffic metadata를 제거하지 않음 |
 | release supply chain | `scripts/build_release.sh`, `scripts/verify_public_release_gate.mjs`, `scripts/verify_release_trust_receipt.mjs` | `./scripts/verify_all.sh --release`, `node scripts/acceptance_release_local_only.mjs` | signed archive, manifest, SBOM, provenance, runtime, no legacy surface, no-Node install/update fixture | 최초 trusted-key 전달·clean OS matrix는 운영 절차와 현재 host 범위를 벗어남 |
-| transport/anonymity | `apps/server/server.mjs`, `apps/web/src/web-runtime.js`, `scripts/verify_transport_boundary.mjs` | `node scripts/verify_transport_boundary.mjs` | `highRiskAllowed:false`, onion/Tor rejection | anonymity·metadata 보호를 제공하지 않음 |
+| transport/anonymity | `apps/daemon/src/relay_http.rs`, `apps/server/server.mjs`, `reference/product_boundary.json` | `node scripts/verify_transport_boundary.mjs` | `highRiskAllowed:false`, unsafe transport rejection, visible metadata non-claim | anonymity·traffic padding·metadata 보호를 제공하지 않음 |
 
 ## Daemon-first traceability register
 
@@ -47,11 +47,11 @@ capability, passphrase, plaintext, IP를 넣지 않는다.
 
 | 요구사항 | source boundary | focused test/command | redacted artifact | 남은 한계 |
 | --- | --- | --- | --- | --- |
-| `ARCH-04`, `BRIDGE-01` | `apps/daemon/src/bridge.rs` loopback/session contract | `node scripts/verify_local_bridge.mjs`, daemon bridge unit tests | origin/token/restart negative 결과; secret·port credential 제거 | 실제 UI route wiring과 browser matrix는 아직 없음 |
-| `AUTH-04` | account root, device certificate, revocation state | fixed identity/device vectors (daemon slice에서 추가) | key fingerprint와 event type만 포함한 device lifecycle report | 현재 web profile은 root/device 계층이 아님 |
-| `CRYPTO-04` | selected protocol adapter, state machine, persistence boundary | deterministic two-daemon vectors (protocol slice에서 추가) | message IDs, epochs, verdict만 포함한 vector report | protocol composition 및 독립 review 미완료 |
-| `DATA-04`, `RECOVERY-01` | `apps/daemon/src/storage.rs` encrypted store/keychain boundary | daemon storage tests, corruption/old-snapshot/keychain-unavailable fixtures | state transition·error code·hash만 포함한 recovery report | OS keychain integration·secure deletion·seizure/coercion 방어는 non-claim |
-| `RELEASE-01`, `RELEASE-02`, `RELEASE-03` | daemon/web/WASM/relay release manifest and trust bootstrap | `./scripts/verify_all.sh --release` and trust fixtures | artifact hashes, signer fingerprint, version, verdict only | 운영 신뢰 채널·clean OS matrix·실제 서명키는 외부 절차 |
+| `ARCH-04`, `BRIDGE-01` | `apps/daemon/src/bridge.rs`, `bridge_http.rs`, `http_server.rs`, `session_routes.rs` | bridge unit tests, `node scripts/verify_daemon_boundary.mjs`, local daemon bootstrap smoke | origin/token/version/CSRF/restart negative 결과; secret·credential 제거 | 실제 clean Chromium matrix와 독립 review는 없음 |
+| `AUTH-04` | `apps/daemon/src/identity.rs`, `device.rs`, `device_link.rs`, `authority.rs` | daemon device registry/link focused tests, local UI device smoke | root-signed certificate, duplicate/foreign/revoked rejection, public event fields | 독립 composition review와 운영 device lifecycle evidence는 없음 |
+| `CRYPTO-04` | `apps/daemon/src/mls_session.rs`, `mls_routes.rs`, `protocol_gate.rs` | daemon session-focused checks and release acceptance | message IDs/epochs/verdict only; no private session state in UI response | protocol composition 및 독립 review 미완료 |
+| `DATA-04`, `RECOVERY-01` | `apps/daemon/src/storage.rs`, `cli.rs`, `authority_routes.rs` | daemon storage/recovery fixtures and local release acceptance | state transition·error code·hash만 포함한 recovery report | OS keychain integration·secure deletion·seizure/coercion 방어는 non-claim |
+| `RELEASE-01`, `RELEASE-02`, `RELEASE-03` | daemon/web/relay release manifest and trust bootstrap | `scripts/verify_all.sh --release`, local acceptance and trust fixtures | artifact hashes, signer fingerprint, version, verdict only | 운영 신뢰 채널·clean OS matrix·실제 서명키는 외부 절차 |
 | `ACT-09`/`ACT-10` non-claims | browser/OS boundary and diagnostics | static/log/DOM scans | redacted category counts only | 장악된 브라우저·OS·keylogger·화면 캡처는 보호하지 않음 |
 | `ACT-11`/`ACT-12` non-claims | release trust and endpoint incident boundary | release negative fixtures; incident runbook fixture | version/fingerprint/event type only | coercion resistance와 완전한 공급망 신뢰는 주장하지 않음 |
 
@@ -60,9 +60,9 @@ and the daemon unit flow. It proves that passphrases are read from stdin, not
 argv, and that local encrypted recovery refuses overwrite; it does not prove
 terminal echo suppression, OS-wide keychain support, or a production update path.
 
-`source boundary`가 신규 daemon 경로를 가리키는데 실제 파일이 없으면 해당 행은
-자동으로 `blocked`로 취급한다. 현재 prototype의 동일한 이름을 가진 browser
-코드나 legacy/native 코드로 이 행을 충족했다고 판정하지 않는다.
+`source boundary`가 현재 daemon 경로를 가리키는데 실제 파일이 없으면 해당 행은
+자동으로 `blocked`로 취급한다. 삭제된 browser prototype이나 legacy/native 코드로
+현재 daemon 행을 충족했다고 판정하지 않는다.
 
 ## Reviewer가 각 finding에 반드시 기록할 것
 
