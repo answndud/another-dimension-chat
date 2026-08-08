@@ -59,6 +59,8 @@ AD_RELEASE_SIGNING_KEY=/secure/release/release-private.pem \
 AD_RELEASE_PUBLIC_KEY=/secure/release/release-public.pem \
 AD_RELEASE_TRUST_MANIFEST=/secure/trust/release-trust.json \
 AD_RELEASE_TRUST_MANIFEST_KEY=/secure/trust/bootstrap-public.pem \
+AD_RELEASE_REVIEW_SIGNOFF=/secure/review/reviewer-signoff.json \
+AD_RELEASE_REVIEWER_PUBLIC_KEY=/secure/review/reviewer-public.pem \
 AD_NODE_RUNTIME=/secure/runtime/node \
 ./scripts/build_release.sh
 ```
@@ -70,6 +72,8 @@ node scripts/verify_public_release_gate.mjs ./another-dimension-0.1.0 \
   --public-key /secure/release/release-public.pem \
   --trust-manifest /secure/trust/release-trust.json \
   --trust-manifest-key /secure/trust/bootstrap-public.pem \
+  --review-signoff /secure/review/reviewer-signoff.json \
+  --reviewer-public-key /secure/review/reviewer-public.pem \
   --min-version 0.1.0
 ```
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { generateKeyPairSync } from "node:crypto";
+import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import { chmod, cp, mkdir, mkdtemp, readFile, rename, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -23,7 +23,15 @@ const publicKeyFile = join(root, "release-public.pem");
 const bootstrap = generateKeyPairSync("ed25519");
 const bootstrapPublicKeyFile = join(root, "trust-bootstrap-public.pem");
 const trustManifestFile = join(root, "release-trust.json");
+const reviewer = generateKeyPairSync("ed25519");
+const reviewerPublicKeyFile = join(root, "reviewer-public.pem");
+const reviewSignoffFile = join(root, "review-signoff.json");
 const noNodeEnvironment = { env: { ...process.env, PATH: "/usr/bin:/bin" } };
+
+function reviewerKeyId(publicKey) {
+  return createHash("sha256").update(publicKey.export({ type: "spki", format: "der" })).digest("hex").slice(0, 32);
+}
+function canonicalReview(value) { return JSON.stringify({ ...value, signature: null }); }
 
 async function copy(relativePath) {
   const source = join(projectDir, relativePath);
@@ -57,6 +65,16 @@ async function runWithInput(command, args, input, options = {}) {
 
 await writeFile(publicKeyFile, publicKey, { mode: 0o600 });
 await writeFile(bootstrapPublicKeyFile, bootstrap.publicKey.export({ type: "spki", format: "pem" }), { mode: 0o600 });
+await writeFile(reviewerPublicKeyFile, reviewer.publicKey.export({ type: "spki", format: "pem" }), { mode: 0o600 });
+const reviewBase = {
+  format: "another-dimension-independent-review-signoff", version: 1, status: "signed", independentReviewer: true,
+  sourceRevision: "0123456789abcdef", reviewedAt: "2026-08-08T00:00:00Z",
+  reviewer: { organization: "fixture-review-organization", identityCheck: "external-record-fixture" },
+  scopeCovered: ["protocol", "browser", "storage", "relay", "release", "transport"],
+  scopeExcluded: ["compromised-device protection"], decision: "experimental-only", findings: [], residualRisk: ["fixture only"], signature: null,
+};
+await writeFile(reviewSignoffFile, JSON.stringify({ ...reviewBase, signature: { algorithm: "Ed25519", keyId: reviewerKeyId(reviewer.publicKey), value: sign(null, Buffer.from(canonicalReview(reviewBase)), reviewer.privateKey).toString("base64") } }, null, 2) + "\n", { mode: 0o600 });
+const reviewArgs = ["--review-signoff", reviewSignoffFile, "--reviewer-public-key", reviewerPublicKeyFile];
 await Promise.all([
   copy("README.md"),
   copy("README.ko.md"),
@@ -75,6 +93,7 @@ await Promise.all([
   copy("apps/server/package.json"),
   copy("apps/server/package-lock.json"),
   copy("scripts/verify_public_release_gate.mjs"),
+  copy("scripts/verify_security_review_signoff.mjs"),
   copy("scripts/verify_release_trust.mjs"),
   copy("scripts/product_boundary.mjs"),
   copy("scripts/verify_web_artifact.mjs"),
@@ -108,18 +127,21 @@ const missingTrust = await run("sh", [join(archive, "scripts/install_local_serve
 assert.notEqual(missingTrust.code, 0);
 assert.match(missingTrust.output, /trust-manifest/);
 
-const gate = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile]);
+const gate = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile, ...reviewArgs]);
 assert.equal(gate.code, 0, gate.output);
 assert.match(gate.output, /public release gate passed/);
+const missingReview = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile]);
+assert.notEqual(missingReview.code, 0);
+assert.match(missingReview.output, /independent security review/);
 const tamperedTrust = structuredClone(trustManifest);
 tamperedTrust.policy.minimumReleaseVersion = "9.0.0";
 await writeFile(trustManifestFile, JSON.stringify(tamperedTrust));
-const tamperedTrustResult = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile]);
+const tamperedTrustResult = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile, ...reviewArgs]);
 assert.notEqual(tamperedTrustResult.code, 0);
 assert.match(tamperedTrustResult.output, /invalid trust manifest signature/);
 await writeFile(trustManifestFile, JSON.stringify(trustManifest));
 
-const installResult = await run("sh", [join(archive, "scripts/install_local_server.sh"), "--archive", archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile, "--destination", install, "--data-dir", data], noNodeEnvironment);
+const installResult = await run("sh", [join(archive, "scripts/install_local_server.sh"), "--archive", archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile, ...reviewArgs, "--destination", install, "--data-dir", data], noNodeEnvironment);
 assert.equal(installResult.code, 0, installResult.output);
 const config = JSON.parse(await readFile(join(install, "server-config.json"), "utf8"));
 assert.equal(config.bindHost, "127.0.0.1");
@@ -240,12 +262,12 @@ assert.notEqual(foreignPid.code, 0);
 await writeFile(join(install, "relay.pid"), "999999\n", { mode: 0o600 });
 const symlinkDestination = join(root, "install-symlink");
 await symlink(install, symlinkDestination);
-const symlinkInstall = await run("sh", [join(archive, "scripts/install_local_server.sh"), "--archive", archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile, "--destination", symlinkDestination, "--data-dir", join(root, "data-symlink")], noNodeEnvironment);
+const symlinkInstall = await run("sh", [join(archive, "scripts/install_local_server.sh"), "--archive", archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile, ...reviewArgs, "--destination", symlinkDestination, "--data-dir", join(root, "data-symlink")], noNodeEnvironment);
 assert.notEqual(symlinkInstall.code, 0);
 await cp(archive, archive2, { recursive: true });
 await writeFile(join(archive2, "README.md"), "updated release fixture\n");
 await writeManifest(archive2, { version: "0.2.0", privateKey });
-const update = await run(join(install, "another-dimension"), ["update", "--archive", archive2, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile, "--stop"], noNodeEnvironment);
+const update = await run(join(install, "another-dimension"), ["update", "--archive", archive2, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile, ...reviewArgs, "--stop"], noNodeEnvironment);
 assert.equal(update.code, 0, update.output);
 const updatedMarker = JSON.parse(await readFile(join(install, ".another-dimension-install.json"), "utf8"));
 assert.equal(updatedMarker.releaseVersion, "0.2.0");
@@ -259,16 +281,16 @@ assert.equal((await readFile(join(data, "retained-sentinel"), "utf8")), "keep-me
 const wrongKey = generateKeyPairSync("ed25519").publicKey.export({ type: "spki", format: "pem" });
 const wrongKeyFile = join(root, "wrong-public.pem");
 await writeFile(wrongKeyFile, wrongKey, { mode: 0o600 });
-const wrongKeyResult = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", wrongKeyFile]);
+const wrongKeyResult = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", wrongKeyFile, ...reviewArgs]);
 assert.notEqual(wrongKeyResult.code, 0);
 assert.match(wrongKeyResult.output, /fingerprint mismatch/);
 
-const oldVersionResult = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, "--min-version", "0.2.0"]);
+const oldVersionResult = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, "--min-version", "0.2.0", ...reviewArgs]);
 assert.notEqual(oldVersionResult.code, 0);
 assert.match(oldVersionResult.output, /older than the minimum/);
 
 const keyId = JSON.parse(await readFile(join(archive, "release-manifest.json"), "utf8")).signature.keyId;
-const revokedResult = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, "--revoked-key-id", keyId]);
+const revokedResult = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, "--revoked-key-id", keyId, ...reviewArgs]);
 assert.notEqual(revokedResult.code, 0);
 assert.match(revokedResult.output, /signing key is revoked/);
 
@@ -276,7 +298,7 @@ const manifestPath = join(archive, "release-manifest.json");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 manifest.files.find((file) => file.path === "README.md").sha256 = "0".repeat(64);
 await writeFile(manifestPath, JSON.stringify(manifest));
-const tamperedResult = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile]);
+const tamperedResult = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, ...reviewArgs]);
 assert.notEqual(tamperedResult.code, 0);
 assert.match(tamperedResult.output, /release hash mismatch/);
 

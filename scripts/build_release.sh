@@ -66,6 +66,10 @@ if [ "${AD_RELEASE_PROFILE:-development}" = "public" ] && { [ -z "${AD_RELEASE_T
   printf '%s\n' "AD_RELEASE_PROFILE=public requires AD_RELEASE_TRUST_MANIFEST and AD_RELEASE_TRUST_MANIFEST_KEY for the external trust gate." >&2
   exit 1
 fi
+if [ "${AD_RELEASE_PROFILE:-development}" = "public" ] && { [ -z "${AD_RELEASE_REVIEW_SIGNOFF:-}" ] || [ -z "${AD_RELEASE_REVIEWER_PUBLIC_KEY:-}" ]; }; then
+  printf '%s\n' "AD_RELEASE_PROFILE=public requires AD_RELEASE_REVIEW_SIGNOFF and AD_RELEASE_REVIEWER_PUBLIC_KEY for independent security review." >&2
+  exit 1
+fi
 if [ -n "${AD_RELEASE_SIGNING_KEY:-}" ]; then
   MANIFEST_ARGS="$MANIFEST_ARGS --private-key $AD_RELEASE_SIGNING_KEY"
 elif [ "${AD_RELEASE_REQUIRE_SIGNATURE:-0}" = "1" ]; then
@@ -88,7 +92,7 @@ node "$PROJECT_DIR/scripts/verify_release_support_gate.mjs" --root "$STAGE/anoth
 # shellcheck disable=SC2086
 node "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $VERIFY_ARGS
 if [ "${AD_RELEASE_PROFILE:-development}" = "public" ]; then
-  PUBLIC_GATE_ARGS="--public-key $AD_RELEASE_PUBLIC_KEY --trust-manifest $AD_RELEASE_TRUST_MANIFEST --trust-manifest-key $AD_RELEASE_TRUST_MANIFEST_KEY"
+  PUBLIC_GATE_ARGS="--public-key $AD_RELEASE_PUBLIC_KEY --trust-manifest $AD_RELEASE_TRUST_MANIFEST --trust-manifest-key $AD_RELEASE_TRUST_MANIFEST_KEY --review-signoff $AD_RELEASE_REVIEW_SIGNOFF --reviewer-public-key $AD_RELEASE_REVIEWER_PUBLIC_KEY"
   [ -n "${AD_RELEASE_MIN_VERSION:-}" ] && PUBLIC_GATE_ARGS="$PUBLIC_GATE_ARGS --min-version $AD_RELEASE_MIN_VERSION"
   # shellcheck disable=SC2086
   node "$PROJECT_DIR/scripts/verify_public_release_gate.mjs" "$STAGE/another-dimension-$VERSION" $PUBLIC_GATE_ARGS

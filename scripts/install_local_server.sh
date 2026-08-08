@@ -5,7 +5,7 @@ set -eu
 # source checkouts deliberately do not use this path.
 usage() {
   cat <<'EOF'
-사용법: install_local_server.sh --archive DIR --public-key PEM --trust-manifest JSON --trust-manifest-key PEM [--min-version VERSION]
+사용법: install_local_server.sh --archive DIR --public-key PEM --trust-manifest JSON --trust-manifest-key PEM --review-signoff JSON --reviewer-public-key PEM [--min-version VERSION]
   [--destination DIR] [--data-dir DIR]
 
 DIR은 verify_public_release_gate.mjs가 통과한 release 디렉터리입니다.
@@ -19,6 +19,8 @@ data_dir="${AD_DATA_DIR:-$HOME/.local/share/another-dimension/data}"
 public_key=
 trust_manifest=
 trust_manifest_key=
+review_signoff=
+reviewer_public_key=
 min_version=
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -28,6 +30,8 @@ while [ "$#" -gt 0 ]; do
     --public-key) public_key=${2:?--public-key requires a file}; shift 2 ;;
     --trust-manifest) trust_manifest=${2:?--trust-manifest requires a file}; shift 2 ;;
     --trust-manifest-key) trust_manifest_key=${2:?--trust-manifest-key requires a file}; shift 2 ;;
+    --review-signoff) review_signoff=${2:?--review-signoff requires a file}; shift 2 ;;
+    --reviewer-public-key) reviewer_public_key=${2:?--reviewer-public-key requires a file}; shift 2 ;;
     --min-version) min_version=${2:?--min-version requires a version}; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "알 수 없는 옵션: $1" >&2; usage >&2; exit 2 ;;
@@ -36,6 +40,7 @@ done
 [ -n "$archive" ] || { usage >&2; exit 2; }
 [ -n "$public_key" ] || { echo "공개 release 설치에는 --public-key가 필요합니다." >&2; usage >&2; exit 2; }
 [ -n "$trust_manifest" ] && [ -n "$trust_manifest_key" ] || { echo "공개 release 설치에는 --trust-manifest와 --trust-manifest-key가 모두 필요합니다." >&2; usage >&2; exit 2; }
+[ -n "$review_signoff" ] && [ -n "$reviewer_public_key" ] || { echo "공개 release 설치에는 독립 보안 검토 sign-off와 reviewer public key가 모두 필요합니다." >&2; usage >&2; exit 2; }
 archive=$(CDPATH= cd -- "$archive" && pwd)
 destination_parent=$(CDPATH= cd -- "$(dirname -- "$destination")" && pwd)
 destination="$destination_parent/$(basename -- "$destination")"
@@ -62,9 +67,9 @@ if [ ! -x "$archive/runtime/node" ]; then
 fi
 "$archive/runtime/node" -e 'const major=Number(process.versions.node.split(".")[0]); if (major < 20) { console.error(`bundled runtime must be Node.js 20 or newer (found ${process.version})`); process.exit(1); }'
 if [ -n "$min_version" ]; then
-  "$archive/runtime/node" "$archive/scripts/verify_public_release_gate.mjs" "$archive" --public-key "$public_key" --trust-manifest "$trust_manifest" --trust-manifest-key "$trust_manifest_key" --min-version "$min_version" >/dev/null
+  "$archive/runtime/node" "$archive/scripts/verify_public_release_gate.mjs" "$archive" --public-key "$public_key" --trust-manifest "$trust_manifest" --trust-manifest-key "$trust_manifest_key" --review-signoff "$review_signoff" --reviewer-public-key "$reviewer_public_key" --min-version "$min_version" >/dev/null
 else
-  "$archive/runtime/node" "$archive/scripts/verify_public_release_gate.mjs" "$archive" --public-key "$public_key" --trust-manifest "$trust_manifest" --trust-manifest-key "$trust_manifest_key" >/dev/null
+  "$archive/runtime/node" "$archive/scripts/verify_public_release_gate.mjs" "$archive" --public-key "$public_key" --trust-manifest "$trust_manifest" --trust-manifest-key "$trust_manifest_key" --review-signoff "$review_signoff" --reviewer-public-key "$reviewer_public_key" >/dev/null
 fi
 
 umask 077
