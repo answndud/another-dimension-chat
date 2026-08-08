@@ -60,7 +60,7 @@ const review = verifyHandoff(reviewManifest, reviewSignoff, reviewerPublicKey);
 const provenance = JSON.parse(await readFile(path.join(root, "RELEASE-PROVENANCE.json"), "utf8"));
 const sourceCommit = String(provenance.sourceCommit || "").toLowerCase();
 const reviewedRevision = String(review.sourceRevision || "").toLowerCase();
-if (!/^[0-9a-f]{7,64}$/.test(sourceCommit) || !(sourceCommit.startsWith(reviewedRevision) || reviewedRevision.startsWith(sourceCommit))) {
+if (!/^[0-9a-f]{40,64}$/.test(sourceCommit) || !/^[0-9a-f]{40,64}$/.test(reviewedRevision) || sourceCommit !== reviewedRevision) {
   throw new Error("independent security review source revision does not match release provenance");
 }
 console.log(`public release gate passed: signed ${result.releaseVersion}, ${result.fileCount} files, key ${result.keyId}, review=${review.decision}`);

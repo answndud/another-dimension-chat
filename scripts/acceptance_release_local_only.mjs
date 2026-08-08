@@ -69,7 +69,7 @@ await writeFile(bootstrapPublicKeyFile, bootstrap.publicKey.export({ type: "spki
 await writeFile(reviewerPublicKeyFile, reviewer.publicKey.export({ type: "spki", format: "pem" }), { mode: 0o600 });
 const reviewBase = {
   format: "another-dimension-independent-review-signoff", version: 1, status: "signed", independentReviewer: true,
-  sourceRevision: "0123456789abcdef", reviewedAt: "2026-08-08T00:00:00Z",
+  sourceRevision: "0123456789abcdef0123456789abcdef01234567", reviewedAt: "2026-08-08T00:00:00Z",
   reviewer: { organization: "fixture-review-organization", identityCheck: "external-record-fixture" },
   scopeCovered: ["protocol", "browser", "storage", "relay", "release", "transport"],
   scopeExcluded: ["compromised-device protection"], decision: "experimental-only", findings: [], residualRisk: ["fixture only"], signature: null,
@@ -128,7 +128,7 @@ await mkdir(join(archive, "runtime"), { recursive: true });
 await cp(process.execPath, join(archive, "runtime/node"));
 await chmod(join(archive, "runtime/node"), 0o700);
 await writeFile(join(archive, "SBOM.cyclonedx.json"), JSON.stringify({ bomFormat: "CycloneDX", specVersion: "1.5", components: [] }) + "\n");
-await writeFile(join(archive, "RELEASE-PROVENANCE.json"), JSON.stringify({ format: "acceptance-fixture", sourceCommit: "0123456789abcdef" }) + "\n");
+await writeFile(join(archive, "RELEASE-PROVENANCE.json"), JSON.stringify({ format: "acceptance-fixture", sourceCommit: reviewBase.sourceRevision }) + "\n");
 await writeManifest(archive, { version: "0.1.0", privateKey });
 const trustManifest = createTrustManifest({ rootPrivateKey: bootstrap.privateKey, releaseKeys: [{ publicKey: keys.publicKey, validFromVersion: "0.1.0" }], minimumReleaseVersion: "0.1.0" });
 await writeFile(trustManifestFile, `${JSON.stringify(trustManifest, null, 2)}\n`, { mode: 0o600 });
@@ -146,7 +146,7 @@ assert.match(gate.output, /public release gate passed/);
 const missingReview = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile]);
 assert.notEqual(missingReview.code, 0);
 assert.match(missingReview.output, /independent security review/);
-const mismatchedBase = { ...reviewBase, sourceRevision: "f".repeat(16) };
+const mismatchedBase = { ...reviewBase, sourceRevision: "f".repeat(40) };
 const mismatchedReview = { ...mismatchedBase, signature: { algorithm: "Ed25519", keyId: reviewerKeyId(reviewer.publicKey), value: sign(null, Buffer.from(canonicalReview(mismatchedBase)), reviewer.privateKey).toString("base64") } };
 await writeFile(reviewSignoffFile, JSON.stringify(mismatchedReview));
 const mismatchedReviewResult = await run(process.execPath, [join(archive, "scripts/verify_public_release_gate.mjs"), archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile, ...reviewArgs]);
