@@ -18,6 +18,7 @@ export CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2}
 run_step "daemon binary" cargo build -p another-dimension-daemon --locked
 run_step "product boundary" node scripts/verify_product_boundary.mjs
 run_step "daemon boundary" node scripts/verify_daemon_boundary.mjs
+run_step "dependency and runtime policy" node scripts/verify_dependency_policy.mjs
 run_step "browser UI tests" npm --prefix apps/web test --workspaces=false
 run_step "local server API tests" npm --prefix apps/server test --workspaces=false
 run_step "browser production build" npm --prefix apps/web run build --workspaces=false

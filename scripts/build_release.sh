@@ -9,6 +9,7 @@ STAGE=$(mktemp -d "${TMPDIR:-/tmp}/another-dimension-release.XXXXXX")
 trap 'rm -rf "$STAGE"' EXIT INT TERM
 
 node -e 'const major = Number(process.versions.node.split(".")[0]); if (major < 20) { console.error(`Node.js 20 or newer is required (found ${process.version}).`); process.exit(1); }'
+node "$PROJECT_DIR/scripts/verify_dependency_policy.mjs"
 npm --prefix "$PROJECT_DIR/apps/web" run build --workspaces=false
 node "$PROJECT_DIR/scripts/verify_web_artifact.mjs" "$PROJECT_DIR/apps/web/dist"
 
