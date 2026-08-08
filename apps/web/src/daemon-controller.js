@@ -595,7 +595,9 @@ export function bindDaemonWorkspace({ render }) {
     });
     bindListener(document.querySelector("#daemon-consume-invite"), "click", async () => {
       try {
-        const staged = await state.daemonBridge.consumeInvite(document.querySelector("#received-relay-origin").value, document.querySelector("#received-invite-code").value);
+        const relayOrigin = state.daemonRelayOrigin.trim();
+        if (!relayOrigin) throw new Error("이 데몬에 릴레이 주소가 설정되지 않았습니다.");
+        const staged = await state.daemonBridge.consumeInvite(relayOrigin, document.querySelector("#received-invite-code").value);
         state.daemonReceivedInvite = staged;
         state.daemonPairing = staged;
         state.daemonPeerInboxUrl = staged.inbox_url || "";
