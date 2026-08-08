@@ -31,6 +31,9 @@ export async function verifyBundleShape(bundleDir, manifest) {
   if (!Array.isArray(manifest.contents.reviewDocuments) || manifest.contents.reviewDocuments.length === 0) {
     throw new Error("review bundle document inventory is missing");
   }
+  if (!Array.isArray(manifest.contents.reviewFiles) || manifest.contents.reviewFiles.length !== manifest.contents.reviewDocuments.length) {
+    throw new Error("review bundle document hash inventory is missing");
+  }
   if (!(["not-provided", "provided-and-scanned"].includes(manifest.contents.evidenceStatus))) {
     throw new Error("review bundle evidence status is invalid");
   }
@@ -41,6 +44,14 @@ export async function verifyBundleShape(bundleDir, manifest) {
     const source = await readFile(path.join(bundleDir, "source", entry.path));
     const digest = createHash("sha256").update(source).digest("hex");
     if (source.byteLength !== entry.bytes || digest !== entry.sha256) throw new Error(`review bundle source hash mismatch: ${entry.path}`);
+  }
+  for (const entry of manifest.contents.reviewFiles) {
+    if (!entry || typeof entry.path !== "string" || path.isAbsolute(entry.path) || entry.path.includes("..") || !/^[a-f0-9]{64}$/.test(entry.sha256) || !Number.isInteger(entry.bytes) || entry.bytes < 0) {
+      throw new Error(`invalid review bundle document inventory entry: ${entry?.path || "unknown"}`);
+    }
+    const document = await readFile(path.join(bundleDir, "review", entry.path));
+    const digest = createHash("sha256").update(document).digest("hex");
+    if (document.byteLength !== entry.bytes || digest !== entry.sha256) throw new Error(`review bundle document hash mismatch: ${entry.path}`);
   }
   const evidence = JSON.parse(await readFile(path.join(bundleDir, "evidence/STATUS.json"), "utf8"));
   if (evidence.status !== manifest.contents.evidenceStatus) throw new Error("review bundle evidence status does not match manifest");
@@ -71,7 +82,7 @@ async function fixture() {
     ...base,
     signature: { algorithm: "Ed25519", keyId, value: sign(null, Buffer.from(JSON.stringify({ ...base, signature: null })), keys.privateKey).toString("base64") },
   };
-  const manifest = { format: FORMAT, version: VERSION, sourceRevision, contents: { sourceFiles: [{ path: "apps/daemon/src/lib.rs", sha256: "a".repeat(64), bytes: 1 }], reviewDocuments: ["reference/SECURITY_REVIEW_RESULT_TEMPLATE.md"], evidenceStatus: "not-provided" }, claims: { independentReview: "not-provided", productionReady: false, highRiskAllowed: false } };
+  const manifest = { format: FORMAT, version: VERSION, sourceRevision, contents: { sourceFiles: [{ path: "apps/daemon/src/lib.rs", sha256: "a".repeat(64), bytes: 1 }], reviewDocuments: ["reference/SECURITY_REVIEW_RESULT_TEMPLATE.md"], reviewFiles: [{ path: "reference/SECURITY_REVIEW_RESULT_TEMPLATE.md", sha256: "a".repeat(64), bytes: 1 }], evidenceStatus: "not-provided" }, claims: { independentReview: "not-provided", productionReady: false, highRiskAllowed: false } };
   assert.equal(verifyHandoff(manifest, signoff, publicKey).sourceRevision, sourceRevision);
   assert.throws(() => verifyHandoff({ ...manifest, sourceRevision: "fedcba9876543210" }, signoff, publicKey), /does not match/);
   console.log("security review handoff fixture passed: bundle/sign-off revision binding -> mismatch rejection");

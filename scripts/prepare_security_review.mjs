@@ -93,6 +93,7 @@ const revision = execFileSync("git", ["-C", projectDir, "rev-parse", "HEAD"], { 
 const sourceDate = execFileSync("git", ["-C", projectDir, "show", "-s", "--format=%cI", revision], { encoding: "utf8" }).trim();
 const files = [];
 for (const relative of sourceFiles) files.push(await copyChecked(relative));
+const reviewFiles = [];
 for (const relative of reviewDocs) {
   const source = path.join(projectDir, relative);
   if (!(await exists(source))) throw new Error(`missing review document: ${relative}`);
@@ -100,6 +101,7 @@ for (const relative of reviewDocs) {
   await mkdir(path.dirname(destination), { recursive: true });
   await cp(source, destination);
   await scan(destination);
+  reviewFiles.push({ path: relative, ...(await digest(destination)) });
 }
 
 const evidenceOutput = path.join(output, "evidence");
@@ -124,7 +126,7 @@ const manifest = {
   version: 1,
   sourceRevision: revision,
   sourceCommitDate: sourceDate,
-  contents: { sourceFiles: files, reviewDocuments: reviewDocs, evidenceStatus },
+  contents: { sourceFiles: files, reviewDocuments: reviewDocs, reviewFiles, evidenceStatus },
   claims: { independentReview: "not-provided", productionReady: false, highRiskAllowed: false },
   redaction: { scannedRules: forbidden.map(({ name }) => name), secretsIncluded: false },
 };
