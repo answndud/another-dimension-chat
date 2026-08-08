@@ -52,6 +52,32 @@ high-risk transport toggle, rejects remote HTTP inbox URLs, and rejects onion
 endpoints. The policy below is retained only as legacy research context and is
 not a supported web route.
 
+## Observable metadata and enforced relay bounds
+
+The current route is deliberately described as low-risk rather than anonymous.
+Depending on the network position, a relay operator or network observer may
+observe the client IP, relay destination, request timing, request frequency,
+and ciphertext/blob sizes. The protocol does not currently add traffic
+padding, dummy traffic, timing obfuscation, or an anonymity set. HTTPS and a
+certificate pin protect transport contents and endpoint authenticity; they do
+not remove those metadata observations.
+
+The relay implementation enforces these availability and exposure bounds. They
+are limits, not privacy guarantees:
+
+| Boundary | Current bound | Meaning |
+| --- | ---: | --- |
+| Encrypted inbox envelope | 96 KiB | A larger envelope is rejected. |
+| Items retained per inbox | 256 | Queue overflow is explicit; it is not durable archival. |
+| Inbox posts | 30 per minute per rate-limit key | Abuse control, not anonymity or delivery fairness. |
+| Encrypted blob | 32 MiB | The server never receives a plaintext file through this path. |
+| Blob retention | At most 7 days | Expiry is a cleanup bound, not a secure-deletion claim. |
+
+These values are declared in `reference/product_boundary.json` and checked
+against relay constants by `scripts/verify_transport_boundary.mjs`. A change
+to a bound is a product-boundary change and must update the threat model and
+release evidence; it must not silently broaden the high-risk claim.
+
 ## Legacy research context (not the web product)
 
 - `TransportPolicy::high_risk_default()` allows only `TransportRoute::OnionService`.

@@ -21,6 +21,22 @@
     "AD_SERVE_UI=1"
   ],
   "highRiskAllowed": false,
+  "transportPolicy": {
+    "highRiskMode": "disabled",
+    "supportedRoutes": [
+      { "id": "loopback", "risk": "low-risk", "anonymity": false, "requires": ["local daemon or relay on loopback"] },
+      { "id": "direct-https-low-risk", "risk": "low-risk", "anonymity": false, "requires": ["user-owned relay", "explicit TLS certificate pin"] }
+    ],
+    "visibleMetadata": ["client IP address", "relay destination", "request timing", "request frequency", "ciphertext and blob sizes"],
+    "relayBounds": {
+      "maxEnvelopeBytes": 98304,
+      "maxInboxItems": 256,
+      "maxEnvelopePostsPerMinute": 30,
+      "maxBlobBytes": 33554432,
+      "maxBlobTtlDays": 7
+    },
+    "notImplemented": ["onion routing", "traffic padding", "dummy traffic", "timing obfuscation", "global anonymity set"]
+  },
   "requiredReleaseFiles": [
     "README.md",
     "README.ko.md",
