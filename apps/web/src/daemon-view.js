@@ -21,9 +21,15 @@ export function renderDaemonBridgeState(state) {
 
 function renderDaemonReceivedInvite(state) {
   const pairing = state.daemonPairing || {};
+  if (pairing.state === "established") {
+    return '<section class="daemon-invite" aria-live="polite"><h2>연결 완료</h2><p class="verified">상대방과의 암호화 연결이 준비되었습니다. 연락처를 선택해 대화를 시작하세요.</p></section>';
+  }
   const verifiedPeer = state.daemonReceivedInvite
     ? `<div class="verified" role="status"><strong>상대 신원을 확인했습니다.</strong><span>이제 안전 번호를 별도 신뢰 채널로 비교하세요.</span></div>`
     : "";
+  const codeEntry = state.daemonReceivedInvite
+    ? ""
+    : '<label>초대 코드<textarea id="received-invite-code" rows="2" placeholder="상대방에게 받은 코드" autocomplete="off" spellcheck="false"></textarea></label><button id="daemon-consume-invite" class="secondary" type="button">초대 코드 확인</button><p class="field-note">코드의 만료·재사용 여부와 상대 신원은 보안 데몬이 자동으로 검증합니다.</p>';
   const approval = pairing.state === "verified" && pairing.safety_verified
     ? '<button id="daemon-approve-pairing" class="primary" type="button">안전 번호 확인 후 연락처 승인</button><button id="daemon-reject-pairing" class="quiet" type="button">거절</button>'
     : pairing.state === "verified"
@@ -31,7 +37,7 @@ function renderDaemonReceivedInvite(state) {
       : pairing.state === "established"
         ? '<p class="verified">연락처 승인이 완료되었습니다.</p>'
         : "";
-  return `<section class="daemon-invite"><h2>2. 상대방 초대 코드 입력</h2><p>상대방에게 받은 일회성 코드를 붙여 넣으세요. 이 기기에 설정된 릴레이 주소는 자동으로 사용됩니다.</p><label>초대 코드<textarea id="received-invite-code" rows="2" placeholder="상대방에게 받은 코드" autocomplete="off" spellcheck="false"></textarea></label><button id="daemon-consume-invite" class="secondary" type="button">초대 코드 확인</button><p class="field-note">코드의 만료·재사용 여부와 상대 신원은 보안 데몬이 자동으로 검증합니다.</p>${verifiedPeer}${state.daemonPairing?.safety_number ? renderDaemonSafetyControls(state.daemonPairing) : ""}${approval}</section>`;
+  return `<section class="daemon-invite"><h2>${state.daemonReceivedInvite ? "3. 상대 신원 확인" : "2. 상대방 초대 코드 입력"}</h2><p>${state.daemonReceivedInvite ? "코드가 확인되었습니다. 안전 번호를 비교한 뒤 연락처를 승인하세요." : "상대방에게 받은 일회성 코드를 붙여 넣으세요. 이 기기에 설정된 릴레이 주소는 자동으로 사용됩니다."}</p>${codeEntry}${verifiedPeer}${state.daemonPairing?.safety_number ? renderDaemonSafetyControls(state.daemonPairing) : ""}${approval}</section>`;
 }
 
 export function renderDaemonSecurityControls(state) {
