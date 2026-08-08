@@ -38,7 +38,12 @@ export async function verifyBundleShape(bundleDir, manifest) {
     if (!entry || typeof entry.path !== "string" || path.isAbsolute(entry.path) || entry.path.includes("..") || !/^[a-f0-9]{64}$/.test(entry.sha256) || !Number.isInteger(entry.bytes) || entry.bytes < 0) {
       throw new Error(`invalid review bundle source inventory entry: ${entry?.path || "unknown"}`);
     }
+    const source = await readFile(path.join(bundleDir, "source", entry.path));
+    const digest = createHash("sha256").update(source).digest("hex");
+    if (source.byteLength !== entry.bytes || digest !== entry.sha256) throw new Error(`review bundle source hash mismatch: ${entry.path}`);
   }
+  const evidence = JSON.parse(await readFile(path.join(bundleDir, "evidence/STATUS.json"), "utf8"));
+  if (evidence.status !== manifest.contents.evidenceStatus) throw new Error("review bundle evidence status does not match manifest");
 }
 
 async function verifyFiles(bundleDir, signoffPath, publicKeyPath) {

@@ -77,11 +77,15 @@ const reviewBase = {
 const signedReview = { ...reviewBase, signature: { algorithm: "Ed25519", keyId: reviewerKeyId(reviewer.publicKey), value: sign(null, Buffer.from(canonicalReview(reviewBase)), reviewer.privateKey).toString("base64") } };
 await writeFile(reviewSignoffFile, JSON.stringify(signedReview, null, 2) + "\n", { mode: 0o600 });
 await mkdir(join(reviewBundle, "source"), { recursive: true });
+await mkdir(join(reviewBundle, "source/apps/daemon/src"), { recursive: true });
 await mkdir(join(reviewBundle, "review/reference"), { recursive: true });
 await mkdir(join(reviewBundle, "evidence"), { recursive: true });
+const fixtureSource = "x\n";
+const fixtureSourceHash = createHash("sha256").update(fixtureSource).digest("hex");
+await writeFile(join(reviewBundle, "source/apps/daemon/src/lib.rs"), fixtureSource);
 await writeFile(join(reviewBundle, "review/reference/SECURITY_REVIEW_RESULT_TEMPLATE.md"), "fixture review template\n");
 await writeFile(join(reviewBundle, "evidence/STATUS.json"), JSON.stringify({ status: "not-provided" }) + "\n");
-await writeFile(join(reviewBundle, "REVIEW-MANIFEST.json"), JSON.stringify({ format: "another-dimension-security-review-bundle", version: 1, sourceRevision: reviewBase.sourceRevision, contents: { sourceFiles: [{ path: "apps/daemon/src/lib.rs", sha256: "a".repeat(64), bytes: 1 }], reviewDocuments: ["reference/SECURITY_REVIEW_RESULT_TEMPLATE.md"], evidenceStatus: "not-provided" }, claims: { independentReview: "not-provided", productionReady: false, highRiskAllowed: false } }) + "\n", { mode: 0o600 });
+await writeFile(join(reviewBundle, "REVIEW-MANIFEST.json"), JSON.stringify({ format: "another-dimension-security-review-bundle", version: 1, sourceRevision: reviewBase.sourceRevision, contents: { sourceFiles: [{ path: "apps/daemon/src/lib.rs", sha256: fixtureSourceHash, bytes: Buffer.byteLength(fixtureSource) }], reviewDocuments: ["reference/SECURITY_REVIEW_RESULT_TEMPLATE.md"], evidenceStatus: "not-provided" }, claims: { independentReview: "not-provided", productionReady: false, highRiskAllowed: false } }) + "\n", { mode: 0o600 });
 const reviewArgs = ["--review-bundle", reviewBundle, "--review-signoff", reviewSignoffFile, "--reviewer-public-key", reviewerPublicKeyFile];
 await Promise.all([
   copy("README.md"),

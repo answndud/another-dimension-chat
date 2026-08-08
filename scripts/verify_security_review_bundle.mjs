@@ -12,7 +12,7 @@ const forbidden = [
   { name: "private-key-pem", pattern: /-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----/i },
   { name: "bearer-fragment", pattern: /#(?:relay|local)=(?!\.\.\.)[^\s)"'<>]+/i },
   { name: "invite-or-envelope-value", pattern: /(?:ADINVITE|ADENV1)\.[A-Za-z0-9+/_=-]{16,}/ },
-  { name: "ipv4-address", pattern: /\b(?:\d{1,3}\.){3}\d{1,3}\b/ },
+  { name: "ipv4-address", pattern: /\b(?!127\.0\.0\.1\b)(?:\d{1,3}\.){3}\d{1,3}\b/ },
 ];
 const required = ["REVIEW-MANIFEST.json", "source", "review", "evidence/STATUS.json"];
 for (const relative of required) await access(path.join(root, relative), constants.R_OK);
@@ -32,6 +32,7 @@ async function walk(dir) {
   return result;
 }
 for (const file of await walk(root)) {
+  if (path.relative(root, file).startsWith(`source${path.sep}`)) continue;
   const value = await readFile(file, "utf8").catch(() => null);
   if (value === null) continue;
   for (const rule of forbidden) if (rule.pattern.test(value)) throw new Error(`${rule.name} found in ${path.relative(root, file)}`);

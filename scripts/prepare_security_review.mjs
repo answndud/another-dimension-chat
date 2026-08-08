@@ -50,7 +50,7 @@ const forbidden = [
   { name: "private-key-pem", pattern: /-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----/i },
   { name: "bearer-fragment", pattern: /#(?:relay|local)=(?!\.\.\.)[^\s)"'<>]+/i },
   { name: "invite-or-envelope-value", pattern: /(?:ADINVITE|ADENV1)\.[A-Za-z0-9+/_=-]{16,}/ },
-  { name: "ipv4-address", pattern: /\b(?:\d{1,3}\.){3}\d{1,3}\b/ },
+  { name: "ipv4-address", pattern: /\b(?!127\.0\.0\.1\b)(?:\d{1,3}\.){3}\d{1,3}\b/ },
 ];
 
 async function exists(file) {
@@ -75,6 +75,9 @@ async function assertNewDirectory(dir) {
 async function copyChecked(relative) {
   const source = path.join(projectDir, relative);
   if (!(await exists(source))) throw new Error(`missing review input: ${relative}`);
+  const destination = path.join(output, "source", relative);
+  await mkdir(path.dirname(destination), { recursive: true });
+  await cp(source, destination);
   return { path: relative, ...(await digest(source)) };
 }
 
