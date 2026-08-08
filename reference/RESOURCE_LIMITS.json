@@ -19,5 +19,10 @@
     "rssMegabytes": 300,
     "startupSeconds": 5,
     "reconnectSeconds": 600
+  },
+  "runtimeMeasurement": {
+    "command": "AD_DAEMON_BINARY=target/debug/another-dimension-daemon node scripts/acceptance_runtime_budget.mjs",
+    "sampling": "짧은 시작 후 idle 1초와 정적 UI 요청 active 1초를 ps 누적 CPU/RSS로 측정",
+    "platform": "macOS arm64"
   }
 }

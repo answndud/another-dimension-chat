@@ -47,6 +47,7 @@ node scripts/verify_web_artifact_fixture.mjs
 node scripts/verify_transport_boundary.mjs
 node scripts/verify_dependency_policy.mjs
 node scripts/acceptance_resource_limits.mjs
+node scripts/acceptance_runtime_budget.mjs
 echo "[3/8] focused server tests"
 node --test apps/server/server.test.mjs
 echo "[4/8] focused browser runtime tests"
