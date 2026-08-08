@@ -7,8 +7,12 @@ import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { execFileSync, spawn } from "node:child_process";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { createLocalServer } from "../apps/server/server.mjs";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+const relayModulePath = process.env.AD_RELAY_MODULE;
+const { createLocalServer } = await import(relayModulePath
+  ? pathToFileURL(resolve(relayModulePath)).href
+  : "../apps/server/server.mjs");
 
 const daemonBinary = process.env.AD_DAEMON_BINARY || "target/debug/another-dimension-daemon";
 const passphrase = "acceptance-only-passphrase";

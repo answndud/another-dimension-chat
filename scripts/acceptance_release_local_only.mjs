@@ -193,6 +193,15 @@ await Promise.all([
   new Promise((resolveExit) => releaseDaemon.once("exit", resolveExit)),
   new Promise((resolveExit) => releaseRelay.once("exit", resolveExit)),
 ]);
+const archiveFlow = await run(join(install, "runtime-node"), [join(projectDir, "scripts/acceptance_daemon_repair.mjs")], {
+  env: {
+    ...process.env,
+    AD_DAEMON_BINARY: join(install, "bin/another-dimension-daemon"),
+    AD_RELAY_MODULE: join(install, "apps/server/server.mjs"),
+  },
+});
+assert.equal(archiveFlow.code, 0, archiveFlow.output);
+assert.match(archiveFlow.output, /daemon E2E acceptance passed/);
 const installedServerFile = join(install, "apps/server/server.mjs");
 const originalServerFile = await readFile(installedServerFile, "utf8");
 await writeFile(installedServerFile, `${originalServerFile}\n// tampered fixture\n`);
