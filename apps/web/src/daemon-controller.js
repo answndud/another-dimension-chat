@@ -5,10 +5,21 @@ import { daemonErrorMessage } from "./daemon-errors.js";
 let activeBindingController;
 let pairingSyncTimer;
 let welcomeSyncTimer;
+let listenerSequence = 0;
 
 function bindListener(target, eventName, handler) {
   if (!target) return;
-  target.addEventListener(eventName, handler, { signal: activeBindingController.signal });
+  const app = document.querySelector("#app");
+  if (!app) return;
+  const marker = `ad-listener-${listenerSequence += 1}`;
+  target.dataset.adListener = marker;
+  app.addEventListener(eventName, (event) => {
+    const matched = event.target instanceof Element
+      ? event.target.closest(`[data-ad-listener="${marker}"]`)
+      : null;
+    if (!matched) return;
+    handler({ ...event, currentTarget: matched, target: matched });
+  }, { signal: activeBindingController.signal });
 }
 
 function schedulePairingSync(render) {
@@ -474,7 +485,7 @@ export function bindDaemonWorkspace({ render }) {
       render();
     });
     bindListener(document.querySelector("#daemon-contact-search"), "input", (event) => {
-      state.daemonContactSearch = event.currentTarget.value;
+      state.daemonContactSearch = event.target.value;
       render();
     });
     document.querySelectorAll("[data-contact-account]").forEach((button) => bindListener(button, "click", () => {
