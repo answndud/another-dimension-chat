@@ -34,6 +34,11 @@ export async function verifyBundleShape(bundleDir, manifest) {
   if (!Array.isArray(manifest.contents.reviewFiles) || manifest.contents.reviewFiles.length !== manifest.contents.reviewDocuments.length) {
     throw new Error("review bundle document hash inventory is missing");
   }
+  const declaredDocuments = [...manifest.contents.reviewDocuments].sort();
+  const hashedDocuments = manifest.contents.reviewFiles.map((entry) => entry?.path).sort();
+  if (declaredDocuments.some((entry) => typeof entry !== "string") || JSON.stringify(declaredDocuments) !== JSON.stringify(hashedDocuments)) {
+    throw new Error("review bundle document inventories do not match");
+  }
   if (!(["not-provided", "provided-and-scanned"].includes(manifest.contents.evidenceStatus))) {
     throw new Error("review bundle evidence status is invalid");
   }
