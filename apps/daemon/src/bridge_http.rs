@@ -78,8 +78,9 @@ const MAX_COMPLETED_ATTACHMENT_BYTES: usize = 64 * 1024 * 1024;
 const MAX_MESSAGE_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
 const MAX_AUTOMATIC_RETRIES_PER_TICK: usize = 2;
 
-/// Minimal HTTP boundary for the local bridge. It intentionally exposes only
-/// session bootstrap/status/lock; identity and message APIs remain absent.
+/// HTTP boundary for the local bridge. It exposes only daemon-owned routes;
+/// session state, identity, protocol state, and message material never leave
+/// the daemon as raw private records.
 pub fn handle_request(bridge: &mut LocalBridge, raw: &[u8], now: u64) -> Vec<u8> {
     handle_request_with_context(bridge, raw, now, None, None, None, None, None, None)
 }

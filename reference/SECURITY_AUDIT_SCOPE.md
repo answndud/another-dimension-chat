@@ -1,49 +1,72 @@
 # Independent security review scope
 
-> **상태: 재작성 대기 중인 과거 scope.** WASM, browser-owned storage, legacy
-> session 항목은 현재 제품에서 제거되었습니다. 현재 daemon 릴리스에 대한 검토
-> 범위나 sign-off 입력물로 사용하지 않습니다.
+> **상태: 현재 daemon-first 제품 검토 범위.** 삭제된 browser Olm/WASM,
+> IndexedDB, Tauri/native prototype은 현재 제품 증거가 아니며 검토 입력물에
+> 포함하지 않는다.
 
-This repository is an experimental web-first prototype whose production
-candidate is daemon-first. An audit must review the daemon, its browser bridge,
-the user-owned relay, and the distribution boundary as one composition. It
-must not treat `vodozemac`, Web Crypto, or any legacy Tauri/CLI/native crate in
-isolation as evidence that the product is safe for high-risk users.
+This is a review scope, not an audit report or a production-safety certificate.
+The reviewer must assess the daemon, browser bridge, user-owned relay, and
+release channel as one composition. A review of OpenMLS, Rust, Node, or any
+other dependency alone is insufficient.
 
-Required scope, in this order:
+## Required scope
 
-1. **Boundary and ownership:** daemon/browser/relay trust boundaries, Account
-   Root Key versus Device Key ownership, least-privilege bridge API, loopback
-   binding, bootstrap token, Origin/Host/CSRF checks, restart invalidation, and
-   version binding.
-2. **Identity and protocol:** identity signatures, invite expiry/revocation, prekey reservation/consumption,
-   safety verification, transcript binding, session pickle persistence, crash and
-   rollback behavior.
-3. **Storage and recovery:** Rust/WASM adapter correctness, generated artifact provenance, Argon2id profile
-   wrapping, IndexedDB lifecycle, auto-lock, backup/restore, and panic wipe.
-4. Browser UI trust boundary, service-worker update/cache behavior, DOM/log/error
-   redaction, clipboard use, and malicious-server or replaced-JS scenarios.
-5. User-owned relay capability secrecy, CORS, headers, rate limits, queue bounds,
-   rotation, proxy configuration, TLS assumptions, and metadata exposure.
-6. Release manifest signatures, key fingerprint distribution, SBOM, source/build
-   reproducibility, rollback rejection, and release archive contents.
-7. **Endpoint and operational non-claims:** malware, browser extensions, keyloggers,
-   coercion, secure deletion, anonymity, traffic analysis, and the exact point at
-   which the release must stop instead of offering a workaround.
+1. **Ownership and boundary:** daemon/browser/relay trust boundaries, Account
+   Root Key versus Device Key ownership, least-privilege bridge responses,
+   loopback binding, one-time bootstrap, exact Origin/Host/UI-version checks,
+   CSRF, session expiry, and restart invalidation.
+2. **Identity and pairing:** root-signed device certificates, duplicate and
+   revoked-device rejection, invite signature/expiry/capability binding,
+   single-use consumption, safety-number verification, contact approval, and
+   identity-change handling.
+3. **Protocol composition:** the pinned `openmls-1` admission boundary,
+   `MlsSessionCatalog`, persistence ordering, replay/duplicate handling,
+   message/attachment state, crash recovery, and rollback behavior. Confirm
+   which properties are provided by OpenMLS and which are application code.
+4. **Storage and recovery:** Argon2id/AES-GCM encrypted daemon store, OS
+   key-store boundary, corrupt/old/incomplete recovery artifacts, lock/wipe
+   semantics, backup overwrite protection, memory lifetime, and diagnostic
+   redaction. Secure deletion and coercion resistance are explicit non-claims.
+5. **Browser UI:** static asset integrity, CSP, no third-party runtime,
+   bootstrap fragment removal, DOM/network/log exposure, clipboard and file
+   handling, stale-cache behavior, accessibility of blocking states, and the
+   exact Chromium support boundary.
+6. **User-owned relay:** opaque bounded envelopes, capability scope/leakage,
+   request abuse, queue/blob bounds, retry/duplicate semantics, restart,
+   backup/restore, TLS pin assumptions, logs, and metadata disclosure.
+7. **Release and operations:** manifest/signature/provenance/SBOM, trusted-key
+   bootstrap and rotation, revocation/minimum-version/rollback refusal,
+   install/update/stop workflow, incident stop-distribution procedure, and
+   whether a clean signed archive was actually tested.
+8. **Non-claims:** compromised browser/OS, extensions, malware, keyloggers,
+   screen capture, IP/timing/size analysis, anonymity, censorship resistance,
+   secure deletion, and coercion resistance must not be promoted as protected.
 
-The reviewer should receive the exact source revision, daemon binary and source,
-bridge API contract, generated WASM, lockfiles,
-release manifest, SBOM, threat model, focused test output, and known non-claims.
-The audit must report assumptions, attack preconditions, severity, reproduction
-steps, and residual risk. A library audit is not evidence that this application
-is safe for journalists or activists.
+## Required handoff inputs
+
+The reviewer receives one clean Git revision, the daemon source and binary,
+web artifact, relay source, lockfiles, release manifest, SBOM, provenance,
+product boundary, threat model, focused evidence, and known non-claims.
+Generate the packet with:
+
+```sh
+node scripts/prepare_security_review.mjs --out /secure/review/bundle
+node scripts/verify_security_review_bundle.mjs /secure/review/bundle --project-dir .
+```
+
+The reviewer must receive no private key, passphrase, live capability,
+plaintext, private invite, or real user data. The bundle verifier proves hashes
+and redaction only; it does not prove reviewer independence or safety.
+
+## Required finding format
+
+For every finding record the source revision, severity, attacker preconditions,
+confidentiality/integrity/availability impact, redacted reproduction, whether
+automated evidence covers it, remediation, regression evidence, release-stop
+decision, affected versions, and residual risk. Critical/high findings stop the
+release. The signed result must separately state covered and excluded scope.
 
 The handoff index is [`SECURITY_REVIEW_EVIDENCE.md`](SECURITY_REVIEW_EVIDENCE.md).
-Every in-scope control must map to a requirement ID, source boundary, one
-focused command, a redacted artifact, and a remaining limitation. Missing
-daemon implementation is a blocker, not an invitation to use the browser
-prototype as a substitute.
-The reviewer must record covered and excluded scope, affected versions, findings,
-remediation, and a separate sign-off. Automated output must be attached as evidence,
-not copied into the sign-off field. Incident, CVE, signing-key, and rollback
-procedures are in [`INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md).
+The independent sign-off is verified separately with
+`scripts/verify_security_review_handoff.mjs`; an empty or fixture-only sign-off
+leaves `AUDIT-01` blocked.

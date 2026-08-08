@@ -1,118 +1,123 @@
-# Another Dimension UI 흐름 계약
+# Another Dimension daemon UI 흐름 계약
 
-> **상태: browser-owned profile 시기의 역사적 화면 계약.** 현재 daemon UI의
-> 구현 계약으로 사용하지 않으며, IndexedDB·Olm·수동 legacy envelope 화면은
-> 현재 제품 범위가 아닙니다.
-
-이 문서는 현재 웹 제품의 화면 상태와 사용자 액션을 정의한다. 디자인 개편은 이 계약의
-기능과 보안 경계를 보존해야 하며, 화면을 단순하게 보이게 하기 위해 안전 검증 단계를
-생략해서는 안 된다.
+> **상태: 현재 daemon-owned UI 계약.** 브라우저는 화면·사용자 승인·입력만
+> 담당한다. 프로필, 개인키, OpenMLS 상태, 대화 기록, 복구 자료는 daemon의
+> 암호화 저장소가 소유한다. 삭제된 browser-owned profile/IndexedDB/Olm 화면은
+> 현재 제품 흐름이 아니다.
 
 ## 제품 원칙
 
-- 중앙 계정·전화번호·이메일·username 검색·그룹방을 제공하지 않는다.
-- 연결은 일회성 초대 또는 수동 signed invite로 시작한다.
-- 안전 문구 확인 전에는 메시지 전송을 열지 않는다.
-- relay 자동 전달이 불가능하면 수동 암호화 봉투를 제공하되, 평문을 relay로 보내지 않는다.
-- 브라우저 UI는 현재 prototype에서 암호화 저장소를 사용한다. daemon 전환 전까지 고위험
-  통신을 허용하는 표현을 하지 않는다.
-- daemon bootstrap 주소로 열린 경우에는 one-time fragment를 즉시 제거하고, 브라우저
-  저장소·암호화·메시지 화면을 열지 않은 채 daemon session gate만 표시한다. 실제 daemon
-  API가 준비되기 전에는 연결 성공이나 고위험 통신 가능으로 표시하지 않는다.
-- 잠금·삭제·백업은 각각 다른 작업이며, 하나의 버튼이나 화면으로 합치지 않는다.
+- 전화번호·이메일·글로벌 계정·검색 가능한 username·중앙 contact discovery를
+  사용하지 않는다.
+- 계정은 Account Root Key에서 파생되고, 기기는 별도 Device Key와 root-signed
+  certificate를 사용한다.
+- 연결은 일회성 초대 코드로 시작한다. 코드 자체는 인증·복호화·기기 추가
+  권한이 아니다.
+- 안전 번호 확인과 연락처 승인은 별도 단계다. 안전 번호만 확인해도 메시지
+  입력을 활성화하지 않는다.
+- 브라우저는 daemon이 발급한 one-time fragment URL로만 세션을 얻고, 교환
+  직후 fragment를 제거한다. private key·ratchet state·raw store는 API로
+  반환하지 않는다.
+- 직접 HTTPS/VPN/LAN은 anonymity가 아닌 제한된 전송 경로다. 고위험 모드는
+  독립 검토·운영 신뢰·release evidence 전까지 비활성화한다.
 
-## 화면 상태
+## 주요 화면 상태
 
 | 상태 | 진입 조건 | 보여줄 것 | 허용 액션 | 차단 액션 |
 | --- | --- | --- | --- | --- |
-| `locked` | 프로필 미선택, 잠금, 자동 잠금 | 프로필 선택, 암호 문구, 보안 경계 | 생성, 잠금 해제, 백업 가져오기 | 초대, 메시지, 복구 세션 |
-| `profile-ready` | 프로필 잠금 해제 직후 | 내 프로필, 연결 없음, 다음 행동 | 초대 보기, 새 연결, 백업, 잠금 | 메시지 전송 |
-| `invite-created` | 내 초대 생성 | 초대 상태, 만료/폐기, 공유 주의 | 복사, 새로 발급, 상대 초대 입력 | 메시지 전송 |
-| `pairing` | 상대 초대 제출 | 상대 identity·relay·검증 결과 | 페어링, 취소, 새 초대 요청 | 메시지 전송 |
-| `unverified` | peer 등록 후 안전 문구 미확인 | 전체 안전 문구, 별도 채널 확인 안내 | 안전 문구 확인 | 모든 메시지 전송 |
-| `handshake-pending` | identity 확인 후 세션 준비 중 | handshake 상태, 수동 봉투 안내 | 자동 전달, 봉투 내보내기, 가져오기 | 일반 메시지 전송 |
-| `ready` | 세션 준비 및 안전 문구 확인 | 대화, 상대 identity, 세션 상태 | 메시지 작성·전송, 동기화, 봉투 전송 | identity 변경 시 전송 |
-| `manual-delivery` | relay가 없거나 HTTP endpoint | 암호화 봉투, 전달 대상, 재전송 주의 | 내보내기, 가져오기, 전달 확인 | 평문 전송 |
-| `relay-unavailable` | 자동 전달 실패 | 실패 원인과 수동 전달 방법 | 재시도, 수동 봉투 | 성공으로 표시 |
-| `storage-error` | IndexedDB·quota·private mode 오류 | 저장 실패와 데이터 보존 안내 | 백업 보존, 잠금, 환경 변경 | 암호화 작업 계속 |
-| `backup-recovery` | 백업 생성·가져오기 선택 | profile/session/transcript 구분 | 생성, 가져오기, 수동 저장 | 자료 종류 혼용 |
-| `wipe-confirm` | 긴급 삭제 선택 | 삭제 대상과 삭제 불가 한계 | 암호 문구 확인, 취소 | 즉시 삭제 |
-| `session-locked` | 다른 탭 잠금, pagehide, inactivity | 잠금 이유와 재잠금 안내 | 다시 잠금 해제 | 기존 세션 사용 |
-| `daemon-session-gate` | `ad_bootstrap` fragment로 daemon UI를 연 경우 | fragment 제거 결과, daemon session 상태, 브라우저 저장소 미사용 안내 | daemon 상태 확인, 세션 잠금, 연결 실패 시 데몬 재실행 | browser profile 생성·IndexedDB·메시지 전송 |
+| `daemon-gate` | bootstrap URL 없음/실패/잠금 | daemon 재실행 안내와 오류 원인 | 터미널에서 daemon 재실행 | 초대·메시지·개인키 작업 |
+| `connected-conversation` | bootstrap 교환·세션 인증 완료 | 연락처, 초대 코드, 연결 상태 | 초대 생성/입력, 연락처 선택 | 승인 전 메시지 전송 |
+| `pairing-received` | 상대 초대 코드 검증 완료 | 상대 account/device와 안전 번호 | 안전 번호 비교, 거절 | 승인 전 메시지 전송 |
+| `safety-verified` | 사용자가 전체 안전 번호를 별도 채널로 대조 | 확인 결과와 연락처 승인 버튼 | 연락처 승인, 재확인 | `established` 전 메시지 전송 |
+| `established` | 안전 번호 확인·연락처 승인·세션 준비 완료 | 대화와 전송 상태 | 텍스트/첨부 전송, 동기화 | identity·capability 변경 후 전송 |
+| `devices` | 기기 메뉴 선택 | 현재/등록/폐기 기기와 이벤트 | 새 기기 승인, 비현재 기기 폐기 | 현재 기기 폐기 |
+| `security` | 보안과 복구 메뉴 선택 | relay pin, 복구, wipe 경계 | pin 저장, 백업, 복구 예약, wipe | 검증 전 원격 relay 사용 |
+| `status` | 상태 메뉴 선택 | daemon 세션·저장소·계정·보안 판정 | 상태 확인 | 고위험 사용 허용 주장 |
 
-## 화면 구성
+## 최초 사용 workflow
 
-### 1. 시작 화면 (`locked`)
+프로필 생성은 브라우저가 아니라 설치된 daemon CLI가 수행한다.
 
-- 프로필 선택과 잠금 해제를 기본 작업으로 둔다.
-- 새 프로필 만들기는 별도 단계로 열고 이름, 암호 문구, 실험용/고위험 사용 금지 동의를 받는다.
-- 새 프로필의 암호 문구는 Web Crypto CSPRNG로 생성하며 직접 입력 기능은 제공하지 않는다.
-  생성된 문구를 password manager에 보관한 뒤 프로필 생성을 완료한다.
-- 생성 문구는 password manager 저장을 우선 권장한다. 복사 기능은 클립보드 기록·동기화
-  삭제 경고를 표시하며, 평문 `.txt` 다운로드는 Downloads·백업·동기화에 남을 수 있다는
-  확인 후에만 제공한다.
-- 프로필 백업 가져오기는 잠금 해제와 분리한다.
-- 브라우저 보안 상태는 짧은 상태 요약과 상세 설명으로 나눈다.
-- 거대한 마케팅 문구, 기술 구현 목록, 대화 기능은 시작 화면에 노출하지 않는다.
+```text
+release gate 확인
+  → another-dimension init --display-name NAME --data-dir PATH
+  → 암호문구는 stdin으로만 전달
+  → another-dimension serve --open
+  → 출력된 one-time URL을 같은 Mac의 Chromium에서 열기
+```
 
-### 2. 작업공간 (`profile-ready` 이후)
+암호문구는 URL, argv, 브라우저 입력, 로그에 넣지 않는다. 현재 CLI는 생성·해제
+시 암호문구를 stdin에서 읽으며, 운영 제품에서는 password manager/OS key store
+정책과 독립 검토 결과가 함께 필요하다. 사용자가 암호문구를 잊으면 daemon은
+복구 우회나 서버 복호화를 제공하지 않는다.
 
-- 좌측 rail: 현재 프로필, 연결, 보안·복구, 설정, 잠금, 긴급 삭제.
-- 연결 목록: 로컬에 저장된 상대만 표시한다. 검색은 이 목록 안에서만 동작한다.
-- 현재 영역: 선택한 연결의 보안 상태 또는 대화를 표시한다.
-- 좁은 화면에서는 rail → 목록 → 현재 영역을 단계별 화면으로 접는다.
+## 초대·연결 workflow
 
-### 3. 새 연결 (`invite-created`, `pairing`)
+1. 대화 화면에서 `일회성 초대 만들기`를 선택한다.
+2. 코드만 별도 신뢰 채널로 전달한다. 화면·로그·relay에 평문 초대나 개인키를
+   남기지 않는다.
+3. 상대 코드를 `초대 코드 확인`으로 입력한다.
+4. daemon이 서명·만료·relay binding·single-use·capability를 검증한다.
+5. 두 사용자가 안전 번호 전체를 별도 채널에서 비교한다.
+6. 일치할 때만 연락처 승인을 누른다.
+7. pairing state가 `established`가 된 뒤에만 대화 입력과 전송을 사용한다.
 
-1. 내 초대 상태를 확인한다.
-2. 초대를 안전한 별도 채널로 전달한다.
-3. 상대 초대를 붙여 넣는다.
-4. 서명·만료·relay·identity 결과를 확인한다.
-5. 페어링한다.
-6. 안전 문구를 외부 신뢰 채널로 대조한다.
+코드 복사 성공, 상대 표시 이름, relay 응답만으로 신원을 확인했다고 표시하지
+않는다. 안전 번호 변경·기기 폐기·capability 변경은 일반 알림이 아니라 전송
+차단과 재검증으로 처리한다.
 
-초대 원문은 기본 화면에 상시 노출하지 않고, 사용자가 “공유 자료 보기”를 선택했을 때만
-표시한다. 복사 성공은 identity 검증의 증거가 아니다.
+## 메뉴별 액션 계약
 
-### 4. 대화 (`ready`, `manual-delivery`)
+### 대화
 
-- 헤더: 상대 표시 이름, account/device identity, 안전 문구 확인 상태, 세션 상태.
-- 대화 본문: 로컬 transcript만 표시한다.
-- 입력 영역: 현재 전송 가능 조건이 충족된 경우에만 활성화한다.
-- 전송 방법 패널: 자동 relay, inbox 동기화, 수동 envelope, handshake 전달 확인을 담는다.
-- identity 변경·안전 문구 불일치·세션 오류는 일반 toast가 아니라 대화 상단 차단 상태로 표시한다.
+- `daemon-create-invite`: 새 일회성 초대 생성
+- `daemon-copy-invite`: 코드만 클립보드로 복사
+- `daemon-revoke-invite`: 초대 즉시 폐기
+- `received-invite-code` / `daemon-consume-invite`: 상대 코드 확인
+- `daemon-safety-confirmation` / `daemon-verify-safety`: 안전 번호 비교
+- `daemon-approve-pairing`: 연락처 승인
+- `daemon-message-send`: `established` 상태에서만 메시지 전송
+- 첨부파일은 daemon이 암호화·청크 처리한 뒤 relay로 전달한다. 브라우저는
+  평문 파일 키나 daemon store를 직접 다루지 않는다.
 
-### 5. 보안·복구
+### 기기
 
-- profile backup: identity와 private material 복구용.
-- session backup: Olm session/replay 복구용.
-- transcript export: 대화 기록 복구용.
-- 긴급 삭제: 현재 브라우저 저장소 삭제 시도와 삭제 불가 영역을 함께 표시한다.
-- 모든 자료는 서로 다른 종류임을 제목·설명·색상보다 텍스트로 명확히 표시한다.
+- 현재 기기는 폐기할 수 없다.
+- 새 기기 연결 요청과 별도 승인 코드를 함께 확인한다.
+- 폐기된 기기는 이후 session/delivery admission에서 거부된다.
+- 이벤트에는 공개 device id·종류·시각만 남기고 개인키·승인 비밀은 남기지 않는다.
 
-## 현재 액션 매핑
+### 보안과 복구
 
-| 현재 DOM/액션 | 새 영역 |
-| --- | --- |
-| `create-form`, `unlock-form` | 시작 화면 |
-| `import-backup` | 시작 화면 / 보안·복구 |
-| `lock`, `panic-wipe`, `wipe-confirm-form` | rail / 보안·복구 |
-| `copy-invite`, `revoke-invite`, `pair`, `peer-invite` | 새 연결 |
-| `safety-confirmation`, `confirm-safety` | 연결 보안 검증 |
-| `confirm-handshake` | 전송 방법 |
-| `message`, `send-envelope` | 대화 입력 |
-| `sync-inbox` | 전송 방법 |
-| `export-envelope`, `envelope`, `incoming`, `import-envelope` | 전송 방법 |
-| `export-backup`, `make-session-backup`, `load-session-backup` | 보안·복구 |
-| `make-transcript-export`, `load-transcript-export` | 보안·복구 |
+- remote relay는 정확한 TLS pin을 별도 채널로 확인한 뒤 저장한다.
+- 복구 백업은 daemon이 생성하고 브라우저는 다운로드/파일 선택만 수행한다.
+- 백업에는 relay 운영 데이터나 브라우저 세션이 포함되지 않는다는 경계를
+  명시한다.
+- `이 기기의 모든 로컬 데이터 삭제`는 삭제 시도일 뿐 secure deletion·압수
+  대응이 아니다.
+
+### 상태와 잠금
+
+- `잠그기` 후 브라우저 세션 cookie/CSRF와 daemon active session을 폐기한다.
+- 상태 화면의 `브라우저 저장소: 사용하지 않음`은 현재 daemon UI 계약의 핵심
+  사실이다.
+- 독립 검토 완료 전에는 항상 고위험 사용 금지 문구를 표시한다.
 
 ## 전역 표시 규칙
 
-- `notice`: 일반 진행 상태.
-- `error`: 작업 실패와 원인·조치·보안 영향·재시도 정책.
-- `warning`: 전송 차단, identity 변경, 삭제 한계 등 사용자의 결정을 요구하는 위험.
-- `verified`: 외부 채널 대조가 완료된 경우에만 사용한다.
-- 안전 번호 확인만으로 메시지 전송을 허용하지 않는다. `established` 세션과 연락처
-  승인까지 완료된 경우에만 “메시지 송신 허용”을 표시하고, 그 전에는 “연락처 승인
-  필요” 또는 세션 준비 상태를 표시한다.
-- disabled 버튼은 반드시 가까운 설명으로 비활성 이유를 제공한다.
+- `status`: 진행·연결 상태만 표시한다.
+- `error`: 실패 원인, 사용자가 할 조치, 재시도/보안 영향을 함께 표시한다.
+- `warning`: identity 변경, 안전 번호 불일치, 삭제 한계, 전송 차단을 상단에
+  고정한다.
+- `verified`: 외부 채널 대조와 daemon 검증이 모두 끝난 경우에만 사용한다.
+- 안전 번호 확인만으로 “메시지 송신 허용”을 표시하지 않는다. `established`와
+  연락처 승인 전에는 반드시 “연락처 승인 필요” 또는 세션 준비 상태를 표시한다.
+- disabled 버튼은 가까운 설명으로 비활성 이유를 제공한다.
+
+## 지원·비보장 경계
+
+현재 자동·브라우저 evidence는 Apple Silicon macOS의 내장 Chromium smoke와
+local-only release acceptance 범위다. 정확한 Chromium 버전이 기록된 clean
+signed archive evidence가 없으면 `SUPPORT_MATRIX.json`은 `unverified`로
+유지한다. 다른 OS/browser, anonymity, secure deletion, coercion resistance,
+compromised-device protection, independent audit는 지원 주장에 포함하지 않는다.

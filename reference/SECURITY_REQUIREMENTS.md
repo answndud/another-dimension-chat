@@ -1,8 +1,8 @@
 # Security requirements
 
-> **상태: daemon 전환 전 요구사항 스냅샷.** 아래 상태값과 browser/WASM 경로는
-> 현재 구현 현황이 아니며 release gate나 완료 판정에 사용할 수 없습니다. 현재
-> 강제되는 경계는 `product_boundary.json`과 관련 verifier입니다.
+> **상태: daemon-first 보안 요구사항 register.** legacy browser/WASM 경로를
+> 현재 제품 증거로 사용하지 않는다. 각 상태값은 구현 범위와 evidence의 현재
+> 한계를 함께 표시하며, `blocked`·미검증 항목은 release gate를 통과시킬 수 없다.
 
 This is the executable security requirement register for the supported web
 product. A requirement is not complete because a document describes it: the
@@ -43,7 +43,7 @@ Requirements marked `blocked` prevent any high-risk claim.
 | `ARCH-02` | Relay and UI have separate trust boundaries; development combined serving cannot enter public release. | `implemented` | Server tests, release scan, signed release gate. |
 | `ARCH-03` | Tauri/CLI/engine/onion research code cannot appear as current product evidence. | `partial` | Legacy workflow/source boundary scan. |
 | `ARCH-04` | The daemon, browser bridge, and relay have separate ownership and failure domains. | `blocked` | Daemon boundary contract, IPC negative fixtures, and release archive separation. |
-| `AUTH-01` | Profile passphrase is required for local private-state unlock. | `implemented` | Web runtime tests and wrong-passphrase fixture. |
+| `AUTH-01` | Profile passphrase is required for local daemon private-state unlock. | `implemented` | daemon init/serve stdin workflow and wrong-passphrase fixture. |
 | `AUTH-02` | Peer identity continuity fails closed on change. | `implemented` | Identity-change and fresh-pair fixture. |
 | `AUTH-03` | Invite signature, expiry, name collision, capability scope, and revocation are checked before pairing. | `partial` | Expired/revoked/capability fixture and protocol vectors. |
 | `AUTH-04` | Account Root Key signs device certificates; unsigned, revoked, or duplicate devices cannot enter a session. | `blocked` | Fixed identity/device vectors, revocation fixture, and redacted device-event artifact. |
@@ -51,8 +51,8 @@ Requirements marked `blocked` prevent any high-risk claim.
 | `CRYPTO-02` | Tamper, duplicate, replay, corrupt storage, crash, concurrency, and rollback fail closed. | `partial` | Fixed-seed property vectors, existing storage/concurrency fixtures, and kill-after-write fixtures. |
 | `CRYPTO-03` | JS/WASM key exposure and zeroization limits are explicit. | `partial` | Boundary review and browser memory/lock evidence; no stronger claim. |
 | `CRYPTO-04` | The selected 1:1 protocol owns prekey, ratchet, persistence, replay, and identity-binding transitions without ad-hoc crypto. | `blocked` | Protocol decision record, fixed vectors, crash/rollback fixtures, and independent composition review. |
-| `DATA-01` | Private profile state is encrypted before IndexedDB persistence. | `implemented` | Argon2id/PBKDF2 migration and storage tests. |
-| `DATA-02` | Browser quota, eviction, private mode, multiple tabs, cache, clipboard, and service-worker behavior are handled. | `partial` | Quota-style IndexedDB write failure locks the active session; multi-tab and Service Worker fixtures exist. Actual browser quota/eviction/private-mode matrix and cache lifecycle remain unverified. |
+| `DATA-01` | Private profile state is encrypted before daemon persistence. | `implemented` | Argon2id/AES-GCM daemon store and storage checks. |
+| `DATA-02` | Browser cache, multiple tabs, clipboard, and service-worker behavior cannot bypass the daemon boundary. | `partial` | daemon-served no-store UI, bridge session binding, and Chromium smoke. Actual private-mode/quota/eviction matrix remains unverified. |
 | `DATA-03` | Wipe is not called secure deletion and backup is not cloud recovery. | `implemented` | UI/docs claim scan and recovery fixtures. |
 | `DATA-04` | Long-term private state is owned by the daemon, not browser storage; keychain-unavailable and recovery failure paths fail closed. | `blocked` | Storage ownership scan, keychain failure fixture, corrupt/old snapshot fixture, and redacted recovery artifact. |
 | `RELAY-01` | Relay stores only bounded opaque envelopes and never private keys/plaintext. | `implemented` | Server route tests, body bounds, log scan. |
