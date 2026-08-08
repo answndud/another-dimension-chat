@@ -11,6 +11,17 @@ if (rootIndex !== -1 && (!args[rootIndex + 1] || args[rootIndex + 1].startsWith(
 const root = rootIndex === -1 ? projectRoot : resolve(args[rootIndex + 1]);
 const matrix = JSON.parse(await readFile(resolve(root, "reference/SUPPORT_MATRIX.json"), "utf8"));
 const fail = (message) => { throw new Error(`release support gate: ${message}`); };
+function verifyEvidenceShape(entry, evidence) {
+  for (const field of ["sourceRevision", "archiveSha256", "recordedAt", "scope", "runtime"]) {
+    if (typeof evidence[field] !== "string" || !evidence[field].trim()) fail(`verified evidence ${field} is missing: ${entry.id}`);
+  }
+  if (!/^[0-9a-f]{40,64}$/i.test(evidence.sourceRevision)) fail(`verified evidence sourceRevision is invalid: ${entry.id}`);
+  if (!/^[0-9a-f]{64}$/i.test(evidence.archiveSha256)) fail(`verified evidence archiveSha256 is invalid: ${entry.id}`);
+  if (!evidence.host || typeof evidence.host !== "object" || evidence.host.platform !== entry.platform) fail(`verified evidence host platform does not match matrix: ${entry.id}`);
+  if (entry.surface === "browser-ui" && (typeof evidence.host.browserVersion !== "string" || !evidence.host.browserVersion.trim())) fail(`verified browser evidence must record an exact browserVersion: ${entry.id}`);
+  if (!evidence.observations || typeof evidence.observations !== "object" || !Array.isArray(evidence.observations.steps) || evidence.observations.steps.length === 0) fail(`verified evidence observations.steps is missing: ${entry.id}`);
+  if (evidence.redaction?.passed !== true) fail(`verified evidence redaction is not marked passed: ${entry.id}`);
+}
 async function verifyEvidence(entry, evidencePath) {
   if (!entry.evidence.endsWith(".json")) fail(`verified evidence must be a JSON record: ${entry.id}`);
   let evidence;
@@ -18,7 +29,7 @@ async function verifyEvidence(entry, evidencePath) {
   if (typeof evidence.status === "string" && evidence.status !== entry.status) fail(`evidence status does not match matrix: ${entry.id}`);
   if (entry.status === "verified-local") {
     if (typeof evidence.scope !== "string" || !evidence.scope.trim()) fail(`verified evidence scope is missing: ${entry.id}`);
-    if (evidence.observations?.initializationErrorShown === true) fail(`verified evidence records an initialization error: ${entry.id}`);
+    verifyEvidenceShape(entry, evidence);
   }
 }
 const policy = matrix.releasePolicy;

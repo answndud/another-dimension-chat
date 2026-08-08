@@ -3,6 +3,14 @@
   "version": 1,
   "generatedFor": "local daemon product",
   "claimsPolicy": "Only entries with an attached, reproducible evidence file may be verified.",
+  "verifiedEvidenceSchema": {
+    "required": ["status", "sourceRevision", "archiveSha256", "recordedAt", "host", "runtime", "scope", "observations", "redaction"],
+    "hostRequired": ["platform"],
+    "browserHostRequired": ["browserVersion"],
+    "observationsRequired": ["steps"],
+    "redaction": "passed must be true",
+    "note": "A verified-local record is scoped local evidence, not public or high-risk approval."
+  },
   "releasePolicy": {
     "blockedStatusesFail": true,
     "unverifiedStatusesAreNonClaim": true,
