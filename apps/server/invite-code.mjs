@@ -52,7 +52,7 @@ export function validateDaemonInvite(invite, expectedRelayOrigin, now = Date.now
   const payload = Buffer.from(parts[1], "hex");
   const signature = Buffer.from(parts[2], "hex");
   const lines = payload.toString("utf8").split("\n");
-  if (![6, 7].includes(lines.length) || lines[0] !== "another-dimension/invite/v1") throw new Error("invalid_signed_invite");
+  if (![6, 7, 8].includes(lines.length) || lines[0] !== "another-dimension/invite/v1") throw new Error("invalid_signed_invite");
   const accountId = lines[1];
   const publicKeyHex = accountId.startsWith("ad1pk") ? accountId.slice("ad1pk".length) : "";
   if (!/^[0-9a-f]{64}$/.test(publicKeyHex) || signature.length !== 64 || !/^[0-9a-f]{64}$/.test(lines[3])) throw new Error("invalid_signed_invite");
@@ -72,6 +72,7 @@ export function validateDaemonInvite(invite, expectedRelayOrigin, now = Date.now
       throw new Error("signed_invite_inbox_binding_invalid");
     }
   }
+  if (lines.length === 8 && (!/^adconv[A-Za-z0-9_-]{1,74}$/.test(lines[7]))) throw new Error("invalid_signed_invite_conversation");
   const publicKeyDer = Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), Buffer.from(publicKeyHex, "hex")]);
   const publicKey = createPublicKey({ key: publicKeyDer, format: "der", type: "spki" });
   if (!verify(null, payload, publicKey, signature)) throw new Error("invalid_signed_invite_signature");
@@ -132,10 +133,41 @@ export function purgeInviteCodes(records, now = Date.now()) {
 export function consumeInviteCode(records, suppliedCode, now = Date.now()) {
   let hash;
   try { hash = inviteCodeHash(suppliedCode); } catch { return { ok: false, reason: "invalid_or_expired" }; }
-  const index = records.findIndex((record) => record.codeHash === hash && record.expiresAt > now);
+  const index = records.findIndex((record) => record.codeHash === hash && record.expiresAt > now && !record.consumedAt);
   if (index < 0) return { ok: false, reason: "invalid_or_expired" };
-  const [record] = records.splice(index, 1);
+  const record = records[index];
+  record.consumedAt = now;
   return { ok: true, record };
+}
+
+const MAX_PAIRING_RESPONSE_BYTES = 128 * 1024;
+
+export function writeInvitePairingResponse(records, suppliedCode, response, now = Date.now()) {
+  let hash;
+  try { hash = inviteCodeHash(suppliedCode); } catch { return { ok: false, reason: "invalid_or_expired" }; }
+  const record = records.find((candidate) => candidate.codeHash === hash && candidate.expiresAt > now && candidate.consumedAt);
+  if (!record || !response || typeof response !== "object") return { ok: false, reason: "invalid_or_expired" };
+  const serialized = JSON.stringify(response);
+  if (Buffer.byteLength(serialized, "utf8") > MAX_PAIRING_RESPONSE_BYTES) return { ok: false, reason: "pairing_response_too_large" };
+  if (response.kind === "key-package") {
+    if (record.pairingResponse?.keyPackage) return { ok: false, reason: "pairing_response_already_set" };
+    record.pairingResponse = { keyPackage: response };
+  } else if (response.kind === "welcome") {
+    if (record.pairingResponse?.welcome) return { ok: false, reason: "pairing_response_already_set" };
+    record.pairingResponse = { ...(record.pairingResponse || {}), welcome: response };
+  } else {
+    return { ok: false, reason: "invalid_pairing_response" };
+  }
+  record.pairingResponse.updatedAt = now;
+  return { ok: true };
+}
+
+export function readInvitePairingResponse(records, suppliedCode, now = Date.now()) {
+  let hash;
+  try { hash = inviteCodeHash(suppliedCode); } catch { return { ok: false, reason: "invalid_or_expired" }; }
+  const record = records.find((candidate) => candidate.codeHash === hash && candidate.expiresAt > now && candidate.consumedAt);
+  if (!record) return { ok: false, reason: "invalid_or_expired" };
+  return { ok: true, response: record.pairingResponse || {} };
 }
 
 export function revokeInviteCode(records, suppliedCode, now = Date.now()) {

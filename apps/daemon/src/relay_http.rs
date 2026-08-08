@@ -312,6 +312,12 @@ struct ConsumeInviteResponse {
 }
 
 #[derive(Deserialize)]
+struct PairingResponseRead {
+    available: bool,
+    response: Option<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
 struct RevokeInviteResponse {
     revoked: bool,
 }
@@ -387,6 +393,52 @@ impl RelayClient {
             return Err(RelayError::InvalidResponse);
         }
         Ok(())
+    }
+
+    pub fn write_pairing_response_blocking(
+        &self,
+        code: &str,
+        response: &serde_json::Value,
+    ) -> Result<(), RelayError> {
+        let body = serde_json::to_vec(&serde_json::json!({ "code": code, "response": response }))
+            .map_err(|_| RelayError::InvalidResponse)?;
+        let (status, response_body) =
+            self.request_blocking("POST", "/api/v1/invite-codes/pairing-response", &body)?;
+        if !(200..300).contains(&status) {
+            return Err(RelayError::Rejected(status));
+        }
+        let accepted: serde_json::Value =
+            serde_json::from_slice(&response_body).map_err(|_| RelayError::InvalidResponse)?;
+        if accepted
+            .get("accepted")
+            .and_then(serde_json::Value::as_bool)
+            != Some(true)
+        {
+            return Err(RelayError::InvalidResponse);
+        }
+        Ok(())
+    }
+
+    pub fn read_pairing_response_blocking(
+        &self,
+        code: &str,
+    ) -> Result<Option<serde_json::Value>, RelayError> {
+        let body = serde_json::to_vec(&serde_json::json!({ "code": code, "read": true }))
+            .map_err(|_| RelayError::InvalidResponse)?;
+        let (status, response_body) =
+            self.request_blocking("POST", "/api/v1/invite-codes/pairing-response", &body)?;
+        if status == 404 {
+            return Ok(None);
+        }
+        if !(200..300).contains(&status) {
+            return Err(RelayError::Rejected(status));
+        }
+        let parsed: PairingResponseRead =
+            serde_json::from_slice(&response_body).map_err(|_| RelayError::InvalidResponse)?;
+        if !parsed.available {
+            return Ok(None);
+        }
+        Ok(parsed.response)
     }
 
     pub async fn post(&self, envelope: &RelayEnvelope) -> Result<RelayAccepted, RelayError> {

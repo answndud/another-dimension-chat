@@ -348,7 +348,14 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             if let Err(error) = authority.mark_invite_created(store) {
                 return pairing_error(error);
             }
-            let Some((_internal_code, signed_invite)) = authority.create(now) else {
+            let mut conversation_bytes = [0_u8; 16];
+            if getrandom::fill(&mut conversation_bytes).is_err() {
+                return response(503, "randomness_unavailable", None, None);
+            }
+            let conversation_id = format!("adconv{}", hex_bytes(&conversation_bytes));
+            let Some((_internal_code, signed_invite)) =
+                authority.create(now, Some(&conversation_id))
+            else {
                 return response(503, "randomness_unavailable", None, None);
             };
             let Some(inbox_url) = authority.inbox_url.as_deref() else {
@@ -364,11 +371,30 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             else {
                 return response(503, "relay_unavailable", None, Some("application/json"));
             };
+            let Some(identity) = identity else {
+                return response(503, "identity_unavailable", None, None);
+            };
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            if catalog
+                .create(
+                    &conversation_id,
+                    mls_device_credential(&identity.account_id, &identity.device_id),
+                    store,
+                )
+                .is_err()
+            {
+                return response(503, "session_unavailable", None, None);
+            }
+            authority.pending_rendezvous_code = Some(invite_code.code.clone());
+            authority.pending_conversation_id = Some(conversation_id.clone());
             let body = format!(
-                r##"{{"invite_code":"{}","expires_at":{},"invite_digest":"{}"}}"##,
+                r##"{{"invite_code":"{}","expires_at":{},"invite_digest":"{}","conversation_id":"{}"}}"##,
                 json_escape(&invite_code.code),
                 invite_code.expires_at,
                 json_escape(&invite_code.invite_digest),
+                json_escape(&conversation_id),
             );
             response(200, &body, None, Some("application/json"))
         }
@@ -395,7 +421,9 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
                     Some("application/json"),
                 );
             };
-            let Ok(consumed) = RelayClient::new(endpoint).consume_invite_code_blocking(code) else {
+            let Ok(consumed) =
+                RelayClient::new(endpoint.clone()).consume_invite_code_blocking(code)
+            else {
                 return response(422, "invalid_invite", None, Some("application/json"));
             };
             let Some(invite) = verify_signed_invite_unbound(&consumed.invite, now) else {
@@ -418,6 +446,49 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             if let Err(error) = authority.stage_peer(invite.clone(), now, store) {
                 return pairing_error(error);
             }
+            let Some(conversation_id) = invite.conversation_id.as_deref() else {
+                return response(
+                    409,
+                    "invite_missing_conversation",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(identity) = identity else {
+                return response(503, "identity_unavailable", None, None);
+            };
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            let key_package = match catalog.prepare(
+                conversation_id,
+                mls_device_credential(&identity.account_id, &identity.device_id),
+            ) {
+                Ok(value) => value,
+                Err(_) => return response(503, "session_unavailable", None, None),
+            };
+            let pairing_response = serde_json::json!({
+                "kind": "key-package",
+                "conversation_id": conversation_id,
+                "account_id": identity.account_id,
+                "device_id": identity.device_id,
+                "key_package": hex_bytes(&key_package),
+                "relay_origin": authority.relay_origin,
+                "inbox_url": authority.inbox_url,
+            });
+            if RelayClient::new(endpoint.clone())
+                .write_pairing_response_blocking(code, &pairing_response)
+                .is_err()
+            {
+                return response(
+                    503,
+                    "pairing_rendezvous_unavailable",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            authority.pending_rendezvous_code = Some(code.to_owned());
+            authority.pending_conversation_id = Some(conversation_id.to_owned());
             let safety_number = authority.pairing.safety_number().unwrap_or_default();
             let inbox_url = invite
                 .inbox_url
@@ -427,12 +498,13 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             response(
                 200,
                 &format!(
-                    r##"{{"staged":true,"state":"verified","safety_verified":false,"safety_number":"{}","account_id":"{}","device_id":"{}","expires_at":{},"inbox_url":{}}}"##,
+                    r##"{{"staged":true,"state":"verified","safety_verified":false,"safety_number":"{}","account_id":"{}","device_id":"{}","expires_at":{},"inbox_url":{},"conversation_id":"{}"}}"##,
                     json_escape(&safety_number),
                     json_escape(&invite.account_id),
                     json_escape(&invite.device_id),
                     invite.expires_at,
                     inbox_url,
+                    json_escape(conversation_id),
                 ),
                 None,
                 Some("application/json"),
@@ -546,6 +618,274 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             );
             response(200, &body, None, Some("application/json"))
         }
+        ("POST", "/local-api/pairing/auto-sync") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let Some(code) = json_string(request.body, "invite_code") else {
+                return response(400, "invalid_invite", None, Some("application/json"));
+            };
+            if authority.pending_rendezvous_code.as_deref() != Some(code) {
+                return response(
+                    409,
+                    "pairing_rendezvous_unknown",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            if authority.pending_key_package.is_some() {
+                let safety_number = authority.pairing.safety_number().unwrap_or_default();
+                return response(
+                    200,
+                    &format!(
+                        r##"{{"state":"verified","safety_verified":false,"safety_number":"{}"}}"##,
+                        json_escape(&safety_number)
+                    ),
+                    None,
+                    Some("application/json"),
+                );
+            }
+            let Ok(endpoint) = RelayEndpoint::for_public_origin_with_pin(
+                &authority.relay_origin,
+                authority.relay_tls_pin,
+            ) else {
+                return response(503, "relay_unavailable", None, None);
+            };
+            let Ok(Some(rendezvous)) =
+                RelayClient::new(endpoint).read_pairing_response_blocking(code)
+            else {
+                return response(
+                    200,
+                    r##"{"state":"waiting"}"##,
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(package_response) = rendezvous.get("keyPackage") else {
+                return response(
+                    200,
+                    r##"{"state":"waiting"}"##,
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(conversation_id) = package_response
+                .get("conversation_id")
+                .and_then(serde_json::Value::as_str)
+            else {
+                return response(
+                    422,
+                    "invalid_pairing_response",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            if authority.pending_conversation_id.as_deref() != Some(conversation_id) {
+                return response(
+                    422,
+                    "pairing_conversation_mismatch",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            let Some(account_id) = package_response
+                .get("account_id")
+                .and_then(serde_json::Value::as_str)
+            else {
+                return response(
+                    422,
+                    "invalid_pairing_response",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(device_id) = package_response
+                .get("device_id")
+                .and_then(serde_json::Value::as_str)
+            else {
+                return response(
+                    422,
+                    "invalid_pairing_response",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(key_package) = package_response
+                .get("key_package")
+                .and_then(serde_json::Value::as_str)
+                .and_then(hex_decode)
+            else {
+                return response(
+                    422,
+                    "invalid_pairing_response",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(relay_origin) = package_response
+                .get("relay_origin")
+                .and_then(serde_json::Value::as_str)
+            else {
+                return response(
+                    422,
+                    "invalid_pairing_response",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(inbox_url) = package_response
+                .get("inbox_url")
+                .and_then(serde_json::Value::as_str)
+            else {
+                return response(
+                    422,
+                    "invalid_pairing_response",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            if validate_bound_inbox_url(relay_origin, inbox_url).is_err()
+                || account_id == authority.account_id
+            {
+                return response(
+                    422,
+                    "invalid_pairing_response",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            let peer = VerifiedInvite {
+                account_id: account_id.to_owned(),
+                device_id: device_id.to_owned(),
+                expires_at: now.saturating_add(600),
+                relay_origin: relay_origin.to_owned(),
+                inbox_url: Some(inbox_url.to_owned()),
+                conversation_id: Some(conversation_id.to_owned()),
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            if let Err(error) = authority.stage_peer(peer, now, store) {
+                return pairing_error(error);
+            }
+            authority.pending_key_package = Some(key_package);
+            let safety_number = authority.pairing.safety_number().unwrap_or_default();
+            response(
+                200,
+                &format!(
+                    r##"{{"state":"verified","safety_verified":false,"safety_number":"{}","account_id":"{}","device_id":"{}","conversation_id":"{}","relay_origin":"{}","inbox_url":"{}"}}"##,
+                    json_escape(&safety_number),
+                    json_escape(account_id),
+                    json_escape(device_id),
+                    json_escape(conversation_id),
+                    json_escape(relay_origin),
+                    json_escape(inbox_url)
+                ),
+                None,
+                Some("application/json"),
+            )
+        }
+        ("POST", "/local-api/pairing/complete-session") => {
+            if let Err(reply) = authorize_api(bridge, &request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "pairing_unavailable", None, None);
+            };
+            let Some(code) = json_string(request.body, "invite_code") else {
+                return response(400, "invalid_invite", None, Some("application/json"));
+            };
+            if authority.pending_rendezvous_code.as_deref() != Some(code) {
+                return response(
+                    409,
+                    "pairing_rendezvous_unknown",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            let Some(conversation_id) = authority.pending_conversation_id.clone() else {
+                return response(
+                    409,
+                    "pairing_conversation_unknown",
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Ok(endpoint) = RelayEndpoint::for_public_origin_with_pin(
+                &authority.relay_origin,
+                authority.relay_tls_pin,
+            ) else {
+                return response(503, "relay_unavailable", None, None);
+            };
+            let Ok(Some(rendezvous)) =
+                RelayClient::new(endpoint).read_pairing_response_blocking(code)
+            else {
+                return response(
+                    200,
+                    r##"{"state":"waiting"}"##,
+                    None,
+                    Some("application/json"),
+                );
+            };
+            let Some(welcome_response) = rendezvous.get("welcome") else {
+                return response(
+                    200,
+                    r##"{"state":"waiting"}"##,
+                    None,
+                    Some("application/json"),
+                );
+            };
+            if welcome_response
+                .get("conversation_id")
+                .and_then(serde_json::Value::as_str)
+                != Some(conversation_id.as_str())
+            {
+                return response(
+                    422,
+                    "pairing_conversation_mismatch",
+                    None,
+                    Some("application/json"),
+                );
+            }
+            let Some(welcome) = welcome_response
+                .get("welcome")
+                .and_then(serde_json::Value::as_str)
+                .and_then(hex_decode)
+            else {
+                return response(422, "invalid_welcome", None, Some("application/json"));
+            };
+            let Some(identity) = identity else {
+                return response(503, "identity_unavailable", None, None);
+            };
+            let Some(catalog) = session_catalog.as_deref_mut() else {
+                return response(503, "session_unavailable", None, None);
+            };
+            let Some(store) = session_store.as_deref_mut() else {
+                return response(503, "storage_unavailable", None, None);
+            };
+            if catalog
+                .join(
+                    &conversation_id,
+                    mls_device_credential(&identity.account_id, &identity.device_id),
+                    &welcome,
+                    store,
+                )
+                .is_err()
+            {
+                return response(422, "invalid_welcome", None, Some("application/json"));
+            }
+            authority.pending_rendezvous_code = None;
+            authority.pending_conversation_id = None;
+            response(
+                200,
+                r##"{"state":"joined","joined":true}"##,
+                None,
+                Some("application/json"),
+            )
+        }
         ("GET", "/local-api/pairing/status") => {
             if let Err(reply) = authorize_api(bridge, &request, now) {
                 return reply;
@@ -656,12 +996,53 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             };
             match authority.approve_pairing(now, store) {
                 Ok(()) => match authority.register_approved_contact(now, store) {
-                    Ok(()) => response(
-                        200,
-                        r##"{"state":"established","approved":true}"##,
-                        None,
-                        Some("application/json"),
-                    ),
+                    Ok(()) => {
+                        if let (Some(key_package), Some(code), Some(conversation_id)) = (
+                            authority.pending_key_package.as_ref(),
+                            authority.pending_rendezvous_code.as_deref(),
+                            authority.pending_conversation_id.as_deref(),
+                        ) {
+                            let Some(catalog) = session_catalog.as_deref_mut() else {
+                                return response(503, "session_unavailable", None, None);
+                            };
+                            let welcome =
+                                match catalog.add_member(conversation_id, key_package, store) {
+                                    Ok(value) => value,
+                                    Err(_) => {
+                                        return response(503, "session_unavailable", None, None)
+                                    }
+                                };
+                            let Ok(endpoint) = RelayEndpoint::for_public_origin_with_pin(
+                                &authority.relay_origin,
+                                authority.relay_tls_pin,
+                            ) else {
+                                return response(503, "relay_unavailable", None, None);
+                            };
+                            let welcome_response = serde_json::json!({
+                                "kind": "welcome",
+                                "conversation_id": conversation_id,
+                                "welcome": hex_bytes(&welcome),
+                            });
+                            if RelayClient::new(endpoint)
+                                .write_pairing_response_blocking(code, &welcome_response)
+                                .is_err()
+                            {
+                                return response(
+                                    503,
+                                    "pairing_rendezvous_unavailable",
+                                    None,
+                                    Some("application/json"),
+                                );
+                            }
+                            authority.pending_key_package = None;
+                        }
+                        response(
+                            200,
+                            r##"{"state":"established","approved":true}"##,
+                            None,
+                            Some("application/json"),
+                        )
+                    }
                     Err(error) => contact_directory_error(error),
                 },
                 Err(error) => pairing_error(error),

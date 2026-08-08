@@ -150,7 +150,7 @@ async function publicInvite(daemon, relay) {
   const created = await daemon.api("POST", "/local-api/invites");
   assert.equal(created.status, 200, JSON.stringify(created.body));
   assert.equal(typeof created.body.signed_invite, "undefined", "browser API must not expose signed invite material");
-  return { code: created.body.invite_code, relay };
+  return { code: created.body.invite_code, conversationId: created.body.conversation_id, relay };
 }
 
 async function stageInvite(daemon, invitation) {
@@ -224,11 +224,12 @@ try {
   bob = await startDaemon(bobDir, 17421, relayA);
 
   const aliceInvite = await publicInvite(alice, relayA);
-  const bobInvite = await publicInvite(bob, relayA);
   const bobStaged = await stageInvite(bob, aliceInvite);
   const reusedInvite = await relayApi(relayA, "POST", "/api/v1/invite-codes/consume", { code: aliceInvite.code });
   assert.equal(reusedInvite.status, 404, JSON.stringify(reusedInvite.body));
-  const aliceStaged = await stageInvite(alice, bobInvite);
+  const autoWaiting = await alice.api("POST", "/local-api/pairing/auto-sync", { invite_code: aliceInvite.code });
+  assert.equal(autoWaiting.status, 200, JSON.stringify(autoWaiting.body));
+  const aliceStaged = autoWaiting.body;
   assert.equal(bobStaged.safety_number, aliceStaged.safety_number);
   assert.equal((await bob.api("POST", "/local-api/pairing/verify-safety", { safety_number: bobStaged.safety_number })).status, 200);
   assert.equal((await alice.api("POST", "/local-api/pairing/verify-safety", { safety_number: aliceStaged.safety_number })).status, 200);
@@ -239,9 +240,7 @@ try {
   assert.equal(contacts.body.contacts.length, 1);
   assert.equal((await alice.api("POST", "/local-api/contacts/alias", { account_id: contacts.body.contacts[0].account_id, alias: "Bob" })).status, 200);
 
-  const conversationId = "acceptance-repair-conversation";
-  assert.equal((await alice.api("POST", "/local-api/session/create", { conversation_id: conversationId })).status, 201);
-  assert.equal((await alice.api("POST", "/local-api/contacts/bind-conversation", { account_id: contacts.body.contacts[0].account_id, conversation_id: conversationId })).status, 200);
+  const conversationId = aliceInvite.conversationId;
   const conversations = await alice.api("GET", "/local-api/conversations");
   assert.deepEqual(conversations.body.conversations, [conversationId]);
   const boundContacts = await alice.api("GET", "/local-api/contacts");
@@ -249,10 +248,8 @@ try {
   assert.equal((await alice.api("POST", "/local-api/contacts/read", { account_id: contacts.body.contacts[0].account_id })).status, 200);
   const bobContacts = await bob.api("GET", "/local-api/contacts");
   assert.equal(bobContacts.body.contacts.length, 1);
-  const bobPackage = await bob.api("POST", "/local-api/session/prepare", { conversation_id: conversationId });
-  const welcome = await alice.api("POST", "/local-api/session/add-member", { conversation_id: conversationId, key_package: bobPackage.body.key_package });
-  assert.equal((await bob.api("POST", "/local-api/session/join", { conversation_id: conversationId, welcome: welcome.body.welcome })).status, 200, JSON.stringify(welcome.body));
-  assert.equal((await bob.api("POST", "/local-api/contacts/bind-conversation", { account_id: bobContacts.body.contacts[0].account_id, conversation_id: conversationId })).status, 200);
+  const joined = await bob.api("POST", "/local-api/pairing/complete-session", { invite_code: aliceInvite.code });
+  assert.equal(joined.status, 200, JSON.stringify(joined.body));
   const ciphertext = await alice.api("POST", "/local-api/session/send", { conversation_id: conversationId, plaintext: "repair-flow" });
   assert.equal(ciphertext.status, 200);
   const invalidExpiry = await alice.api("POST", "/local-api/session/send", { conversation_id: conversationId, plaintext: "expired", expires_at: Math.floor(Date.now() / 1000) - 1 });

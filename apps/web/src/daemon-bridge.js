@@ -282,6 +282,14 @@ export async function connectDaemonBridge({
     unverifySafety: () => request("/local-api/pairing/unverify-safety", { method: "POST" }),
     approvePairing: () => request("/local-api/pairing/approve", { method: "POST" }),
     rejectPairing: () => request("/local-api/pairing/reject", { method: "POST" }),
+    autoSyncPairing: (inviteCode) => request("/local-api/pairing/auto-sync", {
+      method: "POST",
+      body: JSON.stringify({ invite_code: inviteCode }),
+    }),
+    completePairingSession: (inviteCode) => request("/local-api/pairing/complete-session", {
+      method: "POST",
+      body: JSON.stringify({ invite_code: inviteCode }),
+    }),
     createInvite: () => request("/local-api/invites", { method: "POST" }),
     consumeInvite: (relayOrigin, inviteCode) => request("/local-api/invites/consume", {
       method: "POST",

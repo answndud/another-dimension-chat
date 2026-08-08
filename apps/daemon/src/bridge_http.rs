@@ -27,7 +27,8 @@ mod session_routes;
 
 use attachment_routes::handle_attachment_route;
 use authority::{
-    mls_device_credential, verify_relay_receipt, verify_signed_invite, verify_signed_invite_unbound,
+    mls_device_credential, validate_bound_inbox_url, verify_relay_receipt, verify_signed_invite,
+    verify_signed_invite_unbound,
 };
 pub use authority::{IdentityView, InviteAuthority, VerifiedInvite};
 use authority_routes::handle_authority_route;

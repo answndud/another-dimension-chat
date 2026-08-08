@@ -33,6 +33,8 @@ const groupedMessages = [
     "pairing_invalid_transition", "pairing_expired", "pairing_duplicate", "self_invite",
     "safety_number_mismatch", "invalid_invite", "invite_unavailable",
     "invalid_relay_receipt", "randomness_unavailable",
+    "invalid_pairing_response", "invite_missing_conversation", "pairing_conversation_mismatch",
+    "pairing_conversation_unknown", "pairing_rendezvous_unavailable", "pairing_rendezvous_unknown",
   ]],
   [CONTACT_MESSAGE, [
     "contact_blocked", "contacts_unavailable", "contact_device_conflict", "contact_not_found",

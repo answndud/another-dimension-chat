@@ -147,10 +147,14 @@ test("invite rendezvous stays behind authenticated daemon routes", async () => {
   });
   await bridge.createInvite();
   await bridge.consumeInvite("https://relay.example", "CODE");
+  await bridge.autoSyncPairing("CODE");
+  await bridge.completePairingSession("CODE");
   await bridge.revokeInvite("CODE");
   assert.deepEqual(calls.slice(1).map(({ url, options }) => [url, JSON.parse(options.body || "{}")]), [
     ["http://127.0.0.1:1420/local-api/invites", {}],
     ["http://127.0.0.1:1420/local-api/invites/consume", { relay_origin: "https://relay.example", invite_code: "CODE" }],
+    ["http://127.0.0.1:1420/local-api/pairing/auto-sync", { invite_code: "CODE" }],
+    ["http://127.0.0.1:1420/local-api/pairing/complete-session", { invite_code: "CODE" }],
     ["http://127.0.0.1:1420/local-api/invites/revoke", { invite_code: "CODE" }],
   ]);
 });

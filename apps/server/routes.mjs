@@ -2,7 +2,7 @@ import { sign } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { open, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { consumeInviteCode, createInviteCode, inviteCodeHash, invitePayloadDigest, purgeInviteCodes, revokeInviteCode, validateDaemonInvite } from "./invite-code.mjs";
+import { consumeInviteCode, createInviteCode, inviteCodeHash, invitePayloadDigest, purgeInviteCodes, readInvitePairingResponse, revokeInviteCode, validateDaemonInvite, writeInvitePairingResponse } from "./invite-code.mjs";
 import { errorBody, errorStatus } from "./errors.mjs";
 import { corsHeaders, hasJsonContentType, json, mimeTypeFor, readBody, readBodyBuffer, safeFile, securityHeaders } from "./http.mjs";
 
@@ -151,7 +151,7 @@ export function createRelayRequestHandler(context) {
       try {
         if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
         const body = JSON.parse(await readBody(req, 8 * 1024, requestTimeoutMs));
-        const before = routeState.inviteCodes.slice();
+        const before = structuredClone(routeState.inviteCodes);
         const result = consumeInviteCode(routeState.inviteCodes, body?.code);
         if (!result.ok) { json(res, 404, { consumed: false, error: result.reason }, headers); return; }
         try { await persistInviteCodes(); } catch (error) { routeState.inviteCodes = before; throw error; }
@@ -160,6 +160,34 @@ export function createRelayRequestHandler(context) {
         json(res, 200, { consumed: true, invite: result.record.invite, inviteDigest: result.record.inviteDigest, receipt }, headers);
       } catch (error) {
         json(res, errorStatus(error), errorBody(error, { consumed: false }), headers);
+      }
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/v1/invite-codes/pairing-response" && ["POST", "GET"].includes(req.method)) {
+      if (!consumeRateLimit(req, "pairing-response", 60)) { json(res, 429, { error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
+      try {
+        if (req.method === "POST") {
+          if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
+          const body = JSON.parse(await readBody(req, 132 * 1024, requestTimeoutMs));
+          if (body?.read === true) {
+            const result = readInvitePairingResponse(routeState.inviteCodes, body?.code);
+            if (!result.ok) { json(res, 404, { available: false, error: result.reason }, headers); return; }
+            json(res, 200, { available: true, response: result.response }, headers);
+            return;
+          }
+          const before = structuredClone(routeState.inviteCodes);
+          const result = writeInvitePairingResponse(routeState.inviteCodes, body?.code, body?.response);
+          if (!result.ok) { json(res, 404, { accepted: false, error: result.reason }, headers); return; }
+          try { await persistInviteCodes(); } catch (error) { routeState.inviteCodes = before; throw error; }
+          json(res, 201, { accepted: true }, headers);
+        } else {
+          const result = readInvitePairingResponse(routeState.inviteCodes, requestUrl.searchParams.get("code"));
+          if (!result.ok) { json(res, 404, { available: false, error: result.reason }, headers); return; }
+          json(res, 200, { available: true, response: result.response }, headers);
+        }
+      } catch (error) {
+        json(res, errorStatus(error), errorBody(error, { accepted: false }), headers);
       }
       return;
     }

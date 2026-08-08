@@ -22,6 +22,9 @@ pub struct InviteAuthority {
     pub(crate) relay_tls_pin: Option<TlsCertificatePin>,
     pub(crate) relay_trust: Option<RelayTrust>,
     pub(crate) pending: Option<([u8; 32], u64)>,
+    pub(crate) pending_rendezvous_code: Option<String>,
+    pub(crate) pending_conversation_id: Option<String>,
+    pub(crate) pending_key_package: Option<Vec<u8>>,
     pub(crate) staged_peer: Option<VerifiedInvite>,
     pub(crate) pairing: PairingSession,
     pub(crate) contacts: ContactDirectory,
@@ -41,6 +44,8 @@ pub struct VerifiedInvite {
     pub relay_origin: String,
     #[serde(default)]
     pub inbox_url: Option<String>,
+    #[serde(default)]
+    pub conversation_id: Option<String>,
 }
 
 pub fn verify_signed_invite(code: &str, signed_invite: &str, now: u64) -> Option<VerifiedInvite> {
@@ -81,10 +86,20 @@ pub(crate) fn verify_signed_invite_with_code(
         .next()
         .filter(|value| !value.is_empty())
         .map(str::to_owned);
+    let conversation_id = lines
+        .next()
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned);
     if lines.next().is_some()
         || !account_id.starts_with("ad1pk")
         || now >= expires_at
         || expires_at > now.saturating_add(MAX_INVITE_TTL_SECONDS)
+    {
+        return None;
+    }
+    if conversation_id
+        .as_deref()
+        .is_some_and(|value| !value.starts_with("adconv") || value.len() > 80)
     {
         return None;
     }
@@ -121,6 +136,7 @@ pub(crate) fn verify_signed_invite_with_code(
         expires_at,
         relay_origin,
         inbox_url,
+        conversation_id,
     })
 }
 
@@ -269,6 +285,9 @@ impl InviteAuthority {
             relay_tls_pin,
             relay_trust,
             pending: None,
+            pending_rendezvous_code: None,
+            pending_conversation_id: None,
+            pending_key_package: None,
             staged_peer: None,
             pairing: PairingSession::new(local_account_id, device_id),
             contacts: ContactDirectory::new(),
@@ -460,6 +479,8 @@ impl InviteAuthority {
             .snapshot()
             .peer
             .ok_or(ContactDirectoryError::ContactNotFound)?;
+        let conversation_id = peer.conversation_id.clone();
+        let account_id = peer.account_id.clone();
         self.contacts.upsert_verified_with_inbox(
             peer.account_id,
             peer.device_id,
@@ -467,6 +488,10 @@ impl InviteAuthority {
             peer.inbox_url,
             now,
         )?;
+        if let Some(conversation_id) = conversation_id {
+            self.contacts
+                .bind_conversation(&account_id, &conversation_id)?;
+        }
         self.contacts
             .persist(store)
             .map_err(|_| ContactDirectoryError::Corrupt)
@@ -560,7 +585,11 @@ impl InviteAuthority {
             .map_err(|_| ContactDirectoryError::Corrupt)
     }
 
-    pub(crate) fn create(&mut self, now: u64) -> Option<(String, String)> {
+    pub(crate) fn create(
+        &mut self,
+        now: u64,
+        conversation_id: Option<&str>,
+    ) -> Option<(String, String)> {
         let root = self.root.as_ref()?;
         let mut bytes = [0_u8; 32];
         getrandom::fill(&mut bytes).ok()?;
@@ -573,13 +602,14 @@ impl InviteAuthority {
             .collect();
         let code_hash: [u8; 32] = Sha256::digest(normalized_code.as_bytes()).into();
         let payload = format!(
-            "another-dimension/invite/v1\n{}\n{}\n{}\n{}\n{}\n{}",
+            "another-dimension/invite/v1\n{}\n{}\n{}\n{}\n{}\n{}\n{}",
             root.account_id().as_str(),
             self.device_id,
             hex_bytes(&code_hash),
             expires_at,
             self.relay_origin,
-            self.inbox_url.as_deref().unwrap_or("")
+            self.inbox_url.as_deref().unwrap_or(""),
+            conversation_id.unwrap_or("")
         );
         let signature = root.sign(payload.as_bytes());
         self.pending = Some((code_hash, expires_at));

@@ -1,12 +1,67 @@
 import { state } from "./daemon-state.js";
-import { renderDaemonRelayTrust, renderDaemonSafetyControls, decodeHexText, decodeHexBytes, encodeHex, mergeDaemonMessages, newAttachmentBlobId, newDaemonConversationId } from "./daemon-view.js";
+import { renderDaemonRelayTrust, renderDaemonSafetyControls, decodeHexText, decodeHexBytes, encodeHex, mergeDaemonMessages, newAttachmentBlobId } from "./daemon-view.js";
 import { daemonErrorMessage } from "./daemon-errors.js";
 
 let activeBindingController;
+let pairingSyncTimer;
+let welcomeSyncTimer;
 
 function bindListener(target, eventName, handler) {
   if (!target) return;
   target.addEventListener(eventName, handler, { signal: activeBindingController.signal });
+}
+
+function schedulePairingSync(render) {
+  const inviteCode = state.daemonInvite?.invite_code || "";
+  if (!inviteCode || state.daemonPairing?.state === "established" || state.daemonReceivedInvite?.account_id) {
+    if (pairingSyncTimer) clearTimeout(pairingSyncTimer);
+    pairingSyncTimer = undefined;
+    return;
+  }
+  if (pairingSyncTimer) return;
+  pairingSyncTimer = setTimeout(async () => {
+    pairingSyncTimer = undefined;
+    try {
+      const result = await state.daemonBridge.autoSyncPairing(inviteCode);
+      if (result.state === "verified") {
+        state.daemonPairing = result;
+        state.daemonReceivedInvite = result;
+        state.daemonPeerInboxUrl = result.inbox_url || "";
+        state.daemonConversationId = result.conversation_id || state.daemonConversationId;
+        state.notice = "상대 데몬이 연결 자료를 준비했습니다. 안전 번호를 비교한 뒤 승인하세요.";
+        render();
+        return;
+      }
+    } catch (error) {
+      if (error.code !== "pairing_rendezvous_unknown") state.error = daemonErrorMessage(error);
+    }
+    schedulePairingSync(render);
+  }, 15000);
+}
+
+function scheduleWelcomeSync(render) {
+  const inviteCode = state.daemonConsumedInvite || "";
+  if (!inviteCode || state.daemonPairing?.state !== "established") {
+    if (welcomeSyncTimer) clearTimeout(welcomeSyncTimer);
+    welcomeSyncTimer = undefined;
+    return;
+  }
+  if (welcomeSyncTimer) return;
+  welcomeSyncTimer = setTimeout(async () => {
+    welcomeSyncTimer = undefined;
+    try {
+      const result = await state.daemonBridge.completePairingSession(inviteCode);
+      if (result.state === "joined") {
+        state.notice = "대화 연결이 완료되었습니다. 이제 메시지를 보낼 수 있습니다.";
+        state.error = "";
+        render();
+        return;
+      }
+    } catch (error) {
+      if (error.code !== "pairing_rendezvous_unknown") state.error = daemonErrorMessage(error);
+    }
+    scheduleWelcomeSync(render);
+  }, 15000);
 }
 
 function applyMessagePage(result, replace) {
@@ -105,39 +160,6 @@ export function bindDaemonSession({ render }) {
     }
     render();
   };
-  bindListener(document.querySelector("#daemon-session-create"), "click", () => run(async () => {
-    let conversationId = document.querySelector("#daemon-conversation-id")?.value.trim() || "";
-    if (!conversationId && state.daemonSelectedContact) {
-      conversationId = newDaemonConversationId();
-      state.daemonConversationId = conversationId;
-    }
-    if (!conversationId) conversationId = getConversationId();
-    await bridge.createConversation(conversationId);
-    if (state.daemonSelectedContact) await bridge.bindContactConversation(state.daemonSelectedContact, conversationId);
-    state.daemonConversationIds = [...new Set([...state.daemonConversationIds, conversationId])];
-    if (state.daemonSelectedContact) state.daemonContacts = (await bridge.contacts()).contacts || state.daemonContacts;
-  }, "대화 세션을 만들었습니다. 다음으로 연결 자료를 생성하세요."));
-  bindListener(document.querySelector("#daemon-session-prepare"), "click", () => run(async () => {
-    const conversationId = getConversationId();
-    const result = await bridge.prepareConversation(conversationId);
-    state.daemonKeyPackage = result.key_package || "";
-    if (!state.daemonKeyPackage) throw new Error("데몬이 KeyPackage를 반환하지 않았습니다.");
-  }, "내 연결 자료를 만들었습니다. 안전한 별도 채널로 상대 장치에 전달하세요."));
-  bindListener(document.querySelector("#daemon-session-join"), "click", () => run(async () => {
-    const conversationId = getConversationId();
-    const welcome = document.querySelector("#daemon-welcome")?.value.trim() || "";
-    if (!welcome) throw new Error("상대 장치의 Welcome을 입력하세요.");
-    state.daemonWelcome = welcome;
-    await bridge.joinConversation(conversationId, welcome);
-  }, "상대 장치의 Welcome을 검증하고 대화에 참여했습니다."));
-  bindListener(document.querySelector("#daemon-session-add-member"), "click", () => run(async () => {
-    const conversationId = getConversationId();
-    const keyPackage = document.querySelector("#daemon-peer-key-package")?.value.trim() || "";
-    if (!keyPackage) throw new Error("상대 장치의 KeyPackage를 입력하세요.");
-    const result = await bridge.addMember(conversationId, keyPackage);
-    state.daemonWelcome = result.welcome || "";
-    if (!state.daemonWelcome) throw new Error("데몬이 Welcome을 반환하지 않았습니다.");
-  }, "상대 장치를 추가했습니다. 생성된 Welcome을 상대 장치에 전달하세요."));
   bindListener(document.querySelector("#daemon-message-send"), "click", () => run(async () => {
     const conversationId = getConversationId();
     const message = document.querySelector("#daemon-message")?.value || "";
@@ -292,13 +314,6 @@ export function bindDaemonSession({ render }) {
     state.daemonDeliveryState = result.state || "relay-accepted";
     state.daemonOutgoingMessages = state.daemonOutgoingMessages.map((item) => item.id === state.daemonDeliveryDigest ? { ...item, state: state.daemonDeliveryState } : item);
   }, "암호화된 봉투를 relay로 다시 접수했습니다."));
-  bindListener(document.querySelector("#daemon-message-receive"), "click", () => run(async () => {
-    const conversationId = getConversationId();
-    const ciphertext = document.querySelector("#daemon-incoming-ciphertext")?.value.trim() || "";
-    if (!ciphertext) throw new Error("받은 암호문을 입력하세요.");
-    const result = await bridge.receiveMessage(conversationId, ciphertext);
-    state.daemonPlaintext = decodeHexText(result.plaintext);
-  }, "암호문을 데몬에서 복호화했습니다."));
   bindListener(document.querySelector("#daemon-delivery-sync"), "click", () => run(async () => {
     const conversationId = getConversationId();
     const inboxUrl = document.querySelector("#daemon-inbox-url")?.value.trim() || "";
@@ -615,11 +630,14 @@ export function bindDaemonWorkspace({ render }) {
         state.daemonReceivedInvite = staged;
         state.daemonPairing = staged;
         state.daemonPeerInboxUrl = staged.inbox_url || "";
-        state.daemonConsumedInvite = "";
+        state.daemonConversationId = staged.conversation_id || state.daemonConversationId;
+        state.daemonConsumedInvite = document.querySelector("#received-invite-code").value.trim();
         state.notice = "초대 코드를 한 번만 사용하도록 폐기하고 보안 데몬에서 상대 신원을 검증했습니다. 승인 전에는 연결되지 않습니다.";
         state.error = "";
       } catch (error) { state.error = daemonErrorMessage(error); }
       render();
     });
     bindDaemonSession({ render });
+    schedulePairingSync(render);
+    scheduleWelcomeSync(render);
 }

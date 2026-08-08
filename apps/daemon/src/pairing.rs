@@ -273,6 +273,7 @@ mod tests {
             expires_at,
             relay_origin: "https://relay.example".into(),
             inbox_url: None,
+            conversation_id: None,
         }
     }
 

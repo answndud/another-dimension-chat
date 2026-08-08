@@ -22,8 +22,6 @@ export const state = {
   daemonSelectedContact: "",
   daemonLocked: false,
   daemonConversationId: "",
-  daemonKeyPackage: "",
-  daemonWelcome: "",
   daemonCiphertext: "",
   daemonPlaintext: "",
   daemonInboxUrl: "",
