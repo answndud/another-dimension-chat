@@ -1,8 +1,11 @@
 # 독립 보안 검토 Evidence Index
 
-> **상태: 폐기된 browser 제품 evidence index.** 삭제된 generated WASM,
-> `web-runtime.js`, IndexedDB/Olm 경로를 현재 daemon 증거로 제출하면 안 됩니다.
-> 새 검토 bundle이 작성되기 전까지 역사 기록으로만 보존합니다.
+> **상태: daemon 전환 이전 경로를 설명하는 역사적 evidence index.** 삭제된
+> generated WASM, `web-runtime.js`, IndexedDB/Olm 경로를 현재 daemon 증거로
+> 제출하면 안 됩니다. 현재 검토 패킷은 `scripts/prepare_security_review.mjs`로
+> clean Git revision에서 생성하고, source/review 해시는
+> `verify_security_review_bundle.mjs`와 public handoff gate에서 검증합니다.
+> 이 자동화는 실제 독립 검토자의 판단·서명·신원 확인을 대신하지 않습니다.
 
 이 문서는 자동 검증 결과와 독립 보안 검토의 경계를 고정하는 인덱스다.
 테스트가 통과해도 reviewer의 판단·서명·감사 보고서를 대신하지 않는다.

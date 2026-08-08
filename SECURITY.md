@@ -60,10 +60,11 @@ distribution remains a release blocker.
 The current executable product boundary is `reference/PRODUCT_BOUNDARY.md` and
 `reference/product_boundary.json`. Several older requirement, crypto, storage,
 UI, and evidence notes under `reference/` are retained only as explicitly
-labelled historical snapshots while the daemon review packet is rebuilt. They
-must not be used as current implementation evidence. Incident/key compromise
-procedures remain in `reference/INCIDENT_RESPONSE.md`; no repository document is
-an audit report or reviewer sign-off.
+labelled historical snapshots. The daemon review packet can be generated from a
+clean Git revision with `scripts/prepare_security_review.mjs` and checked with
+the source/review hash gates, but no repository document is an audit report or
+reviewer sign-off. Incident/key compromise procedures remain in
+`reference/INCIDENT_RESPONSE.md`.
 
 The operational release trust procedure, including offline bootstrap, two-channel
 fingerprint confirmation, rotation, revocation, and the redacted receipt template,
