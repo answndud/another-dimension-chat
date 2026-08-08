@@ -63,10 +63,23 @@ printf '%s\n' 'backup passphrase' | ./another-dimension-server backup --file /se
 printf '%s\n' 'backup passphrase' | ./another-dimension-server restore --file /secure/path/relay.adrelaybackup
 ```
 
+설치 런처를 사용하는 경우에는 같은 작업을 다음처럼 실행합니다. 복원은
+relay를 중지한 상태에서 비어 있는 데이터 폴더를 대상으로만 수행됩니다.
+
+```sh
+printf '%s\n' 'backup passphrase' | ./another-dimension relay-backup /secure/path/relay.adrelaybackup
+printf '%s\n' 'backup passphrase' | ./another-dimension relay-restore /secure/path/relay.adrelaybackup
+```
+
 Restore is accepted only for an empty data directory and validates the AES-GCM
 authentication tag, every file hash, SQLite integrity, and the allowed file
 list before atomically replacing the empty directory. The backup contains relay
 transport state and encrypted blobs, not decrypted chat text.
+백업 파일은 자동으로 삭제하거나 덮어쓰지 않는 immutable archive입니다. 운영자는
+별도 보호 저장소에 최근 3개 이상과 30일 이상 보관하고, 보관 기간이 지난 파일은
+복원 가능성·사건 대응 필요성을 확인한 뒤 수동으로 폐기해야 합니다. 복원 검증이
+실패하면 대상 데이터 폴더를 변경하지 않으며, 기존 relay 데이터는 자동으로
+삭제되지 않습니다.
 - `AD_WEB_DIST_DIR` — browser bundle directory.
 - `AD_INBOX_TTL_MS` — envelope retention period; default seven days.
 - `AD_TLS_KEY_FILE` and `AD_TLS_CERT_FILE` — optional paired PEM files for

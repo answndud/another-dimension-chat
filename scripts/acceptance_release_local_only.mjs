@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
-import { chmod, cp, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, mkdtemp, readFile, rename, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,6 +38,18 @@ async function run(command, args, options = {}) {
     let output = "";
     child.stdout.on("data", (chunk) => { output += chunk; });
     child.stderr.on("data", (chunk) => { output += chunk; });
+    child.on("error", reject);
+    child.on("close", (code) => resolve({ code, output }));
+  });
+}
+
+async function runWithInput(command, args, input, options = {}) {
+  const child = spawn(command, args, { cwd: projectDir, stdio: ["pipe", "pipe", "pipe"], ...options });
+  let output = "";
+  child.stdout.on("data", (chunk) => { output += chunk; });
+  child.stderr.on("data", (chunk) => { output += chunk; });
+  child.stdin.end(input);
+  return new Promise((resolve, reject) => {
     child.on("error", reject);
     child.on("close", (code) => resolve({ code, output }));
   });
@@ -193,6 +205,18 @@ await Promise.all([
   new Promise((resolveExit) => releaseDaemon.once("exit", resolveExit)),
   new Promise((resolveExit) => releaseRelay.once("exit", resolveExit)),
 ]);
+const relayBackupFile = join(root, "relay.adrelaybackup");
+const backupResult = await runWithInput(join(install, "another-dimension"), ["relay-backup", relayBackupFile], "relay-acceptance-passphrase\n", noNodeEnvironment);
+assert.equal(backupResult.code, 0, backupResult.output);
+const relayDataBeforeRestore = join(root, "relay-before-restore");
+await rename(join(data, "relay"), relayDataBeforeRestore);
+const wrongRestore = await runWithInput(join(install, "another-dimension"), ["relay-restore", relayBackupFile], "wrong-passphrase\n", noNodeEnvironment);
+assert.notEqual(wrongRestore.code, 0);
+assert.equal((await stat(relayDataBeforeRestore)).isDirectory(), true);
+assert.equal((await stat(join(data, "relay")).catch((error) => error.code === "ENOENT" ? null : Promise.reject(error))), null);
+const restoreResult = await runWithInput(join(install, "another-dimension"), ["relay-restore", relayBackupFile], "relay-acceptance-passphrase\n", noNodeEnvironment);
+assert.equal(restoreResult.code, 0, restoreResult.output);
+assert.equal((await stat(join(data, "relay", "relay.sqlite"))).isFile(), true);
 const archiveFlow = await run(join(install, "runtime-node"), [join(projectDir, "scripts/acceptance_daemon_repair.mjs")], {
   env: {
     ...process.env,

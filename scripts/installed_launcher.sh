@@ -88,6 +88,10 @@ case "${1:-help}" in
     [ -n "${2:-}" ] || { echo "사용법: $0 relay-backup FILE (암호문구는 stdin)" >&2; exit 2; }
     relay_pid_is_ours && { echo "백업 전 relay-stop을 실행하세요." >&2; exit 1; }
     exec "$ROOT/runtime-node" "$ROOT/scripts/relay_backup.mjs" backup --data-dir "$(relay_data)" --file "$2" ;;
+  relay-restore)
+    [ -n "${2:-}" ] || { echo "사용법: $0 relay-restore FILE (암호문구는 stdin)" >&2; exit 2; }
+    relay_pid_is_ours && { echo "복원 전 relay-stop을 실행하세요." >&2; exit 1; }
+    exec "$ROOT/runtime-node" "$ROOT/scripts/relay_backup.mjs" restore --data-dir "$(relay_data)" --file "$2" ;;
   update) shift; exec sh "$ROOT/scripts/update_local_server.sh" --install-root "$ROOT" "$@" ;;
   rollback) exec sh "$ROOT/scripts/update_local_server.sh" --install-root "$ROOT" --rollback ;;
   uninstall)
@@ -96,6 +100,6 @@ case "${1:-help}" in
     case "$ROOT" in /|"$HOME"|"$HOME"/|*..*) echo "unsafe installation path; refusing uninstall" >&2; exit 1;; esac
     rm -rf "$ROOT"; echo "설치 코드만 제거했습니다. daemon/relay 데이터는 보존됩니다." ;;
   help|-h|--help)
-    echo "사용법: $0 {init|start|status|stop|doctor|recovery-export|recovery-import|relay-start|relay-stop|relay-status|relay-backup|update|rollback|uninstall}" ;;
+    echo "사용법: $0 {init|start|status|stop|doctor|recovery-export|recovery-import|relay-start|relay-stop|relay-status|relay-backup|relay-restore|update|rollback|uninstall}" ;;
   *) echo "알 수 없는 명령입니다. $0 help" >&2; exit 2 ;;
 esac
