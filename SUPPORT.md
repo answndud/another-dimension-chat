@@ -22,6 +22,26 @@ browser Olm, IndexedDB 키 저장소는 제품과 릴리스에서 제거되었�
 `verified-local`은 적힌 범위의 로컬 자동 검증만 뜻하며 공개 보안 승인이 아닙니다.
 `unverified` 항목은 지원한다고 주장하지 않습니다.
 
+`verified-local`로 올릴 수 있는 evidence는 단순히 “명령이 통과했다”는 로그가
+아닙니다. 다음 필드를 가진 redacted JSON이어야 합니다.
+
+```json
+{
+  "status": "verified-local",
+  "sourceRevision": "40자 이상인 실제 Git revision",
+  "archiveSha256": "서명된 release archive의 SHA-256 64자리",
+  "recordedAt": "2026-08-08T00:00:00Z",
+  "host": { "platform": "matrix의 정확한 platform", "browserVersion": "Chromium 정확한 버전" },
+  "runtime": "관찰한 daemon/runtime 버전",
+  "scope": "검증 범위를 제한적으로 설명",
+  "observations": { "steps": ["관찰한 단계"], "initializationErrorShown": false },
+  "redaction": { "passed": true }
+}
+```
+
+archive hash, source revision, host/browser version이 하나라도 빠지거나 실제
+서명 archive와 연결되지 않으면 `unverified`로 남깁니다.
+
 ```sh
 node scripts/verify_support_matrix.mjs
 node scripts/verify_daemon_ui_artifact.mjs --daemon-ui-artifact
