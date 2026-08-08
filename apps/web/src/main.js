@@ -8,8 +8,13 @@ const app = document.querySelector("#app");
 
 function captureInteractionState() {
   const active = document.activeElement;
-  const focused = active?.id ? {
-    id: active.id,
+  const focusAttribute = active && !active.id
+    ? [...active.attributes].find((attribute) => attribute.name.startsWith("data-") && !attribute.name.startsWith("data-ad-listener"))
+    : null;
+  const focused = active?.id || focusAttribute ? {
+    id: active.id || undefined,
+    attributeName: focusAttribute?.name,
+    attributeValue: focusAttribute?.value,
     value: "value" in active ? active.value : undefined,
     selectionStart: typeof active.selectionStart === "number" ? active.selectionStart : undefined,
     selectionEnd: typeof active.selectionEnd === "number" ? active.selectionEnd : undefined,
@@ -19,8 +24,10 @@ function captureInteractionState() {
 }
 
 function restoreInteractionState(snapshot) {
-  if (snapshot.focused?.id) {
-    const node = document.getElementById(snapshot.focused.id);
+  if (snapshot.focused?.id || snapshot.focused?.attributeName) {
+    const node = snapshot.focused.id
+      ? document.getElementById(snapshot.focused.id)
+      : [...document.querySelectorAll(`[${snapshot.focused.attributeName}]`)].find((candidate) => candidate.getAttribute(snapshot.focused.attributeName) === snapshot.focused.attributeValue);
     if (node && snapshot.focused.value !== undefined && node.type !== "file") node.value = snapshot.focused.value;
     if (node && document.activeElement !== node) node.focus({ preventScroll: true });
     if (node && typeof snapshot.focused.selectionStart === "number" && typeof node.setSelectionRange === "function") {
