@@ -293,7 +293,9 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         .restore_received_attachments(&store)
         .map_err(|_| CliError::Storage(StorageError::CorruptStore))?;
     let bridge = LocalBridge::new(config.clone()).map_err(|_| CliError::Io)?;
-    let url = bridge.bootstrap_url("/").map_err(|_| CliError::Io)?;
+    let url = bridge
+        .bootstrap_url("/__ad_ui__/current")
+        .map_err(|_| CliError::Io)?;
     eprintln!("daemon bridge listening on 127.0.0.1:{port}");
     eprintln!("open once: {url}");
     if args.iter().any(|arg| arg == "--open") {

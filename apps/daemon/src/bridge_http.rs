@@ -71,6 +71,7 @@ use std::{path::Path, process::Command};
 
 const MAX_REQUEST_BYTES: usize = 192 * 1024;
 const EXCHANGE_PATH: &str = "/local-session/exchange";
+const BOOTSTRAP_UI_PATH: &str = "/__ad_ui__/current";
 const MAX_INVITE_TTL_SECONDS: u64 = 10 * 60;
 const COMPLETED_ATTACHMENT_TTL_SECONDS: u64 = 60 * 60;
 const MAX_COMPLETED_ATTACHMENT_COUNT: usize = 2;
@@ -153,8 +154,10 @@ pub(crate) fn handle_request_with_route_context(raw: &[u8], context: RouteContex
     }
     let ui_root = context.ui_root;
     match (request.method, request.path) {
-        ("GET", "/") | ("GET", "/index.html") => static_file(ui_root, "index.html")
-            .unwrap_or_else(|| response(404, "ui_not_found", None, None)),
+        ("GET", "/") | ("GET", "/index.html") | ("GET", BOOTSTRAP_UI_PATH) => {
+            static_file(ui_root, "index.html")
+                .unwrap_or_else(|| response(404, "ui_not_found", None, None))
+        }
         ("GET", path) if path.starts_with("/assets/") || path == "/manifest.webmanifest" => {
             let relative = path.trim_start_matches('/');
             static_file(ui_root, relative)
