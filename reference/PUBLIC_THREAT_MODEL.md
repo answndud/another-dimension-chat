@@ -1,203 +1,88 @@
 # Public Threat Model
 
-> **상태: daemon 전환 중인 위협 모델 스냅샷.** daemon trust-boundary 절은 방향을
-> 설명하지만 browser Olm/WASM 구현 주장과 상태 표는 최신 판정이 아닙니다. 현재
-> 공개 non-claim은 `SECURITY.md`, 제품 경계는 `PRODUCT_BOUNDARY.md`를 따릅니다.
+> **상태: 현재 daemon-first 제품의 public-safe 위협 모델.** 이 문서는
+> 보안 인증서나 독립 audit 결과가 아니다. 현재 `highRiskAllowed=false`이며,
+> 아래의 부분 구현·외부 evidence blocker를 이유로 민감한 통신을 승인하지 않는다.
 
-Another Dimension Chat is not a secure messenger release today.
-
-This document is the public-safe threat model for the unsigned experimental
-public beta. It describes the intended direction and the current beta
-boundary. It does not claim that the current build is safe for sensitive
-communication.
-
-## Requirement IDs
-
-| ID | Threat / asset | Required boundary | Current claim |
-| --- | --- | --- | --- |
-| TM-01 | Relay operator sees plaintext or private keys | Relay receives opaque envelopes only | Implemented guardrail; not independently audited |
-| TM-02 | Relay or proxy replaces browser JS/WASM | Static UI is separately verified; relay-only is the default | Release blocker |
-| TM-03 | Network observer correlates IP, timing, size, or endpoint | Explicit transport limitation or a verified anonymity route | No anonymity claim |
-| TM-04 | Browser/device/extension is compromised | Fail closed where possible and disclose endpoint limit | Not protected |
-| TM-05 | Capability, invite, or local profile leaks | Redaction, rotation, encrypted storage, and user warning | Partial implementation |
-| TM-06 | Queue abuse or relay failure loses messages | Bounded queue, explicit errors, and no silent discard | Availability not guaranteed |
-| TM-07 | User mistakes unsafe pairing or release | Safety confirmation and signed release verification | Prototype gate |
-
-## Daemon-first trust boundaries
-
-The production candidate is intentionally split into four independently
-reviewable boundaries. This is a security boundary, not merely a deployment
-diagram:
+## 제품 경계
 
 ```text
-human
-  │ explicit approval / visible warnings
-  ▼
-browser UI (untrusted renderer)
-  │ authenticated loopback bridge; no key ownership
-  ▼
-local security daemon (key/session/storage owner)
-  │ encrypted opaque envelopes only
-  ▼
+human approval
+    │
+    ▼
+Chromium UI (untrusted renderer)
+    │ one-time bootstrap + Origin/Host/version/CSRF
+    ▼
+local Rust daemon (identity/session/encrypted-store owner)
+    │ opaque bounded envelopes
+    ▼
 user-owned relay (untrusted delivery service)
 ```
 
-The browser must be treated as an untrusted renderer even when it is served
-from the same machine. A browser extension, injected script, stale service
-worker, malicious reverse proxy, or cross-origin page can influence the UI;
-none of these may be allowed to mint identity, export private keys, or submit
-messages without an authenticated daemon session and explicit user policy.
-The daemon must be treated as a separate local security boundary: it owns the
-Account Root Key, Device Key, session state, encrypted records, and recovery
-policy. The relay must be treated as an untrusted transport and must not be
-required to know a profile name, plaintext, private key, or global contact
-graph.
+전화번호·이메일·글로벌 계정·username 검색·중앙 contact discovery·중앙 메시지
+서버·push·클라우드 백업은 v0.1 범위가 아니다. relay는 계정 authority나 복호화
+서비스가 아니다. 삭제된 Tauri/native/browser Olm/WASM 경로는 현재 제품 증거가
+아니다.
 
-The current web prototype does not implement this daemon boundary. Its
-browser-local cryptographic state is therefore not evidence that the future
-daemon design is implemented.
+## 위협과 현재 판정
 
-## Attack-surface separation
+| ID | 위협/자산 | 현재 방어 | 현재 판정 |
+| --- | --- | --- | --- |
+| `TM-01` | relay 운영자가 plaintext/private key를 읽음 | daemon E2EE, opaque bounded envelope, capability 분리 | 구현 경계 있음; 운영·독립 검토 없음 |
+| `TM-02` | hostile origin/stale UI가 local daemon을 호출 | loopback-only, one-time fragment, Origin/Host/UI-version/CSRF | focused evidence 있음; clean Chromium evidence 없음 |
+| `TM-03` | release archive/UI/daemon 변조 | manifest, signature/trust/revocation/rollback gate | 운영 signing trust 없음; blocked |
+| `TM-04` | invite/device 사칭·replay | root-signed device certificate, signed invite, safety number, single-use | 구현·fixture evidence; 독립 검토 없음 |
+| `TM-05` | 로컬 DB·복구 자료 탈취 | Argon2id/AES-GCM encrypted store, recovery conflict checks | secure deletion·압수 대응은 non-claim |
+| `TM-06` | relay abuse/queue/blob 고갈 | bounds, TTL, capability, rate/size controls | 운영 relay evidence 없음 |
+| `TM-07` | IP·시간·크기·빈도 관계 추론 | metadata를 숨긴다고 주장하지 않음 | anonymity/traffic analysis non-claim |
+| `TM-08` | malware, extension, keylogger, screenshot | endpoint를 신뢰 경계 밖으로 명시 | non-claim |
 
-| Surface | Attacker assumption | Protected asset | Required control | Evidence status |
-| --- | --- | --- | --- | --- |
-| Browser UI | hostile origin, extension, injected/stale bundle | daemon session, plaintext, user approval | loopback-only bridge, one-time bootstrap, Origin/Host/CSRF checks, strict CSP, version binding | blocked until daemon exists |
-| Local daemon | local process can probe ports/files or observe crashes | root/device keys, session state, recovery material | authenticated API, OS key store, encrypted DB, redacted logs, fail-closed errors | not implemented |
-| Relay | operator can read/alter/delete/replay everything it stores | plaintext, identity continuity, capabilities | opaque bounded envelopes, scoped rotating capabilities, replay/TTL checks in daemon | partial prototype evidence |
-| Reverse proxy | can replace web assets or alter headers | code integrity, passphrases, messages | signed artifact verification, pinned release manifest, no high-risk mode on mismatch | blocked |
-| Endpoint/OS | malware, keylogger, seizure, memory dump | live secrets, screen, clipboard | explicit non-claim; minimize exposure and disclose residual risk | non-claim |
-| Release channel | compromised build host or signing key | executable, WASM, update trust | reproducible build, offline signing, external bootstrap, revocation and rollback refusal | blocked |
-| Metadata path | observer sees IP, timing, size, frequency | relationship and activity metadata | no anonymity claim; optional transport is separately reviewed | non-claim |
+## 자산 소유 규칙
 
-Each row must be represented by a requirement ID, a focused command, a
-redacted observable artifact, and a remaining limitation in
-`SECURITY_REVIEW_EVIDENCE.md`. A green prototype test cannot promote a blocked
-row or substitute for an independent review.
+- Account Root Key와 Device Key는 daemon 암호화 저장소에만 있다.
+- browser API는 public identity summary, bounded status, ciphertext/result만
+  받으며 seed, raw DB, ratchet/session state, private capability를 받지 않는다.
+- 표시 이름, 초대 코드, relay origin, safety number, mailbox capability는
+  신원 대체물이 아니다.
+- 초대 코드 유출은 짧은 rendezvous 범위의 위험을 만들 수 있지만 개인키
+  export·profile unlock·device addition·message decryption 권한이 아니다.
+- 로그·보고서·evidence에는 passphrase, plaintext, invite/capability, private
+  URL, raw log, key material, 실제 사용자 데이터가 없어야 한다.
 
-## Product Direction
+## 현재 구현 경계
 
-The long-term product direction is a high-risk 1:1 messenger with no central
-trusted server for identity, contact discovery, message relay, push delivery,
-or cloud backup.
+- daemon bridge는 exact loopback origin/host와 UI version을 확인하고, 성공한
+  one-time bootstrap만 session cookie와 CSRF를 발급한다.
+- state-changing route는 CSRF가 없거나 세션이 만료·재시작되면 실패한다.
+- root-signed device certificate는 foreign/duplicate/expired/revoked 상태를
+  거부한다.
+- pairing은 invite 검증 → safety-number 확인 → contact approval → established
+  session 순서이며 safety 확인만으로 전송을 허용하지 않는다.
+- relay는 암호문 전달·TTL·bounds를 담당하고 daemon이 replay/identity/session
+  상태를 소유한다.
+- release gate는 high-risk flag, missing signature/trust/review/support evidence
+  를 통과시키지 않는다.
 
-The current web prototype is narrower:
+이 항목들은 focused implementation evidence이며 독립 cryptographic audit,
+실제 운영 signing ceremony, clean signed archive, 정확한 Chromium version의
+전체 사용자 여정 evidence를 대신하지 않는다.
 
-- user-owned Node relay plus separately served browser UI
-- signed invite-code room flow
-- safety material confirmation
-- browser-local profile, Olm account/session, and message transcript storage
-- two-control-message Olm setup and restart/resume exercise
-- automatic opaque-envelope delivery between explicitly exchanged endpoints
-- manual encrypted-envelope fallback when a server is unavailable
-- HTTPS/reverse-proxy/direct-TLS configuration for advanced users
-- redacted diagnostics and local release-archive verification
+## 명시적 비보장
 
-## Assets
+다음은 현재 제품이 보호한다고 말하지 않는다.
 
-The project is designed to protect:
+- anonymity, Tor/onion, censorship resistance, global traffic correlation 방어
+- compromised OS/browser, extension, malware, keylogger, screenshot
+- coercion resistance, panic wipe, secure deletion from storage media
+- IP/시간/크기/빈도/relay destination metadata 은닉
+- 완전한 relay availability 또는 중앙 장애 방지
+- independent audit, production-ready/high-risk approval
+- 다른 OS/browser 조합 또는 정확한 Chromium evidence가 없는 support claim
 
-- pairwise identity material
-- pairing payloads and safety material
-- message plaintext
-- message envelope keys and replay state
-- local profile/session/message records
-- onion/transport configuration and runtime state
-- diagnostic and recovery data
+## 공개 문구 규칙
 
-The highest-value ownership rule is explicit: the Account Root Key is not a
-browser secret and is not a relay secret. Device keys are independently
-generated and certified by the account root. Display names, invite codes,
-relay addresses, safety material, and mailbox capabilities are identifiers or
-delegation material, not replacements for the account root. A code leak may
-authorize rendezvous only within its short scope; it must never authorize
-identity creation, private-key export, or message decryption.
-
-The current public beta must still treat all of these as sensitive.
-Diagnostics, release artifacts, reports, and public docs must not include bridge
-lines, onion endpoints, invite codes, pairing/envelope/endpoint payloads,
-safety phrases, profile names, message text, local paths, passphrases, raw
-logs, or key material.
-
-## Current Defenses
-
-Current implementation evidence includes:
-
-- passphrase-first browser profile unlock/lock path
-- passphrase-wrapped IndexedDB profile/session/message records
-- signed invite and envelope verification
-- canonical safety material bound to identity and setup material
-- Olm v2 Double Ratchet message setup through the Rust WASM adapter
-- bounded opaque inbox with separate write and local read/ack capabilities
-- duplicate envelope rejection and a bounded age/replay window
-- manual encrypted-envelope fallback
-- public support diagnostics redaction boundary
-- explicit documentation of endpoint, browser, device, and metadata limits
-
-These are implementation guardrails, not a secure messenger claim. Requirement
-IDs describe the boundary to verify in code and documentation; they are not
-evidence of an independent security review.
-
-## Out Of Scope For This Beta
-
-This beta does not claim:
-
-- secure production end-to-end encryption
-- production-ready or audited security
-- safety for sensitive communication
-- reliable real-network Tor/onion delivery
-- independently verified external two-machine onion delivery
-- verified bridge/censorship support beyond returned external reports
-- Briar/Cwtch-equivalent privacy or security level
-- repeated external onion evidence
-- offline mesh delivery
-- protection against endpoint compromise
-- protection against coercion
-- protection against malicious contacts
-- protection against global traffic correlation
-- rollback prevention against restored encrypted database snapshots
-- cloud backup/sync or backup recovery
-- destructive migration
-- secure deletion from storage media
-- dependency audit, SBOM, reproducible build, signing, notarization, or auto-update
-- completed independent review, reviewer signoff, or public user safety signoff
-- trusted signed JavaScript/WASM distribution or verified update channel
-- protection against a malicious server or proxy serving altered browser code
-- rate-limited, abuse-resistant, high-availability relay delivery
-- identity continuity, prekey replenishment, revocation, or device lifecycle
-- protection from IP, timing, endpoint, size, or global traffic correlation
-- crash upload, telemetry, raw log export, or safe publication of private logs
-
-## Non-Goals
-
-v0.1 does not include:
-
-- phone-number identity
-- email identity
-- global accounts
-- searchable usernames
-- centralized contact discovery
-- centralized message server
-- push notification service
-- cloud backup
-- backup recovery
-- offline mailbox
-- group chat
-- file transfer
-- voice or video calls
-- multi-device sync
-
-## User Risk Statement
-
-The unsigned web prototype is for development and review only.
-
-It is an unsigned experimental web prototype, not audited, not
-production-ready, and sensitive communication is prohibited.
-
-Anonymity, external onion delivery, censorship resistance, and global traffic
-protection are outside the current product claim. Same-machine or HTTPS/VPN
-rehearsal can exercise the message flow, but it is not evidence for those
-properties and must not be presented as such.
-
-macOS may require the user to manually allow the app in Privacy & Security.
-The project does not ask users to bypass macOS protections with terminal
-quarantine-removal commands.
+자동 테스트가 통과해도 위협 모델의 blocker가 해소되는 것은 아니다. 운영
+signing/bootstrap receipt, 독립 reviewer signed result, 동일 source revision의
+clean signed archive와 Apple Silicon macOS + 정확한 Chromium evidence가 모두
+없으면 제품은 experimental/limited candidate로만 설명하고 `highRiskAllowed=false`
+를 유지한다.

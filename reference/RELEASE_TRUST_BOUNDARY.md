@@ -1,10 +1,11 @@
 # Release trust boundary
 
-> **상태: 배포 구조 전환 전 기록.** 정적 browser-only 배포와 generated WASM
-> 단계는 현재 릴리스에 적용되지 않습니다. 현재 archive는 daemon binary, daemon UI,
-> bundled relay runtime을 함께 서명·검증합니다.
+> **상태: 현재 daemon archive trust boundary.** browser-only/generated WASM
+> 단계는 역사적 기록이며 현재 릴리스에 적용되지 않습니다. 현재 archive는
+> daemon binary, daemon UI, user-owned relay runtime을 함께 서명·검증합니다.
 
-This document fixes the browser distribution boundary for TM-02 and TM-07.
+This document fixes the local daemon archive and browser UI distribution boundary
+for TM-02 and TM-07.
 
 The operator procedure and redacted receipt template are in
 [`RELEASE_TRUST_OPERATIONS.md`](RELEASE_TRUST_OPERATIONS.md). This document defines
@@ -20,7 +21,8 @@ also not a signature boundary.
 Therefore the product does not claim that a browser can self-attest its own
 high-risk code. Trust must be established before the browser opens a profile:
 
-1. An operator builds the source and generated WASM from a pinned toolchain.
+1. An operator builds the daemon, static UI, relay runtime, and scripts from a
+   pinned toolchain.
 2. The release manifest, SBOM, provenance, and archive are created.
 3. An offline Ed25519 key signs the manifest.
 4. A separate verifier runs `verify_public_release_gate.mjs` with the trusted
