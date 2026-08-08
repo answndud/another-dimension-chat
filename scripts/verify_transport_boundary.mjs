@@ -5,7 +5,7 @@ const boundary = await loadProductBoundary(".");
 const files = new Map([
   ["apps/server/routes.mjs", ["highRiskAllowed: false", "highRiskTransport: \"disabled\"", "supportedTransports"]],
   ["apps/daemon/src/relay_http.rs", ["does not accept an HTTPS endpoint without a configured trust pin"]],
-  ["apps/web/src/main.js", ["고위험 통신을 시작하려면 CLI 데몬"]],
+  ["apps/web/src/main.js", ["고위험 통신을 시작하려면 터미널에서 발급한 일회성 주소"]],
   ["scripts/configure_local_server.mjs", ["Onion/Tor public URLs are not supported"]],
   ["reference/PRODUCT_BOUNDARY.md", ["high-risk route is permanently disabled"]],
   ["reference/TRANSPORT_DECISION.md", ["permanently disabled in the v0.1 web product"]],

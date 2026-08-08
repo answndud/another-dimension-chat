@@ -3,16 +3,15 @@ import { readFile } from "node:fs/promises";
 import { loadProductBoundary } from "./product_boundary.mjs";
 
 const checks = [
-  ["README.ko.md", "production-ready가 아니며"],
-  ["README.md", "scoped `verified-local`"],
-  ["README.md", "다른 브라우저로 일반화하지 않습니다"],
-  ["README.ko.md", "scoped `verified-local`"],
-  ["README.ko.md", "다른 브라우저로 일반화하지 않습니다"],
-  ["README.ko.md", "Tor/onion 익명성이나 검열"],
-  ["SECURITY.md", "not audited"],
-  ["SECURITY.md", "Remote browser origins must use HTTPS"],
-  ["SUPPORT.md", "절대 공개하지 마세요"],
-  ["reference/PRODUCT_BOUNDARY.md", "verified browser UI bundle"],
+  ["SUPPORT.md", "고위험 통신 승인은 아직 비활성화되어 있습니다"],
+  ["README.md", "현재 릴리스 정책상 고위험 통신은 차단되어 있습니다"],
+  ["README.md", "## 지원 환경"],
+  ["README.ko.md", "## 지원 환경"],
+  ["README.ko.md", "검열 저항 또는 Tor/onion 전달"],
+  ["SECURITY.md", "not independently audited"],
+  ["SECURITY.md", "Remote relay access requires HTTPS"],
+  ["SUPPORT.md", "공개 보안 승인이 아닙니다"],
+  ["reference/PRODUCT_BOUNDARY.md", "production release package contains only"],
   ["reference/SECURITY_REQUIREMENTS.md", "RELEASE-01"],
   ["reference/CRYPTO_REVIEW_PACKET.md", "INV-01"],
   ["scripts/verify_security_requirements.mjs", "security requirement evidence passed"],
@@ -26,8 +25,12 @@ for (const [file, text] of checks) {
   if (!contents.includes(text)) failures.push(`${file}: missing required claim boundary: ${text}`);
 }
 const main = await readFile("apps/web/src/main.js", "utf8");
-for (const text of ["민감한 정보·실명·취재원 정보를 입력하지 않겠습니다", "안전 문구", "긴급 삭제"]) {
+for (const text of ["고위험 통신을 시작하려면 터미널에서 발급한 일회성 주소"]) {
   if (!main.includes(text)) failures.push(`apps/web/src/main.js: missing safety UI marker: ${text}`);
+}
+const daemonView = await readFile("apps/web/src/daemon-view.js", "utf8");
+for (const text of ["브라우저는 화면만 표시합니다", "보안 서비스가 발급한 주소"]) {
+  if (!daemonView.includes(text)) failures.push(`apps/web/src/daemon-view.js: missing safety UI marker: ${text}`);
 }
 if (failures.length) {
   console.error(failures.join("\n"));
