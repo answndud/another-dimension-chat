@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { access, readdir, readFile, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
+import { verifyBundleShape } from "./verify_security_review_handoff.mjs";
 
 const root = path.resolve(process.argv[2] || "");
 if (!root) throw new Error("Usage: verify_security_review_bundle.mjs BUNDLE_DIRECTORY");
@@ -21,6 +22,7 @@ if (manifest.format !== "another-dimension-security-review-bundle" || manifest.v
 if (manifest.claims?.independentReview !== "not-provided" || manifest.claims?.productionReady !== false || manifest.claims?.highRiskAllowed !== false) {
   throw new Error("review bundle claims an unearned security status");
 }
+await verifyBundleShape(root, manifest);
 await access(path.join(root, "review/reference/SECURITY_REVIEW_RESULT_TEMPLATE.md"), constants.R_OK);
 async function walk(dir) {
   const result = [];
@@ -41,6 +43,10 @@ for (const entry of manifest.contents.sourceFiles || []) {
   if (path.isAbsolute(entry.path) || entry.path.includes("..") || !/^[a-f0-9]{64}$/.test(entry.sha256) || !Number.isInteger(entry.bytes) || entry.bytes < 0) {
     throw new Error(`invalid source hash entry: ${entry.path}`);
   }
+  const bundleFile = path.join(root, "source", entry.path);
+  const bundleBytes = await readFile(bundleFile);
+  const bundleDigest = createHash("sha256").update(bundleBytes).digest("hex");
+  if (bundleBytes.byteLength !== entry.bytes || bundleDigest !== entry.sha256) throw new Error(`bundle source hash mismatch: ${entry.path}`);
   if (projectDir) {
     const file = path.join(projectDir, entry.path);
     const bytes = await readFile(file);
