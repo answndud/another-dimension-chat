@@ -174,13 +174,13 @@ h2 { font-size: 1rem; }
 
 /* Cold white, square-edged workspace */
 :root {
-  --canvas: #f5f5f4;
+  --canvas: #f7f7f7;
   --surface: #ffffff;
-  --surface-muted: #ededeb;
-  --line: #cececa;
-  --text: #1c1c1a;
-  --muted: #62625e;
-  --subtle: #858580;
+  --surface-muted: #eeeeee;
+  --line: #d0d0d0;
+  --text: #1f1f1f;
+  --muted: #626262;
+  --subtle: #858585;
   --accent: #4a4b49;
   --accent-surface: #eff0ef;
   --focus: #242624;
@@ -238,7 +238,7 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .daemon-divider { height: 1px; background: var(--line); margin: 4px 0; }
 .daemon-delivery { border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 10px; }
 .daemon-delivery h3 { margin: 0; font-size: .95rem; }
-.daemon-message-list { display: grid; gap: 8px; }
+.daemon-message-list { display: grid; gap: 8px; max-height: min(62vh, 720px); overflow-y: auto; overscroll-behavior: contain; padding-right: 3px; }
 .daemon-message { border-left: 2px solid var(--accent); background: var(--surface-muted); padding: 10px 12px; }
 .daemon-message.outgoing { border-left-color: #767b7e; }
 .daemon-message p { margin: 0 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -305,4 +305,13 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
   .daemon-view-heading { display: grid; }
   .daemon-directory > .row-between { display: grid; justify-content: stretch; }
   .daemon-directory > .row-between .pill { justify-self: start; }
+}
+
+/* Keep the daemon workspace deliberately severe and keyboard-readable. */
+.daemon-nav-item { border-radius: 0 !important; }
+.daemon-nav-item:focus-visible, .daemon-contact-select:focus-visible, .daemon-message-copy:focus-visible,
+.daemon-attachment-download:focus-visible, .daemon-attachment-delete:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 38%, transparent); outline-offset: 2px; }
+@media (max-width: 480px) {
+  .daemon-message-list { max-height: 54vh; }
+  .daemon-workspace-header .lede { font-size: .92rem; }
 }
