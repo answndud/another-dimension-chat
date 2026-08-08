@@ -50,6 +50,11 @@ function integrityManifest() {
 
 export default defineConfig({
   clearScreen: false,
+  server: {
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  },
   plugins: [integrityManifest()],
   build: {
     sourcemap: false,
