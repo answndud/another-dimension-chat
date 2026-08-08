@@ -846,6 +846,15 @@ pub fn parse_recovery_artifact(bytes: &[u8]) -> Result<(Vec<u8>, Vec<u8>), Stora
     {
         return Err(StorageError::CorruptStore);
     }
+    let parsed_store = parse_file(store)?;
+    let marker_revision = std::str::from_utf8(revision)
+        .map_err(|_| StorageError::CorruptStore)?
+        .trim()
+        .parse::<u64>()
+        .map_err(|_| StorageError::CorruptStore)?;
+    if parsed_store.revision != marker_revision {
+        return Err(StorageError::CorruptStore);
+    }
     Ok((store.to_vec(), revision.to_vec()))
 }
 

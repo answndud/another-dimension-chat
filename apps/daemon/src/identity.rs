@@ -436,6 +436,10 @@ impl DeviceCertificate {
             .map_err(|_| IdentityError::InvalidCertificate)
     }
 
+    pub(crate) fn verify_integrity(&self) -> Result<(), IdentityError> {
+        self.verify_signature()
+    }
+
     fn matches_revocation(&self, revocation: &DeviceRevocation) -> bool {
         self.account_public_key == revocation.account_public_key
             && self.device_id == revocation.device_id

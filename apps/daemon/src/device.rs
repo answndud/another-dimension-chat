@@ -157,6 +157,10 @@ impl DeviceRegistry {
             )?;
             if certificate.account_public_key() != account_public_key
                 || devices.contains_key(certificate.device_id())
+                || certificate.verify_integrity().is_err()
+                || matches!(item.state, DeviceState::Provisioning)
+                || (certificate.is_revoked() != (item.state == DeviceState::Revoked))
+                || (certificate.is_revoked() != item.revoked_at.is_some())
             {
                 return Err(DeviceRegistryError::Corrupt);
             }
@@ -344,6 +348,31 @@ mod tests {
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded.events().len(), 1);
         assert_eq!(decoded.authorize("laptop", 200), Ok(()));
+    }
+
+    #[test]
+    fn registry_decode_rejects_tampered_certificate_and_state() {
+        let root = AccountRootKey::from_seed([35; 32]);
+        let device = root.issue_device("laptop", [11; 32], 100, 500).unwrap();
+        let mut registry = DeviceRegistry::new(&root);
+        registry
+            .register(device.certificate().clone(), 200)
+            .unwrap();
+        let mut wire: serde_json::Value =
+            serde_json::from_slice(&registry.encode().unwrap()).unwrap();
+        wire["devices"][0]["signature"] = serde_json::Value::String("00".repeat(64));
+        assert!(matches!(
+            DeviceRegistry::decode(&serde_json::to_vec(&wire).unwrap()),
+            Err(DeviceRegistryError::Corrupt)
+        ));
+
+        let mut wire: serde_json::Value =
+            serde_json::from_slice(&registry.encode().unwrap()).unwrap();
+        wire["devices"][0]["state"] = serde_json::Value::String("revoked".into());
+        assert!(matches!(
+            DeviceRegistry::decode(&serde_json::to_vec(&wire).unwrap()),
+            Err(DeviceRegistryError::Corrupt)
+        ));
     }
 }
 
