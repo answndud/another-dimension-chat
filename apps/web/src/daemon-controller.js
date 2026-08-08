@@ -6,6 +6,7 @@ let activeBindingController;
 let pairingSyncTimer;
 let welcomeSyncTimer;
 let listenerSequence = 0;
+let sessionActionBusy = false;
 
 function bindListener(target, eventName, handler) {
   if (!target) return;
@@ -97,7 +98,6 @@ function applyMessagePage(result, replace) {
 
 export function bindDaemonSession({ render }) {
   const bridge = state.daemonBridge;
-  let sessionActionBusy = false;
   bindListener(document.querySelector("#daemon-history-load"), "click", async () => {
     try {
       const conversationId = document.querySelector("#daemon-conversation-id")?.value.trim() || state.daemonConversationId;
