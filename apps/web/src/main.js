@@ -6,6 +6,22 @@ import "./styles.css";
 
 const app = document.querySelector("#app");
 
+// The current product deliberately does not use a service worker: the daemon
+// owns all private state and serves a no-store UI shell. Older prototypes did
+// register one on this origin, so remove those registrations when the current
+// bundle gets a chance to run. This prevents a stale prototype shell from
+// masking the daemon UI after an upgrade.
+async function removeLegacyServiceWorkers() {
+  if (!("serviceWorker" in navigator)) return;
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.allSettled(registrations.map((registration) => registration.unregister()));
+  } catch {
+    // A browser policy can deny service-worker inspection. UI startup must not
+    // fail because this compatibility cleanup was unavailable.
+  }
+}
+
 function captureInteractionState() {
   const active = document.activeElement;
   const focusAttribute = active && !active.id
@@ -103,6 +119,7 @@ function render() {
 
 async function startApp() {
   try {
+    await removeLegacyServiceWorkers();
     const daemonBridge = await connectDaemonBridge();
     if (daemonBridge) {
       state.daemonBridge = daemonBridge;
