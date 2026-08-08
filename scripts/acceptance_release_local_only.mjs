@@ -26,6 +26,7 @@ const trustManifestFile = join(root, "release-trust.json");
 const reviewer = generateKeyPairSync("ed25519");
 const reviewerPublicKeyFile = join(root, "reviewer-public.pem");
 const reviewSignoffFile = join(root, "review-signoff.json");
+const reviewBundle = join(root, "review-bundle");
 const noNodeEnvironment = { env: { ...process.env, PATH: "/usr/bin:/bin" } };
 
 function reviewerKeyId(publicKey) {
@@ -75,7 +76,9 @@ const reviewBase = {
 };
 const signedReview = { ...reviewBase, signature: { algorithm: "Ed25519", keyId: reviewerKeyId(reviewer.publicKey), value: sign(null, Buffer.from(canonicalReview(reviewBase)), reviewer.privateKey).toString("base64") } };
 await writeFile(reviewSignoffFile, JSON.stringify(signedReview, null, 2) + "\n", { mode: 0o600 });
-const reviewArgs = ["--review-signoff", reviewSignoffFile, "--reviewer-public-key", reviewerPublicKeyFile];
+await mkdir(reviewBundle, { recursive: true });
+await writeFile(join(reviewBundle, "REVIEW-MANIFEST.json"), JSON.stringify({ format: "another-dimension-security-review-bundle", version: 1, sourceRevision: reviewBase.sourceRevision, claims: { independentReview: "not-provided", productionReady: false, highRiskAllowed: false } }) + "\n", { mode: 0o600 });
+const reviewArgs = ["--review-bundle", reviewBundle, "--review-signoff", reviewSignoffFile, "--reviewer-public-key", reviewerPublicKeyFile];
 await Promise.all([
   copy("README.md"),
   copy("README.ko.md"),
@@ -95,6 +98,7 @@ await Promise.all([
   copy("apps/server/package-lock.json"),
   copy("scripts/verify_public_release_gate.mjs"),
   copy("scripts/verify_security_review_signoff.mjs"),
+  copy("scripts/verify_security_review_handoff.mjs"),
   copy("scripts/verify_release_trust.mjs"),
   copy("scripts/product_boundary.mjs"),
   copy("scripts/verify_web_artifact.mjs"),

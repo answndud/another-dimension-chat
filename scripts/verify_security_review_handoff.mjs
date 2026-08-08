@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { verifySignoff } from "./verify_security_review_signoff.mjs";
 
 const FORMAT = "another-dimension-security-review-bundle";
@@ -49,10 +50,13 @@ async function fixture() {
   console.log("security review handoff fixture passed: bundle/sign-off revision binding -> mismatch rejection");
 }
 
-const args = process.argv.slice(2);
-if (args[0] === "--fixture") await fixture();
-else {
-  if (args.length !== 3) throw new Error("Usage: verify_security_review_handoff.mjs BUNDLE_DIRECTORY SIGNOFF_JSON REVIEWER_PUBLIC_KEY");
-  const result = await verifyFiles(path.resolve(args[0]), path.resolve(args[1]), path.resolve(args[2]));
-  console.log(`security review handoff verified: ${result.sourceRevision}, decision=${result.decision}, reviewerKey=${result.reviewerKeyId}`);
+const invokedDirectly = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (invokedDirectly) {
+  const args = process.argv.slice(2);
+  if (args[0] === "--fixture") await fixture();
+  else {
+    if (args.length !== 3) throw new Error("Usage: verify_security_review_handoff.mjs BUNDLE_DIRECTORY SIGNOFF_JSON REVIEWER_PUBLIC_KEY");
+    const result = await verifyFiles(path.resolve(args[0]), path.resolve(args[1]), path.resolve(args[2]));
+    console.log(`security review handoff verified: ${result.sourceRevision}, decision=${result.decision}, reviewerKey=${result.reviewerKeyId}`);
+  }
 }
