@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 const cli = await readFile("apps/daemon/src/cli.rs", "utf8");
 const main = await readFile("apps/daemon/src/main.rs", "utf8");
 const failures = [];
-for (const marker of ["init", "identity show", "doctor", "recovery export", "recovery import", "ADRECOVERY1", "ADIDENTITY1", "UnsafeSecretArgument", "read_to_string", "release readiness blocked"]) {
+for (const marker of ["init", "identity show", "doctor", "recovery export", "recovery import", "ADRECOVERY2", "ADIDENTITY1", "UnsafeSecretArgument", "read_to_string", "release readiness blocked"]) {
   if (!cli.includes(marker) && !main.includes(marker)) failures.push(`CLI workflow marker missing: ${marker}`);
 }
 for (const forbidden of ["println!(\"passphrase", "localStorage", "IndexedDB"]) {
