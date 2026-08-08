@@ -4,6 +4,10 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const configuredUrl = process.argv[2] || process.env.AD_ACCEPTANCE_URL;
+if (configuredUrl === "--help" || configuredUrl === "-h") {
+  console.log("Usage: node scripts/check_https_endpoint.mjs https://your-server.example");
+  process.exit(0);
+}
 if (!configuredUrl) {
   console.error("Usage: node scripts/check_https_endpoint.mjs https://your-server.example");
   process.exit(2);
