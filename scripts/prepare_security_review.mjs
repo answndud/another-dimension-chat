@@ -72,6 +72,10 @@ async function assertNewDirectory(dir) {
   const entries = await readdir(dir);
   if (entries.length) throw new Error(`output directory must be absent or empty: ${dir}`);
 }
+function assertCleanRevision() {
+  const status = execFileSync("git", ["-C", projectDir, "status", "--porcelain", "--untracked-files=all"], { encoding: "utf8" });
+  if (status.trim()) throw new Error("review bundle requires a clean git worktree; commit or stash local changes first");
+}
 async function copyChecked(relative) {
   const source = path.join(projectDir, relative);
   if (!(await exists(source))) throw new Error(`missing review input: ${relative}`);
@@ -82,6 +86,7 @@ async function copyChecked(relative) {
 }
 
 await assertNewDirectory(output);
+assertCleanRevision();
 await mkdir(output, { recursive: true });
 await mkdir(path.join(output, "source"), { recursive: true });
 const revision = execFileSync("git", ["-C", projectDir, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
