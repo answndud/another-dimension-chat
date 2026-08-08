@@ -31,7 +31,6 @@ pub enum CliError {
     NotInitialized,
     AlreadyInitialized,
     UnsafeSecretArgument,
-    Unsupported(String),
     InvalidRecovery,
 }
 
@@ -48,7 +47,6 @@ impl std::fmt::Display for CliError {
             Self::UnsafeSecretArgument => f.write_str(
                 "do not pass secrets in command arguments; provide the passphrase on stdin",
             ),
-            Self::Unsupported(value) => write!(f, "command is not implemented yet: {value}"),
             Self::InvalidRecovery => {
                 f.write_str("recovery artifact is invalid or would overwrite existing state")
             }
@@ -134,7 +132,12 @@ pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError
                 CliError::Usage("wipe requires the profile passphrase from stdin".into())
             })?,
         ),
-        "invite" | "contact" | "update" | "rollback" => Err(CliError::Unsupported(args[0].clone())),
+        "invite" | "contact" => Err(CliError::Usage(
+            "초대와 연락처 관리는 daemon 웹 화면에서 수행합니다. serve로 화면을 시작하세요".into(),
+        )),
+        "update" | "rollback" => Err(CliError::Usage(
+            "업데이트와 rollback은 release의 install_local_server.sh 또는 installed launcher에서 수행합니다".into(),
+        )),
         other => Err(CliError::Usage(format!(
             "unknown command '{other}'; use --help"
         ))),

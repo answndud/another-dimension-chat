@@ -32,8 +32,6 @@ pub enum Command {
     Init,
     Serve,
     Identity,
-    Invite,
-    Contact,
     Device,
     Lock,
     Recovery,
@@ -43,13 +41,11 @@ pub enum Command {
 }
 
 impl Command {
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 10] = [
         Self::Doctor,
         Self::Init,
         Self::Serve,
         Self::Identity,
-        Self::Invite,
-        Self::Contact,
         Self::Device,
         Self::Lock,
         Self::Recovery,
@@ -64,8 +60,6 @@ impl Command {
             Self::Init => "init",
             Self::Serve => "serve",
             Self::Identity => "identity",
-            Self::Invite => "invite",
-            Self::Contact => "contact",
             Self::Device => "device",
             Self::Lock => "lock",
             Self::Recovery => "recovery",
@@ -93,7 +87,7 @@ mod tests {
             IMPLEMENTATION_STATUS,
             "daemon-owned-openmls-messaging-path-active-development"
         );
-        assert_eq!(Command::ALL.len(), 12);
+        assert_eq!(Command::ALL.len(), 10);
         assert_eq!(command_from_name("serve"), Some(Command::Serve));
         assert_eq!(command_from_name("desktop"), None);
     }
