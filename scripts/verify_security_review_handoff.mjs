@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
+import { constants } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { verifySignoff } from "./verify_security_review_signoff.mjs";
@@ -20,8 +21,29 @@ export function verifyHandoff(manifest, signoff, reviewerPublicKey) {
   return result;
 }
 
+export async function verifyBundleShape(bundleDir, manifest) {
+  for (const relative of ["source", "review", "evidence/STATUS.json", "review/reference/SECURITY_REVIEW_RESULT_TEMPLATE.md"]) {
+    await access(path.join(bundleDir, relative), constants.R_OK);
+  }
+  if (!manifest.contents || !Array.isArray(manifest.contents.sourceFiles) || manifest.contents.sourceFiles.length === 0) {
+    throw new Error("review bundle source file inventory is missing");
+  }
+  if (!Array.isArray(manifest.contents.reviewDocuments) || manifest.contents.reviewDocuments.length === 0) {
+    throw new Error("review bundle document inventory is missing");
+  }
+  if (!(["not-provided", "provided-and-scanned"].includes(manifest.contents.evidenceStatus))) {
+    throw new Error("review bundle evidence status is invalid");
+  }
+  for (const entry of manifest.contents.sourceFiles) {
+    if (!entry || typeof entry.path !== "string" || path.isAbsolute(entry.path) || entry.path.includes("..") || !/^[a-f0-9]{64}$/.test(entry.sha256) || !Number.isInteger(entry.bytes) || entry.bytes < 0) {
+      throw new Error(`invalid review bundle source inventory entry: ${entry?.path || "unknown"}`);
+    }
+  }
+}
+
 async function verifyFiles(bundleDir, signoffPath, publicKeyPath) {
   const manifest = JSON.parse(await readFile(path.join(bundleDir, "REVIEW-MANIFEST.json"), "utf8"));
+  await verifyBundleShape(bundleDir, manifest);
   const signoff = JSON.parse(await readFile(signoffPath, "utf8"));
   const reviewerPublicKey = await readFile(publicKeyPath, "utf8");
   return verifyHandoff(manifest, signoff, reviewerPublicKey);
@@ -44,7 +66,7 @@ async function fixture() {
     ...base,
     signature: { algorithm: "Ed25519", keyId, value: sign(null, Buffer.from(JSON.stringify({ ...base, signature: null })), keys.privateKey).toString("base64") },
   };
-  const manifest = { format: FORMAT, version: VERSION, sourceRevision, claims: { independentReview: "not-provided", productionReady: false, highRiskAllowed: false } };
+  const manifest = { format: FORMAT, version: VERSION, sourceRevision, contents: { sourceFiles: [{ path: "apps/daemon/src/lib.rs", sha256: "a".repeat(64), bytes: 1 }], reviewDocuments: ["reference/SECURITY_REVIEW_RESULT_TEMPLATE.md"], evidenceStatus: "not-provided" }, claims: { independentReview: "not-provided", productionReady: false, highRiskAllowed: false } };
   assert.equal(verifyHandoff(manifest, signoff, publicKey).sourceRevision, sourceRevision);
   assert.throws(() => verifyHandoff({ ...manifest, sourceRevision: "fedcba9876543210" }, signoff, publicKey), /does not match/);
   console.log("security review handoff fixture passed: bundle/sign-off revision binding -> mismatch rejection");

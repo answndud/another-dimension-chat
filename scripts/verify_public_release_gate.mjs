@@ -6,7 +6,7 @@ import { verifyManifest } from "./release_manifest.mjs";
 import { isForbiddenReleasePath, loadProductBoundary } from "./product_boundary.mjs";
 import { verifyWebArtifact } from "./verify_web_artifact.mjs";
 import { authorizeReleaseKey, verifyTrustManifest } from "./verify_release_trust.mjs";
-import { verifyHandoff } from "./verify_security_review_handoff.mjs";
+import { verifyBundleShape, verifyHandoff } from "./verify_security_review_handoff.mjs";
 
 const [root, ...args] = process.argv.slice(2);
 if (!root) throw new Error("Usage: verify_public_release_gate.mjs RELEASE_ROOT --public-key PEM_FILE --review-bundle DIRECTORY --review-signoff JSON_FILE --reviewer-public-key PEM_FILE [--min-version VERSION]");
@@ -55,6 +55,7 @@ if (trustManifest || trustManifestKey) {
   authorizeReleaseKey(trustManifest, result.releaseVersion, publicKey);
 }
 const reviewManifest = JSON.parse(await readFile(path.join(reviewBundle, "REVIEW-MANIFEST.json"), "utf8"));
+await verifyBundleShape(reviewBundle, reviewManifest);
 const review = verifyHandoff(reviewManifest, reviewSignoff, reviewerPublicKey);
 const provenance = JSON.parse(await readFile(path.join(root, "RELEASE-PROVENANCE.json"), "utf8"));
 const sourceCommit = String(provenance.sourceCommit || "").toLowerCase();
