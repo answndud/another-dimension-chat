@@ -14,9 +14,9 @@
       "surface": "installed-runtime",
       "platform": "macOS arm64",
       "runtime": "Rust daemon binary + bundled Node.js 20+ relay runtime",
-      "status": "verified-local",
-      "evidence": "scripts/acceptance_os_matrix.mjs",
-      "scope": "current-host only: signed archive install, daemon and relay permissions, tamper rejection, update, rollback and process ownership"
+      "status": "unverified",
+      "evidence": null,
+      "scope": "no support claim until a redacted JSON evidence record ties a signed archive, exact host, and the observed install, daemon, relay, tamper, update and rollback steps together"
     },
     {
       "id": "macos-arm64-chromium-production-ui",

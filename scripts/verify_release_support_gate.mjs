@@ -12,7 +12,7 @@ const root = rootIndex === -1 ? projectRoot : resolve(args[rootIndex + 1]);
 const matrix = JSON.parse(await readFile(resolve(root, "reference/SUPPORT_MATRIX.json"), "utf8"));
 const fail = (message) => { throw new Error(`release support gate: ${message}`); };
 async function verifyEvidence(entry, evidencePath) {
-  if (!entry.evidence.endsWith(".json")) return;
+  if (!entry.evidence.endsWith(".json")) fail(`verified evidence must be a JSON record: ${entry.id}`);
   let evidence;
   try { evidence = JSON.parse(await readFile(evidencePath, "utf8")); } catch { fail(`evidence is not valid JSON: ${entry.id}`); }
   if (typeof evidence.status === "string" && evidence.status !== entry.status) fail(`evidence status does not match matrix: ${entry.id}`);

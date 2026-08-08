@@ -21,15 +21,14 @@ for (const entry of matrix.entries) {
   if (!allowedStatuses.has(entry.status)) fail(`invalid status for ${entry.id}`);
   if (entry.evidence !== null && (typeof entry.evidence !== "string" || entry.evidence.includes(".."))) fail(`unsafe evidence path for ${entry.id}`);
   if (entry.status === "verified-local" && !entry.evidence) fail(`verified entry has no evidence: ${entry.id}`);
+  if (entry.status === "verified-local" && !entry.evidence.endsWith(".json")) fail(`verified entry must reference a JSON evidence record: ${entry.id}`);
   if (entry.status === "unverified" && !/no support claim/i.test(entry.scope)) fail(`unverified entry has a support-like scope: ${entry.id}`);
   if (entry.status === "verified-local") {
     const evidencePath = resolve(root, entry.evidence);
     await access(evidencePath);
-    if (entry.evidence.endsWith(".json")) {
-      const evidence = JSON.parse(await readFile(evidencePath, "utf8"));
-      if (evidence.status !== entry.status) fail(`evidence status does not match matrix: ${entry.id}`);
-      if (typeof evidence.scope !== "string" || !evidence.scope.trim()) fail(`evidence scope is missing: ${entry.id}`);
-    }
+    const evidence = JSON.parse(await readFile(evidencePath, "utf8"));
+    if (evidence.status !== entry.status) fail(`evidence status does not match matrix: ${entry.id}`);
+    if (typeof evidence.scope !== "string" || !evidence.scope.trim()) fail(`evidence scope is missing: ${entry.id}`);
   }
 }
 console.log(`support matrix valid: ${matrix.entries.length} entries; verified-local=${matrix.entries.filter((entry) => entry.status === "verified-local").length}; blocked=${matrix.entries.filter((entry) => entry.status === "blocked").length}; unverified=${matrix.entries.filter((entry) => entry.status === "unverified").length}`);
