@@ -37,5 +37,8 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install pinned cargo-deny
+        run: cargo install cargo-deny --version 0.18.3 --locked
+
       - name: Verify current daemon/web/relay product
         run: CARGO_BUILD_JOBS=2 scripts/verify_full.sh

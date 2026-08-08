@@ -2,6 +2,10 @@
   "schema": 1,
   "policyOwner": "product-security",
   "purpose": "The product dependency boundary is intentionally small and every direct dependency has a reviewed reason.",
+  "ciTooling": {
+    "cargoDeny": "0.18.3",
+    "advisoriesAndLicenses": "required in CI; missing cargo-deny is a failure"
+  },
   "allowedRustLicenses": [
     "Apache-2.0",
     "BSD-2-Clause",

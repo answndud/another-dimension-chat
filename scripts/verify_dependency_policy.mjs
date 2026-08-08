@@ -8,6 +8,17 @@ const policy = JSON.parse(await readFile(join(root, "reference/DEPENDENCY_POLICY
 const failures = [];
 const fail = (message) => failures.push(message);
 
+function runCargoDenyGate() {
+  const required = process.env.CI === "true" || process.env.AD_REQUIRE_CARGO_DENY === "1";
+  const tool = spawnSync("cargo-deny", ["--version"], { cwd: root, encoding: "utf8" });
+  if (tool.status !== 0) {
+    if (required) fail("cargo-deny is required in CI but is not installed");
+    return;
+  }
+  const result = spawnSync("cargo-deny", ["check"], { cwd: root, encoding: "utf8" });
+  if (result.status !== 0) fail(`cargo-deny check failed: ${(result.stderr || result.stdout).trim()}`);
+}
+
 function cargoMetadata() {
   const result = spawnSync("cargo", ["metadata", "--locked", "--format-version", "1"], { cwd: root, encoding: "utf8" });
   if (result.status !== 0) {
@@ -116,6 +127,8 @@ for (const [packageRoot, packageFile] of [["apps/web", "apps/web/package.json"],
     fail(`Node license scan requires installed dependencies in CI: ${packageRoot}/node_modules`);
   }
 }
+
+runCargoDenyGate();
 
 const scanFiles = [
   "apps/web/index.html",
