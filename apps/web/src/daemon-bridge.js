@@ -28,7 +28,7 @@ function readBootstrap(location) {
   const params = new URLSearchParams(fragment);
   const token = params.get(BOOTSTRAP_PARAM) || "";
   if (!token || [...params.keys()].some((key) => key !== BOOTSTRAP_PARAM)) {
-    throw new DaemonBridgeError("invalid-bootstrap", "데몬 시작 토큰 형식이 올바르지 않습니다.");
+    throw new DaemonBridgeError("invalid-bootstrap", "보안 서비스 시작 토큰 형식이 올바르지 않습니다.");
   }
   return token;
 }
@@ -37,7 +37,7 @@ async function jsonResponse(response) {
   let body = null;
   try { body = await response.json(); } catch { /* preserve generic network error */ }
   if (!response.ok) {
-    const error = new DaemonBridgeError(body?.error || "exchange-failed", body?.error || "로컬 보안 데몬 세션을 열 수 없습니다.");
+    const error = new DaemonBridgeError(body?.error || "exchange-failed", body?.error || "로컬 보안 서비스 세션을 열 수 없습니다.");
     if (body && typeof body === "object") Object.assign(error, body);
     throw error;
   }
@@ -61,11 +61,11 @@ export async function connectDaemonBridge({
   // referrers, or a later retry after a daemon failure.
   clearFragment(location, history);
   if (typeof fetchImpl !== "function") {
-    throw new DaemonBridgeError("unavailable", "이 브라우저에서는 로컬 데몬 연결을 사용할 수 없습니다.");
+    throw new DaemonBridgeError("unavailable", "이 브라우저에서는 로컬 보안 서비스 연결을 사용할 수 없습니다.");
   }
   const origin = String(location?.origin || "");
   if (!/^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(origin)) {
-    throw new DaemonBridgeError("unsafe-origin", "로컬 데몬은 정확한 loopback HTTP 주소에서만 연결할 수 있습니다.");
+    throw new DaemonBridgeError("unsafe-origin", "로컬 보안 서비스는 정확한 loopback HTTP 주소에서만 연결할 수 있습니다.");
   }
   let response;
   try {
@@ -80,11 +80,11 @@ export async function connectDaemonBridge({
       body: JSON.stringify({ token, ui_version: uiVersion }),
     });
   } catch {
-    throw new DaemonBridgeError("unavailable", "로컬 보안 데몬에 연결할 수 없습니다. 데몬을 실행한 뒤 다시 여세요.");
+    throw new DaemonBridgeError("unavailable", "로컬 보안 서비스에 연결할 수 없습니다. 터미널에서 서비스를 실행한 뒤 다시 여세요.");
   }
   const credentials = await jsonResponse(response);
   if (typeof credentials.csrf_token !== "string" || credentials.csrf_token.length < 32) {
-    throw new DaemonBridgeError("invalid-session", "데몬이 유효한 브라우저 세션을 반환하지 않았습니다.");
+    throw new DaemonBridgeError("invalid-session", "보안 서비스가 유효한 브라우저 세션을 반환하지 않았습니다.");
   }
   let csrfToken = credentials.csrf_token;
   let renewInFlight = null;
@@ -104,7 +104,7 @@ export async function connectDaemonBridge({
       });
       const renewed = await jsonResponse(result);
       if (typeof renewed.csrf_token !== "string" || renewed.csrf_token.length < 32) {
-        throw new DaemonBridgeError("invalid-session", "데몬이 새 브라우저 세션을 반환하지 않았습니다.");
+        throw new DaemonBridgeError("invalid-session", "보안 서비스가 새 브라우저 세션을 반환하지 않았습니다.");
       }
       csrfToken = renewed.csrf_token;
       return renewed;

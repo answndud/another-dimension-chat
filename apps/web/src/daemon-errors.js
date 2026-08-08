@@ -1,15 +1,15 @@
 const GENERIC_ERROR_MESSAGE = "요청을 완료하지 못했습니다. 현재 상태를 확인한 뒤 다시 시도하세요.";
 
-const SESSION_MESSAGE = "로컬 보안 세션이 유효하지 않습니다. 데몬에서 새 시작 주소를 발급해 다시 여세요.";
+const SESSION_MESSAGE = "로컬 보안 세션이 유효하지 않습니다. 터미널에서 새 시작 주소를 발급해 다시 여세요.";
 const INPUT_MESSAGE = "입력값이 올바르지 않습니다. 화면의 필수 항목을 확인한 뒤 다시 시도하세요.";
-const STORAGE_MESSAGE = "암호화 저장소 작업을 완료하지 못했습니다. 데몬 상태와 남은 저장 공간을 확인하세요.";
+const STORAGE_MESSAGE = "암호화 저장소 작업을 완료하지 못했습니다. 보안 서비스 상태와 남은 저장 공간을 확인하세요.";
 const PAIRING_MESSAGE = "연결 확인을 완료하지 못했습니다. 초대 만료 여부와 상대방의 안전 번호를 다시 확인하세요.";
 const CONTACT_MESSAGE = "연락처 상태를 변경하지 못했습니다. 현재 차단·연결 상태를 새로고침한 뒤 다시 시도하세요.";
 const DEVICE_MESSAGE = "기기 상태를 변경하지 못했습니다. 현재 기기 목록과 연결 코드를 다시 확인하세요.";
 const SESSION_CRYPTO_MESSAGE = "암호화 대화 상태가 일치하지 않습니다. 전송을 멈추고 상대방의 신원과 대화 상태를 다시 확인하세요.";
 const ATTACHMENT_MESSAGE = "첨부파일을 안전하게 처리하지 못했습니다. 원본을 유지한 채 파일 크기와 전송 상태를 확인하세요.";
 const DELIVERY_MESSAGE = "암호문 전달 상태를 확인하지 못했습니다. 중복 전송하지 말고 현재 전달 상태를 새로고침하세요.";
-const RELAY_MESSAGE = "릴레이에 연결할 수 없습니다. 로컬 암호화 상태는 유지되며 연결이 복구된 뒤 재시도하세요.";
+const RELAY_MESSAGE = "전달 경로에 연결할 수 없습니다. 로컬 암호화 상태는 유지되며 연결이 복구된 뒤 재시도하세요.";
 
 const groupedMessages = [
   [SESSION_MESSAGE, [

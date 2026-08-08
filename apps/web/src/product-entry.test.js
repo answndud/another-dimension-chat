@@ -16,8 +16,8 @@ test("web product entry is daemon-only and keeps browser state out of the produc
     "daemonBridgeMode",
     "connectDaemonBridge",
     "renderDaemonBridgeState",
-    "암호화 키와 메시지 상태는 로컬 보안 데몬이 소유합니다",
-    "고위험 통신을 시작하려면 CLI 데몬",
+    "암호화 키와 메시지 상태는 로컬 보안 서비스가 소유합니다",
+    "고위험 통신을 시작하려면 터미널에서 발급한 일회성 주소",
     "안전 번호 다시 확인",
     "암호화 복구 백업 다운로드",
   ]) assert.match(productUi, new RegExp(text.replace(/[.*+?^$\\{}()|[\]\\\\]/g, "\\\\$&")));

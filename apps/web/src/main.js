@@ -130,17 +130,17 @@ async function startApp() {
         state.daemonContacts = [];
         state.daemonConversationIds = [];
       }
-      state.notice = "브라우저 보안 경계를 확인했습니다. 암호화 키와 메시지 상태는 로컬 보안 데몬이 소유합니다.";
+      state.notice = "브라우저 보안 경계를 확인했습니다. 암호화 키와 메시지 상태는 로컬 보안 서비스가 소유합니다.";
       render();
       return;
     }
     state.daemonBridgeMode = true;
-    state.daemonStatus = "데몬 연결 대기";
-    state.notice = "고위험 통신을 시작하려면 CLI 데몬이 발급한 일회성 주소로 이 화면을 여세요.";
+    state.daemonStatus = "보안 서비스 연결 대기";
+    state.notice = "고위험 통신을 시작하려면 터미널에서 발급한 일회성 주소로 이 화면을 여세요.";
     render();
   } catch (error) {
     state.daemonBridgeMode = true;
-    state.daemonStatus = "데몬 연결 실패";
+    state.daemonStatus = "보안 서비스 연결 실패";
     state.error = error.message;
     render();
   }
