@@ -79,7 +79,10 @@ export function renderDaemonDevices(state) {
 
 export function renderDaemonSafetyControls(pairing) {
   if (!pairing?.safety_number) return "";
-  if (pairing.safety_verified) return `<div class="daemon-safety" aria-live="polite"><strong>안전 번호</strong><code>${escapeHtml(pairing.safety_number)}</code><p class="verified">안전 번호 확인 완료 · 메시지 송신 허용</p><button id="daemon-unverify-safety" class="quiet" type="button">안전 번호 다시 확인</button></div>`;
+  if (pairing.safety_verified) {
+    const status = pairing.state === "established" ? "안전 번호 확인 완료 · 메시지 송신 허용" : "안전 번호 확인 완료 · 연락처 승인 필요";
+    return `<div class="daemon-safety" aria-live="polite"><strong>안전 번호</strong><code>${escapeHtml(pairing.safety_number)}</code><p class="verified">${status}</p><button id="daemon-unverify-safety" class="quiet" type="button">안전 번호 다시 확인</button></div>`;
+  }
   return `<div class="daemon-safety" aria-live="polite"><strong>안전 번호</strong><code>${escapeHtml(pairing.safety_number)}</code><p class="field-note">상대방에게 별도 신뢰 채널로 전체 번호를 읽어 확인하세요.</p><label>확인한 안전 번호<input id="daemon-safety-confirmation" autocomplete="off" inputmode="text" /></label><button id="daemon-verify-safety" class="secondary" type="button">안전 번호 확인</button></div>`;
 }
 
