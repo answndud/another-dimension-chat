@@ -26,6 +26,7 @@ node --check scripts/acceptance_p3.mjs
 node --check scripts/acceptance_release_local_only.mjs
 node --check scripts/verify_security_requirements.mjs
 node --check scripts/verify_dependency_policy.mjs
+node --check scripts/acceptance_resource_limits.mjs
 node --check scripts/prepare_security_review.mjs
 node --check scripts/verify_security_review_bundle.mjs
 node --check scripts/verify_release_trust.mjs
@@ -45,6 +46,7 @@ node scripts/verify_relay_logs.mjs
 node scripts/verify_web_artifact_fixture.mjs
 node scripts/verify_transport_boundary.mjs
 node scripts/verify_dependency_policy.mjs
+node scripts/acceptance_resource_limits.mjs
 echo "[3/8] focused server tests"
 node --test apps/server/server.test.mjs
 echo "[4/8] focused browser runtime tests"

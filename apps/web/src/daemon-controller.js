@@ -9,6 +9,25 @@ function bindListener(target, eventName, handler) {
   target.addEventListener(eventName, handler, { signal: activeBindingController.signal });
 }
 
+function applyMessagePage(result, replace) {
+  const restored = (result.messages || []).map((message) => ({
+    id: message.message_id || "복구된 메시지",
+    text: decodeHexText(message.plaintext),
+    state: message.direction === "outgoing" ? "내 기록" : "상대 기록",
+    direction: message.direction === "outgoing" ? "outgoing" : "incoming",
+  }));
+  if (replace) {
+    state.daemonOutgoingMessages = restored.filter((message) => message.direction === "outgoing");
+    state.daemonMessages = restored.filter((message) => message.direction === "incoming");
+  } else {
+    state.daemonOutgoingMessages = mergeDaemonMessages(state.daemonOutgoingMessages, restored.filter((message) => message.direction === "outgoing"));
+    state.daemonMessages = mergeDaemonMessages(state.daemonMessages, restored.filter((message) => message.direction === "incoming"));
+  }
+  state.daemonMessageOffset = Number.isInteger(result.next_offset) ? result.next_offset : 0;
+  state.daemonMessagesHasMore = Number.isInteger(result.next_offset);
+  return restored.length;
+}
+
 export function bindDaemonSession({ render }) {
   const bridge = state.daemonBridge;
   const expiry = document.createElement("select");
@@ -26,21 +45,33 @@ export function bindDaemonSession({ render }) {
     try {
       const conversationId = document.querySelector("#daemon-conversation-id")?.value.trim() || state.daemonConversationId;
       if (!conversationId) throw new Error("대화 식별자를 입력하세요.");
-      const result = await bridge.messages(conversationId);
-      const restored = (result.messages || []).map((message) => ({
-        id: message.message_id || "복구된 메시지",
-        text: decodeHexText(message.plaintext),
-        state: message.direction === "outgoing" ? "내 기록" : "상대 기록",
-        direction: message.direction === "outgoing" ? "outgoing" : "incoming",
-      }));
-      state.daemonOutgoingMessages = restored.filter((message) => message.direction === "outgoing");
-      state.daemonMessages = restored.filter((message) => message.direction === "incoming");
-      state.notice = "daemon 암호화 저장소에서 대화 기록을 복구했습니다.";
+      const result = await bridge.messages(conversationId, 200, 0);
+      const restoredCount = applyMessagePage(result, true);
+      state.notice = `daemon 암호화 저장소에서 대화 기록 ${restoredCount}개를 복구했습니다.`;
       state.error = "";
     } catch (error) { state.error = daemonErrorMessage(error); }
     render();
   });
   document.querySelector(".daemon-delivery")?.prepend(historyButton);
+  const olderMessagesButton = document.createElement("button");
+  olderMessagesButton.type = "button";
+  olderMessagesButton.className = "quiet";
+  olderMessagesButton.textContent = "이전 대화 기록 더 불러오기";
+  olderMessagesButton.hidden = !state.daemonMessagesHasMore;
+  bindListener(olderMessagesButton, "click", async () => {
+    try {
+      const conversationId = document.querySelector("#daemon-conversation-id")?.value.trim() || state.daemonConversationId;
+      if (!conversationId || !state.daemonMessagesHasMore) return;
+      const result = await bridge.messages(conversationId, 200, state.daemonMessageOffset);
+      const loaded = applyMessagePage(result, false);
+      state.notice = `이전 대화 기록 ${loaded}개를 추가했습니다.`;
+      state.error = "";
+    } catch (error) { state.error = daemonErrorMessage(error); }
+    render();
+  });
+  document.querySelector(".daemon-delivery")?.prepend(olderMessagesButton);
+  const messageInput = document.querySelector("#daemon-message");
+  if (messageInput) messageInput.maxLength = 90000;
   const getConversationId = () => {
     const value = document.querySelector("#daemon-conversation-id")?.value.trim() || "";
     if (!value) throw new Error("대화 식별자를 입력하세요.");
@@ -433,6 +464,8 @@ export function bindDaemonWorkspace({ render }) {
       state.daemonPeerInboxUrl = contact?.inbox_url || "";
       state.daemonOutgoingMessages = [];
       state.daemonMessages = [];
+      state.daemonMessageOffset = 0;
+      state.daemonMessagesHasMore = false;
       state.daemonDeliveryDigest = "";
       state.daemonDeliveryState = "";
       state.notice = contact?.conversation_id
@@ -441,16 +474,9 @@ export function bindDaemonWorkspace({ render }) {
       state.daemonBridge.markContactRead(state.daemonSelectedContact).then(async () => {
         state.daemonContacts = (await state.daemonBridge.contacts()).contacts || state.daemonContacts;
         if (contact?.conversation_id) {
-          const result = await state.daemonBridge.messages(contact.conversation_id);
-          const restored = (result.messages || []).map((message) => ({
-            id: message.message_id || "복구된 메시지",
-            text: decodeHexText(message.plaintext),
-            state: message.direction === "outgoing" ? "내 기록" : "상대 기록",
-            direction: message.direction === "outgoing" ? "outgoing" : "incoming",
-          }));
-          state.daemonOutgoingMessages = restored.filter((message) => message.direction === "outgoing");
-          state.daemonMessages = restored.filter((message) => message.direction === "incoming");
-          state.notice = restored.length ? `${restored.length}개의 로컬 대화 기록을 불러왔습니다.` : "새 대화를 시작할 수 있습니다.";
+          const result = await state.daemonBridge.messages(contact.conversation_id, 200, 0);
+          const restoredCount = applyMessagePage(result, true);
+          state.notice = restoredCount ? `${restoredCount}개의 로컬 대화 기록을 불러왔습니다.` : "새 대화를 시작할 수 있습니다.";
         }
         render();
       }).catch((error) => {

@@ -30,6 +30,8 @@ export const state = {
   daemonPeerInboxUrl: "",
   daemonMessages: [],
   daemonOutgoingMessages: [],
+  daemonMessageOffset: 0,
+  daemonMessagesHasMore: false,
   daemonDeliveryDigest: "",
   daemonDeliveryState: "",
   daemonAttachmentState: "",
