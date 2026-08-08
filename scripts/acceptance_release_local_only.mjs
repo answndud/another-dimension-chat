@@ -53,6 +53,7 @@ await Promise.all([
   copy("reference/PRODUCT_BOUNDARY.md"),
   copy("reference/product_boundary.json"),
   copy("reference/SUPPORT_MATRIX.json"),
+  copy("apps/web/dist"),
   copy("apps/server/server.mjs"),
   copy("apps/server/routes.mjs"),
   copy("apps/server/http.mjs"),
@@ -75,9 +76,6 @@ await Promise.all([
 const serverDependencies = await run("npm", ["ci", "--prefix", join(archive, "apps/server"), "--omit=dev", "--no-audit", "--no-fund", "--workspaces=false"]);
 assert.equal(serverDependencies.code, 0, serverDependencies.output);
 await rm(join(archive, "apps/server/node_modules/.bin"), { recursive: true, force: true });
-await mkdir(join(archive, "apps/web/dist"), { recursive: true });
-await writeFile(join(archive, "apps/web/dist/index.html"), "<!doctype html><title>fixture</title>\n");
-await writeFile(join(archive, "apps/web/dist/asset-integrity.json"), JSON.stringify({ format: "another-dimension-asset-integrity", version: 1, assets: {} }) + "\n");
 const daemonBinary = process.env.AD_DAEMON_BINARY || join(projectDir, "target/debug/another-dimension-daemon");
 await mkdir(join(archive, "bin"), { recursive: true });
 await cp(daemonBinary, join(archive, "bin/another-dimension-daemon"));
@@ -125,6 +123,76 @@ assert.equal((await run(join(install, "another-dimension"), ["doctor"], noNodeEn
 const initialStatus = await run(join(install, "another-dimension"), ["status"], noNodeEnvironment);
 assert.equal(initialStatus.code, 0);
 assert.match(initialStatus.output, /not initialized|stopped/i);
+const releaseRelayPort = 19422;
+const releaseDaemonPort = 19420;
+const releaseConfig = join(install, "release-acceptance-server-config.json");
+await writeFile(releaseConfig, JSON.stringify({
+  bindHost: "127.0.0.1",
+  port: releaseRelayPort,
+  dataDir: join(data, "relay"),
+  distDir: join(install, "apps/web/dist"),
+  serveStatic: true,
+}) + "\n", { mode: 0o600 });
+function startReady(command, args, pattern) {
+  const child = spawn(command, args, { cwd: install, stdio: ["ignore", "pipe", "pipe"] });
+  let output = "";
+  return new Promise((resolveStart, rejectStart) => {
+    const timer = setTimeout(() => rejectStart(new Error(`release process did not start: ${output}`)), 8000);
+    const onData = (chunk) => {
+      output += chunk.toString();
+      if (!pattern.test(output)) return;
+      clearTimeout(timer);
+      child.stdout.off("data", onData);
+      child.stderr.off("data", onData);
+      resolveStart(child);
+    };
+    child.stdout.on("data", onData);
+    child.stderr.on("data", onData);
+    child.once("error", rejectStart);
+    child.once("exit", (code, signal) => {
+      if (code !== null || signal !== null) rejectStart(new Error(`release process exited: ${code}/${signal}\n${output}`));
+    });
+  });
+}
+const releaseRelay = await startReady(join(install, "runtime-node"), [join(install, "apps/server/server.mjs"), "--config", releaseConfig], /local server listening/);
+const releaseInit = spawn(join(install, "bin/another-dimension-daemon"), ["init", "--display-name", "Release", "--data-dir", join(data, "daemon")], { cwd: install, stdio: ["pipe", "ignore", "pipe"] });
+releaseInit.stdin.end("acceptance-only-passphrase\n");
+await new Promise((resolveInit, rejectInit) => {
+  let output = "";
+  releaseInit.stderr.on("data", (chunk) => { output += chunk.toString(); });
+  releaseInit.once("exit", (code) => code === 0 ? resolveInit() : rejectInit(new Error(`release daemon init failed: ${output}`)));
+});
+const releaseDaemon = spawn(join(install, "bin/another-dimension-daemon"), [
+  "serve", "--data-dir", join(data, "daemon"), "--port", String(releaseDaemonPort),
+  "--relay-origin", `http://127.0.0.1:${releaseRelayPort}`,
+  "--inbox-url", `http://127.0.0.1:${releaseRelayPort}/api/v1/inbox/release-acceptance-capability`,
+  "--ui-dir", join(install, "apps/web/dist"),
+], { cwd: install, stdio: ["pipe", "ignore", "pipe"] });
+releaseDaemon.stdin.end("acceptance-only-passphrase\n");
+await new Promise((resolveStart, rejectStart) => {
+  let output = "";
+  const timer = setTimeout(() => rejectStart(new Error(`release daemon did not start: ${output}`)), 8000);
+  releaseDaemon.stderr.on("data", (chunk) => {
+    output += chunk.toString();
+    if (!/open once: http:\/\//.test(output)) return;
+    clearTimeout(timer);
+    resolveStart();
+  });
+  releaseDaemon.once("exit", (code, signal) => {
+    if (code !== null || signal !== null) rejectStart(new Error(`release daemon exited: ${code}/${signal}\n${output}`));
+  });
+});
+const relayHealth = await fetch(`http://127.0.0.1:${releaseRelayPort}/api/v1/health`);
+assert.equal(relayHealth.status, 200);
+const daemonPage = await fetch(`http://127.0.0.1:${releaseDaemonPort}/`);
+assert.equal(daemonPage.status, 200);
+assert.match(await daemonPage.text(), /Another Dimension/);
+releaseDaemon.kill("SIGTERM");
+releaseRelay.kill("SIGTERM");
+await Promise.all([
+  new Promise((resolveExit) => releaseDaemon.once("exit", resolveExit)),
+  new Promise((resolveExit) => releaseRelay.once("exit", resolveExit)),
+]);
 const installedServerFile = join(install, "apps/server/server.mjs");
 const originalServerFile = await readFile(installedServerFile, "utf8");
 await writeFile(installedServerFile, `${originalServerFile}\n// tampered fixture\n`);
