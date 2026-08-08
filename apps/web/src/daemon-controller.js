@@ -9,6 +9,7 @@ let listenerSequence = 0;
 
 function bindListener(target, eventName, handler) {
   if (!target) return;
+  if (target.dataset.adListener) return;
   const app = document.querySelector("#app");
   if (!app) return;
   const marker = `ad-listener-${listenerSequence += 1}`;
@@ -96,23 +97,7 @@ function applyMessagePage(result, replace) {
 
 export function bindDaemonSession({ render }) {
   const bridge = state.daemonBridge;
-  const expiry = document.createElement("select");
-  expiry.id = "daemon-message-expiry";
-  for (const [value, label] of [["0", "메시지 만료 없음"], ["3600", "1시간 후 만료"], ["86400", "24시간 후 만료"], ["604800", "7일 후 만료"]]) {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    expiry.append(option);
-  }
-  const expiryLabel = document.createElement("label");
-  expiryLabel.textContent = "메시지 보존 기간";
-  expiryLabel.append(expiry);
-  document.querySelector("#daemon-message")?.parentElement?.insertAdjacentElement("afterend", expiryLabel);
-  const historyButton = document.createElement("button");
-  historyButton.type = "button";
-  historyButton.className = "quiet";
-  historyButton.textContent = "로컬 대화 기록 불러오기";
-  bindListener(historyButton, "click", async () => {
+  bindListener(document.querySelector("#daemon-history-load"), "click", async () => {
     try {
       const conversationId = document.querySelector("#daemon-conversation-id")?.value.trim() || state.daemonConversationId;
       if (!conversationId) throw new Error("대화 식별자를 입력하세요.");
@@ -123,13 +108,7 @@ export function bindDaemonSession({ render }) {
     } catch (error) { state.error = daemonErrorMessage(error); }
     render();
   });
-  document.querySelector(".daemon-delivery")?.prepend(historyButton);
-  const olderMessagesButton = document.createElement("button");
-  olderMessagesButton.type = "button";
-  olderMessagesButton.className = "quiet";
-  olderMessagesButton.textContent = "이전 대화 기록 더 불러오기";
-  olderMessagesButton.hidden = !state.daemonMessagesHasMore;
-  bindListener(olderMessagesButton, "click", async () => {
+  bindListener(document.querySelector("#daemon-history-older"), "click", async () => {
     try {
       const conversationId = document.querySelector("#daemon-conversation-id")?.value.trim() || state.daemonConversationId;
       if (!conversationId || !state.daemonMessagesHasMore) return;
@@ -140,7 +119,6 @@ export function bindDaemonSession({ render }) {
     } catch (error) { state.error = daemonErrorMessage(error); }
     render();
   });
-  document.querySelector(".daemon-delivery")?.prepend(olderMessagesButton);
   const messageInput = document.querySelector("#daemon-message");
   if (messageInput) messageInput.maxLength = 90000;
   const getConversationId = () => {
@@ -361,19 +339,14 @@ async function copyToClipboard(value) {
 
 export function bindDaemonWorkspace({ render }) {
   if (!state.daemonBridgeMode) return;
-  activeBindingController?.abort();
-  activeBindingController = new AbortController();
+  if (!activeBindingController) activeBindingController = new AbortController();
     document.querySelectorAll("[data-daemon-view]").forEach((button) => bindListener(button, "click", () => {
       state.daemonActiveView = button.dataset.daemonView || "conversation";
       state.error = "";
       render();
     }));
     if (state.daemonBridge && !state.daemonLocked) {
-      const wipeButton = document.createElement("button");
-      wipeButton.type = "button";
-      wipeButton.className = "danger";
-      wipeButton.textContent = "이 기기의 모든 로컬 데이터 삭제";
-      bindListener(wipeButton, "click", async () => {
+      bindListener(document.querySelector("#daemon-wipe"), "click", async () => {
         if (!window.confirm("이 기기의 암호화 저장소와 현재 세션을 삭제할까요? 릴레이 자료·별도 백업·디스크 잔존 데이터는 삭제되지 않습니다.")) return;
         try {
           const result = await state.daemonBridge.wipe();
@@ -387,11 +360,7 @@ export function bindDaemonWorkspace({ render }) {
         } catch (error) { state.error = daemonErrorMessage(error); }
         render();
       });
-      const recoveryButton = document.createElement("button");
-      recoveryButton.type = "button";
-      recoveryButton.className = "secondary";
-      recoveryButton.textContent = "암호화 복구 백업 다운로드";
-      bindListener(recoveryButton, "click", async () => {
+      bindListener(document.querySelector("#daemon-recovery-export"), "click", async () => {
         if (!window.confirm("현재 암호화 저장소의 복구 백업을 다운로드할까요? 원래 프로필 암호 문구가 있어야 복구할 수 있습니다.")) return;
         try {
           const result = await state.daemonBridge.recoveryExport();
@@ -407,17 +376,10 @@ export function bindDaemonWorkspace({ render }) {
         } catch (error) { state.error = `복구 백업을 만들지 못했습니다: ${daemonErrorMessage(error)}`; }
         render();
       });
-      const recoveryInput = document.createElement("input");
-      recoveryInput.type = "file";
-      recoveryInput.accept = ".adbackup,application/octet-stream";
-      recoveryInput.setAttribute("aria-label", "암호화 복구 백업 파일 선택");
-      const restoreButton = document.createElement("button");
-      restoreButton.type = "button";
-      restoreButton.className = "secondary";
-      restoreButton.textContent = "복구 백업 검증 후 적용 예약";
-      restoreButton.disabled = true;
+      const recoveryInput = document.querySelector("#daemon-recovery-input");
+      const restoreButton = document.querySelector("#daemon-recovery-stage");
       bindListener(recoveryInput, "change", () => {
-        restoreButton.disabled = !recoveryInput.files?.[0];
+        if (restoreButton) restoreButton.disabled = !recoveryInput.files?.[0];
       });
       bindListener(restoreButton, "click", async () => {
         const file = recoveryInput.files?.[0];
@@ -433,10 +395,7 @@ export function bindDaemonWorkspace({ render }) {
         } catch (error) { state.error = `복구 백업을 예약하지 못했습니다: ${daemonErrorMessage(error)}`; }
         render();
       });
-      const recoveryNote = document.createElement("p");
-      recoveryNote.className = "field-note daemon-recovery-note";
-      recoveryNote.textContent = "복구 백업에는 로컬 암호화 저장소와 복구 판정 정보가 포함됩니다. 릴레이 자료와 운영체제·디스크의 잔존 데이터는 포함되지 않습니다.";
-      document.querySelector("#daemon-security-content")?.append(recoveryNote, recoveryButton, recoveryInput, restoreButton, wipeButton);
+      if (restoreButton && recoveryInput) restoreButton.disabled = !recoveryInput.files?.[0];
     }
     bindListener(document.querySelector("#daemon-save-relay-pin"), "click", async () => {
       try {

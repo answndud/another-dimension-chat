@@ -34,8 +34,16 @@ function restoreInteractionState(snapshot) {
 }
 
 function sameElement(left, right) {
-  return left.nodeType === right.nodeType
-    && (left.nodeType !== Node.ELEMENT_NODE || left.tagName === right.tagName);
+  if (left.nodeType !== right.nodeType) return false;
+  if (left.nodeType !== Node.ELEMENT_NODE || left.tagName !== right.tagName) return left.nodeType === Node.TEXT_NODE;
+  const identity = (node) => {
+    if (node.id) return `id:${node.id}`;
+    const dataAttribute = [...node.attributes].find((attribute) => attribute.name.startsWith("data-"));
+    return dataAttribute ? `${dataAttribute.name}:${dataAttribute.value}` : "";
+  };
+  const leftIdentity = identity(left);
+  const rightIdentity = identity(right);
+  return !leftIdentity || !rightIdentity || leftIdentity === rightIdentity;
 }
 
 function syncAttributes(current, next) {
