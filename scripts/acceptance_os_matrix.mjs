@@ -15,12 +15,15 @@ const major = Number(process.versions.node.split(".")[0]);
 assert.ok(major >= 20, `Node.js 20+ is required; found ${process.versions.node}`);
 
 const root = resolve(import.meta.dirname, "..");
+const timeoutMs = Number(process.env.AD_ACCEPTANCE_TIMEOUT_MS ?? "30000");
+assert.ok(Number.isInteger(timeoutMs) && timeoutMs >= 30_000 && timeoutMs <= 120_000,
+  "AD_ACCEPTANCE_TIMEOUT_MS must be an integer between 30000 and 120000");
 const child = spawn(process.execPath, ["scripts/acceptance_release_local_only.mjs"], {
   cwd: root,
   stdio: "inherit",
   env: { ...process.env, NODE_OPTIONS: "--max-old-space-size=256" },
 });
-const timer = setTimeout(() => child.kill("SIGTERM"), 30_000);
+const timer = setTimeout(() => child.kill("SIGTERM"), timeoutMs);
 const code = await new Promise((resolveExit, reject) => {
   child.on("error", reject);
   child.on("close", (exitCode, signal) => resolveExit(signal ? 124 : exitCode));
