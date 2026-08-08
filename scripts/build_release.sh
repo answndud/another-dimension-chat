@@ -9,6 +9,16 @@ STAGE=$(mktemp -d "${TMPDIR:-/tmp}/another-dimension-release.XXXXXX")
 trap 'rm -rf "$STAGE"' EXIT INT TERM
 
 node -e 'const major = Number(process.versions.node.split(".")[0]); if (major < 20) { console.error(`Node.js 20 or newer is required (found ${process.version}).`); process.exit(1); }'
+GIT_SOURCE_COMMIT=$(git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || true)
+SOURCE_COMMIT=${AD_RELEASE_SOURCE_COMMIT:-${GIT_SOURCE_COMMIT:-unknown}}
+if [ -n "$GIT_SOURCE_COMMIT" ] && [ -n "${AD_RELEASE_SOURCE_COMMIT:-}" ] && [ "$AD_RELEASE_SOURCE_COMMIT" != "$GIT_SOURCE_COMMIT" ]; then
+  printf '%s\n' "AD_RELEASE_SOURCE_COMMIT does not match the current Git HEAD; refusing to misbind provenance." >&2
+  exit 1
+fi
+if [ "${AD_RELEASE_PROFILE:-development}" = "public" ] && ! printf '%s' "$SOURCE_COMMIT" | grep -Eq '^[0-9a-fA-F]{40,64}$'; then
+  printf '%s\n' "public release provenance requires a full 40-64 character Git revision." >&2
+  exit 1
+fi
 node "$PROJECT_DIR/scripts/verify_dependency_policy.mjs"
 npm --prefix "$PROJECT_DIR/apps/web" run build --workspaces=false
 node "$PROJECT_DIR/scripts/verify_web_artifact.mjs" "$PROJECT_DIR/apps/web/dist"
@@ -50,7 +60,6 @@ else
   exit 1
 fi
 AD_DAEMON_BINARY="$STAGE/another-dimension-$VERSION/bin/another-dimension-daemon" node "$PROJECT_DIR/scripts/acceptance_daemon_e2e.mjs"
-SOURCE_COMMIT=${AD_RELEASE_SOURCE_COMMIT:-$(git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || printf '%s' unknown)}
 node -e 'const fs=require("fs"); const [file, version, commit, epoch] = process.argv.slice(1); fs.writeFileSync(file, JSON.stringify({format:"another-dimension-release-provenance", version, sourceCommit:commit, node:process.version, sourceDateEpoch:Number(epoch)}, null, 2)+"\n")' "$STAGE/another-dimension-$VERSION/RELEASE-PROVENANCE.json" "$VERSION" "$SOURCE_COMMIT" "${AD_RELEASE_SOURCE_DATE_EPOCH:-0}"
 node "$PROJECT_DIR/scripts/generate_sbom.mjs" "$STAGE/another-dimension-$VERSION/apps/web/package-lock.json" "$STAGE/another-dimension-$VERSION/SBOM.cyclonedx.json" --cargo-lock "$PROJECT_DIR/Cargo.lock" --node-version "$(node --version)"
 chmod +x "$STAGE/another-dimension-$VERSION/scripts/start_local_server.sh" "$STAGE/another-dimension-$VERSION/scripts/install_local_server.sh" "$STAGE/another-dimension-$VERSION/scripts/update_local_server.sh" "$STAGE/another-dimension-$VERSION/scripts/configure_local_server.mjs" "$STAGE/another-dimension-$VERSION/scripts/generate_tls_cert.sh"
