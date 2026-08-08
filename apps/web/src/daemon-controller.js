@@ -83,6 +83,7 @@ function applyMessagePage(result, replace) {
     text: decodeHexText(message.plaintext),
     state: message.direction === "outgoing" ? "내 기록" : "상대 기록",
     direction: message.direction === "outgoing" ? "outgoing" : "incoming",
+    createdAt: Number(message.created_at) || 0,
   }));
   if (replace) {
     state.daemonOutgoingMessages = restored.filter((message) => message.direction === "outgoing");
@@ -185,6 +186,7 @@ export function bindDaemonSession({ render }) {
           text: message,
           state: state.daemonDeliveryState,
           direction: "outgoing",
+          createdAt: Math.floor(Date.now() / 1000),
         }];
         if (messageInput) messageInput.value = "";
       }
@@ -197,6 +199,7 @@ export function bindDaemonSession({ render }) {
       text: message,
       state: state.daemonDeliveryState,
       direction: "outgoing",
+      createdAt: Math.floor(Date.now() / 1000),
     }];
     if (messageInput) messageInput.value = "";
   }, "메시지를 daemon에서 암호화하고 relay에 접수했습니다."));
@@ -284,7 +287,7 @@ export function bindDaemonSession({ render }) {
     state.daemonDeliveryState = accepted.state || "relay-accepted";
     state.daemonAttachmentProgress = 100;
     state.daemonAttachmentState = "첨부파일 암호화·전송 완료";
-    state.daemonOutgoingMessages = [...state.daemonOutgoingMessages, { id: state.daemonDeliveryDigest || "attachment", text: `첨부파일: ${file.name}`, state: state.daemonDeliveryState, direction: "outgoing" }];
+    state.daemonOutgoingMessages = [...state.daemonOutgoingMessages, { id: state.daemonDeliveryDigest || "attachment", text: `첨부파일: ${file.name}`, state: state.daemonDeliveryState, direction: "outgoing", createdAt: Math.floor(Date.now() / 1000) }];
   }, "첨부파일을 daemon에서 암호화하고 relay에 접수했습니다."));
   bindListener(document.querySelector("#daemon-attachment-retry"), "click", () => run(async () => {
     const conversationId = getConversationId();
@@ -333,6 +336,7 @@ export function bindDaemonSession({ render }) {
       attachmentId: message.attachment_id || "",
       state: "decrypted",
       direction: "incoming",
+      createdAt: Number(message.created_at) || Math.floor(Date.now() / 1000),
     }));
     state.daemonMessages = mergeDaemonMessages(state.daemonMessages, received);
     state.daemonPlaintext = received.at(-1)?.text || state.daemonPlaintext;

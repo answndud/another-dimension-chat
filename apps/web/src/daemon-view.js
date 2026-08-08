@@ -126,8 +126,15 @@ export function daemonDeliveryLabel(value) {
 }
 
 export function mergeDaemonMessages(existing, incoming) {
+  const merged = [...existing];
   const known = new Set(existing.map((message) => message.id));
-  return [...existing, ...incoming.filter((message) => message.id && !known.has(message.id))];
+  for (const message of incoming) {
+    if (message.id && !known.has(message.id)) {
+      known.add(message.id);
+      merged.push(message);
+    }
+  }
+  return merged.sort((left, right) => (left.createdAt || 0) - (right.createdAt || 0) || left.id.localeCompare(right.id));
 }
 
 export function newAttachmentBlobId() {
@@ -145,7 +152,8 @@ export function renderDaemonSessionPanel(state) {
   const selectedContact = state.daemonContacts.find((contact) => contact.account_id === state.daemonSelectedContact);
   const conversationId = state.daemonConversationId || "";
   const peerInboxUrl = state.daemonPeerInboxUrl || selectedContact?.inbox_url || "";
-  const timeline = [...state.daemonOutgoingMessages, ...state.daemonMessages];
+  const timeline = [...state.daemonOutgoingMessages, ...state.daemonMessages]
+    .sort((left, right) => (left.createdAt || 0) - (right.createdAt || 0) || left.id.localeCompare(right.id));
   const receivedMessages = timeline.length
     ? timeline.map((message) => `<article class="daemon-message ${message.direction === "outgoing" ? "outgoing" : "incoming"}">${message.attachmentId ? `<p>암호화 첨부파일</p><button class="quiet daemon-attachment-download" data-daemon-attachment="${escapeHtml(message.attachmentId)}" type="button">파일 복호화·다운로드</button><button class="quiet daemon-attachment-delete" data-daemon-attachment-delete="${escapeHtml(message.attachmentId)}" type="button">로컬 첨부 상태 삭제</button>` : `<p>${escapeHtml(message.text)}</p><button class="quiet daemon-message-copy" data-daemon-copy="${escapeHtml(message.text)}" type="button">내용 복사</button>`}<small>${message.direction === "outgoing" ? "내 메시지" : "상대 메시지 · 암호화 저장소에서 복호화됨"} · ${escapeHtml(daemonDeliveryLabel(message.state || "decrypted"))} · ${escapeHtml(message.id.slice(0, 12))}</small></article>`).join("")
     : '<p class="field-note">아직 받은 메시지가 없습니다.</p>';
