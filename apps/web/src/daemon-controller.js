@@ -87,7 +87,12 @@ export function bindDaemonSession({ render }) {
   const bridge = state.daemonBridge;
   const expiry = document.createElement("select");
   expiry.id = "daemon-message-expiry";
-  expiry.innerHTML = '<option value="0">메시지 만료 없음</option><option value="3600">1시간 후 만료</option><option value="86400">24시간 후 만료</option><option value="604800">7일 후 만료</option>';
+  for (const [value, label] of [["0", "메시지 만료 없음"], ["3600", "1시간 후 만료"], ["86400", "24시간 후 만료"], ["604800", "7일 후 만료"]]) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    expiry.append(option);
+  }
   const expiryLabel = document.createElement("label");
   expiryLabel.textContent = "메시지 보존 기간";
   expiryLabel.append(expiry);

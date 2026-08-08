@@ -6,14 +6,43 @@ import "./styles.css";
 
 const app = document.querySelector("#app");
 
+function captureInteractionState() {
+  const active = document.activeElement;
+  const focused = active?.id ? {
+    id: active.id,
+    value: "value" in active ? active.value : undefined,
+    selectionStart: typeof active.selectionStart === "number" ? active.selectionStart : undefined,
+    selectionEnd: typeof active.selectionEnd === "number" ? active.selectionEnd : undefined,
+  } : null;
+  const messageList = document.querySelector(".daemon-message-list");
+  return { focused, messageScrollTop: messageList?.scrollTop ?? null };
+}
+
+function restoreInteractionState(snapshot) {
+  if (snapshot.focused?.id) {
+    const node = document.getElementById(snapshot.focused.id);
+    if (node && snapshot.focused.value !== undefined && node.type !== "file") node.value = snapshot.focused.value;
+    if (node && document.activeElement !== node) node.focus({ preventScroll: true });
+    if (node && typeof snapshot.focused.selectionStart === "number" && typeof node.setSelectionRange === "function") {
+      node.setSelectionRange(snapshot.focused.selectionStart, snapshot.focused.selectionEnd);
+    }
+  }
+  if (snapshot.messageScrollTop !== null) {
+    const messageList = document.querySelector(".daemon-message-list");
+    if (messageList) messageList.scrollTop = snapshot.messageScrollTop;
+  }
+}
+
 function render() {
   if (state.daemonBridgeMode) {
+    const interaction = captureInteractionState();
     app.innerHTML = renderDaemonBridgeState(state);
     if (state.daemonRelayState === "offline") {
       document.querySelector(".daemon-workspace > .notice, .daemon-gate .notice")?.insertAdjacentHTML("beforebegin", '<div class="daemon-connection-banner offline" role="status"><strong>릴레이 연결이 끊겼습니다.</strong><span>로컬 대화와 암호화 상태는 유지됩니다. 연결이 복구되면 전달 대기 항목을 다시 시도하세요.</span></div>');
     } else if (state.daemonRelayState === "online") {
       document.querySelector(".daemon-workspace > .notice, .daemon-gate .notice")?.insertAdjacentHTML("beforebegin", '<div class="daemon-connection-banner online" role="status"><strong>릴레이 연결됨</strong><span>릴레이 접수는 상대방이 읽었다는 뜻이 아닙니다.</span></div>');
     }
+    restoreInteractionState(interaction);
     bindDaemonWorkspace({ render });
     return;
   }
