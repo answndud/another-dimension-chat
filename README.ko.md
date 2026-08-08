@@ -157,14 +157,17 @@ AD="$HOME/.local/share/another-dimension/server/another-dimension"
 ```
 
 `start`는 daemon을 foreground에서 실행하고 Chromium을 엽니다. 종료하려면 해당
-터미널에서 `Ctrl-C`를 누릅니다. 원격 relay를 사용할 때는 README의 TLS pin과 relay
-공개키 옵션을 `start` 뒤에 그대로 붙일 수 있습니다. relay는 daemon과 별도
-프로세스이므로 상태와 종료 명령도 분리됩니다.
+터미널에서 `Ctrl-C`를 누릅니다. 이미 실행 중인 daemon은 `restart`로 중지 후 같은
+터미널에서 다시 시작할 수 있습니다. `restart`는 daemon만 재시작하며 relay는
+`relay-stop` 후 `relay-start`로 별도 관리합니다. 원격 relay를 사용할 때는 README의
+TLS pin과 relay 공개키 옵션을 `start` 뒤에 그대로 붙일 수 있습니다. relay는 daemon과
+별도 프로세스이므로 상태와 종료 명령도 분리됩니다.
 
 ```sh
 "$AD" status
 "$AD" doctor
 "$AD" stop
+"$AD" restart
 "$AD" relay-status
 "$AD" relay-stop
 "$AD" recovery-export /Volumes/OFFLINE/profile.adrecovery

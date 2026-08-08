@@ -55,6 +55,13 @@ case "${1:-help}" in
     "$ROOT/bin/another-dimension-daemon" status --data-dir "$(daemon_data)" ;;
   stop)
     "$ROOT/bin/another-dimension-daemon" stop --data-dir "$(daemon_data)" ;;
+  restart)
+    shift
+    "$ROOT/bin/another-dimension-daemon" stop --data-dir "$(daemon_data)"
+    verify >/dev/null
+    prompt_secret "프로필 암호문구"
+    printf '%s' "$SECRET" | "$ROOT/bin/another-dimension-daemon" serve --data-dir "$(daemon_data)" --port "$(daemon_port)" --ui-dir "$(ui_dir)" --open "$@"
+    unset SECRET ;;
   doctor)
     verify
     "$ROOT/bin/another-dimension-daemon" doctor --data-dir "$(daemon_data)" ;;
@@ -100,6 +107,6 @@ case "${1:-help}" in
     case "$ROOT" in /|"$HOME"|"$HOME"/|*..*) echo "unsafe installation path; refusing uninstall" >&2; exit 1;; esac
     rm -rf "$ROOT"; echo "설치 코드만 제거했습니다. daemon/relay 데이터는 보존됩니다." ;;
   help|-h|--help)
-    echo "사용법: $0 {init|start|status|stop|doctor|recovery-export|recovery-import|relay-start|relay-stop|relay-status|relay-backup|relay-restore|update|rollback|uninstall}" ;;
+    echo "사용법: $0 {init|start|status|stop|restart|doctor|recovery-export|recovery-import|relay-start|relay-stop|relay-status|relay-backup|relay-restore|update|rollback|uninstall}" ;;
   *) echo "알 수 없는 명령입니다. $0 help" >&2; exit 2 ;;
 esac
