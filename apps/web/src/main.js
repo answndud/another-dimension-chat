@@ -1,5 +1,6 @@
 import { connectDaemonBridge } from "./daemon-bridge.js";
 import { renderDaemonBridgeState } from "./daemon-view.js";
+import { daemonErrorMessage } from "./daemon-errors.js";
 import { state } from "./daemon-state.js";
 import { bindDaemonWorkspace } from "./daemon-controller.js";
 import "./styles.css";
@@ -158,7 +159,7 @@ async function startApp() {
   } catch (error) {
     state.daemonBridgeMode = true;
     state.daemonStatus = "보안 서비스 연결 실패";
-    state.error = error.message;
+    state.error = daemonErrorMessage(error);
     render();
   }
 }

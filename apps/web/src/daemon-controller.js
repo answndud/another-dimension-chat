@@ -122,7 +122,7 @@ export function bindDaemonSession({ render }) {
     render();
   });
   const messageInput = document.querySelector("#daemon-message");
-  if (messageInput) messageInput.maxLength = 90000;
+  if (messageInput) messageInput.maxLength = 65536;
   const getConversationId = () => {
     const value = document.querySelector("#daemon-conversation-id")?.value.trim() || "";
     if (!value) throw new Error("대화 식별자를 입력하세요.");

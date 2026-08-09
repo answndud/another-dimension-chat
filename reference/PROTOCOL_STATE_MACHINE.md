@@ -100,6 +100,32 @@ This is implementation evidence, not an independent cryptographic audit; the
 selected protocol composition and high-risk release remain blocked until
 external review and release evidence are complete.
 
+### Current user-visible phase mapping
+
+The daemon does not persist a second, browser-owned state machine. The following
+table is the canonical mapping from bridge events and the persisted pairing
+snapshot to the user-visible phases. `expired`, `revoked`, and `offline-pending`
+are guarded outcomes, not claims that the pairing is still usable.
+
+| User-visible phase | Source of truth | Allowed next action | Message/identity guarantee |
+| --- | --- | --- | --- |
+| `bootstrap` | one-time daemon URL fragment and bridge exchange | exchange once or request a fresh daemon URL | no authenticated API before exchange |
+| `invite-created` | `PairingState::InviteCreated` | share, revoke, or replace the invite | code is rendezvous only; it is not authentication |
+| `received` | verified invite response staged by daemon | compare safety number or reject | peer identity is displayed only after daemon validation |
+| `safety-unverified` | `PairingState::Verified` with `safety_verified=false`, or established pairing re-locked for reconfirmation | compare the complete safety number, or reject | messaging remains blocked |
+| `safety-verified` | `PairingState::Verified` with `safety_verified=true` | explicitly approve or reject | safety comparison passed; contact is not approved yet |
+| `approved` | explicit daemon approval transition | establish the conversation or reject | approval alone does not imply delivery |
+| `established` | `PairingState::Established` with `safety_verified=true` and session catalog ready | send encrypted data, lock, or revoke | message encryption is daemon-owned |
+| `rejected` | `PairingState::Rejected` or binding/trust failure | create a new invite and repeat verification | previous binding is not silently reused |
+| `expired` | invite/relay TTL validation error | create a new invite | expired material is not retried |
+| `revoked` | device, invite, or relay binding revocation error | stop and explicitly re-establish trust | old capability/device is not accepted |
+| `offline-pending` | local delivery ledger `Retryable`/`Queued` | wait for the relay or retry within the ledger policy | only local encryption is complete; recipient receipt is unknown |
+
+`RelayAccepted` is rendered as “전달 경로 접수됨 · 상대 수신 여부 확인 불가”.
+The relay's mailbox acknowledgement is not a read receipt. The UI never claims
+that a person saw a message unless a future authenticated receipt protocol is
+implemented and separately reviewed.
+
 ## Invite-code lifecycle
 
 | State | Entered by | Allowed next transition | Invariant |
@@ -176,11 +202,19 @@ The following must hold for every state:
 
 ## Delivery contract
 
-`send -> relay POST -> recipient read -> decrypt -> local persist -> relay ack`
+`send -> relay POST -> recipient daemon fetch -> decrypt -> local persist -> relay ack`
 is at-least-once delivery. The relay may duplicate or retain an envelope, so
-the recipient deduplicates by profile-bound envelope ID. A failed ack does not
-erase the local decrypted result; the next sync may receive the same envelope
-and safely acknowledge it as already imported.
+the recipient deduplicates by profile-bound envelope ID. The relay ack only
+removes the envelope from that mailbox; it is not a sender-visible read receipt
+and does not prove that the human recipient saw the message. A failed ack does
+not erase the local decrypted result; the next sync may receive the same
+envelope and safely acknowledge it as already imported.
+
+The sender's `relay-accepted` state therefore means only that the user-owned
+relay durably accepted the ciphertext. `recipient-received` and `decrypted`
+are local recipient-daemon states unless a future, separately authenticated
+delivery receipt protocol is added. The product currently exposes no read
+receipt claim.
 
 ## Executable state vectors
 

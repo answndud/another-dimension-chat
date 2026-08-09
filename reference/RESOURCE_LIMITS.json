@@ -4,7 +4,7 @@
   "platform": "macOS arm64 + Chromium",
   "limits": {
     "daemonRequestBytes": 196608,
-    "messageBytes": 1048576,
+    "messageBytes": 65536,
     "attachmentBytes": 33554432,
     "attachmentChunkBytes": 65536,
     "encryptedRecordCount": 4096,

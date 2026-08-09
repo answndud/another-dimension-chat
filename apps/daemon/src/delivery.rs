@@ -42,6 +42,8 @@ pub enum DeliveryState {
     Encrypted,
     Queued,
     RelayAccepted,
+    /// The recipient daemon fetched the envelope and persisted its local
+    /// delivery record. This is never a sender-side read receipt.
     RecipientReceived,
     Decrypted,
     Retryable,

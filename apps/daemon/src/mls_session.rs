@@ -25,7 +25,7 @@ use crate::mls_provider::{DaemonProvider, SELECTED_CIPHERSUITE};
 use crate::storage::{EncryptedStore, RecordClass};
 
 const MAX_IDENTITY_BYTES: usize = 1024;
-const MAX_MESSAGE_BYTES: usize = 1024 * 1024;
+const MAX_MESSAGE_BYTES: usize = 64 * 1024;
 const MAX_WIRE_BYTES: usize = 4 * 1024 * 1024;
 const ATTACHMENT_MESSAGE_PREFIX: &[u8] = b"ADATT1.";
 
