@@ -9,13 +9,13 @@ import { execFileSync, spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+const projectRoot = resolve(new URL("..", import.meta.url).pathname);
 const relayModulePath = process.env.AD_RELAY_MODULE;
 const { createLocalServer } = await import(relayModulePath
   ? pathToFileURL(resolve(relayModulePath)).href
   : "../apps/server/server.mjs");
 
-const daemonBinary = process.env.AD_DAEMON_BINARY || "target/debug/another-dimension-daemon";
-const passphrase = "acceptance-only-passphrase";
+const daemonBinary = process.env.AD_DAEMON_BINARY || join(projectRoot, ".build-cache/cargo-target/debug/another-dimension-daemon");
 const useTls = process.env.AD_ACCEPTANCE_TLS === "1";
 
 function hex(value) {
@@ -72,8 +72,7 @@ function waitForDaemon(process, port) {
 }
 
 async function initDaemon(dataDir, displayName) {
-  const child = spawn(daemonBinary, ["init", "--display-name", displayName, "--data-dir", dataDir], { stdio: ["pipe", "pipe", "pipe"] });
-  child.stdin.end(`${passphrase}\n`);
+  const child = spawn(daemonBinary, ["init", "--display-name", displayName, "--data-dir", dataDir], { stdio: ["ignore", "pipe", "pipe"] });
   return await new Promise((resolve, reject) => {
     let output = "";
     let error = "";
@@ -105,7 +104,7 @@ async function stopDaemon(daemon) {
   ]);
 }
 
-async function startDaemon(dataDir, port, relay) {
+async function startDaemon(dataDir, port, relay, passphrase) {
   const origin = `http://127.0.0.1:${port}`;
   const inboxUrl = relay.inboxUrl.replace(":0", `:${relay.port}`);
   const child = spawn(daemonBinary, [
@@ -202,12 +201,10 @@ try {
     new Promise((resolve) => relayA.server.listen(relayAPort, "127.0.0.1", resolve)),
     new Promise((resolve) => relayB.server.listen(relayBPort, "127.0.0.1", resolve)),
   ]);
-  relayA.port = relayAPort;
-  relayB.port = relayBPort;
-  relayA.origin = useTls ? `https://localhost:${relayA.port}` : `http://127.0.0.1:${relayA.port}`;
-  relayB.origin = useTls ? `https://localhost:${relayB.port}` : `http://127.0.0.1:${relayB.port}`;
-  relayA.inboxUrl = relayA.inboxUrl.replace(`http://127.0.0.1:${relayA.port}`, relayA.origin);
-  relayB.inboxUrl = relayB.inboxUrl.replace(`http://127.0.0.1:${relayB.port}`, relayB.origin);
+  // createLocalServer exposes the effective listener port as a getter. Read
+  // the post-listen URLs instead of mutating the runtime object.
+  relayA.origin = relayA.publicOrigin;
+  relayB.origin = relayB.publicOrigin;
   relayA.tlsPin = tlsFiles?.pin;
   relayB.tlsPin = tlsFiles?.pin;
   const relayInfoBefore = await relayApi(relayA, "GET", "/api/v1/info", undefined, { "x-ad-local-access": relayA.localAccessCapability });
@@ -220,12 +217,16 @@ try {
   const bobDir = join(root, "bob");
   const aliceIdentity = await initDaemon(aliceDir, "Alice");
   const bobIdentity = await initDaemon(bobDir, "Bob");
+  const alicePassphrase = aliceIdentity.match(/^passphrase: ([0-9a-f]{64})$/m)?.[1];
+  const bobPassphrase = bobIdentity.match(/^passphrase: ([0-9a-f]{64})$/m)?.[1];
+  assert.match(alicePassphrase || "", /^[0-9a-f]{64}$/);
+  assert.match(bobPassphrase || "", /^[0-9a-f]{64}$/);
   assert.notEqual(aliceIdentity.match(/account_id: (\S+)/)?.[1], bobIdentity.match(/account_id: (\S+)/)?.[1]);
-  alice = await startDaemon(aliceDir, 17420, relayA);
+  alice = await startDaemon(aliceDir, 17420, relayA, alicePassphrase);
   // v0.1 has one configured relay trust anchor per daemon. Pair both devices
   // through the same relay; the independent relay above proves a second
   // user-owned relay can boot without becoming a central dependency.
-  bob = await startDaemon(bobDir, 17421, relayA);
+  bob = await startDaemon(bobDir, 17421, relayA, bobPassphrase);
 
   const aliceInvite = await publicInvite(alice, relayA);
   const bobStaged = await stageInvite(bob, aliceInvite);
@@ -320,8 +321,8 @@ try {
 
   await stopDaemon(alice);
   await stopDaemon(bob);
-  alice = await startDaemon(aliceDir, 17420, relayA);
-  bob = await startDaemon(bobDir, 17421, relayA);
+  alice = await startDaemon(aliceDir, 17420, relayA, alicePassphrase);
+  bob = await startDaemon(bobDir, 17421, relayA, bobPassphrase);
   assert.equal((await alice.api("GET", "/local-api/contacts")).body.contacts.length, 1);
   assert.deepEqual((await bob.api("GET", "/local-api/conversations")).body.conversations, [conversationId]);
   const afterRestart = await alice.api("POST", "/local-api/session/send", { conversation_id: conversationId, plaintext: "after-daemon-restart" });
@@ -338,9 +339,7 @@ try {
   assert.equal(unavailable.body.state, "retryable", JSON.stringify(unavailable.body));
   relayA = await createLocalServer(relayOptions(relayAPort, "relay-a"));
   await new Promise((resolve) => relayA.server.listen(relayAPort, "127.0.0.1", resolve));
-  relayA.port = relayAPort;
-  relayA.origin = useTls ? `https://localhost:${relayA.port}` : `http://127.0.0.1:${relayA.port}`;
-  relayA.inboxUrl = relayA.inboxUrl.replace(`http://127.0.0.1:${relayA.port}`, relayA.origin);
+  relayA.origin = relayA.publicOrigin;
   relayA.tlsPin = tlsFiles?.pin;
   const relayRecovered = await relayApi(relayA, "GET", "/api/v1/info", undefined, { "x-ad-local-access": relayA.localAccessCapability });
   assert.equal(relayRecovered.status, 200);
@@ -357,7 +356,7 @@ try {
   assert.equal(exported.code, 0, exported.stderr);
   const imported = await runDaemonCommand(["recovery", "import", "--data-dir", restoredAliceDir, "--input", recoveryFile]);
   assert.equal(imported.code, 0, imported.stderr);
-  alice = await startDaemon(restoredAliceDir, 17420, relayA);
+  alice = await startDaemon(restoredAliceDir, 17420, relayA, alicePassphrase);
   assert.equal((await alice.api("GET", "/local-api/contacts")).body.contacts.length, 1);
   assert.deepEqual((await alice.api("GET", "/local-api/conversations")).body.conversations, [conversationId]);
   const afterRecovery = await alice.api("POST", "/local-api/session/send", { conversation_id: conversationId, plaintext: "after-recovery" });

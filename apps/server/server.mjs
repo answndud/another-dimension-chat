@@ -15,6 +15,7 @@ const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const MAX_POSTS_PER_WINDOW = 30;
 const MAX_LOCAL_READS_PER_WINDOW = 120;
+const MAX_RATE_LIMIT_BUCKETS = 4096;
 const CAPABILITY_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const CAPABILITY_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const MAX_INVITE_CODE_RECORDS = 256;
@@ -81,13 +82,22 @@ async function readRegularPrivateFile(file) {
   const info = await lstat(file).catch((error) => error.code === "ENOENT" ? null : Promise.reject(error));
   if (!info) return null;
   if (!info.isFile() || info.isSymbolicLink()) throw new Error(`Private server file is not a regular file: ${file}`);
+  // A file may have been created by an older release with permissive mode bits.
+  // Re-assert the private-file boundary before any capability or signing key is
+  // loaded; the write path already uses an atomic 0600 replacement.
+  await chmod(file, 0o600);
   return readFile(file, "utf8");
 }
 
 async function writePrivateFile(file, contents) {
   const temporary = `${file}.${randomBytes(8).toString("hex")}.tmp`;
   await writeFile(temporary, contents, { mode: 0o600 });
-  await rename(temporary, file);
+  try {
+    await rename(temporary, file);
+  } catch (error) {
+    await unlink(temporary).catch(() => {});
+    throw error;
+  }
 }
 
 function newCapability(scope, now = Date.now()) {
@@ -284,6 +294,7 @@ export async function createLocalServer({
   const retiredInboxPrefixes = new Set();
   const relayReceiptKey = await loadRelayReceiptKey(dataDir, privateFileWriter, relayReceiptSigningKeyFile);
   let localAccessCapability = await loadCapability(localAccessFile, "local-control", privateFileWriter);
+  let boundServer;
   const relayStore = await createSqliteRelayStore({
     file: relayDatabaseFile,
     inboxLegacyFile: queueFile,
@@ -314,7 +325,11 @@ export async function createLocalServer({
     relayStore.replaceInviteCodes(routeState.inviteCodes);
   };
   const scheme = tlsKeyFile && tlsCertFile ? "https" : "http";
-  const originFor = (address) => normalizedPublicUrl || `${scheme}://${urlHost(address)}:${port}`;
+  const effectivePort = () => {
+    const address = boundServer?.address?.();
+    return address && typeof address === "object" && Number.isInteger(address.port) ? address.port : port;
+  };
+  const originFor = (address) => normalizedPublicUrl || `${scheme}://${urlHost(address)}:${effectivePort()}`;
   const inboxUrlFor = (address) => `${originFor(address)}${capabilityPath(capabilityState.inbox.token)}`;
   const rotateInboxCapability = async () => {
     retiredInboxPrefixes.add(capabilityPath(capabilityState.inbox.token));
@@ -323,11 +338,24 @@ export async function createLocalServer({
     return capabilityState.inbox;
   };
   const requestWindows = new Map();
+  let lastRateLimitCleanup = 0;
   const consumeRateLimit = (req, bucket, limit) => {
     // Forwarded headers are informational only. Trusting a client-supplied value
     // here would let a direct caller rotate identities and bypass local limits.
     const key = `${bucket}:${req.socket.remoteAddress || "unknown"}`;
     const now = Date.now();
+    if (now - lastRateLimitCleanup >= RATE_LIMIT_WINDOW_MS) {
+      for (const [storedKey, storedTimestamps] of requestWindows) {
+        if (storedTimestamps.every((timestamp) => now - timestamp >= RATE_LIMIT_WINDOW_MS)) {
+          requestWindows.delete(storedKey);
+        }
+      }
+      lastRateLimitCleanup = now;
+    }
+    if (!requestWindows.has(key) && requestWindows.size >= MAX_RATE_LIMIT_BUCKETS) {
+      const oldestKey = requestWindows.keys().next().value;
+      if (oldestKey !== undefined) requestWindows.delete(oldestKey);
+    }
     const timestamps = (requestWindows.get(key) || []).filter((timestamp) => now - timestamp < RATE_LIMIT_WINDOW_MS);
     if (timestamps.length >= limit) {
       requestWindows.set(key, timestamps);
@@ -400,8 +428,32 @@ export async function createLocalServer({
   const localUiOrigin = tlsKeyFile && normalizedPublicUrl
     ? normalizedPublicUrl
     : `${scheme}://${urlHost(localHost)}:${port}`;
-  const localUiUrl = `${localUiOrigin}/#relay=${encodeURIComponent(originFor(bindHost))}&local=${localAccessCapability.token}`;
-  await privateFileWriter(localUiUrlFile, `${localUiUrl}\n`);
+  const buildLocalUiUrl = () => {
+    const origin = normalizedPublicUrl
+      ? localUiOrigin
+      : `${scheme}://${urlHost(localHost)}:${effectivePort()}`;
+    return `${origin}/#relay=${encodeURIComponent(originFor(bindHost))}&local=${localAccessCapability.token}`;
+  };
+  let localUiUrl = buildLocalUiUrl();
+  const refreshLocalUiUrl = async () => {
+    localUiUrl = buildLocalUiUrl();
+    await privateFileWriter(localUiUrlFile, `${localUiUrl}\n`);
+  };
+  await refreshLocalUiUrl();
+  boundServer = server;
+  let resolveReady;
+  let rejectReady;
+  const ready = new Promise((resolve, reject) => {
+    resolveReady = resolve;
+    rejectReady = reject;
+  });
+  // Consumers that do not need readiness should not create an unhandled
+  // rejection, while callers that await `runtime.ready` still receive errors.
+  ready.catch(() => {});
+  server.once("listening", () => {
+    refreshLocalUiUrl().then(resolveReady, rejectReady);
+  });
+  server.once("error", rejectReady);
   let relayStoreClosed = false;
   const closeRelayStore = () => {
     if (relayStoreClosed) return;
@@ -418,17 +470,18 @@ export async function createLocalServer({
   };
   return {
     server,
+    ready,
     close,
     bindHost,
-    port,
+    get port() { return effectivePort(); },
     inboxCapability: capabilityState.inbox.token,
-    inboxUrl: inboxUrlFor(bindHost),
-    publicOrigin: originFor(bindHost),
+    get inboxUrl() { return inboxUrlFor(bindHost); },
+    get publicOrigin() { return originFor(bindHost); },
     externalSecure: originFor(bindHost).startsWith("https://"),
     listenerTls: Boolean(tlsKeyFile && tlsCertFile),
     serveStatic,
     localAccessCapability: localAccessCapability.token,
-    localUiUrl,
+    get localUiUrl() { return localUiUrl; },
     localUiUrlFile,
     relayReceiptPublicKey: relayReceiptKey.publicKeyHex,
     relayReceiptPublicKeyFingerprint: relayReceiptKey.publicKeyFingerprint,
@@ -455,13 +508,20 @@ if (launchedDirectly) {
     };
     process.once("SIGTERM", () => { void shutdown("SIGTERM"); });
     process.once("SIGINT", () => { void shutdown("SIGINT"); });
-    runtime.server.listen(runtime.port, runtime.bindHost, () => {
-      console.log(`Another Dimension local server listening at ${runtime.listenerTls ? "https" : "http"}://${runtime.bindHost}:${runtime.port}`);
-      console.log(`Advertised origin: ${runtime.publicOrigin}`);
-      console.log(`Private local UI URL written to ${runtime.localUiUrlFile} (mode 600); do not print or share its contents.`);
-      if (!isLoopbackHost(runtime.bindHost)) console.warn("Warning: non-loopback bind exposes this server to the configured network.");
-      if (!isLoopbackHost(runtime.bindHost) && !runtime.externalSecure) console.warn("Warning: remote browser access requires an HTTPS public URL or reverse proxy.");
-      if (runtime.externalSecure && !runtime.listenerTls) console.log(`External HTTPS is expected at ${runtime.publicOrigin}; keep the reverse proxy running.`);
+    runtime.server.listen(runtime.port, runtime.bindHost, async () => {
+      try {
+        await runtime.ready;
+        console.log(`Another Dimension local server listening at ${runtime.listenerTls ? "https" : "http"}://${runtime.bindHost}:${runtime.port}`);
+        console.log(`Advertised origin: ${runtime.publicOrigin}`);
+        console.log(`Private local UI URL written to ${runtime.localUiUrlFile} (mode 600); do not print or share its contents.`);
+        if (!isLoopbackHost(runtime.bindHost)) console.warn("Warning: non-loopback bind exposes this server to the configured network.");
+        if (!isLoopbackHost(runtime.bindHost) && !runtime.externalSecure) console.warn("Warning: remote browser access requires an HTTPS public URL or reverse proxy.");
+        if (runtime.externalSecure && !runtime.listenerTls) console.log(`External HTTPS is expected at ${runtime.publicOrigin}; keep the reverse proxy running.`);
+      } catch (error) {
+        console.error(`Server startup metadata failed: ${error.message}`);
+        await runtime.close().catch(() => {});
+        process.exitCode = 1;
+      }
     });
   };
   launch().catch((error) => {

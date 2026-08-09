@@ -68,14 +68,26 @@ npm --prefix apps/web run build --workspaces=false
 
 ### 3. 로컬 프로필 초기화
 
-daemon은 암호문구를 명령행 인자로 받지 않습니다. 터미널 입력 또는 표준입력만
-사용합니다. 최소 12자 이상을 사용하고 비밀번호 관리자에 보관하세요.
+daemon은 프로필 초기화 때 사용자가 암호문구를 직접 만들도록 요구하지 않습니다.
+운영체제 난수로 생성된 256비트 값을 화면에서 한 번 복사하거나, owner-only
+파일로 저장하도록 명시할 수 있습니다.
 
 ```sh
-read -s AD_PASSPHRASE
-printf '%s' "$AD_PASSPHRASE" | cargo run -p another-dimension-daemon -- \
-  init --display-name "내 표시 이름" --data-dir .local/alice
-unset AD_PASSPHRASE
+cargo run -p another-dimension-daemon -- \
+  init --display-name "내 표시 이름" \
+  --data-dir .local/alice \
+  --passphrase-output /secure/offline/alice.passphrase
+```
+
+생성된 값을 별도 보안 매체에 보관하세요. `serve`, `identity`, `device`, `wipe`는
+생성된 값을 stdin으로만 받아 복호화하며 명령행 인자로는 받지 않습니다.
+
+Apple Silicon macOS에서는 초기화 시 프로필 비밀값을 macOS Keychain에도 등록합니다.
+Keychain 자동 잠금 해제를 명시적으로 사용할 때만 `--keychain`을 붙입니다.
+
+```sh
+cargo run -p another-dimension-daemon -- \
+  identity show --data-dir .local/alice --keychain
 ```
 
 기존 browser Olm/Tauri 프로토타입의 키와 세션은 OpenMLS 신원으로 변환하지
@@ -103,8 +115,7 @@ loopback 개발 중에는 필요한 값을 relay의 private info API에서 확�
 있습니다.
 
 ```sh
-read -s AD_PASSPHRASE
-printf '%s' "$AD_PASSPHRASE" | cargo run -p another-dimension-daemon -- \
+printf '%s' "$(cat /secure/offline/alice.passphrase)" | cargo run -p another-dimension-daemon -- \
   serve \
   --data-dir .local/alice \
   --port 1420 \
@@ -187,7 +198,8 @@ another-dimension-daemon device revoke --id DEVICE_ID [--data-dir PATH]
 another-dimension-daemon recovery export --output PATH [--data-dir PATH]
 another-dimension-daemon recovery inspect --input PATH
 another-dimension-daemon recovery import --input PATH [--data-dir PATH]
-another-dimension-daemon recovery rotate --data-dir PATH
+another-dimension-daemon recovery rotate --data-dir PATH [--passphrase-output PATH]
+another-dimension-daemon keychain enroll --data-dir PATH
 another-dimension-daemon wipe --data-dir PATH
 ```
 
@@ -211,7 +223,48 @@ cargo run -p another-dimension-daemon -- \
 - 가져오기는 기존 프로필을 덮어쓰지 않습니다.
 - 가져오기 전에 `recovery inspect`로 형식과 버전을 확인하세요.
 
+`recovery rotate`는 기존 암호문구만 stdin으로 받고 새 암호문구는 랜덤 생성합니다.
+`--passphrase-output`을 지정하지 않으면 화면에서 한 번 복사할 수 있고, 지정하면
+0600 파일로 저장됩니다. 복구 import 후에는 원래 암호문구로 다음을 한 번 실행해
+macOS Keychain 등록을 복원할 수 있습니다.
+
+복구 파일을 새 디렉터리에 가져온 뒤 Keychain 자동 잠금 해제를 사용하려면 원래
+암호문구를 stdin으로 한 번만 제공해 등록합니다.
+
+```sh
+printf '%s' "$(cat /secure/offline/alice.passphrase)" | \
+  cargo run -p another-dimension-daemon -- \
+  keychain enroll --data-dir .local/alice-restored
+```
+
 ## 검증 명령
+
+Rust 산출물은 `.cargo/config.toml`에 따라 `.build-cache/cargo-target`에만
+생성됩니다. `target/`은 제품 데이터나 로그가 아닌 이전 실행의 legacy cache입니다.
+debug/test incremental compilation은 비활성화되어 소스 변경마다 incremental tree가
+계속 쌓이지 않습니다.
+
+이 cache는 실행·배포에 필요한 영구 데이터가 아니라 재컴파일을 위한 임시 산출물입니다.
+검증 시작 시 기본 2GB 이상이면 자동으로 정리됩니다. 완전히 비우려면 다음 명령을
+사용하세요.
+
+```sh
+scripts/clean_build_artifacts.sh          # dry-run, 삭제하지 않음
+scripts/clean_build_artifacts.sh --apply  # 재생성 가능한 Rust cache 삭제
+du -sh target .build-cache/cargo-target 2>/dev/null
+```
+
+릴리스 아카이브와 웹 배포 산출물은 별도로 관리합니다. 릴리스 증거를 보존해야
+한다면 실행하지 마세요.
+
+```sh
+scripts/clean_release_artifacts.sh          # dry-run
+scripts/clean_release_artifacts.sh --apply  # public-release와 web/dist 삭제
+```
+
+M1의 CPU 사용량을 제한하기 위해 검증 스크립트는 `CARGO_BUILD_JOBS=2`와
+`CARGO_INCREMENTAL=0`을 사용합니다. 직접 Cargo 명령을 실행할 때도 같은 설정을
+사용하고, 일반 개발 검증은 `scripts/verify_light.sh`를 우선 사용하세요.
 
 M1의 CPU 사용량을 과도하게 높이지 않는 기본 검증:
 
@@ -229,6 +282,10 @@ CARGO_BUILD_JOBS=2 scripts/verify_full.sh
 
 기본 검증은 현재 제품인 daemon, 웹 UI, relay만 다룹니다. 삭제된 Tauri/CLI
 프로토타입의 성공 여부를 제품 증거로 사용하지 않습니다.
+
+`scripts/verify_all.sh`는 일반 개발 루프가 아니라 release/compliance 전용 게이트입니다.
+정책 fixture, 릴리스 증거, 지원 환경 검사를 포함하므로 변경할 때마다 반복 실행하지
+말고 릴리스 준비 시에만 `--focused` 또는 `--release`로 실행하세요.
 
 ## 완전한 릴리스 아카이브 만들기
 

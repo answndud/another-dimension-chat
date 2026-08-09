@@ -33,6 +33,9 @@ pub(crate) fn authorize_api(
 
 pub(crate) fn catalog_error(error: SessionCatalogError) -> Vec<u8> {
     match error {
+        SessionCatalogError::InvalidConversation => {
+            response(400, "invalid_conversation", None, Some("application/json"))
+        }
         SessionCatalogError::DuplicateConversation => {
             response(409, "conversation_exists", None, Some("application/json"))
         }
@@ -51,8 +54,8 @@ pub(crate) fn catalog_error(error: SessionCatalogError) -> Vec<u8> {
     }
 }
 
-pub(crate) fn pairing_ready(authority: Option<&InviteAuthority>) -> bool {
-    authority.is_none_or(|value| value.pairing.can_message())
+pub(crate) fn pairing_ready(authority: Option<&InviteAuthority>, now: u64) -> bool {
+    authority.is_none_or(|value| value.pairing.can_message_at(now))
 }
 
 pub(crate) fn pairing_error(error: PairingError) -> Vec<u8> {

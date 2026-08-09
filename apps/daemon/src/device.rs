@@ -2,7 +2,9 @@
 //! revocation state; private root/device seeds remain in the encrypted store.
 
 use crate::{
-    identity::{AccountRootKey, DeviceCertificate, DeviceRevocation, IdentityError},
+    identity::{
+        AccountRootKey, DeviceCertificate, DeviceCertificateParts, DeviceRevocation, IdentityError,
+    },
     model::DeviceState,
 };
 use serde::{Deserialize, Serialize};
@@ -137,24 +139,28 @@ impl DeviceRegistry {
             .map_err(|_| DeviceRegistryError::Corrupt)?;
         let mut devices = BTreeMap::new();
         for item in wire.devices {
-            let certificate = DeviceCertificate::from_parts(
-                item.account_public_key
+            let certificate = DeviceCertificate::from_parts(DeviceCertificateParts {
+                account_public_key: item
+                    .account_public_key
                     .try_into()
                     .map_err(|_| DeviceRegistryError::Corrupt)?,
-                item.device_id,
-                item.device_public_key
+                device_id: item.device_id,
+                device_public_key: item
+                    .device_public_key
                     .try_into()
                     .map_err(|_| DeviceRegistryError::Corrupt)?,
-                item.protocol_package_hash
+                protocol_package_hash: item
+                    .protocol_package_hash
                     .try_into()
                     .map_err(|_| DeviceRegistryError::Corrupt)?,
-                item.issued_at,
-                item.expires_at,
-                item.signature
+                issued_at: item.issued_at,
+                expires_at: item.expires_at,
+                signature: item
+                    .signature
                     .try_into()
                     .map_err(|_| DeviceRegistryError::Corrupt)?,
-                item.revoked,
-            )?;
+                revoked: item.revoked,
+            })?;
             if certificate.account_public_key() != account_public_key
                 || devices.contains_key(certificate.device_id())
                 || certificate.verify_integrity().is_err()

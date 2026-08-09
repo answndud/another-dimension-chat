@@ -10,7 +10,6 @@ const files = new Map(await Promise.all([
   ["storage", "apps/daemon/src/storage.rs"],
   ["authority", "apps/daemon/src/authority_routes.rs"],
   ["server", "apps/daemon/src/http_server.rs"],
-  ["maintenance", "apps/daemon/src/maintenance.rs"],
   ["controller", "apps/web/src/daemon-controller.js"],
 ].map(async ([name, file]) => [name, await readFile(join(root, file), "utf8")])))
   ;
@@ -28,7 +27,7 @@ expect("storage", /MAX_VALUE_BYTES: usize = 4 \* 1024 \* 1024/, "encrypted recor
 expect("authority", /\.clamp\(1, 200\)/, "message page size is no longer bounded to 200 records");
 expect("authority", /records_with_prefix_page\(/, "message history no longer uses paged encrypted storage reads");
 expect("bridge", new RegExp(`MAX_AUTOMATIC_RETRIES_PER_TICK: usize = ${limits.automaticRetriesPerTick}`), "retry-per-tick bound changed without updating RESOURCE_LIMITS.json");
-expect("maintenance", /\.take\(MAX_AUTOMATIC_RETRIES_PER_TICK\)/, "automatic retries are no longer bounded per maintenance tick");
+expect("server", /\.take\(MAX_AUTOMATIC_RETRIES_PER_TICK\)/, "automatic retries are no longer bounded per maintenance tick");
 expect("server", /Duration::from_secs\(15\)/, "maintenance interval changed without updating RESOURCE_LIMITS.json");
 expect("controller", /maxLength = 65536/, "browser message input has no bounded length");
 

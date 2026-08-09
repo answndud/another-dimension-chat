@@ -7,6 +7,7 @@
 
 use crate::{
     bridge_http::VerifiedInvite,
+    protocol_gate::validate_protocol_identifier,
     storage::{EncryptedStore, RecordClass, StorageError},
 };
 use sha2::{Digest, Sha256};
@@ -103,6 +104,9 @@ impl PairingSession {
     pub fn verify_peer(&mut self, peer: VerifiedInvite, now: u64) -> Result<(), PairingError> {
         // Device identifiers are scoped to their account (device-1 is valid
         // for every account); only the account identity makes this a self invite.
+        if !valid_verified_peer(&peer) {
+            return Err(PairingError::InvalidTransition);
+        }
         if peer.account_id == self.local_account_id {
             return Err(PairingError::SelfInvite);
         }
@@ -118,7 +122,9 @@ impl PairingSession {
             }
             PairingState::Verified => Err(PairingError::Duplicate),
             PairingState::Established => {
-                let trusted = self.peer.as_ref().expect("established pairing has a peer");
+                let Some(trusted) = self.peer.as_ref() else {
+                    return Err(PairingError::InvalidTransition);
+                };
                 if trusted.account_id != peer.account_id
                     || trusted.device_id != peer.device_id
                     || trusted.relay_origin != peer.relay_origin
@@ -173,6 +179,10 @@ impl PairingSession {
 
     pub fn can_message(&self) -> bool {
         self.state == PairingState::Established && self.safety_verified
+    }
+
+    pub fn can_message_at(&self, now: u64) -> bool {
+        self.can_message() && self.peer.as_ref().is_some_and(|peer| now < peer.expires_at)
     }
 
     pub fn reject(&mut self) -> Result<(), PairingError> {
@@ -251,7 +261,20 @@ impl PairingSession {
         // Legacy snapshots had no schema field. Their shape is unchanged, so
         // migration is a version annotation rather than a lossy rewrite.
         snapshot.schema_version = PAIRING_SNAPSHOT_VERSION;
-        if snapshot.state == PairingState::Established && snapshot.peer.is_none() {
+        let valid_state_shape = match snapshot.state {
+            PairingState::Idle | PairingState::InviteCreated => snapshot.peer.is_none(),
+            PairingState::Verified | PairingState::Established => {
+                snapshot.peer.as_ref().is_some_and(valid_verified_peer)
+            }
+            PairingState::Rejected => snapshot.peer.is_none(),
+        };
+        if !valid_state_shape
+            || (snapshot.safety_verified
+                && !matches!(
+                    snapshot.state,
+                    PairingState::Verified | PairingState::Established
+                ))
+        {
             return Err(StorageError::CorruptStore);
         }
         session.state = snapshot.state;
@@ -259,6 +282,38 @@ impl PairingSession {
         session.safety_verified = snapshot.safety_verified;
         Ok(session)
     }
+}
+
+fn valid_verified_peer(peer: &VerifiedInvite) -> bool {
+    validate_protocol_identifier(&peer.account_id).is_ok()
+        && validate_protocol_identifier(&peer.device_id).is_ok()
+        && valid_relay_origin(&peer.relay_origin)
+        && peer.inbox_url.as_deref().is_none_or(|inbox| {
+            crate::bridge_http::validate_bound_inbox_url(&peer.relay_origin, inbox).is_ok()
+        })
+        && peer.conversation_id.as_deref().is_none_or(|conversation| {
+            !conversation.is_empty()
+                && conversation.len() <= 128
+                && conversation
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
+        })
+}
+
+fn valid_relay_origin(value: &str) -> bool {
+    let Some((scheme, authority)) = value.split_once("://") else {
+        return false;
+    };
+    (scheme == "http" || scheme == "https")
+        && !authority.is_empty()
+        && authority.len() <= 2 * 1024
+        && !authority.contains('/')
+        && !authority.contains('@')
+        && !authority.contains('?')
+        && !authority.contains('#')
+        && !authority
+            .chars()
+            .any(|character| character.is_whitespace() || character.is_control())
 }
 
 #[cfg(test)]
@@ -325,6 +380,17 @@ mod tests {
     }
 
     #[test]
+    fn pairing_rejects_malformed_peer_bindings_before_establishment() {
+        let mut session = PairingSession::new("local-account", "local-device");
+        let mut malformed = peer("peer-account", "peer-device", 100);
+        malformed.device_id = "peer\ninvalid".into();
+        assert_eq!(
+            session.verify_peer(malformed, 10),
+            Err(PairingError::InvalidTransition)
+        );
+    }
+
+    #[test]
     fn messaging_is_closed_until_safety_verified_and_approved() {
         let mut session = PairingSession::new("local-account", "local-device");
         assert!(!session.can_message());
@@ -337,6 +403,19 @@ mod tests {
         assert!(!session.can_message());
         session.approve(10).unwrap();
         assert!(session.can_message());
+    }
+
+    #[test]
+    fn established_pairing_expires_before_message_admission() {
+        let mut session = PairingSession::new("local-account", "local-device");
+        session
+            .verify_peer(peer("peer-account", "peer-device", 100), 10)
+            .unwrap();
+        let safety = session.safety_number().unwrap();
+        session.confirm_safety(&safety).unwrap();
+        session.approve(10).unwrap();
+        assert!(session.can_message_at(99));
+        assert!(!session.can_message_at(100));
     }
 
     #[test]

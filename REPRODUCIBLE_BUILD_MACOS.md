@@ -24,7 +24,7 @@ npm --prefix apps/web run build --workspaces=false
 완성 아카이브는 daemon binary와 Node runtime을 명시적으로 전달해 생성합니다.
 
 ```sh
-AD_DAEMON_BINARY="$PWD/target/release/another-dimension-daemon" \
+AD_DAEMON_BINARY="$PWD/.build-cache/cargo-target/release/another-dimension-daemon" \
 AD_NODE_RUNTIME="$(command -v node)" \
 AD_RELEASE_SOURCE_DATE_EPOCH=0 \
 scripts/build_release.sh

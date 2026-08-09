@@ -6,22 +6,29 @@ use crate::{
     identity::{AccountRootKey, DeviceIdentity, ProfileIdentity},
     mls_session::MlsSessionCatalog,
     storage::{
-        parse_recovery_artifact, recovery_pending_path, EncryptedStore, RecordClass,
+        parse_recovery_artifact, recovery_pending_path, EncryptedStore, OsKeyStore, RecordClass,
         RecordMutation, StorageError,
     },
     trust::{relay_tls_pin_record_key, RelayTrust, TlsCertificatePin},
 };
+use getrandom::fill as secure_random;
 use sha2::{Digest, Sha256};
 use std::{
     fs, io,
     path::{Path, PathBuf},
 };
 
+#[path = "cli_profile.rs"]
+mod profile;
+#[path = "cli_recovery.rs"]
+mod recovery;
+
 const IDENTITY_RECORD_MAGIC: &[u8; 13] = b"ADIDENTITY1\0\0";
 const LINKED_IDENTITY_RECORD_MAGIC: &[u8; 13] = b"ADIDENTITY2\0\0";
-const RECOVERY_MAGIC: &[u8; 13] = b"ADRECOVERY2\0\0";
 const STORE_FILE: &str = "store.adstore";
 const REVISION_FILE: &str = "store.adstore.revision";
+const PROFILE_ID_FILE: &str = "profile.id";
+const PROFILE_KEYCHAIN_FILE: &str = "profile.keychain";
 
 #[derive(Debug)]
 pub enum CliError {
@@ -67,8 +74,21 @@ impl From<StorageError> for CliError {
 }
 
 pub fn needs_passphrase(args: &[String]) -> bool {
-    matches!(args.first().map(String::as_str), Some("init"))
-        || matches!(args.first().map(String::as_str), Some("serve"))
+    let keychain = args.iter().any(|arg| arg == "--keychain");
+    let command = args.first().map(String::as_str);
+    if matches!(command, Some("keychain")) {
+        return true;
+    }
+    if keychain
+        && (matches!(command, Some("serve" | "wipe" | "device"))
+            || matches!(
+                (command, args.get(1).map(String::as_str)),
+                (Some("identity"), Some("show"))
+            ))
+    {
+        return false;
+    }
+    matches!(command, Some("serve"))
         || matches!(
             (
                 args.first().map(String::as_str),
@@ -95,43 +115,32 @@ pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError
         return Err(CliError::UnsafeSecretArgument);
     }
     match args.first().map(String::as_str).unwrap_or("help") {
-        "help" | "--help" | "-h" => Ok(help_text()),
-        "init" => init(
-            args,
-            passphrase
-                .ok_or_else(|| CliError::Usage("init requires a passphrase from stdin".into()))?,
-        ),
-        "identity" => identity_show(
-            args,
-            passphrase.ok_or_else(|| {
-                CliError::Usage("identity show requires a passphrase from stdin".into())
-            })?,
-        ),
+        "help" | "--help" | "-h" => Ok(help_text().replace("new passphrase", "replacement is generated")),
+        "init" => profile::init(args),
+        "identity" => {
+            let passphrase = resolve_passphrase(args, passphrase)?;
+            profile::identity_show(args, &passphrase)
+        }
+        "keychain" => profile::keychain_command(args, passphrase),
         "doctor" => doctor(args),
         "status" => status(args),
         "stop" => stop(args),
         "lock" => Ok(
             "daemon session locked; no active daemon session was retained by this command".into(),
         ),
-        "recovery" => recovery(args, passphrase),
-        "serve" => serve(
-            args,
-            passphrase.ok_or_else(|| {
-                CliError::Usage("serve requires the profile passphrase from stdin".into())
-            })?,
-        ),
-        "device" => device_command(
-            args,
-            passphrase.ok_or_else(|| {
-                CliError::Usage("device command requires the profile passphrase from stdin".into())
-            })?,
-        ),
-        "wipe" => wipe(
-            args,
-            passphrase.ok_or_else(|| {
-                CliError::Usage("wipe requires the profile passphrase from stdin".into())
-            })?,
-        ),
+        "recovery" => recovery::command(args, passphrase),
+        "serve" => {
+            let passphrase = resolve_passphrase(args, passphrase)?;
+            serve(args, &passphrase)
+        }
+        "device" => {
+            let passphrase = resolve_passphrase(args, passphrase)?;
+            device_command(args, &passphrase)
+        }
+        "wipe" => {
+            let passphrase = resolve_passphrase(args, passphrase)?;
+            profile::wipe(args, &passphrase)
+        }
         "invite" | "contact" => Err(CliError::Usage(
             "초대와 연락처 관리는 daemon 웹 화면에서 수행합니다. serve로 화면을 시작하세요".into(),
         )),
@@ -146,12 +155,21 @@ pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError
 
 fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
     let data_dir = data_dir(args)?;
+    if !data_dir.exists() {
+        return Err(CliError::NotInitialized);
+    }
+    set_private_dir(&data_dir)?;
     let _instance_lock = InstanceLock::acquire(&data_dir)?;
     let port = option(args, "--port")?
         .map(|value| value.parse::<u16>())
         .transpose()
         .map_err(|_| CliError::Usage("--port must be a valid port".into()))?
         .unwrap_or(1420);
+    if port == 0 {
+        return Err(CliError::Usage(
+            "--port 0 is not supported; choose a fixed loopback port so the one-time UI URL remains usable".into(),
+        ));
+    }
     let config = BridgeConfig::new(
         "127.0.0.1".parse().map_err(|_| CliError::Io)?,
         port,
@@ -386,72 +404,6 @@ impl Drop for InstanceLock {
     }
 }
 
-fn init(args: &[String], passphrase: &str) -> Result<String, CliError> {
-    let data_dir = data_dir(args)?;
-    let display_name = option(args, "--display-name")?
-        .ok_or_else(|| CliError::Usage("init requires --display-name".into()))?;
-    if store_path(&data_dir).exists() {
-        return Err(CliError::AlreadyInitialized);
-    }
-    fs::create_dir_all(&data_dir)?;
-    set_private_dir(&data_dir)?;
-    let root = AccountRootKey::generate().map_err(|_| CliError::Io)?;
-    let device = root
-        .issue_device("device-1", [0; 32], 0, u64::MAX - 1)
-        .map_err(|_| CliError::Io)?;
-    let profile = ProfileIdentity::from_account(&root, display_name, None)
-        .map_err(|_| CliError::Usage("display name is invalid".into()))?;
-    let mut store = EncryptedStore::initialize(store_path(&data_dir), passphrase)?;
-    let mut registry = DeviceRegistry::new(&root);
-    registry
-        .register(device.certificate().clone(), 0)
-        .map_err(registry_error)?;
-    store.put(
-        RecordClass::AccountRoot,
-        "identity",
-        &encode_identity(&root, &device, &profile),
-    )?;
-    store.put(
-        RecordClass::Device,
-        "registry",
-        &registry.encode().map_err(registry_error)?,
-    )?;
-    Ok(format!("profile initialized\naccount_id: {}\ndevice_id: {}\nprivate key: encrypted in local daemon store", profile.account_id().as_str(), device.device_id()))
-}
-
-fn identity_show(args: &[String], passphrase: &str) -> Result<String, CliError> {
-    if args.get(1).map(String::as_str) != Some("show") {
-        return Err(CliError::Usage("use identity show".into()));
-    }
-    let store = open_store(&data_dir(args)?, passphrase)?;
-    let record = store
-        .get(RecordClass::AccountRoot, "identity")
-        .ok_or(CliError::NotInitialized)?;
-    let summary =
-        decode_identity_summary(&record).ok_or(CliError::Storage(StorageError::CorruptStore))?;
-    Ok(format!(
-        "account_id: {}\ndevice_id: {}\ndisplay_name: {}\nrelay: none configured",
-        summary.account_id, summary.device_id, summary.display_name
-    ))
-}
-
-fn wipe(args: &[String], passphrase: &str) -> Result<String, CliError> {
-    let data_dir = data_dir(args)?;
-    let store = open_store(&data_dir, passphrase)?;
-    drop(store);
-    let store_path = store_path(&data_dir);
-    let revision_path = revision_path(&data_dir);
-    if !store_path.is_file() || !revision_path.is_file() {
-        return Err(CliError::NotInitialized);
-    }
-    fs::remove_file(&store_path)?;
-    fs::remove_file(&revision_path)?;
-    Ok(format!(
-        "local daemon store deleted: {}\nrelay-side blobs, exported backups, OS/SSD remnants, and browser caches are not deleted",
-        data_dir.display()
-    ))
-}
-
 fn doctor(args: &[String]) -> Result<String, CliError> {
     let data_dir = data_dir(args)?;
     let _relay_tls_pin = option(args, "--relay-tls-pin")?
@@ -645,165 +597,6 @@ fn stop(args: &[String]) -> Result<String, CliError> {
     ))
 }
 
-fn recovery(args: &[String], passphrase: Option<&str>) -> Result<String, CliError> {
-    match args.get(1).map(String::as_str) {
-        Some("export") => {
-            let data_dir = data_dir(args)?;
-            let output = option(args, "--output")?
-                .ok_or_else(|| CliError::Usage("recovery export requires --output".into()))?;
-            export_recovery(&data_dir, Path::new(&output))
-        }
-        Some("import") => {
-            let data_dir = data_dir(args)?;
-            let input = option(args, "--input")?
-                .ok_or_else(|| CliError::Usage("recovery import requires --input".into()))?;
-            import_recovery(&data_dir, Path::new(&input))
-        }
-        Some("inspect") => {
-            let input = option(args, "--input")?
-                .ok_or_else(|| CliError::Usage("recovery inspect requires --input".into()))?;
-            inspect_recovery(Path::new(&input))
-        }
-        Some("rotate") => {
-            let data_dir = data_dir(args)?;
-            let credentials = passphrase
-                .ok_or_else(|| CliError::Usage("recovery rotate requires old and new passphrases on stdin".into()))?;
-            rotate_recovery(&data_dir, credentials)
-        }
-        _ => Err(CliError::Usage(
-            "use recovery export --output PATH, recovery inspect --input PATH, recovery rotate, or recovery import --input PATH".into(),
-        )),
-    }
-}
-
-fn export_recovery(data_dir: &Path, output: &Path) -> Result<String, CliError> {
-    if !store_path(data_dir).is_file() || !revision_path(data_dir).is_file() || output.exists() {
-        return Err(CliError::InvalidRecovery);
-    }
-    let store = fs::read(store_path(data_dir))?;
-    let revision = fs::read(revision_path(data_dir))?;
-    let manifest = RecoveryManifest {
-        schema_version: 2,
-        created_at: now_seconds(),
-        store_bytes: store.len() as u64,
-        revision_bytes: revision.len() as u64,
-        store_sha256: hex_bytes(&Sha256::digest(&store)),
-        revision_sha256: hex_bytes(&Sha256::digest(&revision)),
-    };
-    let manifest = serde_json::to_vec(&manifest).map_err(|_| CliError::InvalidRecovery)?;
-    let mut artifact = Vec::with_capacity(12 + manifest.len() + store.len() + revision.len());
-    artifact.extend_from_slice(RECOVERY_MAGIC);
-    append_blob(&mut artifact, &manifest);
-    append_blob(&mut artifact, &store);
-    append_blob(&mut artifact, &revision);
-    atomic_write(output, &artifact)?;
-    Ok(format!(
-        "encrypted recovery exported to {}\nkeep it offline and separate from the device",
-        output.display()
-    ))
-}
-
-fn import_recovery(data_dir: &Path, input: &Path) -> Result<String, CliError> {
-    if store_path(data_dir).exists() || revision_path(data_dir).exists() {
-        return Err(CliError::AlreadyInitialized);
-    }
-    let bytes = fs::read(input)?;
-    if bytes.len() < RECOVERY_MAGIC.len() || &bytes[..RECOVERY_MAGIC.len()] != RECOVERY_MAGIC {
-        return Err(CliError::InvalidRecovery);
-    }
-    let (manifest_bytes, offset) =
-        read_blob(&bytes, RECOVERY_MAGIC.len()).ok_or(CliError::InvalidRecovery)?;
-    let manifest: RecoveryManifest =
-        serde_json::from_slice(manifest_bytes).map_err(|_| CliError::InvalidRecovery)?;
-    if manifest.schema_version != 2 {
-        return Err(CliError::InvalidRecovery);
-    }
-    let (store, offset) = read_blob(&bytes, offset).ok_or(CliError::InvalidRecovery)?;
-    let (revision, end) = read_blob(&bytes, offset).ok_or(CliError::InvalidRecovery)?;
-    if end != bytes.len()
-        || store.len() as u64 != manifest.store_bytes
-        || revision.len() as u64 != manifest.revision_bytes
-        || hex_bytes(&Sha256::digest(store)) != manifest.store_sha256
-        || hex_bytes(&Sha256::digest(revision)) != manifest.revision_sha256
-        || store.len() < 32
-        || revision.is_empty()
-    {
-        return Err(CliError::InvalidRecovery);
-    }
-    fs::create_dir_all(data_dir)?;
-    set_private_dir(data_dir)?;
-    atomic_write(&store_path(data_dir), store)?;
-    atomic_write(&revision_path(data_dir), revision)?;
-    Ok(format!(
-        "encrypted recovery imported to {}\nunlock with the original passphrase",
-        data_dir.display()
-    ))
-}
-
-fn inspect_recovery(input: &Path) -> Result<String, CliError> {
-    let bytes = fs::read(input)?;
-    if bytes.len() < RECOVERY_MAGIC.len() || &bytes[..RECOVERY_MAGIC.len()] != RECOVERY_MAGIC {
-        return Err(CliError::InvalidRecovery);
-    }
-    let (manifest, _) = read_blob(&bytes, RECOVERY_MAGIC.len()).ok_or(CliError::InvalidRecovery)?;
-    let manifest: RecoveryManifest =
-        serde_json::from_slice(manifest).map_err(|_| CliError::InvalidRecovery)?;
-    if manifest.schema_version != 2 {
-        return Err(CliError::InvalidRecovery);
-    }
-    Ok(format!(
-        "backup schema: {}\ncreated_at: {}\nstore bytes: {}\nrevision bytes: {}\ncontents: encrypted daemon store",
-        manifest.schema_version,
-        manifest.created_at,
-        manifest.store_bytes,
-        manifest.revision_bytes
-    ))
-}
-
-fn rotate_recovery(data_dir: &Path, credentials: &str) -> Result<String, CliError> {
-    let mut lines = credentials.lines();
-    let old_passphrase = lines.next().unwrap_or("").trim();
-    let new_passphrase = lines.next().unwrap_or("").trim();
-    if old_passphrase.is_empty() || new_passphrase.is_empty() || lines.next().is_some() {
-        return Err(CliError::Usage(
-            "recovery rotate stdin must contain exactly two lines: old passphrase, new passphrase"
-                .into(),
-        ));
-    }
-    if old_passphrase == new_passphrase {
-        return Err(CliError::Usage(
-            "new passphrase must differ from the old passphrase".into(),
-        ));
-    }
-    let store = open_store(data_dir, old_passphrase)?;
-    let temporary = data_dir.join(format!("store.adstore.rotate-{}", std::process::id()));
-    let temporary_revision = PathBuf::from(format!("{}.revision", temporary.display()));
-    let _ = fs::remove_file(&temporary);
-    let _ = fs::remove_file(&temporary_revision);
-    store.rekey_to(&temporary, new_passphrase)?;
-    let active = store_path(data_dir);
-    let active_revision = revision_path(data_dir);
-    let old_store = data_dir.join(format!("store.adstore.old-{}", std::process::id()));
-    let old_revision = data_dir.join(format!("store.adstore.revision.old-{}", std::process::id()));
-    fs::rename(&active, &old_store)?;
-    fs::rename(&active_revision, &old_revision)?;
-    if let Err(error) = fs::rename(&temporary, &active) {
-        let _ = fs::rename(&old_store, &active);
-        let _ = fs::rename(&old_revision, &active_revision);
-        let _ = fs::remove_file(&temporary_revision);
-        return Err(error.into());
-    }
-    if let Err(error) = fs::rename(&temporary_revision, &active_revision) {
-        let _ = fs::remove_file(&active);
-        let _ = fs::rename(&old_store, &active);
-        let _ = fs::rename(&old_revision, &active_revision);
-        return Err(error.into());
-    }
-    fs::remove_file(old_store)?;
-    fs::remove_file(old_revision)?;
-    Ok("database key rewrapped with the new passphrase; existing records were preserved".into())
-}
-
 fn encode_identity(
     root: &AccountRootKey,
     device: &DeviceIdentity,
@@ -844,16 +637,6 @@ struct IdentitySummary {
     display_name: String,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(deny_unknown_fields)]
-struct RecoveryManifest {
-    schema_version: u16,
-    created_at: u64,
-    store_bytes: u64,
-    revision_bytes: u64,
-    store_sha256: String,
-    revision_sha256: String,
-}
 fn decode_identity_summary(bytes: &[u8]) -> Option<IdentitySummary> {
     if bytes.len() < IDENTITY_RECORD_MAGIC.len() {
         return None;
@@ -906,6 +689,7 @@ fn open_store(data_dir: &Path, passphrase: &str) -> Result<EncryptedStore, CliEr
     if !store_path(data_dir).is_file() {
         return Err(CliError::NotInitialized);
     }
+    set_private_dir(data_dir)?;
     Ok(EncryptedStore::open(store_path(data_dir), passphrase)?)
 }
 
@@ -1244,6 +1028,54 @@ fn data_dir(args: &[String]) -> Result<PathBuf, CliError> {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(".another-dimension-daemon")))
 }
+fn resolve_passphrase(args: &[String], supplied: Option<&str>) -> Result<String, CliError> {
+    if let Some(passphrase) = supplied {
+        return Ok(passphrase.to_owned());
+    }
+    if !args.iter().any(|arg| arg == "--keychain") {
+        return Err(CliError::Usage(
+            "profile passphrase is required on stdin, or use --keychain on macOS".into(),
+        ));
+    }
+    let data_dir = data_dir(args)?;
+    let profile_id = fs::read_to_string(data_dir.join(PROFILE_ID_FILE)).map_err(|_| {
+        CliError::Usage("profile.id is missing; unlock once with stdin first".into())
+    })?;
+    load_profile_passphrase(profile_id.trim())
+        .map(|value| value.to_string())
+        .map_err(CliError::from)
+}
+
+#[cfg(target_os = "macos")]
+fn load_profile_passphrase(profile_id: &str) -> Result<zeroize::Zeroizing<String>, StorageError> {
+    crate::storage::MacOsKeyStore.load_profile_passphrase(profile_id)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn load_profile_passphrase(_profile_id: &str) -> Result<zeroize::Zeroizing<String>, StorageError> {
+    Err(StorageError::OsKeyStoreUnavailable)
+}
+
+#[cfg(target_os = "macos")]
+fn save_profile_passphrase(profile_id: &str, passphrase: &str) -> Result<(), StorageError> {
+    crate::storage::MacOsKeyStore.save_profile_passphrase(profile_id, passphrase)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn save_profile_passphrase(_profile_id: &str, _passphrase: &str) -> Result<(), StorageError> {
+    Err(StorageError::OsKeyStoreUnavailable)
+}
+
+#[cfg(target_os = "macos")]
+fn delete_profile_passphrase(profile_id: &str) -> Result<(), StorageError> {
+    crate::storage::MacOsKeyStore.delete_profile_passphrase(profile_id)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn delete_profile_passphrase(_profile_id: &str) -> Result<(), StorageError> {
+    Ok(())
+}
+
 fn option(args: &[String], name: &str) -> Result<Option<String>, CliError> {
     let Some(index) = args.iter().position(|arg| arg == name) else {
         return Ok(None);
@@ -1258,6 +1090,12 @@ fn store_path(data_dir: &Path) -> PathBuf {
 }
 fn revision_path(data_dir: &Path) -> PathBuf {
     data_dir.join(REVISION_FILE)
+}
+fn profile_id_path(data_dir: &Path) -> PathBuf {
+    data_dir.join(PROFILE_ID_FILE)
+}
+fn profile_keychain_path(data_dir: &Path) -> PathBuf {
+    data_dir.join(PROFILE_KEYCHAIN_FILE)
 }
 fn append_blob(output: &mut Vec<u8>, value: &[u8]) {
     output.extend_from_slice(&(value.len() as u64).to_be_bytes());
@@ -1279,6 +1117,11 @@ fn parse_hex_key(value: &str) -> Result<[u8; 32], ()> {
 fn hex_bytes(value: &[u8]) -> String {
     value.iter().map(|byte| format!("{byte:02x}")).collect()
 }
+fn generate_passphrase() -> Result<String, CliError> {
+    let mut bytes = [0_u8; 32];
+    secure_random(&mut bytes).map_err(|_| CliError::Io)?;
+    Ok(hex_bytes(&bytes))
+}
 fn read_blob(bytes: &[u8], offset: usize) -> Option<(&[u8], usize)> {
     let end_length = offset.checked_add(8)?;
     if end_length > bytes.len() {
@@ -1292,6 +1135,13 @@ fn read_blob(bytes: &[u8], offset: usize) -> Option<(&[u8], usize)> {
     Some((&bytes[end_length..end], end))
 }
 fn set_private_dir(path: &Path) -> Result<(), CliError> {
+    let metadata = fs::symlink_metadata(path)?;
+    if metadata.file_type().is_symlink() || !metadata.file_type().is_dir() {
+        return Err(CliError::Usage(format!(
+            "data directory must be a real private directory: {}",
+            path.display()
+        )));
+    }
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -1301,17 +1151,23 @@ fn set_private_dir(path: &Path) -> Result<(), CliError> {
 }
 fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CliError> {
     let temporary = path.with_extension(format!("tmp-{}", std::process::id()));
-    fs::write(&temporary, bytes)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&temporary, fs::Permissions::from_mode(0o600))?;
+    let result = (|| {
+        fs::write(&temporary, bytes)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&temporary, fs::Permissions::from_mode(0o600))?;
+        }
+        fs::rename(&temporary, path)?;
+        Ok::<(), std::io::Error>(())
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&temporary);
     }
-    fs::rename(temporary, path)?;
-    Ok(())
+    result.map_err(Into::into)
 }
 fn help_text() -> String {
-    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH]\n  identity show [--data-dir PATH]\n  status [--data-dir PATH]\n  stop [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify] [--open]\n  device list [--data-dir PATH]\n  device revoke --id DEVICE_ID [--data-dir PATH]\n  device link-request --id DEVICE_ID --output PATH\n  device link-complete --input PATH --approval VALUE\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  lock\n  recovery export --output PATH [--data-dir PATH]\n  recovery inspect --input PATH [--data-dir PATH]\n  recovery rotate --data-dir PATH  # stdin: old passphrase\\nnew passphrase\n  recovery import --input PATH [--data-dir PATH]\n  wipe --data-dir PATH              # irreversible local store deletion\n\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\n--open is opt-in; if macOS cannot open a browser, copy the one-time URL printed above.\nPassphrases are read from stdin and are never accepted as arguments.".into()
+    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH] [--passphrase-output PATH]\n  identity show [--data-dir PATH] [--keychain]\n  status [--data-dir PATH]\n  stop [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--keychain] [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify] [--open]\n  device list [--data-dir PATH] [--keychain]\n  device revoke --id DEVICE_ID [--data-dir PATH] [--keychain]\n  device link-request --id DEVICE_ID --output PATH\n  device link-complete --input PATH --approval VALUE\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  keychain enroll --data-dir PATH\n  recovery export --output PATH [--data-dir PATH]\n  recovery inspect --input PATH [--data-dir PATH]\n  recovery rotate --data-dir PATH  # stdin: old passphrase\\nnew passphrase\n  recovery import --input PATH [--data-dir PATH]\n  wipe --data-dir PATH [--keychain] # irreversible local store deletion\n\ninit generates a random 256-bit passphrase; copy it or use --passphrase-output.\nOther commands read secrets from stdin and never accept them as arguments.\nOn macOS, --keychain unlocks a profile secret stored in the OS Keychain.\nAfter recovery import, use keychain enroll once with the original passphrase.\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\n--open is opt-in; if macOS cannot open a browser, copy the one-time URL printed above.".into()
 }
 
 #[cfg(test)]
@@ -1320,8 +1176,10 @@ mod tests {
     use std::{
         fs,
         path::PathBuf,
+        sync::atomic::{AtomicU64, Ordering},
         time::{SystemTime, UNIX_EPOCH},
     };
+    static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
     fn temp_dir() -> PathBuf {
         std::env::temp_dir().join(format!(
             "another-dimension-cli-{}",
@@ -1329,10 +1187,18 @@ mod tests {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_nanos()
+                + u128::from(TEMP_COUNTER.fetch_add(1, Ordering::Relaxed))
         ))
     }
     fn arg(values: &[&str]) -> Vec<String> {
         values.iter().map(|value| (*value).into()).collect()
+    }
+    fn generated_passphrase(output: &str) -> String {
+        output
+            .lines()
+            .find_map(|line| line.strip_prefix("passphrase: "))
+            .expect("init must print generated passphrase")
+            .to_owned()
     }
     #[test]
     fn init_identity_doctor_and_recovery_flow_is_local_and_encrypted() {
@@ -1349,20 +1215,21 @@ mod tests {
                 "--display-name",
                 "Reporter",
             ]),
-            Some("correct horse battery staple"),
+            None,
         )
         .unwrap();
         assert!(init.contains("profile initialized"));
+        let passphrase = generated_passphrase(&init);
         let identity = run(
             &arg(&["identity", "show", "--data-dir", source.to_str().unwrap()]),
-            Some("correct horse battery staple"),
+            Some(&passphrase),
         )
         .unwrap();
         assert!(identity.contains("account_id: ad1pk"));
         assert!(identity.contains("display_name: Reporter"));
         let devices = run(
             &arg(&["device", "list", "--data-dir", source.to_str().unwrap()]),
-            Some("correct horse battery staple"),
+            Some(&passphrase),
         )
         .unwrap();
         assert!(devices.contains("device_id: device-1"));
@@ -1376,13 +1243,13 @@ mod tests {
                 "--data-dir",
                 source.to_str().unwrap(),
             ]),
-            Some("correct horse battery staple"),
+            Some(&passphrase),
         )
         .unwrap();
         assert!(revoked.contains("device revoked: device-1"));
         let devices = run(
             &arg(&["device", "list", "--data-dir", source.to_str().unwrap()]),
-            Some("correct horse battery staple"),
+            Some(&passphrase),
         )
         .unwrap();
         assert!(devices.contains("state: Revoked"));
@@ -1462,23 +1329,24 @@ mod tests {
         ));
         let restored_identity = run(
             &arg(&["identity", "show", "--data-dir", restored.to_str().unwrap()]),
-            Some("correct horse battery staple"),
+            Some(&passphrase),
         )
         .unwrap();
         assert_eq!(identity, restored_identity);
-        run(
+        let rotated = run(
             &arg(&["recovery", "rotate", "--data-dir", source.to_str().unwrap()]),
-            Some("correct horse battery staple\nnew correct horse battery staple"),
+            Some(&passphrase),
         )
         .unwrap();
+        let new_passphrase = generated_passphrase(&rotated);
         assert!(run(
             &arg(&["identity", "show", "--data-dir", source.to_str().unwrap()]),
-            Some("correct horse battery staple"),
+            Some(&passphrase),
         )
         .is_err());
         assert!(run(
             &arg(&["identity", "show", "--data-dir", source.to_str().unwrap()]),
-            Some("new correct horse battery staple"),
+            Some(&new_passphrase),
         )
         .is_ok());
         fs::remove_dir_all(source).unwrap();

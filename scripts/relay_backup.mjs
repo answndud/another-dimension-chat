@@ -122,7 +122,12 @@ async function validateEntries(files) {
 async function atomicWrite(path, data) {
   const temporary = `${path}.${randomBytes(8).toString("hex")}.tmp`;
   await writeFile(temporary, data, { mode: 0o600 });
-  await rename(temporary, path);
+  try {
+    await rename(temporary, path);
+  } catch (error) {
+    await rm(temporary, { force: true }).catch(() => {});
+    throw error;
+  }
 }
 
 async function backup(dataDir, output) {
@@ -146,8 +151,11 @@ async function restore(dataDir, input) {
     for (const entry of files) {
       const path = join(stage, entry.path);
       await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-      await writeFile(path, Buffer.from(entry.data, "base64"), { mode: entry.mode & 0o777 });
-      await chmod(path, entry.mode & 0o777);
+      // Relay backups contain capabilities, signing keys, and encrypted
+      // mailbox data. Never restore caller-controlled archive mode bits as
+      // broader permissions; every restored file remains private.
+      await writeFile(path, Buffer.from(entry.data, "base64"), { mode: 0o600 });
+      await chmod(path, 0o600);
     }
     const db = new Database(join(stage, "relay.sqlite"), { readonly: true });
     if (db.pragma("integrity_check", { simple: true }) !== "ok") { db.close(); throw new Error("restored relay SQLite integrity check failed"); }

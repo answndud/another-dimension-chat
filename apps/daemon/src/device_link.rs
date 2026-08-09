@@ -4,7 +4,7 @@
 //! is generated and retained by the requesting device; the approving device
 //! never receives it.
 
-use crate::identity::{AccountRootKey, DeviceCertificate, IdentityError};
+use crate::identity::{AccountRootKey, DeviceCertificate, DeviceCertificateParts, IdentityError};
 use getrandom::fill as secure_random;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -290,19 +290,20 @@ impl DeviceLinkApproval {
         }
         let request_id = fixed_hex::<REQUEST_ID_BYTES>(&wire.request_id)
             .map_err(|_| DeviceLinkError::InvalidApproval)?;
-        let certificate = DeviceCertificate::from_parts(
-            fixed_hex::<32>(&wire.account_public_key)
+        let certificate = DeviceCertificate::from_parts(DeviceCertificateParts {
+            account_public_key: fixed_hex::<32>(&wire.account_public_key)
                 .map_err(|_| DeviceLinkError::InvalidApproval)?,
-            wire.device_id,
-            fixed_hex::<32>(&wire.device_public_key)
+            device_id: wire.device_id,
+            device_public_key: fixed_hex::<32>(&wire.device_public_key)
                 .map_err(|_| DeviceLinkError::InvalidApproval)?,
-            fixed_hex::<32>(&wire.protocol_package_hash)
+            protocol_package_hash: fixed_hex::<32>(&wire.protocol_package_hash)
                 .map_err(|_| DeviceLinkError::InvalidApproval)?,
-            wire.issued_at,
-            wire.expires_at,
-            fixed_hex::<64>(&wire.signature).map_err(|_| DeviceLinkError::InvalidApproval)?,
-            false,
-        )
+            issued_at: wire.issued_at,
+            expires_at: wire.expires_at,
+            signature: fixed_hex::<64>(&wire.signature)
+                .map_err(|_| DeviceLinkError::InvalidApproval)?,
+            revoked: false,
+        })
         .map_err(|_| DeviceLinkError::InvalidApproval)?;
         Ok(Self {
             request_id,
@@ -382,7 +383,7 @@ fn fixed_hex<const N: usize>(value: &str) -> Result<[u8; N], DeviceLinkError> {
 }
 
 fn decode_hex(value: &str) -> Option<Vec<u8>> {
-    if value.len() % 2 != 0 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+    if !value.len().is_multiple_of(2) || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return None;
     }
     (0..value.len())

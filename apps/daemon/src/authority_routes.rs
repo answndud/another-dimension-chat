@@ -4,6 +4,18 @@ pub(crate) fn handle_authority_route(
     request: &Request<'_>,
     context: &mut RouteContext<'_>,
 ) -> Option<Vec<u8>> {
+    if matches!(
+        (request.method, request.path),
+        ("POST", "/local-api/invites")
+            | ("POST", "/local-api/invites/consume")
+            | ("POST", "/local-api/invites/revoke")
+            | ("POST", "/local-api/pairing/auto-sync")
+            | ("POST", "/local-api/pairing/complete-session")
+            | ("POST", "/local-api/pairing/approve")
+    ) {
+        let _ = context;
+        return Some(response(503, "staged_route_required", None, None));
+    }
     let handled = request.path == "/local-api/identity"
         || request.path == "/local-api/conversations"
         || request.path == "/local-api/messages/list"
@@ -28,7 +40,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
     let delivery_ledger = &mut context.delivery_ledger;
     match (request.method, request.path) {
         ("GET", "/local-api/relay/trust") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority.as_deref() else {
@@ -54,7 +66,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             )
         }
         ("POST", "/local-api/relay/trust") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {
@@ -131,7 +143,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             response(200, &body, None, Some("application/json"))
         }
         ("GET", "/local-api/devices") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority.as_deref() else {
@@ -164,7 +176,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             )
         }
         ("POST", "/local-api/devices/revoke") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(device_id) = json_string(request.body, "device_id") else {
@@ -182,15 +194,36 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             let Some(ledger) = delivery_ledger.as_deref_mut() else {
                 return response(503, "delivery_unavailable", None, Some("application/json"));
             };
-            match authority.revoke_device(device_id, now, store) {
-                Ok(()) => {
-                    let commits = match catalog.remove_device(
-                        &mls_device_credential(&authority.account_id, device_id),
-                        store,
-                    ) {
+            match authority.revoke_device_unpersisted(device_id, now) {
+                Ok((previous_registry, encoded_registry)) => {
+                    let commits = match catalog.remove_device_unpersisted(&mls_device_credential(
+                        &authority.account_id,
+                        device_id,
+                    )) {
                         Ok(commits) => commits,
-                        Err(error) => return catalog_error(error),
+                        Err(error) => {
+                            let _ = authority.restore_device_registry(&previous_registry);
+                            catalog.poison_all();
+                            return catalog_error(error);
+                        }
                     };
+                    let mut mutations = vec![RecordMutation::Put(
+                        RecordClass::Device,
+                        "registry".into(),
+                        encoded_registry,
+                    )];
+                    for (conversation_id, _, checkpoint) in &commits {
+                        mutations.push(RecordMutation::Put(
+                            RecordClass::ProtocolSession,
+                            crate::mls_session::session_checkpoint_key(conversation_id),
+                            checkpoint.clone(),
+                        ));
+                    }
+                    if store.apply_batch(&mutations).is_err() {
+                        let _ = authority.restore_device_registry(&previous_registry);
+                        catalog.poison_all();
+                        return response(503, "storage_unavailable", None, None);
+                    }
                     let delivered = match deliver_device_change_commits(
                         authority, &commits, ledger, store, now,
                     ) {
@@ -255,7 +288,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             }
         }
         ("POST", "/local-api/devices/link/approve") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(link_request) = json_string(request.body, "link_request") else {
@@ -463,6 +496,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             let key_package = match catalog.prepare(
                 conversation_id,
                 mls_device_credential(&identity.account_id, &identity.device_id),
+                store,
             ) {
                 Ok(value) => value,
                 Err(_) => return response(503, "session_unavailable", None, None),
@@ -619,7 +653,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             response(200, &body, None, Some("application/json"))
         }
         ("POST", "/local-api/pairing/auto-sync") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {
@@ -789,7 +823,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             )
         }
         ("POST", "/local-api/pairing/complete-session") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {
@@ -887,7 +921,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             )
         }
         ("GET", "/local-api/pairing/status") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {
@@ -937,7 +971,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             )
         }
         ("POST", "/local-api/pairing/verify-safety") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {
@@ -965,7 +999,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             }
         }
         ("POST", "/local-api/pairing/unverify-safety") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {
@@ -985,7 +1019,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             }
         }
         ("POST", "/local-api/pairing/approve") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {
@@ -1049,7 +1083,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             }
         }
         ("GET", "/local-api/contacts") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {
@@ -1067,7 +1101,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             )
         }
         ("POST", "/local-api/contacts/alias") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {
@@ -1082,13 +1116,13 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             let Some(store) = session_store.as_deref_mut() else {
                 return response(503, "storage_unavailable", None, None);
             };
-            match authority.set_contact_alias(&account_id, &alias, store) {
+            match authority.set_contact_alias(account_id, alias, store) {
                 Ok(()) => response(200, r##"{"updated":true}"##, None, Some("application/json")),
                 Err(error) => contact_directory_error(error),
             }
         }
         ("POST", "/local-api/contacts/block") | ("POST", "/local-api/contacts/unblock") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {
@@ -1101,7 +1135,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
                 return response(503, "storage_unavailable", None, None);
             };
             let blocked = request.path.ends_with("/block");
-            match authority.set_contact_blocked(&account_id, blocked, store) {
+            match authority.set_contact_blocked(account_id, blocked, store) {
                 Ok(()) => response(
                     200,
                     if blocked {
@@ -1116,7 +1150,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             }
         }
         ("POST", "/local-api/contacts/delete") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {
@@ -1128,7 +1162,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             let Some(store) = session_store.as_deref_mut() else {
                 return response(503, "storage_unavailable", None, None);
             };
-            let removed = match authority.remove_contact(&account_id, store) {
+            let removed = match authority.remove_contact(account_id, store) {
                 Ok(contact) => contact,
                 Err(error) => return contact_directory_error(error),
             };
@@ -1148,7 +1182,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             response(200, r##"{"deleted":true}"##, None, Some("application/json"))
         }
         ("POST", "/local-api/contacts/bind-conversation") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {
@@ -1168,13 +1202,13 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             let Some(store) = session_store.as_deref_mut() else {
                 return response(503, "storage_unavailable", None, None);
             };
-            match authority.bind_contact_conversation(&account_id, &conversation_id, store) {
+            match authority.bind_contact_conversation(account_id, conversation_id, store) {
                 Ok(()) => response(200, r##"{"bound":true}"##, None, Some("application/json")),
                 Err(error) => contact_directory_error(error),
             }
         }
         ("POST", "/local-api/contacts/read") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {
@@ -1186,13 +1220,13 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             let Some(store) = session_store.as_deref_mut() else {
                 return response(503, "storage_unavailable", None, None);
             };
-            match authority.mark_contact_read(&account_id, store) {
+            match authority.mark_contact_read(account_id, store) {
                 Ok(()) => response(200, r##"{"read":true}"##, None, Some("application/json")),
                 Err(error) => contact_directory_error(error),
             }
         }
         ("GET", "/local-api/conversations") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(catalog) = session_catalog.as_deref_mut() else {
@@ -1208,7 +1242,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             )
         }
         ("POST", "/local-api/messages/list") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(conversation_id) = json_string(request.body, "conversation_id") else {
@@ -1268,7 +1302,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             )
         }
         ("POST", "/local-api/pairing/reject") => {
-            if let Err(reply) = authorize_api(bridge, &request, now) {
+            if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
             }
             let Some(authority) = invite_authority else {

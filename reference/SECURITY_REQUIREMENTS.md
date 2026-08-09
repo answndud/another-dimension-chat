@@ -42,11 +42,11 @@ Requirements marked `blocked` prevent any high-risk claim.
 | `ARCH-01` | Only the web UI + user-owned relay is a supported product boundary. | `partial` | `verify_product_boundary.mjs` and release archive scan. |
 | `ARCH-02` | Relay and UI have separate trust boundaries; development combined serving cannot enter public release. | `implemented` | Server tests, release scan, signed release gate. |
 | `ARCH-03` | Tauri/CLI/engine/onion research code cannot appear as current product evidence. | `partial` | Legacy workflow/source boundary scan. |
-| `ARCH-04` | The daemon, browser bridge, and relay have separate ownership and failure domains. | `blocked` | Daemon boundary contract, IPC negative fixtures, and release archive separation. |
+| `ARCH-04` | The daemon, browser bridge, and relay have separate ownership and failure domains. | `partial` | Daemon boundary contract, IPC negative fixtures, and release archive separation. |
 | `AUTH-01` | Profile passphrase is required for local daemon private-state unlock. | `implemented` | daemon init/serve stdin workflow and wrong-passphrase fixture. |
 | `AUTH-02` | Peer identity continuity fails closed on change. | `implemented` | Identity-change and fresh-pair fixture. |
 | `AUTH-03` | Invite signature, expiry, name collision, capability scope, and revocation are checked before pairing. | `partial` | Expired/revoked/capability fixture and protocol vectors. |
-| `AUTH-04` | Account Root Key signs device certificates; unsigned, revoked, or duplicate devices cannot enter a session. | `blocked` | Fixed identity/device vectors, revocation fixture, and redacted device-event artifact. |
+| `AUTH-04` | Account Root Key signs device certificates; unsigned, revoked, or duplicate devices cannot enter a session. | `partial` | Fixed identity/device vectors, revocation fixture, and redacted device-event artifact. |
 | `CRYPTO-01` | All identity, invite, device, session, replay, and persistence transitions are specified with invariants. | `partial` | `PROTOCOL_STATE_MACHINE.md`, daemon session/device fixtures, and external review input. |
 | `CRYPTO-02` | Tamper, duplicate, replay, corrupt storage, crash, concurrency, and rollback fail closed. | `partial` | Fixed-seed property vectors, existing storage/concurrency fixtures, and kill-after-write fixtures. |
 | `CRYPTO-03` | Browser memory exposure and daemon key zeroization limits are explicit. | `partial` | bridge boundary, zeroizing storage types, lock evidence; no endpoint-compromise claim. |
@@ -54,15 +54,15 @@ Requirements marked `blocked` prevent any high-risk claim.
 | `DATA-01` | Private profile state is encrypted before daemon persistence. | `implemented` | Argon2id/AES-GCM daemon store and storage checks. |
 | `DATA-02` | Browser cache, multiple tabs, clipboard, and service-worker behavior cannot bypass the daemon boundary. | `partial` | daemon-served no-store UI, bridge session binding, and Chromium smoke. Actual private-mode/quota/eviction matrix remains unverified. |
 | `DATA-03` | Wipe is not called secure deletion and backup is not cloud recovery. | `implemented` | UI/docs claim scan and recovery fixtures. |
-| `DATA-04` | Long-term private state is owned by the daemon, not browser storage; keychain-unavailable and recovery failure paths fail closed. | `blocked` | Storage ownership scan, keychain failure fixture, corrupt/old snapshot fixture, and redacted recovery artifact. |
+| `DATA-04` | Long-term private state is owned by the daemon, not browser storage; keychain-unavailable and recovery failure paths fail closed. | `partial` | Storage ownership scan, keychain failure fixture, corrupt/old snapshot fixture, and redacted recovery artifact. |
 | `RELAY-01` | Relay stores only bounded opaque envelopes and never private keys/plaintext. | `implemented` | Server route tests, body bounds, log scan. |
 | `RELAY-02` | Capability leakage, request abuse, proxy spoofing, disk failure, queue full, and restart are bounded. | `partial` | HTTP abuse fixtures and redacted logs. |
 | `RELAY-03` | Remote HTTP, unsafe bind, and misleading transport claims are rejected. | `implemented` | Server/web transport tests and config preflight. |
 | `WEB-01` | UI requires a secure context and has a strict CSP/no third-party runtime. | `partial` | Built artifact header/CSP/SRI scan plus daemon-served Chromium smoke; full browser matrix remains absent. |
 | `WEB-02` | UI does not put capabilities, secrets, plaintext, or passphrases in telemetry/logs/URLs/titles. | `partial` | Network/log/DOM/clipboard scan. |
 | `WEB-03` | Korean onboarding blocks unsafe shortcuts and explains cause/action/security impact for failures. | `partial` | Automated two-profile UX flow and accessibility checks. |
-| `BRIDGE-01` | A hostile web origin cannot bootstrap, replay, or widen a daemon session. | `blocked` | Cross-origin, DNS-rebinding, token-replay, stale-cookie, restart, and version-mismatch fixtures. |
-| `BRIDGE-02` | The UI receives only least-privilege daemon results and never reads private keys, raw DB files, or ratchet state. | `blocked` | Static boundary scan, API contract test, and redacted DOM/network artifact. |
+| `BRIDGE-01` | A hostile web origin cannot bootstrap, replay, or widen a daemon session. | `partial` | Cross-origin, DNS-rebinding, token-replay, stale-cookie, restart, and version-mismatch fixtures. |
+| `BRIDGE-02` | The UI receives only least-privilege daemon results and never reads private keys, raw DB files, or ratchet state. | `partial` | Static boundary scan, API contract test, and redacted DOM/network artifact. |
 | `TRANSPORT-01` | Direct HTTPS/VPN/LAN is low-risk and does not claim anonymity. | `implemented` | UI/docs claim scan and packet metadata fixture. |
 | `TRANSPORT-02` | High-risk mode is disabled until an independently reviewed anonymity transport exists. | `implemented` | `highRiskAllowed:false`, server/web tests. |
 | `RELEASE-01` | Public archive has verified UI, relay, runtime, manifest, SBOM, provenance, and no legacy artifacts. | `blocked` | Clean public release gate with signed archive. |
@@ -71,7 +71,7 @@ Requirements marked `blocked` prevent any high-risk claim.
 | `OPS-01` | User can install, start, stop, restart, update, rollback, and recover without Node/npm. | `partial` | `acceptance_release_local_only.mjs` runs install, doctor, status, update, and rollback with Node absent from PATH; clean OS and all supported host combinations remain unverified. |
 | `OPS-02` | Incident runbook covers leaked capability, lost device, changed release, key compromise, and fresh pairing. | `partial` | Redacted recovery fixture and support docs. |
 | `AUDIT-01` | Independent review covers protocol composition, browser, storage, relay, release, and transport. | `blocked` | `verify_security_review_signoff.mjs --fixture` validates the handoff gate; actual external report, reviewer identity, and independent sign-off are absent. |
-| `RECOVERY-01` | Recovery, device revocation, backup import, rollback, and incident stop-distribution behavior are explicit and fail closed. | `blocked` | Recovery state machine, corrupted/interrupted/old-backup fixtures, and signed incident bundle. |
+| `RECOVERY-01` | Recovery, device revocation, backup import, rollback, and incident stop-distribution behavior are explicit and fail closed. | `partial` | Recovery state machine, corrupted/interrupted/old-backup fixtures, and signed incident bundle. |
 
 ## Claim policy
 

@@ -7,8 +7,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const root = resolve(new URL("..", import.meta.url).pathname);
-const binary = resolve(process.env.AD_DAEMON_BINARY || join(root, "target/debug/another-dimension-daemon"));
-const passphrase = "acceptance-only-passphrase";
+const binary = resolve(process.env.AD_DAEMON_BINARY || join(root, ".build-cache/cargo-target/debug/another-dimension-daemon"));
 
 async function command(args, input = "") {
   return await new Promise((resolveCommand, rejectCommand) => {
@@ -32,7 +31,7 @@ async function command(args, input = "") {
   });
 }
 
-function startDaemon(dataDir, port) {
+function startDaemon(dataDir, port, passphrase) {
   const child = spawn(binary, [
     "serve", "--data-dir", dataDir, "--port", String(port),
     "--relay-origin", `http://127.0.0.1:${port + 1000}`,
@@ -69,9 +68,11 @@ let crashed;
 try {
   await access(binary, constants.X_OK);
   await access(join(root, "apps/web/dist/index.html"), constants.F_OK);
-  await command(["init", "--display-name", "Lifecycle", "--data-dir", dataDir], `${passphrase}\n`);
+  const initialized = await command(["init", "--display-name", "Lifecycle", "--data-dir", dataDir]);
+  const passphrase = initialized.match(/^passphrase: ([0-9a-f]{64})$/m)?.[1];
+  assert.match(passphrase || "", /^[0-9a-f]{64}$/);
 
-  daemon = await startDaemon(dataDir, 19120);
+  daemon = await startDaemon(dataDir, 19120, passphrase);
   const running = await command(["status", "--data-dir", dataDir]);
   assert.match(running, /daemon status: running/);
 
@@ -84,11 +85,11 @@ try {
   const stopped = await command(["status", "--data-dir", dataDir]);
   assert.match(stopped, /daemon status: stopped/);
 
-  crashed = await startDaemon(dataDir, 19122);
+  crashed = await startDaemon(dataDir, 19122, passphrase);
   crashed.child.kill("SIGKILL");
   await waitForExit(crashed.child);
   crashed = undefined;
-  const recovered = await startDaemon(dataDir, 19123);
+  const recovered = await startDaemon(dataDir, 19123, passphrase);
   await command(["stop", "--data-dir", dataDir]);
   await waitForExit(recovered.child);
 

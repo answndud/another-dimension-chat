@@ -164,28 +164,22 @@ export function createRelayRequestHandler(context) {
       return;
     }
 
-    if (requestUrl.pathname === "/api/v1/invite-codes/pairing-response" && ["POST", "GET"].includes(req.method)) {
+    if (requestUrl.pathname === "/api/v1/invite-codes/pairing-response" && req.method === "POST") {
       if (!consumeRateLimit(req, "pairing-response", 60)) { json(res, 429, { error: "rate_limited" }, { ...headers, "retry-after": "60" }); return; }
       try {
-        if (req.method === "POST") {
-          if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
-          const body = JSON.parse(await readBody(req, 132 * 1024, requestTimeoutMs));
-          if (body?.read === true) {
-            const result = readInvitePairingResponse(routeState.inviteCodes, body?.code);
-            if (!result.ok) { json(res, 404, { available: false, error: result.reason }, headers); return; }
-            json(res, 200, { available: true, response: result.response }, headers);
-            return;
-          }
-          const before = structuredClone(routeState.inviteCodes);
-          const result = writeInvitePairingResponse(routeState.inviteCodes, body?.code, body?.response);
-          if (!result.ok) { json(res, 404, { accepted: false, error: result.reason }, headers); return; }
-          try { await persistInviteCodes(); } catch (error) { routeState.inviteCodes = before; throw error; }
-          json(res, 201, { accepted: true }, headers);
-        } else {
-          const result = readInvitePairingResponse(routeState.inviteCodes, requestUrl.searchParams.get("code"));
+        if (!hasJsonContentType(req)) throw new Error("content_type_not_allowed");
+        const body = JSON.parse(await readBody(req, 132 * 1024, requestTimeoutMs));
+        if (body?.read === true) {
+          const result = readInvitePairingResponse(routeState.inviteCodes, body?.code);
           if (!result.ok) { json(res, 404, { available: false, error: result.reason }, headers); return; }
           json(res, 200, { available: true, response: result.response }, headers);
+          return;
         }
+        const before = structuredClone(routeState.inviteCodes);
+        const result = writeInvitePairingResponse(routeState.inviteCodes, body?.code, body?.response);
+        if (!result.ok) { json(res, 404, { accepted: false, error: result.reason }, headers); return; }
+        try { await persistInviteCodes(); } catch (error) { routeState.inviteCodes = before; throw error; }
+        json(res, 201, { accepted: true }, headers);
       } catch (error) {
         json(res, errorStatus(error), errorBody(error, { accepted: false }), headers);
       }

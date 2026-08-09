@@ -25,7 +25,9 @@ const groupedMessages = [
   ]],
   [STORAGE_MESSAGE, [
     "storage_locked", "storage_unavailable", "message_storage_corrupt",
-    "message_storage_unavailable", "recovery_export_unavailable", "recovery_invalid",
+    "message_storage_unavailable", "session_storage_unavailable", "daemon_busy",
+    "daemon_shutting_down", "staged_route_required",
+    "recovery_export_unavailable", "recovery_invalid",
     "invalid_recovery_artifact", "wipe_incomplete", "attachment_state_unavailable",
   ]],
   [PAIRING_MESSAGE, [
@@ -35,6 +37,7 @@ const groupedMessages = [
     "invalid_relay_receipt", "randomness_unavailable",
     "invalid_pairing_response", "invite_missing_conversation", "pairing_conversation_mismatch",
     "pairing_conversation_unknown", "pairing_rendezvous_unavailable", "pairing_rendezvous_unknown",
+    "peer_unavailable", "peer_protocol_unavailable", "peer_expired", "conversation_binding_changed",
   ]],
   [CONTACT_MESSAGE, [
     "contact_blocked", "contacts_unavailable", "contact_device_conflict", "contact_not_found",
@@ -51,6 +54,7 @@ const groupedMessages = [
   [SESSION_CRYPTO_MESSAGE, [
     "session_operation_failed", "session_unavailable", "invalid_key_package", "invalid_welcome",
     "invalid_ciphertext", "invalid_message", "message_decrypt_failed", "message_encoding_failed",
+    "protocol_unavailable", "protocol_version_unsupported", "clock_skew",
   ]],
   [ATTACHMENT_MESSAGE, [
     "attachment_chunk_not_found", "attachment_not_complete", "attachment_not_found",
@@ -62,7 +66,7 @@ const groupedMessages = [
   [DELIVERY_MESSAGE, [
     "delivery_endpoint_mismatch", "delivery_not_found", "delivery_not_retriable",
     "delivery_not_retryable", "delivery_retry_backoff", "delivery_retry_exhausted",
-    "delivery_state_unavailable", "delivery_unavailable", "duplicate_delivery",
+    "delivery_state_changed", "delivery_state_unavailable", "delivery_unavailable", "duplicate_delivery",
     "invalid_delivery_digest", "invalid_delivery_envelope", "invalid_delivery_ids",
     "invalid_relay_envelope",
   ]],

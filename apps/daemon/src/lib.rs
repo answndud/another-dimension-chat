@@ -18,11 +18,13 @@ pub mod pairing;
 pub mod protocol_gate;
 pub mod relay_http;
 pub mod storage;
+pub mod storage_os;
 pub mod trust;
 
 /// This crate owns the daemon product boundary. The typed domain model is
-/// authoritative for future storage, protocol, delivery, and UI contracts;
-/// the implementation gate remains closed until those slices are complete.
+/// authoritative for storage, protocol, delivery, and UI contracts. The
+/// high-risk release gate remains closed until implementation, independent
+/// review, and release evidence requirements are complete.
 pub const PRODUCT_ROLE: &str = "local-security-daemon";
 pub const IMPLEMENTATION_STATUS: &str = "daemon-owned-openmls-messaging-path-active-development";
 
@@ -33,6 +35,7 @@ pub enum Command {
     Serve,
     Identity,
     Device,
+    Keychain,
     Lock,
     Recovery,
     Status,
@@ -41,12 +44,13 @@ pub enum Command {
 }
 
 impl Command {
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 11] = [
         Self::Doctor,
         Self::Init,
         Self::Serve,
         Self::Identity,
         Self::Device,
+        Self::Keychain,
         Self::Lock,
         Self::Recovery,
         Self::Status,
@@ -61,6 +65,7 @@ impl Command {
             Self::Serve => "serve",
             Self::Identity => "identity",
             Self::Device => "device",
+            Self::Keychain => "keychain",
             Self::Lock => "lock",
             Self::Recovery => "recovery",
             Self::Status => "status",
@@ -87,8 +92,9 @@ mod tests {
             IMPLEMENTATION_STATUS,
             "daemon-owned-openmls-messaging-path-active-development"
         );
-        assert_eq!(Command::ALL.len(), 10);
+        assert_eq!(Command::ALL.len(), 11);
         assert_eq!(command_from_name("serve"), Some(Command::Serve));
+        assert_eq!(command_from_name("keychain"), Some(Command::Keychain));
         assert_eq!(command_from_name("desktop"), None);
     }
 }

@@ -14,11 +14,15 @@ use std::{
 };
 use zeroize::{Zeroize, Zeroizing};
 
+#[cfg(target_os = "macos")]
+pub use crate::storage_os::MacOsKeyStore;
+pub use crate::storage_os::{OsKeyStore, UnavailableOsKeyStore};
+
 const FILE_MAGIC: &[u8; 8] = b"ADSTORE1";
 const FILE_VERSION: u8 = 1;
 const SALT_BYTES: usize = 16;
 const NONCE_BYTES: usize = 12;
-const KEY_BYTES: usize = 32;
+pub(crate) const KEY_BYTES: usize = 32;
 pub const MAX_RECORDS: usize = 4096;
 pub const RECOVERY_MAGIC: &[u8; 13] = b"ADRECOVERY2\0\0";
 const MAX_RECOVERY_ARTIFACT_BYTES: usize = 64 * 1024 * 1024;
@@ -114,85 +118,6 @@ impl From<io::Error> for StorageError {
     }
 }
 
-/// OS-backed key storage boundary. Implementations must never expose a key in
-/// command-line arguments, logs, or a non-encrypted file.
-pub trait OsKeyStore {
-    fn load_database_key(
-        &self,
-        _profile_id: &str,
-    ) -> Result<Zeroizing<[u8; KEY_BYTES]>, StorageError>;
-    fn save_database_key(
-        &self,
-        _profile_id: &str,
-        _key: &[u8; KEY_BYTES],
-    ) -> Result<(), StorageError>;
-}
-
-#[cfg(target_os = "macos")]
-pub struct MacOsKeyStore;
-
-#[cfg(target_os = "macos")]
-impl MacOsKeyStore {
-    const SERVICE: &'static str = "com.another-dimension.daemon.database-key";
-
-    fn account(profile_id: &str) -> Result<&str, StorageError> {
-        if profile_id.is_empty()
-            || profile_id.len() > 128
-            || !profile_id
-                .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
-        {
-            return Err(StorageError::InvalidPassphrase);
-        }
-        Ok(profile_id)
-    }
-}
-
-#[cfg(target_os = "macos")]
-impl OsKeyStore for MacOsKeyStore {
-    fn load_database_key(
-        &self,
-        profile_id: &str,
-    ) -> Result<Zeroizing<[u8; KEY_BYTES]>, StorageError> {
-        let account = Self::account(profile_id)?;
-        let bytes = security_framework::passwords::get_generic_password(Self::SERVICE, account)
-            .map_err(|_| StorageError::OsKeyStoreUnavailable)?;
-        let key: [u8; KEY_BYTES] = bytes
-            .try_into()
-            .map_err(|_| StorageError::OsKeyStoreUnavailable)?;
-        Ok(Zeroizing::new(key))
-    }
-
-    fn save_database_key(
-        &self,
-        profile_id: &str,
-        key: &[u8; KEY_BYTES],
-    ) -> Result<(), StorageError> {
-        let account = Self::account(profile_id)?;
-        security_framework::passwords::set_generic_password(Self::SERVICE, account, key)
-            .map_err(|_| StorageError::OsKeyStoreUnavailable)
-    }
-}
-
-pub struct UnavailableOsKeyStore;
-
-impl OsKeyStore for UnavailableOsKeyStore {
-    fn load_database_key(
-        &self,
-        _profile_id: &str,
-    ) -> Result<Zeroizing<[u8; KEY_BYTES]>, StorageError> {
-        Err(StorageError::OsKeyStoreUnavailable)
-    }
-
-    fn save_database_key(
-        &self,
-        _profile_id: &str,
-        _key: &[u8; KEY_BYTES],
-    ) -> Result<(), StorageError> {
-        Err(StorageError::OsKeyStoreUnavailable)
-    }
-}
-
 pub struct EncryptedStore {
     path: PathBuf,
     marker_path: PathBuf,
@@ -251,7 +176,7 @@ impl EncryptedStore {
         salt: [u8; SALT_BYTES],
     ) -> Result<Self, StorageError> {
         let path = path.to_path_buf();
-        if path.exists() {
+        if ensure_private_file(&path)? {
             return Err(StorageError::CorruptStore);
         }
         let marker_path = marker_path(&path);
@@ -264,14 +189,19 @@ impl EncryptedStore {
             records: BTreeMap::new(),
             locked: false,
         };
-        store.persist()?;
+        if let Err(error) = store.persist() {
+            let _ = fs::remove_file(&store.path);
+            let _ = fs::remove_file(&store.marker_path);
+            return Err(error);
+        }
         Ok(store)
     }
 
     pub fn open(path: impl AsRef<Path>, passphrase: &str) -> Result<Self, StorageError> {
         validate_passphrase(passphrase)?;
         let path = path.as_ref();
-        let bytes = fs::read(&path)?;
+        ensure_private_file(path)?;
+        let bytes = fs::read(path)?;
         let parsed = parse_file(&bytes)?;
         let key = derive_key(passphrase, &parsed.salt)?;
         Self::open_with_key(path, key, parsed)
@@ -282,6 +212,7 @@ impl EncryptedStore {
         key: [u8; KEY_BYTES],
     ) -> Result<Self, StorageError> {
         let path = path.as_ref();
+        ensure_private_file(path)?;
         let bytes = fs::read(path)?;
         let parsed = parse_file(&bytes)?;
         Self::open_with_key(path, Zeroizing::new(key), parsed)
@@ -303,7 +234,8 @@ impl EncryptedStore {
             )
             .map_err(|_| StorageError::AuthenticationFailed)?;
         let records = decode_records(&plaintext)?;
-        let marker_path = marker_path(&path);
+        let marker_path = marker_path(path);
+        ensure_private_file(&marker_path)?;
         if let Some(marker) = read_marker(&marker_path)? {
             if parsed.revision < marker {
                 return Err(StorageError::RollbackDetected);
@@ -510,8 +442,9 @@ impl EncryptedStore {
             return Ok(false);
         }
         if let Err(error) = self.commit() {
-            self.records
-                .insert((class, key.to_string()), previous.expect("checked above"));
+            if let Some(previous) = previous {
+                self.records.insert((class, key.to_string()), previous);
+            }
             return Err(error);
         }
         Ok(true)
@@ -550,8 +483,33 @@ impl EncryptedStore {
             )
             .map_err(|_| StorageError::Io)?;
         let bytes = encode_file(&self.salt, next_revision, &nonce, &ciphertext);
+        let previous_store = fs::read(&self.path)?;
+        let previous_marker = match fs::read(&self.marker_path) {
+            Ok(bytes) => Some(bytes),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+            Err(_) => return Err(StorageError::Io),
+        };
         atomic_write(&self.path, &bytes)?;
-        self.write_marker(next_revision)?;
+        if let Err(error) = self.write_marker(next_revision) {
+            let store_restored = atomic_write(&self.path, &previous_store).is_ok();
+            let marker_restored = match previous_marker {
+                Some(previous_marker) => atomic_write(&self.marker_path, &previous_marker).is_ok(),
+                None => fs::remove_file(&self.marker_path)
+                    .map(|()| true)
+                    .or_else(|error| {
+                        if error.kind() == io::ErrorKind::NotFound {
+                            Ok(true)
+                        } else {
+                            Err(error)
+                        }
+                    })
+                    .unwrap_or(false),
+            };
+            if !store_restored || !marker_restored {
+                return Err(StorageError::Io);
+            }
+            return Err(error);
+        }
         self.revision = next_revision;
         Ok(())
     }
@@ -575,7 +533,12 @@ impl EncryptedStore {
             &self.path,
             &encode_file(&self.salt, self.revision, &nonce, &ciphertext),
         )?;
-        self.write_marker(self.revision)
+        if let Err(error) = self.write_marker(self.revision) {
+            let _ = fs::remove_file(&self.path);
+            let _ = fs::remove_file(&self.marker_path);
+            return Err(error);
+        }
+        Ok(())
     }
 
     fn write_marker(&self, revision: u64) -> Result<(), StorageError> {
@@ -771,6 +734,24 @@ fn marker_path(path: &Path) -> PathBuf {
     PathBuf::from(format!("{}.revision", path.display()))
 }
 
+fn ensure_private_file(path: &Path) -> Result<bool, StorageError> {
+    let metadata = match fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
+        Err(_) => return Err(StorageError::Io),
+    };
+    let file_type = metadata.file_type();
+    if file_type.is_symlink() || !file_type.is_file() {
+        return Err(StorageError::CorruptStore);
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+    }
+    Ok(true)
+}
+
 fn read_marker(path: &Path) -> Result<Option<u64>, StorageError> {
     match fs::read_to_string(path) {
         Ok(value) => value
@@ -791,26 +772,32 @@ fn atomic_write(path: &Path, contents: &[u8]) -> Result<(), StorageError> {
     secure_random(&mut suffix).map_err(|_| StorageError::Io)?;
     let temporary =
         path.with_extension(format!("tmp-{}-{}", std::process::id(), hex_bytes(&suffix)));
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&temporary)?;
-    file.write_all(contents)?;
-    file.sync_all()?;
-    let mut permissions = file.metadata()?.permissions();
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        permissions.set_mode(0o600);
-        file.set_permissions(permissions)?;
+    let result = (|| {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temporary)?;
+        file.write_all(contents)?;
+        file.sync_all()?;
+        let mut permissions = file.metadata()?.permissions();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            permissions.set_mode(0o600);
+            file.set_permissions(permissions)?;
+        }
+        drop(file);
+        fs::rename(&temporary, path).map_err(|_| StorageError::Io)?;
+        #[cfg(unix)]
+        if let Some(parent) = path.parent() {
+            fs::File::open(parent)?.sync_all()?;
+        }
+        Ok::<(), StorageError>(())
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&temporary);
     }
-    drop(file);
-    fs::rename(&temporary, path).map_err(|_| StorageError::Io)?;
-    #[cfg(unix)]
-    if let Some(parent) = path.parent() {
-        fs::File::open(parent)?.sync_all()?;
-    }
-    Ok(())
+    result
 }
 
 fn hex_bytes(bytes: &[u8]) -> String {
@@ -927,6 +914,45 @@ mod tests {
         assert!(!artifact
             .windows(b"private-root-material".len())
             .any(|window| window == b"private-root-material"));
+        fs::remove_file(&path).unwrap();
+        fs::remove_file(format!("{}.revision", path.display())).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn existing_store_permissions_are_reasserted_and_symlinks_are_rejected() {
+        use std::os::unix::fs::{symlink, PermissionsExt};
+
+        let path = temp_path("private-boundary");
+        let link = temp_path("private-boundary-link");
+        let store = EncryptedStore::initialize(&path, "correct horse battery staple").unwrap();
+        drop(store);
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+        fs::set_permissions(
+            format!("{}.revision", path.display()),
+            fs::Permissions::from_mode(0o644),
+        )
+        .unwrap();
+        symlink(&path, &link).unwrap();
+        assert!(matches!(
+            EncryptedStore::open(&link, "correct horse battery staple"),
+            Err(StorageError::CorruptStore)
+        ));
+        let reopened = EncryptedStore::open(&path, "correct horse battery staple").unwrap();
+        drop(reopened);
+        assert_eq!(
+            fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+        assert_eq!(
+            fs::metadata(format!("{}.revision", path.display()))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o600
+        );
+        fs::remove_file(link).unwrap();
         fs::remove_file(&path).unwrap();
         fs::remove_file(format!("{}.revision", path.display())).unwrap();
     }

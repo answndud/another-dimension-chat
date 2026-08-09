@@ -29,12 +29,11 @@ pub(crate) fn message_record_key(conversation_id: &str, message_id: &str) -> Str
     )
 }
 
-pub(crate) fn persist_message(
-    store: &mut EncryptedStore,
+pub(crate) fn encoded_message_record(
     conversation_id: &str,
     message: &MessagePayload,
     direction: &str,
-) -> Result<(), StorageError> {
+) -> Result<(String, Vec<u8>), StorageError> {
     let record = StoredMessage {
         conversation_id: conversation_id.to_owned(),
         message_id: message.id.clone(),
@@ -44,11 +43,7 @@ pub(crate) fn persist_message(
         text: message.text.clone(),
     };
     let bytes = serde_json::to_vec(&record).map_err(|_| StorageError::CorruptStore)?;
-    store.put(
-        RecordClass::Message,
-        &message_record_key(conversation_id, &message.id),
-        &bytes,
-    )
+    Ok((message_record_key(conversation_id, &message.id), bytes))
 }
 
 pub(crate) fn encode_message_payload(text: &str, now: u64, expires_at: u64) -> Option<Vec<u8>> {

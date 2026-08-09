@@ -8,6 +8,7 @@ const main = await readFile("apps/daemon/src/main.rs", "utf8");
 const storage = await readFile("apps/daemon/src/storage.rs", "utf8");
 const bridge = await readFile("apps/daemon/src/bridge.rs", "utf8");
 const cli = await readFile("apps/daemon/src/cli.rs", "utf8");
+const recovery = await readFile("apps/daemon/src/cli_recovery.rs", "utf8");
 const boundary = JSON.parse(await readFile("reference/product_boundary.json", "utf8"));
 const failures = [];
 
@@ -22,7 +23,7 @@ for (const marker of ["is_loopback", "HttpOnly", "SameSite=Strict", "CsrfRequire
   if (!bridge.includes(marker)) failures.push(`daemon bridge boundary marker missing: ${marker}`);
 }
 for (const marker of ["ADRECOVERY2", "UnsafeSecretArgument", "read_to_string", "release readiness blocked"]) {
-  if (!cli.includes(marker) && !main.includes(marker)) failures.push(`daemon CLI boundary marker missing: ${marker}`);
+  if (!cli.includes(marker) && !recovery.includes(marker) && !main.includes(marker)) failures.push(`daemon CLI boundary marker missing: ${marker}`);
 }
 for (const forbidden of ["another-dimension-crypto", "another-dimension-transport", "another-dimension-storage", "apps/desktop-tauri", "vodozemac"]) {
   if (manifest.includes(forbidden) || library.includes(forbidden) || main.includes(forbidden)) failures.push(`daemon boundary imports forbidden dependency or surface: ${forbidden}`);

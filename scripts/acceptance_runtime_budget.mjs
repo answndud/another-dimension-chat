@@ -7,18 +7,22 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const root = resolve(new URL("..", import.meta.url).pathname);
-const binary = resolve(process.env.AD_DAEMON_BINARY || join(root, "target/debug/another-dimension-daemon"));
+const binary = resolve(process.env.AD_DAEMON_BINARY || join(root, ".build-cache/cargo-target/debug/another-dimension-daemon"));
 const limits = JSON.parse(await import("node:fs/promises").then(({ readFile }) => readFile(join(root, "reference/RESOURCE_LIMITS.json"), "utf8"))).acceptanceBudgets;
-const passphrase = "runtime-budget-acceptance-passphrase";
-
 async function runInit(dataDir) {
-  await new Promise((resolveRun, rejectRun) => {
-    const child = spawn(binary, ["init", "--display-name", "Runtime", "--data-dir", dataDir], { cwd: root, stdio: ["pipe", "ignore", "pipe"] });
+  return new Promise((resolveRun, rejectRun) => {
+    const child = spawn(binary, ["init", "--display-name", "Runtime", "--data-dir", dataDir], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
     let stderr = "";
+    child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
     child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
     child.once("error", rejectRun);
-    child.once("exit", (code) => code === 0 ? resolveRun() : rejectRun(new Error(`init failed (${code}): ${stderr}`)));
-    child.stdin.end(`${passphrase}\n`);
+    child.once("exit", (code) => {
+      if (code !== 0) return rejectRun(new Error(`init failed (${code}): ${stderr}`));
+      const passphrase = stdout.match(/^passphrase: ([0-9a-f]{64})$/m)?.[1];
+      if (!passphrase) return rejectRun(new Error(`init did not return a generated passphrase: ${stdout}`));
+      resolveRun(passphrase);
+    });
   });
 }
 
@@ -60,7 +64,7 @@ const startedAt = performance.now();
 try {
   await access(binary, constants.X_OK);
   await access(join(root, "apps/web/dist/index.html"), constants.F_OK);
-  await runInit(dataDir);
+  const passphrase = await runInit(dataDir);
   daemon = spawn(binary, [
     "serve", "--data-dir", dataDir, "--port", String(port),
     "--relay-origin", `http://127.0.0.1:${port + 1000}`,

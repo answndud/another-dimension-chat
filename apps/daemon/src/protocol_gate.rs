@@ -1,5 +1,7 @@
 //! Admission boundary for the daemon-owned 1:1 protocol.
-//! This module deliberately does not implement cryptography or a session yet.
+//! Cryptography and session state remain owned by `mls_session`; this module
+//! only admits a request after the stable protocol identity/version/time
+//! contract has passed.
 
 pub const DAEMON_PROTOCOL: &str = "openmls-1";
 pub const DAEMON_PROTOCOL_VERSION: u16 = 1;
@@ -8,6 +10,7 @@ pub const MAX_TEXT_BYTES: usize = 64 * 1024;
 pub const MAX_ENVELOPE_BYTES: usize = 96 * 1024;
 pub const MAX_ATTACHMENT_BYTES: usize = 32 * 1024 * 1024;
 pub const MAX_CLOCK_SKEW_SECONDS: u64 = 300;
+pub const MAX_PROTOCOL_IDENTIFIER_BYTES: usize = 128;
 
 /// Persisted TTL contract. `issued_at` is the wall-clock anchor needed after a
 /// restart; callers also pass elapsed monotonic seconds while the process is
@@ -31,7 +34,11 @@ impl TtlContract {
 /// Protocol identifiers are ASCII-only. Human-facing Unicode text remains an
 /// application payload and is not used for identity, lookup, or routing.
 pub fn validate_protocol_identifier(value: &str) -> Result<(), AdmissionError> {
-    if value.is_empty() || !value.is_ascii() || value.bytes().any(|byte| byte.is_ascii_control()) {
+    if value.is_empty()
+        || value.len() > MAX_PROTOCOL_IDENTIFIER_BYTES
+        || !value.is_ascii()
+        || value.bytes().any(|byte| byte.is_ascii_control())
+    {
         Err(AdmissionError::InvalidIdentifier)
     } else {
         Ok(())
@@ -72,7 +79,6 @@ pub enum AdmissionError {
     UnsupportedVersion,
     ClockSkew,
     InvalidIdentifier,
-    ImplementationNotAvailable,
 }
 
 pub fn admit(
@@ -83,12 +89,16 @@ pub fn admit(
     if peer_account_id.is_empty() || peer_device_id.is_empty() {
         return Err(AdmissionError::EmptyPeerIdentity);
     }
+    validate_protocol_identifier(peer_account_id)?;
+    validate_protocol_identifier(peer_device_id)?;
     if !supports(protocol) {
         return Err(AdmissionError::UnsupportedProtocol);
     }
-    // The implementation gate remains closed until a vetted, pinned dependency
-    // and persistence/test-vector review are present in this workspace.
-    Err(AdmissionError::ImplementationNotAvailable)
+    Ok(SessionAdmission {
+        peer_account_id: peer_account_id.to_owned(),
+        peer_device_id: peer_device_id.to_owned(),
+        protocol: DAEMON_PROTOCOL,
+    })
 }
 
 #[cfg(test)]
@@ -111,17 +121,21 @@ mod tests {
     }
 
     #[test]
-    fn selected_protocol_stays_closed_until_vetted_implementation_exists() {
+    fn selected_protocol_admits_only_valid_daemon_identity() {
         assert!(supports(DAEMON_PROTOCOL));
         assert!(!supports("Olm.v2"));
         assert_eq!(DAEMON_PROTOCOL_VERSION, 1);
-        assert_eq!(
-            admit("ad1pkpeer", "device-1", DAEMON_PROTOCOL),
-            Err(AdmissionError::ImplementationNotAvailable)
-        );
+        let admission = admit("ad1pkpeer", "device-1", DAEMON_PROTOCOL).unwrap();
+        assert_eq!(admission.peer_account_id, "ad1pkpeer");
+        assert_eq!(admission.peer_device_id, "device-1");
+        assert_eq!(admission.protocol, DAEMON_PROTOCOL);
         assert_eq!(
             admit("", "device-1", DAEMON_PROTOCOL),
             Err(AdmissionError::EmptyPeerIdentity)
+        );
+        assert_eq!(
+            admit("peer\n", "device-1", DAEMON_PROTOCOL),
+            Err(AdmissionError::InvalidIdentifier)
         );
     }
 

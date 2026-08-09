@@ -39,6 +39,7 @@ export async function createJsonStateStore({
     if (recovery !== null) {
       const recovered = parseState(recovery, "recovery");
       await write(file, recovery);
+      await unlink(temporary).catch(() => {});
       raw = recovery;
       return makeStore(recovered);
     }

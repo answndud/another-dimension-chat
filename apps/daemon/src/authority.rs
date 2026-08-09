@@ -1,4 +1,5 @@
 use super::*;
+use crate::attachment::validate_descriptor;
 use axum::http::Uri;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -320,7 +321,7 @@ impl InviteAuthority {
         if self.attachment_jobs.contains_key(blob_id) {
             return Err(crate::attachment::AttachmentError::InvalidManifest);
         }
-        if self.attachment_jobs.len() >= 1
+        if !self.attachment_jobs.is_empty()
             || self.completed_attachments.len() >= MAX_COMPLETED_ATTACHMENT_COUNT
             || self
                 .completed_attachments
@@ -379,6 +380,20 @@ impl InviteAuthority {
         self.completed_attachments.remove(blob_id)
     }
 
+    pub(crate) fn take_completed_attachment_if_equal(
+        &mut self,
+        blob_id: &str,
+        expected: &EncryptedAttachment,
+    ) -> bool {
+        let Some(current) = self.completed_attachments.get(blob_id) else {
+            return false;
+        };
+        if current != expected {
+            return false;
+        }
+        self.take_completed_attachment(blob_id).is_some()
+    }
+
     pub(crate) fn cancel_attachment(&mut self, blob_id: &str, store: &mut EncryptedStore) -> bool {
         let cancelled = self.attachment_jobs.remove(blob_id).is_some()
             || self.completed_attachments.remove(blob_id).is_some()
@@ -391,21 +406,19 @@ impl InviteAuthority {
         cancelled
     }
 
-    pub(crate) fn register_received_attachment(
+    pub(crate) fn stage_received_attachment(
         &mut self,
         attachment_id: &str,
         descriptor: AttachmentDescriptor,
-        store: &mut EncryptedStore,
-    ) -> Result<(), StorageError> {
+    ) -> Result<Vec<u8>, StorageError> {
         let encoded = serde_json::to_vec(&descriptor).map_err(|_| StorageError::CorruptStore)?;
-        store.put(
-            RecordClass::Attachment,
-            &format!("received/{attachment_id}"),
-            &encoded,
-        )?;
         self.received_attachments
             .insert(attachment_id.to_owned(), descriptor);
-        Ok(())
+        Ok(encoded)
+    }
+
+    pub(crate) fn contacts_snapshot_bytes(&self) -> Result<Vec<u8>, StorageError> {
+        self.contacts.snapshot_bytes()
     }
 
     pub(crate) fn received_attachment(&self, attachment_id: &str) -> Option<&AttachmentDescriptor> {
@@ -463,6 +476,7 @@ impl InviteAuthority {
                 .ok_or(StorageError::CorruptStore)?;
             let descriptor: AttachmentDescriptor =
                 serde_json::from_slice(&value).map_err(|_| StorageError::CorruptStore)?;
+            validate_descriptor(&descriptor).map_err(|_| StorageError::CorruptStore)?;
             self.received_attachments
                 .insert(attachment_id.to_owned(), descriptor);
         }
@@ -565,13 +579,12 @@ impl InviteAuthority {
             .map_err(|_| ContactDirectoryError::Corrupt)
     }
 
-    pub(crate) fn record_contact_message(
+    pub(crate) fn stage_contact_message(
         &mut self,
         conversation_id: &str,
         plaintext: &[u8],
         now: u64,
         background: bool,
-        store: &mut EncryptedStore,
     ) -> Result<(), ContactDirectoryError> {
         let preview = String::from_utf8_lossy(plaintext)
             .split_whitespace()
@@ -580,9 +593,7 @@ impl InviteAuthority {
         let preview = preview.chars().take(160).collect::<String>();
         self.contacts
             .record_message(conversation_id, &preview, now, background)?;
-        self.contacts
-            .persist(store)
-            .map_err(|_| ContactDirectoryError::Corrupt)
+        Ok(())
     }
 
     pub(crate) fn create(
@@ -590,6 +601,10 @@ impl InviteAuthority {
         now: u64,
         conversation_id: Option<&str>,
     ) -> Option<(String, String)> {
+        // A long-lived daemon must re-check the current device certificate at
+        // every identity-bearing operation. Startup validation alone would
+        // allow an expired or revoked device to keep creating invites.
+        self.device_registry.authorize(&self.device_id, now).ok()?;
         let root = self.root.as_ref()?;
         let mut bytes = [0_u8; 32];
         getrandom::fill(&mut bytes).ok()?;
@@ -709,12 +724,19 @@ impl InviteAuthority {
         self.device_registry = registry;
     }
 
-    pub(crate) fn revoke_device(
+    pub(crate) fn restore_device_registry(
+        &mut self,
+        encoded: &[u8],
+    ) -> Result<(), DeviceRegistryError> {
+        self.device_registry = DeviceRegistry::decode(encoded)?;
+        Ok(())
+    }
+
+    pub(crate) fn revoke_device_unpersisted(
         &mut self,
         device_id: &str,
         now: u64,
-        store: &mut EncryptedStore,
-    ) -> Result<(), DeviceActionError> {
+    ) -> Result<(Vec<u8>, Vec<u8>), DeviceActionError> {
         if device_id == self.device_id {
             return Err(DeviceActionError::CurrentDevice);
         }
@@ -733,15 +755,7 @@ impl InviteAuthority {
             .device_registry
             .encode()
             .map_err(|_| DeviceActionError::Registry(DeviceRegistryError::Corrupt))?;
-        if store
-            .put(RecordClass::Device, "registry", &encoded)
-            .is_err()
-        {
-            self.device_registry = DeviceRegistry::decode(&previous)
-                .map_err(|_| DeviceActionError::Registry(DeviceRegistryError::Corrupt))?;
-            return Err(DeviceActionError::Storage);
-        }
-        Ok(())
+        Ok((previous, encoded))
     }
 
     pub(crate) fn approve_device_link(
@@ -778,5 +792,40 @@ impl InviteAuthority {
             return Err(DeviceActionError::Storage);
         }
         approval.encode().map_err(DeviceActionError::Link)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::InviteAuthority;
+    use crate::{device::DeviceRegistry, identity::AccountRootKey};
+
+    #[test]
+    fn invite_creation_rechecks_current_device_certificate() {
+        let root = AccountRootKey::from_seed([7; 32]);
+        let device = root
+            .issue_device("device-1", [0; 32], 1, 100)
+            .expect("fixture device certificate");
+        let mut registry = DeviceRegistry::new(&root);
+        registry.register(device.certificate().clone(), 1).unwrap();
+
+        let mut authority = InviteAuthority::new(
+            root,
+            "device-1",
+            "http://127.0.0.1:1422",
+            None,
+            None,
+            None,
+            None,
+        );
+        authority.set_device_registry(registry);
+        assert!(authority.create(10, None).is_some());
+
+        let revoke_root = AccountRootKey::from_seed([7; 32]);
+        authority
+            .device_registry
+            .revoke(&revoke_root, "device-1", 20)
+            .unwrap();
+        assert!(authority.create(20, None).is_none());
     }
 }

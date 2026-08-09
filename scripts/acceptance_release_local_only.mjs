@@ -122,7 +122,7 @@ await Promise.all([
 const serverDependencies = await run("npm", ["ci", "--prefix", join(archive, "apps/server"), "--omit=dev", "--no-audit", "--no-fund", "--workspaces=false"]);
 assert.equal(serverDependencies.code, 0, serverDependencies.output);
 await rm(join(archive, "apps/server/node_modules/.bin"), { recursive: true, force: true });
-const daemonBinary = process.env.AD_DAEMON_BINARY || join(projectDir, "target/debug/another-dimension-daemon");
+const daemonBinary = process.env.AD_DAEMON_BINARY || join(projectDir, ".build-cache/cargo-target/debug/another-dimension-daemon");
 await mkdir(join(archive, "bin"), { recursive: true });
 await cp(daemonBinary, join(archive, "bin/another-dimension-daemon"));
 await chmod(join(archive, "bin/another-dimension-daemon"), 0o700);
@@ -211,20 +211,23 @@ function startReady(command, args, pattern) {
   });
 }
 const releaseRelay = await startReady(join(install, "runtime-node"), [join(install, "apps/server/server.mjs"), "--config", releaseConfig], /local server listening/);
-const releaseInit = spawn(join(install, "bin/another-dimension-daemon"), ["init", "--display-name", "Release", "--data-dir", join(data, "daemon")], { cwd: install, stdio: ["pipe", "ignore", "pipe"] });
-releaseInit.stdin.end("acceptance-only-passphrase\n");
+const releaseInit = spawn(join(install, "bin/another-dimension-daemon"), ["init", "--display-name", "Release", "--data-dir", join(data, "daemon")], { cwd: install, stdio: ["ignore", "pipe", "pipe"] });
+let releaseInitOutput = "";
+releaseInit.stdout.on("data", (chunk) => { releaseInitOutput += chunk.toString(); });
 await new Promise((resolveInit, rejectInit) => {
   let output = "";
   releaseInit.stderr.on("data", (chunk) => { output += chunk.toString(); });
   releaseInit.once("exit", (code) => code === 0 ? resolveInit() : rejectInit(new Error(`release daemon init failed: ${output}`)));
 });
+const releasePassphrase = releaseInitOutput.match(/^passphrase: ([0-9a-f]{64})$/m)?.[1];
+assert.match(releasePassphrase || "", /^[0-9a-f]{64}$/);
 const releaseDaemon = spawn(join(install, "bin/another-dimension-daemon"), [
   "serve", "--data-dir", join(data, "daemon"), "--port", String(releaseDaemonPort),
   "--relay-origin", `http://127.0.0.1:${releaseRelayPort}`,
   "--inbox-url", `http://127.0.0.1:${releaseRelayPort}/api/v1/inbox/release-acceptance-capability`,
   "--ui-dir", join(install, "apps/web/dist"),
 ], { cwd: install, stdio: ["pipe", "ignore", "pipe"] });
-releaseDaemon.stdin.end("acceptance-only-passphrase\n");
+releaseDaemon.stdin.end(`${releasePassphrase}\n`);
 await new Promise((resolveStart, rejectStart) => {
   let output = "";
   const timer = setTimeout(() => rejectStart(new Error(`release daemon did not start: ${output}`)), 8000);

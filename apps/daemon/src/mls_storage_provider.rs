@@ -10,6 +10,8 @@ use serde::Serialize;
 use std::{collections::HashMap, sync::RwLock};
 
 pub const CURRENT_VERSION: u16 = 1;
+const MAX_MLS_VALUES: usize = 4096;
+const MAX_MLS_VALUE_BYTES: usize = 4 * 1024 * 1024;
 
 /// A storage for the V_TEST version.
 
@@ -22,7 +24,10 @@ pub struct EncryptedMlsStorage {
 #[cfg(feature = "test-utils")]
 impl Clone for EncryptedMlsStorage {
     fn clone(&self) -> Self {
-        let values = self.values.read().unwrap();
+        let values = self
+            .values
+            .read()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
         Self {
             values: RwLock::new(values.clone()),
         }
@@ -33,7 +38,10 @@ impl Clone for EncryptedMlsStorage {
 #[cfg(feature = "test-utils")]
 impl EncryptedMlsStorage {
     pub fn serialize(&self, w: &mut Vec<u8>) -> std::io::Result<usize> {
-        let values = self.values.read().unwrap();
+        let values = self
+            .values
+            .read()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
 
         let mut written = 8;
         let count = (values.len() as u64).to_be_bytes();
@@ -94,10 +102,19 @@ impl EncryptedMlsStorage {
         key: &[u8],
         value: Vec<u8>,
     ) -> Result<(), <Self as StorageProvider<CURRENT_VERSION>>::Error> {
-        let mut values = self.values.write().unwrap();
+        if value.len() > MAX_MLS_VALUE_BYTES {
+            return Err(EncryptedMlsStorageError::StorageLimit);
+        }
+        let mut values = self
+            .values
+            .write()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
         let storage_key = build_key_from_vec::<VERSION>(label, key.to_vec());
 
-        values.insert(storage_key, value.to_vec());
+        if !values.contains_key(&storage_key) && values.len() >= MAX_MLS_VALUES {
+            return Err(EncryptedMlsStorageError::StorageLimit);
+        }
+        values.insert(storage_key, value);
         Ok(())
     }
 
@@ -107,7 +124,10 @@ impl EncryptedMlsStorage {
         key: &[u8],
         value: Vec<u8>,
     ) -> Result<(), <Self as StorageProvider<CURRENT_VERSION>>::Error> {
-        let mut values = self.values.write().unwrap();
+        let mut values = self
+            .values
+            .write()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
         let storage_key = build_key_from_vec::<VERSION>(label, key.to_vec());
 
         // fetch value from db, falling back to an empty list if doens't exist
@@ -115,11 +135,18 @@ impl EncryptedMlsStorage {
 
         // parse old value and push new data
         let mut list: Vec<Vec<u8>> = serde_json::from_slice(list_bytes)?;
+        if list.len() >= MAX_MLS_VALUES {
+            return Err(EncryptedMlsStorageError::StorageLimit);
+        }
         list.push(value);
 
+        let encoded = serde_json::to_vec(&list)?;
+        if encoded.len() > MAX_MLS_VALUE_BYTES {
+            return Err(EncryptedMlsStorageError::StorageLimit);
+        }
         // write back, reusing the old buffer
-        list_bytes.truncate(0);
-        serde_json::to_writer(list_bytes, &list)?;
+        list_bytes.clear();
+        list_bytes.extend_from_slice(&encoded);
 
         Ok(())
     }
@@ -130,7 +157,10 @@ impl EncryptedMlsStorage {
         key: &[u8],
         value: Vec<u8>,
     ) -> Result<(), <Self as StorageProvider<CURRENT_VERSION>>::Error> {
-        let mut values = self.values.write().unwrap();
+        let mut values = self
+            .values
+            .write()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
         let storage_key = build_key_from_vec::<VERSION>(label, key.to_vec());
 
         // fetch value from db, falling back to an empty list if doens't exist
@@ -156,11 +186,11 @@ impl EncryptedMlsStorage {
         label: &[u8],
         key: &[u8],
     ) -> Result<Option<V>, <Self as StorageProvider<CURRENT_VERSION>>::Error> {
-        let values = self.values.read().unwrap();
+        let values = self
+            .values
+            .read()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
         let storage_key = build_key_from_vec::<VERSION>(label, key.to_vec());
-
-        #[cfg(feature = "test-utils")]
-        log::debug!("  read key: {}", hex::encode(&storage_key));
 
         let value = values.get(&storage_key);
 
@@ -180,17 +210,18 @@ impl EncryptedMlsStorage {
         label: &[u8],
         key: &[u8],
     ) -> Result<Vec<V>, <Self as StorageProvider<CURRENT_VERSION>>::Error> {
-        let values = self.values.read().unwrap();
+        let values = self
+            .values
+            .read()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
 
         let mut storage_key = label.to_vec();
         storage_key.extend_from_slice(key);
         storage_key.extend_from_slice(&u16::to_be_bytes(VERSION));
 
-        #[cfg(feature = "test-utils")]
-        log::debug!("  read list key: {}", hex::encode(&storage_key));
-
         let value: Vec<Vec<u8>> = match values.get(&storage_key) {
-            Some(list_bytes) => serde_json::from_slice(list_bytes).unwrap(),
+            Some(list_bytes) => serde_json::from_slice(list_bytes)
+                .map_err(|_| EncryptedMlsStorageError::SerializationError)?,
             None => vec![],
         };
 
@@ -208,14 +239,14 @@ impl EncryptedMlsStorage {
         label: &[u8],
         key: &[u8],
     ) -> Result<(), <Self as StorageProvider<CURRENT_VERSION>>::Error> {
-        let mut values = self.values.write().unwrap();
+        let mut values = self
+            .values
+            .write()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
 
         let mut storage_key = label.to_vec();
         storage_key.extend_from_slice(key);
         storage_key.extend_from_slice(&u16::to_be_bytes(VERSION));
-
-        #[cfg(feature = "test-utils")]
-        log::debug!("  delete key: {}", hex::encode(&storage_key));
 
         values.remove(&storage_key);
 
@@ -229,6 +260,7 @@ pub enum EncryptedMlsStorageError {
     UnsupportedValueTypeBytes,
     UnsupportedMethod,
     SerializationError,
+    StorageLimit,
 }
 
 impl std::fmt::Display for EncryptedMlsStorageError {
@@ -237,6 +269,7 @@ impl std::fmt::Display for EncryptedMlsStorageError {
             Self::UnsupportedValueTypeBytes => "serialized byte values are unsupported",
             Self::UnsupportedMethod => "storage update is unsupported",
             Self::SerializationError => "MLS storage serialization failed",
+            Self::StorageLimit => "MLS storage limit exceeded",
         })
     }
 }
@@ -304,8 +337,8 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
     ) -> Result<(), Self::Error> {
         self.write::<CURRENT_VERSION>(
             TREE_LABEL,
-            &serde_json::to_vec(&group_id).unwrap(),
-            serde_json::to_vec(&tree).unwrap(),
+            &serde_json::to_vec(&group_id)?,
+            serde_json::to_vec(&tree)?,
         )
     }
 
@@ -317,9 +350,12 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         group_id: &GroupId,
         interim_transcript_hash: &InterimTranscriptHash,
     ) -> Result<(), Self::Error> {
-        let mut values = self.values.write().unwrap();
-        let key = build_key::<CURRENT_VERSION, &GroupId>(INTERIM_TRANSCRIPT_HASH_LABEL, group_id);
-        let value = serde_json::to_vec(&interim_transcript_hash).unwrap();
+        let mut values = self
+            .values
+            .write()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
+        let key = build_key::<CURRENT_VERSION, &GroupId>(INTERIM_TRANSCRIPT_HASH_LABEL, group_id)?;
+        let value = serde_json::to_vec(&interim_transcript_hash)?;
 
         values.insert(key, value);
         Ok(())
@@ -333,9 +369,12 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         group_id: &GroupId,
         group_context: &GroupContext,
     ) -> Result<(), Self::Error> {
-        let mut values = self.values.write().unwrap();
-        let key = build_key::<CURRENT_VERSION, &GroupId>(GROUP_CONTEXT_LABEL, group_id);
-        let value = serde_json::to_vec(&group_context).unwrap();
+        let mut values = self
+            .values
+            .write()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
+        let key = build_key::<CURRENT_VERSION, &GroupId>(GROUP_CONTEXT_LABEL, group_id)?;
+        let value = serde_json::to_vec(&group_context)?;
 
         values.insert(key, value);
         Ok(())
@@ -349,9 +388,12 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         group_id: &GroupId,
         confirmation_tag: &ConfirmationTag,
     ) -> Result<(), Self::Error> {
-        let mut values = self.values.write().unwrap();
-        let key = build_key::<CURRENT_VERSION, &GroupId>(CONFIRMATION_TAG_LABEL, group_id);
-        let value = serde_json::to_vec(&confirmation_tag).unwrap();
+        let mut values = self
+            .values
+            .write()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
+        let key = build_key::<CURRENT_VERSION, &GroupId>(CONFIRMATION_TAG_LABEL, group_id)?;
+        let value = serde_json::to_vec(&confirmation_tag)?;
 
         values.insert(key, value);
         Ok(())
@@ -365,10 +407,15 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         public_key: &SignaturePublicKey,
         signature_key_pair: &SignatureKeyPair,
     ) -> Result<(), Self::Error> {
-        let mut values = self.values.write().unwrap();
-        let key =
-            build_key::<CURRENT_VERSION, &SignaturePublicKey>(SIGNATURE_KEY_PAIR_LABEL, public_key);
-        let value = serde_json::to_vec(&signature_key_pair).unwrap();
+        let mut values = self
+            .values
+            .write()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
+        let key = build_key::<CURRENT_VERSION, &SignaturePublicKey>(
+            SIGNATURE_KEY_PAIR_LABEL,
+            public_key,
+        )?;
+        let value = serde_json::to_vec(&signature_key_pair)?;
 
         values.insert(key, value);
         Ok(())
@@ -400,7 +447,9 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
                 let key = (group_id, &proposal_ref);
                 let key = serde_json::to_vec(&key)?;
 
-                let proposal = self.read(QUEUED_PROPOSAL_LABEL, &key)?.unwrap();
+                let proposal = self
+                    .read(QUEUED_PROPOSAL_LABEL, &key)?
+                    .ok_or(EncryptedMlsStorageError::SerializationError)?;
                 Ok((proposal_ref, proposal))
             })
             .collect::<Result<Vec<_>, _>>()
@@ -413,15 +462,18 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         &self,
         group_id: &GroupId,
     ) -> Result<Option<TreeSync>, Self::Error> {
-        let values = self.values.read().unwrap();
-        let key = build_key::<CURRENT_VERSION, &GroupId>(TREE_LABEL, group_id);
+        let values = self
+            .values
+            .read()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
+        let key = build_key::<CURRENT_VERSION, &GroupId>(TREE_LABEL, group_id)?;
 
         let Some(value) = values.get(&key) else {
             return Ok(None);
         };
-        let value = serde_json::from_slice(value).unwrap();
-
-        Ok(value)
+        serde_json::from_slice(value)
+            .map(Some)
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)
     }
 
     fn group_context<
@@ -431,15 +483,18 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         &self,
         group_id: &GroupId,
     ) -> Result<Option<GroupContext>, Self::Error> {
-        let values = self.values.read().unwrap();
-        let key = build_key::<CURRENT_VERSION, &GroupId>(GROUP_CONTEXT_LABEL, group_id);
+        let values = self
+            .values
+            .read()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
+        let key = build_key::<CURRENT_VERSION, &GroupId>(GROUP_CONTEXT_LABEL, group_id)?;
 
         let Some(value) = values.get(&key) else {
             return Ok(None);
         };
-        let value = serde_json::from_slice(value).unwrap();
-
-        Ok(value)
+        serde_json::from_slice(value)
+            .map(Some)
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)
     }
 
     fn interim_transcript_hash<
@@ -449,15 +504,18 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         &self,
         group_id: &GroupId,
     ) -> Result<Option<InterimTranscriptHash>, Self::Error> {
-        let values = self.values.read().unwrap();
-        let key = build_key::<CURRENT_VERSION, &GroupId>(INTERIM_TRANSCRIPT_HASH_LABEL, group_id);
+        let values = self
+            .values
+            .read()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
+        let key = build_key::<CURRENT_VERSION, &GroupId>(INTERIM_TRANSCRIPT_HASH_LABEL, group_id)?;
 
         let Some(value) = values.get(&key) else {
             return Ok(None);
         };
-        let value = serde_json::from_slice(value).unwrap();
-
-        Ok(value)
+        serde_json::from_slice(value)
+            .map(Some)
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)
     }
 
     fn confirmation_tag<
@@ -467,15 +525,18 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         &self,
         group_id: &GroupId,
     ) -> Result<Option<ConfirmationTag>, Self::Error> {
-        let values = self.values.read().unwrap();
-        let key = build_key::<CURRENT_VERSION, &GroupId>(CONFIRMATION_TAG_LABEL, group_id);
+        let values = self
+            .values
+            .read()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
+        let key = build_key::<CURRENT_VERSION, &GroupId>(CONFIRMATION_TAG_LABEL, group_id)?;
 
         let Some(value) = values.get(&key) else {
             return Ok(None);
         };
-        let value = serde_json::from_slice(value).unwrap();
-
-        Ok(value)
+        serde_json::from_slice(value)
+            .map(Some)
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)
     }
 
     fn signature_key_pair<
@@ -485,17 +546,22 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         &self,
         public_key: &SignaturePublicKey,
     ) -> Result<Option<SignatureKeyPair>, Self::Error> {
-        let values = self.values.read().unwrap();
+        let values = self
+            .values
+            .read()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
 
-        let key =
-            build_key::<CURRENT_VERSION, &SignaturePublicKey>(SIGNATURE_KEY_PAIR_LABEL, public_key);
+        let key = build_key::<CURRENT_VERSION, &SignaturePublicKey>(
+            SIGNATURE_KEY_PAIR_LABEL,
+            public_key,
+        )?;
 
         let Some(value) = values.get(&key) else {
             return Ok(None);
         };
-        let value = serde_json::from_slice(value).unwrap();
-
-        Ok(value)
+        serde_json::from_slice(value)
+            .map(Some)
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)
     }
 
     fn write_key_package<
@@ -506,13 +572,10 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         hash_ref: &HashReference,
         key_package: &KeyPackage,
     ) -> Result<(), Self::Error> {
-        let key = serde_json::to_vec(&hash_ref).unwrap();
-        let value = serde_json::to_vec(&key_package).unwrap();
+        let key = serde_json::to_vec(&hash_ref)?;
+        let value = serde_json::to_vec(&key_package)?;
 
         self.write::<CURRENT_VERSION>(KEY_PACKAGE_LABEL, &key, value)
-            .unwrap();
-
-        Ok(())
     }
 
     fn write_psk<
@@ -525,8 +588,8 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
     ) -> Result<(), Self::Error> {
         self.write::<CURRENT_VERSION>(
             PSK_LABEL,
-            &serde_json::to_vec(&psk_id).unwrap(),
-            serde_json::to_vec(&psk).unwrap(),
+            &serde_json::to_vec(&psk_id)?,
+            serde_json::to_vec(&psk)?,
         )
     }
 
@@ -540,8 +603,8 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
     ) -> Result<(), Self::Error> {
         self.write::<CURRENT_VERSION>(
             ENCRYPTION_KEY_PAIR_LABEL,
-            &serde_json::to_vec(public_key).unwrap(),
-            serde_json::to_vec(key_pair).unwrap(),
+            &serde_json::to_vec(public_key)?,
+            serde_json::to_vec(key_pair)?,
         )
     }
 
@@ -552,7 +615,7 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         &self,
         hash_ref: &KeyPackageRef,
     ) -> Result<Option<KeyPackage>, Self::Error> {
-        let key = serde_json::to_vec(&hash_ref).unwrap();
+        let key = serde_json::to_vec(&hash_ref)?;
 
         self.read(KEY_PACKAGE_LABEL, &key)
     }
@@ -561,7 +624,7 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         &self,
         psk_id: &PskId,
     ) -> Result<Option<PskBundle>, Self::Error> {
-        self.read(PSK_LABEL, &serde_json::to_vec(&psk_id).unwrap())
+        self.read(PSK_LABEL, &serde_json::to_vec(&psk_id)?)
     }
 
     fn encryption_key_pair<
@@ -571,10 +634,7 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         &self,
         public_key: &EncryptionKey,
     ) -> Result<Option<HpkeKeyPair>, Self::Error> {
-        self.read(
-            ENCRYPTION_KEY_PAIR_LABEL,
-            &serde_json::to_vec(public_key).unwrap(),
-        )
+        self.read(ENCRYPTION_KEY_PAIR_LABEL, &serde_json::to_vec(public_key)?)
     }
 
     fn delete_signature_key_pair<
@@ -583,20 +643,14 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         &self,
         public_key: &SignaturePublicKeuy,
     ) -> Result<(), Self::Error> {
-        self.delete::<CURRENT_VERSION>(
-            SIGNATURE_KEY_PAIR_LABEL,
-            &serde_json::to_vec(public_key).unwrap(),
-        )
+        self.delete::<CURRENT_VERSION>(SIGNATURE_KEY_PAIR_LABEL, &serde_json::to_vec(public_key)?)
     }
 
     fn delete_encryption_key_pair<EncryptionKey: traits::EncryptionKey<CURRENT_VERSION>>(
         &self,
         public_key: &EncryptionKey,
     ) -> Result<(), Self::Error> {
-        self.delete::<CURRENT_VERSION>(
-            ENCRYPTION_KEY_PAIR_LABEL,
-            &serde_json::to_vec(&public_key).unwrap(),
-        )
+        self.delete::<CURRENT_VERSION>(ENCRYPTION_KEY_PAIR_LABEL, &serde_json::to_vec(&public_key)?)
     }
 
     fn delete_key_package<KeyPackageRef: traits::HashReference<CURRENT_VERSION>>(
@@ -803,13 +857,15 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         let key = epoch_key_pairs_id(group_id, epoch, leaf_index)?;
         let storage_key = build_key_from_vec::<CURRENT_VERSION>(EPOCH_KEY_PAIRS_LABEL, key);
 
-        let values = self.values.read().unwrap();
+        let values = self
+            .values
+            .read()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
         let value = values.get(&storage_key);
 
         if let Some(value) = value {
-            #[cfg(feature = "test-utils")]
-            log::debug!("  value: {}", hex::encode(value));
-            return Ok(serde_json::from_slice(value).unwrap());
+            return serde_json::from_slice(value)
+                .map_err(|_| EncryptedMlsStorageError::SerializationError);
         }
 
         Ok(vec![])
@@ -838,7 +894,10 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         // Get all proposal refs for this group.
         let proposal_refs: Vec<ProposalRef> =
             self.read_list(PROPOSAL_QUEUE_REFS_LABEL, &serde_json::to_vec(group_id)?)?;
-        let mut values = self.values.write().unwrap();
+        let mut values = self
+            .values
+            .write()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
         for proposal_ref in proposal_refs {
             // Delete all proposals.
             let key = serde_json::to_vec(&(group_id, proposal_ref))?;
@@ -846,7 +905,7 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         }
 
         // Delete the proposal refs from the store.
-        let key = build_key::<CURRENT_VERSION, &GroupId>(PROPOSAL_QUEUE_REFS_LABEL, group_id);
+        let key = build_key::<CURRENT_VERSION, &GroupId>(PROPOSAL_QUEUE_REFS_LABEL, group_id)?;
         values.remove(&key);
 
         Ok(())
@@ -859,7 +918,7 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         &self,
         group_id: &GroupId,
     ) -> Result<Option<MlsGroupJoinConfig>, Self::Error> {
-        self.read(JOIN_CONFIG_LABEL, &serde_json::to_vec(group_id).unwrap())
+        self.read(JOIN_CONFIG_LABEL, &serde_json::to_vec(group_id)?)
     }
 
     fn write_mls_join_config<
@@ -870,8 +929,8 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         group_id: &GroupId,
         config: &MlsGroupJoinConfig,
     ) -> Result<(), Self::Error> {
-        let key = serde_json::to_vec(group_id).unwrap();
-        let value = serde_json::to_vec(config).unwrap();
+        let key = serde_json::to_vec(group_id)?;
+        let value = serde_json::to_vec(config)?;
 
         self.write::<CURRENT_VERSION>(JOIN_CONFIG_LABEL, &key, value)
     }
@@ -883,7 +942,7 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         &self,
         group_id: &GroupId,
     ) -> Result<Vec<LeafNode>, Self::Error> {
-        self.read_list(OWN_LEAF_NODES_LABEL, &serde_json::to_vec(group_id).unwrap())
+        self.read_list(OWN_LEAF_NODES_LABEL, &serde_json::to_vec(group_id)?)
     }
 
     fn append_own_leaf_node<
@@ -903,38 +962,35 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         &self,
         group_id: &GroupId,
     ) -> Result<(), Self::Error> {
-        self.delete::<CURRENT_VERSION>(OWN_LEAF_NODES_LABEL, &serde_json::to_vec(group_id).unwrap())
+        self.delete::<CURRENT_VERSION>(OWN_LEAF_NODES_LABEL, &serde_json::to_vec(group_id)?)
     }
 
     fn delete_group_config<GroupId: traits::GroupId<CURRENT_VERSION>>(
         &self,
         group_id: &GroupId,
     ) -> Result<(), Self::Error> {
-        self.delete::<CURRENT_VERSION>(JOIN_CONFIG_LABEL, &serde_json::to_vec(group_id).unwrap())
+        self.delete::<CURRENT_VERSION>(JOIN_CONFIG_LABEL, &serde_json::to_vec(group_id)?)
     }
 
     fn delete_tree<GroupId: traits::GroupId<CURRENT_VERSION>>(
         &self,
         group_id: &GroupId,
     ) -> Result<(), Self::Error> {
-        self.delete::<CURRENT_VERSION>(TREE_LABEL, &serde_json::to_vec(group_id).unwrap())
+        self.delete::<CURRENT_VERSION>(TREE_LABEL, &serde_json::to_vec(group_id)?)
     }
 
     fn delete_confirmation_tag<GroupId: traits::GroupId<CURRENT_VERSION>>(
         &self,
         group_id: &GroupId,
     ) -> Result<(), Self::Error> {
-        self.delete::<CURRENT_VERSION>(
-            CONFIRMATION_TAG_LABEL,
-            &serde_json::to_vec(group_id).unwrap(),
-        )
+        self.delete::<CURRENT_VERSION>(CONFIRMATION_TAG_LABEL, &serde_json::to_vec(group_id)?)
     }
 
     fn delete_context<GroupId: traits::GroupId<CURRENT_VERSION>>(
         &self,
         group_id: &GroupId,
     ) -> Result<(), Self::Error> {
-        self.delete::<CURRENT_VERSION>(GROUP_CONTEXT_LABEL, &serde_json::to_vec(group_id).unwrap())
+        self.delete::<CURRENT_VERSION>(GROUP_CONTEXT_LABEL, &serde_json::to_vec(group_id)?)
     }
 
     fn delete_interim_transcript_hash<GroupId: traits::GroupId<CURRENT_VERSION>>(
@@ -943,7 +999,7 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
     ) -> Result<(), Self::Error> {
         self.delete::<CURRENT_VERSION>(
             INTERIM_TRANSCRIPT_HASH_LABEL,
-            &serde_json::to_vec(group_id).unwrap(),
+            &serde_json::to_vec(group_id)?,
         )
     }
 
@@ -955,12 +1011,12 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         group_id: &GroupId,
         proposal_ref: &ProposalRef,
     ) -> Result<(), Self::Error> {
-        let key = serde_json::to_vec(group_id).unwrap();
-        let value = serde_json::to_vec(proposal_ref).unwrap();
+        let key = serde_json::to_vec(group_id)?;
+        let value = serde_json::to_vec(proposal_ref)?;
 
         self.remove_item::<CURRENT_VERSION>(PROPOSAL_QUEUE_REFS_LABEL, &key, value)?;
 
-        let key = serde_json::to_vec(&(group_id, proposal_ref)).unwrap();
+        let key = serde_json::to_vec(&(group_id, proposal_ref))?;
         self.delete::<CURRENT_VERSION>(QUEUED_PROPOSAL_LABEL, &key)
     }
 
@@ -975,8 +1031,8 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
     ) -> Result<(), Self::Error> {
         self.write::<CURRENT_VERSION>(
             APPLICATION_EXPORT_TREE_LABEL,
-            &serde_json::to_vec(&group_id).unwrap(),
-            serde_json::to_vec(&application_export_tree).unwrap(),
+            &serde_json::to_vec(&group_id)?,
+            serde_json::to_vec(&application_export_tree)?,
         )
     }
 
@@ -988,15 +1044,18 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
         &self,
         group_id: &GroupId,
     ) -> Result<Option<ApplicationExportTree>, Self::Error> {
-        let values = self.values.read().unwrap();
-        let key = build_key::<CURRENT_VERSION, &GroupId>(APPLICATION_EXPORT_TREE_LABEL, group_id);
+        let values = self
+            .values
+            .read()
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)?;
+        let key = build_key::<CURRENT_VERSION, &GroupId>(APPLICATION_EXPORT_TREE_LABEL, group_id)?;
 
         let Some(value) = values.get(&key) else {
             return Ok(None);
         };
-        let value = serde_json::from_slice(value).unwrap();
-
-        Ok(value)
+        serde_json::from_slice(value)
+            .map(Some)
+            .map_err(|_| EncryptedMlsStorageError::SerializationError)
     }
 
     #[cfg(feature = "extensions-draft-08")]
@@ -1009,7 +1068,7 @@ impl StorageProvider<CURRENT_VERSION> for EncryptedMlsStorage {
     ) -> Result<(), Self::Error> {
         self.delete::<CURRENT_VERSION>(
             APPLICATION_EXPORT_TREE_LABEL,
-            &serde_json::to_vec(group_id).unwrap(),
+            &serde_json::to_vec(group_id)?,
         )
     }
 }
@@ -1023,8 +1082,11 @@ fn build_key_from_vec<const V: u16>(label: &[u8], key: Vec<u8>) -> Vec<u8> {
 }
 
 /// Build a key with version and label.
-fn build_key<const V: u16, K: Serialize>(label: &[u8], key: K) -> Vec<u8> {
-    build_key_from_vec::<V>(label, serde_json::to_vec(&key).unwrap())
+fn build_key<const V: u16, K: Serialize>(
+    label: &[u8],
+    key: K,
+) -> Result<Vec<u8>, EncryptedMlsStorageError> {
+    Ok(build_key_from_vec::<V>(label, serde_json::to_vec(&key)?))
 }
 
 fn epoch_key_pairs_id(

@@ -14,19 +14,23 @@ run_step() {
 cd "$ROOT_DIR"
 
 export CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2}
+export CARGO_INCREMENTAL=0
+export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-"$ROOT_DIR/.build-cache/cargo-target"}
+export AD_DAEMON_BINARY=${AD_DAEMON_BINARY:-"$CARGO_TARGET_DIR/debug/another-dimension-daemon"}
 
-run_step "daemon binary" cargo build -p another-dimension-daemon --locked
+scripts/prepare_build_cache.sh
+
 run_step "product boundary" node scripts/verify_product_boundary.mjs
 run_step "daemon boundary" node scripts/verify_daemon_boundary.mjs
 run_step "dependency and runtime policy" node scripts/verify_dependency_policy.mjs
 run_step "resource limit acceptance" node scripts/acceptance_resource_limits.mjs
-run_step "runtime budget acceptance" node scripts/acceptance_runtime_budget.mjs
 run_step "browser UI tests" npm --prefix apps/web test --workspaces=false
 run_step "local server API tests" npm --prefix apps/server test --workspaces=false
 run_step "browser production build" npm --prefix apps/web run build --workspaces=false
-run_step "release manifest integrity" node scripts/release_manifest.test.mjs
-run_step "user-owned server transport smoke" node scripts/smoke_user_owned_servers.mjs
 run_step "support matrix release policy" node scripts/verify_release_support_gate.mjs
-run_step "two-daemon product journey" node scripts/acceptance_daemon_e2e.mjs
 
-printf '\nweb/server lightweight verification passed\n'
+# A build can cross the cache budget during this run even when preflight was
+# below it. Enforce the same regenerable-cache policy on exit.
+scripts/prepare_build_cache.sh
+
+printf '\nlight source/web/relay verification passed\n'

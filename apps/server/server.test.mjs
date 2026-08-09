@@ -257,13 +257,18 @@ test("invite codes are relay-bound, hash-only, single-use rendezvous records", a
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
-  // The runtime was intentionally created with port 0; its advertised origin
-  // uses the configured port, while the test listener uses the allocated port.
-  const relayOrigin = "http://127.0.0.1:0";
+  // The runtime exposes the actual ephemeral listener port in its advertised
+  // inbox URL, so fixtures must bind their signed invite to that origin.
+  const relayOrigin = new URL(runtime.inboxUrl).origin;
   const invite = `ADWEB3.${Buffer.from(JSON.stringify({ v: 3, server: { inboxUrl: `${relayOrigin}/api/v1/inbox/redacted` }, signature: "redacted" })).toString("base64url")}`;
   const created = await call(port, "POST", "/api/v1/invite-codes", { invite }, localHeaders(runtime));
   assert.equal(created.status, 201);
   assert.match(created.body.code, /^(?:[0-9A-HJKMNP-TV-Z]{4}-){6}[0-9A-HJKMNP-TV-Z]{2}$/);
+  assert.equal(
+    (await call(port, "GET", `/api/v1/invite-codes/pairing-response?code=${encodeURIComponent(created.body.code)}`)).status,
+    404,
+    "invite codes must not be accepted in URL query parameters",
+  );
   const persistedDb = new Database(join(dataDir, "relay.sqlite"), { readonly: true });
   const persisted = persistedDb.prepare("SELECT code_hash AS codeHash FROM relay_invite_codes").all();
   assert.equal(persisted.length, 1);
@@ -567,6 +572,7 @@ test("capability records rotate after expiry and preserve private file permissio
   await writeFile(join(dataDir, "inbox-capability"), JSON.stringify({
     format: "another-dimension-capability", version: 1, token: oldToken, scope: "inbox-write", issuedAt: 1, expiresAt: 1,
   }));
+  await chmod(join(dataDir, "inbox-capability"), 0o644);
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
   assert.notEqual(runtime.inboxCapability, oldToken);
   const capabilityRecord = JSON.parse(await readFile(join(dataDir, "inbox-capability"), "utf8"));

@@ -1,9 +1,8 @@
 //! Minimal real OpenMLS 1:1 session boundary.
 //!
-//! This module deliberately owns the OpenMLS objects and exposes only
-//! serialized messages to the relay boundary. Persistence is added by the
-//! next storage slice; this first slice proves the cryptographic lifecycle
-//! without allowing the browser to handle MLS state.
+//! This module owns the OpenMLS objects and exposes only serialized messages
+//! to the relay boundary. Session checkpoints are stored in the encrypted
+//! daemon store; the browser never handles MLS state.
 
 use openmls::prelude::{
     BasicCredential, CredentialWithKey, GroupId, KeyPackageIn, Lifetime, MlsGroup,
@@ -95,6 +94,7 @@ pub struct MlsSession {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum SessionCatalogError {
+    InvalidConversation,
     DuplicateConversation,
     UnknownConversation,
     Session(SessionError),
@@ -103,6 +103,7 @@ pub enum SessionCatalogError {
 impl std::fmt::Display for SessionCatalogError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
+            Self::InvalidConversation => "conversation identifier is invalid",
             Self::DuplicateConversation => "conversation already exists",
             Self::UnknownConversation => "conversation does not exist",
             Self::Session(_) => "conversation session operation failed",
@@ -123,6 +124,14 @@ impl From<SessionError> for SessionCatalogError {
 pub struct MlsSessionCatalog {
     sessions: BTreeMap<String, MlsSession>,
     device_private_signature_key: Option<Zeroizing<[u8; 32]>>,
+}
+
+pub type DeviceRemovalCommit = (String, Vec<u8>, Vec<u8>);
+
+impl Default for MlsSessionCatalog {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MlsSessionCatalog {
@@ -157,6 +166,9 @@ impl MlsSessionCatalog {
         identity: Vec<u8>,
         store: &mut EncryptedStore,
     ) -> Result<(), SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
         if self.sessions.contains_key(conversation_id) {
             return Err(SessionCatalogError::DuplicateConversation);
         }
@@ -173,6 +185,9 @@ impl MlsSessionCatalog {
         welcome: &[u8],
         store: &mut EncryptedStore,
     ) -> Result<(), SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
         if let Some(session) = self.sessions.get_mut(conversation_id) {
             session.join_and_persist(welcome, store, conversation_id)?;
             return Ok(());
@@ -187,12 +202,21 @@ impl MlsSessionCatalog {
         &mut self,
         conversation_id: &str,
         identity: Vec<u8>,
+        store: &mut EncryptedStore,
     ) -> Result<Vec<u8>, SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
         if self.sessions.contains_key(conversation_id) {
             return Err(SessionCatalogError::DuplicateConversation);
         }
-        let session = self.new_session(identity)?;
+        let mut session = self.new_session(identity)?;
+        // The KeyPackage's private HPKE state lives in the provider storage.
+        // Persist it before returning the public package; otherwise a daemon
+        // restart between pairing steps makes the received Welcome unusable.
+        session.create_group()?;
         let key_package = session.key_package()?;
+        session.persist_or_poison(store, conversation_id)?;
         self.sessions.insert(conversation_id.to_owned(), session);
         Ok(key_package)
     }
@@ -202,10 +226,18 @@ impl MlsSessionCatalog {
         conversation_id: &str,
         store: &EncryptedStore,
     ) -> Result<(), SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
         if self.sessions.contains_key(conversation_id) {
             return Err(SessionCatalogError::DuplicateConversation);
         }
         let session = MlsSession::restore(store, conversation_id)?;
+        if let Some(device_key) = &self.device_private_signature_key {
+            if !session.signature_key_matches(device_key) {
+                return Err(SessionCatalogError::Session(SessionError::Storage));
+            }
+        }
         self.sessions.insert(conversation_id.to_owned(), session);
         Ok(())
     }
@@ -227,6 +259,9 @@ impl MlsSessionCatalog {
         conversation_id: &str,
         store: &mut EncryptedStore,
     ) -> Result<(), SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
         if self.sessions.remove(conversation_id).is_none() {
             return Err(SessionCatalogError::UnknownConversation);
         }
@@ -244,6 +279,9 @@ impl MlsSessionCatalog {
     }
 
     pub fn key_package(&self, conversation_id: &str) -> Result<Vec<u8>, SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
         self.sessions
             .get(conversation_id)
             .ok_or(SessionCatalogError::UnknownConversation)?
@@ -257,6 +295,9 @@ impl MlsSessionCatalog {
         key_package: &[u8],
         store: &mut EncryptedStore,
     ) -> Result<Vec<u8>, SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
         self.sessions
             .get_mut(conversation_id)
             .ok_or(SessionCatalogError::UnknownConversation)?
@@ -264,89 +305,118 @@ impl MlsSessionCatalog {
             .map_err(Into::into)
     }
 
-    /// Remove every matching device leaf and return the authenticated MLS
-    /// commit for each changed conversation. The caller is responsible for
-    /// delivering those commits to the remaining members.
-    pub fn remove_device(
+    /// Remove every matching device leaf without checkpointing it yet. The
+    /// caller must atomically commit the returned checkpoints with the
+    /// account device registry before delivering the commits.
+    pub fn remove_device_unpersisted(
         &mut self,
         device_credential: &[u8],
-        store: &mut EncryptedStore,
-    ) -> Result<Vec<(String, Vec<u8>)>, SessionCatalogError> {
+    ) -> Result<Vec<DeviceRemovalCommit>, SessionCatalogError> {
         let mut commits = Vec::new();
         for (conversation_id, session) in &mut self.sessions {
             let Some(commit) = session.remove_member(device_credential)? else {
                 continue;
             };
-            session.persist_or_poison(store, conversation_id)?;
-            commits.push((conversation_id.clone(), commit));
+            let checkpoint = session.snapshot_bytes()?;
+            commits.push((conversation_id.clone(), commit, checkpoint));
         }
         Ok(commits)
     }
 
-    pub fn send(
+    pub fn poison_all(&mut self) {
+        for session in self.sessions.values_mut() {
+            session.poisoned = true;
+        }
+    }
+
+    pub fn send_unpersisted(
         &mut self,
         conversation_id: &str,
         plaintext: &[u8],
-        store: &mut EncryptedStore,
     ) -> Result<Vec<u8>, SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
         self.sessions
             .get_mut(conversation_id)
             .ok_or(SessionCatalogError::UnknownConversation)?
-            .encrypt_and_persist(plaintext, store, conversation_id)
+            .encrypt(plaintext)
             .map_err(Into::into)
     }
 
-    pub fn receive(
+    /// Decrypt an inbound delivery without checkpointing it yet. Callers that
+    /// also persist message metadata must commit the returned in-memory state
+    /// together with those records, otherwise a storage failure could advance
+    /// MLS while losing the plaintext transcript.
+    pub fn receive_delivery_unpersisted(
         &mut self,
         conversation_id: &str,
         wire: &[u8],
-        store: &mut EncryptedStore,
-    ) -> Result<Vec<u8>, SessionCatalogError> {
-        self.sessions
-            .get_mut(conversation_id)
-            .ok_or(SessionCatalogError::UnknownConversation)?
-            .decrypt_and_persist(wire, store, conversation_id)
-            .map_err(Into::into)
-    }
-
-    pub fn receive_delivery(
-        &mut self,
-        conversation_id: &str,
-        wire: &[u8],
-        store: &mut EncryptedStore,
     ) -> Result<Option<Vec<u8>>, SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
         self.sessions
             .get_mut(conversation_id)
             .ok_or(SessionCatalogError::UnknownConversation)?
-            .decrypt_delivery_and_persist(wire, store, conversation_id)
+            .decrypt_delivery(wire)
             .map_err(Into::into)
     }
 
-    pub fn send_attachment(
+    pub fn receive_attachment_unpersisted(
+        &mut self,
+        conversation_id: &str,
+        wire: &[u8],
+    ) -> Result<AttachmentDescriptor, SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
+        self.sessions
+            .get_mut(conversation_id)
+            .ok_or(SessionCatalogError::UnknownConversation)?
+            .decrypt_attachment(wire)
+            .map_err(Into::into)
+    }
+
+    pub fn checkpoint_bytes(&self, conversation_id: &str) -> Result<Vec<u8>, SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
+        self.sessions
+            .get(conversation_id)
+            .ok_or(SessionCatalogError::UnknownConversation)?
+            .snapshot_bytes()
+            .map_err(Into::into)
+    }
+
+    pub fn poison(&mut self, conversation_id: &str) {
+        if let Some(session) = self.sessions.get_mut(conversation_id) {
+            session.poisoned = true;
+        }
+    }
+
+    pub fn send_attachment_unpersisted(
         &mut self,
         conversation_id: &str,
         descriptor: &AttachmentDescriptor,
-        store: &mut EncryptedStore,
     ) -> Result<Vec<u8>, SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
         self.sessions
             .get_mut(conversation_id)
             .ok_or(SessionCatalogError::UnknownConversation)?
-            .encrypt_attachment_and_persist(descriptor, store, conversation_id)
+            .encrypt_attachment(descriptor)
             .map_err(Into::into)
     }
+}
 
-    pub fn receive_attachment(
-        &mut self,
-        conversation_id: &str,
-        wire: &[u8],
-        store: &mut EncryptedStore,
-    ) -> Result<AttachmentDescriptor, SessionCatalogError> {
-        self.sessions
-            .get_mut(conversation_id)
-            .ok_or(SessionCatalogError::UnknownConversation)?
-            .decrypt_attachment_and_persist(wire, store, conversation_id)
-            .map_err(Into::into)
-    }
+pub(crate) fn valid_conversation_id(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 128
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -648,6 +718,17 @@ impl MlsSession {
         store: &mut EncryptedStore,
         conversation_id: &str,
     ) -> Result<(), SessionError> {
+        let bytes = self.snapshot_bytes()?;
+        store
+            .put(
+                RecordClass::ProtocolSession,
+                &session_key(conversation_id),
+                &bytes,
+            )
+            .map_err(|_| SessionError::Storage)
+    }
+
+    fn snapshot_bytes(&self) -> Result<Vec<u8>, SessionError> {
         self.ensure_usable()?;
         let group = self.group.as_ref().ok_or(SessionError::NotJoined)?;
         let storage = self
@@ -675,13 +756,7 @@ impl MlsSession {
         if bytes.len() > 4 * 1024 * 1024 {
             return Err(SessionError::TooLarge);
         }
-        store
-            .put(
-                RecordClass::ProtocolSession,
-                &session_key(conversation_id),
-                &bytes,
-            )
-            .map_err(|_| SessionError::Storage)
+        Ok(bytes)
     }
 
     pub fn create_group_and_persist(
@@ -714,61 +789,6 @@ impl MlsSession {
         self.persist_or_poison(store, conversation_id)
     }
 
-    pub fn encrypt_and_persist(
-        &mut self,
-        plaintext: &[u8],
-        store: &mut EncryptedStore,
-        conversation_id: &str,
-    ) -> Result<Vec<u8>, SessionError> {
-        let wire = self.encrypt(plaintext)?;
-        self.persist_or_poison(store, conversation_id)?;
-        Ok(wire)
-    }
-
-    pub fn decrypt_and_persist(
-        &mut self,
-        wire: &[u8],
-        store: &mut EncryptedStore,
-        conversation_id: &str,
-    ) -> Result<Vec<u8>, SessionError> {
-        let plaintext = self.decrypt(wire)?;
-        self.persist_or_poison(store, conversation_id)?;
-        Ok(plaintext)
-    }
-
-    fn decrypt_delivery_and_persist(
-        &mut self,
-        wire: &[u8],
-        store: &mut EncryptedStore,
-        conversation_id: &str,
-    ) -> Result<Option<Vec<u8>>, SessionError> {
-        let plaintext = self.decrypt_delivery(wire)?;
-        self.persist_or_poison(store, conversation_id)?;
-        Ok(plaintext)
-    }
-
-    pub fn encrypt_attachment_and_persist(
-        &mut self,
-        descriptor: &AttachmentDescriptor,
-        store: &mut EncryptedStore,
-        conversation_id: &str,
-    ) -> Result<Vec<u8>, SessionError> {
-        let wire = self.encrypt_attachment(descriptor)?;
-        self.persist_or_poison(store, conversation_id)?;
-        Ok(wire)
-    }
-
-    pub fn decrypt_attachment_and_persist(
-        &mut self,
-        wire: &[u8],
-        store: &mut EncryptedStore,
-        conversation_id: &str,
-    ) -> Result<AttachmentDescriptor, SessionError> {
-        let descriptor = self.decrypt_attachment(wire)?;
-        self.persist_or_poison(store, conversation_id)?;
-        Ok(descriptor)
-    }
-
     fn persist_or_poison(
         &mut self,
         store: &mut EncryptedStore,
@@ -789,6 +809,13 @@ impl MlsSession {
         }
     }
 
+    fn signature_key_matches(&self, private_signature_key: &[u8; 32]) -> bool {
+        let expected = ed25519_dalek::SigningKey::from_bytes(private_signature_key)
+            .verifying_key()
+            .to_bytes();
+        self.credential.signature_key.as_slice() == expected
+    }
+
     pub fn restore(store: &EncryptedStore, conversation_id: &str) -> Result<Self, SessionError> {
         let bytes = store
             .get(RecordClass::ProtocolSession, &session_key(conversation_id))
@@ -798,7 +825,15 @@ impl MlsSession {
         }
         let snapshot: SessionSnapshot =
             serde_json::from_slice(&bytes).map_err(|_| SessionError::Storage)?;
-        if snapshot.private_signature_key.is_empty() {
+        let private_signature_key: [u8; 32] = snapshot
+            .private_signature_key
+            .as_slice()
+            .try_into()
+            .map_err(|_| SessionError::Storage)?;
+        let expected_public_key = ed25519_dalek::SigningKey::from_bytes(&private_signature_key)
+            .verifying_key()
+            .to_bytes();
+        if snapshot.credential.signature_key.as_slice() != expected_public_key {
             return Err(SessionError::Storage);
         }
         let provider = DaemonProvider::new().map_err(|_| SessionError::Provider)?;
@@ -825,7 +860,7 @@ impl MlsSession {
         Ok(Self {
             provider,
             credential: snapshot.credential,
-            private_signature_key: Zeroizing::new(snapshot.private_signature_key),
+            private_signature_key: Zeroizing::new(private_signature_key.to_vec()),
             group: Some(group),
             poisoned: false,
         })
@@ -834,6 +869,10 @@ impl MlsSession {
 
 fn session_key(conversation_id: &str) -> String {
     format!("mls/session/{conversation_id}")
+}
+
+pub(crate) fn session_checkpoint_key(conversation_id: &str) -> String {
+    session_key(conversation_id)
 }
 
 #[cfg(test)]
@@ -955,6 +994,26 @@ mod tests {
         let wire = restored.encrypt(b"after restart").unwrap();
         assert_eq!(bob.decrypt(&wire).unwrap(), b"after restart");
 
+        let snapshot = store
+            .get(
+                crate::storage::RecordClass::ProtocolSession,
+                "mls/session/conversation-1",
+            )
+            .unwrap();
+        let mut tampered: serde_json::Value = serde_json::from_slice(&snapshot).unwrap();
+        tampered["private_signature_key"] = serde_json::json!(vec![0_u8; 32]);
+        store
+            .put(
+                crate::storage::RecordClass::ProtocolSession,
+                "mls/session/conversation-1",
+                &serde_json::to_vec(&tampered).unwrap(),
+            )
+            .unwrap();
+        assert!(matches!(
+            MlsSession::restore(&store, "conversation-1"),
+            Err(SessionError::Storage)
+        ));
+
         drop(store);
         drop(alice);
         drop(bob);
@@ -987,30 +1046,99 @@ mod tests {
         alice
             .create("conversation-1", b"alice".to_vec(), &mut alice_store)
             .unwrap();
-        let bob_key_package = bob.prepare("conversation-1", b"bob".to_vec()).unwrap();
+        let bob_key_package = bob
+            .prepare("conversation-1", b"bob".to_vec(), &mut bob_store)
+            .unwrap();
+        drop(bob);
+        let mut bob = MlsSessionCatalog::new();
+        bob.restore("conversation-1", &bob_store).unwrap();
         let welcome = alice
             .add_member("conversation-1", &bob_key_package, &mut alice_store)
             .unwrap();
         bob.join("conversation-1", b"bob".to_vec(), &welcome, &mut bob_store)
             .unwrap();
         let wire = alice
-            .send("conversation-1", b"catalog message", &mut alice_store)
+            .send_unpersisted("conversation-1", b"catalog message")
+            .unwrap();
+        alice_store
+            .put(
+                crate::storage::RecordClass::ProtocolSession,
+                "mls/session/conversation-1",
+                &alice.checkpoint_bytes("conversation-1").unwrap(),
+            )
             .unwrap();
         assert_eq!(
-            bob.receive("conversation-1", &wire, &mut bob_store)
+            bob.receive_delivery_unpersisted("conversation-1", &wire)
                 .unwrap(),
-            b"catalog message"
+            Some(b"catalog message".to_vec())
         );
+        bob_store
+            .put(
+                crate::storage::RecordClass::ProtocolSession,
+                "mls/session/conversation-1",
+                &bob.checkpoint_bytes("conversation-1").unwrap(),
+            )
+            .unwrap();
+        let wire = alice
+            .send_unpersisted("conversation-1", b"transactional inbound")
+            .unwrap();
+        alice_store
+            .put(
+                crate::storage::RecordClass::ProtocolSession,
+                "mls/session/conversation-1",
+                &alice.checkpoint_bytes("conversation-1").unwrap(),
+            )
+            .unwrap();
+        let before = bob_store
+            .get(
+                crate::storage::RecordClass::ProtocolSession,
+                "mls/session/conversation-1",
+            )
+            .unwrap();
+        assert_eq!(
+            bob.receive_delivery_unpersisted("conversation-1", &wire)
+                .unwrap(),
+            Some(b"transactional inbound".to_vec())
+        );
+        assert_eq!(
+            bob_store
+                .get(
+                    crate::storage::RecordClass::ProtocolSession,
+                    "mls/session/conversation-1",
+                )
+                .unwrap(),
+            before
+        );
+        bob_store
+            .put(
+                crate::storage::RecordClass::ProtocolSession,
+                "mls/session/conversation-1",
+                &bob.checkpoint_bytes("conversation-1").unwrap(),
+            )
+            .unwrap();
+
+        let mut mismatched = MlsSessionCatalog::new_with_device_private_key([7; 32]);
+        assert!(matches!(
+            mismatched.restore("conversation-1", &alice_store),
+            Err(super::SessionCatalogError::Session(SessionError::Storage))
+        ));
 
         let mut restored = MlsSessionCatalog::new();
         restored.restore("conversation-1", &alice_store).unwrap();
         let wire = restored
-            .send("conversation-1", b"after catalog restart", &mut alice_store)
+            .send_unpersisted("conversation-1", b"after catalog restart")
+            .unwrap();
+        alice_store
+            .put(
+                crate::storage::RecordClass::ProtocolSession,
+                "mls/session/conversation-1",
+                &restored.checkpoint_bytes("conversation-1").unwrap(),
+            )
             .unwrap();
         assert_eq!(
-            bob.receive("conversation-1", &wire, &mut bob_store)
+            bob.receive_delivery_unpersisted("conversation-1", &wire)
                 .unwrap(),
-            b"after catalog restart"
+            Some(b"after catalog restart".to_vec())
         );
 
         drop(alice_store);

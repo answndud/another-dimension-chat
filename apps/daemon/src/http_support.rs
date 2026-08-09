@@ -34,7 +34,7 @@ pub(crate) fn axum_response(raw: Vec<u8>) -> Response<Body> {
         return Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
             .body(Body::from("invalid daemon response"))
-            .expect("static response is valid");
+            .unwrap_or_else(|_| Response::new(Body::from("invalid daemon response")));
     };
     let header_text = String::from_utf8_lossy(&raw[..separator]);
     let mut lines = header_text.split("\r\n");

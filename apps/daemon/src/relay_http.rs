@@ -503,7 +503,10 @@ impl RelayClient {
         chunk: &[u8],
     ) -> Result<BlobChunkAccepted, RelayError> {
         let path = self.blob_path(blob_id)?;
-        if total == 0 || total > MAX_BLOB_BYTES || offset > total || offset + chunk.len() > total {
+        let Some(end) = offset.checked_add(chunk.len()) else {
+            return Err(RelayError::InvalidResponse);
+        };
+        if total == 0 || total > MAX_BLOB_BYTES || offset > total || end > total {
             return Err(RelayError::InvalidResponse);
         }
         let headers = [
@@ -518,7 +521,7 @@ impl RelayClient {
         }
         let parsed: BlobChunkResponse =
             serde_json::from_slice(&response).map_err(|_| RelayError::InvalidResponse)?;
-        if !parsed.accepted || parsed.total != total || parsed.received != offset + chunk.len() {
+        if !parsed.accepted || parsed.total != total || parsed.received != end {
             return Err(RelayError::InvalidResponse);
         }
         Ok(BlobChunkAccepted {
@@ -613,7 +616,10 @@ impl RelayClient {
         chunk: &[u8],
     ) -> Result<BlobChunkAccepted, RelayError> {
         let path = self.blob_path(blob_id)?;
-        if total == 0 || total > MAX_BLOB_BYTES || offset > total || offset + chunk.len() > total {
+        let Some(end) = offset.checked_add(chunk.len()) else {
+            return Err(RelayError::InvalidResponse);
+        };
+        if total == 0 || total > MAX_BLOB_BYTES || offset > total || end > total {
             return Err(RelayError::InvalidResponse);
         }
         let headers = [
@@ -627,7 +633,7 @@ impl RelayClient {
         }
         let parsed: BlobChunkResponse =
             serde_json::from_slice(&response).map_err(|_| RelayError::InvalidResponse)?;
-        if !parsed.accepted || parsed.total != total || parsed.received != offset + chunk.len() {
+        if !parsed.accepted || parsed.total != total || parsed.received != end {
             return Err(RelayError::InvalidResponse);
         }
         Ok(BlobChunkAccepted {
@@ -866,7 +872,7 @@ fn parse_response(response: &[u8]) -> Result<(u16, Vec<u8>), RelayError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{RelayEndpoint, RelayError};
+    use super::{RelayClient, RelayEndpoint, RelayError};
     use crate::trust::TlsCertificatePin;
 
     #[test]
@@ -912,6 +918,19 @@ mod tests {
         );
         assert_eq!(
             super::parse_response(b"not-http"),
+            Err(RelayError::InvalidResponse)
+        );
+    }
+
+    #[test]
+    fn blob_upload_rejects_offset_overflow_before_network_io() {
+        let endpoint = RelayEndpoint::from_inbox_url(
+            "http://127.0.0.1:1421/api/v1/inbox/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopq",
+        )
+        .unwrap();
+        let client = RelayClient::new(endpoint);
+        assert_eq!(
+            client.upload_blob_chunk_blocking("a".repeat(32).as_str(), usize::MAX, 32, b"x"),
             Err(RelayError::InvalidResponse)
         );
     }

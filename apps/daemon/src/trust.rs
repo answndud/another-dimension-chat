@@ -2,6 +2,9 @@ use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use sha2::{Digest, Sha256};
 use std::{fs, path::Path};
 
+const MAX_MANIFEST_BYTES: usize = 64 * 1024;
+const MAX_TRUST_KEYS: usize = 256;
+
 #[derive(Debug)]
 pub enum TrustError {
     Io,
@@ -82,6 +85,9 @@ impl RelayTrust {
         expected_bootstrap_key: [u8; 32],
     ) -> Result<Self, TrustError> {
         let raw = fs::read_to_string(path).map_err(|_| TrustError::Io)?;
+        if raw.len() > MAX_MANIFEST_BYTES {
+            return Err(TrustError::Invalid);
+        }
         let mut lines = raw.split_inclusive('\n');
         if lines.next() != Some("ADRELAYTRUST1\n") {
             return Err(TrustError::Invalid);
@@ -108,9 +114,13 @@ impl RelayTrust {
                 if decode(key_id, 32).is_none() || decode(public_key, 32).is_none() {
                     return Err(TrustError::Invalid);
                 }
-                if hex(&Sha256::digest(decode(public_key, 32).as_ref().unwrap())) != key_id
+                let public_key_bytes = decode(public_key, 32).ok_or(TrustError::Invalid)?;
+                if hex(&Sha256::digest(&public_key_bytes)) != key_id
                     || allowed_key_ids.iter().any(|id| id == key_id)
                 {
+                    return Err(TrustError::Invalid);
+                }
+                if allowed_key_ids.len() >= MAX_TRUST_KEYS {
                     return Err(TrustError::Invalid);
                 }
                 allowed_key_ids.push(key_id.to_owned());
@@ -135,7 +145,7 @@ impl RelayTrust {
             return Err(TrustError::Invalid);
         }
         let signature_bytes: [u8; 64] = decode(signature, 64)
-            .unwrap()
+            .ok_or(TrustError::Invalid)?
             .try_into()
             .map_err(|_| TrustError::Invalid)?;
         let bootstrap_key =

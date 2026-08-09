@@ -2,17 +2,32 @@ use super::{
     authorize_api, hex_bytes, hex_decode, json_escape, json_string, json_u64, pairing_ready,
     response, RelayClient, RelayEndpoint, RelayEnvelope, RelayError, Request, RouteContext,
 };
+use crate::{
+    delivery::DeliveryLedger,
+    mls_session::session_checkpoint_key,
+    storage::{RecordClass, RecordMutation},
+};
 
 pub(crate) fn handle_attachment_route(
     request: &Request<'_>,
     context: &mut RouteContext<'_>,
 ) -> Option<Vec<u8>> {
+    if matches!(
+        (request.method, request.path),
+        ("POST", "/local-api/attachment/upload-chunk")
+            | ("POST", "/local-api/attachment/upload-completed")
+            | ("POST", "/local-api/attachment/download-chunk")
+            | ("POST", "/local-api/attachment/send")
+    ) {
+        let _ = context;
+        return Some(response(503, "staged_route_required", None, None));
+    }
     let reply = match (request.method, request.path) {
         ("POST", "/local-api/attachment/upload-chunk") => {
             if let Err(reply) = authorize_api(context.bridge, request, context.now) {
                 return Some(reply);
             }
-            if !pairing_ready(context.invite_authority.as_deref()) {
+            if !pairing_ready(context.invite_authority.as_deref(), context.now) {
                 return Some(response(
                     403,
                     "pairing_not_ready",
@@ -211,7 +226,7 @@ pub(crate) fn handle_attachment_route(
             if let Err(reply) = authorize_api(context.bridge, request, context.now) {
                 return Some(reply);
             }
-            if !pairing_ready(context.invite_authority.as_deref()) {
+            if !pairing_ready(context.invite_authority.as_deref(), context.now) {
                 return Some(response(
                     403,
                     "pairing_not_ready",
@@ -290,7 +305,7 @@ pub(crate) fn handle_attachment_route(
             let Some(store) = context.session_store.as_deref_mut() else {
                 return Some(response(503, "storage_unavailable", None, None));
             };
-            let Ok(ciphertext) = catalog.send_attachment(conversation_id, &descriptor, store)
+            let Ok(ciphertext) = catalog.send_attachment_unpersisted(conversation_id, &descriptor)
             else {
                 return Some(response(
                     409,
@@ -299,7 +314,12 @@ pub(crate) fn handle_attachment_route(
                     Some("application/json"),
                 ));
             };
+            let Ok(checkpoint) = catalog.checkpoint_bytes(conversation_id) else {
+                catalog.poison(conversation_id);
+                return Some(response(503, "session_storage_unavailable", None, None));
+            };
             let Some(expires_at) = context.now.checked_add(3600) else {
+                catalog.poison(conversation_id);
                 return Some(response(
                     422,
                     "invalid_expiry",
@@ -310,6 +330,7 @@ pub(crate) fn handle_attachment_route(
             let Ok(envelope) =
                 RelayEnvelope::create(&endpoint.capability, &ciphertext, expires_at, context.now)
             else {
+                catalog.poison(conversation_id);
                 return Some(response(
                     422,
                     "invalid_delivery_envelope",
@@ -318,6 +339,7 @@ pub(crate) fn handle_attachment_route(
                 ));
             };
             let Ok(digest) = envelope.digest() else {
+                catalog.poison(conversation_id);
                 return Some(response(
                     422,
                     "invalid_delivery_envelope",
@@ -326,6 +348,7 @@ pub(crate) fn handle_attachment_route(
                 ));
             };
             let Ok(wire) = envelope.to_wire() else {
+                catalog.poison(conversation_id);
                 return Some(response(
                     422,
                     "invalid_delivery_envelope",
@@ -334,6 +357,7 @@ pub(crate) fn handle_attachment_route(
                 ));
             };
             let Some(ledger) = context.delivery_ledger.as_deref_mut() else {
+                catalog.poison(conversation_id);
                 return Some(response(503, "delivery_unavailable", None, None));
             };
             if ledger
@@ -345,12 +369,45 @@ pub(crate) fn handle_attachment_route(
                 )
                 .is_err()
             {
+                catalog.poison(conversation_id);
                 return Some(response(
                     409,
                     "duplicate_delivery",
                     None,
                     Some("application/json"),
                 ));
+            }
+            if ledger
+                .transition(&digest, crate::delivery::DeliveryState::Queued)
+                .is_err()
+            {
+                catalog.poison(conversation_id);
+                return Some(response(503, "delivery_state_unavailable", None, None));
+            }
+            let Ok(ledger_bytes) = ledger.encoded_bytes() else {
+                catalog.poison(conversation_id);
+                return Some(response(503, "delivery_state_unavailable", None, None));
+            };
+            if store
+                .apply_batch(&[
+                    RecordMutation::Put(
+                        RecordClass::ProtocolSession,
+                        session_checkpoint_key(conversation_id),
+                        checkpoint,
+                    ),
+                    RecordMutation::Put(
+                        RecordClass::Outbox,
+                        "delivery/ledger".into(),
+                        ledger_bytes,
+                    ),
+                ])
+                .is_err()
+            {
+                catalog.poison(conversation_id);
+                if let Ok(restored) = DeliveryLedger::restore(store) {
+                    *ledger = restored;
+                }
+                return Some(response(503, "message_storage_unavailable", None, None));
             }
             let accepted = match client.post_blocking(&envelope) {
                 Ok(value) => value,
@@ -390,7 +447,7 @@ pub(crate) fn handle_attachment_route(
             if let Err(reply) = authorize_api(context.bridge, request, context.now) {
                 return Some(reply);
             }
-            if !pairing_ready(context.invite_authority.as_deref()) {
+            if !pairing_ready(context.invite_authority.as_deref(), context.now) {
                 return Some(response(
                     403,
                     "pairing_not_ready",
@@ -466,7 +523,7 @@ pub(crate) fn handle_attachment_route(
             if let Err(reply) = authorize_api(context.bridge, request, context.now) {
                 return Some(reply);
             }
-            if !pairing_ready(context.invite_authority.as_deref()) {
+            if !pairing_ready(context.invite_authority.as_deref(), context.now) {
                 return Some(response(
                     403,
                     "pairing_not_ready",

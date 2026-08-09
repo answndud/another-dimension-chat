@@ -26,13 +26,13 @@ mod route_context;
 mod session_routes;
 
 use attachment_routes::handle_attachment_route;
+pub(crate) use authority::validate_bound_inbox_url;
 use authority::{
-    mls_device_credential, validate_bound_inbox_url, verify_relay_receipt, verify_signed_invite,
-    verify_signed_invite_unbound,
+    mls_device_credential, verify_relay_receipt, verify_signed_invite, verify_signed_invite_unbound,
 };
 pub use authority::{IdentityView, InviteAuthority, VerifiedInvite};
 use authority_routes::handle_authority_route;
-use delivery_routes::handle_delivery_route;
+use delivery_routes::{handle_delivery_route, process_sync_items, SyncProcessContext};
 use http_errors::{
     authorize_api, catalog_error, contact_directory_error, error_code, pairing_error, pairing_ready,
 };
@@ -42,10 +42,10 @@ use http_support::{
     json_string, json_string_array, json_u64, parse_request, response, static_file, Request,
 };
 use maintenance::{
-    background_sync_once, deliver_device_change_commits, notify_new_messages, retry_due_deliveries,
+    deliver_device_change_commits, fetch_inbox, notify_new_messages, process_inbox_items,
 };
 use message_service::{
-    decode_message_payload, encode_message_payload, persist_message, StoredMessage,
+    decode_message_payload, encode_message_payload, encoded_message_record, StoredMessage,
 };
 use mls_routes::handle_mls_route;
 use route_context::RouteContext;
@@ -59,10 +59,13 @@ use crate::{
     device::{DeviceRegistry, DeviceRegistryError},
     device_link::{DeviceLinkError, DeviceLinkRequest},
     identity::AccountRootKey,
-    mls_session::{attachment_descriptor_from_plaintext, MlsSessionCatalog, SessionCatalogError},
+    mls_session::{
+        attachment_descriptor_from_plaintext, session_checkpoint_key, MlsSessionCatalog,
+        SessionCatalogError,
+    },
     pairing::{PairingError, PairingSession},
-    relay_http::{RelayClient, RelayEndpoint, RelayError},
-    storage::{EncryptedStore, RecordClass, StorageError},
+    relay_http::{RelayClient, RelayEndpoint, RelayError, RelayItem},
+    storage::{EncryptedStore, RecordClass, RecordMutation, StorageError},
     trust::{relay_tls_pin_record_key, RelayTrust, TlsCertificatePin},
 };
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
@@ -77,13 +80,25 @@ const COMPLETED_ATTACHMENT_TTL_SECONDS: u64 = 60 * 60;
 const MAX_COMPLETED_ATTACHMENT_COUNT: usize = 2;
 const MAX_COMPLETED_ATTACHMENT_BYTES: usize = 64 * 1024 * 1024;
 const MAX_MESSAGE_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
-const MAX_AUTOMATIC_RETRIES_PER_TICK: usize = 2;
+pub(crate) const MAX_AUTOMATIC_RETRIES_PER_TICK: usize = 2;
 
 /// HTTP boundary for the local bridge. It exposes only daemon-owned routes;
 /// session state, identity, protocol state, and message material never leave
 /// the daemon as raw private records.
 pub fn handle_request(bridge: &mut LocalBridge, raw: &[u8], now: u64) -> Vec<u8> {
-    handle_request_with_context(bridge, raw, now, None, None, None, None, None, None)
+    handle_request_with_route_context(
+        raw,
+        RouteContext {
+            bridge,
+            now,
+            ui_root: None,
+            identity: None,
+            invite_authority: None,
+            session_catalog: None,
+            session_store: None,
+            delivery_ledger: None,
+        },
+    )
 }
 
 pub fn handle_request_with_ui(
@@ -92,7 +107,19 @@ pub fn handle_request_with_ui(
     now: u64,
     ui_root: Option<&Path>,
 ) -> Vec<u8> {
-    handle_request_with_context(bridge, raw, now, ui_root, None, None, None, None, None)
+    handle_request_with_route_context(
+        raw,
+        RouteContext {
+            bridge,
+            now,
+            ui_root,
+            identity: None,
+            invite_authority: None,
+            session_catalog: None,
+            session_store: None,
+            delivery_ledger: None,
+        },
+    )
 }
 
 pub(crate) enum DeviceActionError {
@@ -101,32 +128,6 @@ pub(crate) enum DeviceActionError {
     CurrentDevice,
     RootUnavailable,
     Storage,
-}
-
-pub fn handle_request_with_context(
-    bridge: &mut LocalBridge,
-    raw: &[u8],
-    now: u64,
-    ui_root: Option<&Path>,
-    identity: Option<&IdentityView>,
-    invite_authority: Option<&mut InviteAuthority>,
-    session_catalog: Option<&mut MlsSessionCatalog>,
-    session_store: Option<&mut EncryptedStore>,
-    delivery_ledger: Option<&mut DeliveryLedger>,
-) -> Vec<u8> {
-    handle_request_with_route_context(
-        raw,
-        RouteContext {
-            bridge,
-            now,
-            ui_root,
-            identity,
-            invite_authority,
-            session_catalog,
-            session_store,
-            delivery_ledger,
-        },
-    )
 }
 
 pub(crate) fn handle_request_with_route_context(raw: &[u8], context: RouteContext<'_>) -> Vec<u8> {
@@ -185,7 +186,7 @@ fn hex_bytes(bytes: &[u8]) -> String {
 }
 
 fn hex_decode(value: &str) -> Option<Vec<u8>> {
-    if value.is_empty() || value.len() % 2 != 0 {
+    if value.is_empty() || !value.len().is_multiple_of(2) {
         return None;
     }
     value
@@ -207,8 +208,8 @@ fn hex_nibble(value: u8) -> Option<u8> {
 #[cfg(test)]
 mod tests {
     use super::{
-        axum_request_bytes, handle_request, handle_request_with_context, hex_bytes, IdentityView,
-        InviteAuthority,
+        axum_request_bytes, handle_request, handle_request_with_route_context, hex_bytes,
+        IdentityView, InviteAuthority, RouteContext,
     };
     use crate::bridge::{BridgeConfig, LocalBridge};
     use crate::identity::AccountRootKey;
@@ -353,8 +354,7 @@ mod tests {
             device_id: "device-1".into(),
             display_name: "Bridge test".into(),
         };
-        let reply = handle_request_with_context(
-            &mut daemon,
+        let reply = handle_request_with_route_context(
             &request(
                 "POST",
                 "/local-api/session/create",
@@ -364,33 +364,38 @@ mod tests {
                     credentials.cookie, credentials.csrf_token
                 ),
             ),
-            11,
-            None,
-            Some(&identity),
-            None,
-            Some(&mut catalog),
-            Some(&mut store),
-            None,
+            RouteContext {
+                bridge: &mut daemon,
+                now: 11,
+                ui_root: None,
+                identity: Some(&identity),
+                invite_authority: None,
+                session_catalog: Some(&mut catalog),
+                session_store: Some(&mut store),
+                delivery_ledger: None,
+            },
         );
         let reply = String::from_utf8(reply).unwrap();
         assert!(reply.starts_with("HTTP/1.1 201"));
         assert!(reply.contains("\"created\":true"));
 
-        let unauthorized = handle_request_with_context(
-            &mut daemon,
+        let unauthorized = handle_request_with_route_context(
             &request(
                 "POST",
                 "/local-api/session/prepare",
                 r##"{"conversation_id":"conversation-1"}"##,
                 "X-Ad-Ui-Version: web-v1\r\nCookie: ad_session=missing\r\nX-Ad-Csrf: missing",
             ),
-            12,
-            None,
-            Some(&identity),
-            None,
-            Some(&mut catalog),
-            Some(&mut store),
-            None,
+            RouteContext {
+                bridge: &mut daemon,
+                now: 12,
+                ui_root: None,
+                identity: Some(&identity),
+                invite_authority: None,
+                session_catalog: Some(&mut catalog),
+                session_store: Some(&mut store),
+                delivery_ledger: None,
+            },
         );
         assert!(String::from_utf8(unauthorized)
             .unwrap()
@@ -470,8 +475,7 @@ mod tests {
             device_id: "local-device".into(),
             display_name: "Pairing stage test".into(),
         };
-        let reply = handle_request_with_context(
-            &mut daemon,
+        let reply = handle_request_with_route_context(
             &request(
                 "POST",
                 "/local-api/invites/stage",
@@ -484,13 +488,16 @@ mod tests {
                     credentials.cookie, credentials.csrf_token
                 ),
             ),
-            20,
-            None,
-            Some(&identity),
-            Some(&mut authority),
-            None,
-            Some(&mut store),
-            None,
+            RouteContext {
+                bridge: &mut daemon,
+                now: 20,
+                ui_root: None,
+                identity: Some(&identity),
+                invite_authority: Some(&mut authority),
+                session_catalog: None,
+                session_store: Some(&mut store),
+                delivery_ledger: None,
+            },
         );
         let reply = String::from_utf8(reply).unwrap();
         assert!(reply.starts_with("HTTP/1.1 200"), "{reply}");
@@ -511,5 +518,18 @@ mod tests {
         .unwrap();
         let body = raw.split_once("\r\n\r\n").unwrap().1;
         assert_eq!(body, r##"{"error":"pairing_not_ready"}"##);
+    }
+
+    #[test]
+    fn unknown_delivery_route_fails_closed_instead_of_panicking() {
+        let mut daemon = bridge();
+        let reply = handle_request(
+            &mut daemon,
+            &request("POST", "/local-api/delivery/not-a-route", "{}", ""),
+            10,
+        );
+        assert!(String::from_utf8(reply)
+            .unwrap()
+            .starts_with("HTTP/1.1 404"));
     }
 }

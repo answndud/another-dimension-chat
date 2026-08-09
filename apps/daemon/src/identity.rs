@@ -291,6 +291,17 @@ pub struct DeviceCertificate {
     revoked: bool,
 }
 
+pub struct DeviceCertificateParts {
+    pub account_public_key: [u8; KEY_BYTES],
+    pub device_id: String,
+    pub device_public_key: [u8; KEY_BYTES],
+    pub protocol_package_hash: [u8; KEY_BYTES],
+    pub issued_at: u64,
+    pub expires_at: u64,
+    pub signature: [u8; SIGNATURE_BYTES],
+    pub revoked: bool,
+}
+
 impl fmt::Debug for DeviceCertificate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DeviceCertificate")
@@ -366,25 +377,16 @@ impl DeviceCertificate {
         self.signature
     }
 
-    pub fn from_parts(
-        account_public_key: [u8; KEY_BYTES],
-        device_id: String,
-        device_public_key: [u8; KEY_BYTES],
-        protocol_package_hash: [u8; KEY_BYTES],
-        issued_at: u64,
-        expires_at: u64,
-        signature: [u8; SIGNATURE_BYTES],
-        revoked: bool,
-    ) -> Result<Self, IdentityError> {
+    pub fn from_parts(parts: DeviceCertificateParts) -> Result<Self, IdentityError> {
         let certificate = Self {
-            account_public_key,
-            device_id,
-            device_public_key,
-            protocol_package_hash,
-            issued_at,
-            expires_at,
-            signature,
-            revoked,
+            account_public_key: parts.account_public_key,
+            device_id: parts.device_id,
+            device_public_key: parts.device_public_key,
+            protocol_package_hash: parts.protocol_package_hash,
+            issued_at: parts.issued_at,
+            expires_at: parts.expires_at,
+            signature: parts.signature,
+            revoked: parts.revoked,
         };
         certificate.verify_signature()?;
         Ok(certificate)

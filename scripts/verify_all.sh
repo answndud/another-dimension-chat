@@ -4,7 +4,14 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT"
 export CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2}
+export CARGO_INCREMENTAL=0
+export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-"$ROOT/.build-cache/cargo-target"}
+export AD_DAEMON_BINARY=${AD_DAEMON_BINARY:-"$CARGO_TARGET_DIR/debug/another-dimension-daemon"}
+scripts/prepare_build_cache.sh
 MODE=focused
+# This is a release/compliance gate, not the normal development loop. Use
+# verify_light.sh for routine changes; this script intentionally exercises
+# policy fixtures and release evidence checks.
 if [ "${1:-}" = "--release" ]; then MODE=release; elif [ "${1:-}" = "--focused" ] || [ -z "${1:-}" ]; then :; else echo "사용법: $0 [--focused|--release]" >&2; exit 2; fi
 echo "[1/8] shell and JavaScript syntax"
 bash -n scripts/*.sh
@@ -79,4 +86,5 @@ else
   echo "production build skipped: apps/web/node_modules is absent; run npm ci before release verification" >&2
 fi
 git diff --check
+scripts/prepare_build_cache.sh
 echo "verify_all passed ($MODE local gate)"

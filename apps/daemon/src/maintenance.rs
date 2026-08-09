@@ -18,14 +18,14 @@ pub(crate) fn notify_new_messages(enabled: bool, count: usize) {
 
 pub(crate) fn deliver_device_change_commits(
     authority: &InviteAuthority,
-    commits: &[(String, Vec<u8>)],
+    commits: &[crate::mls_session::DeviceRemovalCommit],
     ledger: &mut DeliveryLedger,
     store: &mut EncryptedStore,
     now: u64,
 ) -> Result<Vec<String>, RelayError> {
     let expires_at = now.saturating_add(10 * 60);
     let mut digests = Vec::new();
-    for (conversation_id, commit) in commits {
+    for (conversation_id, commit, _) in commits {
         let contact = authority
             .contacts
             .for_conversation(conversation_id)
@@ -71,98 +71,36 @@ pub(crate) fn deliver_device_change_commits(
     Ok(digests)
 }
 
-/// Retries only daemon-owned outbox records whose destination was persisted
-/// with the encrypted ledger. A small per-tick bound prevents a dead relay
-/// from monopolizing the single-thread daemon runtime after a restart.
-pub(crate) fn retry_due_deliveries(
-    authority: &mut InviteAuthority,
-    ledger: &mut DeliveryLedger,
-    store: &mut EncryptedStore,
-    now: u64,
-) -> usize {
-    let due = ledger
-        .due_retries(now)
-        .into_iter()
-        .take(MAX_AUTOMATIC_RETRIES_PER_TICK)
-        .collect::<Vec<_>>();
-    let mut accepted_count = 0;
-    for record in due {
-        let Some(destination) = record.destination.as_deref() else {
-            continue;
-        };
-        let Some(wire) = record.wire.as_deref() else {
-            continue;
-        };
-        let Ok(endpoint) =
-            RelayEndpoint::from_inbox_url_with_pin(destination, authority.relay_tls_pin)
-        else {
-            let _ = ledger.mark_failed(&record.digest);
-            continue;
-        };
-        let Ok(envelope) = RelayEnvelope::from_wire(wire, now) else {
-            let _ = ledger.mark_failed(&record.digest);
-            continue;
-        };
-        if envelope.mailbox != endpoint.capability {
-            let _ = ledger.mark_failed(&record.digest);
-            continue;
-        }
-        match RelayClient::new(endpoint).post_blocking(&envelope) {
-            Ok(accepted) => {
-                if ledger.bind_relay_id(&record.digest, accepted.id).is_ok()
-                    && ledger
-                        .transition(&record.digest, crate::delivery::DeliveryState::Queued)
-                        .is_ok()
-                    && ledger
-                        .transition(
-                            &record.digest,
-                            crate::delivery::DeliveryState::RelayAccepted,
-                        )
-                        .is_ok()
-                {
-                    accepted_count += 1;
-                } else {
-                    let _ = ledger.mark_failed(&record.digest);
-                }
-            }
-            Err(RelayError::Rejected(410)) => {
-                let _ = authority.invalidate_relay_binding(store);
-                let _ = ledger.mark_failed(&record.digest);
-            }
-            Err(_) => {
-                let _ = ledger.schedule_retry(&record.digest, now);
-            }
-        }
-        let _ = ledger.persist(store);
-    }
-    accepted_count
+/// Fetches the opaque inbox without borrowing any mutable daemon state. The
+/// caller must process and acknowledge the returned items only after the
+/// local transaction has committed.
+pub(crate) fn fetch_inbox(
+    authority: &InviteAuthority,
+) -> Result<Option<(RelayClient, String, Vec<crate::relay_http::RelayItem>)>, RelayError> {
+    let Some(inbox_url) = authority.inbox_url.as_deref() else {
+        return Ok(None);
+    };
+    let endpoint = RelayEndpoint::from_inbox_url_with_pin(inbox_url, authority.relay_tls_pin)
+        .map_err(|_| RelayError::InvalidEndpoint)?;
+    let capability = endpoint.capability.clone();
+    let client = RelayClient::new(endpoint);
+    let items = client.sync_blocking()?;
+    Ok(Some((client, capability, items)))
 }
 
-/// Performs one bounded daemon-owned inbox pass. It tries each locally known
-/// conversation because the relay envelope intentionally does not contain a
-/// conversation identifier. Failed decryption never advances an MLS session.
-pub(crate) fn background_sync_once(
+/// Processes a fetched inbox while the daemon state locks are held. No relay
+/// network I/O occurs here. It tries each locally known conversation because
+/// the relay envelope intentionally does not contain a conversation
+/// identifier. Failed decryption never advances an MLS session.
+pub(crate) fn process_inbox_items(
     authority: &mut InviteAuthority,
     catalog: &mut MlsSessionCatalog,
     store: &mut EncryptedStore,
     ledger: &mut DeliveryLedger,
+    capability: &str,
+    items: Vec<crate::relay_http::RelayItem>,
     now: u64,
-) -> Result<usize, RelayError> {
-    let Some(inbox_url) = authority.inbox_url.clone() else {
-        return Ok(0);
-    };
-    let endpoint = RelayEndpoint::from_inbox_url_with_pin(&inbox_url, authority.relay_tls_pin)
-        .map_err(|_| RelayError::InvalidEndpoint)?;
-    let capability = endpoint.capability.clone();
-    let client = RelayClient::new(endpoint);
-    let items = match client.sync_blocking() {
-        Ok(items) => items,
-        Err(RelayError::Rejected(410)) => {
-            let _ = authority.invalidate_relay_binding(store);
-            return Err(RelayError::Rejected(410));
-        }
-        Err(error) => return Err(error),
-    };
+) -> Result<(usize, Vec<String>), RelayError> {
     let conversation_ids = catalog.conversation_ids();
     let mut acknowledged_ids = Vec::new();
     let mut processed = 0;
@@ -188,10 +126,71 @@ pub(crate) fn background_sync_once(
         let mut delivered = false;
         for conversation_id in &conversation_ids {
             let Ok(plaintext) =
-                catalog.receive_delivery(conversation_id, &envelope.ciphertext, store)
+                catalog.receive_delivery_unpersisted(conversation_id, &envelope.ciphertext)
             else {
                 continue;
             };
+            let checkpoint = catalog
+                .checkpoint_bytes(conversation_id)
+                .map_err(|_| RelayError::InvalidResponse)?;
+            let mut mutations = vec![RecordMutation::Put(
+                RecordClass::ProtocolSession,
+                session_checkpoint_key(conversation_id),
+                checkpoint,
+            )];
+            if let Some(plaintext) = plaintext {
+                if let Some(descriptor) = attachment_descriptor_from_plaintext(&plaintext) {
+                    let encoded = authority
+                        .stage_received_attachment(&digest, descriptor)
+                        .map_err(|_| RelayError::InvalidResponse)?;
+                    mutations.push(RecordMutation::Put(
+                        RecordClass::Attachment,
+                        format!("received/{digest}"),
+                        encoded,
+                    ));
+                    if authority
+                        .stage_contact_message(
+                            conversation_id,
+                            b"[encrypted attachment]",
+                            now,
+                            true,
+                        )
+                        .is_ok()
+                    {
+                        mutations.push(RecordMutation::Put(
+                            RecordClass::Contact,
+                            "contacts/directory".into(),
+                            authority
+                                .contacts_snapshot_bytes()
+                                .map_err(|_| RelayError::InvalidResponse)?,
+                        ));
+                    }
+                } else if let Some(message) = decode_message_payload(&plaintext) {
+                    if message.expires_at == 0 || message.expires_at > now {
+                        let (key, encoded) =
+                            encoded_message_record(conversation_id, &message, "incoming")
+                                .map_err(|_| RelayError::InvalidResponse)?;
+                        mutations.push(RecordMutation::Put(RecordClass::Message, key, encoded));
+                        if authority
+                            .stage_contact_message(
+                                conversation_id,
+                                message.text.as_bytes(),
+                                now,
+                                true,
+                            )
+                            .is_ok()
+                        {
+                            mutations.push(RecordMutation::Put(
+                                RecordClass::Contact,
+                                "contacts/directory".into(),
+                                authority
+                                    .contacts_snapshot_bytes()
+                                    .map_err(|_| RelayError::InvalidResponse)?,
+                            ));
+                        }
+                    }
+                }
+            }
             if ledger
                 .register_recipient_received(&digest, item.id.clone())
                 .is_err()
@@ -199,31 +198,21 @@ pub(crate) fn background_sync_once(
             {
                 return Err(RelayError::InvalidResponse);
             }
-            if let Some(plaintext) = plaintext {
-                if let Some(descriptor) = attachment_descriptor_from_plaintext(&plaintext) {
-                    authority
-                        .register_received_attachment(&digest, descriptor, store)
-                        .map_err(|_| RelayError::InvalidResponse)?;
-                    let _ = authority.record_contact_message(
-                        conversation_id,
-                        b"[encrypted attachment]",
-                        now,
-                        true,
-                        store,
-                    );
-                } else if let Some(message) = decode_message_payload(&plaintext) {
-                    if message.expires_at == 0 || message.expires_at > now {
-                        persist_message(store, conversation_id, &message, "incoming")
-                            .map_err(|_| RelayError::InvalidResponse)?;
-                        let _ = authority.record_contact_message(
-                            conversation_id,
-                            message.text.as_bytes(),
-                            now,
-                            true,
-                            store,
-                        );
-                    }
+            mutations.push(RecordMutation::Put(
+                RecordClass::Outbox,
+                "delivery/ledger".into(),
+                ledger
+                    .encoded_bytes()
+                    .map_err(|_| RelayError::InvalidResponse)?,
+            ));
+            if store.apply_batch(&mutations).is_err() {
+                catalog.poison(conversation_id);
+                let _ = authority.restore_contacts(store);
+                let _ = authority.restore_received_attachments(store);
+                if let Ok(restored) = DeliveryLedger::restore(store) {
+                    *ledger = restored;
                 }
+                return Err(RelayError::InvalidResponse);
             }
             delivered = true;
             processed += 1;
@@ -233,11 +222,8 @@ pub(crate) fn background_sync_once(
             acknowledged_ids.push(item.id);
         }
     }
-    if !acknowledged_ids.is_empty() {
-        client.ack_blocking(&acknowledged_ids)?;
-    }
     ledger
         .persist(store)
         .map_err(|_| RelayError::InvalidResponse)?;
-    Ok(processed)
+    Ok((processed, acknowledged_ids))
 }

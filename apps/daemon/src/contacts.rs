@@ -1,10 +1,13 @@
 //! Durable local contact directory for multiple independent pairings.
 
+use crate::protocol_gate::validate_protocol_identifier;
 use crate::storage::{EncryptedStore, RecordClass, StorageError};
 use std::collections::BTreeMap;
 
 const DIRECTORY_VERSION: u16 = 1;
 const MAX_ALIAS_BYTES: usize = 128;
+const MAX_PREVIEW_BYTES: usize = 4 * 1024;
+const MAX_CONTACTS: usize = crate::storage::MAX_RECORDS;
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct ContactRecord {
@@ -244,12 +247,16 @@ impl ContactDirectory {
     }
 
     pub fn persist(&self, store: &mut EncryptedStore) -> Result<(), StorageError> {
-        let bytes = serde_json::to_vec(&DirectorySnapshot {
+        let bytes = self.snapshot_bytes()?;
+        store.put(RecordClass::Contact, "contacts/directory", &bytes)
+    }
+
+    pub fn snapshot_bytes(&self) -> Result<Vec<u8>, StorageError> {
+        serde_json::to_vec(&DirectorySnapshot {
             version: DIRECTORY_VERSION,
             contacts: self.contacts.clone(),
         })
-        .map_err(|_| StorageError::CorruptStore)?;
-        store.put(RecordClass::Contact, "contacts/directory", &bytes)
+        .map_err(|_| StorageError::CorruptStore)
     }
 
     pub fn restore(store: &EncryptedStore) -> Result<Self, StorageError> {
@@ -261,10 +268,77 @@ impl ContactDirectory {
         if snapshot.version != DIRECTORY_VERSION {
             return Err(StorageError::CorruptStore);
         }
+        if snapshot.contacts.len() > MAX_CONTACTS
+            || snapshot
+                .contacts
+                .iter()
+                .any(|(key, contact)| !valid_persisted_contact(key, contact))
+        {
+            return Err(StorageError::CorruptStore);
+        }
         Ok(Self {
             contacts: snapshot.contacts,
         })
     }
+}
+
+fn valid_persisted_contact(key: &str, contact: &ContactRecord) -> bool {
+    key == contact.account_id
+        && validate_protocol_identifier(&contact.account_id).is_ok()
+        && validate_protocol_identifier(&contact.device_id).is_ok()
+        && valid_relay_origin(&contact.relay_origin)
+        && contact
+            .inbox_url
+            .as_deref()
+            .is_none_or(|value| valid_bound_inbox(&contact.relay_origin, value))
+        && matches!(contact.state.as_str(), "verified" | "blocked")
+        && contact.alias.as_deref().is_none_or(|value| {
+            value.len() <= MAX_ALIAS_BYTES && !value.chars().any(char::is_control)
+        })
+        && contact
+            .conversation_id
+            .as_deref()
+            .is_none_or(valid_conversation_id)
+        && contact
+            .last_message_preview
+            .as_deref()
+            .is_none_or(|value| value.len() <= MAX_PREVIEW_BYTES)
+}
+
+fn valid_bound_inbox(origin: &str, value: &str) -> bool {
+    value.starts_with(&format!("{origin}/api/v1/inbox/"))
+        && value.len() <= 2 * 1024
+        && !value.contains('?')
+        && value.rsplit('/').next().is_some_and(|capability| {
+            capability.len() == 43
+                && capability
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'-')
+        })
+}
+
+fn valid_relay_origin(value: &str) -> bool {
+    let Some((scheme, authority)) = value.split_once("://") else {
+        return false;
+    };
+    (scheme == "http" || scheme == "https")
+        && !authority.is_empty()
+        && authority.len() <= 2 * 1024
+        && !authority.contains('/')
+        && !authority.contains('@')
+        && !authority.contains('?')
+        && !authority.contains('#')
+        && !authority
+            .chars()
+            .any(|character| character.is_whitespace() || character.is_control())
+}
+
+fn valid_conversation_id(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 128
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
 }
 
 #[cfg(test)]

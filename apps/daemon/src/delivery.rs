@@ -9,12 +9,17 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use zeroize::Zeroize;
 
+const MAX_RECORDS: usize = crate::storage::MAX_RECORDS;
 const VERSION: u8 = 1;
 const BLOCK_SIZE: usize = 256;
 const MAX_CIPHERTEXT_BYTES: usize = 96 * 1024;
 const MAX_MAILBOX_BYTES: usize = 128;
 const EXPIRY_BUCKET_SECONDS: u64 = 300;
 const MAX_ENVELOPE_TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
+const MAX_DIGEST_BYTES: usize = 128;
+const MAX_RELAY_ID_BYTES: usize = 256;
+const MAX_WIRE_BYTES: usize = 256 * 1024;
+const MAX_DESTINATION_BYTES: usize = 2 * 1024;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum EnvelopeError {
@@ -69,7 +74,7 @@ pub struct DeliveryRecord {
     pub destination: Option<String>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct DeliveryLedger {
     records: BTreeMap<String, DeliveryRecord>,
 }
@@ -132,6 +137,46 @@ impl DeliveryLedger {
             },
         );
         Ok(())
+    }
+
+    pub fn register_queued_with_destination(
+        &mut self,
+        digest: impl Into<String>,
+        wire: Option<String>,
+        expires_at: Option<u64>,
+        destination: Option<String>,
+    ) -> Result<(), EnvelopeError> {
+        let digest = digest.into();
+        if digest.is_empty() || self.records.contains_key(&digest) {
+            return Err(EnvelopeError::InvalidWire);
+        }
+        self.records.insert(
+            digest.clone(),
+            DeliveryRecord {
+                digest,
+                state: DeliveryState::Queued,
+                attempts: 0,
+                next_retry_at: None,
+                relay_id: None,
+                wire,
+                expires_at,
+                destination,
+            },
+        );
+        Ok(())
+    }
+
+    pub fn discard_if_state(&mut self, digest: &str, expected_state: DeliveryState) -> bool {
+        if self
+            .records
+            .get(digest)
+            .is_some_and(|record| record.state == expected_state)
+        {
+            self.records.remove(digest);
+            true
+        } else {
+            false
+        }
     }
 
     pub fn transition(&mut self, digest: &str, state: DeliveryState) -> Result<(), EnvelopeError> {
@@ -289,7 +334,10 @@ impl DeliveryLedger {
             .ok_or(EnvelopeError::InvalidWire)?;
         if matches!(
             record.state,
-            DeliveryState::RecipientReceived | DeliveryState::Decrypted | DeliveryState::Failed
+            DeliveryState::RecipientReceived
+                | DeliveryState::Decrypted
+                | DeliveryState::Failed
+                | DeliveryState::Cancelled
         ) {
             return Ok(false);
         }
@@ -307,6 +355,21 @@ impl DeliveryLedger {
         Ok(true)
     }
 
+    pub fn schedule_retry_if_current(
+        &mut self,
+        digest: &str,
+        expected_state: DeliveryState,
+        now: u64,
+    ) -> Result<bool, EnvelopeError> {
+        let Some(record) = self.records.get(digest) else {
+            return Err(EnvelopeError::InvalidWire);
+        };
+        if record.state != expected_state {
+            return Ok(false);
+        }
+        self.schedule_retry(digest, now)
+    }
+
     pub fn mark_failed(&mut self, digest: &str) -> Result<bool, EnvelopeError> {
         let record = self
             .records
@@ -322,6 +385,20 @@ impl DeliveryLedger {
         Ok(true)
     }
 
+    pub fn mark_failed_if_current(
+        &mut self,
+        digest: &str,
+        expected_state: DeliveryState,
+    ) -> Result<bool, EnvelopeError> {
+        let Some(record) = self.records.get(digest) else {
+            return Err(EnvelopeError::InvalidWire);
+        };
+        if record.state != expected_state {
+            return Ok(false);
+        }
+        self.mark_failed(digest)
+    }
+
     pub fn get(&self, digest: &str) -> Option<&DeliveryRecord> {
         self.records.get(digest)
     }
@@ -330,8 +407,10 @@ impl DeliveryLedger {
         self.records
             .values()
             .filter(|record| {
-                record.state == DeliveryState::Retryable
-                    && record.next_retry_at.is_none_or(|retry_at| retry_at <= now)
+                matches!(
+                    record.state,
+                    DeliveryState::Retryable | DeliveryState::Queued
+                ) && record.next_retry_at.is_none_or(|retry_at| retry_at <= now)
                     && record.wire.is_some()
                     && record.destination.is_some()
             })
@@ -339,17 +418,84 @@ impl DeliveryLedger {
             .collect()
     }
 
+    /// Applies a relay acceptance only when the record still has the state
+    /// observed before the network request. A cancelled record is also
+    /// reconciled to `RelayAccepted` when the relay proves it accepted the
+    /// envelope; a late failure leaves cancellation intact.
+    pub fn accept_retry(
+        &mut self,
+        digest: &str,
+        expected_state: DeliveryState,
+        relay_id: String,
+    ) -> Result<bool, EnvelopeError> {
+        let record = self
+            .records
+            .get_mut(digest)
+            .ok_or(EnvelopeError::InvalidWire)?;
+        if record.state != expected_state && record.state != DeliveryState::Cancelled {
+            return Ok(false);
+        }
+        record.relay_id = Some(relay_id);
+        record.state = DeliveryState::RelayAccepted;
+        record.next_retry_at = None;
+        Ok(true)
+    }
+
     pub fn persist(&self, store: &mut EncryptedStore) -> Result<(), StorageError> {
-        let bytes = serde_json::to_vec(&self.records).map_err(|_| StorageError::CorruptStore)?;
+        let bytes = self.encoded_bytes()?;
         store.put(RecordClass::Outbox, "delivery/ledger", &bytes)
+    }
+
+    pub fn encoded_bytes(&self) -> Result<Vec<u8>, StorageError> {
+        serde_json::to_vec(&self.records).map_err(|_| StorageError::CorruptStore)
     }
 
     pub fn restore(store: &EncryptedStore) -> Result<Self, StorageError> {
         let Some(bytes) = store.get(RecordClass::Outbox, "delivery/ledger") else {
             return Ok(Self::default());
         };
-        let records = serde_json::from_slice(&bytes).map_err(|_| StorageError::CorruptStore)?;
+        let records: BTreeMap<String, DeliveryRecord> =
+            serde_json::from_slice(&bytes).map_err(|_| StorageError::CorruptStore)?;
+        if records.len() > MAX_RECORDS
+            || records
+                .iter()
+                .any(|(key, record)| !valid_persisted_record(key, record))
+        {
+            return Err(StorageError::CorruptStore);
+        }
         Ok(Self { records })
+    }
+}
+
+fn valid_persisted_record(key: &str, record: &DeliveryRecord) -> bool {
+    if key.is_empty()
+        || key.len() > MAX_DIGEST_BYTES
+        || record.digest != key
+        || record.attempts > 5
+        || record
+            .relay_id
+            .as_ref()
+            .is_some_and(|value| value.is_empty() || value.len() > MAX_RELAY_ID_BYTES)
+        || record
+            .wire
+            .as_ref()
+            .is_some_and(|value| value.is_empty() || value.len() > MAX_WIRE_BYTES)
+        || record
+            .destination
+            .as_ref()
+            .is_some_and(|value| value.is_empty() || value.len() > MAX_DESTINATION_BYTES)
+    {
+        return false;
+    }
+
+    match record.state {
+        DeliveryState::Retryable => {
+            record.attempts > 0 && record.next_retry_at.is_some() && record.wire.is_some()
+        }
+        DeliveryState::Queued => {
+            record.next_retry_at.is_none() && record.wire.is_some() && record.destination.is_some()
+        }
+        _ => record.next_retry_at.is_none(),
     }
 }
 
@@ -497,7 +643,7 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 fn decode_hex(value: &str) -> Option<Vec<u8>> {
-    if value.len() % 2 != 0 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+    if !value.len().is_multiple_of(2) || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return None;
     }
     (0..value.len())
@@ -609,6 +755,12 @@ mod tests {
             ledger.get("draft-2").unwrap().state,
             super::DeliveryState::Failed
         );
+
+        ledger
+            .register_encrypted_with_wire("cancelled", Some("wire".into()))
+            .unwrap();
+        ledger.cancel("cancelled").unwrap();
+        assert_eq!(ledger.schedule_retry("cancelled", 100), Ok(false));
     }
 
     #[test]
@@ -657,6 +809,81 @@ mod tests {
     }
 
     #[test]
+    fn queued_delivery_is_recoverable_after_crash_before_relay_acceptance() {
+        let mut ledger = super::DeliveryLedger::default();
+        ledger
+            .register_encrypted_with_destination(
+                "digest-queued",
+                Some("wire".into()),
+                Some(10_000),
+                Some("https://relay.example/api/v1/inbox/cap".into()),
+            )
+            .unwrap();
+        ledger
+            .transition("digest-queued", super::DeliveryState::Queued)
+            .unwrap();
+        assert_eq!(ledger.due_retries(100).len(), 1);
+    }
+
+    #[test]
+    fn late_retry_result_cannot_overwrite_a_changed_state() {
+        let mut ledger = super::DeliveryLedger::default();
+        ledger
+            .register_encrypted_with_destination(
+                "digest-race",
+                Some("wire".into()),
+                Some(10_000),
+                Some("https://relay.example/api/v1/inbox/cap".into()),
+            )
+            .unwrap();
+        ledger
+            .transition("digest-race", super::DeliveryState::Queued)
+            .unwrap();
+        assert_eq!(
+            ledger.accept_retry(
+                "digest-race",
+                super::DeliveryState::Retryable,
+                "relay-id".into(),
+            ),
+            Ok(false)
+        );
+        assert_eq!(
+            ledger.accept_retry(
+                "digest-race",
+                super::DeliveryState::Queued,
+                "relay-id".into(),
+            ),
+            Ok(true)
+        );
+        assert_eq!(
+            ledger.get("digest-race").unwrap().state,
+            super::DeliveryState::RelayAccepted
+        );
+
+        ledger
+            .register_queued_with_destination(
+                "digest-cancel-race",
+                Some("wire".into()),
+                Some(10_000),
+                Some("https://relay.example/api/v1/inbox/cap".into()),
+            )
+            .unwrap();
+        ledger.cancel("digest-cancel-race").unwrap();
+        assert_eq!(
+            ledger.accept_retry(
+                "digest-cancel-race",
+                super::DeliveryState::Queued,
+                "relay-id-2".into(),
+            ),
+            Ok(true)
+        );
+        assert_eq!(
+            ledger.get("digest-cancel-race").unwrap().state,
+            super::DeliveryState::RelayAccepted
+        );
+    }
+
+    #[test]
     fn inbound_delivery_is_durable_and_idempotent() {
         let mut ledger = super::DeliveryLedger::default();
         assert_eq!(
@@ -693,6 +920,42 @@ mod tests {
             restored.get("digest-persisted").unwrap().state,
             super::DeliveryState::Encrypted
         );
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(path.with_extension("revision"));
+    }
+
+    #[test]
+    fn delivery_ledger_rejects_tampered_persisted_invariants() {
+        let path = std::env::temp_dir().join(format!(
+            "another-dimension-delivery-invalid-{}",
+            std::process::id()
+        ));
+        let mut store =
+            crate::storage::EncryptedStore::initialize(&path, "correct horse battery staple")
+                .unwrap();
+        let malformed = serde_json::json!({
+            "digest-key": {
+                "digest": "different-digest",
+                "state": "Retryable",
+                "attempts": 0,
+                "next_retry_at": null,
+                "relay_id": null,
+                "wire": null,
+                "expires_at": null,
+                "destination": null
+            }
+        });
+        store
+            .put(
+                crate::storage::RecordClass::Outbox,
+                "delivery/ledger",
+                &serde_json::to_vec(&malformed).unwrap(),
+            )
+            .unwrap();
+        assert!(matches!(
+            super::DeliveryLedger::restore(&store),
+            Err(crate::storage::StorageError::CorruptStore)
+        ));
         let _ = std::fs::remove_file(&path);
         let _ = std::fs::remove_file(path.with_extension("revision"));
     }

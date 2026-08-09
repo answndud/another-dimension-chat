@@ -324,16 +324,7 @@ pub fn decrypt_blob(
     descriptor: &AttachmentDescriptor,
     blob: &[u8],
 ) -> Result<Vec<u8>, AttachmentError> {
-    if !valid_blob_id(&descriptor.blob_id)
-        || descriptor.version != ATTACHMENT_VERSION
-        || descriptor.chunk_size as usize != CHUNK_SIZE
-        || descriptor.original_size == 0
-        || descriptor.original_size as usize > MAX_ATTACHMENT_BYTES
-        || descriptor.chunks.is_empty()
-        || descriptor.chunks.len() > MAX_ATTACHMENT_BYTES.div_ceil(CHUNK_SIZE)
-    {
-        return Err(AttachmentError::InvalidManifest);
-    }
+    validate_descriptor(descriptor)?;
     let mut offset = 0usize;
     let mut chunks = Vec::with_capacity(descriptor.chunks.len());
     for (expected, chunk) in descriptor.chunks.iter().enumerate() {
@@ -372,12 +363,7 @@ pub fn decrypt_blob_chunk(
     index: u32,
     ciphertext: &[u8],
 ) -> Result<Vec<u8>, AttachmentError> {
-    if descriptor.version != ATTACHMENT_VERSION
-        || descriptor.chunk_size as usize != CHUNK_SIZE
-        || descriptor.original_size == 0
-    {
-        return Err(AttachmentError::InvalidManifest);
-    }
+    validate_descriptor(descriptor)?;
     let chunk = descriptor
         .chunks
         .get(index as usize)
@@ -406,6 +392,46 @@ pub fn decrypt_blob_chunk(
         .map_err(|_| AttachmentError::AuthenticationFailed)
 }
 
+/// Validate the authenticated descriptor before it is restored or used to
+/// address a blob. This is structural validation only; AEAD verification
+/// still happens when the ciphertext is decrypted.
+pub fn validate_descriptor(descriptor: &AttachmentDescriptor) -> Result<(), AttachmentError> {
+    if !valid_blob_id(&descriptor.blob_id)
+        || descriptor.version != ATTACHMENT_VERSION
+        || descriptor.chunk_size as usize != CHUNK_SIZE
+        || descriptor.original_size == 0
+        || descriptor.original_size as usize > MAX_ATTACHMENT_BYTES
+        || descriptor.chunks.is_empty()
+        || descriptor.chunks.len() > MAX_ATTACHMENT_BYTES.div_ceil(CHUNK_SIZE)
+    {
+        return Err(AttachmentError::InvalidManifest);
+    }
+    sanitize_file_name(descriptor.file_name.as_deref())?;
+    sanitize_media_type(descriptor.media_type.as_deref())?;
+    let mut plaintext_size = 0_u64;
+    for (expected, chunk) in descriptor.chunks.iter().enumerate() {
+        if chunk.index != expected as u32
+            || chunk.ciphertext_size < 16
+            || chunk.ciphertext_size as usize > CHUNK_SIZE + 16
+            || decode_hex(&chunk.nonce).is_none_or(|nonce| nonce.len() != 12)
+        {
+            return Err(AttachmentError::InvalidChunk);
+        }
+        plaintext_size = plaintext_size
+            .checked_add(u64::from(chunk.ciphertext_size - 16))
+            .ok_or(AttachmentError::TooLarge)?;
+        if expected + 1 < descriptor.chunks.len()
+            && chunk.ciphertext_size as usize != CHUNK_SIZE + 16
+        {
+            return Err(AttachmentError::InvalidChunk);
+        }
+    }
+    if plaintext_size != descriptor.original_size {
+        return Err(AttachmentError::InvalidManifest);
+    }
+    Ok(())
+}
+
 pub fn deserialize(value: &str) -> Result<AttachmentManifest, AttachmentError> {
     serde_json::from_str(value).map_err(|_| AttachmentError::InvalidManifest)
 }
@@ -423,7 +449,7 @@ fn hex(value: &[u8]) -> String {
 
 fn decode_hex(value: &str) -> Option<Vec<u8>> {
     if value.is_empty()
-        || value.len() % 2 != 0
+        || !value.len().is_multiple_of(2)
         || !value.bytes().all(|byte| byte.is_ascii_hexdigit())
     {
         return None;

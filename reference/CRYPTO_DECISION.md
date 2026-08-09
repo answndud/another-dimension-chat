@@ -98,8 +98,8 @@ The future production candidate uses a daemon-owned Account Root Key and
 independent Device Keys. The root signs device certificates and revocations but
 does not participate in routine message encryption. The daemon protocol
 candidate is OpenMLS in Rust, with a two-device 1:1 group as the first profile.
-This is a decision to evaluate and gate, not evidence that OpenMLS is already
-implemented or audited here.
+This is the selected daemon implementation boundary; it is not evidence that
+the application composition has passed an independent audit.
 
 The daemon may proceed only after the selected OpenMLS version, cipher suite,
 license, persistence API, KeyPackage/prekey lifecycle, device removal semantics,
@@ -107,12 +107,12 @@ and application composition have a written review packet and fixed vectors. The
 current browser Olm v2 implementation remains isolated as prototype/legacy
 evidence and must not be silently migrated into the daemon.
 
-The daemon currently has an admission gate for this decision: it recognizes only
-the named `openmls-1` protocol identifier and still refuses session admission
-until a pinned vetted implementation, persistence contract, and fixed vectors
-are present. Browser `Olm.v2` and `ADENVWEB3` are rejected at the daemon boundary;
-the gate is not a cryptographic implementation or a claim that daemon messaging
-is available.
+The daemon has an admission gate for this decision: it recognizes only the named
+`openmls-1` protocol identifier, validates daemon-owned account/device identity,
+version, and clock contracts, and routes admitted operations into the
+OpenMLS-backed session catalog. Browser `Olm.v2` and `ADENVWEB3` are rejected at
+the daemon boundary. Admission and local acceptance prove a code path, not that
+the application composition has passed an independent cryptographic review.
 
 The daemon's stable `account_id` is derived from the Account Root public key
 (`ad1pk...`). It is not derived from display name, username, relay origin,

@@ -100,6 +100,10 @@ acknowledgements additionally require the private local-access capability.
 Control and inbox operations have bounded in-memory rate limits and return
 explicit `429`/`queue_full` failures; this is abuse resistance, not a
 high-availability guarantee.
+Rate-limit state is capped at 4,096 source/bucket entries and stale entries are
+removed at window boundaries. This prevents a long-running relay from growing
+its in-memory rate-limit map without bound; it does not provide fair scheduling
+or DDoS protection.
 Share invites only with the intended peer and rotate the data directory if
 either capability is exposed. Authentication, relay, port
 forwarding, and anonymity are not provided automatically. Plain HTTP remote
