@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { verifyWebArtifact } from "./verify_web_artifact.mjs";
 
 const root = await mkdtemp(join(tmpdir(), "another-dimension-web-artifact-"));
+try {
 await mkdir(join(root, "assets"), { recursive: true });
 await writeFile(join(root, "assets/app.js"), "console.log('fixture');\n");
 const bytes = Buffer.from(await import("node:fs/promises").then(({ readFile }) => readFile(join(root, "assets/app.js"))));
@@ -17,3 +18,6 @@ assert.deepEqual(await verifyWebArtifact(root), { assetCount: 1, references: 1 }
 await writeFile(join(root, "index.html"), '<script type="module" src="/src/main.js"></script>\n');
 await assert.rejects(() => verifyWebArtifact(root), /source path/);
 console.log("web artifact negative acceptance passed: source-path UI rejected");
+} finally {
+  await rm(root, { recursive: true, force: true });
+}

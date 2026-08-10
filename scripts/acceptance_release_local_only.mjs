@@ -16,6 +16,81 @@ const archive = join(root, "archive");
 const archive2 = join(root, "archive-2");
 const install = join(root, "install");
 const data = join(root, "data");
+const noNodeEnvironment = { env: { ...process.env, PATH: "/usr/bin:/bin" } };
+const activeChildren = new Set();
+let childCleanupPromise;
+let rootCleanupPromise;
+let signalShutdownPromise;
+
+function trackChild(child) {
+  activeChildren.add(child);
+  child.once("close", () => activeChildren.delete(child));
+  return child;
+}
+
+async function waitForChildClose(child, timeoutMs = 5_000) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  await new Promise((resolve) => {
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(settle, timeoutMs);
+    child.once("close", settle);
+    child.once("error", settle);
+  });
+}
+
+function stopChildren(signal) {
+  if (childCleanupPromise) return childCleanupPromise;
+  childCleanupPromise = (async () => {
+    const children = [...activeChildren];
+    for (const child of children) {
+      if (child.exitCode !== null || child.signalCode !== null) continue;
+      try { child.kill(signal); } catch (error) { if (error.code !== "ESRCH") throw error; }
+    }
+    await Promise.all(children.map((child) => waitForChildClose(child)));
+    for (const child of children) {
+      if (child.exitCode !== null || child.signalCode !== null) continue;
+      try { child.kill("SIGKILL"); } catch (error) { if (error.code !== "ESRCH") throw error; }
+    }
+    await Promise.all(children.map((child) => waitForChildClose(child, 1_000)));
+  })();
+  return childCleanupPromise;
+}
+
+function cleanupRoot() {
+  rootCleanupPromise ??= rm(root, { recursive: true, force: true });
+  return rootCleanupPromise;
+}
+
+function handleSignal(signal) {
+  if (signalShutdownPromise) return;
+  signalShutdownPromise = (async () => {
+    try {
+      try {
+        await stopChildren(signal);
+      } catch (error) {
+        console.error(`acceptance child cleanup failed during ${signal}:`, error);
+      }
+    } finally {
+      try {
+        await cleanupRoot();
+      } catch (error) {
+        console.error(`acceptance root cleanup failed during ${signal}:`, error);
+      }
+      process.exit(signal === "SIGINT" ? 130 : 143);
+    }
+  })();
+}
+
+process.once("SIGINT", () => handleSignal("SIGINT"));
+process.once("SIGTERM", () => handleSignal("SIGTERM"));
+
+try {
 const keys = generateKeyPairSync("ed25519");
 const privateKey = keys.privateKey.export({ type: "pkcs8", format: "pem" });
 const publicKey = keys.publicKey.export({ type: "spki", format: "pem" });
@@ -27,7 +102,6 @@ const reviewer = generateKeyPairSync("ed25519");
 const reviewerPublicKeyFile = join(root, "reviewer-public.pem");
 const reviewSignoffFile = join(root, "review-signoff.json");
 const reviewBundle = join(root, "review-bundle");
-const noNodeEnvironment = { env: { ...process.env, PATH: "/usr/bin:/bin" } };
 
 function reviewerKeyId(publicKey) {
   return createHash("sha256").update(publicKey.export({ type: "spki", format: "der" })).digest("hex").slice(0, 32);
@@ -43,7 +117,7 @@ async function copy(relativePath) {
 
 async function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: projectDir, stdio: "pipe", ...options });
+    const child = trackChild(spawn(command, args, { cwd: projectDir, stdio: "pipe", ...options }));
     let output = "";
     child.stdout.on("data", (chunk) => { output += chunk; });
     child.stderr.on("data", (chunk) => { output += chunk; });
@@ -53,7 +127,7 @@ async function run(command, args, options = {}) {
 }
 
 async function runWithInput(command, args, input, options = {}) {
-  const child = spawn(command, args, { cwd: projectDir, stdio: ["pipe", "pipe", "pipe"], ...options });
+  const child = trackChild(spawn(command, args, { cwd: projectDir, stdio: ["pipe", "pipe", "pipe"], ...options }));
   let output = "";
   child.stdout.on("data", (chunk) => { output += chunk; });
   child.stderr.on("data", (chunk) => { output += chunk; });
@@ -190,7 +264,7 @@ await writeFile(releaseConfig, JSON.stringify({
   serveStatic: true,
 }) + "\n", { mode: 0o600 });
 function startReady(command, args, pattern) {
-  const child = spawn(command, args, { cwd: install, stdio: ["ignore", "pipe", "pipe"] });
+  const child = trackChild(spawn(command, args, { cwd: install, stdio: ["ignore", "pipe", "pipe"] }));
   let output = "";
   return new Promise((resolveStart, rejectStart) => {
     const timer = setTimeout(() => rejectStart(new Error(`release process did not start: ${output}`)), 8000);
@@ -211,7 +285,7 @@ function startReady(command, args, pattern) {
   });
 }
 const releaseRelay = await startReady(join(install, "runtime-node"), [join(install, "apps/server/server.mjs"), "--config", releaseConfig], /local server listening/);
-const releaseInit = spawn(join(install, "bin/another-dimension-daemon"), ["init", "--display-name", "Release", "--data-dir", join(data, "daemon")], { cwd: install, stdio: ["ignore", "pipe", "pipe"] });
+const releaseInit = trackChild(spawn(join(install, "bin/another-dimension-daemon"), ["init", "--display-name", "Release", "--data-dir", join(data, "daemon")], { cwd: install, stdio: ["ignore", "pipe", "pipe"] }));
 let releaseInitOutput = "";
 releaseInit.stdout.on("data", (chunk) => { releaseInitOutput += chunk.toString(); });
 await new Promise((resolveInit, rejectInit) => {
@@ -221,12 +295,12 @@ await new Promise((resolveInit, rejectInit) => {
 });
 const releasePassphrase = releaseInitOutput.match(/^passphrase: ([0-9a-f]{64})$/m)?.[1];
 assert.match(releasePassphrase || "", /^[0-9a-f]{64}$/);
-const releaseDaemon = spawn(join(install, "bin/another-dimension-daemon"), [
+const releaseDaemon = trackChild(spawn(join(install, "bin/another-dimension-daemon"), [
   "serve", "--data-dir", join(data, "daemon"), "--port", String(releaseDaemonPort),
   "--relay-origin", `http://127.0.0.1:${releaseRelayPort}`,
   "--inbox-url", `http://127.0.0.1:${releaseRelayPort}/api/v1/inbox/release-acceptance-capability`,
   "--ui-dir", join(install, "apps/web/dist"),
-], { cwd: install, stdio: ["pipe", "ignore", "pipe"] });
+], { cwd: install, stdio: ["pipe", "ignore", "pipe"] }));
 releaseDaemon.stdin.end(`${releasePassphrase}\n`);
 await new Promise((resolveStart, rejectStart) => {
   let output = "";
@@ -328,3 +402,10 @@ assert.notEqual(tamperedResult.code, 0);
 assert.match(tamperedResult.output, /release hash mismatch/);
 
 console.log("release local-only acceptance passed: signed gate -> no-Node install contract -> permission checks -> key/version/revocation/tamper rejection");
+} finally {
+  try {
+    await stopChildren("SIGTERM");
+  } finally {
+    await cleanupRoot();
+  }
+}

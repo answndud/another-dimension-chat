@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { cp, mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 
 const projectDir = new URL("..", import.meta.url).pathname;
 const root = await mkdtemp(join(tmpdir(), "another-dimension-boundary-negative-"));
+try {
 await mkdir(join(root, "apps/web/dist"), { recursive: true });
 await mkdir(join(root, "apps/server"), { recursive: true });
 await mkdir(join(root, "reference"), { recursive: true });
@@ -29,3 +30,6 @@ const result = await new Promise((resolve, reject) => {
 assert.notEqual(result.code, 0);
 assert.match(result.output, /legacy product files leaked|legacy product surface/i);
 console.log("product boundary negative acceptance passed: legacy release surface rejected");
+} finally {
+  await rm(root, { recursive: true, force: true });
+}

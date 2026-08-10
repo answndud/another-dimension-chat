@@ -23,12 +23,32 @@ const child = spawn(process.execPath, ["scripts/acceptance_release_local_only.mj
   stdio: "inherit",
   env: { ...process.env, NODE_OPTIONS: "--max-old-space-size=256" },
 });
-const timer = setTimeout(() => child.kill("SIGTERM"), timeoutMs);
+let signalShutdownPromise;
+let timedOut = false;
+let timer;
+function waitForChild() {
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+  return new Promise((resolve) => child.once("close", resolve));
+}
+function handleSignal(signal) {
+  if (signalShutdownPromise) return;
+  signalShutdownPromise = (async () => {
+    try {
+      if (child.exitCode === null && child.signalCode === null) child.kill(signal);
+      await waitForChild();
+    } finally {
+      process.exit(signal === "SIGINT" ? 130 : 143);
+    }
+  })();
+}
+process.once("SIGINT", () => handleSignal("SIGINT"));
+process.once("SIGTERM", () => handleSignal("SIGTERM"));
+timer = setTimeout(() => { timedOut = true; child.kill("SIGTERM"); }, timeoutMs);
 const code = await new Promise((resolveExit, reject) => {
   child.on("error", reject);
   child.on("close", (exitCode, signal) => resolveExit(signal ? 124 : exitCode));
 });
 clearTimeout(timer);
-assert.equal(code, 0, "release local-only acceptance failed or timed out");
+assert.equal(timedOut ? 124 : code, 0, "release local-only acceptance failed or timed out");
 console.log(`OS matrix passed: ${platform()} ${arch()} · Node.js ${process.versions.node} · kernel ${release()}`);
 console.log("OS matrix scope: bundled-runtime install, doctor, permissions, tamper, update, rollback, key/version/revocation gates");

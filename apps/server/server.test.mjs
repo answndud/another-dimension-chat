@@ -4,7 +4,7 @@ import { chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile 
 import Database from "better-sqlite3";
 import { request } from "node:http";
 import { connect } from "node:net";
-import { test } from "node:test";
+import { afterEach, test } from "node:test";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildServerConfig } from "../../scripts/configure_local_server.mjs";
@@ -52,8 +52,22 @@ function localHeaders(runtime) {
   return { "x-ad-local-access": runtime.localAccessCapability };
 }
 
+const temporaryDirectories = new Set();
+async function tempDir(prefix) {
+  const directory = await mkdtemp(join(tmpdir(), prefix));
+  temporaryDirectories.add(directory);
+  return directory;
+}
+
+afterEach(async () => {
+  for (const directory of temporaryDirectories) {
+    await rm(directory, { recursive: true, force: true });
+    temporaryDirectories.delete(directory);
+  }
+});
+
 test("relay state store recovers a valid interrupted snapshot and serializes commits", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-storage-"));
+  const dataDir = await tempDir("another-dimension-storage-");
   const file = join(dataDir, "queue.json");
   await writeFile(`${file}.tmp`, "[\"recovered\"]", { mode: 0o600 });
   const store = await createJsonStateStore({ file, initial: () => [], validate: Array.isArray, write: async (path, contents) => writeFile(path, contents, { mode: 0o600 }) });
@@ -65,7 +79,7 @@ test("relay state store recovers a valid interrupted snapshot and serializes com
 });
 
 test("relay state store refuses malformed recovery data", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-storage-"));
+  const dataDir = await tempDir("another-dimension-storage-");
   const file = join(dataDir, "queue.json");
   await writeFile(`${file}.tmp`, "not-json", { mode: 0o600 });
   await assert.rejects(
@@ -76,7 +90,7 @@ test("relay state store refuses malformed recovery data", async () => {
 });
 
 test("sqlite state adapter commits and reloads a bounded relay state", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-sqlite-"));
+  const dataDir = await tempDir("another-dimension-sqlite-");
   const file = join(dataDir, "relay.sqlite");
   const first = createSqliteStateStore({ file, key: "inbox", initial: () => [], validate: Array.isArray });
   first.replace([{ id: "one" }]);
@@ -88,7 +102,7 @@ test("sqlite state adapter commits and reloads a bounded relay state", async () 
 });
 
 test("local server exposes health and a capability-scoped opaque inbox", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -116,7 +130,7 @@ test("local server exposes health and a capability-scoped opaque inbox", async (
 });
 
 test("relay stores only opaque resumable encrypted blobs with bounded TTL", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -133,7 +147,7 @@ test("relay stores only opaque resumable encrypted blobs with bounded TTL", asyn
 });
 
 test("relay removes orphan blob files during startup cleanup", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const blobDir = join(dataDir, "blobs");
   await mkdir(blobDir);
   await writeFile(join(blobDir, `${"b".repeat(32)}.blob`), "orphan", { mode: 0o600 });
@@ -145,7 +159,7 @@ test("relay removes orphan blob files during startup cleanup", async () => {
 });
 
 test("sqlite relay serializes concurrent enqueue and acknowledgement", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -161,8 +175,8 @@ test("sqlite relay serializes concurrent enqueue and acknowledgement", async () 
 });
 
 test("relay-only mode never serves the browser bundle", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
-  const distDir = await mkdtemp(join(tmpdir(), "another-dimension-dist-"));
+  const dataDir = await tempDir("another-dimension-server-");
+  const distDir = await tempDir("another-dimension-dist-");
   await writeFile(join(distDir, "index.html"), JSON.stringify({ malicious: true }));
   const runtime = await createLocalServer({ port: 0, dataDir, distDir });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
@@ -178,8 +192,8 @@ test("relay-only mode never serves the browser bundle", async () => {
 });
 
 test("operational receipt signing keys are externally provisioned and identified", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
-  const keyDir = await mkdtemp(join(tmpdir(), "another-dimension-relay-key-"));
+  const dataDir = await tempDir("another-dimension-server-");
+  const keyDir = await tempDir("another-dimension-relay-key-");
   const keyFile = join(keyDir, "receipt-key.pem");
   const pair = generateKeyPairSync("ed25519");
   await writeFile(keyFile, pair.privateKey.export({ type: "pkcs8", format: "pem" }), { mode: 0o600 });
@@ -192,7 +206,7 @@ test("operational receipt signing keys are externally provisioned and identified
   assert.equal(runtime.relayReceiptKeySource, "external-configured");
   assert.equal(runtime.relayReceiptKeyId, runtime.relayReceiptPublicKeyFingerprint);
   await runtime.server.close();
-  const missingDataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const missingDataDir = await tempDir("another-dimension-server-");
   await assert.rejects(
     () => createLocalServer({ port: 0, dataDir: missingDataDir, relayReceiptSigningKeyFile: join(keyDir, "missing.pem") }),
     /Configured relay receipt signing key does not exist/,
@@ -203,8 +217,8 @@ test("operational receipt signing keys are externally provisioned and identified
 });
 
 test("static serving requires an explicit development opt-in", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
-  const distDir = await mkdtemp(join(tmpdir(), "another-dimension-dist-"));
+  const dataDir = await tempDir("another-dimension-server-");
+  const distDir = await tempDir("another-dimension-dist-");
   await writeFile(join(distDir, "index.html"), JSON.stringify({ development: true }));
   const runtime = await createLocalServer({ port: 0, dataDir, distDir, serveStatic: true });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
@@ -217,7 +231,7 @@ test("static serving requires an explicit development opt-in", async () => {
 });
 
 test("server applies security headers and rejects unlisted cross-origin API calls", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist"), publicUrl: "https://chat.example.test", corsOrigins: ["https://peer.example.test"] });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -237,7 +251,7 @@ test("server applies security headers and rejects unlisted cross-origin API call
 });
 
 test("local access can rotate the inbox capability and invalidate the old URL", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -253,7 +267,7 @@ test("local access can rotate the inbox capability and invalidate the old URL", 
 });
 
 test("invite codes are relay-bound, hash-only, single-use rendezvous records", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -322,7 +336,7 @@ test("remote bind refuses HTTP and missing or unsafe advertised origins", async 
 });
 
 test("trusted proxy mode never uses spoofed forwarded addresses for rate limits", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir, publicUrl: "https://relay.example.test", trustProxy: true });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -341,7 +355,7 @@ test("trusted proxy mode never uses spoofed forwarded addresses for rate limits"
 });
 
 test("TLS certificate input must be a currently valid X.509 certificate", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const keyFile = join(dataDir, "server.key");
   const certFile = join(dataDir, "server.crt");
   await writeFile(keyFile, "not-a-private-key");
@@ -361,7 +375,7 @@ test("local server validates its advertised public origin", async () => {
   await assert.rejects(() => createLocalServer({ publicUrl: "https://relayexample.onion" }), /Onion\/Tor public URLs are not supported/);
   await assert.rejects(() => createLocalServer({ bindHost: "0.0.0.0" }), /AD_PUBLIC_URL is required/);
 
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({
     bindHost: "0.0.0.0",
     port: 0,
@@ -388,7 +402,7 @@ test("local server validates its advertised public origin", async () => {
 
 test("trusted proxy mode requires a public origin and local control endpoints are rate limited", async () => {
   await assert.rejects(() => createLocalServer({ trustProxy: true }), /requires an explicitly configured publicUrl/);
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir, publicUrl: "https://relay.example.test" });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -399,7 +413,7 @@ test("trusted proxy mode requires a public origin and local control endpoints ar
 });
 
 test("untrusted forwarded headers cannot bypass local rate limits", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -412,7 +426,7 @@ test("untrusted forwarded headers cannot bypass local rate limits", async () => 
 });
 
 test("relay rejects non-JSON envelope writes", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -433,7 +447,7 @@ test("relay rejects non-JSON envelope writes", async () => {
 });
 
 test("relay requires JSON content type for envelope and acknowledgement writes", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -477,7 +491,7 @@ test("guided server config validates modes and resolves stored paths", async () 
   assert.throws(() => buildServerConfig({ mode: "reverse-proxy", publicUrl: "http://chat.example.test" }), /HTTPS origin/);
   assert.throws(() => buildServerConfig({ mode: "reverse-proxy", publicUrl: "https://relayexample.onion" }), /Onion\/Tor public URLs are not supported/);
 
-  const directory = await mkdtemp(join(tmpdir(), "another-dimension-config-"));
+  const directory = await tempDir("another-dimension-config-");
   const configFile = join(directory, "server-config.json");
   await writeFile(configFile, JSON.stringify({ bindHost: "127.0.0.1", port: 1777, dataDir: "state" }));
   assert.deepEqual(await loadServerConfig(configFile), {
@@ -491,7 +505,7 @@ test("guided server config validates modes and resolves stored paths", async () 
 });
 
 test("local server rejects malformed inbox requests without storing them", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -504,7 +518,7 @@ test("local server rejects malformed inbox requests without storing them", async
 });
 
 test("local server recovers its bounded queue and purges expired envelopes", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const first = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist"), ttlMs: 1 });
   await new Promise((resolve) => first.server.listen(0, "127.0.0.1", resolve));
   const port = first.server.address().port;
@@ -522,7 +536,7 @@ test("local server recovers its bounded queue and purges expired envelopes", asy
 });
 
 test("ack reports only envelopes that were actually removed", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
   const port = runtime.server.address().port;
@@ -536,7 +550,7 @@ test("ack reports only envelopes that were actually removed", async () => {
 });
 
 test("relay refuses new envelopes when the bounded queue is full", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   await writeFile(join(dataDir, "inbox.json"), JSON.stringify(Array.from({ length: 256 }, (_, index) => ({ id: `existing-${index}`, envelope: `ADENV1.existing-${index}`, receivedAt: Date.now() }))));
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
@@ -550,7 +564,7 @@ test("relay refuses new envelopes when the bounded queue is full", async () => {
 });
 
 test("relay trims a migrated queue to its quota before serving it", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const records = Array.from({ length: 300 }, (_, index) => ({ id: `legacy-${index}`, envelope: `ADENV1.legacy-${index}`, receivedAt: Date.now() + index }));
   await writeFile(join(dataDir, "inbox.json"), JSON.stringify(records), { mode: 0o600 });
   const runtime = await createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist") });
@@ -567,7 +581,7 @@ test("relay trims a migrated queue to its quota before serving it", async () => 
 });
 
 test("capability records rotate after expiry and preserve private file permissions", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const oldToken = "expired-capability-token";
   await writeFile(join(dataDir, "inbox-capability"), JSON.stringify({
     format: "another-dimension-capability", version: 1, token: oldToken, scope: "inbox-write", issuedAt: 1, expiresAt: 1,
@@ -587,13 +601,13 @@ test("capability records rotate after expiry and preserve private file permissio
 });
 
 test("relay refuses symlinked data directories and sensitive files", async () => {
-  const parent = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const parent = await tempDir("another-dimension-server-");
   const target = join(parent, "target");
   const linked = join(parent, "linked");
   await mkdir(target, { recursive: true });
   await symlink(target, linked);
   await assert.rejects(() => createLocalServer({ port: 0, dataDir: linked }), /real directory, not a symlink/);
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const capabilityTarget = join(dataDir, "capability-target");
   await writeFile(capabilityTarget, "secret");
   await rm(join(dataDir, "inbox-capability"), { force: true });
@@ -604,12 +618,12 @@ test("relay refuses symlinked data directories and sensitive files", async () =>
 });
 
 test("relay refuses corrupt queue state and recovers a valid interrupted queue write", async () => {
-  const corruptDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const corruptDir = await tempDir("another-dimension-server-");
   await writeFile(join(corruptDir, "inbox.json"), "not-json");
   await assert.rejects(() => createLocalServer({ port: 0, dataDir: corruptDir }), /inbox file is corrupt/);
   await rm(corruptDir, { recursive: true, force: true });
 
-  const recoveryDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const recoveryDir = await tempDir("another-dimension-server-");
   await writeFile(join(recoveryDir, "inbox.json.tmp"), JSON.stringify([{ id: "recovered", envelope: "ADENV1.recovered", receivedAt: Date.now() }]));
   const runtime = await createLocalServer({ port: 0, dataDir: recoveryDir, distDir: join(recoveryDir, "missing-dist") });
   await new Promise((resolve) => runtime.server.listen(0, "127.0.0.1", resolve));
@@ -622,7 +636,7 @@ test("relay refuses corrupt queue state and recovers a valid interrupted queue w
 });
 
 test("relay bounds slow client settings and closes an incomplete body", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({ port: 0, dataDir, headersTimeoutMs: 80, requestTimeoutMs: 120, keepAliveTimeoutMs: 80 });
   assert.equal(runtime.server.headersTimeout, 80);
   assert.equal(runtime.server.requestTimeout, 120);
@@ -643,7 +657,7 @@ test("relay bounds slow client settings and closes an incomplete body", async ()
 });
 
 test("relay fails queue writes safely when the data directory becomes read-only", async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "another-dimension-server-"));
+  const dataDir = await tempDir("another-dimension-server-");
   const runtime = await createLocalServer({
     port: 0,
     dataDir,
