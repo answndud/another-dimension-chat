@@ -217,6 +217,35 @@ scripts/private_release.sh verify another-dimension-0.1.0.tar.gz \
 node scripts/relay_receipt_keygen.mjs --output-dir /secure/relay-key
 ```
 
+## 50MB 이하 경량 client 배포
+
+일반 지인은 relay를 운영하지 않으므로 Node.js와 relay를 포함한 무거운 server
+설치물을 받을 필요가 없습니다. release daemon·웹 UI만 들어 있는 client archive를
+만들면 현재 기준 압축 파일은 약 2.2MB, 압축 해제 후 약 4.3MB입니다.
+
+```sh
+CARGO_BUILD_JOBS=2 cargo build --release -p another-dimension-daemon --locked
+AD_CLIENT_DAEMON_BINARY="$PWD/.build-cache/cargo-target/release/another-dimension-daemon" \
+AD_RELEASE_SIGNING_KEY=/secure/release/release-private.pem \
+AD_RELEASE_PUBLIC_KEY=/secure/release/release-public.pem \
+scripts/build_client_release.sh
+```
+
+client 실행에는 Node.js·npm·Cargo가 필요하지 않습니다. 설치 전 서명 검증 단계만
+Node.js 20+를 사용합니다.
+
+```sh
+sh another-dimension-client-0.1.0/scripts/install_client.sh \
+  --archive another-dimension-client-0.1.0 \
+  --destination "$HOME/.local/share/another-dimension/client" \
+  --public-key /secure/release/release-public.pem
+"$HOME/.local/share/another-dimension/client/scripts/client_launcher.sh" \
+  init "내 표시 이름"
+```
+
+relay 운영자만 기존 server archive를 설치합니다. 일반 client archive에는 relay,
+Node runtime, Cargo cache, 소스 코드가 포함되지 않습니다.
+
 ## 릴리스 설치 후 명령
 
 서명 검증을 거쳐 설치한 디렉터리의 `another-dimension` 실행 파일 하나를

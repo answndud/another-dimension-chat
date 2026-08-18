@@ -243,6 +243,32 @@ scripts/private_release.sh verify another-dimension-0.1.0.tar.gz \
 node scripts/relay_receipt_keygen.mjs --output-dir /secure/relay-key
 ```
 
+## Lightweight client package under 50MB
+
+Users who do not operate a relay do not need the Node.js runtime or relay server.
+The client archive contains only the release daemon and static web UI. The current
+build is about 2.2MB compressed and 4.3MB unpacked.
+
+```sh
+CARGO_BUILD_JOBS=2 cargo build --release -p another-dimension-daemon --locked
+AD_CLIENT_DAEMON_BINARY="$PWD/.build-cache/cargo-target/release/another-dimension-daemon" \
+AD_RELEASE_SIGNING_KEY=/secure/release/release-private.pem \
+AD_RELEASE_PUBLIC_KEY=/secure/release/release-public.pem \
+scripts/build_client_release.sh
+```
+
+Node.js 20+ is used only to verify the archive signature during installation; the
+installed client does not need Node.js, npm, Cargo, or the relay package.
+
+```sh
+sh another-dimension-client-0.1.0/scripts/install_client.sh \
+  --archive another-dimension-client-0.1.0 \
+  --destination "$HOME/.local/share/another-dimension/client" \
+  --public-key /secure/release/release-public.pem
+"$HOME/.local/share/another-dimension/client/scripts/client_launcher.sh" \
+  init "My profile"
+```
+
 ```sh
 sh another-dimension-0.1.0/scripts/install_local_server.sh \
   --archive another-dimension-0.1.0 \

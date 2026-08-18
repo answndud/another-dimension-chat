@@ -36,6 +36,7 @@ node --check scripts/verify_security_requirements.mjs
 node --check scripts/acceptance_release_builder.mjs
 node --check scripts/relay_receipt_keygen.mjs
 sh -n scripts/private_release.sh
+sh -n scripts/client_launcher.sh scripts/build_client_release.sh scripts/install_client.sh
 node --check scripts/relay_receipt_keygen.mjs
 sh -n scripts/private_release.sh
 node --check scripts/verify_dependency_policy.mjs
