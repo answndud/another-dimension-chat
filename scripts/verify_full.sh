@@ -18,6 +18,9 @@ run_step() {
 
 cd "$ROOT_DIR"
 run_step "light product verification" scripts/verify_light.sh
+run_step "invite and pairing vectors" node scripts/verify_invite_code.mjs
+run_step "web exposure scan" node scripts/verify_web_exposure.mjs
+run_step "security requirement evidence" node scripts/verify_security_requirements.mjs
 run_step "Rust formatting" cargo fmt --all -- --check
 run_step "daemon binary" cargo build -p another-dimension-daemon --locked
 run_step "runtime budget acceptance" node scripts/acceptance_runtime_budget.mjs

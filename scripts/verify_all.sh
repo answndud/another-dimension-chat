@@ -26,6 +26,7 @@ node --check scripts/verify_install_state.mjs
 node --check scripts/verify_public_release_gate.mjs
 node --check scripts/product_boundary_negative.test.mjs
 node --check scripts/verify_relay_logs.mjs
+node --check scripts/verify_web_exposure.mjs
 node --check scripts/verify_web_artifact.mjs
 node --check scripts/verify_transport_boundary.mjs
 node --check scripts/verify_web_artifact_fixture.mjs
@@ -53,6 +54,7 @@ node scripts/verify_relay_logs.mjs
 node scripts/verify_web_artifact_fixture.mjs
 node scripts/verify_transport_boundary.mjs
 node scripts/verify_dependency_policy.mjs
+node scripts/verify_web_exposure.mjs
 node scripts/acceptance_resource_limits.mjs
 node scripts/acceptance_runtime_budget.mjs
 echo "[3/8] focused server tests"

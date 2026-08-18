@@ -18,6 +18,7 @@ const commands = [
   ["release-local-only-acceptance", process.execPath, ["scripts/acceptance_release_local_only.mjs"]],
   ["release-tests", process.execPath, ["--test", "scripts/release_manifest.test.mjs"]],
   ["transport-boundary", process.execPath, ["scripts/verify_transport_boundary.mjs"]],
+  ["web-exposure", process.execPath, ["scripts/verify_web_exposure.mjs"]],
   ["security-requirements", process.execPath, ["scripts/verify_security_requirements.mjs"]],
   ["claim-scan", process.execPath, ["scripts/verify_docs_claims.mjs"]],
 ];
