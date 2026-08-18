@@ -14,6 +14,9 @@ const checks = [
   ["reference/PRODUCT_BOUNDARY.md", "production release package contains only"],
   ["reference/SECURITY_REQUIREMENTS.md", "RELEASE-01"],
   ["reference/CRYPTO_REVIEW_PACKET.md", "INV-01"],
+  ["reference/RELAY_OPERATIONS.md", "단일 topology"],
+  ["reference/RELAY_OPERATIONS.md", "AD_RELAY_PRODUCTION"],
+  ["reference/RELAY_OPERATIONS.md", "relay_backup.mjs backup"],
   ["scripts/verify_security_requirements.mjs", "security requirement evidence passed"],
 ];
 const boundary = await loadProductBoundary(".");

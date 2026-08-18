@@ -84,6 +84,11 @@ Chromium 계열 브라우저**로 고정합니다. 정확한 Chromium 버전은 
 익명성·트래픽 분석 방어·검열 저항을 제공하지 않으며, `high-risk-disabled`
 모드가 항상 비활성화되어 있습니다.
 
+단일 topology 결정(신뢰하는 소규모 그룹의 사설 relay), production 모드 게이트,
+reverse proxy·DNS·방화벽·TLS 갱신, 백업·복구·키 회전 절차는
+`reference/RELAY_OPERATIONS.md`를 따릅니다. relay receipt signing key의 신뢰 경로는
+`reference/RELEASE_TRUST_OPERATIONS.md`에 있습니다.
+
 ## macOS 설치와 quarantine/Gatekeeper
 
 - 브라우저로 내려받은 archive에는 quarantine 속성이 붙을 수 있습니다.

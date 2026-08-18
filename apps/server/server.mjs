@@ -193,7 +193,7 @@ export async function loadServerConfig(configFile) {
     throw new Error(`Could not read server config ${absoluteConfigFile}: ${error.message}`);
   }
   if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error("Server config must be a JSON object.");
-  const allowed = new Set(["bindHost", "port", "dataDir", "distDir", "serveStatic", "publicUrl", "corsOrigins", "trustProxy", "ttlMs", "tlsKeyFile", "tlsCertFile"]);
+  const allowed = new Set(["bindHost", "port", "dataDir", "distDir", "serveStatic", "publicUrl", "corsOrigins", "trustProxy", "ttlMs", "tlsKeyFile", "tlsCertFile", "production"]);
   const unknown = Object.keys(parsed).filter((key) => !allowed.has(key));
   if (unknown.length) throw new Error(`Unknown server config field: ${unknown.join(", ")}`);
   const relativePathKeys = ["dataDir", "distDir", "tlsKeyFile", "tlsCertFile"];
@@ -220,6 +220,7 @@ export async function createLocalServer({
   keepAliveTimeoutMs = 5_000,
   privateFileWriter = writePrivateFile,
   relayReceiptSigningKeyFile = process.env.AD_RELAY_RECEIPT_SIGNING_KEY || "",
+  production = process.env.AD_RELAY_PRODUCTION === "1",
   beforeRelayCommit = null,
 } = {}) {
   if (Boolean(tlsKeyFile) !== Boolean(tlsCertFile)) throw new Error("AD_TLS_KEY_FILE and AD_TLS_CERT_FILE must be configured together.");
@@ -292,6 +293,12 @@ export async function createLocalServer({
   const relayDatabaseFile = join(dataDir, "relay.sqlite");
   const capabilityState = { inbox: await loadCapability(capabilityFile, "inbox-write", privateFileWriter) };
   const retiredInboxPrefixes = new Set();
+  const relayReceiptKeySource = relayReceiptSigningKeyFile ? "external-configured" : "generated-development";
+  if (production && relayReceiptKeySource === "generated-development") {
+    // Refuse before generating any key so a production start never leaves a
+    // generated-development signing key behind on the relay host.
+    throw new Error("Production relay requires a configured relay receipt signing key (AD_RELAY_RECEIPT_SIGNING_KEY).");
+  }
   const relayReceiptKey = await loadRelayReceiptKey(dataDir, privateFileWriter, relayReceiptSigningKeyFile);
   let localAccessCapability = await loadCapability(localAccessFile, "local-control", privateFileWriter);
   let boundServer;
@@ -486,7 +493,7 @@ export async function createLocalServer({
     relayReceiptPublicKey: relayReceiptKey.publicKeyHex,
     relayReceiptPublicKeyFingerprint: relayReceiptKey.publicKeyFingerprint,
     relayReceiptKeyId: relayReceiptKey.publicKeyFingerprint,
-    relayReceiptKeySource: relayReceiptSigningKeyFile ? "external-configured" : "generated-development",
+    relayReceiptKeySource,
   };
 }
 
@@ -514,6 +521,7 @@ if (launchedDirectly) {
         console.log(`Another Dimension local server listening at ${runtime.listenerTls ? "https" : "http"}://${runtime.bindHost}:${runtime.port}`);
         console.log(`Advertised origin: ${runtime.publicOrigin}`);
         console.log(`Private local UI URL written to ${runtime.localUiUrlFile} (mode 600); do not print or share its contents.`);
+        if (runtime.relayReceiptKeySource === "generated-development") console.warn("Warning: running with a generated-development relay receipt signing key. Set AD_RELAY_PRODUCTION=1 and AD_RELAY_RECEIPT_SIGNING_KEY before private-trusted operation.");
         if (!isLoopbackHost(runtime.bindHost)) console.warn("Warning: non-loopback bind exposes this server to the configured network.");
         if (!isLoopbackHost(runtime.bindHost) && !runtime.externalSecure) console.warn("Warning: remote browser access requires an HTTPS public URL or reverse proxy.");
         if (runtime.externalSecure && !runtime.listenerTls) console.log(`External HTTPS is expected at ${runtime.publicOrigin}; keep the reverse proxy running.`);

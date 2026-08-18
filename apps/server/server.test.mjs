@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import Database from "better-sqlite3";
 import { request } from "node:http";
 import { connect } from "node:net";
@@ -213,6 +214,36 @@ test("operational receipt signing keys are externally provisioned and identified
   );
   await rm(dataDir, { recursive: true, force: true });
   await rm(missingDataDir, { recursive: true, force: true });
+  await rm(keyDir, { recursive: true, force: true });
+});
+
+test("production mode refuses to start with a generated-development receipt key", async () => {
+  const dataDir = await tempDir("another-dimension-server-");
+  await assert.rejects(
+    () => createLocalServer({ port: 0, dataDir, distDir: join(dataDir, "missing-dist"), production: true }),
+    /Production relay requires a configured relay receipt signing key/,
+  );
+  // The generated key must never be left behind by the rejected production start.
+  assert.equal(existsSync(join(dataDir, "relay-receipt-signing-key.pem")), false);
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+test("production mode starts with a configured receipt key and reports external-configured", async () => {
+  const dataDir = await tempDir("another-dimension-server-");
+  const keyDir = await tempDir("another-dimension-relay-key-");
+  const keyFile = join(keyDir, "receipt-key.pem");
+  const pair = generateKeyPairSync("ed25519");
+  await writeFile(keyFile, pair.privateKey.export({ type: "pkcs8", format: "pem" }), { mode: 0o600 });
+  const runtime = await createLocalServer({
+    port: 0,
+    dataDir,
+    distDir: join(dataDir, "missing-dist"),
+    relayReceiptSigningKeyFile: keyFile,
+    production: true,
+  });
+  assert.equal(runtime.relayReceiptKeySource, "external-configured");
+  await runtime.server.close();
+  await rm(dataDir, { recursive: true, force: true });
   await rm(keyDir, { recursive: true, force: true });
 });
 

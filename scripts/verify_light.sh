@@ -26,6 +26,8 @@ run_step "dependency and runtime policy" node scripts/verify_dependency_policy.m
 run_step "resource limit acceptance" node scripts/acceptance_resource_limits.mjs
 run_step "browser UI tests" npm --prefix apps/web test --workspaces=false
 run_step "local server API tests" npm --prefix apps/server test --workspaces=false
+run_step "relay operations acceptance" node scripts/acceptance_relay_operations.mjs
+run_step "relay redacted log scan" node scripts/verify_relay_logs.mjs
 run_step "browser production build" npm --prefix apps/web run build --workspaces=false
 run_step "support matrix release policy" node scripts/verify_release_support_gate.mjs
 
