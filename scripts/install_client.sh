@@ -1,21 +1,23 @@
 #!/bin/sh
 set -eu
 
-usage() { echo "사용법: install_client.sh --archive DIR --destination DIR --public-key PEM" >&2; exit 2; }
-archive= destination= public_key=
+usage() { echo "사용법: install_client.sh --archive DIR --destination DIR --public-key PEM --trust-manifest JSON --trust-manifest-key PEM" >&2; exit 2; }
+archive= destination= public_key= trust_manifest= trust_manifest_key=
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --archive) archive=${2:?}; shift 2;;
     --destination) destination=${2:?}; shift 2;;
     --public-key) public_key=${2:?}; shift 2;;
+    --trust-manifest) trust_manifest=${2:?}; shift 2;;
+    --trust-manifest-key) trust_manifest_key=${2:?}; shift 2;;
     *) usage;;
   esac
 done
-[ -n "$archive" ] && [ -n "$destination" ] && [ -n "$public_key" ] || usage
+[ -n "$archive" ] && [ -n "$destination" ] && [ -n "$public_key" ] && [ -n "$trust_manifest" ] && [ -n "$trust_manifest_key" ] || usage
 node_path=$(command -v node 2>/dev/null || true)
 [ -x "$node_path" ] || { echo "설치 전 archive 서명 검증을 위해 Node.js 20+가 필요합니다. 검증 후 실행에는 Node.js가 필요하지 않습니다." >&2; exit 1; }
 node -e 'const major=Number(process.versions.node.split(".")[0]); if(major<20) process.exit(1)' || { echo "Node.js 20+가 필요합니다." >&2; exit 1; }
-node "$(dirname "$0")/verify_release_manifest.mjs" "$archive" --require-signature --public-key "$public_key"
+node "$(dirname "$0")/verify_client_release_gate.mjs" "$archive" --public-key "$public_key" --trust-manifest "$trust_manifest" --trust-manifest-key "$trust_manifest_key"
 [ -x "$archive/bin/another-dimension-daemon" ] || { echo "client daemon이 없습니다." >&2; exit 1; }
 [ -d "$archive/apps/web/dist" ] || { echo "client web UI가 없습니다." >&2; exit 1; }
 [ ! -e "$destination" ] || { echo "설치 대상이 이미 존재합니다." >&2; exit 1; }

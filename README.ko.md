@@ -238,7 +238,9 @@ Node.js 20+를 사용합니다.
 sh another-dimension-client-0.1.0/scripts/install_client.sh \
   --archive another-dimension-client-0.1.0 \
   --destination "$HOME/.local/share/another-dimension/client" \
-  --public-key /secure/release/release-public.pem
+  --public-key /secure/release/release-public.pem \
+  --trust-manifest /secure/trust/release-trust.json \
+  --trust-manifest-key /secure/trust/bootstrap-public.pem
 "$HOME/.local/share/another-dimension/client/scripts/client_launcher.sh" \
   init "내 표시 이름"
 ```
