@@ -208,6 +208,41 @@ node another-dimension-0.1.0/scripts/verify_private_release_gate.mjs \
 `private-trusted` 배포는 이 gate가 `private release gate passed`를 출력해야
 설치할 수 있습니다. gate가 통과한 archive만 설치합니다.
 
+## 제한된 지인 배포를 만드는 단일 흐름
+
+운영자는 저장소나 공개 채널에 private key를 넣지 않고, 다음 wrapper 하나로 실제
+archive를 만들고 압축 해제 후 gate까지 다시 확인합니다.
+
+```sh
+CARGO_BUILD_JOBS=2 cargo build -p another-dimension-daemon --locked
+AD_RELEASE_PROFILE=private \
+AD_RELEASE_SIGNING_KEY=/secure/release/release-private.pem \
+AD_RELEASE_PUBLIC_KEY=/secure/release/release-public.pem \
+AD_RELEASE_TRUST_MANIFEST=/secure/trust/release-trust.json \
+AD_RELEASE_TRUST_MANIFEST_KEY=/secure/trust/bootstrap-public.pem \
+AD_DAEMON_BINARY="$PWD/.build-cache/cargo-target/debug/another-dimension-daemon" \
+AD_NODE_RUNTIME="$(command -v node)" \
+scripts/private_release.sh build
+```
+
+출력된 archive SHA-256과 release/bootstrap fingerprint를 별도 채널로 지인에게
+전달합니다. 수신자는 archive 내부 공개키를 신뢰 root로 사용하지 않고, 외부에서
+받은 자료로 다시 검증합니다.
+
+```sh
+scripts/private_release.sh verify another-dimension-0.1.0.tar.gz \
+  --public-key /secure/release/release-public.pem \
+  --trust-manifest /secure/trust/release-trust.json \
+  --trust-manifest-key /secure/trust/bootstrap-public.pem
+```
+
+운영 relay 영수증 키는 처음부터 별도로 생성합니다. 이 명령은 private key를
+출력하지 않으며, 기존 키를 덮어쓰지 않습니다.
+
+```sh
+node scripts/relay_receipt_keygen.mjs --output-dir /secure/relay-key
+```
+
 ```sh
 sh another-dimension-0.1.0/scripts/install_local_server.sh \
   --archive another-dimension-0.1.0 \

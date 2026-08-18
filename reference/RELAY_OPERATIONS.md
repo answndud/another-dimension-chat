@@ -175,6 +175,17 @@ key 운영 섹션을 따른다. 요약:
 4. 이전 키가 노출됐으면 relay를 중지하고 새 키로 재기동하며, daemon이 새 외부
    fingerprint를 받기 전까지 메시징을 재개하지 않는다.
 
+키 생성은 저장소나 shell history에 private key를 남기지 않는 전용 명령을 사용한다.
+기존 파일은 덮어쓰지 않으므로 회전 시 새 offline 디렉터리를 지정한다.
+
+```sh
+node scripts/relay_receipt_keygen.mjs --output-dir /secure/relay-key-2026-08
+```
+
+출력된 public key와 fingerprint만 두 독립 채널로 전달하고, 수신 대조가 끝난 뒤
+relay를 새 private key로 재시작한다. 이전 private key는 즉시 삭제하지 말고 접근을
+차단한 offline 사고 조사 매체에 격리한다.
+
 ## 검증 명령
 
 ```sh
