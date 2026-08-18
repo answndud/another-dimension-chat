@@ -31,6 +31,7 @@ run_step "relay operations acceptance" node scripts/acceptance_relay_operations.
 run_step "delivery consistency acceptance" node scripts/acceptance_delivery_consistency.mjs
 run_step "two-daemon product journey" node scripts/acceptance_daemon_e2e.mjs
 run_step "representative acceptance flow" node scripts/acceptance_representative_flow.mjs
+run_step "private-trusted release readiness gate" node scripts/verify_release_readiness.mjs
 run_step "daemon tests" cargo test -p another-dimension-daemon --lib
 run_step "daemon library lints" cargo clippy -p another-dimension-daemon --lib -- -D warnings
 scripts/prepare_build_cache.sh

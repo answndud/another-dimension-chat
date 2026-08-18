@@ -27,6 +27,8 @@ const checks = [
   ["scripts/verify_security_requirements.mjs", "security requirement evidence passed"],
   ["reference/SUPPORT_MATRIX.json", "verifiedLocalIsNotPublicSupport"],
   ["reference/SUPPORT_MATRIX.json", "scoped local evidence"],
+  ["reference/RELEASE_READINESS.md", "## 판정 조건과 검증"],
+  ["reference/RELEASE_READINESS.md", "비판정 항목"],
 ];
 const boundary = await loadProductBoundary(".");
 checks.push(["reference/product_boundary.json", boundary.supportedProduct]);
