@@ -1,6 +1,6 @@
 # Another Dimension
 
-Another Dimension은 전화번호·이메일·중앙 계정 서버 없이 사용하는 1:1 보안
+Another Dimension은 전화번호·이메일·중앙 trusted server 없이 사용하는 1:1 보안
 메신저를 목표로 합니다. 사용자의 Mac에서 로컬 보안 daemon을 실행하고,
 Chromium 브라우저는 daemon이 제공하는 인증된 화면만 표시합니다. 메시지 전달은
 사용자가 직접 운영하거나 신뢰 경로를 확인한 relay를 사용합니다.
@@ -34,7 +34,10 @@ Chromium UI (표시·입력)
 - 브라우저는 장기 개인키, OpenMLS 상태, 데이터베이스 키를 소유하지 않습니다.
 - daemon은 `127.0.0.1`에만 UI를 열고 일회성 bootstrap, HttpOnly cookie,
   CSRF, Origin 검사를 사용합니다.
-- relay는 평문, 개인키, 표시 이름, 연락처 목록을 받지 않습니다.
+- relay는 평문, 개인키, 표시 이름, 연락처 목록을 받지 않습니다. 단, relay
+  운영자는 클라이언트 IP, 접속 시각, 트래픽 크기 같은 메타데이터를 볼 수
+  있습니다. 평문을 보지 못하는 것과 메타데이터를 보호하는 것은 별개의 문제이며,
+  이 제품은 메타데이터 보호(익명성)를 제공하지 않습니다.
 - 원격 relay는 HTTPS와 명시적으로 확인된 SHA-256 인증서 pin이 필요합니다.
 - 전화번호, 이메일, 사용자 검색, 중앙 연락처 탐색, 푸시 알림, 클라우드 백업은
   v0.1 제품 범위가 아닙니다.
@@ -43,11 +46,35 @@ Chromium UI (표시·입력)
 
 현재 지원 대상으로 고정한 환경은 다음과 같습니다.
 
-- Apple Silicon macOS
-- Chromium 계열 브라우저
+- Apple Silicon macOS(arm64)
+- Chromium 계열 브라우저(정확한 버전은 지원 evidence에 기록)
 - 로컬 daemon 실행이 가능한 터미널
 - Node.js 20 이상은 소스 개발과 relay 실행에만 필요
 - 일반 배포본은 daemon binary와 Node runtime을 함께 포함해야 함
+- 지원하지 않는 환경(다른 OS·Intel macOS·다른 브라우저)은 development-only이며
+  `doctor`가 `unsupported` 항목을 표시하고 `serve`가 경고를 출력합니다.
+  상세 지원 범위는 [SUPPORT.md](SUPPORT.md)를 참고하세요.
+
+## 릴리스 배포 모드
+
+배포 산출물과 문서는 다음 네 가지 모드를 같은 이름으로 구분합니다.
+
+| 모드 | 목적 | 허용 주장 |
+| --- | --- | --- |
+| `development` | 개발자 로컬 실행 | 기능 개발용이며 배포 금지 |
+| `private-trusted` | 본인·신뢰하는 지인 간 제한 배포 | 암호문 전달과 로컬 키 소유 모델을 설명할 수 있음 |
+| `public` | 불특정 다수 공개 배포 | 독립 검토와 운영 증거가 있어야 함 |
+| `high-risk-disabled` | 고위험 사용자 보호 | 현재 항상 비활성화 |
+
+현재 이 저장소는 `development` 모드로 개발 중이며 `private-trusted` 제한 배포를
+준비합니다. `public` 배포와 `high-risk-disabled` 전환은 독립 보안 검토, 운영
+signing key 신뢰, 실제 배포 증거가 확보되기 전에는 승인하지 않습니다.
+`highRiskAllowed` 릴리스 플래그를 켜는 우회 방법은 없으며, 어떤 문서도 이를
+안내하지 않습니다.
+
+`private-trusted`라고 해도 relay 운영자는 IP, 접속 시각, 트래픽 크기 같은
+메타데이터를 볼 수 있습니다. 상대방 기기가 악성코드에 감염됐거나 상대방이
+화면을 촬영하는 상황도 방어하지 않습니다.
 
 ## 개발 환경에서 빠르게 실행하기
 
@@ -168,14 +195,17 @@ AD="$HOME/.local/share/another-dimension/server/another-dimension"
 ```
 
 `start`는 daemon을 foreground에서 실행하고 Chromium을 엽니다. 종료하려면 해당
-터미널에서 `Ctrl-C`를 누릅니다. 원격 relay를 사용할 때는 README의 TLS pin과 relay
-공개키 옵션을 `start` 뒤에 그대로 붙일 수 있습니다. relay는 daemon과 별도
-프로세스이므로 상태와 종료 명령도 분리됩니다.
+터미널에서 `Ctrl-C`를 누릅니다. 이미 실행 중인 daemon은 `restart`로 중지 후 같은
+터미널에서 다시 시작할 수 있습니다. `restart`는 daemon만 재시작하며 relay는
+`relay-stop` 후 `relay-start`로 별도 관리합니다. 원격 relay를 사용할 때는 README의
+TLS pin과 relay 공개키 옵션을 `start` 뒤에 그대로 붙일 수 있습니다. relay는 daemon과
+별도 프로세스이므로 상태와 종료 명령도 분리됩니다.
 
 ```sh
 "$AD" status
 "$AD" doctor
 "$AD" stop
+"$AD" restart
 "$AD" relay-status
 "$AD" relay-stop
 "$AD" recovery-export /Volumes/OFFLINE/profile.adrecovery
@@ -219,6 +249,10 @@ cargo run -p another-dimension-daemon -- \
 - 암호문구를 같은 위치에 보관하지 마세요.
 - 가져오기는 기존 프로필을 덮어쓰지 않습니다.
 - 가져오기 전에 `recovery inspect`로 형식과 버전을 확인하세요.
+
+복구 파일은 내보낸 시점의 암호화된 로컬 상태 스냅샷입니다. 이후에 relay에 남은
+blob, 삭제된 로컬 데이터, 상대방 기기의 상태는 복원하지 않습니다. 복구는
+클라우드 백업이나 완전 다중 기기 복구를 의미하지 않습니다.
 
 `recovery rotate`는 기존 암호문구만 stdin으로 받고 새 암호문구는 랜덤 생성합니다.
 `--passphrase-output`을 지정하지 않으면 화면에서 한 번 복사할 수 있고, 지정하면
@@ -310,6 +344,18 @@ bootstrap public key와 공개키 검증 절차가 필요합니다. 개인 signi
 기본 또는 지정한 daemon 데이터 디렉터리에는 암호화 저장소, rollback marker,
 private UI bootstrap 자료가 들어갑니다. relay 데이터 디렉터리에는 SQLite queue,
 암호화 blob, capability, receipt signing key가 들어갑니다.
+
+| 데이터 | 위치 | 수명 |
+| --- | --- | --- |
+| daemon 프로필 | `--data-dir` | `wipe`로 삭제 시도. SSD 잔여·백업·브라우저 캐시 삭제는 보장하지 않음 |
+| relay 데이터 | relay 데이터 디렉터리 | envelope 기본 7일·blob 최대 7일·capability 30일 TTL |
+| 브라우저 임시 상태 | Chromium 쿠키·세션 저장소·캐시 | daemon 재시작 시 bootstrap URL·쿠키 무효화 |
+| recovery 파일 | 사용자가 지정한 오프라인 매체 | 내보낸 시점의 암호화 스냅샷. relay blob·삭제 데이터는 미포함 |
+
+프로필은 `--data-dir` 단위로 분리됩니다. 같은 기기의 여러 프로필은 별도
+데이터 디렉터리와 별도 daemon 인스턴스를 사용하며 서로의 데이터에 접근하지
+않습니다. relay 운영자가 보는 정보와 보지 못하는 정보는
+[SUPPORT.md](SUPPORT.md)의 표를 참고하세요.
 
 다음 자료는 공개하면 안 됩니다.
 

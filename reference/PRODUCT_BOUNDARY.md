@@ -29,6 +29,27 @@ The daemon exposes the authoritative domain and protocol boundary. The
 `highRiskAllowed` release flag remains false until all implementation,
 independent review, and release evidence gates are complete.
 
+## Release modes
+
+The four product modes are named `development`, `private-trusted`, `public`, and
+`high-risk-disabled` everywhere.
+
+- `development`: local developer runs, not distributable.
+- `private-trusted`: limited distribution to the operator and trusted
+  acquaintances; the ciphertext-relay and local-key-ownership model can be
+explained.
+- `public`: general public distribution; requires independent review and
+  operational evidence.
+- `high-risk-disabled`: high-risk user protection; always disabled today.
+
+This repository is a `development` checkout preparing a `private-trusted`
+limited distribution. `public` release and the `high-risk-disabled` mode stay
+blocked: `public` requires independent review, operational signing-key trust,
+and deployment evidence, and `high-risk-disabled` remains off until a
+separately reviewed anonymity transport exists. A relay operator can still
+observe metadata (client IP, timing, traffic size) even in `private-trusted`
+use; the relay not seeing plaintext is not metadata protection.
+
 ## Explicitly unsupported legacy surfaces
 
 The former Tauri, native CLI/engine, browser Olm, and onion transport trees were

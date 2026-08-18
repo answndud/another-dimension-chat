@@ -9,6 +9,15 @@ product. A requirement is not complete because a document describes it: the
 release gate must point to source, a focused test, and an observable artifact.
 Requirements marked `blocked` prevent any high-risk claim.
 
+The product mode names are fixed as `development`, `private-trusted`, `public`,
+and `high-risk-disabled`. This repository is a `development` checkout preparing
+a `private-trusted` limited distribution. `public` release and the
+`high-risk-disabled` mode are not approved until every `blocked` requirement in
+this register is closed with source, focused tests, and observable artifacts.
+The relay not receiving plaintext is not metadata protection; the
+`high-risk-disabled` mode covers anonymity, traffic-analysis protection, and
+censorship resistance, which remain non-claims.
+
 ## Security levels
 
 | Level | Meaning |

@@ -159,6 +159,13 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         return Err(CliError::NotInitialized);
     }
     set_private_dir(&data_dir)?;
+    if !(cfg!(target_os = "macos") && cfg!(target_arch = "aarch64")) {
+        eprintln!(
+            "unsupported platform: {}/{}; this build is development-only and not distributable",
+            std::env::consts::OS,
+            std::env::consts::ARCH
+        );
+    }
     let _instance_lock = InstanceLock::acquire(&data_dir)?;
     let port = option(args, "--port")?
         .map(|value| value.parse::<u16>())
@@ -404,6 +411,21 @@ impl Drop for InstanceLock {
     }
 }
 
+/// Returns a human-readable platform label that marks whether this build is
+/// the officially supported private-trusted distribution platform (Apple
+/// Silicon macOS). Other platforms remain development-only builds.
+fn supported_platform_label() -> String {
+    if cfg!(target_os = "macos") && cfg!(target_arch = "aarch64") {
+        "platform: macOS arm64 (supported)".to_owned()
+    } else {
+        format!(
+            "platform: {}/{} (unsupported: development-only, not distributable; private-trusted distribution requires Apple Silicon macOS)",
+            std::env::consts::OS,
+            std::env::consts::ARCH
+        )
+    }
+}
+
 fn doctor(args: &[String]) -> Result<String, CliError> {
     let data_dir = data_dir(args)?;
     let _relay_tls_pin = option(args, "--relay-tls-pin")?
@@ -485,6 +507,7 @@ fn doctor(args: &[String]) -> Result<String, CliError> {
                 "missing"
             }
         ),
+        supported_platform_label(),
         "high-risk mode: disabled".into(),
         "OS key store: unavailable; insecure fallback: refused".into(),
         "network/serve bridge: not started by doctor".into(),

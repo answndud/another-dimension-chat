@@ -91,7 +91,7 @@ restored deliberately in a separate task.
 
 Every public release update must keep:
 
-- `high-risk use disabled`
+- `high-risk-disabled` mode (always off)
 - `sensitive communication prohibited until approval`
 - `not audited`
 - `not production-ready`

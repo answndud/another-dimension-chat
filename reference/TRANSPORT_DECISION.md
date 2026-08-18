@@ -5,7 +5,11 @@ messaging adapter exists.
 
 ## Current Decision
 
-High-risk mode is permanently disabled in the v0.1 web product.
+The high-risk route maps to the product's `high-risk-disabled` mode and is
+permanently disabled in the v0.1 web product. This repository is prepared as a
+`private-trusted` limited distribution; `public` release and any
+`high-risk-disabled` transition require independent review and operational
+evidence before they can be approved.
 
 The web product does not implement Tor/onion routing, does not accept `.onion`
 endpoints, and does not expose an anonymity toggle or fallback. Direct HTTPS,

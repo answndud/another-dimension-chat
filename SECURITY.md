@@ -22,6 +22,31 @@ the unlocked local daemon. The browser does not receive daemon private keys,
 but a malicious UI remains a complete session-level compromise. Signed, independently verifiable app
 distribution remains a release blocker.
 
+## Release modes
+
+The product uses the same four release-mode names everywhere in code and
+releases: `development`, `private-trusted`, `public`, and
+`high-risk-disabled`.
+
+| Mode | Purpose | Allowed claim |
+| --- | --- | --- |
+| `development` | Local developer runs | Feature development only; not distributable |
+| `private-trusted` | Limited distribution to the operator and trusted acquaintances | Can explain the ciphertext-relay and local-key-ownership model |
+| `public` | General public distribution | Requires independent review and operational evidence |
+| `high-risk-disabled` | High-risk user protection | Always disabled today |
+
+This repository is developed in `development` mode and prepared for
+`private-trusted` limited distribution. `public` distribution and any
+`high-risk-disabled` transition stay blocked until independent review,
+operational signing-key trust, and real deployment evidence exist. There is no
+supported way to enable the high-risk flag, and no document instructs one.
+
+A relay operator or network observer can still see metadata such as client IP,
+connection timing, and traffic size even in `private-trusted` use. The relay
+does not receive plaintext, private keys, display names, or contact lists, but
+not seeing plaintext is not the same as protecting metadata. This project does
+not claim anonymity, traffic-analysis protection, or censorship resistance.
+
 ## Current product behavior
 
 - The authenticated browser UI is a presentation client. It does not generate,

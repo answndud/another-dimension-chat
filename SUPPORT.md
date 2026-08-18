@@ -12,8 +12,8 @@ browser Olm, IndexedDB 키 저장소는 제품과 릴리스에서 제거되었�
 
 | 구분 | 현재 선언 | 제한 |
 | --- | --- | --- |
-| 운영체제 | Apple Silicon macOS | 다른 OS는 지원하지 않음 |
-| UI | daemon이 loopback에서 제공하는 Chromium UI | 정확한 Chromium 버전의 전체 사용자 여정 증거는 아직 `unverified` |
+| 운영체제 | Apple Silicon macOS(arm64) | 다른 OS·Intel macOS는 development-only이며 배포 대상이 아님 |
+| UI | daemon이 loopback에서 제공하는 Chromium UI | 정확한 Chromium 버전의 전체 사용자 여정 증거가 없으면 `unverified` |
 | 보안 코어 | 로컬 Rust daemon의 신원·OpenMLS·암호화 저장소 | 브라우저는 장기 키나 메시지 상태를 저장하지 않음 |
 | 전달 | 사용자 소유 relay | 중앙 운영 relay, 익명 네트워크, traffic hiding을 제공하지 않음 |
 | 배포 | 서명 manifest로 검증되는 daemon·UI·bundled Node relay archive | 운영 signing key의 외부 신뢰 경로가 별도로 필요 |
@@ -47,6 +47,53 @@ node scripts/verify_support_matrix.mjs
 node scripts/verify_daemon_ui_artifact.mjs --daemon-ui-artifact
 node scripts/acceptance_os_matrix.mjs --current-host
 ```
+
+## 지원 환경 고정
+
+`private-trusted` 배포의 공식 지원 범위는 **Apple Silicon macOS(arm64) +
+Chromium 계열 브라우저**로 고정합니다. 정확한 Chromium 버전은 evidence에 기록해야
+`verified-local`로 올릴 수 있으며, 그 전까지 브라우저 항목은 `unverified` 상태를
+유지합니다.
+
+지원하지 않는 환경(다른 OS, Intel macOS, 다른 브라우저)에서 daemon을 실행하면
+`doctor`가 `unsupported` 항목을 표시하고 `serve`가 development-only 경고를
+출력합니다. 이들 환경은 개발용 빌드로만 동작하며 배포 대상이 아닙니다.
+
+## 데이터 위치와 수명
+
+| 데이터 | 위치 | 수명·처리 |
+| --- | --- | --- |
+| daemon 프로필 데이터 | `--data-dir`(설치형은 `server-config.json`의 `daemonDataDir`; 기본 `~/.local/share/another-dimension/data/daemon`) | AES-256-GCM 암호화 store + revision marker. `wipe`로 삭제를 시도하지만 SSD 잔여·백업·브라우저 캐시까지 삭제한다고 보장하지 않음 |
+| relay 데이터 | `server-config.json`의 `relayDataDir` | SQLite queue, 암호화 blob, capability, receipt signing key. envelope은 기본 7일 TTL, blob은 최대 7일, capability는 30일 |
+| 브라우저 임시 상태 | Chromium 쿠키·세션 저장소·캐시 | daemon 재시작 시 bootstrap URL·쿠키가 무효화됨. UI는 no-store로 제공되며 장기 키·메시지 상태를 저장하지 않음 |
+| recovery 파일 | 사용자가 지정한 오프라인 매체 | 내보낸 시점의 암호화된 로컬 스냅샷. relay에 남은 blob·삭제된 데이터·상대 기기 상태는 복원하지 않음 |
+
+제한값은 `reference/RESOURCE_LIMITS.json`과 `reference/TRANSPORT_DECISION.md`에
+선언되어 있으며 relay 구현과 `scripts/verify_transport_boundary.mjs`로 대조합니다.
+
+## relay 운영자가 보는 정보
+
+| 볼 수 있음 | 볼 수 없음 |
+| --- | --- |
+| 클라이언트 IP, 접속 시각 | 평문 메시지·파일 내용 |
+| 요청 시각·빈도·암호문 크기 | 개인키·암호문구·데이터베이스 키 |
+| inbox에 제출된 불투명 envelope 수·도달 여부 | 표시 이름·연락처 목록·account/device ID |
+| capability 유출 시 제출 결과(수신 확인은 별도 local capability 필요) | 파일 이름·MIME·복호화된 첨부파일 |
+
+평문을 보지 못하는 것과 메타데이터를 보호하는 것은 별개입니다. 이 제품은
+익명성·트래픽 분석 방어·검열 저항을 제공하지 않으며, `high-risk-disabled`
+모드가 항상 비활성화되어 있습니다.
+
+## 프로필 분리와 다중 프로필
+
+- 프로필은 `--data-dir` 단위로 분리됩니다. 한 프로필의 store·revision·Keychain
+  항목은 다른 프로필의 데이터 디렉터리에 접근하지 않습니다.
+- 같은 기기에 여러 프로필을 만들면 각 프로필이 별도 데이터 디렉터리와 별도
+  daemon 인스턴스(daemon.lock)를 사용합니다. 한 프로필의 복구 파일을 다른
+  프로필 디렉터리에 import하면 형식·버전·identity 검증 후에도 기존 프로필을
+  덮어쓰지 않습니다.
+- daemon은 `127.0.0.1`에만 바인딩하며 다른 프로필이나 다른 사용자 계정의
+  데이터를 자동으로 읽지 않습니다.
 
 ## 지원 요청에 포함할 정보
 
