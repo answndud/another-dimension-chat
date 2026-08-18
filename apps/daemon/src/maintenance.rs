@@ -71,16 +71,15 @@ pub(crate) fn deliver_device_change_commits(
     Ok(digests)
 }
 
-/// Fetches the opaque inbox without borrowing any mutable daemon state. The
-/// caller must process and acknowledge the returned items only after the
-/// local transaction has committed.
+/// Fetches the opaque inbox without holding any daemon state lock. The caller
+/// must snapshot the relay binding (inbox URL + TLS pin) out of the guarded
+/// state first, then process and acknowledge the returned items only after
+/// the local transaction has committed.
 pub(crate) fn fetch_inbox(
-    authority: &InviteAuthority,
+    inbox_url: &str,
+    relay_tls_pin: Option<crate::trust::TlsCertificatePin>,
 ) -> Result<Option<(RelayClient, String, Vec<crate::relay_http::RelayItem>)>, RelayError> {
-    let Some(inbox_url) = authority.inbox_url.as_deref() else {
-        return Ok(None);
-    };
-    let endpoint = RelayEndpoint::from_inbox_url_with_pin(inbox_url, authority.relay_tls_pin)
+    let endpoint = RelayEndpoint::from_inbox_url_with_pin(inbox_url, relay_tls_pin)
         .map_err(|_| RelayError::InvalidEndpoint)?;
     let capability = endpoint.capability.clone();
     let client = RelayClient::new(endpoint);

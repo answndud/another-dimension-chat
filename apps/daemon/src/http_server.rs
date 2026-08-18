@@ -1936,8 +1936,14 @@ fn handle_detached_delivery_sync(state: &AppState, raw: &[u8], now: u64) -> Vec<
         return response(403, "contact_blocked", None, Some("application/json"));
     }
     let background = super::json_bool(request.body, "background").unwrap_or(false);
-    let Ok(endpoint) = RelayEndpoint::from_inbox_url_with_pin(inbox_url, authority.relay_tls_pin)
-    else {
+    // Copy the values needed for relay I/O out of the guarded state and
+    // release the authority lock before touching the network. The 410 branch
+    // below re-locks the same mutex, so holding the guard across
+    // sync_blocking would self-deadlock on a rotated (expired) inbox.
+    let pin = authority.relay_tls_pin;
+    drop(authority);
+    drop(bridge);
+    let Ok(endpoint) = RelayEndpoint::from_inbox_url_with_pin(inbox_url, pin) else {
         return response(
             422,
             "unsupported_relay_endpoint",
@@ -1973,8 +1979,6 @@ fn handle_detached_delivery_sync(state: &AppState, raw: &[u8], now: u64) -> Vec<
         }
         Err(_) => return response(503, "relay_unavailable", None, Some("application/json")),
     };
-    drop(authority);
-    drop(bridge);
 
     let result = {
         let Some(mut authority) = state
@@ -2057,7 +2061,16 @@ fn run_maintenance_tick(state: &AppState, now: u64) -> usize {
         else {
             return 0;
         };
-        fetch_inbox(&authority)
+        // Snapshot the relay binding and release the guard before the network
+        // fetch so a slow or unreachable relay cannot stall every route that
+        // needs the invite authority lock.
+        let inbox_url = authority.inbox_url.clone();
+        let pin = authority.relay_tls_pin;
+        drop(authority);
+        match inbox_url {
+            Some(url) => fetch_inbox(&url, pin),
+            None => Ok(None),
+        }
     };
     let Some((client, capability, items)) = (match fetched {
         Ok(value) => value,
