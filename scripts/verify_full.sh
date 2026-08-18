@@ -25,6 +25,7 @@ run_step "user-owned server transport smoke" node scripts/smoke_user_owned_serve
 run_step "release manifest integrity" node scripts/release_manifest.test.mjs
 run_step "private release acceptance" node scripts/acceptance_private_release.mjs
 run_step "relay operations acceptance" node scripts/acceptance_relay_operations.mjs
+run_step "delivery consistency acceptance" node scripts/acceptance_delivery_consistency.mjs
 run_step "two-daemon product journey" node scripts/acceptance_daemon_e2e.mjs
 run_step "daemon tests" cargo test -p another-dimension-daemon --lib
 run_step "daemon library lints" cargo clippy -p another-dimension-daemon --lib -- -D warnings

@@ -206,7 +206,13 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
     }
     registry
         .authorize(&summary.device_id, now_seconds())
-        .map_err(registry_error)?;
+        .map_err(|error| match error {
+            DeviceRegistryError::DeviceNotActive => CliError::Usage(
+                "current device is revoked; identity-bearing operations require a fresh profile or a re-registered device"
+                    .into(),
+            ),
+            _ => registry_error(error),
+        })?;
     let root_seed = summary.root_seed;
     let mut session_catalog = MlsSessionCatalog::new_with_device_private_key(summary.device_seed);
     session_catalog
@@ -1285,6 +1291,26 @@ mod tests {
         )
         .unwrap();
         assert!(devices.contains("state: Revoked"));
+        let revoked_serve = run(
+            &arg(&[
+                "serve",
+                "--data-dir",
+                source.to_str().unwrap(),
+                "--port",
+                "17999",
+                "--ui-dir",
+                source.to_str().unwrap(),
+                "--relay-origin",
+                "http://127.0.0.1:17998",
+                "--inbox-url",
+                "http://127.0.0.1:17998/api/v1/inbox/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            ]),
+            Some(&passphrase),
+        );
+        assert!(matches!(
+            revoked_serve,
+            Err(CliError::Usage(message)) if message.contains("device is revoked")
+        ));
         assert!(run(
             &arg(&["identity", "show", "--data-dir", source.to_str().unwrap()]),
             Some("wrong horse battery staple")
