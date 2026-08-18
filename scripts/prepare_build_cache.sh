@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly CACHE_DIR="$ROOT_DIR/.build-cache/cargo-target"
@@ -11,6 +12,11 @@ case "$max_mb" in
 esac
 
 if [ -d "$CACHE_DIR" ]; then
+  # Cargo artifacts are regenerable, but can contain local source paths and
+  # debug metadata. Keep the cache private to the current OS account.
+  chmod go-rwx "$CACHE_DIR"
+  find "$CACHE_DIR" -type d -exec chmod go-rwx {} +
+  find "$CACHE_DIR" -type f -exec chmod go-rwx {} +
   size_mb="$(du -sm -- "$CACHE_DIR" | awk '{print $1}')"
 else
   size_mb=0
@@ -22,4 +28,6 @@ if [ "$size_mb" -ge "$max_mb" ]; then
 fi
 
 mkdir -p "$CACHE_DIR"
+chmod 700 "$ROOT_DIR/.build-cache"
+chmod 700 "$CACHE_DIR"
 echo "Cargo cache ready: $CACHE_DIR"

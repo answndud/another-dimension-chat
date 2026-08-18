@@ -349,10 +349,11 @@ printf '%s' "$(cat /secure/offline/alice.passphrase)" | \
 
 Rust 산출물은 `.cargo/config.toml`에 따라 `.build-cache/cargo-target`에만
 생성됩니다. `target/`은 이전 실행에서 남은 legacy cache이며 제품 데이터나
-로그가 아닙니다. debug/test incremental compilation은 비활성화되어 소스 변경별
+로그가 아닙니다. 다만 cache에 소스 경로·debug metadata가 포함될 수 있어 준비
+단계에서 디렉터리 700, 파일 owner-only 권한으로 잠급니다. debug/test incremental compilation은 비활성화되어 소스 변경별
 incremental tree가 계속 쌓이지 않습니다.
 이 cache는 실행·배포에 필수인 영구 데이터가 아니라 재컴파일 시간을 줄이는
-임시 산출물이며, 검증 시작 시 기본 2GB를 넘으면 자동으로 비워집니다. 완전히
+임시 산출물이며, 검증 시작·종료 시 기본 2GB를 넘으면 자동으로 비워집니다. 완전히
 비우고 싶으면 아래 정리 명령을 사용하면 됩니다.
 
 현재 build cache 용량 확인과 정리:
