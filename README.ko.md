@@ -190,6 +190,9 @@ unset AD_PASSPHRASE
 ```sh
 AD="$HOME/.local/share/another-dimension/server/another-dimension"
 "$AD" init "내 표시 이름"
+# init이 256비트 무작위 암호문구를 생성하고 한 번만 출력합니다.
+# 또는 소유자 전용 파일로 바로 저장할 수 있습니다.
+# "$AD" init "내 표시 이름" --passphrase-output "$HOME/profile.passphrase"
 "$AD" relay-start
 "$AD" start
 ```
@@ -309,7 +312,7 @@ node scripts/verify_product_boundary.mjs
 릴리스 전 전체 제품 검증:
 
 ```sh
-CARGO_BUILD_JOBS=2 scripts/verify_full.sh
+CARGO_BUILD_JOBS=2 scripts/verify_full.sh --release
 ```
 
 검증 스크립트는 `CARGO_BUILD_JOBS=2`, `CARGO_INCREMENTAL=0`을 사용하고 동일

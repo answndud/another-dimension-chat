@@ -4,7 +4,7 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 VERSION=${AD_RELEASE_VERSION:-$(node -p 'JSON.parse(require("fs").readFileSync("apps/web/package.json", "utf8")).version')}
-RELEASE_ROOT="$PROJECT_DIR/public-release"
+RELEASE_ROOT=${AD_RELEASE_ROOT:-"$PROJECT_DIR/public-release"}
 STAGE=$(mktemp -d "${TMPDIR:-/tmp}/another-dimension-release.XXXXXX")
 trap 'rm -rf "$STAGE"' EXIT INT TERM
 

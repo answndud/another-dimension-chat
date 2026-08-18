@@ -11,11 +11,11 @@
 
 | # | 조건 | 근거 검증 |
 | --- | --- | --- |
-| 1 | `private` release profile 존재 | `build_release.sh`의 `AD_RELEASE_PROFILE=private` 분기, `scripts/acceptance_private_release.mjs` |
+| 1 | `private` release profile 존재 | 실제 `build_release.sh` 실행을 포함한 `scripts/acceptance_release_builder.mjs` |
 | 2 | development archive와 private archive 분리 | `build_release.sh` profile 분기(미서명 development / 서명 private) |
 | 3 | 릴리스 서명·manifest·SHA-256 검증 동작 | `verify_private_release_gate.mjs`(fingerprint·hash·trust manifest), `verify_release_manifest.mjs` |
 | 4 | 릴리스 공개키 fingerprint를 별도 채널에서 확인 가능 | `RELEASE_TRUST_OPERATIONS.md`의 fingerprint 대조 절차 — 외부 채널 행위는 로컬에서 해결 불가, 절차만 문서화 |
-| 5 | bundled Node로 설치·실행 | `install_local_server.sh`의 no-Node contract, `acceptance_private_release.mjs` 설치 단계 |
+| 5 | bundled Node로 설치·실행 | `install_local_server.sh`의 no-Node contract, `acceptance_release_builder.mjs` 실제 산출물 설치 단계 |
 | 6 | 운영 relay key 없이 production relay 시작 불가 | `acceptance_relay_operations.mjs` production 게이트, `server.mjs` `AD_RELAY_PRODUCTION` |
 | 7 | HTTPS와 relay trust 검증 | `verify_transport_boundary.mjs`, `acceptance_daemon_repair.mjs` TLS/pin 경로 |
 | 8 | 두 로컬 profile invite·safety number·승인 흐름 | `acceptance_daemon_repair.mjs` pairing/safety/approve |
@@ -23,7 +23,7 @@
 | 10 | device revoke 동작 | `acceptance_daemon_repair.mjs`(revoke 후 차단), `cli.rs` device revoke 테스트 |
 | 11 | recovery export/import 동작 | `acceptance_daemon_repair.mjs`(export→import→send), `cli.rs` recovery 테스트 |
 | 12 | relay backup/restore 동작 | `acceptance_relay_operations.mjs`(백업→복구→재시작→전달) |
-| 13 | update/rollback 동작 | `acceptance_private_release.mjs`(update·실패 update·rollback·uninstall) |
+| 13 | update/rollback 동작 | `acceptance_private_release.mjs`(update·실패 update·rollback·uninstall)와 실제 archive gate |
 | 14 | 로그·DOM·네트워크에 비밀값·평문 부재 | `verify_web_exposure.mjs`(console/DOM/clipboard/storage), `verify_relay_logs.mjs`(relay redaction) |
 | 15 | 설치자·relay 운영자·사고 대응 문서가 명령과 일치 | `verify_docs_claims.mjs`(README 설치 경로·INCIDENT_RESPONSE 섹션·RELAY_OPERATIONS 마커) |
 | 16 | 지원 환경 macOS arm64 + Chromium 제한 | `acceptance_os_matrix.mjs --current-host`, `verify_support_matrix.mjs`, `verify_product_boundary.mjs` |
@@ -32,7 +32,7 @@
 ## 판정 절차
 
 ```sh
-scripts/verify_full.sh                          # 전체 pre-release 검증(대표 flow 포함)
+scripts/verify_full.sh --release                # 전체 pre-release 검증(대표 flow 포함)
 node scripts/acceptance_representative_flow.mjs # 대표 flow + evidence 재생성 + matrix 승격
 node scripts/verify_release_readiness.mjs       # 판정 게이트: 위 17개 조건의 근거 고정
 ```

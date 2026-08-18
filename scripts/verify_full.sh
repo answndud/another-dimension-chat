@@ -7,6 +7,20 @@ export CARGO_INCREMENTAL=0
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-"$ROOT_DIR/.build-cache/cargo-target"}
 export AD_DAEMON_BINARY=${AD_DAEMON_BINARY:-"$CARGO_TARGET_DIR/debug/another-dimension-daemon"}
 
+if [[ "${1:-}" != "--release" ]]; then
+  cat >&2 <<'EOF'
+verify_full.sh is a release-only gate and is intentionally expensive.
+Use scripts/verify_light.sh for the daily loop, or run:
+  scripts/verify_full.sh --release
+EOF
+  exit 2
+fi
+shift
+if (($# != 0)); then
+  echo "usage: scripts/verify_full.sh --release" >&2
+  exit 2
+fi
+
 scripts/prepare_build_cache.sh
 
 run_step() {
@@ -20,7 +34,7 @@ cd "$ROOT_DIR"
 run_step "light product verification" scripts/verify_light.sh
 run_step "invite and pairing vectors" node scripts/verify_invite_code.mjs
 run_step "web exposure scan" node scripts/verify_web_exposure.mjs
-run_step "security requirement evidence" node scripts/verify_security_requirements.mjs
+run_step "security requirement evidence" node scripts/verify_security_requirements.mjs --private-trusted
 run_step "Rust formatting" cargo fmt --all -- --check
 run_step "daemon binary" cargo build -p another-dimension-daemon --locked
 run_step "runtime budget acceptance" node scripts/acceptance_runtime_budget.mjs

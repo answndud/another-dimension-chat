@@ -33,18 +33,45 @@ const evidence = new Map([
   ["RELEASE-03", ["scripts/verify_all.sh", "production build cannot be skipped"]],
   ["RECOVERY-01", ["apps/daemon/src/cli_recovery.rs", "ADRECOVERY2"]],
 ]);
+
+const requirementPattern = /^\| `((?:ARCH|AUTH|CRYPTO|DATA|RELAY|WEB|BRIDGE|TRANSPORT|RELEASE|OPS|AUDIT|RECOVERY)-\d+)` \|.*\| `(implemented|partial|blocked)` \|/gm;
 const failures = [];
 const boundary = await loadProductBoundary(".");
+const highRiskRequested = process.argv.includes("--high-risk");
+const requirementsText = await readFile("reference/SECURITY_REQUIREMENTS.md", "utf8");
+const requirements = new Map();
+for (const match of requirementsText.matchAll(requirementPattern)) requirements.set(match[1], match[2]);
+
 if (boundary.highRiskAllowed !== false) failures.push("product boundary must keep high-risk mode disabled");
 if (!boundary.forbiddenReleasePaths.includes("apps/desktop-tauri")) failures.push("legacy product boundary is incomplete");
+if (requirements.size === 0) failures.push("security requirement register has no parseable technical requirements");
+
 for (const [id, [file, marker]] of evidence) {
   const contents = await readFile(file, "utf8");
   if (!contents.includes(marker)) failures.push(`${id}: evidence marker missing from ${file}: ${marker}`);
+  if (!requirements.has(id)) failures.push(`${id}: requirement register entry missing or malformed`);
 }
-const requirements = await readFile("reference/SECURITY_REQUIREMENTS.md", "utf8");
-for (const id of evidence.keys()) if (!requirements.includes(`| \`${id}\` |`)) failures.push(`${id}: requirement register entry missing`);
+
+for (const [id, status] of requirements) {
+  if (status === "implemented" && !evidence.has(id)) {
+    failures.push(`${id}: implemented requirement has no mapped evidence`);
+  }
+  if (highRiskRequested && status !== "implemented") {
+    failures.push(`${id}: high-risk scope requires implemented, found ${status}`);
+  }
+}
+
 if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log(`security requirement evidence passed: ${evidence.size} mapped requirements`);
+
+const counts = { implemented: 0, partial: 0, blocked: 0 };
+for (const status of requirements.values()) counts[status] += 1;
+const scope = highRiskRequested ? "high-risk" : "private-trusted";
+console.log(`security requirement register: scope=${scope}; implemented=${counts.implemented}; partial=${counts.partial}; blocked=${counts.blocked}; mappedEvidence=${evidence.size}`);
+if (highRiskRequested) {
+  console.log("security requirement evidence passed: all requirements are implemented");
+} else {
+  console.log("security requirement evidence passed for private-trusted scope; partial/blocked requirements remain explicit non-claims");
+}

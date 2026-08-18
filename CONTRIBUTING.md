@@ -81,7 +81,8 @@ scripts/verify_light.sh
 ```
 
 `scripts/verify_light.sh` is the canonical current-product entrypoint.
-`scripts/verify_full.sh` adds daemon tests, formatting, and lints. Historical
+`scripts/verify_full.sh --release` adds daemon tests, formatting, and lints. It
+is intentionally release-only; do not run it in the daily loop. Historical
 Tauri, native CLI/engine, browser Olm, and onion prototypes were removed from
 the workspace; git history is the archive.
 

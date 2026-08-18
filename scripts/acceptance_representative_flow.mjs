@@ -74,6 +74,12 @@ const phases = [
     observed: "signed private archive 설치, tamper·wrong-key·min-version·revoked 거부, private update, 실패 update 보존, rollback, uninstall 범위",
   },
   {
+    name: "private release archive builder",
+    script: "scripts/acceptance_release_builder.mjs",
+    planSteps: "P6.2 actual build artifact",
+    observed: "실제 build_release.sh private archive 생성, archive hygiene·manifest·private gate, bundled Node 설치와 doctor",
+  },
+  {
     name: "delivery state machine",
     script: "scripts/acceptance_delivery_consistency.mjs",
     planSteps: "P6.2 steps 9-10 보강",
@@ -100,8 +106,8 @@ for (const result of results) {
 }
 
 const archiveMatch = results
-  .find((result) => result.name === "private release install/update/rollback")
-  ?.output.match(/archive sha256: ([0-9a-f]{64})/);
+  .find((result) => result.name === "private release archive builder")
+  ?.output.match(/release archive sha256: ([0-9a-f]{64})/);
 if (!archiveMatch) fail("private release did not report the verified archive sha256");
 const archiveSha256 = archiveMatch[1];
 

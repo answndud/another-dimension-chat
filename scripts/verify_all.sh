@@ -33,6 +33,7 @@ node --check scripts/verify_web_artifact_fixture.mjs
 node --check scripts/acceptance_p3.mjs
 node --check scripts/acceptance_release_local_only.mjs
 node --check scripts/verify_security_requirements.mjs
+node --check scripts/acceptance_release_builder.mjs
 node --check scripts/verify_dependency_policy.mjs
 node --check scripts/acceptance_resource_limits.mjs
 node --check scripts/prepare_security_review.mjs

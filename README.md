@@ -229,6 +229,9 @@ sh another-dimension-0.1.0/scripts/install_local_server.sh \
 ```sh
 AD="$HOME/.local/share/another-dimension/server/another-dimension"
 "$AD" init "내 표시 이름"
+# init generates a random 256-bit passphrase and prints it once.
+# Or save it directly to an owner-only file:
+# "$AD" init "내 표시 이름" --passphrase-output "$HOME/profile.passphrase"
 "$AD" relay-start
 "$AD" start
 ```
@@ -348,7 +351,7 @@ node scripts/verify_product_boundary.mjs
 릴리스 전 전체 제품 검증:
 
 ```sh
-CARGO_BUILD_JOBS=2 scripts/verify_full.sh
+CARGO_BUILD_JOBS=2 scripts/verify_full.sh --release
 ```
 
 검증 스크립트는 `CARGO_BUILD_JOBS=2`, `CARGO_INCREMENTAL=0`을 사용하고 동일

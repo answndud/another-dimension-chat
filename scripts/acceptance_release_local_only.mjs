@@ -289,7 +289,7 @@ function startReady(command, args, pattern) {
   });
 }
 const releaseRelay = await startReady(join(install, "runtime-node"), [join(install, "apps/server/server.mjs"), "--config", releaseConfig], /local server listening/);
-const releaseInit = trackChild(spawn(join(install, "bin/another-dimension-daemon"), ["init", "--display-name", "Release", "--data-dir", join(data, "daemon")], { cwd: install, stdio: ["ignore", "pipe", "pipe"] }));
+const releaseInit = trackChild(spawn(join(install, "another-dimension"), ["init", "Release"], { cwd: install, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, PATH: "/usr/bin:/bin" } }));
 let releaseInitOutput = "";
 releaseInit.stdout.on("data", (chunk) => { releaseInitOutput += chunk.toString(); });
 await new Promise((resolveInit, rejectInit) => {

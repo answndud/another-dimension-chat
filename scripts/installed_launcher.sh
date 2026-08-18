@@ -40,10 +40,20 @@ case "${1:-help}" in
     shift
     display_name=${1:-}
     [ -n "$display_name" ] || { echo "사용법: $0 init '표시 이름'" >&2; exit 2; }
+    shift
+    passphrase_output=
+    if [ "${1:-}" = "--passphrase-output" ]; then
+      [ -n "${2:-}" ] || { echo "사용법: $0 init '표시 이름' [--passphrase-output FILE]" >&2; exit 2; }
+      passphrase_output=$2
+      shift 2
+    fi
+    [ "$#" -eq 0 ] || { echo "사용법: $0 init '표시 이름' [--passphrase-output FILE]" >&2; exit 2; }
     verify >/dev/null
-    prompt_secret "새 프로필 암호문구"
-    printf '%s' "$SECRET" | "$ROOT/bin/another-dimension-daemon" init --display-name "$display_name" --data-dir "$(daemon_data)"
-    unset SECRET ;;
+    if [ -n "$passphrase_output" ]; then
+      "$ROOT/bin/another-dimension-daemon" init --display-name "$display_name" --data-dir "$(daemon_data)" --passphrase-output "$passphrase_output"
+    else
+      "$ROOT/bin/another-dimension-daemon" init --display-name "$display_name" --data-dir "$(daemon_data)"
+    fi ;;
   start)
     shift
     verify >/dev/null
@@ -117,6 +127,6 @@ case "${1:-help}" in
     rm -rf "$ROOT"
     echo "설치 코드와 실행 파일만 제거했습니다. daemon/relay 데이터는 보존됩니다." ;;
   help|-h|--help)
-    echo "사용법: $0 {init|start|status|stop|restart|doctor|recovery-export|recovery-import|relay-start|relay-stop|relay-status|relay-backup|relay-restore|update|rollback|uninstall}" ;;
+    echo "사용법: $0 {init DISPLAY_NAME [--passphrase-output FILE]|start|status|stop|restart|doctor|recovery-export|recovery-import|relay-start|relay-stop|relay-status|relay-backup|relay-restore|update|rollback|uninstall}" ;;
   *) echo "알 수 없는 명령입니다. $0 help" >&2; exit 2 ;;
 esac
