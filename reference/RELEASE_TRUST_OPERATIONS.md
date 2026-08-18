@@ -50,8 +50,50 @@ fixture가 통과해도 운영 신뢰 상태는 `blocked`다.
 
 ## release 서명과 검증
 
-운영 release는 release private key로만 서명하고, public gate에는 bootstrap public key와
+운영 release는 release private key로만 서명하고, gate에는 bootstrap public key와
 trust manifest를 함께 전달한다.
+
+### private-trusted profile
+
+`private-trusted` 배포는 `AD_RELEASE_PROFILE=private`로 서명·해시 검증을 강제하고,
+독립 보안 검토 sign-off(public 전용 자료)는 요구하지 않는다. 외부 감사가 없다고
+해서 서명 없이 배포하는 것은 아니다. `public` 검증 자료를 private에서 우회
+재사용하지 않는다.
+
+```sh
+AD_RELEASE_PROFILE=private \
+AD_RELEASE_SIGNING_KEY=/secure/release/release-private.pem \
+AD_RELEASE_PUBLIC_KEY=/secure/release/release-public.pem \
+AD_RELEASE_TRUST_MANIFEST=/secure/trust/release-trust.json \
+AD_RELEASE_TRUST_MANIFEST_KEY=/secure/trust/bootstrap-public.pem \
+AD_NODE_RUNTIME=/secure/runtime/node \
+./scripts/build_release.sh
+```
+
+빌드는 `verify_private_release_gate.mjs`로 서명·파일 hash·UI artifact·제품 경계와
+trust manifest 정책을 확인하고, `verify_archive_hygiene.mjs`로 archive 안에 private
+key·과도한 권한·데이터/로그 파일이 없는지 확인한다. 설치·업데이트는 review bundle
+없이 같은 gate를 통과해야 한다.
+
+```sh
+node scripts/verify_private_release_gate.mjs ./another-dimension-0.1.0 \
+  --public-key /secure/release/release-public.pem \
+  --trust-manifest /secure/trust/release-trust.json \
+  --trust-manifest-key /secure/trust/bootstrap-public.pem \
+  --min-version 0.1.0
+
+sh scripts/install_local_server.sh --archive ./another-dimension-0.1.0 \
+  --public-key /secure/release/release-public.pem \
+  --trust-manifest /secure/trust/release-trust.json \
+  --trust-manifest-key /secure/trust/bootstrap-public.pem \
+  --destination "$HOME/.local/share/another-dimension/server"
+```
+
+설치 완료 메시지의 release signing key ID와 trust manifest minimum version을 두
+독립 채널에서 확인하기 전에는 archive를 실행하지 않는다. 이 절차를 거쳐도
+`private-trusted`는 지인 간 제한 배포일 뿐이며 공개·고위험 승인이 아니다.
+
+### public profile
 
 ```sh
 AD_RELEASE_PROFILE=public \
@@ -86,13 +128,31 @@ node scripts/verify_public_release_gate.mjs ./another-dimension-0.1.0 \
 
 1. 새 release key pair를 offline에서 생성하고 fingerprint를 두 채널로 대조한다.
 2. trust manifest에 새 key와 `validFromVersion`을 추가하고 bootstrap key로 서명한다.
-3. 새 key로 signed archive·SBOM·provenance를 만들고 public gate와 update fixture를
-   검증한다.
+3. 새 key로 signed archive·SBOM·provenance를 만들고 private/public gate와 update
+   fixture를 검증한다.
 4. 새 fingerprint와 전환 version을 두 독립 채널로 공지하고, 수신자는 manifest를 먼저
    갱신한 뒤 archive를 검증한다.
 5. overlap 종료 후 기존 key ID를 `revokedKeyIds`에 넣고 minimum version을 올린
    manifest에 다시 서명한다.
 6. 폐기된 key로 서명된 archive를 rollback 대상으로 사용하지 않는다.
+
+### overlap 기간과 종료 시점
+
+- **overlap 시작**: 새 key의 `validFromVersion`이 올라간 trust manifest를 모든
+  수신자가 bootstrap key로 검증한 뒤 첫 새-key archive가 배포된 시점.
+- **overlap 기간**: 이전 key와 새 key를 동시에 허용하는 기간은 최소 30일 또는
+  새 key로 서명된 연속 2개 release가 모두 수신자에게 확인된 시점 중 늦은 쪽까지
+  유지한다. 그동안 이전 key의 `validUntilVersion`을 지정해 새 release에는 새 key만
+  허용한다.
+- **종료 조건**: 모든 수신자가 새 fingerprint를 두 독립 채널에서 대조했고, 이전
+  key로 서명된 archive가 배포·설치되지 않았으며, 다음 조건이 모두 충족됐을 때
+  이전 key ID를 `revokedKeyIds`에 넣고 trust manifest의 minimum release version을
+  새 key 최초 release version으로 올려 서명한다.
+- 종료 전 이전 key archive를 받은 수신자는 두 채널 대조와 gate 검증을 거쳐 새 key
+  archive로 교체한다. 폐기 후 이전 key로 서명된 archive는 거부되며 rollback
+  대상으로도 사용하지 않는다.
+- bootstrap key 자체를 교체해야 하면 같은 절차를 bootstrap key에 적용하고, 새
+  bootstrap fingerprint를 두 독립 채널로 재배포한다.
 
 ## relay receipt signing key 운영
 

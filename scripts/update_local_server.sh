@@ -4,9 +4,11 @@ set -eu
 usage() {
   cat <<'EOF'
 사용법:
-  update_local_server.sh --install-root DIR --archive DIR --public-key PEM --trust-manifest JSON --trust-manifest-key PEM --review-bundle DIR --review-signoff JSON --reviewer-public-key PEM [--min-version VERSION] [--stop]
+  update_local_server.sh --install-root DIR --archive DIR --public-key PEM --trust-manifest JSON --trust-manifest-key PEM [--review-bundle DIR --review-signoff JSON --reviewer-public-key PEM] [--min-version VERSION] [--stop]
   update_local_server.sh --install-root DIR --rollback
 
+private-trusted update는 --public-key와 trust manifest만으로 서명·해시 검증을
+수행하고, public update는 독립 보안 검토 sign-off까지 요구합니다.
 실행 중인 서버를 자동으로 끄지 않습니다. update에서 --stop을 명시해야 합니다.
 data directory는 설치 교체와 분리되어 보존됩니다.
 EOF
@@ -75,7 +77,11 @@ fi
 [ -n "$archive" ] || { echo "update에는 --archive가 필요합니다." >&2; usage >&2; exit 2; }
 [ -n "$public_key" ] || { echo "update에는 --public-key가 필요합니다." >&2; usage >&2; exit 2; }
 [ -n "$trust_manifest" ] && [ -n "$trust_manifest_key" ] || { echo "update에는 --trust-manifest와 --trust-manifest-key가 모두 필요합니다." >&2; usage >&2; exit 2; }
-[ -n "$review_bundle" ] && [ -n "$review_signoff" ] && [ -n "$reviewer_public_key" ] || { echo "update에는 review bundle, 독립 보안 검토 sign-off와 reviewer public key가 모두 필요합니다." >&2; usage >&2; exit 2; }
+gate_args=""
+if [ -n "$review_bundle" ] || [ -n "$review_signoff" ] || [ -n "$reviewer_public_key" ]; then
+  [ -n "$review_bundle" ] && [ -n "$review_signoff" ] && [ -n "$reviewer_public_key" ] || { echo "public update에는 review bundle, 독립 보안 검토 sign-off와 reviewer public key가 모두 필요합니다." >&2; usage >&2; exit 2; }
+  gate_args="--review-bundle $review_bundle --review-signoff $review_signoff --reviewer-public-key $reviewer_public_key"
+fi
 verify
 if is_running; then
   [ "$allow_stop" -eq 1 ] || { echo "서버가 실행 중입니다. --stop을 명시해야 atomic update를 진행합니다." >&2; exit 1; }
@@ -94,9 +100,11 @@ if [ -e "$previous" ] || [ -L "$previous" ]; then
 fi
 
 if [ -n "$min_version" ]; then
-  sh "$install_root/scripts/install_local_server.sh" --archive "$archive" --public-key "$public_key" --trust-manifest "$trust_manifest" --trust-manifest-key "$trust_manifest_key" --review-bundle "$review_bundle" --review-signoff "$review_signoff" --reviewer-public-key "$reviewer_public_key" --destination "$stage" --data-dir "$data_dir" --min-version "$min_version"
+  # shellcheck disable=SC2086
+  sh "$install_root/scripts/install_local_server.sh" --archive "$archive" --public-key "$public_key" --trust-manifest "$trust_manifest" --trust-manifest-key "$trust_manifest_key" $gate_args --destination "$stage" --data-dir "$data_dir" --min-version "$min_version"
 else
-  sh "$install_root/scripts/install_local_server.sh" --archive "$archive" --public-key "$public_key" --trust-manifest "$trust_manifest" --trust-manifest-key "$trust_manifest_key" --review-bundle "$review_bundle" --review-signoff "$review_signoff" --reviewer-public-key "$reviewer_public_key" --destination "$stage" --data-dir "$data_dir"
+  # shellcheck disable=SC2086
+  sh "$install_root/scripts/install_local_server.sh" --archive "$archive" --public-key "$public_key" --trust-manifest "$trust_manifest" --trust-manifest-key "$trust_manifest_key" $gate_args --destination "$stage" --data-dir "$data_dir"
 fi
 if ! "$stage/runtime-node" "$stage/scripts/verify_install_state.mjs" "$stage" >/dev/null; then
   echo "새 release staging 검증에 실패했습니다. 기존 설치는 변경되지 않았습니다." >&2

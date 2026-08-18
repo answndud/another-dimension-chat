@@ -334,8 +334,14 @@ AD_RELEASE_VERSION=0.1.0 \
 scripts/build_release.sh
 ```
 
-공개 배포에는 추가로 Ed25519 release signing key, 외부 trust manifest,
-bootstrap public key와 공개키 검증 절차가 필요합니다. 개인 signing key는
+`AD_RELEASE_PROFILE=private`을 지정하면 서명된 `private-trusted` archive를
+만듭니다. private profile은 독립 보안 검토 sign-off 없이도 릴리스 서명·해시·
+trust manifest 검증을 반드시 요구하며, 기본값인 미서명 development 산출물과
+구분됩니다. 설치·업데이트도 같은 검증 없이는 진행되지 않습니다.
+
+공개 배포(`AD_RELEASE_PROFILE=public`)에는 추가로 독립 보안 검토 sign-off가
+필요합니다. 어느 profile이든 Ed25519 release signing key와 외부 trust manifest,
+bootstrap public key, 공개키 검증 절차를 사용합니다. 개인 signing key는
 저장소나 릴리스 아카이브에 넣지 마세요. 자세한 공개 비주장은
 [SECURITY.md](SECURITY.md)를 따릅니다.
 

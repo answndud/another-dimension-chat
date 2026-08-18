@@ -84,6 +84,19 @@ Chromium 계열 브라우저**로 고정합니다. 정확한 Chromium 버전은 
 익명성·트래픽 분석 방어·검열 저항을 제공하지 않으며, `high-risk-disabled`
 모드가 항상 비활성화되어 있습니다.
 
+## macOS 설치와 quarantine/Gatekeeper
+
+- 브라우저로 내려받은 archive에는 quarantine 속성이 붙을 수 있습니다.
+  `xattr -l ARCHIVE.tar.gz`로 속성을 확인하고, 서명 fingerprint를 두 독립 채널에서
+  대조하기 전에는 압축을 풀거나 실행하지 마세요.
+- fingerprint·SHA-256·trust manifest minimum version을 확인한 뒤에도 Gatekeeper가
+  막으면 macOS 문서의 승인 절차를 따르세요. 경고를 무시하고 강제 실행하거나,
+  quarantine을 임의로 제거하지 않습니다.
+- 설치 launcher(`another-dimension`), daemon binary, bundled Node runtime은
+  설치 디렉터리 안에 0700 권한으로 고정됩니다. daemon/relay 데이터는 설치
+  디렉터리 밖의 데이터 디렉터리(기본 `~/.local/share/another-dimension/data`)에
+  보관되므로 uninstall해도 프로필·relay 데이터는 삭제되지 않습니다.
+
 ## 프로필 분리와 다중 프로필
 
 - 프로필은 `--data-dir` 단위로 분리됩니다. 한 프로필의 store·revision·Keychain

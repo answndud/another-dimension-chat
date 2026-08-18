@@ -105,7 +105,12 @@ case "${1:-help}" in
     verify >/dev/null
     "$0" relay-stop >/dev/null 2>&1 || true
     case "$ROOT" in /|"$HOME"|"$HOME"/|*..*) echo "unsafe installation path; refusing uninstall" >&2; exit 1;; esac
-    rm -rf "$ROOT"; echo "설치 코드만 제거했습니다. daemon/relay 데이터는 보존됩니다." ;;
+    daemon_data=$(daemon_data)
+    relay_data=$(relay_data)
+    echo "다음을 삭제합니다: $ROOT (설치 코드·실행 파일)"
+    echo "다음은 삭제하지 않습니다: $daemon_data (daemon 프로필), $relay_data (relay 데이터)"
+    rm -rf "$ROOT"
+    echo "설치 코드와 실행 파일만 제거했습니다. daemon/relay 데이터는 보존됩니다." ;;
   help|-h|--help)
     echo "사용법: $0 {init|start|status|stop|restart|doctor|recovery-export|recovery-import|relay-start|relay-stop|relay-status|relay-backup|relay-restore|update|rollback|uninstall}" ;;
   *) echo "알 수 없는 명령입니다. $0 help" >&2; exit 2 ;;

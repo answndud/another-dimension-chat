@@ -15,8 +15,12 @@ if [ -n "$GIT_SOURCE_COMMIT" ] && [ -n "${AD_RELEASE_SOURCE_COMMIT:-}" ] && [ "$
   printf '%s\n' "AD_RELEASE_SOURCE_COMMIT does not match the current Git HEAD; refusing to misbind provenance." >&2
   exit 1
 fi
-if [ "${AD_RELEASE_PROFILE:-development}" = "public" ] && ! printf '%s' "$SOURCE_COMMIT" | grep -Eq '^[0-9a-fA-F]{40,64}$'; then
-  printf '%s\n' "public release provenance requires a full 40-64 character Git revision." >&2
+case "${AD_RELEASE_PROFILE:-development}" in
+  development|private|public) ;;
+  *) printf '%s\n' "AD_RELEASE_PROFILE must be development, private, or public (got '${AD_RELEASE_PROFILE:-development}')." >&2; exit 1;;
+esac
+if [ "${AD_RELEASE_PROFILE:-development}" != "development" ] && ! printf '%s' "$SOURCE_COMMIT" | grep -Eq '^[0-9a-fA-F]{40,64}$'; then
+  printf '%s\n' "signed release provenance requires a full 40-64 character Git revision." >&2
   exit 1
 fi
 node "$PROJECT_DIR/scripts/verify_dependency_policy.mjs"
@@ -29,7 +33,7 @@ npm --prefix "$STAGE/another-dimension-$VERSION/apps/server" ci --omit=dev --no-
 rm -rf "$STAGE/another-dimension-$VERSION/apps/server/node_modules/.bin"
 cp -R "$PROJECT_DIR/apps/web/dist" "$STAGE/another-dimension-$VERSION/apps/web/"
 cp "$PROJECT_DIR/apps/web/package.json" "$PROJECT_DIR/apps/web/package-lock.json" "$STAGE/another-dimension-$VERSION/apps/web/"
-cp "$PROJECT_DIR/scripts/start_local_server.sh" "$PROJECT_DIR/scripts/install_local_server.sh" "$PROJECT_DIR/scripts/installed_launcher.sh" "$PROJECT_DIR/scripts/update_local_server.sh" "$PROJECT_DIR/scripts/relay_backup.mjs" "$PROJECT_DIR/scripts/verify_install_state.mjs" "$PROJECT_DIR/scripts/configure_local_server.mjs" "$PROJECT_DIR/scripts/preflight_local_server.mjs" "$PROJECT_DIR/scripts/generate_tls_cert.sh" "$PROJECT_DIR/scripts/check_https_endpoint.mjs" "$PROJECT_DIR/scripts/release_manifest.mjs" "$PROJECT_DIR/scripts/product_boundary.mjs" "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$PROJECT_DIR/scripts/verify_public_release_gate.mjs" "$PROJECT_DIR/scripts/verify_release_trust.mjs" "$PROJECT_DIR/scripts/verify_release_trust_receipt.mjs" "$PROJECT_DIR/scripts/verify_security_review_handoff.mjs" "$PROJECT_DIR/scripts/verify_security_review_signoff.mjs" "$PROJECT_DIR/scripts/verify_web_artifact.mjs" "$PROJECT_DIR/scripts/verify_support_matrix.mjs" "$PROJECT_DIR/scripts/verify_release_support_gate.mjs" "$PROJECT_DIR/scripts/acceptance_os_matrix.mjs" "$PROJECT_DIR/scripts/verify_daemon_ui_artifact.mjs" "$STAGE/another-dimension-$VERSION/scripts/"
+cp "$PROJECT_DIR/scripts/start_local_server.sh" "$PROJECT_DIR/scripts/install_local_server.sh" "$PROJECT_DIR/scripts/installed_launcher.sh" "$PROJECT_DIR/scripts/update_local_server.sh" "$PROJECT_DIR/scripts/relay_backup.mjs" "$PROJECT_DIR/scripts/verify_install_state.mjs" "$PROJECT_DIR/scripts/configure_local_server.mjs" "$PROJECT_DIR/scripts/preflight_local_server.mjs" "$PROJECT_DIR/scripts/generate_tls_cert.sh" "$PROJECT_DIR/scripts/check_https_endpoint.mjs" "$PROJECT_DIR/scripts/release_manifest.mjs" "$PROJECT_DIR/scripts/product_boundary.mjs" "$PROJECT_DIR/scripts/verify_release_manifest.mjs" "$PROJECT_DIR/scripts/verify_public_release_gate.mjs" "$PROJECT_DIR/scripts/verify_private_release_gate.mjs" "$PROJECT_DIR/scripts/verify_archive_hygiene.mjs" "$PROJECT_DIR/scripts/verify_release_trust.mjs" "$PROJECT_DIR/scripts/verify_release_trust_receipt.mjs" "$PROJECT_DIR/scripts/verify_security_review_handoff.mjs" "$PROJECT_DIR/scripts/verify_security_review_signoff.mjs" "$PROJECT_DIR/scripts/verify_web_artifact.mjs" "$PROJECT_DIR/scripts/verify_support_matrix.mjs" "$PROJECT_DIR/scripts/verify_release_support_gate.mjs" "$PROJECT_DIR/scripts/acceptance_os_matrix.mjs" "$PROJECT_DIR/scripts/verify_daemon_ui_artifact.mjs" "$STAGE/another-dimension-$VERSION/scripts/"
 cp "$PROJECT_DIR/README.md" "$PROJECT_DIR/README.ko.md" "$PROJECT_DIR/SECURITY.md" "$PROJECT_DIR/SUPPORT.md" "$STAGE/another-dimension-$VERSION/"
 mkdir -p "$STAGE/another-dimension-$VERSION/reference"
 cp "$PROJECT_DIR/reference/PRODUCT_BOUNDARY.md" "$PROJECT_DIR/reference/product_boundary.json" "$PROJECT_DIR/reference/SUPPORT_MATRIX.json" "$PROJECT_DIR/reference/DEPENDENCY_POLICY.json" "$PROJECT_DIR/reference/RESOURCE_LIMITS.json" "$STAGE/another-dimension-$VERSION/reference/"
@@ -66,14 +70,20 @@ chmod +x "$STAGE/another-dimension-$VERSION/scripts/start_local_server.sh" "$STA
 
 MANIFEST_ARGS="--version $VERSION"
 VERIFY_ARGS=""
-if [ "${AD_RELEASE_PROFILE:-development}" = "public" ]; then AD_RELEASE_REQUIRE_SIGNATURE=1; fi
+if [ "${AD_RELEASE_PROFILE:-development}" = "private" ] || [ "${AD_RELEASE_PROFILE:-development}" = "public" ]; then AD_RELEASE_REQUIRE_SIGNATURE=1; fi
 if [ "${AD_RELEASE_PROFILE:-development}" = "public" ] && [ -z "${AD_RELEASE_PUBLIC_KEY:-}" ]; then
   printf '%s\n' "AD_RELEASE_PROFILE=public requires AD_RELEASE_PUBLIC_KEY for the post-signature public gate." >&2
   exit 1
 fi
-if [ "${AD_RELEASE_PROFILE:-development}" = "public" ] && { [ -z "${AD_RELEASE_TRUST_MANIFEST:-}" ] || [ -z "${AD_RELEASE_TRUST_MANIFEST_KEY:-}" ]; }; then
-  printf '%s\n' "AD_RELEASE_PROFILE=public requires AD_RELEASE_TRUST_MANIFEST and AD_RELEASE_TRUST_MANIFEST_KEY for the external trust gate." >&2
+if [ "${AD_RELEASE_PROFILE:-development}" = "private" ] && [ -z "${AD_RELEASE_PUBLIC_KEY:-}" ]; then
+  printf '%s\n' "AD_RELEASE_PROFILE=private requires AD_RELEASE_PUBLIC_KEY (the release public key that matches AD_RELEASE_SIGNING_KEY) for the post-signature private gate." >&2
   exit 1
+fi
+if [ "${AD_RELEASE_PROFILE:-development}" = "private" ] || [ "${AD_RELEASE_PROFILE:-development}" = "public" ]; then
+  if { [ -z "${AD_RELEASE_TRUST_MANIFEST:-}" ] || [ -z "${AD_RELEASE_TRUST_MANIFEST_KEY:-}" ]; }; then
+    printf '%s\n' "AD_RELEASE_PROFILE=${AD_RELEASE_PROFILE:-development} requires AD_RELEASE_TRUST_MANIFEST and AD_RELEASE_TRUST_MANIFEST_KEY for the external trust gate." >&2
+    exit 1
+  fi
 fi
 if [ "${AD_RELEASE_PROFILE:-development}" = "public" ] && { [ -z "${AD_RELEASE_REVIEW_BUNDLE:-}" ] || [ -z "${AD_RELEASE_REVIEW_SIGNOFF:-}" ] || [ -z "${AD_RELEASE_REVIEWER_PUBLIC_KEY:-}" ]; }; then
   printf '%s\n' "AD_RELEASE_PROFILE=public requires AD_RELEASE_REVIEW_BUNDLE, AD_RELEASE_REVIEW_SIGNOFF, and AD_RELEASE_REVIEWER_PUBLIC_KEY for independent security review." >&2
@@ -95,6 +105,7 @@ if [ -n "${AD_RELEASE_REVOKED_KEY_IDS:-}" ]; then
 fi
 # shellcheck disable=SC2086
 SOURCE_DATE_EPOCH="${AD_RELEASE_SOURCE_DATE_EPOCH:-0}" node "$PROJECT_DIR/scripts/create_release_manifest.mjs" "$STAGE/another-dimension-$VERSION" $MANIFEST_ARGS
+node "$PROJECT_DIR/scripts/verify_archive_hygiene.mjs" "$STAGE/another-dimension-$VERSION"
 node "$PROJECT_DIR/scripts/verify_product_boundary.mjs" "$STAGE/another-dimension-$VERSION" --release
 node "$PROJECT_DIR/scripts/verify_release_support_gate.mjs" --root "$STAGE/another-dimension-$VERSION"
 # Unsigned output is allowed only for local development; verified distribution requires a signature.
@@ -105,6 +116,11 @@ if [ "${AD_RELEASE_PROFILE:-development}" = "public" ]; then
   [ -n "${AD_RELEASE_MIN_VERSION:-}" ] && PUBLIC_GATE_ARGS="$PUBLIC_GATE_ARGS --min-version $AD_RELEASE_MIN_VERSION"
   # shellcheck disable=SC2086
   node "$PROJECT_DIR/scripts/verify_public_release_gate.mjs" "$STAGE/another-dimension-$VERSION" $PUBLIC_GATE_ARGS
+elif [ "${AD_RELEASE_PROFILE:-development}" = "private" ]; then
+  PRIVATE_GATE_ARGS="--public-key $AD_RELEASE_PUBLIC_KEY --trust-manifest $AD_RELEASE_TRUST_MANIFEST --trust-manifest-key $AD_RELEASE_TRUST_MANIFEST_KEY"
+  [ -n "${AD_RELEASE_MIN_VERSION:-}" ] && PRIVATE_GATE_ARGS="$PRIVATE_GATE_ARGS --min-version $AD_RELEASE_MIN_VERSION"
+  # shellcheck disable=SC2086
+  node "$PROJECT_DIR/scripts/verify_private_release_gate.mjs" "$STAGE/another-dimension-$VERSION" $PRIVATE_GATE_ARGS
 fi
 
 mkdir -p "$RELEASE_ROOT"
