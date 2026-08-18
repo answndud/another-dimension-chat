@@ -20,6 +20,8 @@ test("web product entry is daemon-only and keeps browser state out of the produc
     "고위험 통신을 시작하려면 터미널에서 발급한 일회성 주소",
     "안전 번호 다시 확인",
     "암호화 복구 백업 다운로드",
+    "Chromium 기반 브라우저",
+    "지원 브라우저가 아닙니다",
   ]) assert.match(productUi, new RegExp(text.replace(/[.*+?^$\\{}()|[\]\\\\]/g, "\\\\$&")));
   for (const text of [
     "로컬 프로필 만들기",

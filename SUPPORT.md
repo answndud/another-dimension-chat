@@ -13,7 +13,7 @@ browser Olm, IndexedDB 키 저장소는 제품과 릴리스에서 제거되었�
 | 구분 | 현재 선언 | 제한 |
 | --- | --- | --- |
 | 운영체제 | Apple Silicon macOS(arm64) | 다른 OS·Intel macOS는 development-only이며 배포 대상이 아님 |
-| UI | daemon이 loopback에서 제공하는 Chromium UI | 정확한 Chromium 버전의 전체 사용자 여정 증거가 없으면 `unverified` |
+| UI | daemon이 loopback에서 제공하는 Chromium UI | Safari·Firefox·모바일 브라우저는 지원하지 않으며, 접속하면 지원 범위 안내 화면만 표시함 |
 | 보안 코어 | 로컬 Rust daemon의 신원·OpenMLS·암호화 저장소 | 브라우저는 장기 키나 메시지 상태를 저장하지 않음 |
 | 전달 | 사용자 소유 relay | 중앙 운영 relay, 익명 네트워크, traffic hiding을 제공하지 않음 |
 | 배포 | 서명 manifest로 검증되는 daemon·UI·bundled Node relay archive | 운영 signing key의 외부 신뢰 경로가 별도로 필요 |

@@ -19,11 +19,26 @@ export function renderDaemonBridgeState(state) {
   return `<main class="daemon-app" aria-labelledby="daemon-gate-title"><aside class="daemon-nav" aria-label="주 메뉴"><div class="daemon-brand"><span aria-hidden="true">⊡</span><strong>Another Dimension</strong></div><nav>${nav}</nav><div class="daemon-nav-footer"><span>${escapeHtml(state.daemonIdentity?.display_name || "로컬 사용자")}</span><button id="daemon-lock" class="quiet" type="button">잠그기</button></div></aside><section class="daemon-workspace"><header class="daemon-workspace-header"><p class="eyebrow">로컬 보안 서비스</p><h1 id="daemon-gate-title">${title}</h1><p class="lede">${detail}</p></header><div class="notice" role="status">${escapeHtml(state.notice || "브라우저 보안 경계를 확인했습니다.")}</div>${connectionBanner}${state.error ? `<p class="error" role="alert">${escapeHtml(state.error)}</p>` : ""}<section class="daemon-view" ${active === "conversation" ? "" : "hidden"}>${pairingReset}<div class="daemon-view-heading"><div><h2>대화와 연락처</h2><p>초대 코드로 상대를 추가하고 안전 번호를 확인한 뒤 대화를 시작합니다.</p></div>${state.daemonInvite ? "" : `<button id="daemon-create-invite" class="primary" type="button">${state.daemonPairing?.state === "rejected" ? "새 연결 시작" : "일회성 초대 만들기"}</button>`}</div>${invite}${renderDaemonContacts(state)}${received}${renderDaemonSessionPanel(state)}</section><section class="daemon-view" ${active === "devices" ? "" : "hidden"}>${renderDaemonDevices(state)}</section><section id="daemon-security-content" class="daemon-view" ${active === "security" ? "" : "hidden"}><div class="daemon-view-heading"><div><h2>보안과 복구</h2><p>전달 경로 확인, 암호화 백업과 이 기기의 데이터 삭제를 관리합니다.</p></div></div>${renderDaemonRelayTrust(state)}${renderDaemonSecurityControls(state)}</section><section class="daemon-view" ${active === "status" ? "" : "hidden"}><div class="daemon-view-heading"><div><h2>현재 상태</h2><p>브라우저와 로컬 보안 서비스의 연결 경계를 확인합니다.</p></div></div><dl class="daemon-facts"><div><dt>세션</dt><dd>${escapeHtml(state.daemonStatus.replace("daemon-session-active", "연결됨"))}</dd></div><div><dt>브라우저 저장소</dt><dd>사용하지 않음</dd></div><div><dt>계정</dt><dd>${escapeHtml(`${state.daemonIdentity.display_name} · ${state.daemonIdentity.account_id}`)}</dd></div><div><dt>보안 판정</dt><dd>독립 검토 완료 전 고위험 사용 금지</dd></div></dl><p class="disclaimer">독립 보안 검토와 운영 배포 검증이 끝나기 전에는 민감한 통신에 사용하지 마세요.</p></section></section></main>`;
 }
 
-function renderDaemonReceivedInvite(state) {
+function renderDaemonPeerDetails(state) {
+  const staged = state.daemonReceivedInvite || {};
+  const peer = state.daemonPairing?.peer || {};
+  const accountId = staged.account_id || peer.account_id || "";
+  const deviceId = staged.device_id || peer.device_id || "";
+  const relayOrigin = peer.relay_origin || "";
+  const expiresAt = Number(staged.expires_at || peer.expires_at || 0);
+  const expiry = expiresAt && Number.isSafeInteger(expiresAt)
+    ? new Date(expiresAt * 1000).toLocaleString("ko-KR")
+    : "만료 없음";
+  if (!accountId && !deviceId && !relayOrigin) return "";
+  return `<dl class="daemon-peer-facts"><div><dt>상대 Account ID</dt><dd><code>${escapeHtml(accountId || "확인 필요")}</code></dd></div><div><dt>상대 Device ID</dt><dd><code>${escapeHtml(deviceId || "확인 필요")}</code></dd></div>${relayOrigin ? `<div><dt>전달 경로 origin</dt><dd><code>${escapeHtml(relayOrigin)}</code></dd></div>` : ""}<div><dt>초대 만료</dt><dd>${escapeHtml(expiry)}</dd></div></dl><p class="field-note">안전 번호는 상대 기기의 공개키 지문입니다. 별도 신뢰 채널에서 전체 번호를 비교하세요.</p>`;
+}
+
+export function renderDaemonReceivedInvite(state) {
   const pairing = state.daemonPairing || {};
   if (pairing.state === "established") {
     return '<section class="daemon-invite" aria-live="polite"><h2>연결 완료</h2><p class="verified">상대방과의 암호화 연결이 준비되었습니다. 연락처를 선택해 대화를 시작하세요.</p></section>';
   }
+  const peerDetails = renderDaemonPeerDetails(state);
   const verifiedPeer = state.daemonReceivedInvite
     ? `<div class="verified" role="status"><strong>상대 신원을 확인했습니다.</strong><span>이제 안전 번호를 별도 신뢰 채널로 비교하세요.</span></div>`
     : "";
@@ -37,7 +52,7 @@ function renderDaemonReceivedInvite(state) {
       : pairing.state === "established"
         ? '<p class="verified">연락처 승인이 완료되었습니다.</p>'
         : "";
-  return `<section class="daemon-invite"><h2>${state.daemonReceivedInvite ? "3. 상대 신원 확인" : "2. 상대방 초대 코드 입력"}</h2><p>${state.daemonReceivedInvite ? "코드가 확인되었습니다. 안전 번호를 비교한 뒤 연락처를 승인하세요." : "상대방에게 받은 일회성 코드를 붙여 넣으세요. 이 기기에 설정된 전달 경로는 자동으로 사용됩니다."}</p>${codeEntry}${verifiedPeer}${state.daemonPairing?.safety_number ? renderDaemonSafetyControls(state.daemonPairing) : ""}${approval}</section>`;
+  return `<section class="daemon-invite"><h2>${state.daemonReceivedInvite ? "3. 상대 신원 확인" : "2. 상대방 초대 코드 입력"}</h2><p>${state.daemonReceivedInvite ? "코드가 확인되었습니다. 상대 정보를 확인하고 안전 번호를 비교한 뒤 연락처를 승인하세요." : "상대방에게 받은 일회성 코드를 붙여 넣으세요. 이 기기에 설정된 전달 경로는 자동으로 사용됩니다."}</p>${codeEntry}${verifiedPeer}${peerDetails}${state.daemonPairing?.safety_number ? renderDaemonSafetyControls(state.daemonPairing) : ""}${approval}</section>`;
 }
 
 export function renderDaemonSecurityControls(state) {
@@ -155,17 +170,24 @@ export function newAttachmentBlobId() {
 export function renderDaemonSessionPanel(state) {
   const connected = Boolean(state.daemonBridge) && !state.daemonLocked;
   if (!connected) return "";
-  if (state.daemonPairing?.state !== "established" || state.daemonPairing?.safety_verified !== true) {
+  if (state.daemonPairing?.state !== "established") {
     return '<section class="daemon-session-tools" aria-live="polite"><h2>대화 세션</h2><p class="field-note">안전 번호를 확인하고 연락처를 승인한 뒤에만 대화 세션을 열 수 있습니다.</p></section>';
+  }
+  if (state.daemonPairing?.safety_verified !== true) {
+    // A safety number change after establishment is a system event, not a
+    // normal message. Keep message sending blocked until the peer re-verifies
+    // the number in a separate trusted channel.
+    return `<section class="daemon-session-tools" aria-live="polite"><h2>대화 세션</h2><div class="daemon-system-row" role="alert"><strong>안전 번호가 변경되었습니다.</strong><span>재검증 전까지 메시지 송신이 차단됩니다. 별도 신뢰 채널에서 전체 번호를 확인한 뒤 다시 검증하세요.</span></div>${renderDaemonSafetyControls(state.daemonPairing)}</section>`;
   }
   const selectedContact = state.daemonContacts.find((contact) => contact.account_id === state.daemonSelectedContact);
   const conversationId = state.daemonConversationId || "";
   const peerInboxUrl = state.daemonPeerInboxUrl || selectedContact?.inbox_url || "";
+  const systemRows = (state.daemonDeviceEvents || []).slice().reverse().slice(0, 4).map((event) => `<div class="daemon-system-row"><strong>기기 변경 · ${event.kind === "revoked" ? "기기 폐기" : "기기 등록"}</strong><span>${escapeHtml(event.device_id)} · ${escapeHtml(new Date(Number(event.at) * 1000).toLocaleString("ko-KR"))}</span></div>`).join("");
   const timeline = [...state.daemonOutgoingMessages, ...state.daemonMessages]
     .sort((left, right) => (left.createdAt || 0) - (right.createdAt || 0) || left.id.localeCompare(right.id));
-  const receivedMessages = timeline.length
+  const receivedMessages = `${systemRows}${timeline.length
     ? timeline.map((message) => `<article class="daemon-message ${message.direction === "outgoing" ? "outgoing" : "incoming"}">${message.attachmentId ? `<p>암호화 첨부파일</p><button class="quiet daemon-attachment-download" data-daemon-attachment="${escapeHtml(message.attachmentId)}" type="button">파일 복호화·다운로드</button><button class="quiet daemon-attachment-delete" data-daemon-attachment-delete="${escapeHtml(message.attachmentId)}" type="button">로컬 첨부 상태 삭제</button>` : `<p dir="auto">${escapeHtml(message.text)}</p><button class="quiet daemon-message-copy" data-daemon-copy="${escapeHtml(message.text)}" type="button">내용 복사</button>`}<small>${message.direction === "outgoing" ? "내 메시지" : "상대 메시지 · 암호화 저장소에서 복호화됨"} · ${escapeHtml(daemonDeliveryLabel(message.state || "decrypted"))} · ${escapeHtml(String(message.id || "unknown").slice(0, 12))}</small></article>`).join("")
-    : '<p class="field-note">아직 받은 메시지가 없습니다.</p>';
+    : '<p class="field-note">아직 받은 메시지가 없습니다.</p>'}`;
   const retryButton = state.daemonDeliveryState === "retryable" ? '<button id="daemon-delivery-retry" class="secondary" type="button">전달 다시 시도</button>' : "";
   const attachmentRetry = state.daemonAttachmentBlobId && /다시 시도/i.test(state.daemonAttachmentState) ? '<button id="daemon-attachment-retry" class="secondary" type="button">첨부파일 전송 다시 시도</button><button id="daemon-attachment-cancel" class="quiet" type="button">첨부파일 작업 취소</button>' : "";
   const contactTitle = selectedContact?.alias || selectedContact?.account_id?.slice(0, 18) || "연락처를 선택하세요";

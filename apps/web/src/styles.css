@@ -185,6 +185,14 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .daemon-message-list { display: grid; gap: 8px; max-height: min(62vh, 720px); overflow-y: auto; overscroll-behavior: contain; padding-right: 3px; }
 .daemon-message { border-left: 2px solid var(--accent); background: var(--surface-muted); padding: 10px 12px; }
 .daemon-message.outgoing { border-left-color: #767b7e; }
+.daemon-system-row { display: grid; gap: 2px; border: 1px dashed var(--line); border-radius: 6px; background: var(--surface-muted); padding: 9px 12px; font-size: .8rem; line-height: 1.5; }
+.daemon-system-row strong { color: var(--muted); }
+.daemon-system-row span { color: var(--subtle); overflow-wrap: anywhere; }
+.daemon-peer-facts { display: grid; gap: 8px; margin: 12px 0 0; }
+.daemon-peer-facts div { display: grid; grid-template-columns: minmax(110px, 1fr) 2fr; gap: 8px; align-items: baseline; }
+.daemon-peer-facts dt { color: var(--muted); font-size: .78rem; }
+.daemon-peer-facts dd { margin: 0; overflow-wrap: anywhere; }
+.daemon-peer-facts code { font: 500 .78rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .daemon-message p { margin: 0 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .daemon-message small { color: var(--muted); font-size: .72rem; }
 .daemon-attachment { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; display: grid; gap: 8px; }

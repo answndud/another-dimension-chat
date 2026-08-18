@@ -23,6 +23,14 @@ async function removeLegacyServiceWorkers() {
   }
 }
 
+function browserSupportStatus() {
+  const ua = navigator.userAgent || "";
+  if (/Firefox\//.test(ua)) return { supported: false, label: "Firefox" };
+  const isSafari = /Safari\//.test(ua) && !/Chrome\//.test(ua) && !/CriOS\//.test(ua) && !/EdgiOS/.test(ua);
+  if (isSafari) return { supported: false, label: "Safari" };
+  return { supported: true, label: /Edg\//.test(ua) ? "Microsoft Edge" : /OPR\//.test(ua) ? "Opera" : "Chromium" };
+}
+
 function captureInteractionState() {
   const active = document.activeElement;
   const focusAttribute = active && !active.id
@@ -121,6 +129,14 @@ function render() {
 async function startApp() {
   try {
     await removeLegacyServiceWorkers();
+    const support = browserSupportStatus();
+    if (!support.supported) {
+      state.daemonBridgeMode = true;
+      state.daemonStatus = "지원 브라우저가 아닙니다";
+      state.notice = `이 화면은 Chromium 기반 브라우저(Chrome·Edge·Brave 등)만 지원합니다. 현재 브라우저(${support.label})에서는 보안 서비스에 연결하지 않았습니다. 터미널에서 앱을 시작하면 기본 Chromium이 자동으로 열립니다.`;
+      render();
+      return;
+    }
     const daemonBridge = await connectDaemonBridge();
     if (daemonBridge) {
       state.daemonBridge = daemonBridge;

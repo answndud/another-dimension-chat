@@ -482,6 +482,14 @@ fn doctor(args: &[String]) -> Result<String, CliError> {
                 .into(),
         )),
     };
+    let daemon_running = match lock_pid(&data_dir.join("daemon.lock")) {
+        Some(pid) if process_is_daemon(pid) => format!("running (PID {pid})"),
+        Some(pid) if process_is_alive(pid) => {
+            format!("lock held by another process (PID {pid}); inspect daemon.lock")
+        }
+        Some(_) => "not running (stale lock)".into(),
+        None => "not running".into(),
+    };
     let checks = [
         format!(
             "data directory: {}",
@@ -511,6 +519,7 @@ fn doctor(args: &[String]) -> Result<String, CliError> {
         "high-risk mode: disabled".into(),
         "OS key store: unavailable; insecure fallback: refused".into(),
         "network/serve bridge: not started by doctor".into(),
+        format!("daemon running: {daemon_running}"),
         trust_status.into(),
     ];
     let ready =
@@ -1281,12 +1290,13 @@ mod tests {
             Some("wrong horse battery staple")
         )
         .is_err());
-        assert!(run(
+        let doctor_output = run(
             &arg(&["doctor", "--data-dir", source.to_str().unwrap()]),
-            None
+            None,
         )
-        .unwrap()
-        .contains("release readiness blocked"));
+        .unwrap();
+        assert!(doctor_output.contains("release readiness blocked"));
+        assert!(doctor_output.contains("daemon running: not running"));
         run(
             &arg(&[
                 "recovery",
