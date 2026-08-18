@@ -29,6 +29,9 @@ const checks = [
   ["reference/SUPPORT_MATRIX.json", "scoped local evidence"],
   ["reference/RELEASE_READINESS.md", "## 판정 조건과 검증"],
   ["reference/RELEASE_READINESS.md", "비판정 항목"],
+  ["reference/PUBLIC_RELEASE_REQUIREMENTS.md", "## P9.1 외부 검토"],
+  ["reference/PUBLIC_RELEASE_REQUIREMENTS.md", "blocked"],
+  ["reference/PUBLIC_RELEASE_REQUIREMENTS.md", "## 전환 게이트"],
 ];
 const boundary = await loadProductBoundary(".");
 checks.push(["reference/product_boundary.json", boundary.supportedProduct]);

@@ -107,6 +107,7 @@ try {
     copy("reference/evidence/macos-arm64-chromium-production-ui.json"),
     copy("reference/RELAY_OPERATIONS.md"),
     copy("reference/RELEASE_READINESS.md"),
+    copy("reference/PUBLIC_RELEASE_REQUIREMENTS.md"),
     copy("apps/web/dist"),
     copy("apps/server/server.mjs"),
     copy("apps/server/routes.mjs"),

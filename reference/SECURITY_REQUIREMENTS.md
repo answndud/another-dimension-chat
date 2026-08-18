@@ -18,6 +18,10 @@ The relay not receiving plaintext is not metadata protection; the
 `high-risk-disabled` mode covers anonymity, traffic-analysis protection, and
 censorship resistance, which remain non-claims.
 
+The executable transition checklist for `public` release and the
+`high-risk-disabled` mode is `reference/PUBLIC_RELEASE_REQUIREMENTS.md`; it
+maps every P9 item to the required external evidence and existing gates.
+
 ## Security levels
 
 | Level | Meaning |
