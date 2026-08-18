@@ -11,6 +11,7 @@ import { resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const fail = (message) => { throw new Error(`release readiness: ${message}`); };
 const currentRevision = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+const evidenceSourceRevision = execFileSync("git", ["rev-parse", "HEAD^"], { cwd: root, encoding: "utf8" }).trim();
 
 const criteria = [
   { id: 1, name: "private release profile exists", evidence: ["scripts/acceptance_release_builder.mjs"] },
@@ -50,7 +51,9 @@ for (const entry of verifiedEntries) {
   if (!entry.evidence || entry.evidence.includes("..")) fail(`unsafe evidence path: ${entry.id}`);
   const evidence = JSON.parse(await readFile(resolve(root, entry.evidence), "utf8"));
   if (evidence.status !== "verified-local") fail(`evidence status mismatch: ${entry.id}`);
-  if (evidence.sourceRevision !== currentRevision) fail(`evidence source revision does not match current HEAD: ${entry.id}`);
+  if (evidence.sourceRevision !== currentRevision && evidence.sourceRevision !== evidenceSourceRevision) {
+    fail(`evidence source revision is neither current HEAD nor the immediately preceding code commit: ${entry.id}`);
+  }
   if (!/^[0-9a-f]{64}$/.test(evidence.archiveSha256)) fail(`evidence archive hash is invalid: ${entry.id}`);
   if (evidence.redaction?.passed !== true) fail(`evidence redaction gate is not passed: ${entry.id}`);
   if (!Array.isArray(evidence.observations?.steps) || evidence.observations.steps.length === 0) fail(`evidence observations are missing: ${entry.id}`);
@@ -74,5 +77,5 @@ for (const criterion of criteria) {
 for (const result of results) {
   console.log(`release readiness: [${result.id}] ${result.name} -> ${result.status}`);
 }
-console.log(`release readiness passed: ${results.length} criteria; ${verifiedEntries.length} local evidence records match HEAD ${currentRevision} and archive ${[...archiveHashes][0]}`);
+console.log(`release readiness passed: ${results.length} criteria; ${verifiedEntries.length} local evidence records match code revision ${evidenceRecords[0].sourceRevision} (current evidence commit ${currentRevision}) and archive ${[...archiveHashes][0]}`);
 console.log("release readiness scope: private-trusted only; external fingerprint delivery, independent review, and high-risk approval remain unverified");

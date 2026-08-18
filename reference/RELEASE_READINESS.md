@@ -38,7 +38,8 @@ node scripts/verify_release_readiness.mjs       # 판정 게이트: 위 17개 �
 ```
 
 `verify_release_readiness.mjs`가 모든 조건에서 `passed`를 출력하면 이 문서의
-판정 기준을 충족한다. 판정은 위 검증이 실제 실행된 시점·revision에만 유효하며,
+판정 기준을 충족한다. 증거 파일은 검증한 코드 커밋을 `sourceRevision`으로 기록하고,
+그 증거를 저장하는 후속 커밋에서는 직전 코드 커밋만 허용한다. 판정은 위 검증이 실제 실행된 시점·revision에만 유효하며,
 실행하지 않은 절차나 외부 증거(독립 채널 fingerprint 확인, 운영 key 보관)를
 완료로 표시하지 않는다.
 
