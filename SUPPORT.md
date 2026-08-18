@@ -43,10 +43,15 @@ archive hash, source revision, host/browser version이 하나라도 빠지거나
 서명 archive와 연결되지 않으면 `unverified`로 남깁니다.
 
 ```sh
+node scripts/acceptance_representative_flow.mjs   # P6.2 대표 flow 실행 + evidence 생성 + matrix 승격
 node scripts/verify_support_matrix.mjs
 node scripts/verify_daemon_ui_artifact.mjs --daemon-ui-artifact
 node scripts/acceptance_os_matrix.mjs --current-host
 ```
+
+`reference/evidence/*.json`은 위 대표 flow가 생성하는 redacted 로컬 증거이며,
+현재 호스트·source revision·검증한 archive hash에만 유효합니다. 다른
+revision·호스트에서 재검증하지 않는 한 더 넓은 지원을 주장하지 않습니다.
 
 ## 지원 환경 고정
 

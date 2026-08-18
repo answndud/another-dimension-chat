@@ -171,6 +171,8 @@ await Promise.all([
   copy("reference/PRODUCT_BOUNDARY.md"),
   copy("reference/product_boundary.json"),
   copy("reference/SUPPORT_MATRIX.json"),
+  copy("reference/evidence/macos-arm64-node20-local-gate.json"),
+  copy("reference/evidence/macos-arm64-chromium-production-ui.json"),
   copy("apps/web/dist"),
   copy("apps/server/server.mjs"),
   copy("apps/server/routes.mjs"),

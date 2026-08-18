@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { generateKeyPairSync } from "node:crypto";
+import { createHash, generateKeyPairSync } from "node:crypto";
 import { chmod, cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -103,6 +103,8 @@ try {
     copy("reference/PRODUCT_BOUNDARY.md"),
     copy("reference/product_boundary.json"),
     copy("reference/SUPPORT_MATRIX.json"),
+    copy("reference/evidence/macos-arm64-node20-local-gate.json"),
+    copy("reference/evidence/macos-arm64-chromium-production-ui.json"),
     copy("reference/RELAY_OPERATIONS.md"),
     copy("apps/web/dist"),
     copy("apps/server/server.mjs"),
@@ -243,6 +245,11 @@ try {
   await assert.rejects(() => stat(join(install, "another-dimension")), { code: "ENOENT" });
   assert.equal(await readFile(join(data, "retained-sentinel"), "utf8"), "keep-me\n");
 
+  const finalManifest = JSON.parse(await readFile(join(archive, "release-manifest.json"), "utf8"));
+  const archiveHash = createHash("sha256")
+    .update(JSON.stringify(finalManifest.files.map((file) => [file.path, file.sha256]).sort()))
+    .digest("hex");
+  console.log(`archive sha256: ${archiveHash}`);
   console.log("private release acceptance passed: signed gate without review bundle -> install -> tamper/wrong-key/min-version/revoked rejection -> private update/failed-update/rollback -> uninstall scope");
 } finally {
   try {

@@ -18,6 +18,8 @@ const checks = [
   ["reference/RELAY_OPERATIONS.md", "AD_RELAY_PRODUCTION"],
   ["reference/RELAY_OPERATIONS.md", "relay_backup.mjs backup"],
   ["scripts/verify_security_requirements.mjs", "security requirement evidence passed"],
+  ["reference/SUPPORT_MATRIX.json", "verifiedLocalIsNotPublicSupport"],
+  ["reference/SUPPORT_MATRIX.json", "scoped local evidence"],
 ];
 const boundary = await loadProductBoundary(".");
 checks.push(["reference/product_boundary.json", boundary.supportedProduct]);

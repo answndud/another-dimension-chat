@@ -4,10 +4,26 @@
   "generatedFor": "local daemon product",
   "claimsPolicy": "Only entries with an attached, reproducible evidence file may be verified.",
   "verifiedEvidenceSchema": {
-    "required": ["status", "sourceRevision", "archiveSha256", "recordedAt", "host", "runtime", "scope", "observations", "redaction"],
-    "hostRequired": ["platform"],
-    "browserHostRequired": ["browserVersion"],
-    "observationsRequired": ["steps"],
+    "required": [
+      "status",
+      "sourceRevision",
+      "archiveSha256",
+      "recordedAt",
+      "host",
+      "runtime",
+      "scope",
+      "observations",
+      "redaction"
+    ],
+    "hostRequired": [
+      "platform"
+    ],
+    "browserHostRequired": [
+      "browserVersion"
+    ],
+    "observationsRequired": [
+      "steps"
+    ],
     "redaction": "passed must be true",
     "note": "A verified-local record is scoped local evidence, not public or high-risk approval."
   },
@@ -22,18 +38,18 @@
       "surface": "installed-runtime",
       "platform": "macOS arm64",
       "runtime": "Rust daemon binary + bundled Node.js 20+ relay runtime",
-      "status": "unverified",
-      "evidence": null,
-      "scope": "no support claim until a redacted JSON evidence record ties a signed archive, exact host, and the observed install, daemon, relay, tamper, update and rollback steps together"
+      "status": "verified-local",
+      "evidence": "reference/evidence/macos-arm64-node20-local-gate.json",
+      "scope": "scoped local evidence on this macOS arm64 host: signed private archive install, daemon/relay boot, tamper/wrong-key/min-version/revoked rejection, relay backup/restore, private update and rollback; not a public or high-risk support claim"
     },
     {
       "id": "macos-arm64-chromium-production-ui",
       "surface": "browser-ui",
       "platform": "macOS arm64 Chromium",
       "runtime": "daemon-served production UI; exact Chromium version must be recorded in future evidence",
-      "status": "unverified",
-      "evidence": null,
-      "scope": "no support claim until the daemon bootstrap, profile, invite, verification, messaging, restart, recovery and lock journeys are recorded against an exact Chromium version and release archive hash"
+      "status": "verified-local",
+      "evidence": "reference/evidence/macos-arm64-chromium-production-ui.json",
+      "scope": "scoped local evidence on this macOS arm64 Chromium host: daemon bootstrap, profile, invite, safety verification, messaging, restart, recovery and lock journeys against the recorded release archive and exact Chromium version; not a public or high-risk support claim"
     }
   ]
 }

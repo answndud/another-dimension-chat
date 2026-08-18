@@ -37,6 +37,10 @@ cp "$PROJECT_DIR/scripts/start_local_server.sh" "$PROJECT_DIR/scripts/install_lo
 cp "$PROJECT_DIR/README.md" "$PROJECT_DIR/README.ko.md" "$PROJECT_DIR/SECURITY.md" "$PROJECT_DIR/SUPPORT.md" "$STAGE/another-dimension-$VERSION/"
 mkdir -p "$STAGE/another-dimension-$VERSION/reference"
 cp "$PROJECT_DIR/reference/PRODUCT_BOUNDARY.md" "$PROJECT_DIR/reference/product_boundary.json" "$PROJECT_DIR/reference/SUPPORT_MATRIX.json" "$PROJECT_DIR/reference/DEPENDENCY_POLICY.json" "$PROJECT_DIR/reference/RESOURCE_LIMITS.json" "$PROJECT_DIR/reference/RELAY_OPERATIONS.md" "$STAGE/another-dimension-$VERSION/reference/"
+if [ -d "$PROJECT_DIR/reference/evidence" ]; then
+  mkdir -p "$STAGE/another-dimension-$VERSION/reference/evidence"
+  cp "$PROJECT_DIR"/reference/evidence/*.json "$STAGE/another-dimension-$VERSION/reference/evidence/"
+fi
 cp "$PROJECT_DIR/Cargo.lock" "$STAGE/another-dimension-$VERSION/Cargo.lock"
 if [ -n "${AD_DAEMON_BINARY:-}" ]; then
   if [ ! -x "$AD_DAEMON_BINARY" ]; then
