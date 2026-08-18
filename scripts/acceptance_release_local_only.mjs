@@ -363,6 +363,24 @@ await writeFile(join(install, "relay.pid"), `${process.pid}\n`, { mode: 0o600 })
 const foreignPid = await run(join(install, "another-dimension"), ["relay-start"], noNodeEnvironment);
 assert.notEqual(foreignPid.code, 0);
 await writeFile(join(install, "relay.pid"), "999999\n", { mode: 0o600 });
+// The installed launcher must start the relay from the signed config: the
+// server rejects launcher-only fields, so relay-start derives a server-only
+// config and must come up healthy on the configured relay port.
+const launcherRelayStart = await run(join(install, "another-dimension"), ["relay-start"], noNodeEnvironment);
+assert.equal(launcherRelayStart.code, 0, launcherRelayStart.output);
+assert.match(launcherRelayStart.output, /relay started pid=/);
+const relayServerConfig = JSON.parse(await readFile(join(install, "relay-server-config.json"), "utf8"));
+const installedConfig = JSON.parse(await readFile(join(install, "server-config.json"), "utf8"));
+assert.equal(relayServerConfig.port, installedConfig.port);
+assert.equal(relayServerConfig.dataDir, installedConfig.relayDataDir);
+assert.equal(relayServerConfig.daemonDataDir, undefined, "server config must not carry launcher-only fields");
+const launcherRelayHealth = await fetch(`http://127.0.0.1:${installedConfig.port}/api/v1/health`);
+assert.equal(launcherRelayHealth.status, 200);
+const launcherRelayStatus = await run(join(install, "another-dimension"), ["relay-status"], noNodeEnvironment);
+assert.equal(launcherRelayStatus.code, 0);
+assert.match(launcherRelayStatus.output, /relay running/);
+const launcherRelayStop = await run(join(install, "another-dimension"), ["relay-stop"], noNodeEnvironment);
+assert.equal(launcherRelayStop.code, 0);
 const symlinkDestination = join(root, "install-symlink");
 await symlink(install, symlinkDestination);
 const symlinkInstall = await run("sh", [join(archive, "scripts/install_local_server.sh"), "--archive", archive, "--public-key", publicKeyFile, "--trust-manifest", trustManifestFile, "--trust-manifest-key", bootstrapPublicKeyFile, ...reviewArgs, "--destination", symlinkDestination, "--data-dir", join(root, "data-symlink")], noNodeEnvironment);

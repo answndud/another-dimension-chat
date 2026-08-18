@@ -81,7 +81,12 @@ case "${1:-help}" in
       esac
     fi
     umask 077
-    nohup "$ROOT/runtime-node" "$ROOT/apps/server/server.mjs" --config "$CONFIG" >"$ROOT/relay.log" 2>&1 &
+    # server-config.json carries launcher-only fields (daemonDataDir,
+    # relayDataDir, daemonPort). The relay server rejects unknown fields, so
+    # derive a server-only config for the relay process.
+    "$ROOT/runtime-node" -e 'const fs=require("node:fs"); const [file,dest]=process.argv.slice(1); const c=JSON.parse(fs.readFileSync(file,"utf8")); const allowed=new Set(["bindHost","port","dataDir","distDir","serveStatic","publicUrl","corsOrigins","trustProxy","ttlMs","tlsKeyFile","tlsCertFile","production"]); const serverConfig={}; for (const key of allowed) if (c[key] !== undefined) serverConfig[key]=c[key]; fs.writeFileSync(dest, JSON.stringify(serverConfig)+"\n")' "$CONFIG" "$ROOT/relay-server-config.json"
+    chmod 600 "$ROOT/relay-server-config.json"
+    nohup "$ROOT/runtime-node" "$ROOT/apps/server/server.mjs" --config "$ROOT/relay-server-config.json" >"$ROOT/relay.log" 2>&1 &
     RELAY_PID=$!; printf '%s\n' "$RELAY_PID" >"$RELAY_PIDFILE"; chmod 600 "$RELAY_PIDFILE"
     sleep 0.2
     relay_pid_is_ours || { echo "relay 시작 실패; relay.log를 외부에 공유하지 말고 확인하세요." >&2; rm -f "$RELAY_PIDFILE"; exit 1; }
