@@ -182,6 +182,45 @@ unset AD_PASSPHRASE
 초대 코드는 한 번만 사용할 수 있고 만료됩니다. 사용자명 검색이나 전화번호
 연락처 동기화는 제공하지 않습니다.
 
+## 릴리스 설치
+
+서명된 `private-trusted` archive를 받으면 압축을 풀기 전에 발신자에게 받은
+release signing key fingerprint를 **별도의 신뢰 채널**(메시지가 아닌 전화·대면
+등)에서 대조하고, archive의 SHA-256과 quarantine 속성을 확인합니다.
+
+```sh
+shasum -a 256 another-dimension-0.1.0.tar.gz
+xattr -l another-dimension-0.1.0.tar.gz   # 예상하지 못한 속성이 없는지 확인
+```
+
+archive 안의 공개키만 믿고 설치하지 않습니다. 압축을 풀고 서명·해시·trust
+manifest를 검증합니다.
+
+```sh
+tar -xzf another-dimension-0.1.0.tar.gz
+node another-dimension-0.1.0/scripts/verify_private_release_gate.mjs \
+  another-dimension-0.1.0 \
+  --public-key release-public.pem \
+  --trust-manifest release-trust.json \
+  --trust-manifest-key trust-bootstrap-public.pem
+```
+
+`private-trusted` 배포는 이 gate가 `private release gate passed`를 출력해야
+설치할 수 있습니다. gate가 통과한 archive만 설치합니다.
+
+```sh
+sh another-dimension-0.1.0/scripts/install_local_server.sh \
+  --archive another-dimension-0.1.0 \
+  --public-key release-public.pem \
+  --trust-manifest release-trust.json \
+  --trust-manifest-key trust-bootstrap-public.pem
+```
+
+설치 위치 기본값은 `~/.local/share/another-dimension/server`이고,
+`--destination`과 `--data-dir`로 바꿀 수 있습니다. 업데이트는 같은 gate를 거친
+새 archive로 `another-dimension update --archive DIR ...`를, 이전 버전 복귀는
+`another-dimension rollback`을 사용합니다.
+
 ## 릴리스 설치 후 명령
 
 서명 검증을 거쳐 설치한 디렉터리의 `another-dimension` 실행 파일 하나를
