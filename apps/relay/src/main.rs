@@ -34,6 +34,158 @@ struct AppState {
     capability: String,
     origin: String,
     receipt_key: SigningKey,
+    blob_dir: PathBuf,
+}
+fn valid_blob_id(value: &str) -> bool {
+    (32..=128).contains(&value.len())
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+}
+fn header_usize(headers: &HeaderMap, name: &str, default: usize) -> Option<usize> {
+    headers
+        .get(name)
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.parse().ok())
+        .unwrap_or(Some(default))
+}
+async fn blob_impl(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+    body: Bytes,
+    method: axum::http::Method,
+) -> Response {
+    if !valid_blob_id(&id) {
+        return error(StatusCode::BAD_REQUEST, "invalid_blob_id");
+    }
+    if headers
+        .get("x-ad-relay-capability")
+        .and_then(|v| v.to_str().ok())
+        != Some(state.capability.as_str())
+    {
+        return error(StatusCode::FORBIDDEN, "relay_capability_required");
+    }
+    let file = state.blob_dir.join(format!("{id}.blob"));
+    let meta = state.blob_dir.join(format!("{id}.meta.json"));
+    if method == axum::http::Method::DELETE {
+        let _ = fs::remove_file(file);
+        let _ = fs::remove_file(meta);
+        return response(StatusCode::OK, json!({ "deleted": true }));
+    }
+    if method == axum::http::Method::GET {
+        let bytes = match fs::read(&file) {
+            Ok(v) => v,
+            Err(_) => return error(StatusCode::NOT_FOUND, "blob_not_found"),
+        };
+        let offset = match header_usize(&headers, "x-ad-blob-offset", 0) {
+            Some(v) if v <= bytes.len() => v,
+            _ => return error(StatusCode::BAD_REQUEST, "invalid_blob_range"),
+        };
+        let length = header_usize(&headers, "x-ad-blob-length", bytes.len() - offset)
+            .unwrap_or(0)
+            .min(bytes.len() - offset);
+        let mut response = response(StatusCode::OK, json!({ "error": "binary" }));
+        *response.status_mut() = StatusCode::OK;
+        response.headers_mut().insert(
+            header::CONTENT_TYPE,
+            "application/octet-stream".parse().unwrap(),
+        );
+        response
+            .headers_mut()
+            .insert("x-ad-blob-offset", offset.to_string().parse().unwrap());
+        response
+            .headers_mut()
+            .insert("x-ad-blob-total", bytes.len().to_string().parse().unwrap());
+        *response.body_mut() = bytes[offset..offset + length].to_vec().into();
+        return response;
+    }
+    let offset = match header_usize(&headers, "x-ad-blob-offset", 0) {
+        Some(v) => v,
+        None => return error(StatusCode::BAD_REQUEST, "invalid_blob_metadata"),
+    };
+    let total = match header_usize(&headers, "x-ad-blob-total", 0) {
+        Some(v) if v > 0 && v <= 32 * 1024 * 1024 => v,
+        _ => return error(StatusCode::BAD_REQUEST, "invalid_blob_metadata"),
+    };
+    if offset > total || offset + body.len() > total {
+        return error(StatusCode::BAD_REQUEST, "blob_chunk_out_of_bounds");
+    }
+    let mut existing = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(&file)
+        .map_err(|_| ())
+        .ok();
+    if existing.is_none() && offset != 0 {
+        return error(StatusCode::BAD_REQUEST, "blob_offset_mismatch");
+    }
+    let Some(mut file_handle) = existing.take() else {
+        return error(StatusCode::INTERNAL_SERVER_ERROR, "blob_storage_error");
+    };
+    use std::io::{Seek, SeekFrom, Write};
+    if file_handle.seek(SeekFrom::Start(offset as u64)).is_err()
+        || file_handle.write_all(&body).is_err()
+    {
+        return error(StatusCode::INTERNAL_SERVER_ERROR, "blob_storage_error");
+    }
+    let received = offset + body.len();
+    let complete = received == total;
+    let metadata = json!({ "version": 1, "total": total, "received": received, "complete": complete, "expiresAt": now() + TTL_SECONDS });
+    if fs::write(&meta, metadata.to_string()).is_err() {
+        return error(StatusCode::INTERNAL_SERVER_ERROR, "blob_storage_error");
+    }
+    response(
+        if complete {
+            StatusCode::CREATED
+        } else {
+            StatusCode::ACCEPTED
+        },
+        json!({ "accepted": true, "complete": complete, "received": received, "total": total, "expiresAt": now() + TTL_SECONDS, "blobUrl": format!("/api/v1/blobs/{id}") }),
+    )
+}
+async fn get_blob(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+) -> Response {
+    blob_impl(
+        State(state),
+        Path(id),
+        headers,
+        Bytes::new(),
+        axum::http::Method::GET,
+    )
+    .await
+}
+async fn post_blob(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    blob_impl(
+        State(state),
+        Path(id),
+        headers,
+        body,
+        axum::http::Method::POST,
+    )
+    .await
+}
+async fn delete_blob(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+) -> Response {
+    blob_impl(
+        State(state),
+        Path(id),
+        headers,
+        Bytes::new(),
+        axum::http::Method::DELETE,
+    )
+    .await
 }
 #[derive(Clone, Serialize, Deserialize)]
 struct Item {
@@ -499,12 +651,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(error) => return Err(error.into()),
     }
     let origin = format!("http://{host}:{port}");
+    let blob_dir = data_dir.join("blobs");
+    fs::create_dir_all(&blob_dir)?;
     let state = AppState {
         store: Arc::new(Mutex::new(load_store(data_dir.join("relay-inbox.json"))?)),
         invites: Arc::new(Mutex::new(invites)),
         capability: capability.clone(),
         origin,
         receipt_key: SigningKey::from_bytes(&seed),
+        blob_dir,
     };
     let app = Router::new()
         .route("/api/v1/health", get(health))
@@ -516,6 +671,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/invite-codes/public", post(create_invite))
         .route("/api/v1/invite-codes/consume", post(consume_invite))
         .route("/api/v1/invite-codes/pairing-response", post(pairing))
+        .route(
+            "/api/v1/blobs/{id}",
+            get(get_blob).post(post_blob).delete(delete_blob),
+        )
         .with_state(state);
     let address: SocketAddr = format!("{host}:{port}").parse()?;
     let listener = tokio::net::TcpListener::bind(address).await?;
