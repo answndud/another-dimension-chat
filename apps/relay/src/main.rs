@@ -9,7 +9,7 @@ use axum::{
     Router,
 };
 use base64ct::{Base64UrlUnpadded, Encoding};
-use ed25519_dalek::{Signer, SigningKey};
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use getrandom::fill as random_fill;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -146,6 +146,55 @@ fn receipt(key: &SigningKey, origin: &str, code: &str, invite: &str, timestamp: 
     );
     format!("{}.{}", body, hex(&key.sign(body.as_bytes()).to_bytes()))
 }
+fn hex_decode(value: &str) -> Option<Vec<u8>> {
+    if value.len() % 2 != 0 {
+        return None;
+    }
+    (0..value.len())
+        .step_by(2)
+        .map(|index| u8::from_str_radix(&value[index..index + 2], 16).ok())
+        .collect()
+}
+fn validate_invite(invite: &str, expected_origin: &str) -> bool {
+    let parts: Vec<_> = invite.split('.').collect();
+    if parts.len() != 3 || parts[0] != "ADDAINV1" {
+        return false;
+    }
+    let Some(payload) = hex_decode(parts[1]) else {
+        return false;
+    };
+    let Some(signature) = hex_decode(parts[2]) else {
+        return false;
+    };
+    let Ok(text) = String::from_utf8(payload.clone()) else {
+        return false;
+    };
+    let lines: Vec<_> = text.split('\n').collect();
+    if ![6, 7, 8].contains(&lines.len()) || lines[0] != "another-dimension/invite/v1" {
+        return false;
+    }
+    let account = lines[1].strip_prefix("ad1pk").unwrap_or("");
+    let Some(public_bytes) = hex_decode(account) else {
+        return false;
+    };
+    let Ok(public_bytes) = <[u8; 32]>::try_from(public_bytes) else {
+        return false;
+    };
+    let Ok(key) = VerifyingKey::from_bytes(&public_bytes) else {
+        return false;
+    };
+    let Ok(sig_bytes) = <[u8; 64]>::try_from(signature) else {
+        return false;
+    };
+    let Ok(expires) = lines[4].parse::<u64>() else {
+        return false;
+    };
+    if expires <= now() || lines[5] != expected_origin || hex_decode(lines[3]).is_none() {
+        return false;
+    }
+    key.verify(&payload, &Signature::from_bytes(&sig_bytes))
+        .is_ok()
+}
 fn load_store(path: PathBuf) -> Result<Store, String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -251,11 +300,7 @@ async fn create_invite(State(state): State<AppState>, body: Bytes) -> Response {
         Err(_) => return error(StatusCode::BAD_REQUEST, "invalid_json"),
     };
     let invite = match body.get("invite").and_then(Value::as_str) {
-        Some(v)
-            if (v.starts_with("ADDAINV1.") || v.starts_with("ADWEB3.")) && v.len() <= 96 * 1024 =>
-        {
-            v.to_owned()
-        }
+        Some(v) if v.len() <= 96 * 1024 && validate_invite(v, &state.origin) => v.to_owned(),
         _ => return error(StatusCode::BAD_REQUEST, "invalid_signed_invite"),
     };
     let code = match invite_code() {
