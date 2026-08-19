@@ -9,6 +9,7 @@ use axum::{
     Router,
 };
 use base64ct::{Base64UrlUnpadded, Encoding};
+use ed25519_dalek::{Signer, SigningKey};
 use getrandom::fill as random_fill;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -29,7 +30,10 @@ const TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
 #[derive(Clone)]
 struct AppState {
     store: Arc<Mutex<Store>>,
+    invites: Arc<Mutex<Vec<Invite>>>,
     capability: String,
+    origin: String,
+    receipt_key: SigningKey,
 }
 #[derive(Clone, Serialize, Deserialize)]
 struct Item {
@@ -41,6 +45,23 @@ struct Item {
 struct Store {
     path: PathBuf,
     items: Vec<Item>,
+}
+#[derive(Clone, Serialize, Deserialize)]
+struct Invite {
+    version: u8,
+    #[serde(rename = "codeHash")]
+    code_hash: String,
+    invite: String,
+    #[serde(rename = "inviteDigest")]
+    invite_digest: String,
+    #[serde(rename = "createdAt")]
+    created_at: u64,
+    #[serde(rename = "expiresAt")]
+    expires_at: u64,
+    #[serde(rename = "consumedAt", skip_serializing_if = "Option::is_none")]
+    consumed_at: Option<u64>,
+    #[serde(rename = "pairingResponse", skip_serializing_if = "Option::is_none")]
+    pairing_response: Option<Value>,
 }
 
 fn now() -> u64 {
@@ -78,6 +99,52 @@ fn persist(store: &Store) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
     fs::rename(temp, &store.path).map_err(|e| e.to_string())
+}
+fn persist_invites(path: &PathBuf, invites: &[Invite]) -> Result<(), String> {
+    let temp = path.with_extension("json.tmp");
+    fs::write(
+        &temp,
+        serde_json::to_vec(invites).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
+    fs::rename(temp, path).map_err(|e| e.to_string())
+}
+fn invite_code() -> Result<String, String> {
+    const ALPHABET: &[u8] = b"0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+    let mut bytes = [0u8; 32];
+    random_fill(&mut bytes).map_err(|_| "random generation failed")?;
+    let raw: String = bytes
+        .iter()
+        .take(26)
+        .map(|b| ALPHABET[*b as usize % ALPHABET.len()] as char)
+        .collect();
+    Ok(raw
+        .as_bytes()
+        .chunks(4)
+        .map(|c| std::str::from_utf8(c).unwrap_or(""))
+        .collect::<Vec<_>>()
+        .join("-"))
+}
+fn code_hash(code: &str) -> String {
+    hex(&Sha256::digest(
+        code.chars()
+            .filter(|c| *c != '-')
+            .flat_map(char::to_uppercase)
+            .collect::<String>()
+            .as_bytes(),
+    ))
+}
+fn receipt(key: &SigningKey, origin: &str, code: &str, invite: &str, timestamp: u64) -> String {
+    let key_id = hex(&Sha256::digest(key.verifying_key().as_bytes()));
+    let body = format!(
+        "ADRECEIPT1.{}.{}.{}.{}.{}",
+        key_id,
+        hex(origin.as_bytes()),
+        code_hash(code),
+        hex(&Sha256::digest(invite.as_bytes())),
+        timestamp
+    );
+    format!("{}.{}", body, hex(&key.sign(body.as_bytes()).to_bytes()))
 }
 fn load_store(path: PathBuf) -> Result<Store, String> {
     if let Some(parent) = path.parent() {
@@ -178,6 +245,144 @@ async fn ack_inbox(
         json!({ "acknowledged": before - store.items.len() }),
     )
 }
+async fn create_invite(State(state): State<AppState>, body: Bytes) -> Response {
+    let body: Value = match serde_json::from_slice(&body) {
+        Ok(v) => v,
+        Err(_) => return error(StatusCode::BAD_REQUEST, "invalid_json"),
+    };
+    let invite = match body.get("invite").and_then(Value::as_str) {
+        Some(v)
+            if (v.starts_with("ADDAINV1.") || v.starts_with("ADWEB3.")) && v.len() <= 96 * 1024 =>
+        {
+            v.to_owned()
+        }
+        _ => return error(StatusCode::BAD_REQUEST, "invalid_signed_invite"),
+    };
+    let code = match invite_code() {
+        Ok(v) => v,
+        Err(_) => {
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "random_generation_failed",
+            )
+        }
+    };
+    let timestamp = now();
+    let record = Invite {
+        version: 1,
+        code_hash: code_hash(&code),
+        invite_digest: hex(&Sha256::digest(invite.as_bytes())),
+        invite,
+        created_at: timestamp,
+        expires_at: timestamp + 600,
+        consumed_at: None,
+        pairing_response: None,
+    };
+    let mut invites = state.invites.lock().await;
+    let result = record.clone();
+    invites.retain(|item| item.expires_at > timestamp);
+    invites.push(record);
+    if persist_invites(
+        &PathBuf::from(
+            env::var("AD_RELAY_DATA_DIR").unwrap_or_else(|_| ".another-dimension-relay".into()),
+        )
+        .join("invite-codes.json"),
+        &invites,
+    )
+    .is_err()
+    {
+        return error(StatusCode::INTERNAL_SERVER_ERROR, "storage_error");
+    }
+    response(
+        StatusCode::CREATED,
+        json!({ "created": true, "code": code, "expiresAt": result.expires_at, "inviteDigest": result.invite_digest }),
+    )
+}
+async fn consume_invite(State(state): State<AppState>, body: Bytes) -> Response {
+    let body: Value = match serde_json::from_slice(&body) {
+        Ok(v) => v,
+        Err(_) => return error(StatusCode::BAD_REQUEST, "invalid_json"),
+    };
+    let code = match body.get("code").and_then(Value::as_str) {
+        Some(v) => v,
+        None => return error(StatusCode::NOT_FOUND, "invalid_or_expired"),
+    };
+    let mut invites = state.invites.lock().await;
+    let timestamp = now();
+    let Some(record) = invites.iter_mut().find(|item| {
+        item.code_hash == code_hash(code)
+            && item.expires_at > timestamp
+            && item.consumed_at.is_none()
+    }) else {
+        return error(StatusCode::NOT_FOUND, "invalid_or_expired");
+    };
+    record.consumed_at = Some(timestamp);
+    let payload = json!({ "consumed": true, "invite": record.invite, "inviteDigest": record.invite_digest, "receipt": receipt(&state.receipt_key, &state.origin, code, &record.invite, timestamp) });
+    if persist_invites(
+        &PathBuf::from(
+            env::var("AD_RELAY_DATA_DIR").unwrap_or_else(|_| ".another-dimension-relay".into()),
+        )
+        .join("invite-codes.json"),
+        &invites,
+    )
+    .is_err()
+    {
+        return error(StatusCode::INTERNAL_SERVER_ERROR, "storage_error");
+    }
+    response(StatusCode::OK, payload)
+}
+async fn pairing(State(state): State<AppState>, body: Bytes) -> Response {
+    let body: Value = match serde_json::from_slice(&body) {
+        Ok(v) => v,
+        Err(_) => return error(StatusCode::BAD_REQUEST, "invalid_json"),
+    };
+    let code = match body.get("code").and_then(Value::as_str) {
+        Some(v) => v,
+        None => return error(StatusCode::NOT_FOUND, "invalid_or_expired"),
+    };
+    let mut invites = state.invites.lock().await;
+    let timestamp = now();
+    let Some(record) = invites.iter_mut().find(|item| {
+        item.code_hash == code_hash(code)
+            && item.expires_at > timestamp
+            && item.consumed_at.is_some()
+    }) else {
+        return error(StatusCode::NOT_FOUND, "invalid_or_expired");
+    };
+    if body.get("read").and_then(Value::as_bool) == Some(true) {
+        return response(
+            StatusCode::OK,
+            json!({ "available": true, "response": record.pairing_response.clone().unwrap_or_else(|| json!({})) }),
+        );
+    }
+    let value = match body.get("response") {
+        Some(v)
+            if v.is_object()
+                && serde_json::to_vec(v)
+                    .map(|b| b.len() <= 128 * 1024)
+                    .unwrap_or(false) =>
+        {
+            v.clone()
+        }
+        _ => return error(StatusCode::BAD_REQUEST, "invalid_pairing_response"),
+    };
+    if record.pairing_response.is_some() {
+        return error(StatusCode::CONFLICT, "pairing_response_already_set");
+    }
+    record.pairing_response = Some(value);
+    if persist_invites(
+        &PathBuf::from(
+            env::var("AD_RELAY_DATA_DIR").unwrap_or_else(|_| ".another-dimension-relay".into()),
+        )
+        .join("invite-codes.json"),
+        &invites,
+    )
+    .is_err()
+    {
+        return error(StatusCode::INTERNAL_SERVER_ERROR, "storage_error");
+    }
+    response(StatusCode::CREATED, json!({ "accepted": true }))
+}
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let data_dir = PathBuf::from(
@@ -198,9 +403,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             value
         }
     };
+    let invite_path = data_dir.join("invite-codes.json");
+    let invites = match fs::read(&invite_path) {
+        Ok(bytes) => serde_json::from_slice(&bytes).map_err(|_| "invite state is corrupt")?,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+        Err(error) => return Err(error.into()),
+    };
+    let key_path = data_dir.join("relay-receipt-signing-key.bin");
+    let mut seed = [0u8; 32];
+    match fs::read(&key_path) {
+        Ok(bytes) if bytes.len() == 32 => seed.copy_from_slice(&bytes),
+        Ok(_) => return Err("relay receipt key is corrupt".into()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            random_fill(&mut seed)?;
+            fs::write(&key_path, seed)?;
+            #[cfg(unix)]
+            {
+                let mut permissions = fs::metadata(&key_path)?.permissions();
+                std::os::unix::fs::PermissionsExt::set_mode(&mut permissions, 0o600);
+                fs::set_permissions(&key_path, permissions)?;
+            }
+        }
+        Err(error) => return Err(error.into()),
+    }
+    let origin = format!("http://{host}:{port}");
     let state = AppState {
         store: Arc::new(Mutex::new(load_store(data_dir.join("relay-inbox.json"))?)),
+        invites: Arc::new(Mutex::new(invites)),
         capability: capability.clone(),
+        origin,
+        receipt_key: SigningKey::from_bytes(&seed),
     };
     let app = Router::new()
         .route("/api/v1/health", get(health))
@@ -209,6 +441,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             get(get_inbox).post(post_inbox),
         )
         .route("/api/v1/inbox/{capability}/ack", post(ack_inbox))
+        .route("/api/v1/invite-codes/public", post(create_invite))
+        .route("/api/v1/invite-codes/consume", post(consume_invite))
+        .route("/api/v1/invite-codes/pairing-response", post(pairing))
         .with_state(state);
     let address: SocketAddr = format!("{host}:{port}").parse()?;
     let listener = tokio::net::TcpListener::bind(address).await?;

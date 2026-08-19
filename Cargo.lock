@@ -68,6 +68,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "base64ct",
+ "ed25519-dalek",
  "getrandom 0.4.2",
  "serde",
  "serde_json",
