@@ -237,6 +237,9 @@ fn response(status: StatusCode, value: Value) -> Response {
     Response::builder()
         .status(status)
         .header(header::CONTENT_TYPE, "application/json")
+        .header("cache-control", "no-store")
+        .header("x-content-type-options", "nosniff")
+        .header("referrer-policy", "no-referrer")
         .body(value.to_string().into())
         .unwrap()
 }
@@ -370,6 +373,29 @@ fn load_store(path: PathBuf) -> Result<Store, String> {
 }
 async fn health() -> Response {
     response(StatusCode::OK, json!({ "ok": true, "protocol": 1 }))
+}
+async fn info(State(state): State<AppState>) -> Response {
+    response(
+        StatusCode::OK,
+        json!({
+            "protocol": 1,
+            "protocolVersions": [1],
+            "inboxUrl": format!("{}/api/v1/inbox/{}", state.origin, state.capability),
+            "publicOrigin": state.origin,
+            "externalSecure": false,
+            "listenerTls": false,
+            "serveStatic": false,
+            "highRiskAllowed": false,
+            "highRiskTransport": "disabled",
+            "supportedTransports": ["loopback"],
+            "transportMode": "local-or-http-low-risk",
+            "networkScope": "loopback",
+            "maxEnvelopeBytes": MAX_ENVELOPE_BYTES,
+            "maxAttachmentBytes": 32 * 1024 * 1024,
+            "relayReceiptPublicKey": hex(state.receipt_key.verifying_key().as_bytes()),
+            "relayReceiptPublicKeyFingerprint": hex(&Sha256::digest(state.receipt_key.verifying_key().as_bytes())),
+        }),
+    )
 }
 async fn post_inbox(
     State(state): State<AppState>,
@@ -671,6 +697,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let app = Router::new()
         .route("/api/v1/health", get(health))
+        .route("/api/v1/info", get(info))
         .route(
             "/api/v1/inbox/{capability}",
             get(get_inbox).post(post_inbox),
