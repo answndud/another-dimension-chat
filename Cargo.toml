@@ -8,11 +8,11 @@ resolver = "2"
 
 [profile.dev]
 incremental = false
-debug = 1
+debug = 0
 
 [profile.test]
 incremental = false
-debug = 1
+debug = 0
 
 [workspace.package]
 edition = "2021"
@@ -24,7 +24,7 @@ unsafe_code = "forbid"
 
 [profile.release]
 incremental = false
-debug = 1
+debug = 0
 strip = "symbols"
 panic = "abort"
 codegen-units = 1

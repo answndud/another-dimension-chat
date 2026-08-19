@@ -12,10 +12,12 @@ export CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2}
 export CARGO_INCREMENTAL=0
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-"$ROOT_DIR/.build-cache/cargo-target"}
 
+scripts/prepare_build_cache.sh
 printf '%s\n' '==> Rust release binaries'
 cargo build --release --locked --offline -p another-dimension-daemon -p another-dimension-relay -p another-dimension-tools
 printf '%s\n' '==> static web build'
 scripts/build_web_static.sh
 printf '%s\n' '==> shell syntax'
 bash -n scripts/*.sh
+scripts/prepare_build_cache.sh
 printf '%s\n' 'Rust/web release verification passed'

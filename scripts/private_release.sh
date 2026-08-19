@@ -13,8 +13,8 @@ case "${1:-build}" in
     [ "$#" -ge 2 ] || { echo "사용법: private_release.sh verify ARCHIVE.tar.gz --public-key PEM" >&2; exit 2; }
     archive=$2
     shift 2
-    tools=${AD_TOOLS_BINARY:-"$PROJECT_DIR/.build-cache/cargo-target/debug/another-dimension-tools"}
-    [ -x "$tools" ] || { CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 cargo build --offline -p another-dimension-tools; }
+    tools=${AD_TOOLS_BINARY:-"$PROJECT_DIR/.build-cache/cargo-target/release/another-dimension-tools"}
+    [ -x "$tools" ] || { CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 cargo build --release --offline -p another-dimension-tools; }
     tmp=$(mktemp -d "${TMPDIR:-/tmp}/another-dimension-release-verify.XXXXXX")
     trap 'rm -rf "$tmp"' EXIT INT TERM
     tar -xzf "$archive" -C "$tmp"

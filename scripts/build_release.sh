@@ -7,11 +7,11 @@ STAGE=$(mktemp -d "${TMPDIR:-/tmp}/another-dimension-release.XXXXXX")
 trap 'rm -rf "$STAGE"' EXIT INT TERM
 DAEMON=${AD_DAEMON_BINARY:-"$PROJECT_DIR/.build-cache/cargo-target/release/another-dimension-daemon"}
 RELAY=${AD_RELAY_BINARY:-"$PROJECT_DIR/.build-cache/cargo-target/release/another-dimension-relay"}
-TOOLS=${AD_TOOLS_BINARY:-"$PROJECT_DIR/.build-cache/cargo-target/debug/another-dimension-tools"}
+TOOLS=${AD_TOOLS_BINARY:-"$PROJECT_DIR/.build-cache/cargo-target/release/another-dimension-tools"}
 [ -n "${AD_RELEASE_SIGNING_KEY:-}" ] || { echo "AD_RELEASE_SIGNING_KEY가 필요합니다." >&2; exit 1; }
 [ -x "$DAEMON" ] || { CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 cargo build --release --offline -p another-dimension-daemon; }
 [ -x "$RELAY" ] || { CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 cargo build --release --offline -p another-dimension-relay; }
-[ -x "$TOOLS" ] || { CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 cargo build --offline -p another-dimension-tools; }
+[ -x "$TOOLS" ] || { CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 cargo build --release --offline -p another-dimension-tools; }
 AD_WEB_DIST="$PROJECT_DIR/apps/web/dist" "$PROJECT_DIR/scripts/build_web_static.sh"
 ROOT="$STAGE/another-dimension-$VERSION"
 mkdir -p "$ROOT/bin" "$ROOT/apps/web" "$ROOT/scripts"

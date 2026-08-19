@@ -6,7 +6,7 @@ PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 VERSION=${AD_RELEASE_VERSION:-0.1.0}
 OUTPUT_DIR=${AD_CLIENT_RELEASE_ROOT:-"$PROJECT_DIR/client-release"}
 DAEMON=${AD_CLIENT_DAEMON_BINARY:-"$PROJECT_DIR/.build-cache/cargo-target/release/another-dimension-daemon"}
-TOOLS=${AD_TOOLS_BINARY:-"$PROJECT_DIR/.build-cache/cargo-target/debug/another-dimension-tools"}
+TOOLS=${AD_TOOLS_BINARY:-"$PROJECT_DIR/.build-cache/cargo-target/release/another-dimension-tools"}
 STAGE=$(mktemp -d "${TMPDIR:-/tmp}/another-dimension-client.XXXXXX")
 trap 'rm -rf "$STAGE"' EXIT INT TERM
 
@@ -14,7 +14,7 @@ trap 'rm -rf "$STAGE"' EXIT INT TERM
 [ -n "${AD_RELEASE_SIGNING_KEY:-}" ] || { echo "보안 client release에는 AD_RELEASE_SIGNING_KEY가 필요합니다." >&2; exit 1; }
 [ -n "${AD_RELEASE_PUBLIC_KEY:-}" ] || { echo "보안 client release에는 AD_RELEASE_PUBLIC_KEY가 필요합니다." >&2; exit 1; }
 if [ ! -x "$TOOLS" ]; then
-  CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 cargo build --offline -p another-dimension-tools
+  CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 cargo build --release --offline -p another-dimension-tools
 fi
 AD_WEB_DIST="$PROJECT_DIR/apps/web/dist" "$PROJECT_DIR/scripts/build_web_static.sh"
 ROOT="$STAGE/another-dimension-client-$VERSION"

@@ -3,10 +3,10 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
-RELAY=${AD_RELAY_BINARY:-"$PROJECT_DIR/.build-cache/cargo-target/debug/another-dimension-relay"}
+RELAY=${AD_RELAY_BINARY:-"$PROJECT_DIR/.build-cache/cargo-target/release/another-dimension-relay"}
 
 if [ ! -x "$RELAY" ]; then
-  CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 cargo build --offline -p another-dimension-relay
+  CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 cargo build --release --offline -p another-dimension-relay
 fi
 
 export AD_RELAY_DATA_DIR=${AD_RELAY_DATA_DIR:-"${AD_DATA_DIR:-$PROJECT_DIR/.another-dimension-relay}"}

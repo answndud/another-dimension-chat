@@ -81,7 +81,7 @@ signing key 신뢰, 실제 배포 증거가 확보되기 전에는 승인하지 
 ### 1. 의존성 준비
 
 ```sh
-cargo check --workspace --locked --offline
+cargo check --workspace --release --locked --offline
 ```
 
 Rust 의존성은 저장소의 `Cargo.lock`으로 고정되어 있습니다.
@@ -371,7 +371,7 @@ Rust 산출물은 `.cargo/config.toml`에 따라 `.build-cache/cargo-target`에�
 단계에서 디렉터리 700, 파일 owner-only 권한으로 잠급니다. debug/test incremental compilation은 비활성화되어 소스 변경별
 incremental tree가 계속 쌓이지 않습니다.
 이 cache는 실행·배포에 필수인 영구 데이터가 아니라 재컴파일 시간을 줄이는
-임시 산출물이며, 검증 시작·종료 시 기본 2GB를 넘으면 자동으로 비워집니다. 완전히
+임시 산출물이며, 검증 시작·종료 시 기본 768MiB를 넘으면 자동으로 비워집니다. 완전히
 비우고 싶으면 아래 정리 명령을 사용하면 됩니다.
 
 현재 build cache 용량 확인과 정리:
@@ -398,7 +398,7 @@ M1의 CPU 사용량을 과도하게 높이지 않는 기본 검증:
 
 ```sh
 scripts/verify_light.sh
-CARGO_BUILD_JOBS=2 cargo check -p another-dimension-daemon --offline
+CARGO_BUILD_JOBS=2 cargo check --release -p another-dimension-daemon --offline
 scripts/verify_light.sh
 ```
 
