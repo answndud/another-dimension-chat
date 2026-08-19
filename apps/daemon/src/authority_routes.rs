@@ -462,7 +462,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
                         .map(|value| format!(r##""{}""##, json_escape(value)))
                         .unwrap_or_else(|| "null".to_owned());
                     format!(
-                        r##",\"peer\":{{\"account_id\":\"{}\",\"device_id\":\"{}\",\"expires_at\":{},\"relay_origin\":\"{}\",\"inbox_url\":{}}}"##,
+                        r##","peer":{{"account_id":"{}","device_id":"{}","expires_at":{},"relay_origin":"{}","inbox_url":{}}}"##,
                         json_escape(&peer.account_id),
                         json_escape(&peer.device_id),
                         peer.expires_at,
@@ -474,7 +474,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             let safety_number = authority
                 .pairing
                 .safety_number()
-                .map(|value| format!(r##",\"safety_number\":\"{}\""##, json_escape(&value)))
+                .map(|value| format!(r##","safety_number":"{}""##, json_escape(&value)))
                 .unwrap_or_default();
             let safety_verified = if snapshot.safety_verified {
                 "true"

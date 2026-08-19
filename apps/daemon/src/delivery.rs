@@ -223,23 +223,19 @@ impl DeliveryLedger {
         Ok(())
     }
 
+    /// A relay ACK only confirms removal from the relay queue. It must never
+    /// be promoted to a recipient receipt; only the authenticated recipient
+    /// daemon can create `RecipientReceived`.
     pub fn acknowledge_relay_ids(&mut self, ids: &[String]) -> usize {
         self.records
-            .values_mut()
+            .values()
             .filter(|record| {
                 record
                     .relay_id
                     .as_ref()
                     .is_some_and(|id| ids.iter().any(|candidate| candidate == id))
             })
-            .filter_map(|record| {
-                if record.state == DeliveryState::RelayAccepted {
-                    record.state = DeliveryState::RecipientReceived;
-                    Some(())
-                } else {
-                    None
-                }
-            })
+            .filter(|record| record.state == DeliveryState::RelayAccepted)
             .count()
     }
 
@@ -731,6 +727,24 @@ mod tests {
         assert_eq!(
             ledger.get("digest-1").unwrap().state,
             super::DeliveryState::Decrypted
+        );
+    }
+
+    #[test]
+    fn relay_ack_does_not_claim_recipient_received() {
+        let mut ledger = super::DeliveryLedger::default();
+        ledger.register_encrypted("relay-only").unwrap();
+        ledger
+            .transition("relay-only", super::DeliveryState::Queued)
+            .unwrap();
+        ledger
+            .transition("relay-only", super::DeliveryState::RelayAccepted)
+            .unwrap();
+        ledger.bind_relay_id("relay-only", "relay-1").unwrap();
+        assert_eq!(ledger.acknowledge_relay_ids(&["relay-1".into()]), 1);
+        assert_eq!(
+            ledger.get("relay-only").unwrap().state,
+            super::DeliveryState::RelayAccepted
         );
     }
 

@@ -546,7 +546,7 @@ fn handle_detached_pairing_auto_sync(state: &AppState, raw: &[u8], now: u64) -> 
             Some("application/json"),
         );
     };
-    let Some(package_response) = rendezvous.get("key_package") else {
+    let Some(kind) = rendezvous.get("kind").and_then(serde_json::Value::as_str) else {
         return response(
             200,
             r##"{"state":"waiting"}"##,
@@ -554,6 +554,15 @@ fn handle_detached_pairing_auto_sync(state: &AppState, raw: &[u8], now: u64) -> 
             Some("application/json"),
         );
     };
+    if kind != "key-package" {
+        return response(
+            422,
+            "invalid_pairing_response",
+            None,
+            Some("application/json"),
+        );
+    }
+    let package_response = &rendezvous;
     let Some(conversation_id) = package_response
         .get("conversation_id")
         .and_then(serde_json::Value::as_str)
@@ -731,7 +740,7 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
             Some("application/json"),
         );
     };
-    let Some(welcome_response) = rendezvous.get("welcome") else {
+    let Some(kind) = rendezvous.get("kind").and_then(serde_json::Value::as_str) else {
         return response(
             200,
             r##"{"state":"waiting"}"##,
@@ -739,6 +748,10 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
             Some("application/json"),
         );
     };
+    if kind != "welcome" {
+        return response(422, "invalid_welcome", None, Some("application/json"));
+    }
+    let welcome_response = &rendezvous;
     if welcome_response
         .get("conversation_id")
         .and_then(serde_json::Value::as_str)
@@ -786,6 +799,15 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
     let Ok(mut authority) = authority.lock() else {
         return response(503, "pairing_unavailable", None, None);
     };
+    let Ok(mut store) = state.session_store.lock() else {
+        return response(503, "storage_unavailable", None, None);
+    };
+    if let Err(error) = authority.approve_pairing(now, &mut store) {
+        return pairing_error(error);
+    }
+    if let Err(error) = authority.register_approved_contact(now, &mut store) {
+        return contact_directory_error(error);
+    }
     authority.pending_rendezvous_code = None;
     authority.pending_conversation_id = None;
     response(
@@ -1890,15 +1912,15 @@ fn handle_detached_delivery_ack(state: &AppState, raw: &[u8], now: u64) -> Vec<u
     let Ok(mut ledger) = state.delivery_ledger.lock() else {
         return response(503, "delivery_unavailable", None, None);
     };
-    let recipient_received = ledger.acknowledge_relay_ids(&ids);
+    let relay_acknowledged = ledger.acknowledge_relay_ids(&ids);
     if ledger.persist(&mut store).is_err() {
         return response(503, "storage_unavailable", None, None);
     }
     response(
         200,
         &format!(
-            r##"{{"acknowledged":{},"recipient_received":{}}}"##,
-            acknowledged, recipient_received
+            r##"{{"acknowledged":{},"relay_acknowledged":{}}}"##,
+            acknowledged, relay_acknowledged
         ),
         None,
         Some("application/json"),

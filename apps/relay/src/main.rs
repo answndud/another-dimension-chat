@@ -111,6 +111,37 @@ async fn blob_impl(
     if offset > total || offset + body.len() > total {
         return error(StatusCode::BAD_REQUEST, "blob_chunk_out_of_bounds");
     }
+    // A client may retry after losing the response. Accept an identical
+    // already-written range instead of turning a successful upload into an
+    // offset error; conflicting bytes are rejected and never overwritten.
+    if let Ok(existing_bytes) = fs::read(&file) {
+        if offset < existing_bytes.len() {
+            let end = offset.saturating_add(body.len());
+            if end <= existing_bytes.len() && existing_bytes[offset..end] == body[..] {
+                let complete = existing_bytes.len() == total;
+                return response(
+                    if complete {
+                        StatusCode::CREATED
+                    } else {
+                        StatusCode::ACCEPTED
+                    },
+                    json!({
+                        "accepted": true,
+                        "complete": complete,
+                        "duplicate": true,
+                        "received": existing_bytes.len(),
+                        "total": total,
+                        "expiresAt": now() + TTL_SECONDS,
+                        "blobUrl": format!("/api/v1/blobs/{id}")
+                    }),
+                );
+            }
+            return error(StatusCode::CONFLICT, "blob_chunk_conflict");
+        }
+        if offset != existing_bytes.len() {
+            return error(StatusCode::BAD_REQUEST, "blob_offset_mismatch");
+        }
+    }
     let mut existing = fs::OpenOptions::new()
         .create(true)
         .write(true)
@@ -624,8 +655,15 @@ async fn pairing(State(state): State<AppState>, body: Bytes) -> Response {
         }
         _ => return error(StatusCode::BAD_REQUEST, "invalid_pairing_response"),
     };
-    if record.pairing_response.is_some() {
-        return error(StatusCode::CONFLICT, "pairing_response_already_set");
+    if let Some(previous) = record.pairing_response.as_ref() {
+        let previous_kind = previous.get("kind").and_then(Value::as_str);
+        let next_kind = value.get("kind").and_then(Value::as_str);
+        // The invite consumer publishes its key package first. The invite
+        // creator may then replace that rendezvous value exactly once with
+        // the authenticated MLS welcome; every other overwrite is rejected.
+        if !(previous_kind == Some("key-package") && next_kind == Some("welcome")) {
+            return error(StatusCode::CONFLICT, "pairing_response_already_set");
+        }
     }
     record.pairing_response = Some(value);
     if persist_invites(

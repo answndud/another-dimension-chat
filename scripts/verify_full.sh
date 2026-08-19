@@ -19,5 +19,7 @@ printf '%s\n' '==> static web build'
 scripts/build_web_static.sh
 printf '%s\n' '==> shell syntax'
 bash -n scripts/*.sh
+printf '%s\n' '==> P0 local smoke'
+scripts/smoke_p0.sh
 scripts/prepare_build_cache.sh
 printf '%s\n' 'Rust/web release verification passed'

@@ -194,8 +194,16 @@ pub(crate) fn process_sync_items(
         if delivery_ledger
             .as_deref()
             .and_then(|ledger| ledger.get(&digest))
-            .is_some_and(|record| record.state == crate::delivery::DeliveryState::Decrypted)
+            .is_some_and(|record| {
+                matches!(
+                    record.state,
+                    crate::delivery::DeliveryState::RecipientReceived
+                        | crate::delivery::DeliveryState::Decrypted
+                )
+            })
         {
+            // The local transaction was already committed. Re-ACK the relay
+            // item without feeding the same ciphertext into MLS again.
             acknowledged_ids.push(relay_id);
             continue;
         }
