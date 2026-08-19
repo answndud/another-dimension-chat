@@ -546,7 +546,7 @@ fn handle_detached_pairing_auto_sync(state: &AppState, raw: &[u8], now: u64) -> 
             Some("application/json"),
         );
     };
-    let Some(package_response) = rendezvous.get("keyPackage") else {
+    let Some(package_response) = rendezvous.get("key_package") else {
         return response(
             200,
             r##"{"state":"waiting"}"##,

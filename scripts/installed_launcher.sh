@@ -51,6 +51,38 @@ start_relay() {
   echo "relay started pid=$pid · http://127.0.0.1:$RELAY_PORT"
 }
 
+prepare_local_relay() {
+  start_relay >/dev/null
+  RELAY_ORIGIN="http://127.0.0.1:$RELAY_PORT"
+  RELAY_CAPABILITY=$(tr -d '\r\n' < "$RELAY_DATA/inbox-capability")
+  RELAY_INFO=$(curl -fsS "$RELAY_ORIGIN/api/v1/info") || {
+    echo "Rust relay info를 읽지 못했습니다." >&2
+    exit 1
+  }
+  RELAY_PUBLIC_KEY=$(printf '%s' "$RELAY_INFO" | sed -n 's/.*"relayReceiptPublicKey":"\([0-9a-f]\{64\}\)".*/\1/p')
+  RELAY_FINGERPRINT=$(printf '%s' "$RELAY_INFO" | sed -n 's/.*"relayReceiptPublicKeyFingerprint":"\([0-9a-f]\{64\}\)".*/\1/p')
+  [ "${#RELAY_CAPABILITY}" -eq 43 ] && [ "${#RELAY_PUBLIC_KEY}" -eq 64 ] && [ "${#RELAY_FINGERPRINT}" -eq 64 ] || {
+    echo "relay info 형식이 올바르지 않습니다." >&2
+    exit 1
+  }
+}
+
+start_daemon() {
+  prepare_local_relay
+  shift
+  prompt_secret "프로필 암호문구"
+  printf '%s' "$SECRET" | "$DAEMON" serve \
+    --data-dir "$DAEMON_DATA" \
+    --port "$DAEMON_PORT" \
+    --ui-dir "$ROOT/apps/web/dist" \
+    --relay-origin "$RELAY_ORIGIN" \
+    --inbox-url "$RELAY_ORIGIN/api/v1/inbox/$RELAY_CAPABILITY" \
+    --relay-public-key "$RELAY_PUBLIC_KEY" \
+    --relay-public-key-fingerprint "$RELAY_FINGERPRINT" \
+    --open "$@"
+  unset SECRET
+}
+
 case "${1:-help}" in
   init)
     shift
@@ -66,16 +98,13 @@ case "${1:-help}" in
     fi
     [ "$#" -eq 0 ] || { echo "알 수 없는 init 옵션입니다." >&2; exit 2; } ;;
   start)
-    shift; prompt_secret "프로필 암호문구"
-    printf '%s' "$SECRET" | "$DAEMON" serve --data-dir "$DAEMON_DATA" --port "$DAEMON_PORT" --ui-dir "$ROOT/apps/web/dist" --open "$@"
-    unset SECRET ;;
-  status) "$DAEMON" status --data-dir "$DAEMON_DATA" ;;
-  stop) "$DAEMON" stop --data-dir "$DAEMON_DATA" ;;
+    start_daemon "$@" ;;
+  status) "$DAEMON" status --data-dir "$DAEMON_DATA"; "$0" relay-status >/dev/null 2>&1 || true ;;
+  stop) "$DAEMON" stop --data-dir "$DAEMON_DATA" 2>/dev/null || true; "$0" relay-stop >/dev/null 2>&1 || true ;;
   restart)
     "$DAEMON" stop --data-dir "$DAEMON_DATA" 2>/dev/null || true
-    shift; prompt_secret "프로필 암호문구"
-    printf '%s' "$SECRET" | "$DAEMON" serve --data-dir "$DAEMON_DATA" --port "$DAEMON_PORT" --ui-dir "$ROOT/apps/web/dist" --open "$@"
-    unset SECRET ;;
+    "$0" relay-stop >/dev/null 2>&1 || true
+    start_daemon "$@" ;;
   doctor) "$DAEMON" doctor --data-dir "$DAEMON_DATA" ;;
   recovery-export) [ -n "${2:-}" ] || { echo "사용법: $0 recovery-export FILE" >&2; exit 2; }; "$DAEMON" recovery export --data-dir "$DAEMON_DATA" --output "$2" ;;
   recovery-import) [ -n "${2:-}" ] || { echo "사용법: $0 recovery-import FILE" >&2; exit 2; }; "$DAEMON" recovery import --data-dir "$DAEMON_DATA" --input "$2" ;;

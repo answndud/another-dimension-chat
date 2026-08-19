@@ -294,9 +294,27 @@ fn hygiene(root: &Path, current: &Path) -> Result<(), String> {
         }
         let bytes = fs::read(&path).map_err(|error| error.to_string())?;
         // Binary executables can contain diagnostic/source strings that look like
-        // PEM markers. Scan only valid UTF-8 text files; the secret filename and
-        // extension checks above still apply to every file.
-        if let Ok(text) = std::str::from_utf8(&bytes) {
+        // PEM markers. Scan only release text formats; filename and extension
+        // checks above still apply to every file.
+        let text_file = matches!(
+            extension.as_deref(),
+            Some(
+                ".json"
+                    | ".md"
+                    | ".sh"
+                    | ".html"
+                    | ".css"
+                    | ".js"
+                    | ".txt"
+                    | ".toml"
+                    | ".yaml"
+                    | ".yml"
+                    | ".webmanifest"
+            )
+        );
+        if text_file {
+            let text = String::from_utf8(bytes.clone())
+                .map_err(|_| format!("release text file is not valid UTF-8: {relative}"))?;
             if text.contains("-----BEGIN ") && text.contains("PRIVATE KEY-----") {
                 return error(format!("private key material in release: {relative}"));
             }
