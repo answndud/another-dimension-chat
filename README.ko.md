@@ -231,8 +231,9 @@ AD_RELEASE_PUBLIC_KEY=/secure/release/release-public.pem \
 scripts/build_client_release.sh
 ```
 
-client 실행에는 Node.js·npm·Cargo가 필요하지 않습니다. 설치 전 서명 검증 단계만
-Node.js 20+를 사용합니다.
+client release는 Rust `another-dimension-tools`로 빌드합니다.
+설치는 archive에 포함된 Rust daemon으로 서명과 신뢰 매니페스트를 검증하므로,
+client 사용자와 client release 운영자 모두 Node.js·npm·relay 패키지가 필요하지 않습니다.
 
 ```sh
 sh another-dimension-client-0.1.0/scripts/install_client.sh \

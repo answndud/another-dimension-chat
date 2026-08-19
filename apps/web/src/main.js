@@ -3,8 +3,6 @@ import { renderDaemonBridgeState } from "./daemon-view.js";
 import { daemonErrorMessage } from "./daemon-errors.js";
 import { state } from "./daemon-state.js";
 import { bindDaemonWorkspace } from "./daemon-controller.js";
-import "./styles.css";
-
 const app = document.querySelector("#app");
 
 // The current product deliberately does not use a service worker: the daemon

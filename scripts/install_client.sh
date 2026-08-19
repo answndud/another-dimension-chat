@@ -14,12 +14,9 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 [ -n "$archive" ] && [ -n "$destination" ] && [ -n "$public_key" ] && [ -n "$trust_manifest" ] && [ -n "$trust_manifest_key" ] || usage
-node_path=$(command -v node 2>/dev/null || true)
-[ -x "$node_path" ] || { echo "설치 전 archive 서명 검증을 위해 Node.js 20+가 필요합니다. 검증 후 실행에는 Node.js가 필요하지 않습니다." >&2; exit 1; }
-node -e 'const major=Number(process.versions.node.split(".")[0]); if(major<20) process.exit(1)' || { echo "Node.js 20+가 필요합니다." >&2; exit 1; }
-node "$(dirname "$0")/verify_client_release_gate.mjs" "$archive" --public-key "$public_key" --trust-manifest "$trust_manifest" --trust-manifest-key "$trust_manifest_key"
 [ -x "$archive/bin/another-dimension-daemon" ] || { echo "client daemon이 없습니다." >&2; exit 1; }
 [ -d "$archive/apps/web/dist" ] || { echo "client web UI가 없습니다." >&2; exit 1; }
+"$archive/bin/another-dimension-daemon" verify-client-release --root "$archive" --public-key "$public_key" --trust-manifest "$trust_manifest" --trust-manifest-key "$trust_manifest_key"
 [ ! -e "$destination" ] || { echo "설치 대상이 이미 존재합니다." >&2; exit 1; }
 umask 077
 mkdir -p "$(dirname "$destination")"

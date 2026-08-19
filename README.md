@@ -257,8 +257,9 @@ AD_RELEASE_PUBLIC_KEY=/secure/release/release-public.pem \
 scripts/build_client_release.sh
 ```
 
-Node.js 20+ is used only to verify the archive signature during installation; the
-installed client does not need Node.js, npm, Cargo, or the relay package.
+The client release is built with the Rust `another-dimension-tools` binary. Installation
+verifies the signed archive with the Rust daemon already inside the archive, so neither
+client users nor client release operators need Node.js, npm, or the relay package.
 
 ```sh
 sh another-dimension-client-0.1.0/scripts/install_client.sh \

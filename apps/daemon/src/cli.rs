@@ -22,6 +22,8 @@ use std::{
 mod profile;
 #[path = "cli_recovery.rs"]
 mod recovery;
+#[path = "cli_release_verify.rs"]
+mod release_verify;
 
 const IDENTITY_RECORD_MAGIC: &[u8; 13] = b"ADIDENTITY1\0\0";
 const LINKED_IDENTITY_RECORD_MAGIC: &[u8; 13] = b"ADIDENTITY2\0\0";
@@ -141,6 +143,7 @@ pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError
             let passphrase = resolve_passphrase(args, passphrase)?;
             profile::wipe(args, &passphrase)
         }
+        "verify-client-release" => release_verify::verify(args),
         "invite" | "contact" => Err(CliError::Usage(
             "초대와 연락처 관리는 daemon 웹 화면에서 수행합니다. serve로 화면을 시작하세요".into(),
         )),

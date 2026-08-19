@@ -41,10 +41,11 @@ pub enum Command {
     Status,
     Stop,
     Wipe,
+    VerifyClientRelease,
 }
 
 impl Command {
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 12] = [
         Self::Doctor,
         Self::Init,
         Self::Serve,
@@ -56,6 +57,7 @@ impl Command {
         Self::Status,
         Self::Stop,
         Self::Wipe,
+        Self::VerifyClientRelease,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -71,6 +73,7 @@ impl Command {
             Self::Status => "status",
             Self::Stop => "stop",
             Self::Wipe => "wipe",
+            Self::VerifyClientRelease => "verify-client-release",
         }
     }
 }
@@ -92,7 +95,7 @@ mod tests {
             IMPLEMENTATION_STATUS,
             "daemon-owned-openmls-messaging-path-active-development"
         );
-        assert_eq!(Command::ALL.len(), 11);
+        assert_eq!(Command::ALL.len(), 12);
         assert_eq!(command_from_name("serve"), Some(Command::Serve));
         assert_eq!(command_from_name("keychain"), Some(Command::Keychain));
         assert_eq!(command_from_name("desktop"), None);
