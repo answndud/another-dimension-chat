@@ -3,7 +3,7 @@
 use axum::{
     body::Bytes,
     extract::{Path, State},
-    http::{header, StatusCode},
+    http::{header, HeaderMap, StatusCode},
     response::Response,
     routing::{get, post},
     Router,
@@ -214,10 +214,18 @@ async fn health() -> Response {
 async fn post_inbox(
     State(state): State<AppState>,
     Path(capability): Path<String>,
+    headers: HeaderMap,
     body: Bytes,
 ) -> Response {
     if capability != state.capability {
         return error(StatusCode::GONE, "capability_expired");
+    }
+    if headers
+        .get("x-ad-relay-capability")
+        .and_then(|value| value.to_str().ok())
+        != Some(state.capability.as_str())
+    {
+        return error(StatusCode::FORBIDDEN, "relay_capability_required");
     }
     let body: Value = match serde_json::from_slice(&body) {
         Ok(value) => value,
@@ -251,9 +259,20 @@ async fn post_inbox(
     }
     response(StatusCode::ACCEPTED, json!({ "accepted": true, "id": id }))
 }
-async fn get_inbox(State(state): State<AppState>, Path(capability): Path<String>) -> Response {
+async fn get_inbox(
+    State(state): State<AppState>,
+    Path(capability): Path<String>,
+    headers: HeaderMap,
+) -> Response {
     if capability != state.capability {
         return error(StatusCode::GONE, "capability_expired");
+    }
+    if headers
+        .get("x-ad-relay-capability")
+        .and_then(|value| value.to_str().ok())
+        != Some(state.capability.as_str())
+    {
+        return error(StatusCode::FORBIDDEN, "relay_capability_required");
     }
     let mut store = state.store.lock().await;
     let cutoff = now().saturating_sub(TTL_SECONDS);
@@ -269,10 +288,18 @@ async fn get_inbox(State(state): State<AppState>, Path(capability): Path<String>
 async fn ack_inbox(
     State(state): State<AppState>,
     Path(capability): Path<String>,
+    headers: HeaderMap,
     body: Bytes,
 ) -> Response {
     if capability != state.capability {
         return error(StatusCode::GONE, "capability_expired");
+    }
+    if headers
+        .get("x-ad-relay-capability")
+        .and_then(|value| value.to_str().ok())
+        != Some(state.capability.as_str())
+    {
+        return error(StatusCode::FORBIDDEN, "relay_capability_required");
     }
     let body: Value = match serde_json::from_slice(&body) {
         Ok(value) => value,
