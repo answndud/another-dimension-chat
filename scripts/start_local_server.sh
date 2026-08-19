@@ -3,28 +3,13 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
-CONFIG_FILE=${AD_CONFIG_FILE:-"$PROJECT_DIR/.another-dimension-server/server-config.json"}
+RELAY=${AD_RELAY_BINARY:-"$PROJECT_DIR/.build-cache/cargo-target/debug/another-dimension-relay"}
 
-node -e 'const major = Number(process.versions.node.split(".")[0]); if (major < 20) { console.error(`Node.js 20 or newer is required (found ${process.version}).`); process.exit(1); }'
-
-if [ "${AD_SERVE_UI:-0}" = "1" ] && [ ! -f "$PROJECT_DIR/apps/web/dist/index.html" ]; then
-  echo "Web bundle missing. Run: npm --prefix apps/web run build --workspaces=false" >&2
-  exit 1
+if [ ! -x "$RELAY" ]; then
+  CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 cargo build --offline -p another-dimension-relay
 fi
 
-if [ "${1:-}" = "--setup" ]; then
-  shift
-  node "$PROJECT_DIR/scripts/configure_local_server.mjs" --config "$CONFIG_FILE" "$@"
-fi
-
-if [ -f "$CONFIG_FILE" ]; then
-  node "$PROJECT_DIR/scripts/preflight_local_server.mjs" --config "$CONFIG_FILE"
-else
-  node "$PROJECT_DIR/scripts/preflight_local_server.mjs"
-fi
-
-if [ -f "$CONFIG_FILE" ]; then
-  exec node "$PROJECT_DIR/apps/server/server.mjs" --config "$CONFIG_FILE"
-fi
-
-exec node "$PROJECT_DIR/apps/server/server.mjs"
+export AD_RELAY_DATA_DIR=${AD_RELAY_DATA_DIR:-"${AD_DATA_DIR:-$PROJECT_DIR/.another-dimension-relay}"}
+export AD_RELAY_BIND_HOST=${AD_RELAY_BIND_HOST:-127.0.0.1}
+export AD_RELAY_PORT=${AD_RELAY_PORT:-1422}
+exec "$RELAY"
