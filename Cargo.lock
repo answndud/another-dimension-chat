@@ -63,6 +63,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "another-dimension-relay"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "base64ct",
+ "getrandom 0.4.2",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tokio",
+]
+
+[[package]]
 name = "another-dimension-tools"
 version = "0.1.0"
 dependencies = [

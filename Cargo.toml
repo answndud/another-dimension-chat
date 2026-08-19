@@ -2,6 +2,7 @@
 members = [
     "apps/daemon",
     "apps/tools",
+    "apps/relay",
 ]
 resolver = "2"
 
