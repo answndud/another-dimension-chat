@@ -35,6 +35,7 @@ export const state = {
   daemonAttachmentState: "",
   daemonAttachmentProgress: 0,
   daemonAttachmentBlobId: "",
+  daemonBusy: "",
   error: "",
   notice: "",
 };

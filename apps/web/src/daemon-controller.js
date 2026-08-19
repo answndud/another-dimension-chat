@@ -132,6 +132,8 @@ export function bindDaemonSession({ render }) {
   const run = async (action, success) => {
     if (sessionActionBusy) return;
     sessionActionBusy = true;
+    state.daemonBusy = "보안 작업";
+    render();
     try {
       await action();
       state.notice = success;
@@ -157,6 +159,7 @@ export function bindDaemonSession({ render }) {
       }
     } finally {
       sessionActionBusy = false;
+      state.daemonBusy = "";
     }
     render();
   };

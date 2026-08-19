@@ -117,7 +117,9 @@ This prototype does not claim:
 - an independently exercised signing-key distribution path or safe unattended updates
 - independently reviewed identity continuity, KeyPackage lifecycle, revocation,
   or device recovery
-- rate-limited, spam-resistant, highly available relay delivery
+- spam-resistant or highly available relay delivery. The local relay applies
+  bounded request frequency, body, queue, invite, and blob limits, but this is
+  not a distributed abuse-prevention service.
 
 Using OpenMLS and libcrux does not audit this application's identity signatures,
 transcript binding, persistence, delivery, local bridge, or UI. An unlocked

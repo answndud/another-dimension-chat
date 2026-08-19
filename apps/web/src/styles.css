@@ -156,6 +156,7 @@ button, input, textarea, select, .notice, .global-status, .error, .warning,
 .daemon-invite p { color: var(--muted); font-size: .82rem; line-height: 1.6; }
 .daemon-invite textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem; }
 .daemon-session-tools { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 20px; }
+.daemon-busy { border: 1px solid var(--line); padding: 10px 12px; margin: 12px 0; color: var(--text-muted); }
 .daemon-session-tools summary { cursor: pointer; font-weight: 750; }
 .daemon-session-tools[open] { display: grid; gap: 12px; }
 .daemon-session-tools textarea[readonly] { background: var(--surface-muted); }

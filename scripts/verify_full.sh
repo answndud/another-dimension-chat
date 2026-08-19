@@ -21,5 +21,6 @@ printf '%s\n' '==> shell syntax'
 bash -n scripts/*.sh
 printf '%s\n' '==> P0 local smoke'
 scripts/smoke_p0.sh
+git diff --check
 scripts/prepare_build_cache.sh
 printf '%s\n' 'Rust/web release verification passed'

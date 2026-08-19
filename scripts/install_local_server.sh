@@ -27,6 +27,7 @@ done
 [ -n "$archive" ] || { usage >&2; exit 2; }
 [ -n "$public_key" ] || { echo "--public-key가 필요합니다." >&2; exit 2; }
 archive=$(CDPATH= cd -- "$archive" && pwd)
+mkdir -p "$(dirname -- "$destination")"
 destination_parent=$(CDPATH= cd -- "$(dirname -- "$destination")" && pwd)
 destination="$destination_parent/$(basename -- "$destination")"
 case "$destination" in "$archive"|"$archive"/*) echo "설치 대상은 release 원본 안쪽일 수 없습니다." >&2; exit 2;; esac
