@@ -124,6 +124,14 @@ async fn blob_impl(
         return error(StatusCode::INTERNAL_SERVER_ERROR, "blob_storage_error");
     };
     use std::io::{Seek, SeekFrom, Write};
+    if file_handle
+        .metadata()
+        .map(|metadata| metadata.len() as usize)
+        .unwrap_or(usize::MAX)
+        != offset
+    {
+        return error(StatusCode::BAD_REQUEST, "blob_offset_mismatch");
+    }
     if file_handle.seek(SeekFrom::Start(offset as u64)).is_err()
         || file_handle.write_all(&body).is_err()
     {
