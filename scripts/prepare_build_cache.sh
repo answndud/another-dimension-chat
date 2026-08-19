@@ -4,7 +4,7 @@ umask 077
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly CACHE_DIR="$ROOT_DIR/.build-cache/cargo-target"
-readonly DEFAULT_MAX_MB=768
+readonly DEFAULT_MAX_MB=512
 max_mb="${AD_BUILD_CACHE_MAX_MB:-$DEFAULT_MAX_MB}"
 
 case "$max_mb" in

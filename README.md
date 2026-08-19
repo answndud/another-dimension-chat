@@ -48,12 +48,13 @@ Chromium UI (표시·입력)
 
 - Apple Silicon macOS(arm64)
 - Chromium 계열 브라우저(정확한 버전은 지원 evidence에 기록)
-- 로컬 daemon 실행이 가능한 터미널
+- 일반 사용자는 `Another Dimension.app`을 더블클릭하며 터미널이 필요하지 않음
 - Node.js/npm은 필요하지 않음
 - 일반 배포본은 daemon·Rust relay·release tools binary를 함께 포함함
 - 지원하지 않는 환경(다른 OS·Intel macOS·다른 브라우저)은 development-only이며
   `doctor`가 `unsupported` 항목을 표시하고 `serve`가 경고를 출력합니다.
-  상세 지원 범위는 [SUPPORT.md](SUPPORT.md)를 참고하세요.
+  지원 상태와 증거 수준은 [`reference/SUPPORT_MATRIX.json`](reference/SUPPORT_MATRIX.json),
+  보안 경계는 [`SECURITY.md`](SECURITY.md)를 참고하세요.
 
 ## 릴리스 배포 모드
 
@@ -76,7 +77,22 @@ signing key 신뢰, 실제 배포 증거가 확보되기 전에는 승인하지 
 메타데이터를 볼 수 있습니다. 상대방 기기가 악성코드에 감염됐거나 상대방이
 화면을 촬영하는 상황도 방어하지 않습니다.
 
-## 개발 환경에서 빠르게 실행하기
+## 일반 사용자 실행 — 여기까지만 읽어도 됩니다
+
+1. 운영자에게 받은 검증된 `Another Dimension.app`을 응용 프로그램 폴더로 옮깁니다.
+2. 앱을 더블클릭합니다. Chromium 화면이 자동으로 열립니다.
+3. 표시 이름만 입력해 계정을 만들고, 화면의 `복구 파일 저장`을 완료합니다.
+4. `초대 만들기` 또는 `상대 초대에 참여하기`를 선택합니다.
+5. 양쪽이 화면의 안전 번호 전체를 전화·대면 등 다른 신뢰 채널에서 비교합니다.
+6. 번호가 일치할 때만 연락처를 승인하고 채팅을 시작합니다.
+
+일반 사용자는 `cargo`, `daemon`, `relay`, 포트, 저장 경로, 서명 명령을
+입력하지 않습니다. 복구 파일·초대 코드·안전번호·로컬 주소·원문 메시지는 메신저나
+지원 요청에 보내지 않습니다. 문제가 생기면 앱에 표시된 일반 오류 문구만 운영자에게
+전달합니다. 업데이트와 삭제는 [Mac 사용 가이드](docs/03-기능/다운로드-설치-실행-가이드.md)를
+따릅니다.
+
+## 운영자·개발자 환경에서 빠르게 실행하기
 
 ### 1. 의존성 준비
 
@@ -166,17 +182,18 @@ unset AD_PASSPHRASE
 확인하지 않은 새 pin으로 자동 전환하지 않습니다. 인증서를 실제로 교체한 경우에만
 새 pin과 `--relay-tls-retrust`를 함께 사용하세요.
 
-## 사용자 워크플로우
+## 내부 구현 워크플로우 (일반 사용자용 절차 아님)
 
-1. 각 사용자가 자신의 Mac에서 daemon 프로필을 생성합니다.
-2. 각 사용자가 접근 가능한 user-owned relay를 준비합니다.
+1. 운영자가 검증된 통합 앱과 전달 경로를 준비합니다.
+2. 사용자는 앱을 열어 표시 이름과 복구 파일만 준비합니다.
 3. 초대를 만드는 사용자가 UI에서 일회성 초대 코드를 생성합니다.
 4. 코드는 별도의 신뢰 가능한 채널로 상대에게 전달합니다.
 5. 상대가 코드를 입력하면 daemon이 서명, 만료, relay binding, protocol version을
    검증합니다.
 6. 양쪽이 안전 번호 전체를 비교하고 확인합니다.
 7. 확인이 끝난 뒤에만 연락처 승인과 OpenMLS 메시지 전송이 활성화됩니다.
-8. account, device, relay binding이 바뀌면 전송은 중단되고 새로 검증해야 합니다.
+8. 계정·기기·연결 정보가 바뀌면 전송은 중단됩니다. 화면 안내에 따라 상대방과
+   안전 번호를 다시 확인해야 합니다.
 
 초대 코드는 한 번만 사용할 수 있고 만료됩니다. 사용자명 검색이나 전화번호
 연락처 동기화는 제공하지 않습니다.
@@ -250,16 +267,13 @@ The client release is built with the Rust `another-dimension-tools` binary. Inst
 verifies the signed archive with the Rust daemon already inside the archive, so neither
 client users nor client release operators need Node.js, npm, or the relay package.
 
-```sh
-sh another-dimension-client-0.1.0/scripts/install_client.sh \
-  --archive another-dimension-client-0.1.0 \
-  --destination "$HOME/.local/share/another-dimension/client" \
-  --public-key /secure/release/release-public.pem \
-  --trust-manifest /secure/trust/release-trust.json \
-  --trust-manifest-key /secure/trust/bootstrap-public.pem
-"$HOME/.local/share/another-dimension/client/scripts/client_launcher.sh" \
-  init "My profile"
-```
+일반 사용자는 검증된 통합 배포본의 `Another Dimension.app`을 더블클릭합니다.
+Chromium에서 표시 이름만 입력하고 복구 파일을 오프라인 암호화 매체에 저장하면,
+이후 앱을 다시 더블클릭해 초대·안전번호·채팅을 사용할 수 있습니다. 일반 사용자는
+`init`, `start`, `--data-dir`, 포트, manifest 검증 명령을 실행하지 않습니다.
+
+`client-only` archive는 relay를 별도로 운영하는 운영자용 패키지이며 일반 사용자에게
+전달하지 않습니다.
 
 ```sh
 sh another-dimension-0.1.0/scripts/install_local_server.sh \
@@ -455,7 +469,7 @@ private UI bootstrap 자료가 들어갑니다. relay 데이터 디렉터리에�
 프로필은 `--data-dir` 단위로 분리됩니다. 같은 기기의 여러 프로필은 별도
 데이터 디렉터리와 별도 daemon 인스턴스를 사용하며 서로의 데이터에 접근하지
 않습니다. relay 운영자가 보는 정보와 보지 못하는 정보는
-[SUPPORT.md](SUPPORT.md)의 표를 참고하세요.
+[`SECURITY.md`](SECURITY.md)의 보안 경계를 참고하세요.
 
 다음 자료는 공개하면 안 됩니다.
 

@@ -11,6 +11,7 @@ use std::{
 use std::os::unix::fs::PermissionsExt;
 
 const FORMAT: &str = "another-dimension-release-manifest";
+const TRUST_FORMAT: &str = "another-dimension-release-trust";
 
 fn error(message: impl Into<String>) -> Result<(), String> {
     Err(message.into())
@@ -22,6 +23,28 @@ fn option(args: &[String], name: &str) -> Result<PathBuf, String> {
         .map(|pair| PathBuf::from(&pair[1]))
         .filter(|value| !value.as_os_str().is_empty())
         .ok_or_else(|| format!("{name} requires a value"))
+}
+
+fn text_option(args: &[String], name: &str) -> Result<String, String> {
+    args.windows(2)
+        .find(|pair| pair[0] == name)
+        .map(|pair| pair[1].clone())
+        .filter(|value| !value.starts_with('-') && !value.is_empty())
+        .ok_or_else(|| format!("{name} requires a value"))
+}
+
+fn version(value: &str) -> Result<String, String> {
+    let parts: Vec<_> = value.split('.').collect();
+    if parts.len() != 3
+        || parts
+            .iter()
+            .any(|part| part.is_empty() || !part.chars().all(|c| c.is_ascii_digit()))
+    {
+        return Err(format!(
+            "invalid version: {value}; expected MAJOR.MINOR.PATCH"
+        ));
+    }
+    Ok(value.to_owned())
 }
 
 fn encode(bytes: &[u8]) -> Result<String, String> {
@@ -115,6 +138,51 @@ fn unsigned(manifest: &Value) -> Result<Vec<u8>, String> {
     serde_json::to_vec(&value).map_err(|error| error.to_string())
 }
 
+fn trust_unsigned(manifest: &Value) -> Result<Vec<u8>, String> {
+    unsigned(manifest)
+}
+
+fn verify_signed_document(value: &Value, key: &VerifyingKey) -> Result<(), String> {
+    let signature = value
+        .get("signature")
+        .ok_or_else(|| "signature is missing".to_owned())?;
+    if signature.get("algorithm").and_then(Value::as_str) != Some("Ed25519")
+        || signature.get("keyId").and_then(Value::as_str) != Some(key_id(key).as_str())
+    {
+        return error("signature key identity mismatch");
+    }
+    let bytes = decode(
+        signature
+            .get("value")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "signature value is missing".to_owned())?,
+    )?;
+    let signature =
+        Signature::from_slice(&bytes).map_err(|_| "invalid signature length".to_owned())?;
+    key.verify(&trust_unsigned(value)?, &signature)
+        .map_err(|_| "signature verification failed".to_owned())
+}
+
+fn write_json_once(output: &Path, value: &Value) -> Result<(), String> {
+    if output.exists() {
+        return error(format!(
+            "refusing to overwrite existing trust manifest: {}",
+            output.display()
+        ));
+    }
+    if let Some(parent) = output.parent() {
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    fs::write(
+        output,
+        format!(
+            "{}\n",
+            serde_json::to_string_pretty(value).map_err(|error| error.to_string())?
+        ),
+    )
+    .map_err(|error| error.to_string())
+}
+
 fn create(root: &Path, version: &str, private_key: &Path) -> Result<(), String> {
     let signing = signing_key(private_key)?;
     let mut paths = Vec::new();
@@ -162,6 +230,175 @@ fn create(root: &Path, version: &str, private_key: &Path) -> Result<(), String> 
         ),
     )
     .map_err(|error| error.to_string())
+}
+
+fn trust_create(args: &[String]) -> Result<(), String> {
+    let output = option(args, "--output")?;
+    let bootstrap = signing_key(&option(args, "--bootstrap-private-key")?)?;
+    let release_pem_path = option(args, "--release-public-key")?;
+    let release_pem = fs::read_to_string(&release_pem_path).map_err(|error| error.to_string())?;
+    let release = public_key_from_pem(&release_pem)?;
+    let minimum = version(&text_option(args, "--minimum-release-version")?)?;
+    let valid_from = version(
+        &args
+            .windows(2)
+            .find(|pair| pair[0] == "--valid-from-version")
+            .map(|pair| pair[1].clone())
+            .unwrap_or_else(|| minimum.clone()),
+    )?;
+    let valid_until = args
+        .windows(2)
+        .find(|pair| pair[0] == "--valid-until-version")
+        .map(|pair| pair[1].clone())
+        .map(|value| version(&value))
+        .transpose()?;
+    let release_id = key_id(&release);
+    let mut manifest = Map::new();
+    manifest.insert("format".into(), json!(TRUST_FORMAT));
+    manifest.insert("trustVersion".into(), json!(1));
+    manifest.insert("policy".into(), json!({ "minimumReleaseVersion": minimum }));
+    manifest.insert(
+        "keys".into(),
+        json!([{
+            "keyId": release_id,
+            "publicKey": release_pem,
+            "validFromVersion": valid_from,
+            "validUntilVersion": valid_until,
+        }]),
+    );
+    manifest.insert("revokedKeyIds".into(), json!([]));
+    manifest.insert("signature".into(), Value::Null);
+    let mut value = Value::Object(manifest);
+    let signature = bootstrap.sign(&trust_unsigned(&value)?);
+    value
+        .as_object_mut()
+        .expect("trust manifest object")
+        .insert(
+            "signature".into(),
+            json!({
+                "algorithm": "Ed25519",
+                "keyId": key_id(&bootstrap.verifying_key()),
+                "value": encode(&signature.to_bytes())?,
+            }),
+        );
+    write_json_once(&output, &value)
+}
+
+fn trust_revoke(args: &[String]) -> Result<(), String> {
+    let input = option(args, "--input")?;
+    let output = option(args, "--output")?;
+    let key_to_revoke = text_option(args, "--key-id")?;
+    if key_to_revoke.len() != 32 || !key_to_revoke.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return error("--key-id must be a 32-character hexadecimal key id");
+    }
+    let bootstrap = signing_key(&option(args, "--bootstrap-private-key")?)?;
+    let mut manifest: Value =
+        serde_json::from_slice(&fs::read(&input).map_err(|error| error.to_string())?)
+            .map_err(|error| error.to_string())?;
+    if manifest.get("format").and_then(Value::as_str) != Some(TRUST_FORMAT)
+        || manifest.get("trustVersion").and_then(Value::as_u64) != Some(1)
+    {
+        return error("unsupported trust manifest");
+    }
+    verify_signed_document(&manifest, &bootstrap.verifying_key())?;
+    let known_key = manifest
+        .get("keys")
+        .and_then(Value::as_array)
+        .is_some_and(|keys| {
+            keys.iter().any(|entry| {
+                entry.get("keyId").and_then(Value::as_str) == Some(key_to_revoke.as_str())
+            })
+        });
+    if !known_key {
+        return error("cannot revoke an unknown release key");
+    }
+    let revoked = manifest
+        .get_mut("revokedKeyIds")
+        .and_then(Value::as_array_mut)
+        .ok_or_else(|| "trust manifest revokedKeyIds is missing".to_owned())?;
+    if revoked
+        .iter()
+        .any(|entry| entry.as_str() == Some(key_to_revoke.as_str()))
+    {
+        return error("release key is already revoked");
+    }
+    revoked.push(Value::String(key_to_revoke));
+    manifest
+        .as_object_mut()
+        .ok_or_else(|| "trust manifest must be an object".to_owned())?
+        .insert("signature".into(), Value::Null);
+    let signature = bootstrap.sign(&trust_unsigned(&manifest)?);
+    manifest
+        .as_object_mut()
+        .expect("trust manifest object")
+        .insert(
+            "signature".into(),
+            json!({
+                "algorithm": "Ed25519",
+                "keyId": key_id(&bootstrap.verifying_key()),
+                "value": encode(&signature.to_bytes())?,
+            }),
+        );
+    write_json_once(&output, &manifest)
+}
+
+fn trust_add_key(args: &[String]) -> Result<(), String> {
+    let input = option(args, "--input")?;
+    let output = option(args, "--output")?;
+    let bootstrap = signing_key(&option(args, "--bootstrap-private-key")?)?;
+    let release_pem = fs::read_to_string(option(args, "--release-public-key")?)
+        .map_err(|error| error.to_string())?;
+    let release = public_key_from_pem(&release_pem)?;
+    let valid_from = version(&text_option(args, "--valid-from-version")?)?;
+    let valid_until = args
+        .windows(2)
+        .find(|pair| pair[0] == "--valid-until-version")
+        .map(|pair| pair[1].clone())
+        .map(|value| version(&value))
+        .transpose()?;
+    let mut manifest: Value =
+        serde_json::from_slice(&fs::read(&input).map_err(|error| error.to_string())?)
+            .map_err(|error| error.to_string())?;
+    if manifest.get("format").and_then(Value::as_str) != Some(TRUST_FORMAT)
+        || manifest.get("trustVersion").and_then(Value::as_u64) != Some(1)
+    {
+        return error("unsupported trust manifest");
+    }
+    verify_signed_document(&manifest, &bootstrap.verifying_key())?;
+    let release_id = key_id(&release);
+    let keys = manifest
+        .get_mut("keys")
+        .and_then(Value::as_array_mut)
+        .ok_or_else(|| "trust manifest keys is missing".to_owned())?;
+    if keys
+        .iter()
+        .any(|entry| entry.get("keyId").and_then(Value::as_str) == Some(release_id.as_str()))
+    {
+        return error("release key is already present");
+    }
+    keys.push(json!({
+        "keyId": release_id,
+        "publicKey": release_pem,
+        "validFromVersion": valid_from,
+        "validUntilVersion": valid_until,
+    }));
+    manifest
+        .as_object_mut()
+        .ok_or_else(|| "trust manifest must be an object".to_owned())?
+        .insert("signature".into(), Value::Null);
+    let signature = bootstrap.sign(&trust_unsigned(&manifest)?);
+    manifest
+        .as_object_mut()
+        .expect("trust manifest object")
+        .insert(
+            "signature".into(),
+            json!({
+                "algorithm": "Ed25519",
+                "keyId": key_id(&bootstrap.verifying_key()),
+                "value": encode(&signature.to_bytes())?,
+            }),
+        );
+    write_json_once(&output, &manifest)
 }
 
 fn hex(bytes: &[u8]) -> String {
@@ -346,6 +583,14 @@ pub fn command(args: &[String]) -> Result<(), String> {
             }
             hygiene(&root, &root)
         }
-        _ => Err("usage: release-manifest create|verify".into()),
+        Some("release-trust") => match args.get(1).map(String::as_str) {
+            Some("create") => trust_create(&args[2..]),
+            Some("revoke") => trust_revoke(&args[2..]),
+            Some("add-key") => trust_add_key(&args[2..]),
+            _ => Err("usage: release-trust create|add-key|revoke ...".into()),
+        },
+        _ => Err(
+            "usage: release-manifest create|verify | release-trust create|add-key|revoke".into(),
+        ),
     }
 }

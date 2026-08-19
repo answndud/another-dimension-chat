@@ -46,14 +46,12 @@
     }
   },
   "node": {
-    "allowedLicenses": ["0BSD", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "MIT", "Unlicense", "Zlib"],
-    "direct": {
-      "vite": { "owner": "web-build", "purpose": "Local static browser bundle build", "license": "MIT" },
-      "better-sqlite3": { "owner": "relay", "purpose": "Local relay durable queue storage", "license": "MIT" }
-    },
-    "registryOnly": true,
-    "requireIntegrity": true,
-    "requireInstalledLicenseScan": true
+    "runtimeRequired": false,
+    "allowedLicenses": [],
+    "direct": {},
+    "registryOnly": false,
+    "requireIntegrity": false,
+    "requireInstalledLicenseScan": false
   },
   "forbiddenRuntimePatterns": [
     "eval",

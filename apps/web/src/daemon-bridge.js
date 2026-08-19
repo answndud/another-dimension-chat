@@ -80,7 +80,7 @@ export async function connectDaemonBridge({
       body: JSON.stringify({ token, ui_version: uiVersion }),
     });
   } catch {
-    throw new DaemonBridgeError("unavailable", "로컬 보안 서비스에 연결할 수 없습니다. 터미널에서 서비스를 실행한 뒤 다시 여세요.");
+    throw new DaemonBridgeError("unavailable", "보안 서비스를 찾을 수 없습니다. Another Dimension 앱을 다시 열어 보세요.");
   }
   const credentials = await jsonResponse(response);
   if (typeof credentials.csrf_token !== "string" || credentials.csrf_token.length < 32) {
@@ -135,6 +135,10 @@ export async function connectDaemonBridge({
     get csrfToken() { return csrfToken; },
     request,
     renewSession,
+    setupProfile: (displayName) => request("/local-api/setup/profile", {
+      method: "POST",
+      body: JSON.stringify({ display_name: displayName }),
+    }),
     relayTrust: () => request("/local-api/relay/trust"),
     saveRelayTlsPin: (tlsPin, retrust = false) => request("/local-api/relay/trust", {
       method: "POST",

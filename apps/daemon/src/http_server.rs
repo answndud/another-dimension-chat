@@ -1,10 +1,10 @@
 use super::{
     authorize_api, axum_request_bytes, axum_response, contact_directory_error,
-    handle_request_with_route_context, hex_bytes, hex_decode, json_escape, json_string, json_u64,
-    mls_device_credential, notify_new_messages, pairing_error, pairing_ready, parse_request,
-    response, unix_now, validate_bound_inbox_url, verify_relay_receipt,
-    verify_signed_invite_unbound, IdentityView, InviteAuthority, Request, RouteContext,
-    StoredMessage, VerifiedInvite, MAX_REQUEST_BYTES,
+    handle_request_with_route_context, handle_setup_request, hex_bytes, hex_decode, json_escape,
+    json_string, json_u64, mls_device_credential, notify_new_messages, pairing_error,
+    pairing_ready, parse_request, response, unix_now, validate_bound_inbox_url,
+    verify_relay_receipt, verify_signed_invite_unbound, IdentityView, InviteAuthority, Request,
+    RouteContext, StoredMessage, VerifiedInvite, MAX_REQUEST_BYTES,
 };
 use super::{fetch_inbox, process_inbox_items, MAX_AUTOMATIC_RETRIES_PER_TICK};
 use super::{process_sync_items, SyncProcessContext};
@@ -34,7 +34,7 @@ use std::{
     },
     time::Duration,
 };
-use tokio::sync::Semaphore;
+use tokio::sync::{Notify, Semaphore};
 
 const MAX_BLOCKING_REQUESTS: usize = 2;
 
@@ -113,6 +113,116 @@ pub fn serve_forever(
             },
         }
     })
+}
+
+/// Serves the minimal loopback surface used before a profile exists.
+/// No encrypted store, identity, pairing authority, or relay client is built.
+pub fn serve_setup_forever(
+    bridge: LocalBridge,
+    ui_root: Option<&Path>,
+    data_dir: &Path,
+    setup_status: &str,
+) -> std::io::Result<()> {
+    let address = SocketAddr::new(bridge.bind_host(), bridge.port());
+    let state = SetupAppState {
+        bridge: Arc::new(Mutex::new(bridge)),
+        ui_root: ui_root.map(Path::to_path_buf),
+        data_dir: data_dir.to_path_buf(),
+        setup_status: setup_status.to_owned(),
+        blocking_slots: Arc::new(Semaphore::new(MAX_BLOCKING_REQUESTS)),
+        shutting_down: Arc::new(AtomicBool::new(false)),
+        setup_completed: Arc::new(Notify::new()),
+    };
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()
+        .map_err(|error| io::Error::other(error.to_string()))?;
+    runtime.block_on(async move {
+        let listener = tokio::net::TcpListener::bind(address).await?;
+        let shutdown_state = state.clone();
+        let app = Router::new()
+            .fallback(any(setup_axum_handler))
+            .with_state(state);
+        tokio::select! {
+            result = axum::serve(listener, app) => {
+                shutdown_state.shutting_down.store(true, Ordering::Release);
+                result.map_err(|error| io::Error::other(error.to_string()))
+            },
+            _ = shutdown_signal() => {
+                shutdown_state.shutting_down.store(true, Ordering::Release);
+                Ok(())
+            },
+            _ = shutdown_state.setup_completed.notified() => {
+                shutdown_state.shutting_down.store(true, Ordering::Release);
+                Ok(())
+            },
+        }
+    })
+}
+
+#[derive(Clone)]
+struct SetupAppState {
+    bridge: Arc<Mutex<LocalBridge>>,
+    ui_root: Option<PathBuf>,
+    data_dir: PathBuf,
+    setup_status: String,
+    blocking_slots: Arc<Semaphore>,
+    shutting_down: Arc<AtomicBool>,
+    setup_completed: Arc<Notify>,
+}
+
+async fn setup_axum_handler(
+    State(state): State<SetupAppState>,
+    request: HttpRequest<Body>,
+) -> Response<Body> {
+    if state.shutting_down.load(Ordering::Acquire) {
+        return axum_response(response(503, "daemon_shutting_down", None, None));
+    }
+    let (parts, body) = request.into_parts();
+    let body = match tokio::time::timeout(
+        Duration::from_secs(10),
+        to_bytes(body, MAX_REQUEST_BYTES),
+    )
+    .await
+    {
+        Ok(Ok(body)) => body,
+        Ok(Err(_)) => return axum_response(response(413, "request_too_large", None, None)),
+        Err(_) => return axum_response(response(408, "request_timeout", None, None)),
+    };
+    let Some(raw) = axum_request_bytes(&parts, &body) else {
+        return axum_response(response(400, "invalid_request", None, None));
+    };
+    let Ok(_permit) = state.blocking_slots.clone().try_acquire_owned() else {
+        return axum_response(response(503, "daemon_busy", None, None));
+    };
+    let bridge = state.bridge.clone();
+    let ui_root = state.ui_root.clone();
+    let data_dir = state.data_dir.clone();
+    let setup_status = state.setup_status.clone();
+    let output = tokio::task::spawn_blocking(move || {
+        let Ok(mut bridge) = bridge.lock() else {
+            return response(503, "bridge_unavailable", None, None);
+        };
+        handle_setup_request(
+            &mut bridge,
+            &raw,
+            unix_now(),
+            ui_root.as_deref(),
+            &data_dir,
+            &setup_status,
+        )
+    })
+    .await;
+    match output {
+        Ok(output) => {
+            if String::from_utf8_lossy(&output).contains("\"status\":\"profile-created\"") {
+                state.setup_completed.notify_waiters();
+            }
+            axum_response(output)
+        }
+        Err(_) => axum_response(response(503, "bridge_unavailable", None, None)),
+    }
 }
 
 async fn drain_blocking_work(state: &AppState) -> io::Result<()> {

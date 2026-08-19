@@ -1,6 +1,6 @@
 use crate::{
     bridge::{BridgeConfig, LocalBridge},
-    bridge_http::{serve_forever, IdentityView, InviteAuthority},
+    bridge_http::{serve_forever, serve_setup_forever, IdentityView, InviteAuthority},
     device::{DeviceRegistry, DeviceRegistryError},
     device_link::{DeviceLinkApproval, DeviceLinkRequest, PendingDeviceKey},
     identity::{AccountRootKey, DeviceIdentity, ProfileIdentity},
@@ -19,7 +19,7 @@ use std::{
 };
 
 #[path = "cli_profile.rs"]
-mod profile;
+pub(crate) mod profile;
 #[path = "cli_recovery.rs"]
 mod recovery;
 #[path = "cli_release_verify.rs"]
@@ -81,6 +81,9 @@ pub fn needs_passphrase(args: &[String]) -> bool {
     if matches!(command, Some("keychain")) {
         return true;
     }
+    if matches!(command, Some("setup")) {
+        return false;
+    }
     if keychain
         && (matches!(command, Some("serve" | "wipe" | "device"))
             || matches!(
@@ -119,6 +122,7 @@ pub fn run(args: &[String], passphrase: Option<&str>) -> Result<String, CliError
     match args.first().map(String::as_str).unwrap_or("help") {
         "help" | "--help" | "-h" => Ok(help_text().replace("new passphrase", "replacement is generated")),
         "init" => profile::init(args),
+        "setup" => setup(args),
         "identity" => {
             let passphrase = resolve_passphrase(args, passphrase)?;
             profile::identity_show(args, &passphrase)
@@ -354,6 +358,74 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         }
     })?;
     Ok("daemon stopped".into())
+}
+
+fn setup(args: &[String]) -> Result<String, CliError> {
+    let data_dir = data_dir(args)?;
+    let store_exists = store_path(&data_dir).exists();
+    let revision_exists = revision_path(&data_dir).exists();
+    let profile_id_exists = data_dir.join(PROFILE_ID_FILE).exists();
+    let keychain_marker_exists = data_dir.join(PROFILE_KEYCHAIN_FILE).exists();
+    let has_markers =
+        store_exists || revision_exists || profile_id_exists || keychain_marker_exists;
+    if store_exists && revision_exists && profile_id_exists {
+        return Err(CliError::AlreadyInitialized);
+    }
+    fs::create_dir_all(&data_dir)?;
+    set_private_dir(&data_dir)?;
+    let _instance_lock = InstanceLock::acquire(&data_dir)?;
+    let port = option(args, "--port")?
+        .map(|value| value.parse::<u16>())
+        .transpose()
+        .map_err(|_| CliError::Usage("--port must be a valid port".into()))?
+        .unwrap_or(1420);
+    if port == 0 {
+        return Err(CliError::Usage("--port 0 is not supported".into()));
+    }
+    let config = BridgeConfig::new(
+        "127.0.0.1".parse().map_err(|_| CliError::Io)?,
+        port,
+        format!("http://127.0.0.1:{port}"),
+        "web-v1",
+    )
+    .map_err(|_| CliError::Usage("setup requires a loopback port".into()))?;
+    let ui_dir = option(args, "--ui-dir")?
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("apps/web/dist"));
+    if !ui_dir.is_dir() {
+        return Err(CliError::Usage(format!(
+            "UI directory does not exist: {}",
+            ui_dir.display()
+        )));
+    }
+    let setup_status = if !(cfg!(target_os = "macos") && cfg!(target_arch = "aarch64")) {
+        "unsupported"
+    } else if store_exists && revision_exists && !profile_id_exists {
+        "initializing"
+    } else if has_markers {
+        "corrupt"
+    } else {
+        "not_initialized"
+    };
+    let bridge = LocalBridge::new(config).map_err(|_| CliError::Io)?;
+    let url = bridge
+        .bootstrap_url("/__ad_ui__/current")
+        .map_err(|_| CliError::Io)?;
+    eprintln!("first-run setup listening on 127.0.0.1:{port}");
+    eprintln!("open once: {url}");
+    if args.iter().any(|arg| arg == "--open") {
+        open_browser(&url);
+    }
+    serve_setup_forever(bridge, Some(&ui_dir), &data_dir, setup_status).map_err(|error| {
+        if error.kind() == io::ErrorKind::AddrInUse {
+            CliError::Usage(format!(
+                "port {port} is already in use; choose another --port"
+            ))
+        } else {
+            CliError::from(error)
+        }
+    })?;
+    Ok("setup stopped".into())
 }
 
 fn open_browser(url: &str) {
@@ -1208,7 +1280,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CliError> {
     result.map_err(Into::into)
 }
 fn help_text() -> String {
-    "Another Dimension daemon\n\nUsage:\n  init --display-name NAME [--data-dir PATH] [--passphrase-output PATH]\n  identity show [--data-dir PATH] [--keychain]\n  status [--data-dir PATH]\n  stop [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--keychain] [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify] [--open]\n  device list [--data-dir PATH] [--keychain]\n  device revoke --id DEVICE_ID [--data-dir PATH] [--keychain]\n  device link-request --id DEVICE_ID --output PATH\n  device link-complete --input PATH --approval VALUE\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  keychain enroll --data-dir PATH\n  recovery export --output PATH [--data-dir PATH]\n  recovery inspect --input PATH [--data-dir PATH]\n  recovery rotate --data-dir PATH  # stdin: old passphrase\\nnew passphrase\n  recovery import --input PATH [--data-dir PATH]\n  wipe --data-dir PATH [--keychain] # irreversible local store deletion\n\ninit generates a random 256-bit passphrase; copy it or use --passphrase-output.\nOther commands read secrets from stdin and never accept them as arguments.\nOn macOS, --keychain unlocks a profile secret stored in the OS Keychain.\nAfter recovery import, use keychain enroll once with the original passphrase.\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\n--open is opt-in; if macOS cannot open a browser, copy the one-time URL printed above.".into()
+    "Another Dimension daemon\n\nUsage:\n  setup [--data-dir PATH] [--port PORT] [--ui-dir PATH] [--open]\n  init --display-name NAME [--data-dir PATH] [--passphrase-output PATH]\n  identity show [--data-dir PATH] [--keychain]\n  status [--data-dir PATH]\n  stop [--data-dir PATH]\n  serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [--keychain] [--relay-tls-pin sha256:HEX] [--relay-tls-retrust] [--notify] [--open]\n  device list [--data-dir PATH] [--keychain]\n  device revoke --id DEVICE_ID [--data-dir PATH] [--keychain]\n  device link-request --id DEVICE_ID --output PATH\n  device link-complete --input PATH --approval VALUE\n  doctor [--data-dir PATH] [--relay-tls-pin sha256:HEX]\n  keychain enroll --data-dir PATH\n  recovery export --output PATH [--data-dir PATH]\n  recovery inspect --input PATH [--data-dir PATH]\n  recovery rotate --data-dir PATH  # stdin: old passphrase\\nnew passphrase\n  recovery import --input PATH [--data-dir PATH]\n  wipe --data-dir PATH [--keychain] # irreversible local store deletion\n\ninit generates a random 256-bit passphrase; copy it or use --passphrase-output.\nOther commands read secrets from stdin and never accept them as arguments.\nOn macOS, --keychain unlocks a profile secret stored in the OS Keychain.\nAfter recovery import, use keychain enroll once with the original passphrase.\n--notify is opt-in and emits only a generic macOS notification without sender or message text.\n--open is opt-in; if macOS cannot open a browser, copy the one-time URL printed above.".into()
 }
 
 #[cfg(test)]

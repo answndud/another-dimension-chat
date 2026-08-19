@@ -1,23 +1,41 @@
+import { DAEMON_SCREEN, canNavigateToView, isSetupScreen } from "./daemon-flow.js";
+
 export function renderDaemonBridgeState(state) {
   const connected = Boolean(state.daemonBridge) && !state.daemonLocked;
-  const title = connected ? "보안 대화" : "보안 서비스 연결이 필요합니다";
+  if (isSetupScreen(state.daemonScreen)) {
+    if (state.daemonScreen !== DAEMON_SCREEN.setup) {
+      const title = state.daemonScreen === DAEMON_SCREEN.unsupportedEnvironment ? "지원하지 않는 환경" : state.daemonScreen === DAEMON_SCREEN.initializing ? "설정이 중단되었습니다" : "프로필 확인이 필요합니다";
+      return `<main class="daemon-gate daemon-setup" aria-labelledby="daemon-setup-title"><div class="daemon-gate-mark" aria-hidden="true">!</div><p class="eyebrow">ANOTHER DIMENSION</p><h1 id="daemon-setup-title">${title}</h1><p class="lede">${escapeHtml(state.notice || "프로필을 새로 만들지 않고 현재 상태를 보호했습니다.")}</p><div class="notice" role="alert">기존 파일을 삭제하거나 새 계정을 덮어쓰지 마세요. 배포 운영자에게 이 화면의 상태만 전달하세요.</div></main>`;
+    }
+    return `<main class="daemon-gate daemon-setup" aria-labelledby="daemon-setup-title" aria-busy="${state.daemonBusy ? "true" : "false"}"><div class="daemon-gate-mark" aria-hidden="true">⊡</div><p class="eyebrow">ANOTHER DIMENSION</p><h1 id="daemon-setup-title">처음 설정</h1><p class="lede">이 기기에서 사용할 보안 프로필을 준비합니다. 표시 이름을 정하고 복구 파일을 저장하면 채팅을 시작할 수 있습니다.</p><div class="notice" role="status">${escapeHtml(state.notice || "계정은 이 기기에만 만들어집니다.")}</div><form id="daemon-setup-form" class="daemon-setup-form"><label>표시 이름<input id="daemon-setup-display-name" maxlength="80" autocomplete="nickname" placeholder="예: Alice" required ${state.daemonBusy ? "disabled" : ""}></label><button class="primary" type="submit" ${state.daemonBusy ? "disabled" : ""}>${state.daemonBusy ? "계정 준비 중…" : "내 계정 만들기"}</button></form><p class="field-note">암호화 키와 메시지는 이 기기의 보안 서비스가 관리합니다. 아직 연락처·전달 경로는 설정되지 않았습니다.</p>${state.error ? `<p class="error" role="alert">${escapeHtml(state.error)}</p>` : ""}</main>`;
+  }
+  const title = connected
+    ? (state.daemonRecoveryRequired ? "복구 파일 저장" : "보안 대화")
+    : "보안 서비스 연결이 필요합니다";
   const detail = connected
-    ? "브라우저는 화면만 표시합니다. 신원, 암호화 키, 메시지와 파일은 이 기기의 로컬 보안 서비스가 관리합니다."
-    : "터미널에서 앱을 시작한 뒤 표시되는 일회성 주소를 이 브라우저에서 여세요.";
-  if (!connected) return `<main class="daemon-gate" aria-labelledby="daemon-gate-title"><div class="daemon-gate-mark" aria-hidden="true">⊡</div><p class="eyebrow">ANOTHER DIMENSION</p><h1 id="daemon-gate-title">${title}</h1><p class="lede">${detail}</p><div class="notice" role="status">${escapeHtml(state.notice || "보안 서비스가 발급한 주소를 기다리고 있습니다.")}</div>${state.error ? `<p class="error" role="alert">${escapeHtml(state.error)}</p>` : ""}</main>`;
+    ? (state.daemonRecoveryRequired
+      ? "채팅을 시작하기 전에 이 기기의 계정을 복구할 수 있는 암호화 파일을 오프라인 매체에 보관하세요."
+      : "브라우저는 화면만 표시합니다. 신원, 암호화 키, 메시지와 파일은 이 기기의 로컬 보안 서비스가 관리합니다.")
+    : state.daemonScreen === DAEMON_SCREEN.locked
+      ? "이 기기의 보안 상태가 잠겨 있습니다. 앱을 다시 열어 잠금을 해제하세요."
+      : "Another Dimension 앱을 다시 열어 이 브라우저에 보안 화면을 연결하세요.";
+  if (!connected || [DAEMON_SCREEN.unsupportedBrowser, DAEMON_SCREEN.disconnected, DAEMON_SCREEN.error].includes(state.daemonScreen)) return `<main class="daemon-gate" aria-labelledby="daemon-gate-title"><div class="daemon-gate-mark" aria-hidden="true">⊡</div><p class="eyebrow">ANOTHER DIMENSION</p><h1 id="daemon-gate-title">${title}</h1><p class="lede">${detail}</p><div class="notice" role="status">${escapeHtml(state.notice || "보안 서비스가 발급한 주소를 기다리고 있습니다.")}</div>${state.error ? `<p class="error" role="alert">${escapeHtml(state.error)}</p>` : ""}</main>`;
   const connectionBanner = state.daemonRelayState === "offline"
     ? '<div class="daemon-connection-banner offline" role="status"><strong>전달 경로 연결이 끊겼습니다.</strong><span>로컬 대화와 암호화 상태는 유지됩니다. 연결이 복구되면 전달 대기 항목을 다시 시도하세요.</span></div>'
     : state.daemonRelayState === "online"
       ? '<div class="daemon-connection-banner online" role="status"><strong>전달 경로 연결됨</strong><span>전달 경로 접수는 상대방이 읽었다는 뜻이 아닙니다.</span></div>'
       : "";
-  const active = ["conversation", "devices", "security", "status"].includes(state.daemonActiveView) ? state.daemonActiveView : "conversation";
-  const nav = [["conversation", "대화"], ["devices", "기기"], ["security", "보안과 복구"], ["status", "상태"]]
+  const active = canNavigateToView(state.daemonScreen, state.daemonActiveView) ? state.daemonActiveView : state.daemonRecoveryRequired ? "security" : "conversation";
+  const nav = (state.daemonRecoveryRequired
+    ? [["security", "복구 파일"]]
+    : [["conversation", "대화"], ["devices", "기기"], ["security", "보안과 복구"], ["status", "상태"]])
     .map(([view, label]) => `<button class="daemon-nav-item${active === view ? " active" : ""}" data-daemon-view="${view}" type="button" aria-current="${active === view ? "page" : "false"}">${label}</button>`).join("");
   const invite = state.daemonInvite ? `<section class="daemon-invite"><h2>1. 내 초대 코드 전달</h2><p>아래 코드만 상대방에게 별도 신뢰 채널로 전달하세요. 10분 뒤 만료되고 한 번만 사용할 수 있습니다.</p><label>일회성 초대 코드<textarea readonly rows="2">${escapeHtml(state.daemonInvite.invite_code)}</textarea></label><div class="daemon-action-row"><button id="daemon-copy-invite" class="secondary" type="button">코드 복사</button><button id="daemon-revoke-invite" class="quiet" type="button">초대 폐기</button></div></section>` : "";
   const received = renderDaemonReceivedInvite(state);
   const pairingReset = state.daemonPairing?.state === "rejected" ? '<p class="warning">기존 전달 권한이 폐기되어 연결을 중단했습니다. 새 초대를 교환하고 안전 번호를 다시 확인하세요.</p>' : "";
+  const relayWarning = state.daemonRelayConfigured ? "" : '<div class="warning" role="alert"><strong>전달 경로가 준비되지 않았습니다.</strong><p>이 화면에서 relay 주소나 capability를 직접 입력하지 마세요. 운영자에게 통합 배포본을 요청하세요.</p></div>';
   const busy = state.daemonBusy ? `<div class="daemon-busy" role="status" aria-live="polite">${escapeHtml(state.daemonBusy)} 처리 중…</div>` : "";
-  return `<main class="daemon-app" aria-labelledby="daemon-gate-title" aria-busy="${state.daemonBusy ? "true" : "false"}"><aside class="daemon-nav" aria-label="주 메뉴"><div class="daemon-brand"><span aria-hidden="true">⊡</span><strong>Another Dimension</strong></div><nav>${nav}</nav><div class="daemon-nav-footer"><span>${escapeHtml(state.daemonIdentity?.display_name || "로컬 사용자")}</span><button id="daemon-lock" class="quiet" type="button">잠그기</button></div></aside><section class="daemon-workspace"><header class="daemon-workspace-header"><p class="eyebrow">로컬 보안 서비스</p><h1 id="daemon-gate-title">${title}</h1><p class="lede">${detail}</p></header><div class="notice" role="status">${escapeHtml(state.notice || "브라우저 보안 경계를 확인했습니다.")}</div>${busy}${connectionBanner}${state.error ? `<p class="error" role="alert">${escapeHtml(state.error)}</p>` : ""}<section class="daemon-view" ${active === "conversation" ? "" : "hidden"}>${pairingReset}<div class="daemon-view-heading"><div><h2>대화와 연락처</h2><p>초대 코드로 상대를 추가하고 안전 번호를 확인한 뒤 대화를 시작합니다.</p></div>${state.daemonInvite ? "" : `<button id="daemon-create-invite" class="primary" type="button">${state.daemonPairing?.state === "rejected" ? "새 연결 시작" : "일회성 초대 만들기"}</button>`}</div>${invite}${renderDaemonContacts(state)}${received}${renderDaemonSessionPanel(state)}</section><section class="daemon-view" ${active === "devices" ? "" : "hidden"}>${renderDaemonDevices(state)}</section><section id="daemon-security-content" class="daemon-view" ${active === "security" ? "" : "hidden"}><div class="daemon-view-heading"><div><h2>보안과 복구</h2><p>전달 경로 확인, 암호화 백업과 이 기기의 데이터 삭제를 관리합니다.</p></div></div>${renderDaemonRelayTrust(state)}${renderDaemonSecurityControls(state)}</section><section class="daemon-view" ${active === "status" ? "" : "hidden"}><div class="daemon-view-heading"><div><h2>현재 상태</h2><p>브라우저와 로컬 보안 서비스의 연결 경계를 확인합니다.</p></div></div><dl class="daemon-facts"><div><dt>세션</dt><dd>${escapeHtml(state.daemonStatus.replace("daemon-session-active", "연결됨"))}</dd></div><div><dt>브라우저 저장소</dt><dd>사용하지 않음</dd></div><div><dt>계정</dt><dd>${escapeHtml(`${state.daemonIdentity.display_name} · ${state.daemonIdentity.account_id}`)}</dd></div><div><dt>보안 판정</dt><dd>독립 검토 완료 전 고위험 사용 금지</dd></div></dl><p class="disclaimer">독립 보안 검토와 운영 배포 검증이 끝나기 전에는 민감한 통신에 사용하지 마세요.</p></section></section></main>`;
+  return `<main class="daemon-app" aria-labelledby="daemon-gate-title" aria-busy="${state.daemonBusy ? "true" : "false"}"><aside class="daemon-nav" aria-label="주 메뉴"><div class="daemon-brand"><span aria-hidden="true">⊡</span><strong>Another Dimension</strong></div><nav>${nav}</nav><div class="daemon-nav-footer"><span>${escapeHtml(state.daemonIdentity?.display_name || "로컬 사용자")}</span><button id="daemon-lock" class="quiet" type="button">잠그기</button></div></aside><section class="daemon-workspace"><header class="daemon-workspace-header"><p class="eyebrow">이 기기의 보안 상태</p><h1 id="daemon-gate-title">${title}</h1><p class="lede">${detail}</p></header><div class="notice" role="status">${escapeHtml(state.notice || "보안 상태를 확인했습니다.")}</div>${busy}${connectionBanner}${relayWarning}${state.error ? `<p class="error" role="alert">${escapeHtml(state.error)}</p>` : ""}<section class="daemon-view" ${active === "conversation" ? "" : "hidden"}>${pairingReset}<div class="daemon-view-heading"><div><h2>대화 시작하기</h2><p>초대 코드를 교환하고 안전번호를 확인한 뒤 대화를 시작합니다.</p></div>${state.daemonInvite || !state.daemonRelayConfigured ? "" : `<button id="daemon-create-invite" class="primary" type="button">${state.daemonPairing?.state === "rejected" ? "새 연결 시작" : "일회성 초대 만들기"}</button>`}</div>${invite}${renderDaemonContacts(state)}${received}${renderDaemonSessionPanel(state)}</section><section class="daemon-view" ${active === "devices" ? "" : "hidden"}>${renderDaemonDevices(state)}</section><section id="daemon-security-content" class="daemon-view" ${active === "security" ? "" : "hidden"}><div class="daemon-view-heading"><div><h2>보안과 복구</h2><p>${state.daemonRecoveryRequired ? "채팅을 시작하기 전에 복구 파일을 저장하세요." : "연결 확인, 복구 파일과 이 기기의 데이터 삭제를 관리합니다."}</p></div></div>${state.daemonRecoveryRequired ? '<div class="warning" role="alert"><strong>복구 파일이 아직 저장되지 않았습니다.</strong><p>이 파일이 없으면 이 기기의 데이터가 손상되었을 때 계정을 복구할 수 없습니다. 파일을 다운로드해 오프라인 암호화 매체에 옮긴 뒤 채팅을 시작하세요.</p></div>' : ""}${renderDaemonRelayTrust(state)}${renderDaemonSecurityControls(state)}</section><section class="daemon-view" ${active === "status" ? "" : "hidden"}><div class="daemon-view-heading"><div><h2>현재 상태</h2><p>브라우저와 이 기기의 보안 서비스 연결 상태를 확인합니다.</p></div></div><dl class="daemon-facts"><div><dt>세션</dt><dd>${escapeHtml(state.daemonStatus.replace("daemon-session-active", "연결됨"))}</dd></div><div><dt>브라우저 저장소</dt><dd>사용하지 않음</dd></div><div><dt>계정</dt><dd>${escapeHtml(`${state.daemonIdentity.display_name} · ${state.daemonIdentity.account_id}`)}</dd></div><div><dt>보안 판정</dt><dd>독립 검토 완료 전 고위험 사용 금지</dd></div></dl><p class="disclaimer">독립 보안 검토와 운영 배포 검증이 끝나기 전에는 민감한 통신에 사용하지 마세요.</p></section></section></main>`;
 }
 
 function renderDaemonPeerDetails(state) {
@@ -25,13 +43,12 @@ function renderDaemonPeerDetails(state) {
   const peer = state.daemonPairing?.peer || {};
   const accountId = staged.account_id || peer.account_id || "";
   const deviceId = staged.device_id || peer.device_id || "";
-  const relayOrigin = peer.relay_origin || "";
   const expiresAt = Number(staged.expires_at || peer.expires_at || 0);
   const expiry = expiresAt && Number.isSafeInteger(expiresAt)
     ? new Date(expiresAt * 1000).toLocaleString("ko-KR")
     : "만료 없음";
-  if (!accountId && !deviceId && !relayOrigin) return "";
-  return `<dl class="daemon-peer-facts"><div><dt>상대 Account ID</dt><dd><code>${escapeHtml(accountId || "확인 필요")}</code></dd></div><div><dt>상대 Device ID</dt><dd><code>${escapeHtml(deviceId || "확인 필요")}</code></dd></div>${relayOrigin ? `<div><dt>전달 경로 origin</dt><dd><code>${escapeHtml(relayOrigin)}</code></dd></div>` : ""}<div><dt>초대 만료</dt><dd>${escapeHtml(expiry)}</dd></div></dl><p class="field-note">안전 번호는 상대 기기의 공개키 지문입니다. 별도 신뢰 채널에서 전체 번호를 비교하세요.</p>`;
+  if (!accountId && !deviceId) return "";
+  return `<dl class="daemon-peer-facts"><div><dt>상대방</dt><dd>초대에 포함된 신원 확인 완료</dd></div><div><dt>초대 만료</dt><dd>${escapeHtml(expiry)}</dd></div></dl><p class="field-note">표시된 안전번호를 전화·대면 등 다른 신뢰 채널에서 전체 비교하세요.</p>`;
 }
 
 export function renderDaemonReceivedInvite(state) {
@@ -45,7 +62,7 @@ export function renderDaemonReceivedInvite(state) {
     : "";
   const codeEntry = state.daemonReceivedInvite
     ? ""
-    : '<label>초대 코드<textarea id="received-invite-code" rows="2" placeholder="상대방에게 받은 코드" autocomplete="off" spellcheck="false"></textarea></label><button id="daemon-consume-invite" class="secondary" type="button">초대 코드 확인</button><p class="field-note">코드의 만료·재사용 여부와 상대 신원은 로컬 보안 서비스가 자동으로 확인합니다.</p>';
+    : '<label>상대방에게 받은 초대 코드<textarea id="received-invite-code" rows="2" placeholder="코드를 붙여 넣으세요" autocomplete="off" spellcheck="false"></textarea></label><button id="daemon-consume-invite" class="secondary" type="button">초대 참여하기</button><p class="field-note">코드의 만료·재사용 여부와 상대 신원은 로컬 보안 서비스가 자동으로 확인합니다.</p>';
   const approval = pairing.state === "verified" && pairing.safety_verified
     ? '<button id="daemon-approve-pairing" class="primary" type="button">안전 번호 확인 후 연락처 승인</button><button id="daemon-reject-pairing" class="quiet" type="button">거절</button>'
     : pairing.state === "verified"
@@ -53,21 +70,25 @@ export function renderDaemonReceivedInvite(state) {
       : pairing.state === "established"
         ? '<p class="verified">연락처 승인이 완료되었습니다.</p>'
         : "";
-  return `<section class="daemon-invite"><h2>${state.daemonReceivedInvite ? "3. 상대 신원 확인" : "2. 상대방 초대 코드 입력"}</h2><p>${state.daemonReceivedInvite ? "코드가 확인되었습니다. 상대 정보를 확인하고 안전 번호를 비교한 뒤 연락처를 승인하세요." : "상대방에게 받은 일회성 코드를 붙여 넣으세요. 이 기기에 설정된 전달 경로는 자동으로 사용됩니다."}</p>${codeEntry}${verifiedPeer}${peerDetails}${state.daemonPairing?.safety_number ? renderDaemonSafetyControls(state.daemonPairing) : ""}${approval}</section>`;
+  return `<section class="daemon-invite"><h2>${state.daemonReceivedInvite ? "상대 초대 참여 · 상대 신원 확인" : "상대 초대에 참여하기"}</h2><p>${state.daemonReceivedInvite ? "코드가 확인되었습니다. 상대 정보를 확인하고 안전 번호를 비교한 뒤 연락처를 승인하세요." : "상대방에게 받은 일회성 코드만 붙여 넣으세요. 전달 경로 설정은 자동으로 처리됩니다."}</p>${codeEntry}${verifiedPeer}${peerDetails}${state.daemonPairing?.safety_number ? renderDaemonSafetyControls(state.daemonPairing) : ""}${approval}</section>`;
 }
 
 export function renderDaemonSecurityControls(state) {
   if (!state.daemonBridge || state.daemonLocked) return "";
-  return '<section class="daemon-invite daemon-recovery-tools"><h2>복구와 긴급 삭제</h2><p class="field-note daemon-recovery-note">복구 백업에는 로컬 암호화 저장소와 복구 판정 정보가 포함됩니다. 전달 경로 자료와 운영체제·디스크의 잔존 데이터는 포함되지 않습니다.</p><button id="daemon-recovery-export" class="secondary" type="button">암호화 복구 백업 다운로드</button><label>복구 백업 파일<input id="daemon-recovery-input" type="file" accept=".adbackup,application/octet-stream" aria-label="암호화 복구 백업 파일 선택"></label><button id="daemon-recovery-stage" class="secondary" type="button" disabled>복구 백업 검증 후 적용 예약</button><button id="daemon-wipe" class="danger" type="button">이 기기의 모든 로컬 데이터 삭제</button></section>';
+  if (state.daemonRecoveryRequired) {
+    return `<section class="daemon-invite daemon-recovery-tools"><h2>복구 파일 저장</h2><p class="field-note daemon-recovery-note">보안 서비스가 암호화 복구 파일을 한 번 만들어 내려줍니다. 파일을 Mac 밖의 암호화된 오프라인 매체로 옮긴 뒤에만 채팅을 시작하세요.</p><button id="daemon-recovery-export" class="primary" type="button" ${state.daemonBusy ? "disabled" : ""}>${state.daemonBusy ? "복구 파일 준비 중…" : "복구 파일 저장"}</button></section>`;
+  }
+  return '<section class="daemon-invite daemon-recovery-tools"><h2>복구와 긴급 삭제</h2><p class="field-note daemon-recovery-note">복구 백업에는 로컬 암호화 저장소와 복구 판정 정보가 포함됩니다. 전달 경로 자료와 운영체제·디스크의 잔존 데이터는 포함되지 않습니다.</p><button id="daemon-recovery-export" class="secondary" type="button">암호화 복구 백업 다운로드</button><label>복구 백업 파일<input id="daemon-recovery-input" type="file" accept=".adbackup,application/octet-stream" aria-label="암호화 복구 백업 파일 선택"></label><button id="daemon-recovery-stage" class="secondary" type="button" disabled>복구 백업 검증 후 적용 예약</button><button id="daemon-wipe" class="danger" type="button">이 기기의 모든 로컬 데이터 삭제</button></section><section class="daemon-invite"><h2>앱 삭제</h2><p class="field-note">앱만 삭제하면 이 기기의 계정과 복구 파일은 남습니다. 계정까지 지우려면 위의 로컬 데이터 삭제를 먼저 완료하세요.</p><button id="daemon-app-delete-guide" class="quiet" type="button">앱 삭제 방법 보기</button></section>';
 }
 
 export function renderDaemonRelayTrust(state) {
+  if (state.daemonRecoveryRequired) return "";
   const trust = state.daemonRelayTrust || {};
   const pin = trust.tls_pin || "";
   if (/^http:\/\/(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?$/.test(trust.relay_origin || "")) {
     return '<section class="daemon-invite daemon-relay-trust"><h2>로컬 전달 경로</h2><p>이 전달 경로는 같은 기기의 로컬 주소에서만 열립니다. 원격 전달 경로로 전환하면 인증서 지문 확인 항목이 표시됩니다.</p><p class="verified">이 기기에서만 연결됨</p></section>';
   }
-  return '<section class="daemon-invite daemon-relay-trust"><h2>원격 전달 경로 인증서 확인</h2><p>인증서 지문은 브라우저가 아닌 로컬 보안 서비스의 암호화 저장소에 보관됩니다. 운영 전달 경로의 지문을 별도 채널로 확인한 뒤 입력하세요.</p><label>인증서 지문<input id="daemon-tls-pin" value="' + escapeHtml(pin) + '" placeholder="sha256:64자리 16진수" autocomplete="off" spellcheck="false"></label><label class="checkbox-line"><input id="daemon-tls-retrust" type="checkbox"> 변경된 지문을 확인하고 다시 신뢰</label><button id="daemon-save-relay-pin" class="secondary" type="button">전달 경로 신뢰 저장</button><p class="field-note">현재 상태: ' + (pin ? "지문 등록됨" : "지문 미등록") + ' · 지문이 바뀌면 확인 전까지 연결이 중단됩니다.</p></section>';
+  return '<section class="daemon-invite daemon-relay-trust"><h2>연결 확인이 필요합니다</h2><p>이 배포본의 전달 경로 확인이 아직 끝나지 않았습니다. 주소나 인증서 지문을 직접 입력하지 말고, 배포 운영자에게 확인된 앱 패키지를 요청하세요.</p><p class="field-note">현재 상태: ' + (pin ? "확인된 연결" : "확인되지 않음") + ' · 확인되지 않은 연결에서는 초대와 메시지를 시작하지 마세요.</p></section>';
 }
 
 export function renderDaemonContacts(state) {

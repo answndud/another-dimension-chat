@@ -36,7 +36,7 @@ use delivery_routes::{handle_delivery_route, process_sync_items, SyncProcessCont
 use http_errors::{
     authorize_api, catalog_error, contact_directory_error, error_code, pairing_error, pairing_ready,
 };
-pub use http_server::serve_forever;
+pub use http_server::{serve_forever, serve_setup_forever};
 use http_support::{
     axum_request_bytes, axum_response, cookie_value, delivery_state_name, json_bool, json_escape,
     json_string, json_string_array, json_u64, parse_request, response, static_file, Request,
@@ -120,6 +120,99 @@ pub fn handle_request_with_ui(
             delivery_ledger: None,
         },
     )
+}
+
+/// Handles only the safe first-run surface. No identity, storage, messaging,
+/// pairing, or relay context is available before a profile is created.
+pub fn handle_setup_request(
+    bridge: &mut LocalBridge,
+    raw: &[u8],
+    now: u64,
+    ui_root: Option<&Path>,
+    data_dir: &Path,
+    setup_status: &str,
+) -> Vec<u8> {
+    let Ok(request) = parse_request(raw) else {
+        return response(400, "invalid_request", None, None);
+    };
+    if request.method == "GET" && request.path == "/local-api/status" {
+        return match authorize_api(bridge, &request, now) {
+            Ok(()) => response(
+                200,
+                &format!(
+                    r#"{{"status":"{}","high_risk":false,"private_state":"not-initialized","relay_configured":false,"storage_records":0}}"#,
+                    json_escape(setup_status)
+                ),
+                None,
+                Some("application/json"),
+            ),
+            Err(reply) => reply,
+        };
+    }
+    if request.method == "POST" && request.path == "/local-api/setup/profile" {
+        if setup_status != "not_initialized" {
+            return response(
+                409,
+                "profile_setup_unavailable",
+                None,
+                Some("application/json"),
+            );
+        }
+        let Ok(()) = authorize_api(bridge, &request, now) else {
+            return response(401, "session_invalid", None, Some("application/json"));
+        };
+        let Some(display_name) = json_string(request.body, "display_name") else {
+            return response(400, "display_name_required", None, Some("application/json"));
+        };
+        if display_name.trim().is_empty() || display_name.chars().count() > 80 {
+            return response(400, "display_name_invalid", None, Some("application/json"));
+        }
+        return match crate::cli::profile::init_from_setup(data_dir, display_name.trim()) {
+            Ok(output) => {
+                let account_id = output
+                    .lines()
+                    .find_map(|line| line.strip_prefix("account_id: "))
+                    .unwrap_or("");
+                response(
+                    200,
+                    &format!(
+                        r#"{{"status":"profile-created","account_id":"{}"}}"#,
+                        json_escape(account_id)
+                    ),
+                    None,
+                    Some("application/json"),
+                )
+            }
+            Err(crate::cli::CliError::AlreadyInitialized) => {
+                response(409, "already_initialized", None, Some("application/json"))
+            }
+            Err(_) => response(
+                500,
+                "profile_initialization_failed",
+                None,
+                Some("application/json"),
+            ),
+        };
+    }
+    if (request.method == "POST" && request.path == EXCHANGE_PATH)
+        || (request.method == "GET"
+            && (request.path == "/"
+                || request.path == "/index.html"
+                || request.path == BOOTSTRAP_UI_PATH
+                || request.path.starts_with("/assets/")
+                || request.path == "/manifest.webmanifest"))
+    {
+        return handle_request_with_ui(bridge, raw, now, ui_root);
+    }
+    if request.path.starts_with("/local-api/") || request.path.starts_with("/local-session/") {
+        return response(
+            409,
+            "profile_not_initialized",
+            None,
+            Some("application/json"),
+        );
+    }
+    response(404, "not_found", None, None)
 }
 
 pub(crate) enum DeviceActionError {

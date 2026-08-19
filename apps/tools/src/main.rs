@@ -12,7 +12,7 @@ mod release;
 
 fn usage() -> ! {
     eprintln!(
-        "usage: another-dimension-tools web-build --source DIR --output DIR\n  another-dimension-tools release-manifest create|verify ..."
+        "usage: another-dimension-tools web-build --source DIR --output DIR\n  another-dimension-tools release-manifest create|verify ...\n  another-dimension-tools release-trust create ..."
     );
     std::process::exit(2);
 }
@@ -170,6 +170,7 @@ fn main() {
             (Err(error), _) | (_, Err(error)) => Err(error),
         },
         Some("release-manifest") => release::command(&args[1..]),
+        Some("release-trust") => release::command(&args),
         _ => usage(),
     };
     if let Err(error) = result {

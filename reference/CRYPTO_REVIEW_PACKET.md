@@ -60,9 +60,9 @@ presentation-safe results only.
 
 ## Evidence and decision
 
-Use the exact source revision and the focused commands in
-[`SECURITY_REVIEW_EVIDENCE.md`](SECURITY_REVIEW_EVIDENCE.md). Automated checks
-are composition evidence only; they are not an independent cryptographic audit.
+Use the exact source revision and the focused commands recorded in the release
+verification record. Automated checks are composition evidence only; they are
+not an independent cryptographic audit.
 Until the signed independent result, operating trust receipt, and matching
 release evidence exist, the decision must remain `experimental-only` and
 `highRiskAllowed=false`.

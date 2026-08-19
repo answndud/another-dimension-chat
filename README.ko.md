@@ -48,12 +48,14 @@ Chromium UI (표시·입력)
 
 - Apple Silicon macOS(arm64)
 - Chromium 계열 브라우저(정확한 버전은 지원 evidence에 기록)
-- 로컬 daemon 실행이 가능한 터미널
+- 일반 사용자는 `Another Dimension.app`을 더블클릭해 실행하며 터미널이 필요하지
+  않습니다. 터미널은 운영자·개발자의 점검에만 사용합니다.
 - Node.js/npm은 필요하지 않음
 - 일반 배포본은 daemon·Rust relay·release tools binary를 함께 포함함
 - 지원하지 않는 환경(다른 OS·Intel macOS·다른 브라우저)은 development-only이며
   `doctor`가 `unsupported` 항목을 표시하고 `serve`가 경고를 출력합니다.
-  상세 지원 범위는 [SUPPORT.md](SUPPORT.md)를 참고하세요.
+  지원 상태와 증거 수준은 [`reference/SUPPORT_MATRIX.json`](reference/SUPPORT_MATRIX.json),
+  보안 경계는 [`SECURITY.md`](SECURITY.md)를 참고하세요.
 
 ## 릴리스 배포 모드
 
@@ -76,7 +78,18 @@ signing key 신뢰, 실제 배포 증거가 확보되기 전에는 승인하지 
 메타데이터를 볼 수 있습니다. 상대방 기기가 악성코드에 감염됐거나 상대방이
 화면을 촬영하는 상황도 방어하지 않습니다.
 
-## 개발 환경에서 빠르게 실행하기
+## 일반 사용자 실행
+
+검증된 통합 배포본을 받은 사용자는 압축을 풀고 `Another Dimension.app`을 더블클릭합니다.
+Chromium이 열리면 표시 이름을 입력하고, 안내에 따라 복구 파일을 Mac 밖의 암호화된
+오프라인 매체에 저장합니다. 그 뒤 앱을 다시 더블클릭하면 초대·안전번호·채팅 화면을
+사용할 수 있습니다.
+
+사용자는 `cargo`, `daemon`, `relay`, `--data-dir`, 포트, manifest 검증 명령을
+실행하지 않습니다. 문제가 생기면 암호문구·초대 코드·local URL·원본 로그를 보내지
+말고 배포 운영자에게 앱 화면의 일반 오류 문구만 전달합니다.
+
+## 운영자·개발자 환경에서 빠르게 실행하기
 
 ### 1. 의존성 준비
 
@@ -168,15 +181,16 @@ unset AD_PASSPHRASE
 
 ## 사용자 워크플로우
 
-1. 각 사용자가 자신의 Mac에서 daemon 프로필을 생성합니다.
-2. 각 사용자가 접근 가능한 user-owned relay를 준비합니다.
-3. 초대를 만드는 사용자가 UI에서 일회성 초대 코드를 생성합니다.
+1. 각 사용자가 `Another Dimension.app`을 더블클릭합니다.
+2. 화면에서 표시 이름만 입력하고 복구 파일을 오프라인 매체에 저장합니다.
+3. 초대를 만드는 사용자가 `초대 만들기`를 선택합니다.
 4. 코드는 별도의 신뢰 가능한 채널로 상대에게 전달합니다.
-5. 상대가 코드를 입력하면 daemon이 서명, 만료, relay binding, protocol version을
-   검증합니다.
+5. 상대가 `상대 초대에 참여하기`에서 코드만 입력합니다. 서명·만료·연결 정보는
+   보안 서비스가 자동으로 검증합니다.
 6. 양쪽이 안전 번호 전체를 비교하고 확인합니다.
-7. 확인이 끝난 뒤에만 연락처 승인과 OpenMLS 메시지 전송이 활성화됩니다.
-8. account, device, relay binding이 바뀌면 전송은 중단되고 새로 검증해야 합니다.
+7. 확인이 끝난 뒤에만 연락처 승인과 암호화 메시지 전송이 활성화됩니다.
+8. 계정·기기·연결 정보가 바뀌면 전송은 중단됩니다. 화면 안내에 따라 상대방과
+   안전번호를 다시 확인해야 합니다.
 
 초대 코드는 한 번만 사용할 수 있고 만료됩니다. 사용자명 검색이나 전화번호
 연락처 동기화는 제공하지 않습니다.
@@ -233,16 +247,17 @@ client release는 Rust `another-dimension-tools`로 빌드합니다.
 설치는 archive에 포함된 Rust daemon으로 서명과 신뢰 매니페스트를 검증하므로,
 client 사용자와 client release 운영자 모두 Node.js·npm·relay 패키지가 필요하지 않습니다.
 
+일반 사용자는 운영자가 설치·검증한 폴더에서 launcher만 실행합니다.
+
 ```sh
-sh another-dimension-client-0.1.0/scripts/install_client.sh \
-  --archive another-dimension-client-0.1.0 \
-  --destination "$HOME/.local/share/another-dimension/client" \
-  --public-key /secure/release/release-public.pem \
-  --trust-manifest /secure/trust/release-trust.json \
-  --trust-manifest-key /secure/trust/bootstrap-public.pem
-"$HOME/.local/share/another-dimension/client/scripts/client_launcher.sh" \
-  init "내 표시 이름"
+/설치된/폴더/scripts/client_launcher.sh init
+/설치된/폴더/scripts/client_launcher.sh start
 ```
+
+`init`에서 표시 이름만 입력하면 암호문구가 자동 생성되고 macOS Keychain에
+등록됩니다. `start`는 암호문구를 다시 묻지 않고 Chromium UI를 엽니다. release
+서명·manifest 검증과 설치 옵션은 운영자가 수행하며 일반 사용자에게 요구하지
+않습니다.
 
 relay 운영자만 기존 server archive를 설치합니다. 일반 client archive에는 relay,
 Node runtime, Cargo cache, 소스 코드가 포함되지 않습니다.
@@ -428,7 +443,7 @@ private UI bootstrap 자료가 들어갑니다. relay 데이터 디렉터리에�
 프로필은 `--data-dir` 단위로 분리됩니다. 같은 기기의 여러 프로필은 별도
 데이터 디렉터리와 별도 daemon 인스턴스를 사용하며 서로의 데이터에 접근하지
 않습니다. relay 운영자가 보는 정보와 보지 못하는 정보는
-[SUPPORT.md](SUPPORT.md)의 표를 참고하세요.
+[`SECURITY.md`](SECURITY.md)의 보안 경계를 참고하세요.
 
 다음 자료는 공개하면 안 됩니다.
 

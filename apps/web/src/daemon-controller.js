@@ -1,6 +1,7 @@
 import { state } from "./daemon-state.js";
 import { decodeHexText, decodeHexBytes, encodeHex, mergeDaemonMessages, newAttachmentBlobId } from "./daemon-view.js";
 import { daemonErrorMessage } from "./daemon-errors.js";
+import { DAEMON_SCREEN, canNavigateToView } from "./daemon-flow.js";
 
 let activeBindingController;
 let pairingSyncTimer;
@@ -359,8 +360,28 @@ async function copyToClipboard(value) {
 export function bindDaemonWorkspace({ render }) {
   if (!state.daemonBridgeMode) return;
   if (!activeBindingController) activeBindingController = new AbortController();
+    bindListener(document.querySelector("#daemon-setup-form"), "submit", async (event) => {
+      event.preventDefault();
+      const displayName = document.querySelector("#daemon-setup-display-name")?.value.trim() || "";
+      if (!displayName) return;
+      try {
+        state.daemonBusy = "계정 만들기";
+        state.error = "";
+        render();
+        await state.daemonBridge.setupProfile(displayName);
+        state.notice = "계정을 만들었습니다. 보안 대화 화면을 다시 여는 중입니다.";
+        state.daemonBusy = "";
+        window.setTimeout(() => window.location.reload(), 1200);
+      } catch (error) {
+        state.daemonBusy = "";
+        state.error = daemonErrorMessage(error);
+      }
+      render();
+    });
     document.querySelectorAll("[data-daemon-view]").forEach((button) => bindListener(button, "click", () => {
-      state.daemonActiveView = button.dataset.daemonView || "conversation";
+      const nextView = button.dataset.daemonView || "conversation";
+      if (!canNavigateToView(state.daemonScreen, nextView)) return;
+      state.daemonActiveView = nextView;
       state.error = "";
       render();
     }));
@@ -379,20 +400,34 @@ export function bindDaemonWorkspace({ render }) {
         } catch (error) { state.error = daemonErrorMessage(error); }
         render();
       });
+      bindListener(document.querySelector("#daemon-app-delete-guide"), "click", () => {
+        state.notice = "앱을 종료한 뒤 Finder의 응용 프로그램 폴더에서 Another Dimension을 휴지통으로 이동하세요. 이 작업은 계정 데이터를 지우지 않습니다.";
+        state.error = "";
+        render();
+      });
       bindListener(document.querySelector("#daemon-recovery-export"), "click", async () => {
-        if (!window.confirm("현재 암호화 저장소의 복구 백업을 다운로드할까요? 원래 프로필 암호 문구가 있어야 복구할 수 있습니다.")) return;
+        if (state.daemonBusy) return;
+        if (!window.confirm("이 기기를 복구할 수 있는 암호화 파일을 저장할까요? 저장한 뒤에는 Mac 밖의 암호화된 오프라인 매체로 옮기세요.")) return;
         try {
+          state.daemonBusy = "복구 파일 준비";
+          state.error = "";
+          render();
           const result = await state.daemonBridge.recoveryExport();
           const bytes = decodeHexBytes(result.artifact_hex || "");
           const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
           const anchor = document.createElement("a");
           anchor.href = url;
-          anchor.download = "another-dimension-recovery.adbackup";
+          const shortAccountId = String(state.daemonIdentity?.account_id || "profile").slice(0, 12).replace(/[^a-zA-Z0-9_-]/g, "profile");
+          anchor.download = `another-dimension-recovery-${shortAccountId}-${new Date().toISOString().slice(0, 10)}.adbackup`;
           anchor.click();
           setTimeout(() => URL.revokeObjectURL(url), 1000);
           state.notice = "암호화 복구 백업을 다운로드했습니다. 원본 암호 문구와 별도 오프라인 저장소에 보관하세요.";
+          state.daemonRecoveryRequired = false;
+          state.daemonScreen = state.daemonRelayConfigured ? DAEMON_SCREEN.ready : DAEMON_SCREEN.relay;
+          state.daemonActiveView = "conversation";
           state.error = "";
         } catch (error) { state.error = `복구 백업을 만들지 못했습니다: ${daemonErrorMessage(error)}`; }
+        state.daemonBusy = "";
         render();
       });
       const recoveryInput = document.querySelector("#daemon-recovery-input");

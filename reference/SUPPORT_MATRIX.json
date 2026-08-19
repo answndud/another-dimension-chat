@@ -34,22 +34,22 @@
   },
   "entries": [
     {
-      "id": "macos-arm64-node20-local-gate",
+      "id": "macos-arm64-rust-local-gate",
       "surface": "installed-runtime",
       "platform": "macOS arm64",
-      "runtime": "Rust daemon binary + bundled Node.js 20+ relay runtime",
-      "status": "verified-local",
-      "evidence": "reference/evidence/macos-arm64-node20-local-gate.json",
-      "scope": "scoped local evidence on this macOS arm64 host: signed private archive install, daemon/relay boot, tamper/wrong-key/min-version/revoked rejection, relay backup/restore, private update and rollback; not a public or high-risk support claim"
+      "runtime": "Rust daemon binary + Rust relay binary + bundled static web UI",
+      "status": "unverified",
+      "evidence": null,
+      "scope": "implementation and focused shell evidence exist, but a reproducible signed archive record with exact host/runtime details has not been attached; not a public or high-risk support claim"
     },
     {
       "id": "macos-arm64-chromium-production-ui",
       "surface": "browser-ui",
       "platform": "macOS arm64 Chromium",
       "runtime": "daemon-served production UI; exact Chromium version must be recorded in future evidence",
-      "status": "verified-local",
-      "evidence": "reference/evidence/macos-arm64-chromium-production-ui.json",
-      "scope": "scoped local evidence on this macOS arm64 Chromium host: daemon bootstrap, profile, invite, safety verification, messaging, restart, recovery and lock journeys against the recorded release archive and exact Chromium version; not a public or high-risk support claim"
+      "status": "unverified",
+      "evidence": null,
+      "scope": "the exact Chromium version and a reproducible signed archive record are not attached; local UI smoke is not a public or high-risk support claim"
     }
   ]
 }

@@ -85,6 +85,39 @@ pub(super) fn init(args: &[String]) -> Result<String, CliError> {
     ))
 }
 
+/// Browser setup uses the same initialization implementation as the CLI, but
+/// never exposes the generated passphrase in its HTTP response. macOS
+/// Keychain enrollment remains the only automatic unlock path.
+pub(crate) fn init_from_setup(
+    data_dir: &std::path::Path,
+    display_name: &str,
+) -> Result<String, CliError> {
+    let args = vec![
+        "init".to_owned(),
+        "--display-name".to_owned(),
+        display_name.to_owned(),
+        "--data-dir".to_owned(),
+        data_dir.display().to_string(),
+    ];
+    let output = init(&args)?;
+    if output.contains("keychain: configured") {
+        return Ok(output);
+    }
+    // A browser-first setup must never leave a profile that the user cannot
+    // unlock. The CLI init path remains usable for explicit operator recovery,
+    // but the no-terminal setup path requires the supported OS Keychain.
+    let passphrase = output
+        .lines()
+        .find_map(|line| line.strip_prefix("passphrase: "))
+        .map(str::to_owned);
+    if let Some(passphrase) = passphrase {
+        let _ = wipe(&args, &passphrase);
+    }
+    Err(CliError::Usage(
+        "macOS Keychain에 프로필 비밀을 저장하지 못해 계정을 만들지 않았습니다".into(),
+    ))
+}
+
 pub(super) fn identity_show(args: &[String], passphrase: &str) -> Result<String, CliError> {
     if args.get(1).map(String::as_str) != Some("show") {
         return Err(CliError::Usage("use identity show".into()));

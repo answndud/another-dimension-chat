@@ -3,7 +3,7 @@ set -eu
 
 usage() {
   cat <<'EOF'
-사용법: install_local_server.sh --archive DIR --public-key PEM [--destination DIR] [--data-dir DIR]
+사용법: install_local_server.sh --archive DIR --public-key PEM [--destination DIR] [--data-dir DIR] [--update]
 
 Rust release 디렉터리의 서명과 파일 목록을 확인한 뒤 설치합니다.
 Node.js/npm/runtime 디렉터리는 요구하지 않습니다.
@@ -14,12 +14,14 @@ archive=
 destination="${AD_INSTALL_DIR:-$HOME/.local/share/another-dimension/server}"
 data_dir="${AD_DATA_DIR:-$HOME/.local/share/another-dimension/data}"
 public_key=
+update=0
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --archive) archive=${2:?--archive requires a directory}; shift 2 ;;
     --destination) destination=${2:?--destination requires a directory}; shift 2 ;;
     --data-dir) data_dir=${2:?--data-dir requires a directory}; shift 2 ;;
     --public-key) public_key=${2:?--public-key requires a file}; shift 2 ;;
+    --update) update=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "알 수 없는 옵션: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -31,7 +33,11 @@ mkdir -p "$(dirname -- "$destination")"
 destination_parent=$(CDPATH= cd -- "$(dirname -- "$destination")" && pwd)
 destination="$destination_parent/$(basename -- "$destination")"
 case "$destination" in "$archive"|"$archive"/*) echo "설치 대상은 release 원본 안쪽일 수 없습니다." >&2; exit 2;; esac
-[ ! -e "$destination" ] && [ ! -L "$destination" ] || { echo "설치 대상이 이미 존재합니다: $destination" >&2; exit 2; }
+if [ "$update" -eq 0 ]; then
+  [ ! -e "$destination" ] && [ ! -L "$destination" ] || { echo "설치 대상이 이미 존재합니다: $destination" >&2; exit 2; }
+else
+  [ -d "$destination" ] && [ ! -L "$destination" ] || { echo "업데이트 대상이 올바른 기존 설치 디렉터리가 아닙니다: $destination" >&2; exit 2; }
+fi
 
 TOOLS="$archive/bin/another-dimension-tools"
 [ -x "$TOOLS" ] || { echo "Rust release 도구가 없습니다: $TOOLS" >&2; exit 1; }
@@ -51,7 +57,29 @@ mkdir -p "$data_dir"
 chmod 700 "$data_dir"
 cp "$stage/scripts/installed_launcher.sh" "$stage/another-dimension"
 chmod 700 "$stage/another-dimension"
-mv "$stage" "$destination"
+if [ -d "$stage/Another Dimension.app" ]; then
+  chmod 700 "$stage/Another Dimension.app/Contents/MacOS/Another Dimension"
+fi
+if [ "$update" -eq 0 ]; then
+  mv "$stage" "$destination"
+else
+  backup_parent=$(mktemp -d "$(dirname -- "$destination")/.another-dimension-previous.XXXXXX")
+  if ! mv "$destination" "$backup_parent/previous"; then
+    echo "기존 설치를 안전하게 보관하지 못해 업데이트를 중단했습니다." >&2
+    exit 1
+  fi
+  if ! mv "$stage" "$destination"; then
+    mv "$backup_parent/previous" "$destination"
+    echo "새 설치를 배치하지 못해 기존 설치를 복원했습니다." >&2
+    exit 1
+  fi
+  rm -rf "$backup_parent/previous"
+  rmdir "$backup_parent"
+fi
 trap - EXIT INT TERM
-echo "설치 완료: $destination/another-dimension"
+if [ "$update" -eq 1 ]; then
+  echo "업데이트 완료: $destination/another-dimension"
+else
+  echo "설치 완료: $destination/another-dimension"
+fi
 echo "데이터 위치(자동 삭제하지 않음): $data_dir"

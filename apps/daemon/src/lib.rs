@@ -27,11 +27,22 @@ pub mod trust;
 /// review, and release evidence requirements are complete.
 pub const PRODUCT_ROLE: &str = "local-security-daemon";
 pub const IMPLEMENTATION_STATUS: &str = "daemon-owned-openmls-messaging-path-active-development";
+pub const DAEMON_STATES: [&str; 8] = [
+    "not_initialized",
+    "initializing",
+    "locked",
+    "ready",
+    "relay_unconfigured",
+    "recovery_required",
+    "corrupt",
+    "unsupported",
+];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Command {
     Doctor,
     Init,
+    Setup,
     Serve,
     Identity,
     Device,
@@ -45,9 +56,10 @@ pub enum Command {
 }
 
 impl Command {
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 13] = [
         Self::Doctor,
         Self::Init,
+        Self::Setup,
         Self::Serve,
         Self::Identity,
         Self::Device,
@@ -64,6 +76,7 @@ impl Command {
         match self {
             Self::Doctor => "doctor",
             Self::Init => "init",
+            Self::Setup => "setup",
             Self::Serve => "serve",
             Self::Identity => "identity",
             Self::Device => "device",
@@ -95,8 +108,9 @@ mod tests {
             IMPLEMENTATION_STATUS,
             "daemon-owned-openmls-messaging-path-active-development"
         );
-        assert_eq!(Command::ALL.len(), 12);
+        assert_eq!(Command::ALL.len(), 13);
         assert_eq!(command_from_name("serve"), Some(Command::Serve));
+        assert_eq!(command_from_name("setup"), Some(Command::Setup));
         assert_eq!(command_from_name("keychain"), Some(Command::Keychain));
         assert_eq!(command_from_name("desktop"), None);
     }

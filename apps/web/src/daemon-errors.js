@@ -1,6 +1,6 @@
 const GENERIC_ERROR_MESSAGE = "요청을 완료하지 못했습니다. 현재 상태를 확인한 뒤 다시 시도하세요.";
 
-const SESSION_MESSAGE = "로컬 보안 세션이 유효하지 않습니다. 터미널에서 새 시작 주소를 발급해 다시 여세요.";
+const SESSION_MESSAGE = "보안 화면이 만료되었습니다. Another Dimension 앱을 다시 열어 새 화면을 시작하세요.";
 const INPUT_MESSAGE = "입력값이 올바르지 않습니다. 화면의 필수 항목을 확인한 뒤 다시 시도하세요.";
 const STORAGE_MESSAGE = "암호화 저장소 작업을 완료하지 못했습니다. 보안 서비스 상태와 남은 저장 공간을 확인하세요.";
 const PAIRING_MESSAGE = "연결 확인을 완료하지 못했습니다. 초대 만료 여부와 상대방의 안전 번호를 다시 확인하세요.";

@@ -2,7 +2,7 @@ use super::{
     authorize_api, cookie_value, error_code, hex_bytes, hex_decode, json_escape, json_string,
     response, Request, RouteContext, EXCHANGE_PATH,
 };
-use crate::storage::EncryptedStore;
+use crate::storage::{EncryptedStore, RecordClass};
 
 pub(crate) fn handle_session_route(
     request: &Request<'_>,
@@ -94,10 +94,24 @@ pub(crate) fn handle_session_route(
                     .as_deref()
                     .map(|store| (store.record_count(), EncryptedStore::record_limit()))
                     .unwrap_or((0, EncryptedStore::record_limit()));
+                let status = if context.identity.is_none() {
+                    "not_initialized"
+                } else if context
+                    .session_store
+                    .as_deref()
+                    .is_some_and(|store| store.get(RecordClass::Recovery, "exported").is_none())
+                {
+                    "recovery_required"
+                } else if relay_origin.is_empty() || inbox_url == "null" {
+                    "relay_unconfigured"
+                } else {
+                    "ready"
+                };
                 response(
                     200,
                     &format!(
-                        r##"{{"status":"daemon-session-active","high_risk":false,"private_state":"daemon-owned","relay_origin":"{}","inbox_url":{},"storage_records":{},"storage_record_limit":{}}}"##,
+                        r##"{{"status":"{}","high_risk":false,"private_state":"daemon-owned","relay_origin":"{}","inbox_url":{},"storage_records":{},"storage_record_limit":{}}}"##,
+                        status,
                         json_escape(relay_origin),
                         inbox_url,
                         storage_records,
@@ -113,7 +127,7 @@ pub(crate) fn handle_session_route(
             if let Err(reply) = authorize_api(context.bridge, request, context.now) {
                 return Some(reply);
             }
-            let Some(store) = context.session_store.as_deref() else {
+            let Some(store) = context.session_store.as_deref_mut() else {
                 return Some(response(
                     503,
                     "storage_unavailable",
@@ -129,6 +143,14 @@ pub(crate) fn handle_session_route(
                     Some("application/json"),
                 ));
             };
+            if store.put(RecordClass::Recovery, "exported", b"v1").is_err() {
+                return Some(response(
+                    503,
+                    "recovery_export_unavailable",
+                    None,
+                    Some("application/json"),
+                ));
+            }
             response(
                 200,
                 &format!(
