@@ -1,142 +1,111 @@
 # Another Dimension
 
-Another Dimension은 전화번호·이메일·중앙 trusted server 없이 사용하는 1:1 보안
-메신저를 목표로 합니다. 사용자의 Mac에서 로컬 보안 daemon을 실행하고,
-Chromium 브라우저는 daemon이 제공하는 인증된 화면만 표시합니다. 메시지 전달은
-사용자가 직접 운영하거나 신뢰 경로를 확인한 relay를 사용합니다.
+Another Dimension은 전화번호·이메일·중앙 계정 없이, 각 사용자의 Mac에서
+암호화 상태를 보관하는 1:1 보안 채팅 도구입니다. 사용자는 Chromium 화면에서
+초대 코드를 교환하고 안전번호를 확인한 뒤 대화합니다.
 
-> 현재 릴리스 정책상 고위험 통신은 차단되어 있습니다. 구현이 존재한다는 사실은
-> 독립 보안 검토, 익명성, 검열 저항성 또는 기자·취재원 보호 승인을 뜻하지
-> 않습니다. 민감한 실제 통신에는 아직 사용하지 마세요.
+> 현재 제품은 `high-risk-disabled` 상태입니다. 독립 보안 검토, 실제 운영 키
+> 신뢰, 서명·공증된 배포 증거가 확보되지 않았으므로 기자·취재원·활동가의
+> 고위험 통신에 사용하지 마세요. 구현되어 있다는 사실만으로 익명성, 검열
+> 저항성 또는 고위험 통신 안전성을 보증하지 않습니다.
 
-## 현재 제품 구조
+## 이 프로젝트가 하는 일
 
 ```text
-Chromium UI (표시·입력)
-        │ loopback 인증 세션
-        ▼
-로컬 Rust daemon
-  - 계정·기기 신원
-  - 초대와 안전 번호
-  - OpenMLS 암복호화
-  - 암호화 로컬 저장소
-  - 첨부파일·전달 상태
-        │ HTTPS + 인증서 pin
-        ▼
-사용자 소유 relay
-  - 일회성 초대 중계
-  - 불투명 ADENV1 봉투
-  - 암호화 첨부 blob
+사용자 Mac
+┌──────────────────────────────────────────┐
+│ Another Dimension.app                    │
+│  └─ Rust launcher                         │
+│      ├─ 로컬 Rust daemon                  │
+│      │   ├─ 계정·기기 신원                │
+│      │   ├─ OpenMLS 세션과 암복호화        │
+│      │   ├─ 암호화 로컬 저장소             │
+│      │   └─ 초대·안전번호·복구             │
+│      └─ 사용자의 Chromium UI              │
+└──────────────────┬───────────────────────┘
+                   │ 암호화된 불투명 봉투
+                   ▼
+             사용자 소유 Rust relay
 ```
 
-보안 경계의 핵심은 다음과 같습니다.
+- 브라우저는 화면과 입력만 담당하며 장기 개인키, OpenMLS 상태, 데이터베이스 키를
+  보관하지 않습니다.
+- daemon은 loopback에 인증된 로컬 화면을 열고, 키·세션·메시지 저장을 소유합니다.
+- relay는 평문과 개인키를 보지 못하고 암호문과 전달에 필요한 최소 정보를 취급합니다.
+- relay 운영자는 IP 주소, 접속 시각, 접속 빈도, 메시지 크기 등 메타데이터를 볼 수
+  있습니다. 이 프로젝트는 익명 네트워크가 아닙니다.
+- 전화번호, 이메일, 전역 사용자 검색, 중앙 연락처 탐색, 푸시 알림, 클라우드 백업은
+  제품 범위에 포함하지 않습니다.
 
-- 브라우저는 장기 개인키, OpenMLS 상태, 데이터베이스 키를 소유하지 않습니다.
-- daemon은 `127.0.0.1`에만 UI를 열고 일회성 bootstrap, HttpOnly cookie,
-  CSRF, Origin 검사를 사용합니다.
-- relay는 평문, 개인키, 표시 이름, 연락처 목록을 받지 않습니다. 단, relay
-  운영자는 클라이언트 IP, 접속 시각, 트래픽 크기 같은 메타데이터를 볼 수
-  있습니다. 평문을 보지 못하는 것과 메타데이터를 보호하는 것은 별개의 문제이며,
-  이 제품은 메타데이터 보호(익명성)를 제공하지 않습니다.
-- 원격 relay는 HTTPS와 명시적으로 확인된 SHA-256 인증서 pin이 필요합니다.
-- 전화번호, 이메일, 사용자 검색, 중앙 연락처 탐색, 푸시 알림, 클라우드 백업은
-  v0.1 제품 범위가 아닙니다.
+## 현재 지원 범위와 상태
 
-## 지원 환경
+- 지원 대상: Apple Silicon macOS(arm64)와 명시된 Chromium 계열 브라우저
+- 앱 사용: `Another Dimension.app` 더블클릭
+- 런타임: Rust daemon과 Rust relay만 사용하며 Node.js/npm은 필요하지 않음
+- 채팅: 초대 코드, 서명 검증, 만료·일회성 확인, 안전번호 확인 후 1:1 대화
+- 저장: Mac의 암호화 로컬 저장소와 macOS Keychain
+- 릴리스 모드: 개발용 `development`, 제한된 지인 배포용 `private-trusted`
+- 공개 배포와 고위험 사용: 독립 검토·운영 증거가 생기기 전까지 차단
 
-현재 지원 대상으로 고정한 환경은 다음과 같습니다.
+지원 환경과 보안 경계의 상세 기준은 [`SECURITY.md`](SECURITY.md)와
+[`reference/SUPPORT_MATRIX.json`](reference/SUPPORT_MATRIX.json)을 확인하세요.
 
-- Apple Silicon macOS(arm64)
-- Chromium 계열 브라우저(정확한 버전은 지원 evidence에 기록)
-- 일반 사용자는 `Another Dimension.app`을 더블클릭하며 터미널이 필요하지 않음
-- Node.js/npm은 필요하지 않음
-- 일반 배포본은 daemon·Rust relay·release tools binary를 함께 포함함
-- 지원하지 않는 환경(다른 OS·Intel macOS·다른 브라우저)은 development-only이며
-  `doctor`가 `unsupported` 항목을 표시하고 `serve`가 경고를 출력합니다.
-  지원 상태와 증거 수준은 [`reference/SUPPORT_MATRIX.json`](reference/SUPPORT_MATRIX.json),
-  보안 경계는 [`SECURITY.md`](SECURITY.md)를 참고하세요.
+## 일반 사용법
 
-## 릴리스 배포 모드
+일반 사용자는 터미널, Rust, 포트, `data-dir`, manifest, relay capability를
+직접 다루지 않습니다. 운영자에게서 받은 검증된 통합 배포본을 기준으로 다음만
+수행합니다.
 
-배포 산출물과 문서는 다음 네 가지 모드를 같은 이름으로 구분합니다.
+1. `Another Dimension.app`을 응용 프로그램 폴더로 옮깁니다.
+2. 앱을 더블클릭합니다. 처음 실행하면 로컬 relay와 보안 서비스가 준비되고
+   Chromium 화면이 열립니다.
+3. 화면에서 표시 이름을 입력하고 `내 계정 만들기`를 누릅니다. 암호화 키와
+   계정 비밀은 daemon이 생성하며 브라우저 화면으로 노출하지 않습니다.
+4. `복구 파일 저장`을 눌러 암호화 복구 파일을 저장합니다. Mac과 분리된 암호화
+   오프라인 매체에 보관해야 채팅을 시작할 수 있습니다.
+5. 한 사람이 `일회성 초대 만들기`를 선택하고 코드를 다른 신뢰 채널로 전달합니다.
+6. 상대방은 `상대 초대에 참여하기`에 코드를 입력합니다.
+7. 양쪽이 화면에 표시된 안전번호 전체를 전화·대면 등 별도 채널에서 비교합니다.
+8. 번호가 일치할 때만 연결을 승인하고 메시지를 보냅니다.
 
-| 모드 | 목적 | 허용 주장 |
-| --- | --- | --- |
-| `development` | 개발자 로컬 실행 | 기능 개발용이며 배포 금지 |
-| `private-trusted` | 본인·신뢰하는 지인 간 제한 배포 | 암호문 전달과 로컬 키 소유 모델을 설명할 수 있음 |
-| `public` | 불특정 다수 공개 배포 | 독립 검토와 운영 증거가 있어야 함 |
-| `high-risk-disabled` | 고위험 사용자 보호 | 현재 항상 비활성화 |
+초대 코드·안전번호·복구 파일·local URL·원본 로그를 메신저나 지원 요청에 보내지
+마세요. 앱에 표시된 일반 오류 문구만 운영자에게 전달하세요.
 
-현재 이 저장소는 `development` 모드로 개발 중이며 `private-trusted` 제한 배포를
-준비합니다. `public` 배포와 `high-risk-disabled` 전환은 독립 보안 검토, 운영
-signing key 신뢰, 실제 배포 증거가 확보되기 전에는 승인하지 않습니다.
-`highRiskAllowed` 릴리스 플래그를 켜는 우회 방법은 없으며, 어떤 문서도 이를
-안내하지 않습니다.
+### 앱 종료와 재실행
 
-`private-trusted`라고 해도 relay 운영자는 IP, 접속 시각, 트래픽 크기 같은
-메타데이터를 볼 수 있습니다. 상대방 기기가 악성코드에 감염됐거나 상대방이
-화면을 촬영하는 상황도 방어하지 않습니다.
+앱을 종료하면 daemon과 로컬 relay를 함께 종료합니다. 다시 앱을 더블클릭하면
+같은 로컬 프로필을 Keychain으로 잠금 해제하고 Chromium 화면을 엽니다. 계정이
+사라졌거나 복구가 필요한 화면이 나오면 새 계정을 만들지 말고 앱을 종료한 뒤
+운영자에게 문의하세요.
 
-## 일반 사용자 실행 — 여기까지만 읽어도 됩니다
+### 복구와 로컬 삭제
 
-1. 운영자에게 받은 검증된 `Another Dimension.app`을 응용 프로그램 폴더로 옮깁니다.
-2. 앱을 더블클릭합니다. Chromium 화면이 자동으로 열립니다.
-3. 표시 이름만 입력해 계정을 만들고, 화면의 `복구 파일 저장`을 완료합니다.
-4. `초대 만들기` 또는 `상대 초대에 참여하기`를 선택합니다.
-5. 양쪽이 화면의 안전 번호 전체를 전화·대면 등 다른 신뢰 채널에서 비교합니다.
-6. 번호가 일치할 때만 연락처를 승인하고 채팅을 시작합니다.
+- 복구 파일은 로컬 암호화 상태의 스냅샷입니다. 상대방 기기, relay에 이미 전달된
+  자료, OS 백업, 화면 캡처까지 복원하거나 삭제하지 않습니다.
+- `보안과 복구` 화면에서 암호화 복구 백업을 다운로드하고, 필요하면 검증 후 다음
+  시작 때 적용하도록 예약할 수 있습니다.
+- `이 기기의 모든 로컬 데이터 삭제`는 되돌릴 수 없습니다. 앱만 삭제하는 것은
+  프로필·복구 파일·relay 데이터를 삭제하지 않습니다.
 
-일반 사용자는 `cargo`, `daemon`, `relay`, 포트, 저장 경로, 서명 명령을
-입력하지 않습니다. 복구 파일·초대 코드·안전번호·로컬 주소·원문 메시지는 메신저나
-지원 요청에 보내지 않습니다. 문제가 생기면 앱에 표시된 일반 오류 문구만 운영자에게
-전달합니다. 업데이트와 삭제는 [Mac 사용 가이드](docs/03-기능/다운로드-설치-실행-가이드.md)를
-따릅니다.
+## 릴레이 운영 방식
 
-## 운영자·개발자 환경에서 빠르게 실행하기
+통합 배포본은 각 사용자의 Mac에서 개발·개인용 Rust relay를 함께 시작합니다.
+사용자 소유 relay를 별도 운영하려면 운영자가 Rust relay를 실행하고, 생성된
+inbox URL·relay 공개키·인증서 pin을 daemon 설정에 넣어야 합니다. 이 작업은
+일반 사용자에게 요구하지 않습니다.
 
-### 1. 의존성 준비
+### 개발용 로컬 relay
+
+저장소 루트에서 다음 명령으로 개발 relay를 실행합니다. 기본값은 loopback
+`127.0.0.1:1422`이며 외부 네트워크에 공개하지 않습니다.
 
 ```sh
-cargo check --workspace --release --locked --offline
+AD_RELAY_DATA_DIR=.local/relay \
+AD_RELAY_PORT=1422 \
+scripts/start_local_server.sh
 ```
 
-Rust 의존성은 저장소의 `Cargo.lock`으로 고정되어 있습니다.
-
-### 2. 웹 UI 빌드
-
-```sh
-scripts/build_web_static.sh
-```
-
-### 3. 로컬 프로필 초기화
-
-daemon은 프로필 초기화 때 사용자가 암호문구를 직접 만들도록 요구하지 않습니다.
-운영체제 난수로 생성된 256비트 값을 화면에서 한 번 복사하거나, owner-only
-파일로 저장하도록 명시할 수 있습니다.
-
-```sh
-cargo run -p another-dimension-daemon -- \
-  init --display-name "내 표시 이름" \
-  --data-dir .local/alice \
-  --passphrase-output /secure/offline/alice.passphrase
-```
-
-생성된 값을 별도 보안 매체에 보관하세요. `serve`, `identity`, `device`, `wipe`는
-생성된 값을 stdin으로만 받아 복호화하며 명령행 인자로는 받지 않습니다.
-
-Apple Silicon macOS에서는 초기화 시 프로필 비밀값을 macOS Keychain에도 등록합니다.
-Keychain 자동 잠금 해제를 명시적으로 사용할 때만 `--keychain`을 붙입니다.
-
-```sh
-cargo run -p another-dimension-daemon -- \
-  identity show --data-dir .local/alice --keychain
-```
-
-기존 browser Olm/Tauri 프로토타입의 키와 세션은 OpenMLS 신원으로 변환하지
-않습니다. 암호 프로토콜 상태를 억지로 변환하면 신원 연속성을 거짓으로 보일 수
-있기 때문에 새 daemon 프로필을 생성해야 합니다.
-
-### 4. 개발 relay 실행
+또는 Rust 바이너리를 직접 실행할 수 있습니다.
 
 ```sh
 AD_RELAY_DATA_DIR=.local/relay \
@@ -144,389 +113,167 @@ AD_RELAY_PORT=1422 \
 cargo run -p another-dimension-relay --offline
 ```
 
-relay는 기본적으로 API만 제공합니다. `AD_SERVE_UI=1`은 로컬 개발 편의
-기능이며 공개 배포 경계로 사용하면 안 됩니다.
+relay의 private info와 capability는 relay 데이터 디렉터리에 owner-only로
+저장됩니다. 로그·화면 공유·이슈에 복사하지 마세요. `AD_SERVE_UI=1`은 개발 편의
+기능일 뿐 공개 서비스용 UI가 아닙니다.
 
-relay를 시작하면 private local UI URL과 capability는 데이터 디렉터리의
-owner-only 파일에 저장됩니다. 해당 값을 로그, 화면 공유, 이슈에 올리지 마세요.
+## 개발자가 로컬에서 실행하기
 
-### 5. daemon UI 실행
+### 필요한 것
 
-실제 relay가 발급한 inbox URL과 relay 공개키·인증서 pin을 사용해야 합니다.
-loopback 개발 중에는 필요한 값을 relay의 private info API에서 확인할 수
-있습니다.
+- Apple Silicon macOS
+- Rust toolchain과 Cargo
+- 지원 Chromium 브라우저
+- 의존성은 `Cargo.lock`으로 고정되며 Node.js/npm은 필요하지 않습니다.
+
+빌드 산출물은 `.build-cache/cargo-target`에만 두도록 설정되어 있습니다. `target/`,
+`.build-cache/`, `apps/web/dist/`는 재생성 가능한 산출물이며 Git에 커밋하지 않습니다.
+
+### 웹 UI 빌드
 
 ```sh
-printf '%s' "$(cat /secure/offline/alice.passphrase)" | cargo run -p another-dimension-daemon -- \
+scripts/build_web_static.sh
+```
+
+### 프로필과 daemon을 직접 실행하는 개발 흐름
+
+아래 흐름은 일반 사용자용이 아니라 daemon·bridge를 개발할 때만 사용합니다.
+
+```sh
+mkdir -p .local/alice
+cargo run -p another-dimension-daemon -- \
+  init \
+  --display-name "Alice" \
+  --data-dir .local/alice \
+  --passphrase-output /secure/offline/alice.passphrase
+```
+
+암호문구는 운영체제 난수로 생성됩니다. 명령행 인자에 비밀값을 넣지 않으며,
+생성된 파일은 owner-only 권한의 별도 암호화 매체에 보관합니다.
+
+```sh
+printf '%s' "$(cat /secure/offline/alice.passphrase)" | \
+  cargo run -p another-dimension-daemon -- \
   serve \
   --data-dir .local/alice \
   --port 1420 \
   --ui-dir apps/web/dist \
+  --relay-origin http://127.0.0.1:1422 \
+  --inbox-url http://127.0.0.1:1422/api/v1/inbox/CAPABILITY \
+  --relay-public-key RELAY_PUBLIC_KEY_HEX \
+  --relay-public-key-fingerprint RELAY_FINGERPRINT_HEX \
   --open
-unset AD_PASSPHRASE
 ```
 
-`--open`이 동작하지 않으면 daemon이 출력한 일회성 URL을 같은 Mac의 Chromium에
-붙여 넣습니다. URL은 다른 사람에게 전송하지 마세요.
+원격 relay는 HTTPS, 사전에 확인한 SHA-256 인증서 pin, relay 공개키와 fingerprint를
+모두 요구합니다. 확인하지 않은 새 pin으로 자동 전환하지 않습니다.
 
-원격 HTTPS relay를 연결할 때는 다음 값이 추가로 필요합니다.
+### daemon 주요 명령
 
 ```text
---relay-origin https://relay.example
---inbox-url https://relay.example/api/v1/inbox/<capability>
---relay-tls-pin sha256:<certificate-der-sha256>
---relay-public-key <32-byte-ed25519-public-key-hex>
---relay-public-key-fingerprint <sha256-hex>
+setup --data-dir PATH --port PORT --ui-dir PATH --open
+init --display-name NAME [--data-dir PATH] [--passphrase-output PATH]
+identity show [--data-dir PATH] [--keychain]
+status [--data-dir PATH]
+serve --data-dir PATH --relay-origin ORIGIN --inbox-url URL [옵션]
+stop [--data-dir PATH]
+device list|revoke|link-request|link-complete
+doctor [--data-dir PATH]
+keychain enroll --data-dir PATH
+recovery export|inspect|rotate|import
+wipe --data-dir PATH
 ```
 
-확인하지 않은 새 pin으로 자동 전환하지 않습니다. 인증서를 실제로 교체한 경우에만
-새 pin과 `--relay-tls-retrust`를 함께 사용하세요.
+`wipe`는 로컬 daemon 저장소 삭제 명령입니다. SSD 잔여 영역, OS 백업, relay blob,
+브라우저 캐시와 상대방 기기의 사본까지 안전하게 삭제한다고 주장하지 않습니다.
 
-## 내부 구현 워크플로우 (일반 사용자용 절차 아님)
+## 제한된 지인용 릴리스 만들기
 
-1. 운영자가 검증된 통합 앱과 전달 경로를 준비합니다.
-2. 사용자는 앱을 열어 표시 이름과 복구 파일만 준비합니다.
-3. 초대를 만드는 사용자가 UI에서 일회성 초대 코드를 생성합니다.
-4. 코드는 별도의 신뢰 가능한 채널로 상대에게 전달합니다.
-5. 상대가 코드를 입력하면 daemon이 서명, 만료, relay binding, protocol version을
-   검증합니다.
-6. 양쪽이 안전 번호 전체를 비교하고 확인합니다.
-7. 확인이 끝난 뒤에만 연락처 승인과 OpenMLS 메시지 전송이 활성화됩니다.
-8. 계정·기기·연결 정보가 바뀌면 전송은 중단됩니다. 화면 안내에 따라 상대방과
-   안전 번호를 다시 확인해야 합니다.
-
-초대 코드는 한 번만 사용할 수 있고 만료됩니다. 사용자명 검색이나 전화번호
-연락처 동기화는 제공하지 않습니다.
-
-## 릴리스 설치
-
-서명된 `private-trusted` archive를 받으면 압축을 풀기 전에 발신자에게 받은
-release signing key fingerprint를 **별도의 신뢰 채널**(메시지가 아닌 전화·대면
-등)에서 대조하고, archive의 SHA-256과 quarantine 속성을 확인합니다.
+릴리스 운영자는 개인키를 저장소나 공개 채널에 넣지 않습니다. `private-trusted`
+릴리스는 Rust daemon·Rust relay·Rust release tools·정적 UI를 포함한 통합 archive와
+Finder에서 실행할 수 있는 `.app`을 생성합니다.
 
 ```sh
-shasum -a 256 another-dimension-0.1.0.tar.gz
-xattr -l another-dimension-0.1.0.tar.gz   # 예상하지 못한 속성이 없는지 확인
-```
-
-archive 안의 공개키만 믿고 설치하지 않습니다. 압축을 풀고 서명·해시·trust
-manifest를 검증합니다.
-
-```sh
-tar -xzf another-dimension-0.1.0.tar.gz
-./another-dimension-0.1.0/bin/another-dimension-tools release-manifest verify \
-  --root another-dimension-0.1.0 --public-key release-public.pem
-```
-
-`private-trusted` 배포는 이 gate가 `private release gate passed`를 출력해야
-설치할 수 있습니다. gate가 통과한 archive만 설치합니다.
-
-## 제한된 지인 배포를 만드는 단일 흐름
-
-운영자는 저장소나 공개 채널에 private key를 넣지 않고, 다음 wrapper 하나로 실제
-archive를 만들고 압축 해제 후 gate까지 다시 확인합니다.
-
-```sh
-CARGO_BUILD_JOBS=2 cargo build -p another-dimension-daemon --locked
+CARGO_BUILD_JOBS=2 cargo build --release --locked --offline
 AD_RELEASE_SIGNING_KEY=/secure/release/release-private.pem \
 AD_RELEASE_PUBLIC_KEY=/secure/release/release-public.pem \
 scripts/private_release.sh build
 ```
 
-출력된 archive SHA-256과 release/bootstrap fingerprint를 별도 채널로 지인에게
-전달합니다. 수신자는 archive 내부 공개키를 신뢰 root로 사용하지 않고, 외부에서
-받은 자료로 다시 검증합니다.
+운영 signing key가 없거나 안전하게 보관되지 않았다면 배포하지 않습니다. 생성된
+archive는 운영자가 별도 채널에서 전달받은 공개키·trust 자료와 대조한 뒤 검증합니다.
 
 ```sh
 scripts/private_release.sh verify another-dimension-0.1.0.tar.gz \
   --public-key /secure/release/release-public.pem
 ```
 
-운영 relay 영수증 키는 처음부터 별도로 생성합니다. 이 명령은 private key를
-출력하지 않으며, 기존 키를 덮어쓰지 않습니다.
+`release-manifest` 검증은 파일 목록·해시·서명을 확인합니다. 이것만으로 독립 보안
+검토, 운영 키 custody, macOS 공증, 고위험 사용자 승인이 완료되는 것은 아닙니다.
+
+### macOS 앱 게이트
+
+릴리스 builder는 앱 내부에 daemon·relay·tools·웹 UI를 포함하고, 다음 경계를
+자동 확인합니다.
 
 ```sh
-relay receipt signing key는 Rust relay가 데이터 디렉터리에서 최초 실행 시 생성합니다.
+scripts/verify_macos_app.sh \
+  public-release/another-dimension-0.1.0/Another\ Dimension.app
 ```
 
-## Lightweight client package under 50MB
+운영 서명을 요구할 때는 `AD_MACOS_SIGNING_IDENTITY`와
+`AD_REQUIRE_MACOS_SIGNING=1`을 설정합니다. Apple notarization과 Gatekeeper 검증을
+요구할 때는 `AD_REQUIRE_MACOS_NOTARIZED=1`도 설정해야 합니다. ad-hoc 서명이나
+로컬 rehearsal은 실제 운영 signing·notarization 증거가 아닙니다.
 
-Users who do not operate a relay do not need the Node.js runtime or relay server.
-The client archive contains only the release daemon and static web UI. The current
-build is about 2.2MB compressed and 4.3MB unpacked.
+## 경량화와 검증
+
+CPU·디스크 사용량을 제한하기 위해 개발·검증 명령은 기본적으로 `CARGO_BUILD_JOBS=2`,
+`CARGO_INCREMENTAL=0`, offline 의존성을 사용합니다.
 
 ```sh
-CARGO_BUILD_JOBS=2 cargo build --release -p another-dimension-daemon --locked
-AD_CLIENT_DAEMON_BINARY="$PWD/.build-cache/cargo-target/release/another-dimension-daemon" \
-AD_RELEASE_SIGNING_KEY=/secure/release/release-private.pem \
-AD_RELEASE_PUBLIC_KEY=/secure/release/release-public.pem \
-scripts/build_client_release.sh
+scripts/clean_build_artifacts.sh          # dry-run
+scripts/clean_build_artifacts.sh --apply  # 재생성 가능한 cache 삭제
+scripts/verify_light.sh                  # 짧은 기본 검증
 ```
 
-The client release is built with the Rust `another-dimension-tools` binary. Installation
-verifies the signed archive with the Rust daemon already inside the archive, so neither
-client users nor client release operators need Node.js, npm, or the relay package.
-
-일반 사용자는 검증된 통합 배포본의 `Another Dimension.app`을 더블클릭합니다.
-Chromium에서 표시 이름만 입력하고 복구 파일을 오프라인 암호화 매체에 저장하면,
-이후 앱을 다시 더블클릭해 초대·안전번호·채팅을 사용할 수 있습니다. 일반 사용자는
-`init`, `start`, `--data-dir`, 포트, manifest 검증 명령을 실행하지 않습니다.
-
-`client-only` archive는 relay를 별도로 운영하는 운영자용 패키지이며 일반 사용자에게
-전달하지 않습니다.
-
-```sh
-sh another-dimension-0.1.0/scripts/install_local_server.sh \
-  --archive another-dimension-0.1.0 \
-  --public-key release-public.pem \
-  --trust-manifest release-trust.json \
-  --trust-manifest-key trust-bootstrap-public.pem
-```
-
-설치 위치 기본값은 `~/.local/share/another-dimension/server`이고,
-`--destination`과 `--data-dir`로 바꿀 수 있습니다. 업데이트는 같은 gate를 거친
-새 archive로 `another-dimension update --archive DIR ...`를, 이전 버전 복귀는
-`another-dimension rollback`을 사용합니다.
-
-## 릴리스 설치 후 명령
-
-서명 검증을 거쳐 설치한 디렉터리의 `another-dimension` 실행 파일 하나를
-사용합니다. 아래에서 `AD`는 그 절대 경로입니다.
-
-```sh
-AD="$HOME/.local/share/another-dimension/server/another-dimension"
-"$AD" init "내 표시 이름"
-# init generates a random 256-bit passphrase and prints it once.
-# Or save it directly to an owner-only file:
-# "$AD" init "내 표시 이름" --passphrase-output "$HOME/profile.passphrase"
-"$AD" relay-start
-"$AD" start
-```
-
-`start`는 daemon을 foreground에서 실행하고 Chromium을 엽니다. 종료하려면 해당
-터미널에서 `Ctrl-C`를 누릅니다. 이미 실행 중인 daemon은 `restart`로 중지 후 같은
-터미널에서 다시 시작할 수 있습니다. `restart`는 daemon만 재시작하며 relay는
-`relay-stop` 후 `relay-start`로 별도 관리합니다. 원격 relay를 사용할 때는 README의
-TLS pin과 relay 공개키 옵션을 `start` 뒤에 그대로 붙일 수 있습니다. relay는 daemon과
-별도 프로세스이므로 상태와 종료 명령도 분리됩니다.
-
-```sh
-"$AD" status
-"$AD" doctor
-"$AD" stop
-"$AD" restart
-"$AD" relay-status
-"$AD" relay-stop
-"$AD" recovery-export /Volumes/OFFLINE/profile.adrecovery
-```
-
-## 주요 daemon 명령
-
-```text
-another-dimension-daemon init --display-name NAME [--data-dir PATH]
-another-dimension-daemon identity show [--data-dir PATH]
-another-dimension-daemon status [--data-dir PATH]
-another-dimension-daemon doctor [--data-dir PATH]
-another-dimension-daemon serve [options]
-another-dimension-daemon stop [--data-dir PATH]
-another-dimension-daemon device list [--data-dir PATH]
-another-dimension-daemon device revoke --id DEVICE_ID [--data-dir PATH]
-another-dimension-daemon recovery export --output PATH [--data-dir PATH]
-another-dimension-daemon recovery inspect --input PATH
-another-dimension-daemon recovery import --input PATH [--data-dir PATH]
-another-dimension-daemon recovery rotate --data-dir PATH [--passphrase-output PATH]
-another-dimension-daemon keychain enroll --data-dir PATH
-another-dimension-daemon wipe --data-dir PATH
-```
-
-`wipe`는 로컬 daemon 저장소를 제거하지만 SSD 잔여 데이터, relay blob, 별도
-백업, 브라우저 캐시까지 안전 삭제한다고 주장하지 않습니다.
-
-## 백업과 복구
-
-암호화 복구 파일을 오프라인 매체에 내보냅니다.
-
-```sh
-cargo run -p another-dimension-daemon -- \
-  recovery export --data-dir .local/alice --output /Volumes/OFFLINE/alice.adrecovery
-```
-
-복구 파일은 계정·기기·암호화 상태를 포함할 수 있는 민감한 자료입니다.
-
-- 메시지나 메신저로 보내지 마세요.
-- 원본 기기와 분리된 암호화 매체에 보관하세요.
-- 암호문구를 같은 위치에 보관하지 마세요.
-- 가져오기는 기존 프로필을 덮어쓰지 않습니다.
-- 가져오기 전에 `recovery inspect`로 형식과 버전을 확인하세요.
-
-복구 파일은 내보낸 시점의 암호화된 로컬 상태 스냅샷입니다. 이후에 relay에 남은
-blob, 삭제된 로컬 데이터, 상대방 기기의 상태는 복원하지 않습니다. 복구는
-클라우드 백업이나 완전 다중 기기 복구를 의미하지 않습니다.
-
-`recovery rotate`는 기존 암호문구만 stdin으로 받고 새 암호문구는 랜덤 생성합니다.
-`--passphrase-output`을 지정하지 않으면 화면에서 한 번 복사할 수 있고, 지정하면
-0600 파일로 저장됩니다. 복구 import 후에는 원래 암호문구로 다음을 한 번 실행해
-macOS Keychain 등록을 복원할 수 있습니다.
-
-복구 파일을 새 디렉터리에 가져온 뒤 Keychain 자동 잠금 해제를 사용하려면 원래
-암호문구를 stdin으로 한 번만 제공해 등록합니다.
-
-```sh
-printf '%s' "$(cat /secure/offline/alice.passphrase)" | \
-  cargo run -p another-dimension-daemon -- \
-  keychain enroll --data-dir .local/alice-restored
-```
-
-## 검증 명령
-
-Rust 산출물은 `.cargo/config.toml`에 따라 `.build-cache/cargo-target`에만
-생성됩니다. `target/`은 이전 실행에서 남은 legacy cache이며 제품 데이터나
-로그가 아닙니다. 다만 cache에 소스 경로·debug metadata가 포함될 수 있어 준비
-단계에서 디렉터리 700, 파일 owner-only 권한으로 잠급니다. debug/test incremental compilation은 비활성화되어 소스 변경별
-incremental tree가 계속 쌓이지 않습니다.
-이 cache는 실행·배포에 필수인 영구 데이터가 아니라 재컴파일 시간을 줄이는
-임시 산출물이며, 검증 시작·종료 시 기본 768MiB를 넘으면 자동으로 비워집니다. 완전히
-비우고 싶으면 아래 정리 명령을 사용하면 됩니다.
-
-현재 build cache 용량 확인과 정리:
-
-```sh
-scripts/clean_build_artifacts.sh          # dry-run, 삭제하지 않음
-scripts/clean_build_artifacts.sh --apply  # 명시적으로 재생성 가능한 cache 삭제
-du -sh target .build-cache/cargo-target 2>/dev/null
-```
-
-릴리스 아카이브와 웹 배포 산출물은 별도 명령으로 관리합니다. 릴리스 증거를
-보존해야 하는 경우에는 실행하지 마세요.
-
-```sh
-scripts/clean_release_artifacts.sh          # dry-run
-scripts/clean_release_artifacts.sh --apply  # public-release와 web/dist 삭제
-```
-
-정리 후에는 검증 명령이 필요한 binary와 의존성을 자동으로 재생성합니다.
-`target/`, `.build-cache/cargo-target`, `.git`, 소스, 문서, profile data가 아닌
-경로를 직접 삭제 대상으로 지정하지 마세요.
-
-M1의 CPU 사용량을 과도하게 높이지 않는 기본 검증:
-
-```sh
-scripts/verify_light.sh
-CARGO_BUILD_JOBS=2 cargo check --release -p another-dimension-daemon --offline
-scripts/verify_light.sh
-```
-
-릴리스 전 전체 제품 검증:
+릴리스 후보에서만 다음을 실행합니다. 동일 revision에서 반복 실행하지 않습니다.
 
 ```sh
 CARGO_BUILD_JOBS=2 scripts/verify_full.sh --release
 ```
 
-검증 스크립트는 `CARGO_BUILD_JOBS=2`, `CARGO_INCREMENTAL=0`을 사용하고 동일
-Cargo target을 공유합니다. 전체 검증에서도 clippy는 library target만 검사해
-테스트·보조 target의 중복 컴파일을 피합니다. 기본 검증은 현재 제품인 daemon, 웹 UI, relay만
-다룹니다. 삭제된 Tauri/CLI
-프로토타입의 성공 여부를 제품 증거로 사용하지 않습니다.
+검증은 실제 소스·문서·private profile data를 삭제하지 않습니다. `target/`,
+`.build-cache/cargo-target`, `public-release`, `apps/web/dist`만 재생성 가능한
+정리 대상입니다.
 
-`scripts/verify_all.sh`는 일반 개발 루프가 아니라 release/compliance 전용 게이트입니다.
-정책 fixture, 릴리스 증거, 지원 환경 검사를 포함하므로 변경할 때마다 반복 실행하지
-말고 릴리스 준비 시에만 `--focused` 또는 `--release`로 실행하세요.
+## 보안 한계
 
-## 완전한 릴리스 아카이브 만들기
+이 도구는 다음을 해결하지 않습니다.
 
-공개 아카이브에는 실행 가능한 daemon·Rust relay·release tools가 포함됩니다.
-미서명 개발 아카이브도 두 파일이 없으면 생성하지 않습니다.
+- 감염된 Mac, 키로거, 악성 브라우저 확장, 화면 캡처
+- 상대방이 메시지를 복사하거나 촬영하는 행위
+- IP·접속 시각·트래픽 크기 분석
+- 악성 운영 relay가 전달을 지연·차단하거나 메타데이터를 기록하는 행위
+- OS 백업·crash dump·swap·압수된 기기의 모든 잔존 데이터
+- 독립적인 암호 구현 감사가 없는 상태에서의 프로토콜 안전성 인증
 
-```sh
-AD_RELEASE_VERSION=0.1.0 \
-scripts/build_release.sh
+현재 `highRiskAllowed`를 활성화하는 우회 방법은 제공하지 않습니다. 고위험 사용
+승인을 위해서는 독립 암호·프로토콜 검토, 실제 운영 signing/bootstrap key ceremony,
+깨끗한 Apple Silicon·Chromium 배포 증거, 로컬 단말 hardening 증거가 별도로
+필요합니다.
+
+## 저장소 구조
+
+```text
+apps/daemon/   로컬 신원·암호화·저장소·HTTP bridge
+apps/relay/    Rust 기반 불투명 전달 relay
+apps/tools/    정적 UI·release manifest·release trust 도구
+apps/web/      daemon 화면과 사용자 워크플로우
+reference/     제품 경계·위협 모델·릴리스 운영 참고 문서
+scripts/       빌드·실행·릴리스·경량 검증 스크립트
 ```
 
-`AD_RELEASE_PROFILE=private`을 지정하면 서명된 `private-trusted` archive를
-만듭니다. private profile은 독립 보안 검토 sign-off 없이도 릴리스 서명·해시·
-trust manifest 검증을 반드시 요구하며, 기본값인 미서명 development 산출물과
-구분됩니다. 설치·업데이트도 같은 검증 없이는 진행되지 않습니다.
-
-공개 배포(`AD_RELEASE_PROFILE=public`)에는 추가로 독립 보안 검토 sign-off가
-필요합니다. 어느 profile이든 Ed25519 release signing key와 외부 trust manifest,
-bootstrap public key, 공개키 검증 절차를 사용합니다. 개인 signing key는
-저장소나 릴리스 아카이브에 넣지 마세요. 자세한 공개 비주장은
-[SECURITY.md](SECURITY.md)를 따릅니다.
-
-## 저장 위치와 민감정보
-
-기본 또는 지정한 daemon 데이터 디렉터리에는 암호화 저장소, rollback marker,
-private UI bootstrap 자료가 들어갑니다. relay 데이터 디렉터리에는 SQLite queue,
-암호화 blob, capability, receipt signing key가 들어갑니다.
-
-| 데이터 | 위치 | 수명 |
-| --- | --- | --- |
-| daemon 프로필 | `--data-dir` | `wipe`로 삭제 시도. SSD 잔여·백업·브라우저 캐시 삭제는 보장하지 않음 |
-| relay 데이터 | relay 데이터 디렉터리 | envelope 기본 7일·blob 최대 7일·capability 30일 TTL |
-| 브라우저 임시 상태 | Chromium 쿠키·세션 저장소·캐시 | daemon 재시작 시 bootstrap URL·쿠키 무효화 |
-| recovery 파일 | 사용자가 지정한 오프라인 매체 | 내보낸 시점의 암호화 스냅샷. relay blob·삭제 데이터는 미포함 |
-
-프로필은 `--data-dir` 단위로 분리됩니다. 같은 기기의 여러 프로필은 별도
-데이터 디렉터리와 별도 daemon 인스턴스를 사용하며 서로의 데이터에 접근하지
-않습니다. relay 운영자가 보는 정보와 보지 못하는 정보는
-[`SECURITY.md`](SECURITY.md)의 보안 경계를 참고하세요.
-
-다음 자료는 공개하면 안 됩니다.
-
-- 초대 코드와 signed invite
-- inbox/local UI capability
-- 안전 번호와 연락처 식별자
-- 메시지 평문·암호문
-- 복구 파일과 암호문구
-- daemon·relay 전체 로그
-- private room 화면 캡처
-- release signing private key
-
-## 문제 해결
-
-### UI 디렉터리가 없다고 나오는 경우
-
-```sh
-scripts/build_web_static.sh
-```
-
-그 후 `serve --ui-dir apps/web/dist`로 다시 실행합니다.
-
-### 프로필이 초기화되지 않았다고 나오는 경우
-
-같은 `--data-dir`을 사용했는지 확인하고 먼저 `init`을 실행합니다. 기존 폴더를
-임의로 덮어쓰지 마세요.
-
-### HTTPS relay pin 오류
-
-인증서가 예상과 다른 상태입니다. 네트워크 공격과 정상 인증서 교체를 UI만 보고
-구분할 수 없습니다. relay 운영 경로에서 새 지문을 별도로 확인하기 전에는
-`--relay-tls-retrust`를 사용하지 마세요.
-
-### 브라우저가 daemon에 연결되지 않는 경우
-
-- daemon 프로세스가 실행 중인지 확인합니다.
-- daemon이 출력한 최신 일회성 URL을 사용합니다.
-- 다른 origin에서 UI를 열지 않습니다.
-- daemon 재시작 후에는 이전 cookie와 bootstrap URL을 재사용하지 않습니다.
-
-## 명시적 비보장
-
-현재 프로젝트는 다음을 보장하지 않습니다.
-
-- 독립 보안 감사 완료
-- 기자·취재원·활동가의 실제 고위험 통신 승인
-- 익명성, IP 은닉, 트래픽 분석 방어
-- 검열 저항 또는 Tor/onion 전달
-- 악성코드·키로거·화면 캡처로 장악된 기기 보호
-- 상대방의 복사·촬영 방지
-- 강압 저항 또는 부인 가능성
-- SSD 수준 secure deletion
-- 다중 기기 완전 복구와 고가용성 relay
-
-취약점을 발견하면 공개 이슈에 재현용 비밀이나 실제 대화 데이터를 넣지 말고
-[SECURITY.md](SECURITY.md)의 비공개 신고 절차를 사용하세요.
-
-## 라이선스
-
-MIT License. 자세한 내용은 [LICENSE](LICENSE)를 확인하세요.
+`docs/`는 공개 배포물에 포함하지 않는 private planning/security notes입니다.
+기여 전에는 `SECURITY.md`와 제품 경계를 먼저 읽고, 실제 비밀·복구 파일·사용자
+대화 데이터를 저장소나 이슈에 올리지 마세요.
