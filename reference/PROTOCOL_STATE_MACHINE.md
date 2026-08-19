@@ -222,8 +222,7 @@ The fixed-seed vector fixture runs the browser runtime against the committed WAS
 module and an in-memory IndexedDB boundary:
 
 ```sh
-npm --prefix apps/web test --workspaces=false
-node scripts/verify_web_crypto_binding.mjs
+scripts/verify_light.sh
 ```
 
 The `fixed-seed protocol vectors preserve state-machine invariants` case covers

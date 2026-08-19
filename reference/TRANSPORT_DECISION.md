@@ -78,7 +78,7 @@ are limits, not privacy guarantees:
 | Blob retention | At most 7 days | Expiry is a cleanup bound, not a secure-deletion claim. |
 
 These values are declared in `reference/product_boundary.json` and checked
-against relay constants by `scripts/verify_transport_boundary.mjs`. A change
+against the Rust relay contract. A change
 to a bound is a product-boundary change and must update the threat model and
 release evidence; it must not silently broaden the high-risk claim.
 

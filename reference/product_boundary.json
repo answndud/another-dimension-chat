@@ -1,7 +1,7 @@
 {
   "format": "another-dimension-product-boundary",
   "version": 1,
-  "supportedProduct": "authenticated browser UI + local OpenMLS daemon + user-owned relay",
+  "supportedProduct": "authenticated browser UI + local OpenMLS daemon + Rust user-owned relay",
   "candidateProduct": "apps/daemon local OpenMLS security daemon (implementation active; high-risk disabled)",
   "candidateProductPath": "apps/daemon",
   "forbiddenReleasePaths": [
@@ -49,18 +49,12 @@
     "reference/SUPPORT_MATRIX.json",
     "apps/web/dist/index.html",
     "apps/web/dist/asset-integrity.json",
-    "apps/server/server.mjs",
-    "apps/server/routes.mjs",
-    "apps/server/http.mjs",
-    "apps/server/errors.mjs",
-    "apps/server/invite-code.mjs",
-    "apps/server/storage.mjs",
-    "runtime/node",
+    "bin/another-dimension-relay",
+    "bin/another-dimension-tools",
     "bin/another-dimension-daemon",
     "scripts/install_local_server.sh",
     "scripts/installed_launcher.sh",
-    "scripts/update_local_server.sh",
-    "scripts/verify_install_state.mjs"
+    "scripts/build_release.sh"
   ],
   "nonClaims": [
     "anonymity",

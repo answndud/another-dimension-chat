@@ -293,10 +293,13 @@ fn hygiene(root: &Path, current: &Path) -> Result<(), String> {
             return error(format!("secret/data/log file in release: {relative}"));
         }
         let bytes = fs::read(&path).map_err(|error| error.to_string())?;
-        if String::from_utf8_lossy(&bytes).contains("-----BEGIN ")
-            && String::from_utf8_lossy(&bytes).contains("PRIVATE KEY-----")
-        {
-            return error(format!("private key material in release: {relative}"));
+        // Binary executables can contain diagnostic/source strings that look like
+        // PEM markers. Scan only valid UTF-8 text files; the secret filename and
+        // extension checks above still apply to every file.
+        if let Ok(text) = std::str::from_utf8(&bytes) {
+            if text.contains("-----BEGIN ") && text.contains("PRIVATE KEY-----") {
+                return error(format!("private key material in release: {relative}"));
+            }
         }
     }
     Ok(())

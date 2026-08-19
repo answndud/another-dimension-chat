@@ -49,8 +49,8 @@ Chromium UI (표시·입력)
 - Apple Silicon macOS(arm64)
 - Chromium 계열 브라우저(정확한 버전은 지원 evidence에 기록)
 - 로컬 daemon 실행이 가능한 터미널
-- Node.js 20 이상은 소스 개발과 relay 실행에만 필요
-- 일반 배포본은 daemon binary와 Node runtime을 함께 포함해야 함
+- Node.js/npm은 필요하지 않음
+- 일반 배포본은 daemon·Rust relay·release tools binary를 함께 포함함
 - 지원하지 않는 환경(다른 OS·Intel macOS·다른 브라우저)은 development-only이며
   `doctor`가 `unsupported` 항목을 표시하고 `serve`가 경고를 출력합니다.
   상세 지원 범위는 [SUPPORT.md](SUPPORT.md)를 참고하세요.
@@ -81,8 +81,7 @@ signing key 신뢰, 실제 배포 증거가 확보되기 전에는 승인하지 
 ### 1. 의존성 준비
 
 ```sh
-npm ci --prefix apps/web --workspaces=false
-npm ci --prefix apps/server --workspaces=false
+cargo check --workspace --locked --offline
 ```
 
 Rust 의존성은 저장소의 `Cargo.lock`으로 고정되어 있습니다.
@@ -90,7 +89,7 @@ Rust 의존성은 저장소의 `Cargo.lock`으로 고정되어 있습니다.
 ### 2. 웹 UI 빌드
 
 ```sh
-npm --prefix apps/web run build --workspaces=false
+scripts/build_web_static.sh
 ```
 
 ### 3. 로컬 프로필 초기화
@@ -124,9 +123,9 @@ cargo run -p another-dimension-daemon -- \
 ### 4. 개발 relay 실행
 
 ```sh
-AD_SERVER_DATA_DIR=.local/relay \
-AD_PORT=1422 \
-node apps/server/server.mjs
+AD_RELAY_DATA_DIR=.local/relay \
+AD_RELAY_PORT=1422 \
+cargo run -p another-dimension-relay --offline
 ```
 
 relay는 기본적으로 API만 제공합니다. `AD_SERVE_UI=1`은 로컬 개발 편의
@@ -195,7 +194,6 @@ AD_RELEASE_PUBLIC_KEY=/secure/release/release-public.pem \
 AD_RELEASE_TRUST_MANIFEST=/secure/trust/release-trust.json \
 AD_RELEASE_TRUST_MANIFEST_KEY=/secure/trust/bootstrap-public.pem \
 AD_DAEMON_BINARY="$PWD/.build-cache/cargo-target/debug/another-dimension-daemon" \
-AD_NODE_RUNTIME="$(command -v node)" \
 scripts/private_release.sh build
 ```
 
@@ -214,7 +212,7 @@ scripts/private_release.sh verify another-dimension-0.1.0.tar.gz \
 출력하지 않으며, 기존 키를 덮어쓰지 않습니다.
 
 ```sh
-node scripts/relay_receipt_keygen.mjs --output-dir /secure/relay-key
+relay receipt signing key는 Rust relay가 데이터 디렉터리에서 최초 실행 시 생성합니다.
 ```
 
 ## 50MB 이하 경량 client 배포
@@ -374,7 +372,7 @@ M1의 CPU 사용량을 과도하게 높이지 않는 기본 검증:
 ```sh
 scripts/verify_light.sh
 CARGO_BUILD_JOBS=2 cargo check -p another-dimension-daemon --offline
-node scripts/verify_product_boundary.mjs
+scripts/verify_light.sh
 ```
 
 릴리스 전 전체 제품 검증:
@@ -395,12 +393,10 @@ Cargo target을 공유합니다. 전체 검증에서도 clippy는 library target
 
 ## 완전한 릴리스 아카이브 만들기
 
-공개 아카이브에는 실행 가능한 daemon과 Node runtime이 반드시 포함되어야 합니다.
+공개 아카이브에는 실행 가능한 daemon·Rust relay·release tools가 포함됩니다.
 미서명 개발 아카이브도 두 파일이 없으면 생성하지 않습니다.
 
 ```sh
-AD_DAEMON_BINARY=/absolute/path/another-dimension-daemon \
-AD_NODE_RUNTIME="$(command -v node)" \
 AD_RELEASE_VERSION=0.1.0 \
 scripts/build_release.sh
 ```
@@ -450,7 +446,7 @@ private UI bootstrap 자료가 들어갑니다. relay 데이터 디렉터리에�
 ### UI 디렉터리가 없다고 나오는 경우
 
 ```sh
-npm --prefix apps/web run build --workspaces=false
+scripts/build_web_static.sh
 ```
 
 그 후 `serve --ui-dir apps/web/dist`로 다시 실행합니다.

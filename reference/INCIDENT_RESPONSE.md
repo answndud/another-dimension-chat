@@ -60,7 +60,7 @@ recovery 파일은 계정·기기·암호화 상태를 포함한 민감 자료�
 
 ## 변조된 UI·daemon·manifest·runtime
 
-1. `doctor` 또는 `verify_public_release_gate.mjs`가 실패하면 실행을 중지한다.
+1. `doctor` 또는 `scripts/verify_full.sh --release`가 실패하면 실행을 중지한다.
 2. 해당 archive를 삭제하지 말고 hash와 source revision만 private incident record에
    적는다. archive 내용과 로그를 공개 issue에 붙이지 않는다.
 3. 별도 trusted key 경로로 새 archive의 fingerprint와 manifest를 확인한다.
@@ -74,7 +74,7 @@ recovery 파일은 계정·기기·암호화 상태를 포함한 민감 자료�
 
 1. 업데이트 적용을 중지하고 현재 설치를 유지한다. 자동 rollback도 실행하지
    않는다(같은 키로 서명된 이전 archive도 의심 대상).
-2. `another-dimension doctor`와 `verify_private_release_gate.mjs`를 다시 실행해
+2. `another-dimension doctor`와 Rust release manifest 검증을 다시 실행해
    현재 설치의 hash·fingerprint·trust manifest를 확인한다.
 3. 별도 신뢰 채널에서 새 archive의 fingerprint·SHA-256을 발신자에게 직접
    확인한다. archive 내부 값만으로 판단하지 않는다.

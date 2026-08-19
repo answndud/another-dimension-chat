@@ -89,7 +89,7 @@ enqueue 중복은 idempotent하며 remove/clear는 순서 목록과 본문을 �
 갱신한다. own-leaf 누적도 codec과 encrypted batch를 통과한다.
 
 현재 trait source의 메서드 수와 `CURRENT_VERSION=1`은
-`scripts/verify_openmls_storage_contract.mjs`로 고정한다. adapter 구현이 이 계약을 모두
+`scripts/verify_light.sh`와 Rust source review로 고정한다. adapter 구현이 이 계약을 모두
 구현하기 전에는 OpenMLS provider를 daemon session에 주입하지 않는다.
 
 ## 반드시 추가로 고정할 결정

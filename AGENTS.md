@@ -19,7 +19,7 @@
 
 ## 제품 경계
 
-- 현재 제품 경로는 `apps/web`, `apps/daemon`, `apps/server`뿐이다.
+- 현재 제품 경로는 `apps/web`, `apps/daemon`, `apps/relay`, `apps/tools`뿐이다.
 - legacy Tauri/native/Olm/onion 소스와 전용 CI는 제거됐으며 git history만 archive다.
 
 ## 작업 상태 문서
