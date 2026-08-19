@@ -2,7 +2,7 @@
 
 use axum::{
     body::Bytes,
-    extract::{Path, State},
+    extract::{DefaultBodyLimit, Path, State},
     http::{header, HeaderMap, StatusCode},
     response::Response,
     routing::{get, post},
@@ -18,14 +18,19 @@ use std::{
     env, fs,
     net::SocketAddr,
     path::PathBuf,
-    sync::Arc,
+    sync::{Arc, Mutex as StdMutex},
     time::{SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::Mutex;
 
 const MAX_ENVELOPE_BYTES: usize = 96 * 1024;
 const MAX_INBOX_ITEMS: usize = 256;
+const MAX_INVITES: usize = 256;
+const MAX_RELAY_BODY_BYTES: usize = 192 * 1024;
+const MAX_BLOB_BYTES: usize = 32 * 1024 * 1024;
 const TTL_SECONDS: u64 = 7 * 24 * 60 * 60;
+const RATE_WINDOW_SECONDS: u64 = 60;
+const MAX_REQUESTS_PER_WINDOW: u32 = 120;
 
 #[derive(Clone)]
 struct AppState {
@@ -35,6 +40,25 @@ struct AppState {
     origin: String,
     receipt_key: SigningKey,
     blob_dir: PathBuf,
+    rate_window: Arc<StdMutex<RateWindow>>,
+}
+
+struct RateWindow {
+    started_at: u64,
+    requests: u32,
+}
+
+fn rate_limited(state: &AppState) -> bool {
+    let Ok(mut window) = state.rate_window.lock() else {
+        return true;
+    };
+    let timestamp = now();
+    if timestamp.saturating_sub(window.started_at) >= RATE_WINDOW_SECONDS {
+        window.started_at = timestamp;
+        window.requests = 0;
+    }
+    window.requests = window.requests.saturating_add(1);
+    window.requests > MAX_REQUESTS_PER_WINDOW
 }
 fn valid_blob_id(value: &str) -> bool {
     (32..=128).contains(&value.len())
@@ -56,6 +80,9 @@ async fn blob_impl(
     body: Bytes,
     method: axum::http::Method,
 ) -> Response {
+    if rate_limited(&state) {
+        return error(StatusCode::TOO_MANY_REQUESTS, "rate_limit_exceeded");
+    }
     if !valid_blob_id(&id) {
         return error(StatusCode::BAD_REQUEST, "invalid_blob_id");
     }
@@ -105,7 +132,7 @@ async fn blob_impl(
         None => return error(StatusCode::BAD_REQUEST, "invalid_blob_metadata"),
     };
     let total = match header_usize(&headers, "x-ad-blob-total", 0) {
-        Some(v) if v > 0 && v <= 32 * 1024 * 1024 => v,
+        Some(v) if v > 0 && v <= MAX_BLOB_BYTES => v,
         _ => return error(StatusCode::BAD_REQUEST, "invalid_blob_metadata"),
     };
     if offset > total || offset + body.len() > total {
@@ -395,7 +422,18 @@ fn load_store(path: PathBuf) -> Result<Store, String> {
     }
     let items = match fs::read(&path) {
         Ok(bytes) => {
-            serde_json::from_slice(&bytes).map_err(|_| "relay state is corrupt".to_owned())?
+            let items: Vec<Item> =
+                serde_json::from_slice(&bytes).map_err(|_| "relay state is corrupt".to_owned())?;
+            if items.len() > MAX_INBOX_ITEMS
+                || items.iter().any(|item| {
+                    item.id.len() != 64
+                        || item.envelope.len() > MAX_ENVELOPE_BYTES
+                        || !item.envelope.starts_with("ADENV1.")
+                })
+            {
+                return Err("relay state exceeds safe limits".to_owned());
+            }
+            items
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
         Err(error) => return Err(error.to_string()),
@@ -434,6 +472,9 @@ async fn post_inbox(
     headers: HeaderMap,
     body: Bytes,
 ) -> Response {
+    if rate_limited(&state) {
+        return error(StatusCode::TOO_MANY_REQUESTS, "rate_limit_exceeded");
+    }
     if capability != state.capability {
         return error(StatusCode::GONE, "capability_expired");
     }
@@ -481,6 +522,9 @@ async fn get_inbox(
     Path(capability): Path<String>,
     headers: HeaderMap,
 ) -> Response {
+    if rate_limited(&state) {
+        return error(StatusCode::TOO_MANY_REQUESTS, "rate_limit_exceeded");
+    }
     if capability != state.capability {
         return error(StatusCode::GONE, "capability_expired");
     }
@@ -508,6 +552,9 @@ async fn ack_inbox(
     headers: HeaderMap,
     body: Bytes,
 ) -> Response {
+    if rate_limited(&state) {
+        return error(StatusCode::TOO_MANY_REQUESTS, "rate_limit_exceeded");
+    }
     if capability != state.capability {
         return error(StatusCode::GONE, "capability_expired");
     }
@@ -539,6 +586,9 @@ async fn ack_inbox(
     )
 }
 async fn create_invite(State(state): State<AppState>, body: Bytes) -> Response {
+    if rate_limited(&state) {
+        return error(StatusCode::TOO_MANY_REQUESTS, "rate_limit_exceeded");
+    }
     let body: Value = match serde_json::from_slice(&body) {
         Ok(v) => v,
         Err(_) => return error(StatusCode::BAD_REQUEST, "invalid_json"),
@@ -570,6 +620,9 @@ async fn create_invite(State(state): State<AppState>, body: Bytes) -> Response {
     let mut invites = state.invites.lock().await;
     let result = record.clone();
     invites.retain(|item| item.expires_at > timestamp);
+    if invites.len() >= MAX_INVITES {
+        return error(StatusCode::TOO_MANY_REQUESTS, "invite_queue_full");
+    }
     invites.push(record);
     if persist_invites(
         &PathBuf::from(
@@ -588,6 +641,9 @@ async fn create_invite(State(state): State<AppState>, body: Bytes) -> Response {
     )
 }
 async fn consume_invite(State(state): State<AppState>, body: Bytes) -> Response {
+    if rate_limited(&state) {
+        return error(StatusCode::TOO_MANY_REQUESTS, "rate_limit_exceeded");
+    }
     let body: Value = match serde_json::from_slice(&body) {
         Ok(v) => v,
         Err(_) => return error(StatusCode::BAD_REQUEST, "invalid_json"),
@@ -621,6 +677,9 @@ async fn consume_invite(State(state): State<AppState>, body: Bytes) -> Response 
     response(StatusCode::OK, payload)
 }
 async fn pairing(State(state): State<AppState>, body: Bytes) -> Response {
+    if rate_limited(&state) {
+        return error(StatusCode::TOO_MANY_REQUESTS, "rate_limit_exceeded");
+    }
     let body: Value = match serde_json::from_slice(&body) {
         Ok(v) => v,
         Err(_) => return error(StatusCode::BAD_REQUEST, "invalid_json"),
@@ -700,11 +759,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
     let invite_path = data_dir.join("invite-codes.json");
-    let invites = match fs::read(&invite_path) {
+    let invites: Vec<Invite> = match fs::read(&invite_path) {
         Ok(bytes) => serde_json::from_slice(&bytes).map_err(|_| "invite state is corrupt")?,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
         Err(error) => return Err(error.into()),
     };
+    if invites.len() > MAX_INVITES || invites.iter().any(|invite| invite.invite.len() > 96 * 1024) {
+        return Err("invite state exceeds safe limits".into());
+    }
     let key_path = data_dir.join("relay-receipt-signing-key.bin");
     let mut seed = [0u8; 32];
     match fs::read(&key_path) {
@@ -732,6 +794,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         origin,
         receipt_key: SigningKey::from_bytes(&seed),
         blob_dir,
+        rate_window: Arc::new(StdMutex::new(RateWindow {
+            started_at: now(),
+            requests: 0,
+        })),
     };
     let app = Router::new()
         .route("/api/v1/health", get(health))
@@ -748,6 +814,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "/api/v1/blobs/{id}",
             get(get_blob).post(post_blob).delete(delete_blob),
         )
+        .layer(DefaultBodyLimit::max(MAX_RELAY_BODY_BYTES))
         .with_state(state);
     let address: SocketAddr = format!("{host}:{port}").parse()?;
     let listener = tokio::net::TcpListener::bind(address).await?;

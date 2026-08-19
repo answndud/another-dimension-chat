@@ -59,7 +59,9 @@ user-owned relay (untrusted delivery service)
 - pairing은 invite 검증 → safety-number 확인 → contact approval → established
   session 순서이며 safety 확인만으로 전송을 허용하지 않는다.
 - relay는 암호문 전달·TTL·bounds를 담당하고 daemon이 replay/identity/session
-  상태를 소유한다.
+  상태를 소유한다. relay HTTP 본문·inbox·invite·blob 상태에는 각각 상한이
+  있으며 요청 빈도도 제한한다. 한도를 넘거나 손상된 영속 상태로는 시작하지
+  않는다.
 - release gate는 high-risk flag, missing signature/trust/review/support evidence
   를 통과시키지 않는다.
 

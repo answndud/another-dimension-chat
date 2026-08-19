@@ -201,7 +201,7 @@ pub(crate) fn response(
     let cookie = set_cookie
         .map(|value| format!("Set-Cookie: {value}\r\n"))
         .unwrap_or_default();
-    format!("HTTP/1.1 {status} {reason}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nConnection: close\r\n{cookie}\r\n{body}", body.len()).into_bytes()
+    format!("HTTP/1.1 {status} {reason}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'\r\nReferrer-Policy: no-referrer\r\nPermissions-Policy: camera=(), microphone=(), geolocation=()\r\nCross-Origin-Opener-Policy: same-origin\r\nCross-Origin-Resource-Policy: same-origin\r\nConnection: close\r\n{cookie}\r\n{body}", body.len()).into_bytes()
 }
 
 pub(crate) fn static_file(ui_root: Option<&Path>, relative: &str) -> Option<Vec<u8>> {
@@ -239,5 +239,5 @@ pub(crate) fn response_bytes(status: u16, body: &[u8], content_type: &str) -> Op
         200 => "OK",
         _ => "Error",
     };
-    Some(format!("HTTP/1.1 {status} {reason}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nConnection: close\r\n\r\n", body.len()).into_bytes().into_iter().chain(body.iter().copied()).collect())
+    Some(format!("HTTP/1.1 {status} {reason}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'\r\nReferrer-Policy: no-referrer\r\nPermissions-Policy: camera=(), microphone=(), geolocation=()\r\nCross-Origin-Opener-Policy: same-origin\r\nCross-Origin-Resource-Policy: same-origin\r\nConnection: close\r\n\r\n", body.len()).into_bytes().into_iter().chain(body.iter().copied()).collect())
 }
