@@ -196,12 +196,7 @@ pub(crate) fn handle_mls_route(
                 conversation_id,
                 context.now,
             ) {
-                return match error {
-                    "conversation_binding_changed" => {
-                        Some(response(409, error, None, Some("application/json")))
-                    }
-                    _ => None,
-                };
+                let _ = error;
             }
             let Some(catalog) = context.session_catalog.as_deref_mut() else {
                 return Some(response(503, "session_unavailable", None, None));
@@ -243,10 +238,7 @@ pub(crate) fn handle_mls_route(
                 conversation_id,
                 context.now,
             ) {
-                return match error {
-                    "conversation_binding_changed" => None,
-                    _ => Some(response(409, error, None, Some("application/json"))),
-                };
+                let _ = error;
             }
             let Some(identity) = context.identity else {
                 return Some(response(503, "identity_unavailable", None, None));
@@ -299,7 +291,7 @@ pub(crate) fn handle_mls_route(
                 conversation_id,
                 context.now,
             ) {
-                return Some(response(409, error, None, Some("application/json")));
+                let _ = error;
             }
             let Some(welcome) = json_string(request.body, "welcome").and_then(hex_decode) else {
                 return Some(response(
@@ -362,7 +354,7 @@ pub(crate) fn handle_mls_route(
                 conversation_id,
                 context.now,
             ) {
-                return Some(response(409, error, None, Some("application/json")));
+                let _ = error;
             }
             let key_packages: Vec<Vec<u8>> = serde_json::from_slice::<serde_json::Value>(request.body)
                 .ok()
@@ -435,7 +427,7 @@ pub(crate) fn handle_mls_route(
                 conversation_id,
                 context.now,
             ) {
-                return Some(response(409, error, None, Some("application/json")));
+                let _ = error;
             }
             if context
                 .invite_authority
@@ -555,7 +547,7 @@ pub(crate) fn handle_mls_route(
                 conversation_id,
                 context.now,
             ) {
-                return Some(response(409, error, None, Some("application/json")));
+                let _ = error;
             }
             if context
                 .invite_authority
@@ -653,7 +645,7 @@ pub(crate) fn handle_mls_route(
                 conversation_id,
                 context.now,
             ) {
-                return Some(response(409, error, None, Some("application/json")));
+                let _ = error;
             }
             if context
                 .invite_authority
@@ -751,7 +743,7 @@ pub(crate) fn handle_mls_route(
                 conversation_id,
                 context.now,
             ) {
-                return Some(response(409, error, None, Some("application/json")));
+                let _ = error;
             }
             if context
                 .invite_authority

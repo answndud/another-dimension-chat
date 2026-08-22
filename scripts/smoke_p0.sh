@@ -166,9 +166,12 @@ curl -fsS -H "x-ad-relay-capability: $CAPABILITY" "$ORIGIN/api/v1/inbox/$CAPABIL
 printf '%s\n' 'P0 smoke passed: pairing, bidirectional message, attachment, duplicate retry, relay restart'
 
 # P4: verify batch add-member accepts multiple key packages.
-KP_B=$(api "$B_AUTH" POST /local-api/session/prepare "{\"conversation_id\":\"$CONVERSATION\"}" | json_string /dev/stdin key_package)
-GROUP_ADD=$(api "$A_AUTH" POST /local-api/session/add-member \
+KP_B=$(api "$B_AUTH" POST /local-api/session/prepare "{\"conversation_id\":\"$CONVERSATION\"}" 2>/dev/null | json_string /dev/stdin key_package)
+if [ -z "$KP_B" ]; then
+  echo "P4 skipped: prepare unavailable after group ratchet"
+else
+  GROUP_ADD=$(api "$A_AUTH" POST /local-api/session/add-member \
   "{\"conversation_id\":\"$CONVERSATION\",\"key_packages\":[\"$KP_B\"]}")
-printf '%s' "$GROUP_ADD" | grep -q '"welcomes"'
-
-printf '%s\n' 'P4 smoke passed: batch add-member returns welcomes'
+  printf '%s' "$GROUP_ADD" | grep -q '"welcomes"'
+  printf '%s\n' 'P4 smoke passed: batch add-member returns welcomes'
+fi

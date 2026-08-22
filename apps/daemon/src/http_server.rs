@@ -633,7 +633,7 @@ fn handle_detached_pairing_auto_sync(state: &AppState, raw: &[u8], now: u64) -> 
             endpoint,
             authority.pending_conversation_id.clone(),
             authority.account_id.clone(),
-            authority.pending_key_package.is_some(),
+            !authority.pending_key_packages.is_empty(),
         )
     };
     if already_staged {
@@ -784,7 +784,7 @@ fn handle_detached_pairing_auto_sync(state: &AppState, raw: &[u8], now: u64) -> 
     if let Err(error) = authority.stage_peer(peer, now, &mut store) {
         return super::pairing_error(error);
     }
-    authority.pending_key_package = Some(key_package);
+    authority.pending_key_packages.push(key_package);
     let safety_number = authority.pairing.safety_number().unwrap_or_default();
     response(
         200,
@@ -964,14 +964,15 @@ fn handle_detached_pairing_approve(state: &AppState, raw: &[u8], now: u64) -> Ve
         if let Err(error) = authority.register_approved_contact(now, &mut store) {
             return contact_directory_error(error);
         }
-        let Some(key_package) = authority.pending_key_package.clone() else {
+        let key_packages = authority.pending_key_packages.clone();
+        if key_packages.is_empty() {
             return response(
                 200,
                 r##"{"state":"established","approved":true}"##,
                 None,
                 Some("application/json"),
             );
-        };
+        }
         let Some(code) = authority.pending_rendezvous_code.clone() else {
             return response(
                 200,
@@ -994,9 +995,9 @@ fn handle_detached_pairing_approve(state: &AppState, raw: &[u8], now: u64) -> Ve
         ) else {
             return response(503, "relay_unavailable", None, None);
         };
-        Some((key_package, code, conversation_id, endpoint))
+        Some((key_packages, code, conversation_id, endpoint))
     };
-    let Some((key_package, code, conversation_id, endpoint)) = pending else {
+    let Some((pending_key_packages, code, conversation_id, endpoint)) = pending else {
         return response(
             200,
             r##"{"state":"established","approved":true}"##,
@@ -1004,37 +1005,34 @@ fn handle_detached_pairing_approve(state: &AppState, raw: &[u8], now: u64) -> Ve
             Some("application/json"),
         );
     };
-    let welcome = {
+    let welcomes = {
         let Ok(mut catalog) = state.session_catalog.lock() else {
             return response(503, "session_unavailable", None, None);
         };
         let Ok(mut store) = state.session_store.lock() else {
             return response(503, "storage_unavailable", None, None);
         };
-        match catalog.add_member(&conversation_id, &key_package, &mut store) {
+        match catalog.add_members_batch(&conversation_id, &pending_key_packages, &mut store) {
             Ok(value) => value,
             Err(_) => return response(503, "session_unavailable", None, None),
         }
     };
-    let welcome_response = serde_json::json!({
-        "kind": "welcome",
-        "conversation_id": conversation_id,
-        "welcome": hex_bytes(&welcome),
-    });
-    if RelayClient::new(endpoint)
-        .write_pairing_response_blocking(&code, &welcome_response)
-        .is_err()
-    {
-        return response(
-            503,
-            "pairing_rendezvous_unavailable",
-            None,
-            Some("application/json"),
-        );
+    for welcome in &welcomes {
+        let welcome_response = serde_json::json!({
+            "kind": "welcome",
+            "conversation_id": conversation_id,
+            "welcome": hex_bytes(welcome),
+        });
+        if RelayClient::new(endpoint.clone())
+            .write_pairing_response_blocking(&code, &welcome_response)
+            .is_err()
+        {
+            return response(503, "pairing_rendezvous_unavailable", None, Some("application/json"));
+        }
     }
     if let Some(authority) = state.invite_authority.as_ref() {
         if let Ok(mut authority) = authority.lock() {
-            authority.pending_key_package = None;
+            authority.pending_key_packages.clear();
         }
     }
     response(
