@@ -6,6 +6,8 @@ import { DAEMON_SCREEN, canNavigateToView } from "./daemon-flow.js";
 let activeBindingController;
 let pairingSyncTimer;
 let welcomeSyncTimer;
+let daemonEventSocket;
+let daemonEventState = "connecting";
 let listenerSequence = 0;
 let sessionActionBusy = false;
 
@@ -76,6 +78,54 @@ function scheduleWelcomeSync(render) {
     }
     scheduleWelcomeSync(render);
   }, 15000);
+}
+
+function subscribeDaemonEvents(render) {
+  if (daemonEventSocket || !state.daemonBridge) return;
+  const socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/local-api/events`);
+  daemonEventSocket = socket;
+  socket.addEventListener("open", () => {
+    if (daemonEventState !== "online") {
+      daemonEventState = "online";
+      state.daemonRelayState = "realtime-online";
+      render();
+    }
+  });
+  socket.addEventListener("error", () => {
+    if (daemonEventState === "online") return;
+    daemonEventState = "offline";
+    state.daemonRelayState = "offline";
+  });
+  socket.addEventListener("message", async (event) => {
+    try {
+      const payload = JSON.parse(event.data);
+      if (payload.type !== "messages_updated") return;
+      const conversationId = state.daemonConversationId;
+      const inboxUrl = state.daemonInboxUrl;
+      if (!conversationId || !inboxUrl) return;
+      const result = await state.daemonBridge.syncDelivery(conversationId, inboxUrl);
+      const received = (result.messages || []).map((message) => ({
+        id: message.id || "수신 메시지",
+        text: message.attachment_id ? "암호화 첨부파일" : message.expired ? "만료된 메시지" : decodeHexText(message.plaintext),
+        attachmentId: message.attachment_id || "",
+        state: "decrypted",
+        direction: "incoming",
+        createdAt: Number(message.created_at) || Math.floor(Date.now() / 1000),
+      }));
+      if (!received.length) return;
+      state.daemonMessages = mergeDaemonMessages(state.daemonMessages, received);
+      state.daemonPlaintext = received.at(-1)?.text || state.daemonPlaintext;
+      render();
+    } catch { /* reconnect on close */ }
+  });
+  socket.addEventListener("close", () => {
+    if (daemonEventSocket === socket) daemonEventSocket = undefined;
+    if (state.daemonRelayState === "realtime-online") {
+      state.daemonRelayState = "reconnecting";
+      render();
+    }
+    setTimeout(() => subscribeDaemonEvents(render), 3000);
+  });
 }
 
 function applyMessagePage(result, replace) {
@@ -665,4 +715,5 @@ export function bindDaemonWorkspace({ render }) {
     bindDaemonSession({ render });
     schedulePairingSync(render);
     scheduleWelcomeSync(render);
+    subscribeDaemonEvents(render);
 }

@@ -305,6 +305,30 @@ impl MlsSessionCatalog {
             .map_err(Into::into)
     }
 
+    pub fn add_members_batch(
+        &mut self,
+        conversation_id: &str,
+        key_packages: &[Vec<u8>],
+        store: &mut EncryptedStore,
+    ) -> Result<Vec<Vec<u8>>, SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
+        let session = self
+            .sessions
+            .get_mut(conversation_id)
+            .ok_or(SessionCatalogError::UnknownConversation)?;
+        let mut welcomes = Vec::with_capacity(key_packages.len());
+        for key_package in key_packages {
+            welcomes.push(
+                session
+                    .add_member_and_persist(key_package, store, conversation_id)
+                    .map_err(SessionCatalogError::from)?,
+            );
+        }
+        Ok(welcomes)
+    }
+
     /// Remove every matching device leaf without checkpointing it yet. The
     /// caller must atomically commit the returned checkpoints with the
     /// account device registry before delivering the commits.

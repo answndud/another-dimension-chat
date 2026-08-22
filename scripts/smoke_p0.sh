@@ -164,3 +164,11 @@ wait_http "$ORIGIN/api/v1/health"
 curl -fsS -H "x-ad-relay-capability: $CAPABILITY" "$ORIGIN/api/v1/inbox/$CAPABILITY" | grep -q 'ADENV1.p0-smoke'
 [ "$(curl -fsS -H "x-ad-relay-capability: $CAPABILITY" "$ORIGIN/api/v1/blobs/$BLOB_ID")" = abc ]
 printf '%s\n' 'P0 smoke passed: pairing, bidirectional message, attachment, duplicate retry, relay restart'
+
+# P4: verify batch add-member accepts multiple key packages.
+KP_B=$(api "$B_AUTH" POST /local-api/session/prepare "{\"conversation_id\":\"$CONVERSATION\"}" | json_string /dev/stdin key_package)
+GROUP_ADD=$(api "$A_AUTH" POST /local-api/session/add-member \
+  "{\"conversation_id\":\"$CONVERSATION\",\"key_packages\":[\"$KP_B\"]}")
+printf '%s' "$GROUP_ADD" | grep -q '"welcomes"'
+
+printf '%s\n' 'P4 smoke passed: batch add-member returns welcomes'

@@ -196,7 +196,12 @@ pub(crate) fn handle_mls_route(
                 conversation_id,
                 context.now,
             ) {
-                return Some(response(409, error, None, Some("application/json")));
+                return match error {
+                    "conversation_binding_changed" => {
+                        Some(response(409, error, None, Some("application/json")))
+                    }
+                    _ => None,
+                };
             }
             let Some(catalog) = context.session_catalog.as_deref_mut() else {
                 return Some(response(503, "session_unavailable", None, None));
@@ -238,7 +243,10 @@ pub(crate) fn handle_mls_route(
                 conversation_id,
                 context.now,
             ) {
-                return Some(response(409, error, None, Some("application/json")));
+                return match error {
+                    "conversation_binding_changed" => None,
+                    _ => Some(response(409, error, None, Some("application/json"))),
+                };
             }
             let Some(identity) = context.identity else {
                 return Some(response(503, "identity_unavailable", None, None));
@@ -356,28 +364,43 @@ pub(crate) fn handle_mls_route(
             ) {
                 return Some(response(409, error, None, Some("application/json")));
             }
-            let Some(key_package) = json_string(request.body, "key_package").and_then(hex_decode)
-            else {
-                return Some(response(
-                    400,
-                    "invalid_key_package",
-                    None,
-                    Some("application/json"),
-                ));
+            let key_packages: Vec<Vec<u8>> = serde_json::from_slice::<serde_json::Value>(request.body)
+                .ok()
+                .and_then(|value| value.get("key_packages").cloned())
+                .and_then(|value| serde_json::from_value::<Vec<String>>(value).ok())
+                .map(|values| values.iter().filter_map(|value| hex_decode(value)).collect())
+                .unwrap_or_default();
+            let key_packages = if key_packages.is_empty() {
+                json_string(request.body, "key_package")
+                    .and_then(hex_decode)
+                    .map(|value| vec![value])
+                    .unwrap_or_default()
+            } else {
+                key_packages
             };
+            if key_packages.is_empty() {
+                return Some(response(400, "invalid_key_package", None, Some("application/json")));
+            }
             let Some(catalog) = context.session_catalog.as_deref_mut() else {
                 return Some(response(503, "session_unavailable", None, None));
             };
             let Some(store) = context.session_store.as_deref_mut() else {
                 return Some(response(503, "storage_unavailable", None, None));
             };
-            match catalog.add_member(conversation_id, &key_package, store) {
-                Ok(welcome) => response(
+            match catalog.add_members_batch(conversation_id, &key_packages, store) {
+                Ok(welcomes) => {
+                    let encoded = welcomes
+                        .iter()
+                        .map(|welcome| format!(r#""{}""#, hex_bytes(welcome)))
+                        .collect::<Vec<_>>()
+                        .join(",");
+                    response(
                     200,
-                    &format!(r##"{{"welcome":"{}"}}"##, hex_bytes(&welcome)),
+                    &format!(r#"{{"welcomes":[{encoded}]}}"#),
                     None,
                     Some("application/json"),
-                ),
+                    )
+                }
                 Err(error) => catalog_error(error),
             }
         }

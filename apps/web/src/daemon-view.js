@@ -22,6 +22,10 @@ export function renderDaemonBridgeState(state) {
   if (!connected || [DAEMON_SCREEN.unsupportedBrowser, DAEMON_SCREEN.disconnected, DAEMON_SCREEN.error].includes(state.daemonScreen)) return `<main class="daemon-gate" aria-labelledby="daemon-gate-title"><div class="daemon-gate-mark" aria-hidden="true">⊡</div><p class="eyebrow">ANOTHER DIMENSION</p><h1 id="daemon-gate-title">${title}</h1><p class="lede">${detail}</p><div class="notice" role="status">${escapeHtml(state.notice || "보안 서비스가 발급한 주소를 기다리고 있습니다.")}</div>${state.error ? `<p class="error" role="alert">${escapeHtml(state.error)}</p>` : ""}</main>`;
   const connectionBanner = state.daemonRelayState === "offline"
     ? '<div class="daemon-connection-banner offline" role="status"><strong>전달 경로 연결이 끊겼습니다.</strong><span>로컬 대화와 암호화 상태는 유지됩니다. 연결이 복구되면 전달 대기 항목을 다시 시도하세요.</span></div>'
+    : state.daemonRelayState === "reconnecting"
+      ? '<div class="daemon-connection-banner offline" role="status"><strong>실시간 연결 재시도 중</strong><span>새 메시지 알림이 지연될 수 있습니다. 로컬 대화와 암호화 상태는 유지됩니다.</span></div>'
+      : state.daemonRelayState === "realtime-online"
+        ? '<div class="daemon-connection-banner online" role="status"><strong>실시간 수신 대기 중</strong><span>새 메시지가 도착하면 자동으로 동기화됩니다.</span></div>'
     : state.daemonRelayState === "online"
       ? '<div class="daemon-connection-banner online" role="status"><strong>전달 경로 연결됨</strong><span>전달 경로 접수는 상대방이 읽었다는 뜻이 아닙니다.</span></div>'
       : "";

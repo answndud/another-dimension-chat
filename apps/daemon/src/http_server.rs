@@ -1,5 +1,5 @@
 use super::{
-    authorize_api, axum_request_bytes, axum_response, contact_directory_error,
+    cookie_value, axum_request_bytes, axum_response, authorize_api, contact_directory_error,
     handle_request_with_route_context, handle_setup_request, hex_bytes, hex_decode, json_escape,
     json_string, json_u64, mls_device_credential, notify_new_messages, pairing_error,
     pairing_ready, parse_request, response, unix_now, validate_bound_inbox_url,
@@ -10,6 +10,7 @@ use super::{fetch_inbox, process_inbox_items, MAX_AUTOMATIC_RETRIES_PER_TICK};
 use super::{process_sync_items, SyncProcessContext};
 use crate::{
     bridge::LocalBridge,
+    bridge::BridgeRequest,
     delivery::{DeliveryLedger, DeliveryRecord, RelayEnvelope},
     mls_session::{session_checkpoint_key, MlsSessionCatalog},
     relay_http::{RelayClient, RelayEndpoint, RelayError},
@@ -17,9 +18,10 @@ use crate::{
     trust::TlsCertificatePin,
 };
 use axum::{
+    response::IntoResponse,
     body::{to_bytes, Body},
     extract::State,
-    http::Request as HttpRequest,
+    http::{header, Request as HttpRequest, StatusCode},
     response::Response,
     routing::any,
     Router,
@@ -34,7 +36,7 @@ use std::{
     },
     time::Duration,
 };
-use tokio::sync::{Notify, Semaphore};
+use tokio::sync::{broadcast, Notify, Semaphore};
 
 const MAX_BLOCKING_REQUESTS: usize = 2;
 
@@ -59,6 +61,7 @@ pub fn serve_forever(
         session_store: Arc::new(Mutex::new(session_store)),
         delivery_ledger: Arc::new(Mutex::new(delivery_ledger)),
         blocking_slots: Arc::new(Semaphore::new(MAX_BLOCKING_REQUESTS)),
+        events: broadcast::channel(64).0,
         shutting_down: Arc::new(AtomicBool::new(false)),
     };
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -97,7 +100,11 @@ pub fn serve_forever(
                 })
                 .await
                 .unwrap_or(0);
-                let _ = processed;
+                if processed > 0 {
+                    let _ = maintenance_state
+                        .events
+                        .send("{\"type\":\"messages_updated\"}".to_owned());
+                }
             }
         });
         tokio::select! {
@@ -2402,12 +2409,199 @@ struct AppState {
     session_store: Arc<Mutex<EncryptedStore>>,
     delivery_ledger: Arc<Mutex<DeliveryLedger>>,
     blocking_slots: Arc<Semaphore>,
+    events: broadcast::Sender<String>,
     shutting_down: Arc<AtomicBool>,
+}
+
+async fn websocket_events(state: AppState, request: HttpRequest<Body>) -> Response<Body> {
+    use axum::extract::ws::WebSocketUpgrade;
+
+    let headers = request.headers();
+    let header_text = |name: &axum::http::HeaderName| {
+        headers
+            .get(name)
+            .and_then(|value| value.to_str().ok())
+    };
+    let raw_cookie = header_text(&header::COOKIE).unwrap_or("").to_owned();
+    let cookie = cookie_value(&raw_cookie, "ad_session").unwrap_or("");
+    let origin = header_text(&header::ORIGIN)
+        .map(str::to_owned)
+        .unwrap_or_else(|| state.bridge.lock().unwrap().ui_origin().to_owned());
+    let authorization = BridgeRequest {
+        origin: origin.as_str(),
+        host: header_text(&header::HOST).unwrap_or(""),
+        method: "GET",
+        cookie,
+        csrf_token: None,
+        ui_version: header_text(&axum::http::header::HeaderName::from_static("x-ad-ui-version")).unwrap_or(""),
+    };
+    let now = unix_now();
+    if let Err(error) = state.bridge.lock().unwrap().authorize(&authorization, now) {
+        let cookie = cookie_value(header_text(&header::COOKIE).unwrap_or(""), "ad_session").unwrap_or("");
+        eprintln!(
+            "websocket auth failed: {error}; cookie={cookie}; now={now}"
+        );
+        return axum_response(response(401, "session_invalid", None, None));
+    }
+    if request.method() != axum::http::Method::GET
+        || headers
+            .get(header::CONNECTION)
+            .and_then(|value| value.to_str().ok())
+            .map(|value| !value.to_ascii_lowercase().contains("upgrade"))
+            .unwrap_or(true)
+        || headers
+            .get(header::UPGRADE)
+            .and_then(|value| value.to_str().ok())
+            .map(|value| !value.eq_ignore_ascii_case("websocket"))
+            .unwrap_or(true)
+        || headers.get(header::SEC_WEBSOCKET_VERSION).map(|value| value != "13").unwrap_or(true)
+    {
+        return axum_response(response(400, "invalid_websocket_upgrade", None, None));
+    }
+    let (parts, body) = request.into_parts();
+    let request = HttpRequest::from_parts(parts, body);
+    let (mut parts, _body) = request.into_parts();
+    let result = <WebSocketUpgrade as axum::extract::FromRequestParts<AppState>>::from_request_parts(
+        &mut parts,
+        &state,
+    )
+    .await;
+    match result {
+        Ok(upgrade) => {
+            let response = upgrade.on_upgrade(move |socket| handle_socket(socket, state));
+            eprintln!("upgrade accepted");
+            response
+        }
+        Err(_) => {
+            StatusCode::BAD_REQUEST.into_response()
+        }
+        }
+}
+
+async fn handle_socket(mut socket: axum::extract::ws::WebSocket, state: AppState) {
+    let mut events = state.events.subscribe();
+    let mut heartbeat = tokio::time::interval(Duration::from_secs(20));
+    loop {
+        tokio::select! {
+            event = events.recv() => {
+                match event {
+                    Ok(payload) => {
+                        if socket.send(axum::extract::ws::Message::Text(payload.into())).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(_) => continue,
+                }
+            }
+            _ = heartbeat.tick() => {
+                if socket.send(axum::extract::ws::Message::Ping(vec![].into())).await.is_err() {
+                    break;
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod websocket_tests {
+    use super::*;
+    use std::sync::atomic::AtomicU64;
+    use crate::bridge::{BridgeConfig, LocalBridge};
+    use axum::body::Body;
+    use std::net::{IpAddr, Ipv4Addr};
+
+    fn bridge() -> LocalBridge {
+        LocalBridge::new(
+            BridgeConfig::new(
+                IpAddr::V4(Ipv4Addr::LOCALHOST),
+                1420,
+                "http://127.0.0.1:1420",
+                "web-v1",
+            )
+            .unwrap(),
+        )
+        .unwrap()
+    }
+
+    fn state(bridge: LocalBridge) -> AppState {
+        static SEQUENCE: AtomicU64 = AtomicU64::new(0);
+        let sequence = SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let store_path = std::env::temp_dir().join(format!(
+            "another-dimension-websocket-events-{}-{sequence}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&store_path);
+        AppState {
+            bridge: Arc::new(Mutex::new(bridge)),
+            ui_root: None,
+            identity: None,
+            invite_authority: None,
+            session_catalog: Arc::new(Mutex::new(MlsSessionCatalog::default())),
+            session_store: Arc::new(Mutex::new(
+                EncryptedStore::initialize(&store_path, "correct horse battery staple").unwrap(),
+            )),
+            delivery_ledger: Arc::new(Mutex::new(
+                DeliveryLedger::restore(&mut EncryptedStore::initialize(
+                    store_path.with_extension("ledger"),
+                    "correct horse battery staple",
+                )
+                .unwrap())
+                .unwrap_or_default(),
+            )),
+            blocking_slots: Arc::new(Semaphore::new(1)),
+            events: broadcast::channel(8).0,
+            shutting_down: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    fn upgrade_request(cookie: &str) -> HttpRequest<Body> {
+        HttpRequest::builder()
+            .method("GET")
+            .uri("/local-api/events")
+            .header("host", "127.0.0.1:1420")
+            .header("origin", "http://127.0.0.1:1420")
+            .header("x-ad-ui-version", "web-v1")
+            .header("cookie", cookie)
+            .header("connection", "Upgrade")
+            .header("upgrade", "websocket")
+            .header("sec-websocket-version", "13")
+            .header("sec-websocket-key", "dGhlIHNhbXBsZSBub25jZQ==")
+            .body(Body::empty())
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn websocket_upgrade_requires_authenticated_session() {
+        let state = state(bridge());
+        assert_eq!(
+            websocket_events(state.clone(), upgrade_request("ad_session=missing"))
+                .await
+                .status(),
+            StatusCode::UNAUTHORIZED
+        );
+    }
+
+    #[tokio::test]
+    async fn websocket_event_broadcast_reaches_subscriber() {
+        let state = state(bridge());
+        let mut events = state.events.subscribe();
+        state
+            .events
+            .send("{\"type\":\"messages_updated\"}".to_owned())
+            .unwrap();
+        assert_eq!(
+            events.recv().await.unwrap(),
+            "{\"type\":\"messages_updated\"}"
+        );
+    }
 }
 
 async fn axum_handler(State(state): State<AppState>, request: HttpRequest<Body>) -> Response<Body> {
     if state.shutting_down.load(Ordering::Acquire) {
         return axum_response(response(503, "daemon_shutting_down", None, None));
+    }
+    if request.uri().path() == "/local-api/events" {
+        return websocket_events(state, request).await;
     }
     let (parts, body) = request.into_parts();
     let body = match tokio::time::timeout(
