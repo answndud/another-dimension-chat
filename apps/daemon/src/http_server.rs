@@ -874,7 +874,6 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
     if welcomes.is_empty() {
         return response(200, r##"{"state":"waiting"}"##, None, Some("application/json"));
     }
-    let welcome = &welcomes[0];
     let Some(identity) = state.identity.as_ref() else {
         return response(503, "identity_unavailable", None, None);
     };
@@ -884,16 +883,19 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
     let Ok(mut store) = state.session_store.lock() else {
         return response(503, "storage_unavailable", None, None);
     };
-    if catalog
-        .join(
-            &conversation_id,
-            mls_device_credential(&identity.account_id, &identity.device_id),
-            &welcome,
-            &mut store,
-        )
-        .is_err()
-    {
-        return response(422, "invalid_welcome", None, Some("application/json"));
+    for welcome in &welcomes {
+        if catalog
+            .join(
+                &conversation_id,
+                mls_device_credential(&identity.account_id, &identity.device_id),
+                welcome,
+                &mut store,
+            )
+            .is_err()
+        {
+            return response(422, "invalid_welcome", None, Some("application/json"));
+        }
+        break;
     }
     drop(store);
     drop(catalog);
