@@ -412,7 +412,7 @@ fn handle_detached_create_invite(state: &AppState, raw: &[u8], now: u64) -> Vec<
     let Ok(mut authority) = authority.lock() else {
         return response(503, "invite_unavailable", None, None);
     };
-    authority.pending_rendezvous_code = Some(invite_code.code.clone());
+    authority.pending_rendezvous_codes.push(invite_code.code.clone());
     authority.pending_conversation_id = Some(conversation_id.clone());
     response(
         200,
@@ -568,7 +568,7 @@ fn handle_detached_consume_invite(state: &AppState, raw: &[u8], now: u64) -> Vec
     let Ok(mut authority) = authority.lock() else {
         return response(503, "invite_unavailable", None, None);
     };
-    authority.pending_rendezvous_code = Some(code.to_owned());
+    authority.pending_rendezvous_codes.push(code.to_owned());
     authority.pending_conversation_id = Some(conversation_id.to_owned());
     let safety_number = authority.pairing.safety_number().unwrap_or_default();
     let inbox_url = invite
@@ -614,7 +614,7 @@ fn handle_detached_pairing_auto_sync(state: &AppState, raw: &[u8], now: u64) -> 
         let Ok(authority) = authority.lock() else {
             return response(503, "pairing_unavailable", None, None);
         };
-        if authority.pending_rendezvous_code.as_deref() != Some(code) {
+        if !authority.pending_rendezvous_codes.iter().any(|item| item == code) {
             return response(
                 409,
                 "pairing_rendezvous_unknown",
@@ -824,7 +824,7 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
         let Ok(authority) = authority.lock() else {
             return response(503, "pairing_unavailable", None, None);
         };
-        if authority.pending_rendezvous_code.as_deref() != Some(code) {
+        if !authority.pending_rendezvous_codes.iter().any(|item| item == code) {
             return response(
                 409,
                 "pairing_rendezvous_unknown",
@@ -925,7 +925,13 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
     if let Err(error) = authority.register_approved_contact(now, &mut store) {
         return contact_directory_error(error);
     }
-    authority.pending_rendezvous_code = None;
+    if let Some(index) = authority
+        .pending_rendezvous_codes
+        .iter()
+        .position(|item| item.as_str() == code)
+    {
+        authority.pending_rendezvous_codes.remove(index);
+    }
     authority.pending_conversation_id = None;
     response(
         200,
@@ -973,7 +979,7 @@ fn handle_detached_pairing_approve(state: &AppState, raw: &[u8], now: u64) -> Ve
                 Some("application/json"),
             );
         }
-        let Some(code) = authority.pending_rendezvous_code.clone() else {
+        let Some(code) = authority.pending_rendezvous_codes.last().cloned() else {
             return response(
                 200,
                 r##"{"state":"established","approved":true}"##,
@@ -1033,6 +1039,13 @@ fn handle_detached_pairing_approve(state: &AppState, raw: &[u8], now: u64) -> Ve
     if let Some(authority) = state.invite_authority.as_ref() {
         if let Ok(mut authority) = authority.lock() {
             authority.pending_key_packages.clear();
+            if let Some(index) = authority
+                .pending_rendezvous_codes
+                .iter()
+                .position(|item| item.as_str() == code)
+            {
+                authority.pending_rendezvous_codes.remove(index);
+            }
         }
     }
     response(
