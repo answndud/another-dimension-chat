@@ -278,8 +278,8 @@ struct Invite {
     expires_at: u64,
     #[serde(rename = "consumedAt", skip_serializing_if = "Option::is_none")]
     consumed_at: Option<u64>,
-    #[serde(rename = "pairingResponse", skip_serializing_if = "Option::is_none")]
-    pairing_response: Option<Value>,
+    #[serde(rename = "pairingResponses", default, skip_serializing_if = "Vec::is_empty")]
+    pairing_responses: Vec<Value>,
 }
 
 fn now() -> u64 {
@@ -615,7 +615,7 @@ async fn create_invite(State(state): State<AppState>, body: Bytes) -> Response {
         created_at: timestamp,
         expires_at: timestamp + 600,
         consumed_at: None,
-        pairing_response: None,
+        pairing_responses: Vec::new(),
     };
     let mut invites = state.invites.lock().await;
     let result = record.clone();
@@ -700,7 +700,7 @@ async fn pairing(State(state): State<AppState>, body: Bytes) -> Response {
     if body.get("read").and_then(Value::as_bool) == Some(true) {
         return response(
             StatusCode::OK,
-            json!({ "available": true, "response": record.pairing_response.clone().unwrap_or_else(|| json!({})) }),
+            json!({ "available": !record.pairing_responses.is_empty(), "responses": record.pairing_responses.clone() }),
         );
     }
     let value = match body.get("response") {
@@ -714,17 +714,7 @@ async fn pairing(State(state): State<AppState>, body: Bytes) -> Response {
         }
         _ => return error(StatusCode::BAD_REQUEST, "invalid_pairing_response"),
     };
-    if let Some(previous) = record.pairing_response.as_ref() {
-        let previous_kind = previous.get("kind").and_then(Value::as_str);
-        let next_kind = value.get("kind").and_then(Value::as_str);
-        // The invite consumer publishes its key package first. The invite
-        // creator may then replace that rendezvous value exactly once with
-        // the authenticated MLS welcome; every other overwrite is rejected.
-        if !(previous_kind == Some("key-package") && next_kind == Some("welcome")) {
-            return error(StatusCode::CONFLICT, "pairing_response_already_set");
-        }
-    }
-    record.pairing_response = Some(value);
+    record.pairing_responses.push(value);
     if persist_invites(
         &PathBuf::from(
             env::var("AD_RELAY_DATA_DIR").unwrap_or_else(|_| ".another-dimension-relay".into()),

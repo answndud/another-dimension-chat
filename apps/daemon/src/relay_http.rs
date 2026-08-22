@@ -314,7 +314,7 @@ struct ConsumeInviteResponse {
 #[derive(Deserialize)]
 struct PairingResponseRead {
     available: bool,
-    response: Option<serde_json::Value>,
+    responses: Vec<serde_json::Value>,
 }
 
 #[derive(Deserialize)]
@@ -422,23 +422,23 @@ impl RelayClient {
     pub fn read_pairing_response_blocking(
         &self,
         code: &str,
-    ) -> Result<Option<serde_json::Value>, RelayError> {
+    ) -> Result<Vec<serde_json::Value>, RelayError> {
         let body = serde_json::to_vec(&serde_json::json!({ "code": code, "read": true }))
             .map_err(|_| RelayError::InvalidResponse)?;
         let (status, response_body) =
             self.request_blocking("POST", "/api/v1/invite-codes/pairing-response", &body)?;
         if status == 404 {
-            return Ok(None);
+            return Ok(Vec::new());
         }
         if !(200..300).contains(&status) {
             return Err(RelayError::Rejected(status));
         }
         let parsed: PairingResponseRead =
             serde_json::from_slice(&response_body).map_err(|_| RelayError::InvalidResponse)?;
-        if !parsed.available {
-            return Ok(None);
+        if !parsed.available || parsed.responses.is_empty() {
+            return Ok(Vec::new());
         }
-        Ok(parsed.response)
+        Ok(parsed.responses)
     }
 
     pub async fn post(&self, envelope: &RelayEnvelope) -> Result<RelayAccepted, RelayError> {

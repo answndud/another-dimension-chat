@@ -654,7 +654,7 @@ fn handle_detached_pairing_auto_sync(state: &AppState, raw: &[u8], now: u64) -> 
             Some("application/json"),
         );
     }
-    let Ok(Some(rendezvous)) = RelayClient::new(endpoint).read_pairing_response_blocking(code)
+    let Ok(rendezvous_list) = RelayClient::new(endpoint).read_pairing_response_blocking(code)
     else {
         return response(
             200,
@@ -662,6 +662,12 @@ fn handle_detached_pairing_auto_sync(state: &AppState, raw: &[u8], now: u64) -> 
             None,
             Some("application/json"),
         );
+    };
+    let Some(rendezvous) = rendezvous_list
+        .iter()
+        .find(|value| value.get("kind").and_then(serde_json::Value::as_str) == Some("key-package"))
+    else {
+        return response(200, r##"{"state":"waiting"}"##, None, Some("application/json"));
     };
     let Some(kind) = rendezvous.get("kind").and_then(serde_json::Value::as_str) else {
         return response(
@@ -848,7 +854,7 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
         };
         (endpoint, conversation_id)
     };
-    let Ok(Some(rendezvous)) = RelayClient::new(endpoint).read_pairing_response_blocking(code)
+    let Ok(rendezvous_list) = RelayClient::new(endpoint).read_pairing_response_blocking(code)
     else {
         return response(
             200,
@@ -857,37 +863,18 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
             Some("application/json"),
         );
     };
-    let Some(kind) = rendezvous.get("kind").and_then(serde_json::Value::as_str) else {
-        return response(
-            200,
-            r##"{"state":"waiting"}"##,
-            None,
-            Some("application/json"),
-        );
-    };
-    if kind != "welcome" {
-        return response(422, "invalid_welcome", None, Some("application/json"));
+    let welcomes: Vec<Vec<u8>> = rendezvous_list
+        .iter()
+        .filter(|value| {
+            value.get("kind").and_then(serde_json::Value::as_str) == Some("welcome")
+                && value.get("conversation_id").and_then(serde_json::Value::as_str) == Some(conversation_id.as_str())
+        })
+        .filter_map(|value| value.get("welcome").and_then(serde_json::Value::as_str).and_then(hex_decode))
+        .collect();
+    if welcomes.is_empty() {
+        return response(200, r##"{"state":"waiting"}"##, None, Some("application/json"));
     }
-    let welcome_response = &rendezvous;
-    if welcome_response
-        .get("conversation_id")
-        .and_then(serde_json::Value::as_str)
-        != Some(conversation_id.as_str())
-    {
-        return response(
-            422,
-            "pairing_conversation_mismatch",
-            None,
-            Some("application/json"),
-        );
-    }
-    let Some(welcome) = welcome_response
-        .get("welcome")
-        .and_then(serde_json::Value::as_str)
-        .and_then(hex_decode)
-    else {
-        return response(422, "invalid_welcome", None, Some("application/json"));
-    };
+    let welcome = &welcomes[0];
     let Some(identity) = state.identity.as_ref() else {
         return response(503, "identity_unavailable", None, None);
     };
