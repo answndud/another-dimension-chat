@@ -158,12 +158,37 @@ export function Ready({
               클라우드(Dropbox, Google Drive 등)에는 저장하지 마세요.
             </p>
           </div>
+          <div style={{ marginTop: "24px", borderTop: "1px solid rgba(255,255,255,.1)", paddingTop: "16px" }}>
+            <button
+              type="button"
+              className="danger"
+              disabled={state.busy}
+              onClick={() => {
+                if (confirm("이 기기의 모든 로컬 데이터를 삭제합니다. 되돌릴 수 없습니다. 계속하시겠습니까?")) {
+                  state.bridge?.wipeSession().then(() => window.location.reload());
+                }
+              }}
+            >
+              🗑️ 이 기기의 모든 데이터 삭제
+            </button>
+          </div>
         </section>
       )}
+
       {view === "status" && (
-        <section className="panel">
-          <h2>시스템</h2>
+        <section className="panel" style={{ flex: 1 }}>
+          <h2>현재 상태</h2>
           {state.notice && <p>{state.notice}</p>}
+          <dl style={{ marginTop: "12px", display: "grid", gap: "6px", fontSize: ".82rem" }}>
+            {state.identity && (
+              <>
+                <div><dt><strong>계정 ID:</strong></dt><dd><code style={{ fontSize: ".75rem" }}>{state.identity.account_id}</code></dd></div>
+                <div><dt><strong>기기 ID:</strong></dt><dd><code style={{ fontSize: ".75rem" }}>{state.identity.device_id || "—"}</code></dd></div>
+              </>
+            )}
+            <div><dt><strong>전달 경로:</strong></dt><dd>{state.relayOrigin || "미설정"}</dd></div>
+            <div><dt><strong>Inbox URL:</strong></dt><dd style={{ wordBreak: "break-all", fontSize: ".72rem" }}>{state.inboxUrl ? state.inboxUrl.slice(0, 50) + "…" : "—"}</dd></div>
+          </dl>
         </section>
       )}
       {state.error && <p className="error" role="alert">{state.error}</p>}

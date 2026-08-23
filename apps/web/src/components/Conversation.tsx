@@ -11,6 +11,7 @@ interface Props {
 
 export function Conversation({ contact, messages, busy, onSend }: Props) {
   const [text, setText] = useState("");
+  const [expiry, setExpiry] = useState("0");
   const messageListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -75,6 +76,22 @@ export function Conversation({ contact, messages, busy, onSend }: Props) {
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             />
           </label>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+            <label style={{ fontSize: ".75rem", color: "var(--muted)", whiteSpace: "nowrap" }}>
+              만료:
+              <select
+                value={expiry}
+                onChange={(e) => { setExpiry(e.target.value); }}
+                disabled={!conversationReady || busy}
+                style={{ marginLeft: "4px", padding: "2px 6px", borderRadius: "4px", background: "rgba(255,255,255,.08)", color: "inherit" }}
+              >
+                <option value="0">만료 없음</option>
+                <option value="3600">1시간</option>
+                <option value="86400">24시간</option>
+                <option value="604800">7일</option>
+              </select>
+            </label>
+          </div>
           <button className="primary" type="button" onClick={handleSend} disabled={!conversationReady || busy || !text.trim()}>
             보내기
           </button>
