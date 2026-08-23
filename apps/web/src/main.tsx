@@ -18,6 +18,9 @@ function App() {
     saveRecoveryFile,
     lockSession,
     revokeDeviceById,
+    setContactAliasById,
+    blockContactById,
+    unblockContactById,
   } = useDaemon();
 
   if (state.screen === "loading" || state.screen === "disconnected") {
@@ -163,6 +166,9 @@ function App() {
       onSaveRecovery={() => { void saveRecoveryFile(); }}
       onLockSession={() => { void lockSession(); }}
       onRevokeDevice={(id) => { void revokeDeviceById(id); }}
+      onSetAlias={(id, alias) => { void setContactAliasById(id, alias); }}
+      onBlock={(id) => { void blockContactById(id); }}
+      onUnblock={(id) => { void unblockContactById(id); }}
     />
   );
 }

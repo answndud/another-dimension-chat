@@ -19,12 +19,14 @@ export function useWebSocket(
   inboxUrl: string,
   onMessages: (conversationId: string, messages: IncomingMessage[]) => void
 ) {
+  const allContactsRef = useRef<Contact[]>([]);
   const socketRef = useRef<WebSocket | null>(null);
   const [status, setStatus] = useState<RealtimeStatus>("connecting");
   const selectedRef = useRef(selectedContact);
   const contactsRef = useRef(contacts);
   selectedRef.current = selectedContact;
   contactsRef.current = contacts;
+  allContactsRef.current = contacts;
 
   const syncConversation = useCallback(async (conversationId: string) => {
     if (!bridge || !inboxUrl || !conversationId) return;
@@ -35,6 +37,15 @@ export function useWebSocket(
     } catch { /* reconnect or next event retries */ }
   }, [bridge, inboxUrl, onMessages]);
 
+  const syncAllConversations = useCallback(async () => {
+    if (!bridge || !inboxUrl) return;
+    for (const contact of contactsRef.current) {
+      if (contact.conversation_id) {
+        await syncConversation(contact.conversation_id);
+      }
+    }
+  }, [bridge, inboxUrl, syncConversation]);
+
   useEffect(() => {
     if (!bridge) return;
     let retry: ReturnType<typeof setTimeout> | undefined;
@@ -44,7 +55,10 @@ export function useWebSocket(
       setStatus((current) => (current === "online" ? "reconnecting" : "connecting"));
       const socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/local-api/events`);
       socketRef.current = socket;
-      socket.addEventListener("open", () => setStatus("online"));
+      socket.addEventListener("open", () => {
+        setStatus("online");
+        void syncAllConversations();
+      });
       socket.addEventListener("message", (event) => {
         try {
           const payload = JSON.parse(event.data) as { type?: string; conversation_ids?: string[] };

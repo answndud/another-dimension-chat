@@ -714,6 +714,10 @@ async fn pairing(State(state): State<AppState>, body: Bytes) -> Response {
         }
         _ => return error(StatusCode::BAD_REQUEST, "invalid_pairing_response"),
     };
+    const MAX_PAIRING_RESPONSES: usize = 32;
+    if record.pairing_responses.len() >= MAX_PAIRING_RESPONSES {
+        return error(StatusCode::CONFLICT, "pairing_response_queue_full");
+    }
     record.pairing_responses.push(value);
     if persist_invites(
         &PathBuf::from(

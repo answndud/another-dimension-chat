@@ -326,6 +326,40 @@ export function useDaemon() {
     setState((s) => ({ ...s, devices: devices.devices || [], deviceEvents: devices.events || [] }));
   }, []);
 
+  const setContactAliasById = useCallback(async (accountId: string, alias: string) => {
+    const bridge = bridgeRef.current;
+    if (!bridge) return;
+    try {
+      await bridge.setContactAlias(accountId, alias);
+      setState((s) => ({
+        ...s,
+        contacts: s.contacts.map((c) => c.account_id === accountId ? { ...c, alias } : c),
+      }));
+    } catch { /* silent */ }
+  }, []);
+
+  const blockContactById = useCallback(async (accountId: string) => {
+    const bridge = bridgeRef.current;
+    if (!bridge) return;
+    try {
+      await bridge.blockContact(accountId);
+      setState((s) => ({
+        ...s,
+        contacts: s.contacts.map((c) => c.account_id === accountId ? { ...c, state: "blocked" } : c),
+      }));
+    } catch { /* silent */ }
+  }, []);
+
+  const unblockContactById = useCallback(async (accountId: string) => {
+    const bridge = bridgeRef.current;
+    if (!bridge) return;
+    try {
+      await bridge.unblockContact(accountId);
+      const contacts = await bridge.contacts();
+      setState((s) => ({ ...s, contacts: contacts.contacts || [] }));
+    } catch { /* silent */ }
+  }, []);
+
   return {
     state,
     initialized,
@@ -340,5 +374,8 @@ export function useDaemon() {
     saveRecoveryFile,
     lockSession,
     revokeDeviceById,
+    setContactAliasById,
+    blockContactById,
+    unblockContactById,
   };
 }

@@ -5,11 +5,12 @@ interface Props {
   contacts: Contact[];
   selectedContact: string;
   onSelect: (accountId: string) => void;
+  onSetAlias?: (accountId: string, alias: string) => void;
   onBlock?: (accountId: string) => void;
   onUnblock?: (accountId: string) => void;
 }
 
-export function ContactList({ contacts, selectedContact, onSelect, onBlock, onUnblock }: Props) {
+export function ContactList({ contacts, selectedContact, onSelect, onSetAlias, onBlock, onUnblock }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [aliasInput, setAliasInput] = useState("");
   const blocked = contacts.filter((c) => c.state === "blocked");
@@ -54,7 +55,12 @@ export function ContactList({ contacts, selectedContact, onSelect, onBlock, onUn
                   placeholder="별칭 입력"
                   onChange={(e) => setAliasInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { setEditingId(null); }}}
-                  onBlur={() => setEditingId(null)}
+                  onBlur={() => {
+                    if (onSetAlias && aliasInput.trim()) {
+                      onSetAlias(contact.account_id, aliasInput.trim());
+                    }
+                    setEditingId(null);
+                  }}
                   style={{ fontSize: ".72rem", padding: "2px 6px", borderRadius: "4px" }}
                 />
               ) : (

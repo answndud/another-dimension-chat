@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: "dist",
-    emptyOutDir: false,
+    emptyOutDir: true,
     manifest: true,
     rollupOptions: {
       input: "/src/main.tsx",

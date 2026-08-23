@@ -22,6 +22,9 @@ interface Props {
   onSaveRecovery: () => void;
   onLockSession: () => void;
   onRevokeDevice: (deviceId: string) => void;
+  onSetAlias?: (accountId: string, alias: string) => void;
+  onBlock?: (accountId: string) => void;
+  onUnblock?: (accountId: string) => void;
 }
 
 export function Ready({
@@ -37,6 +40,9 @@ export function Ready({
   onSaveRecovery,
   onLockSession,
   onRevokeDevice,
+  onSetAlias,
+  onBlock,
+  onUnblock,
 }: Props) {
   const [view, setView] = useState<View>("conversation");
   const selected = state.contacts.find((c) => c.account_id === state.selectedContact) || null;
@@ -103,7 +109,14 @@ export function Ready({
                 onReject={onRejectPairing}
               />
             )}
-            <ContactList contacts={state.contacts} selectedContact={state.selectedContact} onSelect={onSelectContact} />
+            <ContactList
+              contacts={state.contacts}
+              selectedContact={state.selectedContact}
+              onSelect={onSelectContact}
+              onSetAlias={onSetAlias}
+              onBlock={onBlock}
+              onUnblock={onUnblock}
+            />
           </div>
           <div className="conversation-column" style={{ flex: 1 }}>
             <Conversation contact={selected} messages={state.messages} busy={state.busy} onSend={onSendMessage} />
