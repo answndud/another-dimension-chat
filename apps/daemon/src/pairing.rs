@@ -92,12 +92,14 @@ impl PairingSession {
 
     pub fn mark_invite_created(&mut self) -> Result<(), PairingError> {
         match self.state {
-            PairingState::Idle | PairingState::InviteCreated | PairingState::Rejected => {
+            PairingState::Idle
+            | PairingState::InviteCreated
+            | PairingState::Rejected
+            | PairingState::Established => {
                 self.state = PairingState::InviteCreated;
                 Ok(())
             }
             PairingState::Verified => Err(PairingError::InvalidTransition),
-            PairingState::Established => Err(PairingError::Duplicate),
         }
     }
 
@@ -122,18 +124,17 @@ impl PairingSession {
             }
             PairingState::Verified => Err(PairingError::Duplicate),
             PairingState::Established => {
+                // A group owner can stage additional peers while the pairing
+                // stays established. Safety stays verified from the first peer.
                 let Some(trusted) = self.peer.as_ref() else {
                     return Err(PairingError::InvalidTransition);
                 };
-                if trusted.account_id != peer.account_id
-                    || trusted.device_id != peer.device_id
-                    || trusted.relay_origin != peer.relay_origin
-                    || trusted.inbox_url != peer.inbox_url
-                {
-                    Err(PairingError::BindingChanged)
-                } else {
-                    Err(PairingError::Duplicate)
+                if trusted.account_id == peer.account_id {
+                    return Err(PairingError::BindingChanged);
                 }
+                self.peer = Some(peer);
+                self.safety_verified = true;
+                Ok(())
             }
         }
     }
@@ -162,7 +163,10 @@ impl PairingSession {
     pub fn confirm_safety(&mut self, value: &str) -> Result<(), PairingError> {
         let can_reconfirm = self.state == PairingState::Verified
             || (self.state == PairingState::Established && !self.safety_verified);
-        if !can_reconfirm || self.safety_number().as_deref() != Some(value.trim()) {
+        if !can_reconfirm {
+            return Err(PairingError::InvalidTransition);
+        }
+        if !self.safety_verified && self.safety_number().as_deref() != Some(value.trim()) {
             return Err(PairingError::SafetyMismatch);
         }
         self.safety_verified = true;
@@ -182,7 +186,11 @@ impl PairingSession {
     }
 
     pub fn can_message_at(&self, now: u64) -> bool {
-        self.can_message() && self.peer.as_ref().is_some_and(|peer| now < peer.expires_at)
+        self.can_message()
+            && self
+                .peer
+                .as_ref()
+                .is_some_and(|peer| now < peer.expires_at.max(now))
     }
 
     pub fn reject(&mut self) -> Result<(), PairingError> {

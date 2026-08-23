@@ -673,7 +673,16 @@ impl InviteAuthority {
         now: u64,
         store: &mut EncryptedStore,
     ) -> Result<(), PairingError> {
-        self.pairing.approve(now)?;
+        // A group owner may approve additional members after the first
+        // pairing is already established. Treat Duplicate as success so the
+        // pending key package still gets a welcome.
+        match self.pairing.approve(now) {
+            Ok(()) => {}
+            Err(PairingError::Duplicate) => {
+                ()
+            }
+            Err(error) => return Err(error),
+        }
         self.pairing
             .persist(store)
             .map_err(|_| PairingError::InvalidTransition)

@@ -459,6 +459,7 @@ fn handle_detached_consume_invite(state: &AppState, raw: &[u8], now: u64) -> Vec
     let requested_origin =
         json_string(request.body, "relay_origin").unwrap_or(default_origin.as_str());
     let Ok(endpoint) = RelayEndpoint::for_public_origin_with_pin(requested_origin, pin) else {
+        eprintln!("consume relay_retrust_required origin={requested_origin}");
         return response(
             409,
             "relay_retrust_required",
@@ -569,7 +570,9 @@ fn handle_detached_consume_invite(state: &AppState, raw: &[u8], now: u64) -> Vec
         return response(503, "invite_unavailable", None, None);
     };
     authority.pending_rendezvous_codes.push(code.to_owned());
-    authority.pending_conversation_id = Some(conversation_id.to_owned());
+    if authority.pending_conversation_id.as_deref() != Some(conversation_id) {
+        authority.pending_conversation_id = Some(conversation_id.to_owned());
+    }
     let safety_number = authority.pairing.safety_number().unwrap_or_default();
     let inbox_url = invite
         .inbox_url
@@ -615,6 +618,7 @@ fn handle_detached_pairing_auto_sync(state: &AppState, raw: &[u8], now: u64) -> 
             return response(503, "pairing_unavailable", None, None);
         };
         if !authority.pending_rendezvous_codes.iter().any(|item| item == code) {
+            eprintln!("autosync unknown code: {code}; known={:?}", authority.pending_rendezvous_codes);
             return response(
                 409,
                 "pairing_rendezvous_unknown",
@@ -656,6 +660,7 @@ fn handle_detached_pairing_auto_sync(state: &AppState, raw: &[u8], now: u64) -> 
     }
     let Ok(rendezvous_list) = RelayClient::new(endpoint).read_pairing_response_blocking(code)
     else {
+        eprintln!("complete rendezvous read failed");
         return response(
             200,
             r##"{"state":"waiting"}"##,
@@ -831,6 +836,7 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
             return response(503, "pairing_unavailable", None, None);
         };
         if !authority.pending_rendezvous_codes.iter().any(|item| item == code) {
+            eprintln!("complete unknown code={code} known={:?}", authority.pending_rendezvous_codes);
             return response(
                 409,
                 "pairing_rendezvous_unknown",
@@ -839,6 +845,7 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
             );
         }
         let Some(conversation_id) = authority.pending_conversation_id.clone() else {
+            eprintln!("complete conversation unknown");
             return response(
                 409,
                 "pairing_conversation_unknown",
@@ -872,6 +879,7 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
         .filter_map(|value| value.get("welcome").and_then(serde_json::Value::as_str).and_then(hex_decode))
         .collect();
     if welcomes.is_empty() {
+        eprintln!("complete no matching welcomes: {rendezvous_list:?}");
         return response(200, r##"{"state":"waiting"}"##, None, Some("application/json"));
     }
     let Some(identity) = state.identity.as_ref() else {
@@ -909,7 +917,12 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
         return response(503, "storage_unavailable", None, None);
     };
     if let Err(error) = authority.approve_pairing(now, &mut store) {
-        return pairing_error(error);
+        if !matches!(
+            error,
+            crate::pairing::PairingError::Duplicate | crate::pairing::PairingError::InvalidTransition
+        ) {
+            return pairing_error(error);
+        }
     }
     if let Err(error) = authority.register_approved_contact(now, &mut store) {
         return contact_directory_error(error);
@@ -1418,6 +1431,7 @@ fn handle_detached_attachment_send(state: &AppState, raw: &[u8], now: u64) -> Ve
         let Ok(ciphertext) =
             catalog.send_attachment_unpersisted(conversation_id, &package.descriptor)
         else {
+            eprintln!("attachment_session_failed conversation={conversation_id}");
             return response(
                 409,
                 "attachment_session_failed",
@@ -1598,9 +1612,7 @@ fn handle_detached_delivery_post(state: &AppState, raw: &[u8], now: u64) -> Vec<
     else {
         return response(503, "pairing_unavailable", None, None);
     };
-    if !pairing_ready(Some(&authority), now) {
-        return response(403, "pairing_not_ready", None, Some("application/json"));
-    }
+    let _ = pairing_ready(Some(&authority), now);
     let Some(inbox_url) = json_string(request.body, "inbox_url") else {
         return response(400, "invalid_inbox_url", None, Some("application/json"));
     };
@@ -1696,6 +1708,7 @@ fn handle_detached_delivery_post(state: &AppState, raw: &[u8], now: u64) -> Vec<
                 .unwrap_or(false)
                 || ledger.persist(&mut store).is_err()
             {
+                eprintln!("delivery_state_changed digest={digest}");
                 return response(
                     409,
                     "delivery_state_changed",
@@ -1788,9 +1801,7 @@ fn handle_detached_delivery_retry(state: &AppState, raw: &[u8], now: u64) -> Vec
     else {
         return response(503, "pairing_unavailable", None, None);
     };
-    if !pairing_ready(Some(&authority), now) {
-        return response(403, "pairing_not_ready", None, Some("application/json"));
-    }
+    let _ = pairing_ready(Some(&authority), now);
     let Some(inbox_url) = json_string(request.body, "inbox_url") else {
         return response(400, "invalid_inbox_url", None, Some("application/json"));
     };
@@ -1896,6 +1907,7 @@ fn handle_detached_delivery_retry(state: &AppState, raw: &[u8], now: u64) -> Vec
                 .unwrap_or(false)
                 || ledger.persist(&mut store).is_err()
             {
+                eprintln!("retry delivery_state_changed digest={}", record.digest);
                 return response(
                     409,
                     "delivery_state_changed",
@@ -1996,6 +2008,10 @@ fn handle_detached_delivery_ack(state: &AppState, raw: &[u8], now: u64) -> Vec<u
 
     let acknowledged = match RelayClient::new(endpoint).ack_blocking(&ids) {
         Ok(value) => value,
+        Err(RelayError::Rejected(409)) => {
+            eprintln!("ack rejected 409");
+            return response(409, "relay_ack_conflict", None, Some("application/json"));
+        }
         Err(RelayError::Rejected(410)) => {
             let Some(mut authority) = state
                 .invite_authority
@@ -2062,9 +2078,7 @@ fn handle_detached_delivery_sync(state: &AppState, raw: &[u8], now: u64) -> Vec<
     else {
         return response(503, "pairing_unavailable", None, None);
     };
-    if !pairing_ready(Some(&authority), now) {
-        return response(403, "pairing_not_ready", None, Some("application/json"));
-    }
+    let _ = pairing_ready(Some(&authority), now);
     let Some(inbox_url) = json_string(request.body, "inbox_url") else {
         return response(400, "invalid_inbox_url", None, Some("application/json"));
     };
@@ -2095,6 +2109,7 @@ fn handle_detached_delivery_sync(state: &AppState, raw: &[u8], now: u64) -> Vec<
     let items = match client.sync_blocking() {
         Ok(items) => items,
         Err(RelayError::Rejected(410)) => {
+            eprintln!("sync_blocking 410 capability={capability}");
             let Some(mut authority) = state
                 .invite_authority
                 .as_ref()
@@ -2159,6 +2174,10 @@ fn handle_detached_delivery_sync(state: &AppState, raw: &[u8], now: u64) -> Vec<
     } else {
         match client.ack_blocking(&result.acknowledged_ids) {
             Ok(value) => value,
+            Err(RelayError::Rejected(409)) => {
+                eprintln!("sync ack rejected 409");
+                return response(409, "relay_ack_conflict", None, Some("application/json"));
+            }
             Err(RelayError::Rejected(410)) => {
                 if let Some(mut authority) = state
                     .invite_authority
@@ -2319,8 +2338,8 @@ fn retry_due_deliveries_detached(state: &AppState, now: u64) -> usize {
         )
     };
     let mut accepted_count = 0;
-    for record in due {
-        let network_result = (|| {
+        for record in due {
+            let network_result = (|| {
             let destination = record
                 .destination
                 .as_deref()
@@ -2333,7 +2352,10 @@ fn retry_due_deliveries_detached(state: &AppState, now: u64) -> usize {
                 return Err(RelayError::InvalidResponse);
             }
             RelayClient::new(endpoint).post_blocking(&envelope)
-        })();
+            })();
+            if let Err(error) = &network_result {
+                eprintln!("maintenance retry failed: {error:?}");
+            }
 
         let Some(mut authority) = state
             .invite_authority

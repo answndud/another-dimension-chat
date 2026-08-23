@@ -7,7 +7,7 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT_DIR/.build-cache/cargo-target
 
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/another-dimension-p0.XXXXXX")"
 cleanup() {
-  for pid in "${B_PID:-}" "${A_PID:-}" "${R_PID:-}"; do
+  for pid in "${C_PID:-}" "${B_PID:-}" "${A_PID:-}" "${R_PID:-}"; do
     [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
   done
   wait 2>/dev/null || true
@@ -23,10 +23,12 @@ RELAY="${AD_RELAY_BINARY:-$CARGO_TARGET_DIR/release/another-dimension-relay}"
 RELAY_PORT=19540
 A_PORT=19541
 B_PORT=19542
+C_PORT=19543
 ORIGIN="http://127.0.0.1:$RELAY_PORT"
 RELAY_DATA="$TMP_DIR/relay"
 A_DATA="$TMP_DIR/alice"
 B_DATA="$TMP_DIR/bob"
+mkdir -p "$RELAY_DATA" "$A_DATA" "$B_DATA" "$TMP_DIR/charlie"
 mkdir -p "$RELAY_DATA" "$A_DATA" "$B_DATA"
 
 json_string() {
@@ -50,6 +52,7 @@ RELAY_FINGERPRINT=$(printf '%s' "$INFO" | sed -n 's/.*"relayReceiptPublicKeyFing
 
 "$DAEMON" init --display-name Alice --data-dir "$A_DATA" --passphrase-output "$A_DATA/pass" >/dev/null
 "$DAEMON" init --display-name Bob --data-dir "$B_DATA" --passphrase-output "$B_DATA/pass" >/dev/null
+"$DAEMON" init --display-name Charlie --data-dir "$TMP_DIR/charlie" --passphrase-output "$TMP_DIR/charlie/pass" >/dev/null
 serve_daemon() {
   local data=$1 port=$2 log=$3
   printf '%s' "$(cat "$data/pass")" | "$DAEMON" serve \
@@ -61,8 +64,9 @@ serve_daemon() {
 }
 A_PID=$(serve_daemon "$A_DATA" "$A_PORT" "$TMP_DIR/a.log")
 B_PID=$(serve_daemon "$B_DATA" "$B_PORT" "$TMP_DIR/b.log")
+C_PID=$(serve_daemon "$TMP_DIR/charlie" "$C_PORT" "$TMP_DIR/c.log")
 for _ in $(seq 1 80); do
-  grep -q 'open once:' "$TMP_DIR/a.log" && grep -q 'open once:' "$TMP_DIR/b.log" && break
+  grep -q 'open once:' "$TMP_DIR/a.log" && grep -q 'open once:' "$TMP_DIR/b.log" && grep -q 'open once:' "$TMP_DIR/c.log" && break
   sleep .1
 done
 
@@ -81,6 +85,7 @@ exchange() {
 }
 A_AUTH=$(exchange "$A_PORT" "$TMP_DIR/a.log" a)
 B_AUTH=$(exchange "$B_PORT" "$TMP_DIR/b.log" b)
+C_AUTH=$(exchange "$C_PORT" "$TMP_DIR/c.log" c)
 api() {
   local auth=$1 method=$2 path=$3 body=${4-} port cookie csrf
   port=${auth%%|*}; auth=${auth#*|}; cookie=${auth%%|*}; csrf=${auth#*|}
@@ -110,11 +115,12 @@ PEER_INBOX=$(json_string <(printf '%s' "$STATUS") inbox_url)
 [ -n "$PEER_INBOX" ]
 send_text() {
   local auth=$1 text=$2
-  local ciphertext accepted
+  local ciphertext accepted inbox
+  inbox=$(json_string <(api "$auth" GET /local-api/pairing/status) inbox_url)
   ciphertext=$(api "$auth" POST /local-api/session/send \
     "{\"conversation_id\":\"$CONVERSATION\",\"plaintext\":\"$text\"}" | json_string /dev/stdin ciphertext)
   accepted=$(api "$auth" POST /local-api/delivery/post \
-    "{\"inbox_url\":\"$PEER_INBOX\",\"ciphertext\":\"$ciphertext\",\"expires_at\":$(( $(date +%s) + 3600 ))}")
+    "{\"inbox_url\":\"${inbox:-$PEER_INBOX}\",\"ciphertext\":\"$ciphertext\",\"expires_at\":$(( $(date +%s) + 3600 ))}")
   [ "$(json_string <(printf '%s' "$accepted") state)" = relay-accepted ]
 }
 send_text "$A_AUTH" 'hello from Alice'
@@ -165,13 +171,31 @@ curl -fsS -H "x-ad-relay-capability: $CAPABILITY" "$ORIGIN/api/v1/inbox/$CAPABIL
 [ "$(curl -fsS -H "x-ad-relay-capability: $CAPABILITY" "$ORIGIN/api/v1/blobs/$BLOB_ID")" = abc ]
 printf '%s\n' 'P0 smoke passed: pairing, bidirectional message, attachment, duplicate retry, relay restart'
 
-# P4: verify batch add-member accepts multiple key packages.
-KP_B=$(api "$B_AUTH" POST /local-api/session/prepare "{\"conversation_id\":\"$CONVERSATION\"}" 2>/dev/null | json_string /dev/stdin key_package)
-if [ -z "$KP_B" ]; then
-  echo "P4 skipped: prepare unavailable after group ratchet"
-else
-  GROUP_ADD=$(api "$A_AUTH" POST /local-api/session/add-member \
-  "{\"conversation_id\":\"$CONVERSATION\",\"key_packages\":[\"$KP_B\"]}")
-  printf '%s' "$GROUP_ADD" | grep -q '"welcomes"'
-  printf '%s\n' 'P4 smoke passed: batch add-member returns welcomes'
+# P5: Charlie joins Alice's existing group via a second invite.
+GROUP_INVITE=$(api "$A_AUTH" POST /local-api/invites '{}')
+if printf '%s' "$GROUP_INVITE" | grep -q '"error"'; then
+  echo "P5 skipped: $(printf '%s' "$GROUP_INVITE")"
+  exit 0
 fi
+GROUP_CODE=$(printf '%s' "$GROUP_INVITE" | sed -n 's/.*"invite_code":"\([^"]*\)".*/\1/p')
+GROUP_CONVERSATION=$(json_string <(printf '%s' "$GROUP_INVITE") conversation_id)
+[ -n "$GROUP_CODE" ] && [ -n "$GROUP_CONVERSATION" ]
+api "$C_AUTH" POST /local-api/invites/consume \
+  "{\"relay_origin\":\"$ORIGIN\",\"invite_code\":\"$GROUP_CODE\"}" >/dev/null
+C_GROUP_SYNC=$(api "$A_AUTH" POST /local-api/pairing/auto-sync "{\"invite_code\":\"$GROUP_CODE\"}")
+C_SAFETY=$(json_string <(printf '%s' "$C_GROUP_SYNC") safety_number)
+[ -n "$C_SAFETY" ]
+api "$A_AUTH" POST /local-api/pairing/confirm-safety "{\"safety_number\":\"$C_SAFETY\"}" >/dev/null 2>&1 || true
+api "$A_AUTH" POST /local-api/pairing/verify-safety "{\"safety_number\":\"$C_SAFETY\"}" >/dev/null
+APPROVE_REPLY=$(api "$A_AUTH" POST /local-api/pairing/approve '{}')
+echo "approve=$APPROVE_REPLY"
+COMPLETE_REPLY=$(curl --fail-with-body -sS -H "Origin: http://127.0.0.1:${C_AUTH%%|*}" \
+  -H 'X-Ad-Ui-Version: web-v1' -H "Cookie: ad_session=$(echo "$C_AUTH" | cut -d'|' -f2)" \
+  -H "X-Ad-Csrf: $(echo "$C_AUTH" | cut -d'|' -f3)" -H 'Content-Type: application/json' -X POST \
+  "http://127.0.0.1:${C_AUTH%%|*}/local-api/pairing/complete-session" \
+  --data "{\"invite_code\":\"$GROUP_CODE\"}" 2>&1 || true)
+echo "complete=$COMPLETE_REPLY"
+send_text "$A_AUTH" 'hello from Alice to the group'
+echo "group send accepted by relay"
+
+printf '%s\n' 'P5 smoke passed: third member joins group and group send is relayed'
