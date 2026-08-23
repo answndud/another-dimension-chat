@@ -4,6 +4,8 @@ import type { RealtimeStatus } from "../hooks/useWebSocket";
 import { ContactList } from "../components/ContactList";
 import { Conversation } from "../components/Conversation";
 import { GroupInvite } from "../components/GroupInvite";
+import { InvitePanel } from "../components/InvitePanel";
+import { PairingApproval } from "../components/PairingApproval";
 
 type View = "conversation" | "devices" | "security" | "status";
 
@@ -13,6 +15,13 @@ interface Props {
   onSelectContact: (accountId: string) => void;
   onSendMessage: (text: string) => void;
   onGroupInvite?: (accountIds: string[]) => void;
+  onCreateInvite: () => void;
+  onConsumeInvite: (code: string) => void;
+  onConfirmSafety: (safetyNumber: string) => void;
+  onRejectPairing: () => void;
+  onSaveRecovery: () => void;
+  onLockSession: () => void;
+  onRevokeDevice: (deviceId: string) => void;
 }
 
 export function Ready({
@@ -21,6 +30,13 @@ export function Ready({
   onSelectContact,
   onSendMessage,
   onGroupInvite,
+  onCreateInvite,
+  onConsumeInvite,
+  onConfirmSafety,
+  onRejectPairing,
+  onSaveRecovery,
+  onLockSession,
+  onRevokeDevice,
 }: Props) {
   const [view, setView] = useState<View>("conversation");
   const selected = state.contacts.find((c) => c.account_id === state.selectedContact) || null;
@@ -52,6 +68,14 @@ export function Ready({
             <small>{state.identity.account_id.slice(0, 16)}…</small>
           </div>
         )}
+        <button
+          type="button"
+          className="nav-item lock-button"
+          onClick={() => { void onLockSession(); }}
+          style={{ marginTop: "8px", width: "100%", textAlign: "center" }}
+        >
+          🔒 잠그기
+        </button>
       </nav>
 
       <div className={`connection-banner ${realtimeStatus === "online" ? "online" : "offline"}`} role="status">
@@ -62,8 +86,26 @@ export function Ready({
 
       {view === "conversation" && (
         <>
-          <ContactList contacts={state.contacts} selectedContact={state.selectedContact} onSelect={onSelectContact} />
-          <div className="conversation-column">
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", minWidth: "240px", maxWidth: "300px" }}>
+            <InvitePanel
+              invite={state.invite}
+              busy={state.busy}
+              hasContacts={state.contacts.length > 0}
+              onCreateInvite={onCreateInvite}
+              onConsumeInvite={onConsumeInvite}
+            />
+            {state.pairingStatus?.safety_number && (
+              <PairingApproval
+                safetyNumber={state.pairingStatus.safety_number}
+                peerAccountId={state.pairingStatus.account_id || ""}
+                busy={state.busy}
+                onConfirm={onConfirmSafety}
+                onReject={onRejectPairing}
+              />
+            )}
+            <ContactList contacts={state.contacts} selectedContact={state.selectedContact} onSelect={onSelectContact} />
+          </div>
+          <div className="conversation-column" style={{ flex: 1 }}>
             <Conversation contact={selected} messages={state.messages} busy={state.busy} onSend={onSendMessage} />
             {selected && onGroupInvite && (
               <GroupInvite
@@ -77,17 +119,45 @@ export function Ready({
         </>
       )}
       {view === "devices" && (
-        <section className="panel">
+        <section className="panel" style={{ flex: 1 }}>
           <h2>연결된 기기 ({state.devices.length}대)</h2>
           {state.devices.map((d) => (
-            <div key={d.device_id}><span>{d.device_id.slice(0, 20)}</span> · {d.state}</div>
+            <div key={d.device_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,.08)" }}>
+              <span><code style={{ fontSize: ".78rem" }}>{d.device_id.slice(0, 24)}</code> · {d.state}</span>
+              {d.state === "active" && (
+                <button
+                  type="button"
+                  className="danger"
+                  style={{ fontSize: ".78rem", padding: "4px 10px" }}
+                  disabled={state.busy}
+                  onClick={() => { void onRevokeDevice(d.device_id); }}
+                >
+                  폐기
+                </button>
+              )}
+            </div>
           ))}
         </section>
       )}
       {view === "security" && (
-        <section className="panel">
-          <h2>보안 상태</h2>
+        <section className="panel" style={{ flex: 1 }}>
+          <h2>보안과 복구</h2>
           <p className="field-note">암호화 키는 이 Mac의 보안 서비스가 관리합니다.</p>
+          <div style={{ marginTop: "16px" }}>
+            <button
+              type="button"
+              className="primary"
+              disabled={state.busy}
+              onClick={() => { void onSaveRecovery(); }}
+            >
+              📁 복구 파일 다운로드
+            </button>
+            <p className="field-note" style={{ marginTop: "10px", lineHeight: "1.6" }}>
+              이 파일 없이는 데이터 손상 시 계정을 복구할 수 없습니다.<br/>
+              암호화된 오프라인 매체(USB 등)에 보관하세요.<br/>
+              클라우드(Dropbox, Google Drive 등)에는 저장하지 마세요.
+            </p>
+          </div>
         </section>
       )}
       {view === "status" && (

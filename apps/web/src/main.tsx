@@ -5,7 +5,20 @@ import { Setup } from "./screens/Setup";
 import { Ready } from "./screens/Ready";
 
 function App() {
-  const { state, realtimeStatus, selectContact, sendMessage, inviteToGroup } = useDaemon();
+  const {
+    state,
+    realtimeStatus,
+    selectContact,
+    sendMessage,
+    inviteToGroup,
+    createInvite,
+    consumeInviteCode,
+    confirmSafetyAndApprove,
+    rejectPairing,
+    saveRecoveryFile,
+    lockSession,
+    revokeDeviceById,
+  } = useDaemon();
 
   if (state.screen === "loading" || state.screen === "disconnected") {
     return (
@@ -51,6 +64,13 @@ function App() {
       onSelectContact={selectContact}
       onSendMessage={sendMessage}
       onGroupInvite={inviteToGroup}
+      onCreateInvite={() => { void createInvite(); }}
+      onConsumeInvite={(code) => { void consumeInviteCode(code); }}
+      onConfirmSafety={(sn) => { void confirmSafetyAndApprove(sn); }}
+      onRejectPairing={() => { void rejectPairing(); }}
+      onSaveRecovery={() => { void saveRecoveryFile(); }}
+      onLockSession={() => { void lockSession(); }}
+      onRevokeDevice={(id) => { void revokeDeviceById(id); }}
     />
   );
 }

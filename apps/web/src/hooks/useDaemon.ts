@@ -38,6 +38,7 @@ export interface DaemonState {
   relayOrigin: string;
   inboxUrl: string;
   invite: { invite_code: string } | null;
+  pairingStatus: PairingStatus | null;
   busy: boolean;
   error: string;
   notice: string;
@@ -77,6 +78,7 @@ export function useDaemon() {
     relayOrigin: "",
     inboxUrl: "",
     invite: null,
+    pairingStatus: null,
     busy: false,
     error: "",
     notice: "",
@@ -232,5 +234,111 @@ export function useDaemon() {
     }
   }, [state.selectedContact, selectContact]);
 
-  return { state, initialized, realtimeStatus, selectContact, sendMessage, inviteToGroup };
+  const createInvite = useCallback(async () => {
+    const bridge = bridgeRef.current;
+    if (!bridge) return;
+    setState((s) => ({ ...s, busy: true }));
+    try {
+      const result = await bridge.createInvite();
+      setState((s) => ({ ...s, invite: result, notice: "초대 코드가 생성되었습니다. 별도 신뢰 채널로 전달하세요.", error: "" }));
+    } catch (error) {
+      setState((s) => ({ ...s, error: error instanceof Error ? error.message : "초대 생성 실패" }));
+    } finally {
+      setState((s) => ({ ...s, busy: false }));
+    }
+  }, []);
+
+  const consumeInviteCode = useCallback(async (code: string) => {
+    const bridge = bridgeRef.current;
+    if (!bridge || !state.relayOrigin) {
+      setState((s) => ({ ...s, error: "relay origin이 설정되지 않았습니다." }));
+      return;
+    }
+    setState((s) => ({ ...s, busy: true }));
+    try {
+      const result = await bridge.consumeInvite(state.relayOrigin, code.trim());
+      if (result.state === "verified") {
+        setState((s) => ({
+          ...s,
+          pairingStatus: result,
+          contacts: [...s.contacts, { account_id: result.account_id || "", alias: "", state: "pending", conversation_id: result.conversation_id }],
+          notice: "상대 신원이 확인되었습니다. 안전번호를 대조한 뒤 승인하세요.",
+          error: "",
+        }));
+        const status = await bridge.pairingStatus();
+        setState((s) => ({ ...s, pairingStatus: status }));
+      }
+    } catch (error) {
+      setState((s) => ({ ...s, error: error instanceof Error ? error.message : "초대 코드 처리 실패" }));
+    } finally {
+      setState((s) => ({ ...s, busy: false }));
+    }
+  }, [state.relayOrigin]);
+
+  const confirmSafetyAndApprove = useCallback(async (safetyNumber: string) => {
+    const bridge = bridgeRef.current;
+    if (!bridge) return;
+    setState((s) => ({ ...s, busy: true }));
+    try {
+      await bridge.verifySafety(safetyNumber.trim());
+      await bridge.approvePairing();
+      setState((s) => ({ ...s, notice: "연결이 승인되었습니다. 이제 메시지를 주고받을 수 있습니다.", error: "" }));
+      const contacts = await bridge.contacts();
+      setState((s) => ({ ...s, contacts: contacts.contacts || [] }));
+    } catch (error) {
+      setState((s) => ({ ...s, error: error instanceof Error ? error.message : "승인 실패" }));
+    } finally {
+      setState((s) => ({ ...s, busy: false }));
+    }
+  }, []);
+
+  const rejectPairing = useCallback(async () => {
+    const bridge = bridgeRef.current;
+    if (!bridge) return;
+    try {
+      await bridge.rejectPairing();
+      setState((s) => ({ ...s, pairingStatus: null, notice: "연결 요청을 거절했습니다." }));
+    } catch { /* silent */ }
+  }, []);
+
+  const saveRecoveryFile = useCallback(async () => {
+    const bridge = bridgeRef.current;
+    if (!bridge) return;
+    try {
+      await bridge.exportRecovery();
+      setState((s) => ({ ...s, notice: "복구 파일을 다운로드했습니다. 암호화된 오프라인 매체에 보관하세요." }));
+    } catch (error) {
+      setState((s) => ({ ...s, error: error instanceof Error ? error.message : "복구 파일 저장 실패" }));
+    }
+  }, []);
+
+  const lockSession = useCallback(async () => {
+    const bridge = bridgeRef.current;
+    if (!bridge) return;
+    await bridge.lockSession();
+  }, []);
+
+  const revokeDeviceById = useCallback(async (deviceId: string) => {
+    const bridge = bridgeRef.current;
+    if (!bridge) return;
+    await bridge.revokeDevice(deviceId);
+    const devices = await bridge.devices();
+    setState((s) => ({ ...s, devices: devices.devices || [], deviceEvents: devices.events || [] }));
+  }, []);
+
+  return {
+    state,
+    initialized,
+    realtimeStatus,
+    selectContact,
+    sendMessage,
+    inviteToGroup,
+    createInvite,
+    consumeInviteCode,
+    confirmSafetyAndApprove,
+    rejectPairing,
+    saveRecoveryFile,
+    lockSession,
+    revokeDeviceById,
+  };
 }
