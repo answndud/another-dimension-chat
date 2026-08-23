@@ -397,6 +397,52 @@ pub(crate) fn handle_mls_route(
                 Err(error) => catalog_error(error),
             }
         }
+        ("POST", "/local-api/session/remove-member") => {
+            if let Err(reply) = authorize_api(context.bridge, request, context.now) {
+                return Some(reply);
+            }
+            if !pairing_ready(context.invite_authority.as_deref(), context.now) {
+                return Some(response(
+                    403,
+                    "pairing_not_ready",
+                    None,
+                    Some("application/json"),
+                ));
+            }
+            let Some(identity) = context.identity else {
+                return Some(response(503, "identity_unavailable", None, None));
+            };
+            if let Err(error) = require_protocol(identity, context.now) {
+                return Some(response(503, error, None, Some("application/json")));
+            }
+            let Some(conversation_id) = json_string(request.body, "conversation_id") else {
+                return Some(response(400, "invalid_conversation", None, Some("application/json")));
+            };
+            let Some(device_credential) = json_string(request.body, "device_credential").and_then(hex_decode) else {
+                return Some(response(400, "invalid_device_credential", None, Some("application/json")));
+            };
+            let Some(catalog) = context.session_catalog.as_deref_mut() else {
+                return Some(response(503, "session_unavailable", None, None));
+            };
+            let Some(store) = context.session_store.as_deref_mut() else {
+                return Some(response(503, "storage_unavailable", None, None));
+            };
+            match catalog.remove_group_member(conversation_id, &device_credential, store) {
+                Ok(Some(commit)) => response(
+                    200,
+                    &format!(r#"{{"commit":"{}"}}"#, hex_bytes(&commit)),
+                    None,
+                    Some("application/json"),
+                ),
+                Ok(None) => response(
+                    200,
+                    r#"{"removed":false}"#,
+                    None,
+                    Some("application/json"),
+                ),
+                Err(error) => catalog_error(error),
+            }
+        }
         ("POST", "/local-api/session/send") => {
             if let Err(reply) = authorize_api(context.bridge, request, context.now) {
                 return Some(reply);

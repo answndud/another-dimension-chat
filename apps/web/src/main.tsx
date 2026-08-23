@@ -21,6 +21,7 @@ function App() {
     setContactAliasById,
     blockContactById,
     unblockContactById,
+    removeGroupMemberById,
   } = useDaemon();
 
   if (state.screen === "loading" || state.screen === "disconnected") {
@@ -169,6 +170,7 @@ function App() {
       onSetAlias={(id, alias) => { void setContactAliasById(id, alias); }}
       onBlock={(id) => { void blockContactById(id); }}
       onUnblock={(id) => { void unblockContactById(id); }}
+      onRemoveMember={(convId, cred) => { void removeGroupMemberById(convId, cred); }}
     />
   );
 }

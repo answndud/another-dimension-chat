@@ -25,6 +25,7 @@ interface Props {
   onSetAlias?: (accountId: string, alias: string) => void;
   onBlock?: (accountId: string) => void;
   onUnblock?: (accountId: string) => void;
+  onRemoveMember?: (conversationId: string, deviceCredential: string) => void;
 }
 
 export function Ready({
@@ -43,6 +44,7 @@ export function Ready({
   onSetAlias,
   onBlock,
   onUnblock,
+  onRemoveMember,
 }: Props) {
   const [view, setView] = useState<View>("conversation");
   const selected = state.contacts.find((c) => c.account_id === state.selectedContact) || null;
@@ -126,6 +128,7 @@ export function Ready({
                 selected={selected.account_id}
                 busy={state.busy}
                 onInvite={onGroupInvite}
+                onRemoveMember={onRemoveMember}
               />
             )}
           </div>

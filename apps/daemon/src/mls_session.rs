@@ -329,6 +329,22 @@ impl MlsSessionCatalog {
         Ok(welcomes)
     }
 
+    pub fn remove_group_member(
+        &mut self,
+        conversation_id: &str,
+        device_credential: &[u8],
+        store: &mut EncryptedStore,
+    ) -> Result<Option<Vec<u8>>, SessionCatalogError> {
+        if !valid_conversation_id(conversation_id) {
+            return Err(SessionCatalogError::InvalidConversation);
+        }
+        self.sessions
+            .get_mut(conversation_id)
+            .ok_or(SessionCatalogError::UnknownConversation)?
+            .remove_member_and_persist(device_credential, store, conversation_id)
+            .map_err(Into::into)
+    }
+
     /// Remove every matching device leaf without checkpointing it yet. The
     /// caller must atomically commit the returned checkpoints with the
     /// account device registry before delivering the commits.
@@ -603,7 +619,7 @@ impl MlsSession {
             .map_err(|_| SessionError::InvalidWire)
     }
 
-    fn remove_member(&mut self, device_credential: &[u8]) -> Result<Option<Vec<u8>>, SessionError> {
+    pub(crate) fn remove_member(&mut self, device_credential: &[u8]) -> Result<Option<Vec<u8>>, SessionError> {
         self.ensure_usable()?;
         let group = self.group.as_mut().ok_or(SessionError::NotJoined)?;
         let Some(member) = group
@@ -801,6 +817,19 @@ impl MlsSession {
         let welcome = self.add_member(key_package)?;
         self.persist_or_poison(store, conversation_id)?;
         Ok(welcome)
+    }
+
+    pub(crate) fn remove_member_and_persist(
+        &mut self,
+        device_credential: &[u8],
+        store: &mut EncryptedStore,
+        conversation_id: &str,
+    ) -> Result<Option<Vec<u8>>, SessionError> {
+        let commit = self.remove_member(device_credential)?;
+        if commit.is_some() {
+            self.persist_or_poison(store, conversation_id)?;
+        }
+        Ok(commit)
     }
 
     pub fn join_and_persist(

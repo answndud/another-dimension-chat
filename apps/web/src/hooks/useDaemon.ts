@@ -350,6 +350,17 @@ export function useDaemon() {
     } catch { /* silent */ }
   }, []);
 
+  const removeGroupMemberById = useCallback(async (conversationId: string, deviceCredential: string) => {
+    const bridge = bridgeRef.current;
+    if (!bridge) return;
+    try {
+      await bridge.removeGroupMember(conversationId, deviceCredential);
+      setState((s) => ({ ...s, notice: "멤버가 그룹에서 제거되었습니다.", error: "" }));
+    } catch (error) {
+      setState((s) => ({ ...s, error: error instanceof Error ? error.message : "멤버 제거 실패" }));
+    }
+  }, []);
+
   const unblockContactById = useCallback(async (accountId: string) => {
     const bridge = bridgeRef.current;
     if (!bridge) return;
@@ -377,5 +388,6 @@ export function useDaemon() {
     setContactAliasById,
     blockContactById,
     unblockContactById,
+    removeGroupMemberById,
   };
 }
