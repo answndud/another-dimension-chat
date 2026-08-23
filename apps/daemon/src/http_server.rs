@@ -903,7 +903,6 @@ fn handle_detached_pairing_complete_session(state: &AppState, raw: &[u8], now: u
         {
             return response(422, "invalid_welcome", None, Some("application/json"));
         }
-        break;
     }
     drop(store);
     drop(catalog);

@@ -678,9 +678,7 @@ impl InviteAuthority {
         // pending key package still gets a welcome.
         match self.pairing.approve(now) {
             Ok(()) => {}
-            Err(PairingError::Duplicate) => {
-                ()
-            }
+            Err(PairingError::Duplicate) => {}
             Err(error) => return Err(error),
         }
         self.pairing

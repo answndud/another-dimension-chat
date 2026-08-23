@@ -171,6 +171,7 @@ async fn blob_impl(
     }
     let mut existing = fs::OpenOptions::new()
         .create(true)
+        .truncate(false)
         .write(true)
         .open(&file)
         .map_err(|_| ())
@@ -368,7 +369,7 @@ fn receipt(key: &SigningKey, origin: &str, code: &str, invite: &str, timestamp: 
     format!("{}.{}", body, hex(&key.sign(body.as_bytes()).to_bytes()))
 }
 fn hex_decode(value: &str) -> Option<Vec<u8>> {
-    if value.len() % 2 != 0 {
+    if !value.len().is_multiple_of(2) {
         return None;
     }
     (0..value.len())
