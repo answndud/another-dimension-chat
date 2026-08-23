@@ -1,7 +1,7 @@
 use super::*;
 
 pub(crate) fn notify_new_messages(enabled: bool, count: usize) {
-    if !enabled || count == 0 || !cfg!(target_os = "macos") {
+    if !enabled || count == 0 {
         return;
     }
     let message = if count == 1 {
@@ -13,7 +13,11 @@ pub(crate) fn notify_new_messages(enabled: bool, count: usize) {
         "display notification {:?} with title \"Another Dimension\"",
         message
     );
-    let _ = Command::new("osascript").args(["-e", &script]).status();
+    if cfg!(target_os = "macos") {
+        let _ = Command::new("osascript").args(["-e", &script]).status();
+    } else {
+        eprintln!("notification: {message}");
+    }
 }
 
 pub(crate) fn deliver_device_change_commits(

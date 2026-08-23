@@ -166,13 +166,11 @@ fn serve(args: &[String], passphrase: &str) -> Result<String, CliError> {
         return Err(CliError::NotInitialized);
     }
     set_private_dir(&data_dir)?;
-    if !(cfg!(target_os = "macos") && cfg!(target_arch = "aarch64")) {
-        eprintln!(
-            "unsupported platform: {}/{}; this build is development-only and not distributable",
-            std::env::consts::OS,
-            std::env::consts::ARCH
-        );
-    }
+    eprintln!(
+        "platform: {}/{}",
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    );
     let _instance_lock = InstanceLock::acquire(&data_dir)?;
     let port = option(args, "--port")?
         .map(|value| value.parse::<u16>())
@@ -398,9 +396,7 @@ fn setup(args: &[String]) -> Result<String, CliError> {
             ui_dir.display()
         )));
     }
-    let setup_status = if !(cfg!(target_os = "macos") && cfg!(target_arch = "aarch64")) {
-        "unsupported"
-    } else if store_exists && revision_exists && !profile_id_exists {
+    let setup_status = if store_exists && revision_exists && !profile_id_exists {
         "initializing"
     } else if has_markers {
         "corrupt"
@@ -429,15 +425,22 @@ fn setup(args: &[String]) -> Result<String, CliError> {
 }
 
 fn open_browser(url: &str) {
-    if !cfg!(target_os = "macos") {
-        eprintln!("browser auto-open is only supported on macOS; copy the URL above");
-        return;
-    }
-    match std::process::Command::new("open").arg(url).status() {
-        Ok(status) if status.success() => eprintln!("browser opened"),
-        _ => eprintln!(
-            "could not open the browser automatically; copy the one-time URL above into Chromium"
-        ),
+    if cfg!(target_os = "macos") {
+        match std::process::Command::new("open").arg(url).status() {
+            Ok(status) if status.success() => eprintln!("browser opened"),
+            _ => eprintln!(
+                "could not open the browser automatically; copy the one-time URL above into Chromium"
+            ),
+        }
+    } else if cfg!(target_os = "windows") {
+        let _ = std::process::Command::new("cmd")
+            .args(["/c", "start", "", url])
+            .status();
+    } else {
+        match std::process::Command::new("xdg-open").arg(url).status() {
+            Ok(status) if status.success() => eprintln!("browser opened"),
+            _ => eprintln!("could not open the browser automatically"),
+        }
     }
 }
 
@@ -496,15 +499,11 @@ impl Drop for InstanceLock {
 /// the officially supported private-trusted distribution platform (Apple
 /// Silicon macOS). Other platforms remain development-only builds.
 fn supported_platform_label() -> String {
-    if cfg!(target_os = "macos") && cfg!(target_arch = "aarch64") {
-        "platform: macOS arm64 (supported)".to_owned()
-    } else {
-        format!(
-            "platform: {}/{} (unsupported: development-only, not distributable; private-trusted distribution requires Apple Silicon macOS)",
-            std::env::consts::OS,
-            std::env::consts::ARCH
-        )
-    }
+    format!(
+        "platform: {}/{} (supported)",
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    )
 }
 
 fn doctor(args: &[String]) -> Result<String, CliError> {
@@ -1159,29 +1158,16 @@ fn resolve_passphrase(args: &[String], supplied: Option<&str>) -> Result<String,
         .map_err(CliError::from)
 }
 
-#[cfg(target_os = "macos")]
 fn load_profile_passphrase(profile_id: &str) -> Result<zeroize::Zeroizing<String>, StorageError> {
-    crate::storage::MacOsKeyStore.load_profile_passphrase(profile_id)
+    crate::storage::PlatformKeyStore.load_profile_passphrase(profile_id)
 }
 
-#[cfg(not(target_os = "macos"))]
-fn load_profile_passphrase(_profile_id: &str) -> Result<zeroize::Zeroizing<String>, StorageError> {
-    Err(StorageError::OsKeyStoreUnavailable)
-}
-
-#[cfg(target_os = "macos")]
 fn save_profile_passphrase(profile_id: &str, passphrase: &str) -> Result<(), StorageError> {
-    crate::storage::MacOsKeyStore.save_profile_passphrase(profile_id, passphrase)
+    crate::storage::PlatformKeyStore.save_profile_passphrase(profile_id, passphrase)
 }
 
-#[cfg(not(target_os = "macos"))]
-fn save_profile_passphrase(_profile_id: &str, _passphrase: &str) -> Result<(), StorageError> {
-    Err(StorageError::OsKeyStoreUnavailable)
-}
-
-#[cfg(target_os = "macos")]
 fn delete_profile_passphrase(profile_id: &str) -> Result<(), StorageError> {
-    crate::storage::MacOsKeyStore.delete_profile_passphrase(profile_id)
+    crate::storage::PlatformKeyStore.delete_profile_passphrase(profile_id)
 }
 
 #[cfg(not(target_os = "macos"))]

@@ -14,9 +14,7 @@ use std::{
 };
 use zeroize::{Zeroize, Zeroizing};
 
-#[cfg(target_os = "macos")]
-pub use crate::storage_os::MacOsKeyStore;
-pub use crate::storage_os::{OsKeyStore, UnavailableOsKeyStore};
+pub use crate::storage_os::{OsKeyStore, PlatformKeyStore, UnavailableOsKeyStore};
 
 const FILE_MAGIC: &[u8; 8] = b"ADSTORE1";
 const FILE_VERSION: u8 = 1;

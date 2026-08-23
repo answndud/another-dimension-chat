@@ -32,40 +32,39 @@ pub trait OsKeyStore {
     }
 }
 
-#[cfg(target_os = "macos")]
-pub struct MacOsKeyStore;
+const DATABASE_KEY_SERVICE: &str = "com.another-dimension.daemon.database-key";
+const PASSPHRASE_SERVICE: &str = "com.another-dimension.daemon.profile-passphrase";
 
-#[cfg(target_os = "macos")]
-impl MacOsKeyStore {
-    const DATABASE_KEY_SERVICE: &'static str = "com.another-dimension.daemon.database-key";
-    const PASSPHRASE_SERVICE: &'static str = "com.another-dimension.daemon.profile-passphrase";
-
-    fn account(profile_id: &str) -> Result<&str, StorageError> {
-        if profile_id.is_empty()
-            || profile_id.len() > 128
-            || !profile_id
-                .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
-        {
-            return Err(StorageError::InvalidPassphrase);
-        }
-        Ok(profile_id)
+fn account(profile_id: &str) -> Result<&str, StorageError> {
+    if profile_id.is_empty()
+        || profile_id.len() > 128
+        || !profile_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+    {
+        return Err(StorageError::InvalidPassphrase);
     }
+    Ok(profile_id)
 }
 
-#[cfg(target_os = "macos")]
-impl OsKeyStore for MacOsKeyStore {
+fn entry(service: &str, profile_id: &str) -> Result<keyring::Entry, StorageError> {
+    keyring::Entry::new(service, account(profile_id)?)
+        .map_err(|_| StorageError::OsKeyStoreUnavailable)
+}
+
+pub struct PlatformKeyStore;
+
+impl OsKeyStore for PlatformKeyStore {
     fn load_database_key(
         &self,
         profile_id: &str,
     ) -> Result<Zeroizing<[u8; super::storage::KEY_BYTES]>, StorageError> {
-        let account = Self::account(profile_id)?;
-        let bytes = security_framework::passwords::get_generic_password(
-            Self::DATABASE_KEY_SERVICE,
-            account,
-        )
-        .map_err(|_| StorageError::OsKeyStoreUnavailable)?;
-        let key: [u8; super::storage::KEY_BYTES] = bytes
+        let entry = entry(DATABASE_KEY_SERVICE, profile_id)?;
+        let bytes = entry
+            .get_password()
+            .map_err(|_| StorageError::OsKeyStoreUnavailable)?;
+        let decoded = hex_decode_key(&bytes)?;
+        let key: [u8; super::storage::KEY_BYTES] = decoded
             .try_into()
             .map_err(|_| StorageError::OsKeyStoreUnavailable)?;
         Ok(Zeroizing::new(key))
@@ -76,21 +75,18 @@ impl OsKeyStore for MacOsKeyStore {
         profile_id: &str,
         key: &[u8; super::storage::KEY_BYTES],
     ) -> Result<(), StorageError> {
-        let account = Self::account(profile_id)?;
-        security_framework::passwords::set_generic_password(
-            Self::DATABASE_KEY_SERVICE,
-            account,
-            key,
-        )
-        .map_err(|_| StorageError::OsKeyStoreUnavailable)
+        let entry = entry(DATABASE_KEY_SERVICE, profile_id)?;
+        let encoded: String = key.iter().map(|byte| format!("{byte:02x}")).collect();
+        entry
+            .set_password(&encoded)
+            .map_err(|_| StorageError::OsKeyStoreUnavailable)
     }
 
     fn load_profile_passphrase(&self, profile_id: &str) -> Result<Zeroizing<String>, StorageError> {
-        let account = Self::account(profile_id)?;
-        let bytes =
-            security_framework::passwords::get_generic_password(Self::PASSPHRASE_SERVICE, account)
-                .map_err(|_| StorageError::OsKeyStoreUnavailable)?;
-        let value = String::from_utf8(bytes).map_err(|_| StorageError::OsKeyStoreUnavailable)?;
+        let entry = entry(PASSPHRASE_SERVICE, profile_id)?;
+        let value = entry
+            .get_password()
+            .map_err(|_| StorageError::OsKeyStoreUnavailable)?;
         Ok(Zeroizing::new(value))
     }
 
@@ -99,20 +95,25 @@ impl OsKeyStore for MacOsKeyStore {
         profile_id: &str,
         passphrase: &str,
     ) -> Result<(), StorageError> {
-        let account = Self::account(profile_id)?;
-        security_framework::passwords::set_generic_password(
-            Self::PASSPHRASE_SERVICE,
-            account,
-            passphrase.as_bytes(),
-        )
-        .map_err(|_| StorageError::OsKeyStoreUnavailable)
+        let entry = entry(PASSPHRASE_SERVICE, profile_id)?;
+        entry
+            .set_password(passphrase)
+            .map_err(|_| StorageError::OsKeyStoreUnavailable)
     }
 
     fn delete_profile_passphrase(&self, profile_id: &str) -> Result<(), StorageError> {
-        let account = Self::account(profile_id)?;
-        security_framework::passwords::delete_generic_password(Self::PASSPHRASE_SERVICE, account)
+        let entry = entry(PASSPHRASE_SERVICE, profile_id)?;
+        entry
+            .delete_credential()
             .map_err(|_| StorageError::OsKeyStoreUnavailable)
     }
+}
+
+fn hex_decode_key(hex: &str) -> Result<Vec<u8>, StorageError> {
+    (0..hex.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).map_err(|_| StorageError::InvalidPassphrase))
+        .collect()
 }
 
 pub struct UnavailableOsKeyStore;
