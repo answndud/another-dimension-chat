@@ -124,6 +124,8 @@ export interface DaemonBridge {
   removeGroupMember(conversationId: string, deviceCredential: string): Promise<void>;
   devices(): Promise<{ devices: DeviceInfo[]; events: DeviceEvent[] }>;
   revokeDevice(deviceId: string): Promise<void>;
+  deviceLinkRequest(): Promise<{ request: string; code: string }>;
+  deviceLinkApprove(request: string, code: string): Promise<{ approval: string }>;
   setContactAlias(accountId: string, alias: string): Promise<void>;
   blockContact(accountId: string): Promise<void>;
   unblockContact(accountId: string): Promise<void>;
@@ -289,6 +291,15 @@ export async function connectDaemonBridge({
     devices: () => request("/local-api/devices"),
     revokeDevice: async (deviceId) => {
       await request("/local-api/devices/revoke", { method: "POST", body: JSON.stringify({ device_id: deviceId }) });
+    },
+    deviceLinkRequest: async () => {
+      return await request("/local-api/devices/link-request", { method: "POST" }) as { request: string; code: string };
+    },
+    deviceLinkApprove: async (linkRequest, code) => {
+      return await request("/local-api/devices/link/approve", {
+        method: "POST",
+        body: JSON.stringify({ link_request: linkRequest, code }),
+      }) as { approval: string };
     },
     setContactAlias: async (accountId, alias) => {
       await request("/local-api/contacts/alias", { method: "POST", body: JSON.stringify({ account_id: accountId, alias }) });

@@ -290,6 +290,28 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
                 ),
             }
         }
+        ("POST", "/local-api/devices/link-request") => {
+            if let Err(reply) = authorize_api(bridge, request, now) {
+                return reply;
+            }
+            let device_id = format!("device-link-{}", now);
+            match crate::device_link::PendingDeviceKey::create(&device_id, [0u8; 32], now) {
+                Ok((pending, code)) => {
+                    let request_str = pending.request().encode().unwrap_or_default();
+                    response(
+                        200,
+                        &format!(
+                            r#"{{"request":"{}","code":"{}"}}"#,
+                            json_escape(&request_str),
+                            json_escape(&code)
+                        ),
+                        None,
+                        Some("application/json"),
+                    )
+                }
+                Err(_) => response(503, "link_request_failed", None, Some("application/json")),
+            }
+        }
         ("POST", "/local-api/devices/link/approve") => {
             if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;
