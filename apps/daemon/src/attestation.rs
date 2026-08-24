@@ -1,6 +1,4 @@
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
-use sha2::{Digest, Sha256};
-use zeroize::Zeroizing;
 
 const ATTESTATION_VERSION: u16 = 1;
 const MAX_ATTESTATIONS_PER_PEER: usize = 8;
@@ -127,6 +125,12 @@ pub struct PeerAttestationStore {
     attestations: std::collections::BTreeMap<String, Vec<PeerAttestation>>,
 }
 
+impl Default for PeerAttestationStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PeerAttestationStore {
     pub fn new() -> Self {
         Self {
@@ -174,7 +178,7 @@ impl PeerAttestationStore {
 }
 
 fn decode_hex(value: &str) -> Option<Vec<u8>> {
-    if value.len() % 2 != 0 || value.is_empty() {
+    if !value.len().is_multiple_of(2) || value.is_empty() {
         return None;
     }
     (0..value.len())

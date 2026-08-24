@@ -15,6 +15,32 @@ pub(crate) fn notify_new_messages(enabled: bool, count: usize) {
     );
     if cfg!(target_os = "macos") {
         let _ = Command::new("osascript").args(["-e", &script]).status();
+    } else if cfg!(target_os = "linux") {
+        let _ = Command::new("notify-send")
+            .args(["-a", "Another Dimension", message])
+            .status();
+    } else if cfg!(target_os = "windows") {
+        let ps_script = format!(
+            "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; \
+             [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Another Dimension').Show(\
+             [Windows.UI.Notifications.ToastNotification]::new(\
+             [Windows.UI.Notifications.ToastText02]::new())); \
+             $toast = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); \
+             $textNodes = $toast.GetElementsByTagName('text'); \
+             $textNodes.Item(0).AppendChild($toast.CreateTextNode('Another Dimension')) | Out-Null; \
+             $textNodes.Item(1).AppendChild($toast.CreateTextNode('{}')) | Out-Null; \
+             $toast_notif = [Windows.UI.Notifications.ToastNotification]::new($toast); \
+             [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Another Dimension').Show($toast_notif)",
+             message
+        );
+        let mut cmd = Command::new("powershell");
+        cmd.args(["-NoProfile", "-Command", &ps_script]);
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+        let _ = cmd.status();
     } else {
         eprintln!("notification: {message}");
     }

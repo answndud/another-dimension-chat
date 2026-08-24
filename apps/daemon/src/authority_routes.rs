@@ -325,7 +325,7 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
             let Some(subject_device_key) = json_string(request.body, "subject_device_public_key") else {
                 return response(400, "subject_device_key_required", None, Some("application/json"));
             };
-            match authority.create_attestation(&subject_account_id, &subject_device_key, now) {
+            match authority.create_attestation(subject_account_id, subject_device_key, now) {
                 Ok(attestation) => {
                     let encoded = serde_json::to_string(&attestation).unwrap_or_default();
                     response(200, &encoded, None, Some("application/json"))
