@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub mod attestation;
 pub mod attachment;
 pub mod bridge;
 pub mod bridge_http;

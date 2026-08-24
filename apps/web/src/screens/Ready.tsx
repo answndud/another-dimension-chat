@@ -175,6 +175,29 @@ export function Ready({
             </p>
           </div>
           <div style={{ marginTop: "24px", borderTop: "1px solid rgba(255,255,255,.1)", paddingTop: "16px" }}>
+            <h3 style={{ fontSize: ".9rem", marginBottom: "8px" }}>Peer Attestations</h3>
+            <p className="field-note" style={{ marginBottom: "10px" }}>
+              연결된 연락처들의 신원을 서명하여 상호 검증합니다.
+              이것은 중간자 공격을 탐지하는 추가 보호 계층입니다.
+            </p>
+            <button
+              type="button"
+              className="secondary"
+              disabled={state.busy || state.contacts.length === 0}
+              onClick={() => {
+                for (const contact of state.contacts) {
+                  if (contact.account_id && contact.state !== "blocked") {
+                    state.bridge?.createAttestation(contact.account_id, contact.account_id.replace("ad1pk", ""));
+                  }
+                }
+                void onSaveRecovery();
+              }}
+            >
+              🔏 모든 연락처 서명 (Attest)
+            </button>
+          </div>
+
+          <div style={{ marginTop: "16px", borderTop: "1px solid rgba(255,255,255,.1)", paddingTop: "16px" }}>
             <button
               type="button"
               className="danger"

@@ -312,6 +312,38 @@ fn dispatch_authority_route(request: &Request<'_>, context: &mut RouteContext<'_
                 Err(_) => response(503, "link_request_failed", None, Some("application/json")),
             }
         }
+        ("POST", "/local-api/attestations/create") => {
+            if let Err(reply) = authorize_api(bridge, request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "authority_unavailable", None, Some("application/json"));
+            };
+            let Some(subject_account_id) = json_string(request.body, "subject_account_id") else {
+                return response(400, "subject_account_id_required", None, Some("application/json"));
+            };
+            let Some(subject_device_key) = json_string(request.body, "subject_device_public_key") else {
+                return response(400, "subject_device_key_required", None, Some("application/json"));
+            };
+            match authority.create_attestation(&subject_account_id, &subject_device_key, now) {
+                Ok(attestation) => {
+                    let encoded = serde_json::to_string(&attestation).unwrap_or_default();
+                    response(200, &encoded, None, Some("application/json"))
+                }
+                Err(_) => response(500, "attestation_creation_failed", None, Some("application/json")),
+            }
+        }
+        ("GET", "/local-api/attestations/list") => {
+            if let Err(reply) = authorize_api(bridge, request, now) {
+                return reply;
+            }
+            let Some(authority) = invite_authority else {
+                return response(503, "authority_unavailable", None, Some("application/json"));
+            };
+            let all: Vec<_> = authority.peer_attestations.all().cloned().collect();
+            let encoded = serde_json::to_string(&all).unwrap_or_else(|_| "[]".to_owned());
+            response(200, &encoded, None, Some("application/json"))
+        }
         ("POST", "/local-api/devices/link/approve") => {
             if let Err(reply) = authorize_api(bridge, request, now) {
                 return reply;

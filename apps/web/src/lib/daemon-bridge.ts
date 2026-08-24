@@ -126,6 +126,8 @@ export interface DaemonBridge {
   revokeDevice(deviceId: string): Promise<void>;
   deviceLinkRequest(): Promise<{ request: string; code: string }>;
   deviceLinkApprove(request: string, code: string): Promise<{ approval: string }>;
+  createAttestation(subjectAccountId: string, subjectDeviceKey: string): Promise<unknown>;
+  listAttestations(): Promise<unknown[]>;
   setContactAlias(accountId: string, alias: string): Promise<void>;
   blockContact(accountId: string): Promise<void>;
   unblockContact(accountId: string): Promise<void>;
@@ -301,6 +303,12 @@ export async function connectDaemonBridge({
         body: JSON.stringify({ link_request: linkRequest, code }),
       }) as { approval: string };
     },
+    createAttestation: (subjectAccountId, subjectDeviceKey) =>
+      request("/local-api/attestations/create", {
+        method: "POST",
+        body: JSON.stringify({ subject_account_id: subjectAccountId, subject_device_public_key: subjectDeviceKey }),
+      }),
+    listAttestations: () => request("/local-api/attestations/list"),
     setContactAlias: async (accountId, alias) => {
       await request("/local-api/contacts/alias", { method: "POST", body: JSON.stringify({ account_id: accountId, alias }) });
     },

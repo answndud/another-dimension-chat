@@ -35,6 +35,7 @@ pub struct InviteAuthority {
     pub(crate) completed_attachments: std::collections::BTreeMap<String, EncryptedAttachment>,
     pub(crate) completed_attachment_created_at: std::collections::BTreeMap<String, u64>,
     pub(crate) received_attachments: std::collections::BTreeMap<String, AttachmentDescriptor>,
+    pub(crate) peer_attestations: crate::attestation::PeerAttestationStore,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -298,6 +299,7 @@ impl InviteAuthority {
             completed_attachments: std::collections::BTreeMap::new(),
             completed_attachment_created_at: std::collections::BTreeMap::new(),
             received_attachments: std::collections::BTreeMap::new(),
+            peer_attestations: crate::attestation::PeerAttestationStore::new(),
         }
     }
 
@@ -513,6 +515,32 @@ impl InviteAuthority {
 
     pub(crate) fn contacts(&self) -> Vec<crate::contacts::ContactRecord> {
         self.contacts.list()
+    }
+
+    pub(crate) fn create_attestation(
+        &mut self,
+        subject_account_id: &str,
+        subject_device_public_key: &str,
+        now: u64,
+    ) -> Result<crate::attestation::PeerAttestation, crate::attestation::AttestationError> {
+        let root = self.root.as_ref().ok_or(crate::attestation::AttestationError::Storage)?;
+        crate::attestation::PeerAttestation::create(
+            root,
+            subject_account_id,
+            subject_device_public_key,
+            now,
+        )
+    }
+
+    pub(crate) fn add_peer_attestation(
+        &mut self,
+        attestation: crate::attestation::PeerAttestation,
+    ) -> Result<(), crate::attestation::AttestationError> {
+        self.peer_attestations.add(attestation)
+    }
+
+    pub(crate) fn peer_attestations_for(&self, account_id: &str) -> &[crate::attestation::PeerAttestation] {
+        self.peer_attestations.for_peer(account_id)
     }
 
     pub(crate) fn set_contact_alias(
